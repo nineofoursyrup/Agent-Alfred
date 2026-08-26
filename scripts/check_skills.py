@@ -109,18 +109,22 @@ def _parse_scalar(raw: str, lineno: int) -> str:
     return s
 
 
+def _reject_trailing(s: str, i: int, lineno: int) -> None:
+    leftover = s[i + 1 :].strip()
+    if leftover:
+        raise FrontmatterError(
+            f"line {lineno}: unsupported frontmatter form "
+            f"(trailing content after quoted scalar: {leftover!r})"
+        )
+
+
 def _parse_double_quoted(s: str, lineno: int) -> str:
     out: list[str] = []
     i = 1
     while i < len(s):
         ch = s[i]
         if ch == '"':
-            leftover = s[i + 1 :].strip()
-            if leftover:
-                raise FrontmatterError(
-                    f"line {lineno}: unsupported frontmatter form "
-                    f"(trailing content after quoted scalar: {leftover!r})"
-                )
+            _reject_trailing(s, i, lineno)
             return "".join(out)
         if ch == "\\":
             if i + 1 >= len(s):
@@ -152,12 +156,7 @@ def _parse_single_quoted(s: str, lineno: int) -> str:
                 out.append("'")
                 i += 2
                 continue
-            leftover = s[i + 1 :].strip()
-            if leftover:
-                raise FrontmatterError(
-                    f"line {lineno}: unsupported frontmatter form "
-                    f"(trailing content after quoted scalar: {leftover!r})"
-                )
+            _reject_trailing(s, i, lineno)
             return "".join(out)
         out.append(ch)
         i += 1
@@ -178,7 +177,7 @@ def validate_skill_text(text: str) -> list[str]:
             errors.append(f"missing {field!r} in frontmatter")
             continue
         value = data[field]
-        if not isinstance(value, str) or not value.strip():
+        if not value.strip():
             errors.append(f"{field!r} must be a non-empty string")
     return errors
 
