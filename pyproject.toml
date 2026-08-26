@@ -54,3 +54,9 @@ known-first-party = ["agent_alfred"]
 
 [tool.pytest.ini_options]
 testpaths = ["src/agent_alfred/evals/deterministic"]
+# Keyed tests must never become a default (CI) requirement. Directory
+# testpaths is a second line of defence, not the only one.
+addopts = ["-m", "not requires_key"]
+markers = [
+    "requires_key: needs a named environment variable (API key); skip if unset, never fail the default run",
+]

@@ -27,7 +27,7 @@ jobs:
         run: uv python install 3.14
 
       - name: Install package (dev extra)
-        run: uv sync --extra dev
+        run: uv sync --extra dev --locked
 
       - name: Lint
         run: uv run ruff check
