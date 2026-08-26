@@ -1,0 +1,35 @@
+# Bytecode and tool caches
+__pycache__/
+*.py[cod]
+*$py.class
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtualenvs
+.venv/
+venv/
+
+# Packaging / uv / build junk
+build/
+dist/
+wheels/
+*.egg-info/
+*.egg
+*.whl
+
+# Local secrets (never commit). .env.example is tracked.
+.env
+
+# In-clone runtime artifacts
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+traces/
+usage.jsonl
+
+# OS
+.DS_Store

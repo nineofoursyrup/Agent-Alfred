@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-alfred"
+version = "0.1.0"
+description = "Local-first single-user private AI assistant"
+requires-python = ">=3.14"
+dependencies = [
+    "anthropic>=1.0.0",
+    "openai>=3.3.1",
+    "python-dotenv>=1.2.3",
+    "rich>=15.0.0",
+]
+
+[project.optional-dependencies]
+# v1 uses a stdlib MCP client; the extra exists so optional-integration
+# registration can still name it.
+mcp = []
+otel = [
+    "opentelemetry-api>=1.44.0",
+    "opentelemetry-sdk>=1.44.0",
+]
+# Tavily is stdlib HTTP; the extra exists so the registry can name it.
+search = []
+dev = [
+    "ruff==0.16.4",
+    "pytest>=9.1.1",
+]
+
+[project.scripts]
+agent-alfred = "agent_alfred.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_alfred"]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 88
+src = ["src"]
+extend-exclude = ["docs"]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent_alfred"]
+
+[tool.pytest.ini_options]
+testpaths = ["src/agent_alfred/evals/deterministic"]
