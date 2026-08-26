@@ -23,9 +23,6 @@ jobs:
         with:
           python-version: "3.14"
 
-      - name: Install Python 3.14
-        run: uv python install 3.14
-
       - name: Install package (dev extra)
         run: uv sync --extra dev --locked
 

@@ -15,14 +15,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# v1 uses a stdlib MCP client; the extra exists so optional-integration
-# registration can still name it.
+# Placeholder extra: `pip install 'agent-alfred[mcp]'` currently pulls no
+# additional packages. v1 uses a stdlib MCP client; fill this extra when
+# a real SDK is wired in. The name exists so the registry can point at it.
 mcp = []
 otel = [
     "opentelemetry-api>=1.44.0",
     "opentelemetry-sdk>=1.44.0",
 ]
-# Tavily is stdlib HTTP; the extra exists so the registry can name it.
+# Placeholder extra: `pip install 'agent-alfred[search]'` currently pulls
+# no additional packages. Tavily is stdlib HTTP; fill this extra when a
+# real SDK is wired in. The name exists so the registry can point at it.
 search = []
 dev = [
     "ruff==0.16.4",
