@@ -63,8 +63,8 @@ ModelClient 链的最内层，只做某一种 wire 形状的编解码，**不含
 `attempt_id` 由它铸造，因此 attempt 数恒等于真实网络往返数。
 
 **Gateway（网关）**：
-模型请求的 **base URL / 认证边界**。它与 Adapter 是不同的轴：网关回答「连到哪里、用哪把钥匙」；Adapter 回答「这种 wire 形状怎么编解码」。同一个网关下的不同模型可以走不同 Adapter。
-_Avoid_: 把网关当成 Adapter；把供应商名当成 wire style
+模型请求的 **base URL / 认证边界**。它与 Adapter 是不同的轴：网关回答「连到哪里、用哪把钥匙」；Adapter 回答「这种 wire 形状怎么编解码」。同一个网关下的不同模型可以走不同 Adapter，因此**不得**把供应商名当成 wire style。
+_Avoid_: 供应商、provider、Adapter
 
 **wire style（线路形状）**：
 一个模型实际使用的 API 形状。它挂在**模型**上，不挂在供应商上——
