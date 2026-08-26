@@ -5,10 +5,11 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from _common import SKIP_DIRS, read_utf8, repo_root, strip_unquoted_comment
+
 SKILL_FILENAME = "SKILL.md"
 PACKAGE_SKILLS = Path("src") / "agent_alfred" / "skills"
 ROOT_SKILLS = Path("skills")
-IGNORED_DIRS = frozenset({"__pycache__", ".git", ".venv"})
 
 _FRONTMATTER = re.compile(
     r"\A\ufeff?---[ \t]*\r?\n(.*?\r?\n)---[ \t]*(?:\r?\n|\Z)",
@@ -41,10 +42,6 @@ class YamlParseError(ValueError):
     """Frontmatter is not valid YAML (subset used for Skill files)."""
 
 
-def repo_root() -> Path:
-    return Path(__file__).resolve().parents[1]
-
-
 def skill_roots(root: Path) -> list[Path]:
     """Package skills dir, plus repo-root skills/ if present.
 
@@ -64,7 +61,7 @@ def find_skill_files(root: Path) -> list[Path]:
     found: list[Path] = []
     for base in skill_roots(root):
         for path in base.rglob(SKILL_FILENAME):
-            if any(part in IGNORED_DIRS for part in path.parts):
+            if any(part in SKIP_DIRS for part in path.parts):
                 continue
             if path.is_file():
                 found.append(path)
@@ -119,20 +116,6 @@ def _skip_ws(s: str, i: int) -> int:
     while i < len(s) and s[i] in " \t":
         i += 1
     return i
-
-
-def _strip_unquoted_comment(s: str) -> str:
-    in_single = False
-    in_double = False
-    for i, ch in enumerate(s):
-        if ch == "'" and not in_double:
-            in_single = not in_single
-        elif ch == '"' and not in_single:
-            in_double = not in_double
-        elif ch == "#" and not in_single and not in_double:
-            if i == 0 or s[i - 1] in " \t":
-                return s[:i]
-    return s
 
 
 def _parse_double_quoted(s: str, i: int) -> tuple[str, int]:
@@ -363,11 +346,11 @@ def _parse_scalar_line(content: str) -> object:
         return None
     if s[0] in {'"', "'"}:
         value, idx = _parse_quoted(s, 0)
-        leftover = _strip_unquoted_comment(s[idx:]).strip()
+        leftover = strip_unquoted_comment(s[idx:]).strip()
         if leftover:
             raise YamlParseError(f"trailing content after quoted scalar: {leftover!r}")
         return value
-    return _interpret_plain(_strip_unquoted_comment(s))
+    return _interpret_plain(strip_unquoted_comment(s))
 
 
 def _fold_block(lines: list[str]) -> str:
@@ -508,7 +491,7 @@ class _YamlLoader:
         return _parse_scalar_line(rest)
 
     def _parse_block_scalar(self, parent_indent: int, header: str) -> str:
-        header = _strip_unquoted_comment(header).strip()
+        header = strip_unquoted_comment(header).strip()
         if not header or header[0] not in "|>":
             raise YamlParseError(f"line {self.i}: invalid block scalar header")
         folded = header[0] == ">"
@@ -562,13 +545,8 @@ def main() -> int:
     errors: list[str] = []
     for path in skill_files:
         rel = path.relative_to(root).as_posix()
-        try:
-            text = path.read_text(encoding="utf-8")
-        except OSError as exc:
-            errors.append(f"{rel}: cannot read file: {exc}")
-            continue
-        except UnicodeDecodeError as exc:
-            errors.append(f"{rel}: not valid UTF-8: {exc}")
+        text = read_utf8(path, errors, rel)
+        if text is None:
             continue
         for item in validate_skill_text(text):
             errors.append(f"{rel}: {item}")

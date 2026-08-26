@@ -6,8 +6,10 @@ import ast
 import re
 from pathlib import Path
 
+from _common import SKIP_DIRS, read_utf8, repo_root, strip_unquoted_comment
+
 ENV_EXAMPLE = ".env.example"
-SRC_DIR = Path("src")
+SCAN_ROOTS = (Path("src"), Path("scripts"))
 
 REQUIRED_KEYS = (
     "OPENCODE_API_KEY",
@@ -101,30 +103,9 @@ _WELL_KNOWN = frozenset(
     }
 )
 
-_SKIP_DIRS = frozenset({"__pycache__", ".venv", ".git"})
-
-
-def repo_root() -> Path:
-    return Path(__file__).resolve().parents[1]
-
-
-def _strip_unquoted_comment(s: str) -> str:
-    in_single = False
-    in_double = False
-    for i, ch in enumerate(s):
-        if ch == "'" and not in_double:
-            in_single = not in_single
-        elif ch == '"' and not in_single:
-            in_double = not in_double
-        elif ch == "#" and not in_single and not in_double:
-            if i == 0 or s[i - 1].isspace():
-                return s[:i]
-    return s
-
-
 def normalized_env_value(raw: str) -> str:
     """Return the assignment value after stripping quotes and whitespace."""
-    s = _strip_unquoted_comment(raw).strip()
+    s = strip_unquoted_comment(raw).strip()
     if len(s) >= 2 and s[0] == s[-1] and s[0] in {'"', "'"}:
         s = s[1:-1]
     return s.strip()
@@ -238,7 +219,7 @@ def is_tracked_env_name(name: str) -> bool:
 def iter_python_files(src_root: Path) -> list[Path]:
     files: list[Path] = []
     for path in src_root.rglob("*.py"):
-        if any(part in _SKIP_DIRS for part in path.parts):
+        if any(part in SKIP_DIRS for part in path.parts):
             continue
         if path.is_file():
             files.append(path)
@@ -253,13 +234,8 @@ def collect_source_env_hits(
     errors: list[str] = []
     for path in iter_python_files(src_root):
         rel = path.relative_to(repo).as_posix()
-        try:
-            text = path.read_text(encoding="utf-8")
-        except OSError as exc:
-            errors.append(f"{rel}: cannot read file: {exc}")
-            continue
-        except UnicodeDecodeError as exc:
-            errors.append(f"{rel}: not valid UTF-8: {exc}")
+        text = read_utf8(path, errors, rel)
+        if text is None:
             continue
         try:
             tree = ast.parse(text, filename=rel)
@@ -284,23 +260,31 @@ def main() -> int:
     if not example_path.is_file():
         errors.append(f"{ENV_EXAMPLE} is missing at the repository root")
     else:
-        try:
-            text = example_path.read_text(encoding="utf-8")
-        except OSError as exc:
-            errors.append(f"{ENV_EXAMPLE}: cannot read file: {exc}")
-        except UnicodeDecodeError as exc:
-            errors.append(f"{ENV_EXAMPLE}: not valid UTF-8: {exc}")
-        else:
+        text = read_utf8(example_path, errors, ENV_EXAMPLE)
+        if text is not None:
             example_keys, parse_errors = parse_env_example(text)
             errors.extend(parse_errors)
             for key in REQUIRED_KEYS:
                 if key not in example_keys:
                     errors.append(f"{ENV_EXAMPLE}: missing required key {key}")
 
-    src_root = root / SRC_DIR
-    if src_root.is_dir():
-        hits, scan_errors = collect_source_env_hits(src_root, root)
+    hits: dict[str, list[str]] = {}
+    scanned_any = False
+    for rel_root in SCAN_ROOTS:
+        scan_root = root / rel_root
+        if not scan_root.is_dir():
+            continue
+        scanned_any = True
+        root_hits, scan_errors = collect_source_env_hits(scan_root, root)
         errors.extend(scan_errors)
+        for name, locs in root_hits.items():
+            hits.setdefault(name, []).extend(locs)
+    if not scanned_any:
+        if not errors:
+            errors.append(
+                "src/ and scripts/ are missing; cannot scan env lookups"
+            )
+    else:
         for name, locs in sorted(hits.items()):
             if name not in example_keys:
                 shown = ", ".join(locs[:5])
@@ -309,8 +293,6 @@ def main() -> int:
                     f"{name} is looked up in {shown}{extra} but missing from "
                     f"{ENV_EXAMPLE}"
                 )
-    elif not errors:
-        errors.append(f"{SRC_DIR.as_posix()}/ is missing; cannot scan env lookups")
 
     if errors:
         for item in errors:

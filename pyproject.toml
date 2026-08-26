@@ -39,7 +39,9 @@ packages = ["src/agent_alfred"]
 target-version = "py314"
 line-length = 88
 src = ["src"]
-extend-exclude = ["docs"]
+# Root-only. "docs" matches any nested docs/; "/docs" is an absolute
+# filesystem path in Ruff 0.16.4 and would not exclude the repo docs/.
+extend-exclude = ["docs/"]
 
 [tool.ruff.lint]
 select = [
