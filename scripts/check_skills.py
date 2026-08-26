@@ -168,10 +168,8 @@ def validate_skill_text(text: str) -> list[str]:
     try:
         raw = extract_frontmatter(text)
         data = parse_frontmatter_mapping(raw)
-    except SkillCheckError as exc:
+    except (SkillCheckError, FrontmatterError) as exc:
         return [str(exc)]
-    except FrontmatterError as exc:
-        return [f"unsupported frontmatter form: {exc}"]
     for field in ("name", "description"):
         if field not in data:
             errors.append(f"missing {field!r} in frontmatter")

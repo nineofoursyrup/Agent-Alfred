@@ -72,3 +72,19 @@ def test_missing_frontmatter_fails(monkeypatch, capsys, tmp_path: Path) -> None:
     out = capsys.readouterr().out
     assert "missing YAML frontmatter delimited by '---'" in out
     assert out.strip().endswith("FAIL: skill check (1 error(s))")
+
+
+def test_quoted_scalars_are_accepted() -> None:
+    body = "---\nname: \"demo\"\ndescription: 'it''s fine'\n---\n"
+    assert check_skills.validate_skill_text(body) == []
+
+
+def test_trailing_content_after_quoted_scalar_fails() -> None:
+    expected = [
+        "line 1: unsupported frontmatter form "
+        "(trailing content after quoted scalar: 'junk')"
+    ]
+    double = '---\nname: "demo" junk\ndescription: d\n---\n'
+    single = "---\nname: 'demo' junk\ndescription: d\n---\n"
+    assert check_skills.validate_skill_text(double) == expected
+    assert check_skills.validate_skill_text(single) == expected
