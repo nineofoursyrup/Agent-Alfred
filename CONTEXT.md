@@ -190,7 +190,7 @@ _Avoid_: 用量日志、账单文件
 信封承载谁 / 何时（`seq` / `ts` / `run_id` / `session_id` / `step_index` / `attempt_id`），载荷承载什么。
 事件**只是通知，不是账本**：用量与费用永远直接汇总 `ModelResult.attempts`，
 因为 EventSink 可以缺席，而缺席时那笔钱照样花掉了。
-_Avoid_: 日志、log
+_Avoid_: 日志、log、日程、events 表
 
 **EventSink（事件汇）**：
 事件的消费端接口。**单向**——业务代码无法从它读回任何东西。
@@ -370,6 +370,12 @@ _Avoid_: Adapter、记忆适配器（`Adapter` 专指模型 wire 形状的编解
 用户目录里的同名 Skill **整体取代**内置版本，不合并——Skill 是散文，合并两份散文没有语义。
 覆盖**必须可见**：界面上要写明某个内置 Skill 已被用户版本取代。
 同一目录内重名则是配置错误，启动即失败，不静默取其一。
+
+## 日程
+
+**日程（calendar entry）**：
+一条带开始与结束绝对时刻的安排。当地显示、未来日程或重复规则才需要 IANA 时区名；既成的瞬间只有带 offset 的 UTC 时刻。
+_Avoid_: Event, events
 
 ## 图
 
