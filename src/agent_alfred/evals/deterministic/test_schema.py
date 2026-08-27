@@ -125,6 +125,9 @@ def test_migrate_creates_required_tables_without_user_id() -> None:
         "episodes",
         "episodes_fts",
         "agent_log",
+        "sessions",
+        "runs",
+        "activity_clock",
         "tool_ledger",
         "trace_prunes",
         "consolidation_batches",
@@ -223,7 +226,7 @@ def test_migrate_writes_one_contiguous_ledger_row_per_version() -> None:
     schema.migrate(conn)
     rows = conn.execute("SELECT version FROM schema_migrations").fetchall()
     conn.close()
-    assert rows == [(1,), (2,)]
+    assert rows == [(1,), (2,), (3,)]
 
 
 def test_migrate_does_not_commit_the_callers_transaction() -> None:
@@ -1013,6 +1016,9 @@ def test_completed_instants_do_not_carry_an_iana_time_zone_column() -> None:
         "facts",
         "episodes",
         "agent_log",
+        "sessions",
+        "runs",
+        "activity_clock",
         "tool_ledger",
         "trace_prunes",
         "consolidation_batches",
@@ -1266,9 +1272,19 @@ def _all_rows(conn: sqlite3.Connection) -> dict[str, list[tuple]]:
         "consolidation_batches",
         "consolidation_ops",
     )
-    return {
-        table: conn.execute(f"SELECT * FROM {table}").fetchall() for table in tables
-    }
+    rows = {}
+    for table in tables:
+        if table == "agent_log":
+            # Version 3 appends run_id; the upgrade must keep the original
+            # eight columns byte-for-byte, so the comparison is on those.
+            rows[table] = conn.execute(
+                """SELECT id, session_id, role, content, consolidated,
+                          source, telemetry, created_at
+                   FROM agent_log"""
+            ).fetchall()
+        else:
+            rows[table] = conn.execute(f"SELECT * FROM {table}").fetchall()
+    return rows
 
 
 def test_version_1_ddl_is_frozen_at_the_shape_the_last_commit_published() -> None:
@@ -1320,6 +1336,12 @@ def test_upgrading_a_version_1_database_keeps_every_row(commit: str) -> None:
     assert conn.execute(
         "SELECT fact FROM facts_fts WHERE facts_fts MATCH 'tea'"
     ).fetchall() == [("likes tea",)]
+    # Historic messages keep a null run_id; the Session is backfilled from
+    # the original session_id, not invented.
+    assert conn.execute("SELECT run_id FROM agent_log").fetchall() == [(None,)]
+    assert conn.execute(
+        "SELECT session_id, created_at FROM sessions"
+    ).fetchall() == [("s1", _TS)]
     conn.close()
 
 
@@ -1368,7 +1390,7 @@ def test_upgrading_a_version_1_database_lands_the_current_shape(commit: str) -> 
     ).fetchall()[0] == (1, historic_schema.V1_APPLIED_AT)
     assert conn.execute(
         "SELECT version FROM schema_migrations ORDER BY version"
-    ).fetchall() == [(1,), (2,)]
+    ).fetchall() == [(1,), (2,), (3,)]
     conn.close()
 
 
@@ -1558,6 +1580,7 @@ def test_a_failed_upgrade_in_a_caller_transaction_leaves_the_ledger_intact(
     assert conn.execute("SELECT version FROM schema_migrations").fetchall() == [
         (1,),
         (2,),
+        (3,),
     ]
     # Rolling back is still the caller's decision too, and it takes back the
     # caller's own write and nothing else.

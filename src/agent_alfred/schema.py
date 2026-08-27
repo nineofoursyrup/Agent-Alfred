@@ -40,6 +40,29 @@ ORIGIN_REQUIRED_COLUMN = {
 }
 ORIGIN_KINDS = tuple(ORIGIN_REQUIRED_COLUMN)
 _ORIGIN_KIND_SQL = ", ".join(f"'{kind}'" for kind in ORIGIN_KINDS)
+# Run index closed sets. Independent of SOURCES even though the Gateway
+# values match today: a new message source must not silently rewrite runs.
+GATEWAYS = ("cli", "web")
+_GATEWAY_SQL = ", ".join(f"'{gateway}'" for gateway in GATEWAYS)
+PURPOSES = ("chat", "inference_probe")
+_PURPOSE_SQL = ", ".join(f"'{purpose}'" for purpose in PURPOSES)
+PHASES = ("accepted", "running", "finished")
+_PHASE_SQL = ", ".join(f"'{phase}'" for phase in PHASES)
+OUTCOMES = ("completed", "max_steps", "failed", "interrupted")
+_OUTCOME_SQL = ", ".join(f"'{outcome}'" for outcome in OUTCOMES)
+# Non-terminal phases may only pair with a null outcome; finished must pair
+# with a closed outcome. The CHECK is the shape; callers still have to
+# UPDATE with an old-phase predicate that affects exactly one row.
+_PHASE_OUTCOME_CHECK = """(
+    (
+      phase IN ('accepted', 'running')
+      AND outcome IS NULL
+    )
+    OR (
+      phase = 'finished'
+      AND outcome IS NOT NULL
+    )
+  )"""
 
 _FTS5_UNAVAILABLE = """\
 SQLite FTS5 is not enabled in this Python interpreter's sqlite3 module \
@@ -559,6 +582,10 @@ class SchemaVersionError(RuntimeError):
     """Raised when the on-disk schema version cannot be migrated by this code."""
 
 
+class RunPhaseError(RuntimeError):
+    """Raised when a Run phase UPDATE does not affect exactly one row."""
+
+
 _OBJECT_NAME = re.compile(
     r"^CREATE\s+(?:VIRTUAL\s+)?(?:TABLE|INDEX|TRIGGER)\s+(\w+)", re.IGNORECASE
 )
@@ -761,10 +788,221 @@ def _apply_v2(conn: sqlite3.Connection) -> None:
     )
 
 
+# ---------------------------------------------------------------------------
+# Version 3 -- sessions, the Run index, the activity clock.
+#
+# Forward-only. Version 1 and version 2 stay frozen: a database that already
+# recorded those numbers would skip any in-place edit, and two shapes would
+# then share a ledger row.
+# ---------------------------------------------------------------------------
+
+_V3_VERSION = 3
+
+_V3_AGENT_LOG_COLUMNS = (
+    "id",
+    "session_id",
+    "role",
+    "content",
+    "consolidated",
+    "source",
+    "telemetry",
+    "created_at",
+)
+
+_V3_AGENT_LOG = f"""
+CREATE TABLE agent_log (
+  id INTEGER PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ({_ROLE_SQL})),
+  content TEXT NOT NULL CHECK (json_valid(content)),
+  consolidated INTEGER NOT NULL DEFAULT 0 CHECK (consolidated IN (0, 1)),
+  source TEXT NOT NULL CHECK (source IN ({_SOURCE_SQL})),
+  telemetry TEXT CHECK (telemetry IS NULL OR json_valid(telemetry)),
+  created_at TEXT NOT NULL,
+  run_id TEXT,
+  CHECK (run_id IS NULL OR telemetry IS NULL)
+)
+"""
+
+_V3_SESSIONS = """
+CREATE TABLE sessions (
+  session_id TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL,
+  activity_revision INTEGER NOT NULL UNIQUE
+)
+"""
+
+_V3_RUNS = f"""
+CREATE TABLE runs (
+  run_id TEXT PRIMARY KEY,
+  purpose TEXT NOT NULL CHECK (purpose IN ({_PURPOSE_SQL})),
+  session_id TEXT,
+  gateway TEXT NOT NULL CHECK (gateway IN ({_GATEWAY_SQL})),
+  entry_surface_id TEXT,
+  prompt_preview TEXT,
+  phase TEXT NOT NULL CHECK (phase IN ({_PHASE_SQL})),
+  outcome TEXT CHECK (
+    outcome IS NULL OR outcome IN ({_OUTCOME_SQL})
+  ),
+  accepted_at TEXT NOT NULL,
+  started_at TEXT,
+  finished_at TEXT,
+  activity_revision INTEGER NOT NULL,
+  telemetry TEXT CHECK (telemetry IS NULL OR json_valid(telemetry)),
+  CHECK {_PHASE_OUTCOME_CHECK}
+)
+"""
+
+_V3_ACTIVITY_CLOCK = """
+CREATE TABLE activity_clock (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  next_revision INTEGER NOT NULL CHECK (next_revision >= 1)
+)
+"""
+
+_V3_AGENT_LOG_SESSION_IDX = """
+CREATE INDEX agent_log_session_created_idx
+  ON agent_log (session_id, created_at)
+"""
+
+_V3_AGENT_LOG_RUN_ROLE_IDX = """
+CREATE UNIQUE INDEX agent_log_run_role_unique
+  ON agent_log (run_id, role) WHERE run_id IS NOT NULL
+"""
+
+_V3_RUNS_ACTIVITY_IDX = """
+CREATE INDEX runs_activity_revision_idx
+  ON runs (activity_revision, run_id)
+"""
+
+_V3_MANAGED_OBJECTS = (
+    "sessions",
+    "runs",
+    "runs_activity_revision_idx",
+    "activity_clock",
+    "agent_log_run_role_unique",
+)
+
+_V3_UNKNOWN_AGENT_LOG = """\
+Refusing to migrate to version {version}: `agent_log` is not the version 2 \
+shape this code copies from ({detail}).
+
+Version 3 rebuilds the table to add `run_id` and a CHECK that a message with \
+a run_id cannot also carry telemetry. A copy driven by the wrong columns \
+would drop or invent fields. Back the database file up. No DDL has run; \
+the database is exactly as it was found.
+"""
+
+_V3_OBJECTS_ALREADY_PRESENT = """\
+Refusing to migrate to version {version}: {objects} already exist, so this \
+is not a version 2 database this code can upgrade. Back the database file \
+up. No DDL has run; the database is exactly as it was found.
+"""
+
+
+def _agent_log_columns(conn: sqlite3.Connection) -> list[str]:
+    return [row[1] for row in conn.execute("PRAGMA table_info(agent_log)")]
+
+
+def _verify_v2_agent_log(conn: sqlite3.Connection) -> None:
+    if not _table_exists(conn, "agent_log"):
+        raise SchemaVersionError(
+            _V3_UNKNOWN_AGENT_LOG.format(
+                version=_V3_VERSION, detail="the table is missing"
+            )
+        )
+    actual = _agent_log_columns(conn)
+    expected = list(_V3_AGENT_LOG_COLUMNS)
+    if actual != expected:
+        raise SchemaVersionError(
+            _V3_UNKNOWN_AGENT_LOG.format(
+                version=_V3_VERSION,
+                detail=f"columns {actual} rather than {expected}",
+            )
+        )
+
+
+def _reject_v3_if_already_present(conn: sqlite3.Connection) -> None:
+    found = [
+        name
+        for name in ("sessions", "runs", "activity_clock")
+        if _table_exists(conn, name)
+    ]
+    if found:
+        raise SchemaVersionError(
+            _V3_OBJECTS_ALREADY_PRESENT.format(
+                version=_V3_VERSION, objects=", ".join(found)
+            )
+        )
+
+
+def _backfill_sessions(conn: sqlite3.Connection) -> None:
+    """Insert one sessions row per distinct agent_log.session_id, verbatim.
+
+    created_at is copied from the row with the smallest id, not from MIN()
+    on the time text: that column was never a strict instant, so a
+    lexicographic minimum is not the earliest message.
+    activity_revision is allocated oldest-max-id first so the session that
+    last received a message sorts ahead. Re-running the migration is a
+    no-op because the ledger already records version 3.
+    """
+    groups = conn.execute(
+        """
+        SELECT session_id, MAX(id) AS max_id
+        FROM agent_log
+        GROUP BY session_id
+        ORDER BY max_id ASC
+        """
+    ).fetchall()
+    for session_id, _max_id in groups:
+        created_at = conn.execute(
+            """
+            SELECT created_at FROM agent_log
+            WHERE session_id = ?
+            ORDER BY id ASC
+            LIMIT 1
+            """,
+            (session_id,),
+        ).fetchone()[0]
+        revision = allocate_activity_revision(conn)
+        conn.execute(
+            """INSERT INTO sessions (
+                 session_id, created_at, activity_revision
+               ) VALUES (?, ?, ?)""",
+            (session_id, created_at, revision),
+        )
+
+
+def _apply_v3(conn: sqlite3.Connection) -> None:
+    _reject_v3_if_already_present(conn)
+    _verify_v2_agent_log(conn)
+    _rebuild_table(
+        conn,
+        source="agent_log",
+        create=_V3_AGENT_LOG,
+        target="agent_log",
+        columns=(*_V3_AGENT_LOG_COLUMNS, "run_id"),
+        select=(*_V3_AGENT_LOG_COLUMNS, "NULL"),
+    )
+    conn.execute(_V3_AGENT_LOG_SESSION_IDX)
+    conn.execute(_V3_AGENT_LOG_RUN_ROLE_IDX)
+    conn.execute(_V3_SESSIONS)
+    conn.execute(_V3_RUNS)
+    conn.execute(_V3_RUNS_ACTIVITY_IDX)
+    conn.execute(_V3_ACTIVITY_CLOCK)
+    conn.execute("INSERT INTO activity_clock (id, next_revision) VALUES (1, 1)")
+    _backfill_sessions(conn)
+
+
 MIGRATIONS = (
     Migration(version=1, apply=_apply_v1, managed_objects=_V1_MANAGED_OBJECTS),
     # Renames and rebuilds only: every name it leaves behind is already v1's.
     Migration(version=_REPAIR_VERSION, apply=_apply_v2, managed_objects=()),
+    Migration(
+        version=_V3_VERSION,
+        apply=_apply_v3,
+        managed_objects=_V3_MANAGED_OBJECTS,
+    ),
 )
 MIGRATION_VERSIONS = tuple(migration.version for migration in MIGRATIONS)
 LATEST_MIGRATION_VERSION = MIGRATION_VERSIONS[-1]
@@ -916,6 +1154,141 @@ def migrate(conn: sqlite3.Connection) -> None:
         conn.execute(f"RELEASE {_MIGRATION_SAVEPOINT}")
     else:
         conn.commit()
+
+
+def allocate_activity_revision(conn: sqlite3.Connection) -> int:
+    """Take the next activity_revision from the single-row clock.
+
+    Must run inside the caller's transaction: Session creation and Run
+    phase transfers stamp the same number they just allocated.
+    """
+    row = conn.execute(
+        """UPDATE activity_clock
+           SET next_revision = next_revision + 1
+           WHERE id = 1
+           RETURNING next_revision - 1"""
+    ).fetchone()
+    if row is None:
+        raise RunPhaseError("activity clock is missing")
+    return int(row[0])
+
+
+def insert_session(
+    conn: sqlite3.Connection, *, session_id: str, created_at: str
+) -> int:
+    """Insert a Session and stamp it with a newly allocated activity_revision."""
+    revision = allocate_activity_revision(conn)
+    conn.execute(
+        """INSERT INTO sessions (session_id, created_at, activity_revision)
+           VALUES (?, ?, ?)""",
+        (session_id, created_at, revision),
+    )
+    return revision
+
+
+def insert_accepted_run(
+    conn: sqlite3.Connection,
+    *,
+    run_id: str,
+    purpose: str,
+    session_id: str | None,
+    gateway: str,
+    accepted_at: str,
+    entry_surface_id: str | None = None,
+    prompt_preview: str | None = None,
+) -> int:
+    """Insert a Run in phase accepted with a null outcome.
+
+    Allocates one activity_revision and copies it onto the Session when
+    session_id is set. The INSERT itself is what the CHECK rejects if the
+    phase/outcome pairing is wrong; callers do not pass phase or outcome.
+    """
+    revision = allocate_activity_revision(conn)
+    conn.execute(
+        """INSERT INTO runs (
+             run_id, purpose, session_id, gateway, entry_surface_id,
+             prompt_preview, phase, outcome, accepted_at, started_at,
+             finished_at, activity_revision, telemetry
+           ) VALUES (
+             ?, ?, ?, ?, ?, ?, 'accepted', NULL, ?, NULL, NULL, ?, NULL
+           )""",
+        (
+            run_id,
+            purpose,
+            session_id,
+            gateway,
+            entry_surface_id,
+            prompt_preview,
+            accepted_at,
+            revision,
+        ),
+    )
+    if session_id is not None:
+        updated = conn.execute(
+            "UPDATE sessions SET activity_revision = ? WHERE session_id = ?",
+            (revision, session_id),
+        ).rowcount
+        if updated != 1:
+            raise RunPhaseError(
+                f"expected exactly 1 session {session_id!r} to receive "
+                f"activity_revision {revision}, updated {updated}"
+            )
+    return revision
+
+
+def update_run_phase(
+    conn: sqlite3.Connection,
+    *,
+    run_id: str,
+    from_phase: str,
+    to_phase: str,
+    activity_revision: int,
+    outcome: str | None = None,
+    started_at: str | None = None,
+    finished_at: str | None = None,
+    telemetry: str | None = None,
+    session_id: str | None = None,
+) -> None:
+    """Move a Run from from_phase to to_phase. Must affect exactly one row.
+
+    The WHERE clause carries the old phase so a concurrent or repeated
+    transition cannot silently rewrite a different state. rowcount != 1
+    is a hard failure, not a retry.
+    """
+    assignments = ["phase = ?", "activity_revision = ?"]
+    params: list[object] = [to_phase, activity_revision]
+    if to_phase == "running":
+        assignments.append("started_at = ?")
+        params.append(started_at)
+    elif to_phase == "finished":
+        assignments.append("outcome = ?")
+        params.append(outcome)
+        assignments.append("finished_at = ?")
+        params.append(finished_at)
+        if telemetry is not None:
+            assignments.append("telemetry = ?")
+            params.append(telemetry)
+    params.extend([run_id, from_phase])
+    updated = conn.execute(
+        f"UPDATE runs SET {', '.join(assignments)} "
+        "WHERE run_id = ? AND phase = ?",
+        params,
+    ).rowcount
+    if updated != 1:
+        raise RunPhaseError(
+            f"expected exactly 1 run {run_id!r} in phase {from_phase!r}, "
+            f"updated {updated}"
+        )
+    if session_id is not None:
+        session_updated = conn.execute(
+            "UPDATE sessions SET activity_revision = ? WHERE session_id = ?",
+            (activity_revision, session_id),
+        ).rowcount
+        if session_updated != 1:
+            raise RunPhaseError(
+                f"expected exactly 1 session {session_id!r} to receive "
+                f"activity_revision {activity_revision}, updated {session_updated}"
+            )
 
 
 def parse_instant(value: str) -> datetime:
