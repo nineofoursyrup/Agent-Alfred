@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterable
 from pathlib import Path
 
 BUSY_TIMEOUT_MS = 5000
 SCHEMA_VERSION = 1
-PRUNE_REASONS = frozenset({"manual", "disk_low", "age", "capacity"})
+# Highest first. One deletion may match several reasons; the stored
+# value is whichever of these wins, so the same set always records the same row.
+PRUNE_REASON_PRIORITY = ("manual", "disk_low", "age", "capacity")
+PRUNE_REASONS = frozenset(PRUNE_REASON_PRIORITY)
+_PRUNE_REASON_SQL = ", ".join(f"'{reason}'" for reason in PRUNE_REASON_PRIORITY)
 
 _FTS5_UNAVAILABLE = """\
 SQLite FTS5 is not enabled in this Python interpreter's sqlite3 module \
@@ -192,9 +197,10 @@ CREATE INDEX IF NOT EXISTS tool_ledger_session_created_idx
 CREATE TABLE IF NOT EXISTS trace_prunes (
   run_id TEXT PRIMARY KEY,
   prune_requested_at TEXT NOT NULL,
+  -- Observed-gone time, not an unlink instant we cannot prove.
   absence_confirmed_at TEXT NOT NULL,
   prune_reason TEXT NOT NULL CHECK (
-    prune_reason IN ('manual', 'disk_low', 'age', 'capacity')
+    prune_reason IN ({_PRUNE_REASON_SQL})
   )
 );
 
@@ -256,17 +262,37 @@ def migrate(conn: sqlite3.Connection) -> None:
     conn.executescript(_SCHEMA_SQL)
 
 
+def pick_prune_reason(reasons: Iterable[str]) -> str:
+    """Pick the stored prune_reason: manual > disk_low > age > capacity."""
+    best: str | None = None
+    best_rank = len(PRUNE_REASON_PRIORITY)
+    for reason in reasons:
+        if reason not in PRUNE_REASONS:
+            allowed = ", ".join(PRUNE_REASON_PRIORITY)
+            raise ValueError(
+                f"prune_reason must be one of {allowed}, got {reason!r}"
+            )
+        rank = PRUNE_REASON_PRIORITY.index(reason)
+        if rank < best_rank:
+            best = reason
+            best_rank = rank
+    if best is None:
+        raise ValueError("prune_reasons must not be empty")
+    return best
+
+
 def record_trace_prune(
     conn: sqlite3.Connection,
     *,
     run_id: str,
     prune_requested_at: str,
     absence_confirmed_at: str,
-    prune_reason: str,
+    prune_reason: str | Iterable[str],
 ) -> None:
-    if prune_reason not in PRUNE_REASONS:
-        allowed = ", ".join(sorted(PRUNE_REASONS))
-        raise ValueError(f"prune_reason must be one of {allowed}, got {prune_reason!r}")
+    if isinstance(prune_reason, str):
+        prune_reason = pick_prune_reason((prune_reason,))
+    else:
+        prune_reason = pick_prune_reason(prune_reason)
     conn.execute(
         """INSERT OR IGNORE INTO trace_prunes (
              run_id, prune_requested_at, absence_confirmed_at, prune_reason

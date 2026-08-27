@@ -389,6 +389,89 @@ def test_local_write_ledger_row_rolls_back_with_the_business_write() -> None:
     conn.close()
 
 
+def test_tool_ledger_keeps_two_rows_with_the_same_fingerprint() -> None:
+    conn = _migrate()
+    conn.execute(
+        """INSERT INTO tool_ledger (
+             tool_name, fingerprint, effect, status, created_at
+           ) VALUES ('create_event', 'same-fp', 'local_write', 'succeeded', ?)""",
+        (_TS,),
+    )
+    conn.execute(
+        """INSERT INTO tool_ledger (
+             tool_name, fingerprint, effect, status, created_at
+           ) VALUES ('create_event', 'same-fp', 'local_write', 'succeeded', ?)""",
+        (_TS,),
+    )
+    count = conn.execute("SELECT COUNT(*) FROM tool_ledger").fetchone()[0]
+    assert count == 2
+    conn.close()
+
+
+def test_external_ledger_row_can_move_from_started_to_a_terminal_status() -> None:
+    conn = _migrate()
+    conn.execute(
+        """INSERT INTO tool_ledger (
+             tool_name, fingerprint, effect, status, created_at
+           ) VALUES ('web_search', 'q', 'external', 'started', ?)""",
+        (_TS,),
+    )
+    conn.execute(
+        "UPDATE tool_ledger SET status = 'unknown',"
+        " updated_at = ? WHERE fingerprint = 'q'",
+        (_TS,),
+    )
+    assert conn.execute("SELECT status FROM tool_ledger").fetchone() == ("unknown",)
+    conn.close()
+
+
+def test_trace_prunes_in_one_transaction_roll_back_together() -> None:
+    conn = _migrate()
+    conn.execute("BEGIN")
+    schema.record_trace_prune(
+        conn,
+        run_id="run-a",
+        prune_requested_at=_TS,
+        absence_confirmed_at=_TS,
+        prune_reason="age",
+    )
+    schema.record_trace_prune(
+        conn,
+        run_id="run-b",
+        prune_requested_at=_TS,
+        absence_confirmed_at=_TS,
+        prune_reason="capacity",
+    )
+    conn.rollback()
+    assert conn.execute("SELECT COUNT(*) FROM trace_prunes").fetchone() == (0,)
+    conn.close()
+
+
+def test_record_trace_prune_stores_the_highest_priority_reason() -> None:
+    conn = _migrate()
+    schema.record_trace_prune(
+        conn,
+        run_id="run-1",
+        prune_requested_at=_TS,
+        absence_confirmed_at=_TS,
+        prune_reason=("age", "capacity", "manual"),
+    )
+    assert conn.execute("SELECT prune_reason FROM trace_prunes").fetchone() == (
+        "manual",
+    )
+    conn.close()
+
+
+def test_pick_prune_reason_takes_manual_over_disk_low_over_age_over_capacity() -> None:
+    assert (
+        schema.pick_prune_reason(("age", "manual", "capacity", "disk_low"))
+        == "manual"
+    )
+    assert schema.pick_prune_reason(("capacity", "age")) == "age"
+    assert schema.pick_prune_reason(("capacity", "disk_low")) == "disk_low"
+    assert schema.pick_prune_reason(("capacity",)) == "capacity"
+
+
 def test_record_trace_prune_rejects_unknown_reason() -> None:
     conn = _migrate()
     with pytest.raises(ValueError, match="prune_reason"):
