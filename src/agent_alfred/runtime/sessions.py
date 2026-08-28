@@ -397,9 +397,14 @@ def _has_inflight_run(
         marks = ", ".join("?" for _ in recording_failed_run_ids)
         failed_clause = f"AND runs.run_id NOT IN ({marks})\n"
         params.extend(sorted(recording_failed_run_ids))
-    beyond_clause = _runs_beyond_clause() if position is not None else ""
+    beyond_clause = ""
     if position is not None:
-        params.extend([position[0], position[0], position[1]])
+        # Named after the clause's own parameter order, so the three bindings
+        # cannot be silently transposed: the shared predicate reads the sort
+        # key twice and the tiebreaker once.
+        position_ar, position_r = position
+        beyond_clause = _runs_beyond_clause()
+        params.extend([position_ar, position_ar, position_r])
     row = conn.execute(
         sql.format(failed=failed_clause, beyond=beyond_clause), params
     ).fetchone()
@@ -507,9 +512,10 @@ def _page_run_keys(
     if position is None:
         rows = conn.execute(sql.format(keyset=""), (session_id, count)).fetchall()
     else:
+        position_ar, position_r = position
         rows = conn.execute(
             sql.format(keyset=_runs_beyond_clause()),
-            (session_id, position[0], position[0], position[1], count),
+            (session_id, position_ar, position_ar, position_r, count),
         ).fetchall()
     return [(row[0], row[1]) for row in rows]
 

@@ -250,7 +250,7 @@ class CommitBoomSink:
         del prepared, event
         raise RuntimeError("commit exploded")
 
-    def flush(self, run_id: str | None = None) -> FlushResult:
+    def flush(self, run_id: str) -> FlushResult:
         del run_id
         return BarrierFlushResult(outcome="flushed", dropped_events=0)
 
@@ -362,7 +362,7 @@ def test_sink_publishes_bundle_for_the_derived_identity(tmp_path) -> None:
     )
     try:
         _emit_one(sink, "run-abc")
-        result = sink.flush()
+        result = sink.flush(run_id="run-abc")
         assert result == BarrierFlushResult(
             outcome="flushed", dropped_events=0, detail=""
         )
@@ -392,7 +392,7 @@ def test_sink_circuit_breaks_on_identity_collision(tmp_path) -> None:
     occupied.mkdir(parents=True)
     try:
         _emit_one(sink, "run-abc")
-        result = sink.flush()
+        result = sink.flush(run_id="run-abc")
         assert result.outcome == "failed"
         assert "storage_id_collision" in result.detail
         assert (occupied / "trace.jsonl").exists() is False, "never overwrite"
@@ -446,7 +446,7 @@ def test_transient_events_never_enter_the_persistent_trace(tmp_path) -> None:
         _commit(sink, BlockDelta(attempt_id="a", index=0, text="lo"), 4, "transient")
         _commit(sink, BlockStopped(attempt_id="a", index=0), 5, "transient")
         _commit(sink, StepFinished(step_index=0), 6, "persist")
-        result = sink.flush()
+        result = sink.flush(run_id="run-policy")
         assert result.outcome == "flushed"
         assert result.dropped_events == 0, (
             "normal transient filtering is not an event loss"
@@ -471,7 +471,7 @@ def test_a_transient_only_run_publishes_no_bundle(tmp_path) -> None:
     )
     try:
         _commit(sink, BlockDelta(attempt_id="a", index=0, text="x"), 1, "transient")
-        result = sink.flush()
+        result = sink.flush(run_id="run-policy")
         assert result.outcome == "flushed"
         assert result.dropped_events == 0
     finally:
@@ -627,7 +627,7 @@ def test_partial_write_then_retryable_error_writes_one_clean_line(
     try:
         _commit(sink, RunStarted(purpose="chat", user_message=None), 1, "persist")
         _commit(sink, StepFinished(step_index=0), 2, "persist")
-        result = sink.flush()
+        result = sink.flush(run_id="run-policy")
         assert result.outcome == "flushed"
         assert result.dropped_events == 0
     finally:
@@ -659,7 +659,7 @@ def test_after_a_write_break_no_lines_follow_the_truncated_tail(
         # truncated tail: an internal bad line followed by good lines would
         # turn a damaged audit file into one that reads as complete.
         _commit(sink, StepFinished(step_index=0), 2, "persist")
-        result = sink.flush()
+        result = sink.flush(run_id="run-policy")
         assert result.outcome == "failed"
         assert result.dropped_events >= 1
         assert "write_failed" in result.detail
@@ -682,7 +682,7 @@ def test_unrecoverable_write_failure_reports_the_first_reason_once(
     sink = _utc_sink(tmp_path)
     try:
         _commit(sink, RunStarted(purpose="chat", user_message=None), 1, "persist")
-        result = sink.flush()
+        result = sink.flush(run_id="run-policy")
         assert result.outcome == "failed"
         assert result.dropped_events >= 1
         assert "write_failed" in result.detail
@@ -704,7 +704,7 @@ def test_retry_budget_exhaustion_circuit_breaks_the_run(
     sink = _utc_sink(tmp_path)
     try:
         _commit(sink, RunStarted(purpose="chat", user_message=None), 1, "persist")
-        result = sink.flush()
+        result = sink.flush(run_id="run-policy")
         assert result.outcome == "failed"
         assert "write_failed" in result.detail
     finally:
@@ -736,7 +736,7 @@ def test_a_write_failed_run_does_not_poison_the_next_run(
             "persist",
             run_id="run-one",
         )
-        first = sink.flush()
+        first = sink.flush(run_id="run-one")
         assert first.outcome == "failed"
         assert "write_failed" in first.detail
 
@@ -747,7 +747,7 @@ def test_a_write_failed_run_does_not_poison_the_next_run(
             "persist",
             run_id="run-two",
         )
-        second = sink.flush()
+        second = sink.flush(run_id="run-two")
         assert second.outcome == "flushed"
         assert second.dropped_events == 0
     finally:
@@ -802,7 +802,7 @@ def test_commit_returns_while_the_drain_is_blocked_on_disk_io(
             "other sinks publish while the drain is stalled on disk"
         )
         gate.set()
-        result = sink.flush()
+        result = sink.flush(run_id="run-policy")
         assert result.outcome == "flushed"
         assert result.dropped_events == 0
     finally:
@@ -857,7 +857,7 @@ def test_late_commit_after_the_barrier_is_rejected_without_touching_the_trace(
     sink = _utc_sink(tmp_path)
     try:
         _commit(sink, RunStarted(purpose="chat", user_message=None), 1, "persist")
-        result = sink.flush()
+        result = sink.flush(run_id="run-policy")
         assert result.outcome == "flushed"
         bundle = (
             tmp_path / "traces" / "2026-08-28" / f"123456Z-{_storage_id('run-policy')}"
@@ -870,7 +870,7 @@ def test_late_commit_after_the_barrier_is_rejected_without_touching_the_trace(
             "a late commit must not reopen or extend a published bundle"
         )
         # A second barrier after termination stays honest and quiet.
-        again = sink.flush()
+        again = sink.flush(run_id="run-policy")
         assert again.outcome == "flushed"
     finally:
         sink.close()
@@ -936,7 +936,10 @@ def test_commit_racing_the_barrier_seal_is_rejected_fail_closed(
         _commit(sink, RunStarted(purpose="chat", user_message=None), 1, "persist")
         assert first_line_reached.wait(2.0), "the drain must reach the write"
         flusher = threading.Thread(
-            target=lambda: flush_box.update(result=sink.flush()), daemon=True
+            target=lambda: flush_box.update(
+                result=sink.flush(run_id="run-policy")
+            ),
+            daemon=True,
         )
         flusher.start()
         _wait_for_queued_barrier(sink)
@@ -1058,7 +1061,10 @@ def test_close_leaves_fd_ownership_to_the_drain_and_answers_queued_barriers(
         _commit(sink, RunStarted(purpose="chat", user_message=None), 1, "persist")
         assert first_line_reached.wait(2.0), "the drain must reach the write"
         flusher = threading.Thread(
-            target=lambda: flush_box.update(result=sink.flush()), daemon=True
+            target=lambda: flush_box.update(
+                result=sink.flush(run_id="run-policy")
+            ),
+            daemon=True,
         )
         flusher.start()
         _wait_for_queued_barrier(sink)
@@ -1089,10 +1095,10 @@ def test_flush_after_close_reports_an_honest_reason(tmp_path) -> None:
     _commit(sink, RunStarted(purpose="chat", user_message=None), 1, "persist")
     sink.close()
     try:
-        result = sink.flush()
+        result = sink.flush(run_id="run-policy")
         assert result.outcome == "failed"
         assert result.detail == "sink_stopping", result.detail
-        again = sink.flush()
+        again = sink.flush(run_id="run-policy")
         assert again.detail == "sink_stopping"
     finally:
         sink.close()
@@ -1128,7 +1134,7 @@ def test_queue_overflow_drop_is_reported_by_the_run_s_barrier(
             sink, StepFinished(step_index=0), 2 + _QUEUE_LIMIT, "persist"
         )
         gate.set()
-        result = sink.flush()
+        result = sink.flush(run_id="run-policy")
         assert result.outcome == "failed"
         assert "queue_overflow" in result.detail, result.detail
         assert result.dropped_events >= 1
@@ -1141,3 +1147,79 @@ def test_queue_overflow_drop_is_reported_by_the_run_s_barrier(
     )
     names = [line["payload_name"] for line in _trace_lines(bundle)]
     assert names == ["run.started"], "the overflowed event never reaches disk"
+
+
+# --- re-review round 4: an exiting drain owns every barrier it holds --------
+
+
+def test_a_crashing_drain_answers_its_queued_barrier_and_releases_the_fd(
+    tmp_path, monkeypatch
+) -> None:
+    """The drain is the only thread that can answer a barrier, so its exit --
+    including the crash unwind -- must answer the ones still queued with an
+    honest reason. Left alone they hang for the whole flush timeout and then
+    report a timeout they never hit, which reads as "the disk was slow" when
+    the truth is "the writer died"."""
+    sink = _utc_sink(tmp_path)
+    reached = threading.Event()
+    gate = threading.Event()
+    real_write_item = sink._write_item
+
+    def crashing_write_item(item):
+        # The real item runs first, so the bundle is published and the drain
+        # owns its trace fd by the time the injected crash kills it.
+        real_write_item(item)
+        reached.set()
+        assert gate.wait(5.0), "the test must release the drain"
+        # AssertionError is the one exception the drain re-raises by design:
+        # the enqueue/retire invariant broke and a silent drop is worse than
+        # a dead writer.
+        raise AssertionError("injected drain crash")
+
+    sink._write_item = crashing_write_item
+    flush_box: dict[str, FlushResult] = {}
+    try:
+        _commit(sink, RunStarted(purpose="chat", user_message=None), 1, "persist")
+        assert reached.wait(2.0), "the drain must reach the write"
+        # Only instrument os.close now: the bundle's fd is already open, so
+        # the first close recorded for it is the unwind's, not the staging
+        # close that handed the number back for reuse.
+        real_close = os.close
+        closed: list[int] = []
+
+        def counting_close(fd):
+            closed.append(fd)
+            return real_close(fd)
+
+        monkeypatch.setattr(os, "close", counting_close)
+        trace_fd = sink._bundles["run-policy"].trace_fd
+        assert trace_fd is not None, "the published bundle owns an fd"
+
+        flusher = threading.Thread(
+            target=lambda: flush_box.update(
+                result=sink.flush(run_id="run-policy")
+            ),
+            daemon=True,
+        )
+        flusher.start()
+        _wait_for_queued_barrier(sink)
+        gate.set()  # the crash happens with the barrier already queued
+
+        flusher.join(5.0)
+        assert not flusher.is_alive(), (
+            "the barrier waiter was left hanging for the full flush timeout "
+            "by a drain that already exited"
+        )
+        result = flush_box["result"]
+        assert result.outcome == "failed"
+        assert "flush_timeout" not in result.detail, (
+            f"the waiter never timed out: {result.detail}"
+        )
+        assert result.detail == "sink_failed", result.detail
+
+        sink._drain.join(2.0)
+        assert not sink._drain.is_alive(), "the crashed drain must exit"
+        assert trace_fd in closed, "the crash unwind releases the fd it owns"
+    finally:
+        gate.set()
+        sink.close()

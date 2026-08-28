@@ -94,6 +94,6 @@ def test_fanout_assigns_seq_in_commit_order() -> None:
     assert [event.seq for event in sink.events] == [1, 2]
     # No flush_at_run_end sink exists, so the barrier must not claim the trace
     # is complete -- durability is nobody's promise here.
-    incomplete, reason = fanout.flush_barrier()
+    incomplete, reason = fanout.flush_barrier("r")
     assert incomplete is True
     assert reason is not None and "no flush_at_run_end sink" in reason

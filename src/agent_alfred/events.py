@@ -220,9 +220,12 @@ class EventSink(Protocol):
 
     def commit(self, prepared: object, event: SequencedEvent) -> None: ...
 
-    def flush(self, run_id: str | None = None) -> FlushResult:
+    def flush(self, run_id: str) -> FlushResult:
         """Settle this sink. ``run_id`` scopes a durability-critical sink's
-        barrier to the finishing Run; sinks that do not scope may ignore it."""
+        barrier to the finishing Run; sinks that do not scope may ignore it.
+        It is always supplied: the production barrier knows which Run is
+        finishing, and a barrier that silently settles every Run at once is
+        not a question anybody is allowed to ask."""
         ...
 
     def close(self) -> None: ...
@@ -244,7 +247,7 @@ class CapturingSink:
         del prepared
         self.events.append(event)
 
-    def flush(self, run_id: str | None = None) -> FlushResult:
+    def flush(self, run_id: str) -> FlushResult:
         del run_id
         if self.flush_at_run_end:
             return BarrierFlushResult(outcome="flushed", dropped_events=0)
@@ -416,7 +419,7 @@ class FanOutSink:
             reasons = self._persist_lost.setdefault(run_id, [])
             reasons.append(f"run.finished publish failed: {type(exc).__name__}")
 
-    def flush_barrier(self, run_id: str | None = None) -> tuple[bool, str | None]:
+    def flush_barrier(self, run_id: str) -> tuple[bool, str | None]:
         """Wait on flush_at_run_end sinks. Missing/failed/exception => incomplete."""
         reasons: list[str] = []
         if run_id is not None:

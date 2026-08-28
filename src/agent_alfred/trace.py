@@ -26,6 +26,10 @@ Ownership rules that keep ADR-0015 true:
 - ``close`` never touches an fd: after a timed-out join the drain may be
   inside ``os.write`` on one. It answers still-queued barriers so no flusher
   hangs, and the drain releases the fds when it unwinds.
+- The drain answers the barriers it still holds on **every** exit, including
+  the unwind after a crash. It is the only thread that can answer one, so a
+  crash that leaves a barrier queued would otherwise hang its waiter for the
+  whole flush timeout and then report a timeout that never happened.
 """
 
 from __future__ import annotations
@@ -69,6 +73,12 @@ REASON_FLUSH_TIMEOUT = "flush_timeout"
 REASON_QUEUE_OVERFLOW = "queue_overflow"
 REASON_SINK_STOPPING = "sink_stopping"
 REASON_SINK_CLOSED = "sink_closed"
+# The drain exited still holding a barrier it never reached: the writer is
+# gone, not slow. Kept distinct from ``sink_closed`` (close() was called and
+# the queue is deliberately abandoned) and from ``flush_timeout`` (the drain
+# was given the whole budget and used it up) -- a flusher told "timeout"
+# here would go looking for a slow disk that is not the problem.
+REASON_SINK_FAILED = "sink_failed"
 
 _FLUSH_TIMEOUT_S = 30.0
 # How long close() waits for a drain that may be stuck on a slow disk. The
@@ -199,15 +209,36 @@ def _fsync_dir(path: Path) -> None:
         os.close(fd)
 
 
-def _advance_drop_locked(bundle: _RunBundle) -> None:
-    """The one place a dropped event is counted. Caller holds bundle.lock."""
-    bundle.dropped += 1
+def _exception_detail(reason: str, exc: BaseException) -> str:
+    """The one shape an exception may leave in a barrier's detail: the
+    closed-set reason plus the exception's type name. Never its text -- that
+    may carry paths or payload fragments the closed set exists to keep out."""
+    return f"{reason} {type(exc).__name__}"
+
+
+def _take_fd(bundle: _RunBundle) -> int | None:
+    """Drain-thread only: claim the bundle's fd, so the bundle no longer
+    references the one fd the drain is about to close. Callers may hold the
+    sink wake lock: it is only ever taken before this one, never after."""
+    with bundle.lock:
+        fd = bundle.trace_fd
+        bundle.trace_fd = None
+    return fd
+
+
+def _close_fds(fds: list[int]) -> None:
+    """Close every fd outside every lock (ADR-0015). A second close is not a
+    failure: the fd is already reclaimed and the drain owned it either way."""
+    for fd in fds:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
 
 
 @dataclass
 class _RunBundle:
     run_id: str
-    published: bool = False
     run_dir: Path | None = None
     trace_fd: int | None = None
     dropped: int = 0
@@ -220,6 +251,42 @@ class _RunBundle:
     # drain thread -- never across open/rename/write/fsync/close. Lock order:
     # the sink wake lock may be held while taking this one, never the reverse.
     lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
+
+    def drop_if_broken(self) -> str | None:
+        """Count one event as dropped when this Run is already broken and
+        return the reason. Callers may hold the sink wake lock. The breaker
+        state lives here, next to the lock that guards it, rather than on the
+        sink that only ever reaches through to these fields."""
+        with self.lock:
+            if self.broken is not None:
+                self.dropped += 1
+            return self.broken
+
+    def mark_broken(self, reason: str, detail: str | None = None) -> None:
+        """Circuit-break this Run (ADR-0019). The first cause wins; later
+        failures only advance the drop counter the barrier reports."""
+        with self.lock:
+            if self.first_error is None:
+                self.first_error = detail if detail else reason
+            if self.broken is None:
+                self.broken = reason
+            self.dropped += 1
+
+    def mark_broken_with_exception(self, reason: str, exc: BaseException) -> None:
+        self.mark_broken(reason, _exception_detail(reason, exc))
+
+
+@dataclass(frozen=True)
+class _WriteItem:
+    """One queued persist event: which Run it belongs to, the payload the
+    prepare stage serialized lock-free, and the sequenced event whose envelope
+    the line is composed from. The three are only ever produced, queued, and
+    written together, so they travel as one item instead of a positional
+    triple whose slots the drain would have to remember."""
+
+    run_id: str
+    prepared: str
+    event: SequencedEvent
 
 
 @dataclass
@@ -237,6 +304,15 @@ class _WriteBarrier:
     dropped: int = 0
     failed: str | None = None
 
+    def answer(self, reason: str | None, dropped: int = 0) -> None:
+        """Answer every waiter once. The count and the reason are written
+        before the event is set, so a thread released by ``done`` sees them;
+        every caller answers a given barrier exactly once and skips the ones
+        already answered."""
+        self.failed = reason
+        self.dropped = dropped
+        self.done.set()
+
 
 class RunBundleTraceSink:
     """The production EventSink whose flush the Run barrier waits on."""
@@ -252,9 +328,7 @@ class RunBundleTraceSink:
         # Lightweight, recyclable termination record: run_ids whose final
         # barrier retired their bundle. Only strings survive.
         self._terminated: set[str] = set()
-        self._queue: deque[_WriteBarrier | tuple[str, str, SequencedEvent]] = (
-            deque()
-        )
+        self._queue: deque[_WriteBarrier | _WriteItem] = deque()
         self._wake = threading.Condition()
         self._stopping = False
         # Fail fast at assembly: an unusable traces root must be discovered
@@ -297,19 +371,18 @@ class RunBundleTraceSink:
             # this same lock when the barrier is enqueued) makes the check
             # atomic with the drain's retire, so an event can never be
             # enqueued behind the barrier that retires its bundle.
-            if self._stopping or run_id in self._terminated:
+            bundle = self._bundles.get(run_id)
+            sealed = bundle is not None and bundle.sealed
+            if self._stopping or run_id in self._terminated or sealed:
+                # Both refusals are the same fact -- the Run's final barrier
+                # is already settled -- so they say it once.
                 raise LateCommitRejected(
                     "late commit after the run's final barrier"
                 )
-            bundle = self._bundles.get(run_id)
             if bundle is None:
                 bundle = _RunBundle(run_id=run_id)
                 self._bundles[run_id] = bundle
-            elif bundle.sealed:
-                raise LateCommitRejected(
-                    "late commit after the run's final barrier"
-                )
-            if self._drop_if_broken(bundle) is not None:
+            if bundle.drop_if_broken() is not None:
                 # Circuit-broken: the first cause is kept; later events only
                 # advance the drop counter the Run's barrier reports.
                 return
@@ -318,39 +391,12 @@ class RunBundleTraceSink:
                 # trace is circuit-broken, never blocked on a slow drain. The
                 # break lands inside this same critical section, so a barrier
                 # enqueued later always reports the drop.
-                self._break(bundle, REASON_QUEUE_OVERFLOW)
+                bundle.mark_broken(REASON_QUEUE_OVERFLOW)
             else:
-                self._queue.append((run_id, prepared, event))
+                self._queue.append(
+                    _WriteItem(run_id=run_id, prepared=prepared, event=event)
+                )
             self._wake.notify_all()
-
-    def _drop_if_broken(self, bundle: _RunBundle) -> str | None:
-        """Read the circuit-breaker under its writer's lock and count the
-        event as dropped when the Run is already broken. Returns the reason.
-        Callers may hold the wake lock: it is only ever taken before this
-        one, never after."""
-        with bundle.lock:
-            if bundle.broken is not None:
-                _advance_drop_locked(bundle)
-            return bundle.broken
-
-    def _break(
-        self, bundle: _RunBundle, reason: str, detail: str | None = None
-    ) -> None:
-        """Circuit-break one Run (ADR-0019). The first cause wins; later
-        failures only advance the drop counter."""
-        with bundle.lock:
-            if bundle.first_error is None:
-                bundle.first_error = detail if detail else reason
-            if bundle.broken is None:
-                bundle.broken = reason
-            _advance_drop_locked(bundle)
-
-    def _break_write_failed(self, bundle: _RunBundle, exc: Exception) -> None:
-        self._break(
-            bundle,
-            REASON_WRITE_FAILED,
-            f"{REASON_WRITE_FAILED} {type(exc).__name__}",
-        )
 
     # -- drain thread: the sole owner of fds and filesystem calls ----------
 
@@ -371,9 +417,8 @@ class RunBundleTraceSink:
                         continue
                     self._process_barrier(item)
                     continue
-                run_id, prepared, event = item
                 try:
-                    self._write_item(run_id, prepared, event)
+                    self._write_item(item)
                 except AssertionError:
                     # The enqueue/retire invariant broke; a silent drop here
                     # is exactly what the barrier seal exists to prevent.
@@ -386,15 +431,25 @@ class RunBundleTraceSink:
                     # stalling every later barrier. The reason keeps only the
                     # type name.
                     with self._wake:
-                        bundle = self._bundles.get(run_id)
+                        bundle = self._bundles.get(item.run_id)
                     if bundle is not None:
-                        self._break_write_failed(bundle, exc)
+                        bundle.mark_broken_with_exception(REASON_WRITE_FAILED, exc)
         finally:
+            # The drain is the only thread that can answer a barrier, so its
+            # unwind answers the ones it still holds -- on a crash as much as
+            # on a clean stop. Otherwise their waiters hang for the whole
+            # flush budget and then report a timeout that never happened,
+            # which reads as a slow disk when the truth is a dead writer.
+            # Nothing holds a lock here: every raise inside the loop escapes
+            # from _write_item, which runs outside both locks.
+            with self._wake:
+                self._answer_queued_barriers_locked(REASON_SINK_FAILED)
             # The drain is the sole owner of every fd for the thread's whole
             # life, including its unwind: only it ever closes one.
             self._release_remaining_fds()
 
-    def _write_item(self, run_id: str, prepared: str, event: SequencedEvent) -> None:
+    def _write_item(self, item: _WriteItem) -> None:
+        run_id = item.run_id
         with self._wake:
             bundle = self._bundles.get(run_id)
         if bundle is None:
@@ -403,7 +458,7 @@ class RunBundleTraceSink:
             # it before that barrier retires the bundle. A silent drop here
             # would be invisible to the Run's FlushResult, so fail loudly.
             raise AssertionError(f"trace item for unknown bundle {run_id!r}")
-        if self._drop_if_broken(bundle) is not None:
+        if bundle.drop_if_broken() is not None:
             return  # the Run is broken; the drop was counted under its lock
         with bundle.lock:
             fd = bundle.trace_fd
@@ -414,12 +469,12 @@ class RunBundleTraceSink:
                 fd = bundle.trace_fd
             if broken is not None:
                 return  # the failed publish already counted this event
-        line = _compose_line(prepared, event) + "\n"
+        line = _compose_line(item.prepared, item.event) + "\n"
         data = line.encode("utf-8")
         try:
             _write_all(fd, data)  # one byte offset across the item's retries
         except Exception as exc:
-            self._break_write_failed(bundle, exc)
+            bundle.mark_broken_with_exception(REASON_WRITE_FAILED, exc)
 
     def _publish(self, bundle: _RunBundle) -> None:
         run_id = bundle.run_id
@@ -431,11 +486,11 @@ class RunBundleTraceSink:
             target = date_dir / dir_name
             staging = date_dir / f"{_STAGING_PREFIX}{storage_id}"
             if target.exists():
-                self._break(bundle, REASON_ID_COLLISION)
+                bundle.mark_broken(REASON_ID_COLLISION)
                 return
             if staging.exists():
                 # A leftover from a crashed publish is never reused (ADR-0017).
-                self._break(bundle, REASON_STAGING_LEFTOVER)
+                bundle.mark_broken(REASON_STAGING_LEFTOVER)
                 return
             date_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
             date_dir.chmod(0o700)
@@ -477,17 +532,12 @@ class RunBundleTraceSink:
             bundle.trace_fd = os.open(
                 target / "trace.jsonl", os.O_WRONLY | os.O_APPEND, 0o600
             )
-            bundle.published = True
         except Exception as exc:
-            self._break(
-                bundle,
-                REASON_PUBLISH_FAILED,
-                f"{REASON_PUBLISH_FAILED} {type(exc).__name__}",
-            )
+            bundle.mark_broken_with_exception(REASON_PUBLISH_FAILED, exc)
 
     # -- flush barrier (ADR-0019) ------------------------------------------
 
-    def flush(self, run_id: str | None = None) -> FlushResult:
+    def flush(self, run_id: str) -> FlushResult:
         with self._wake:
             if self._stopping:
                 return BarrierFlushResult(
@@ -495,14 +545,11 @@ class RunBundleTraceSink:
                     dropped_events=0,
                     detail=REASON_SINK_STOPPING,
                 )
-            if run_id is None:
-                # Unscoped legacy barrier: every bundle still active.
-                # Production always scopes (the FanOut passes the finishing
-                # Run), so single-slot admission is not load-bearing here.
-                snapshot = tuple(self._bundles.values())
-            else:
-                bundle = self._bundles.get(run_id)
-                snapshot = () if bundle is None else (bundle,)
+            # The FanOut always names the finishing Run, so the unscoped
+            # "settle every bundle at once" shape is gone: a barrier is
+            # always somebody's, and it retires exactly that somebody.
+            bundle = self._bundles.get(run_id)
+            snapshot = () if bundle is None else (bundle,)
             barrier = _WriteBarrier(bundles=snapshot)
             for bundle in snapshot:
                 # Seal at enqueue, under the same lock commits need: any
@@ -530,7 +577,10 @@ class RunBundleTraceSink:
     def _process_barrier(self, barrier: _WriteBarrier) -> None:
         details: list[str] = []
         dropped = 0
-        to_retire: list[tuple[_RunBundle, int | None, Path | None]] = []
+        # (bundle, the fd this barrier closes. None for a broken Run: its
+        # bundle is retired without closing the fd, so nothing closes it
+        # afterwards -- the OS reclaims it at process exit.)
+        to_retire: list[tuple[_RunBundle, int | None]] = []
         for bundle in barrier.bundles:
             with bundle.lock:
                 broken = bundle.broken
@@ -540,33 +590,31 @@ class RunBundleTraceSink:
                 run_dir = bundle.run_dir
             if broken is not None:
                 details.append(first_error or broken)
-                to_retire.append((bundle, None, None))
+                to_retire.append((bundle, None))
                 continue
             if fd is not None and run_dir is not None:
                 error = self._fsync_bundle(fd, run_dir)
                 if error is not None:
                     details.append(error)
-            to_retire.append((bundle, fd, run_dir))
+            to_retire.append((bundle, fd))
         # The writes are fsynced; now the drain releases each Run's fd and
         # retires the bundle, so nothing is held until sink.close().
         closed_fds: list[int] = []
         with self._wake:
-            for bundle, fd, _run_dir in to_retire:
+            for bundle, fd in to_retire:
                 self._bundles.pop(bundle.run_id, None)
                 self._terminated.add(bundle.run_id)
                 if fd is not None:
-                    bundle.trace_fd = None
-                    closed_fds.append(fd)
-        for fd in closed_fds:
-            try:
-                os.close(fd)
-            except OSError:
-                pass
-        barrier.dropped = dropped
-        barrier.failed = (
-            "; ".join(dict.fromkeys(details))[:200] if details else None
+                    # Claimed under the bundle's lock (wake -> bundle.lock
+                    # only), so the bundle stops referencing the fd the drain
+                    # is about to close.
+                    claimed = _take_fd(bundle)
+                    if claimed is not None:
+                        closed_fds.append(claimed)
+        _close_fds(closed_fds)
+        barrier.answer(
+            "; ".join(dict.fromkeys(details))[:200] if details else None, dropped
         )
-        barrier.done.set()
 
     def _fsync_bundle(self, fd: int, run_dir: Path) -> str | None:
         # ADR-0019 order: artifact files -> trace.jsonl -> artifacts/ -> Run dir.
@@ -576,7 +624,7 @@ class RunBundleTraceSink:
             _fsync_dir(run_dir)
             return None
         except Exception as exc:
-            return f"{REASON_FSYNC_FAILED} {type(exc).__name__}"
+            return _exception_detail(REASON_FSYNC_FAILED, exc)
 
     def close(self) -> None:
         with self._wake:
@@ -587,10 +635,7 @@ class RunBundleTraceSink:
                 # now with the honest reason. The drain skips cancelled
                 # barriers when it reaches them; queued events are still
                 # written -- the queue and the fds stay with the drain.
-                for item in self._queue:
-                    if isinstance(item, _WriteBarrier) and not item.done.is_set():
-                        item.failed = REASON_SINK_CLOSED
-                        item.done.set()
+                self._answer_queued_barriers_locked(REASON_SINK_CLOSED)
                 self._wake.notify_all()
         self._drain.join(timeout=_CLOSE_JOIN_TIMEOUT_S)
         # No fd is closed here, even after a timed-out join: the drain thread
@@ -598,20 +643,20 @@ class RunBundleTraceSink:
         # right now. It closes what remains when it unwinds; the OS reclaims
         # anything else at process exit.
 
+    def _answer_queued_barriers_locked(self, reason: str) -> None:
+        """Answer every barrier still in the queue that nobody has answered
+        yet, and leave them in place: the drain skips an answered barrier
+        when it reaches one. Caller holds the wake lock. Used wherever the
+        only thread that could answer them is going away -- close(), and the
+        drain's own unwind."""
+        for item in self._queue:
+            if isinstance(item, _WriteBarrier) and not item.done.is_set():
+                item.answer(reason)
+
     def _release_remaining_fds(self) -> None:
         """Drain-thread unwind: close what no barrier retired."""
         with self._wake:
             bundles = list(self._bundles.values())
             self._bundles.clear()
-        closed_fds: list[int] = []
-        for bundle in bundles:
-            with bundle.lock:
-                fd = bundle.trace_fd
-                bundle.trace_fd = None
-            if fd is not None:
-                closed_fds.append(fd)
-        for fd in closed_fds:
-            try:
-                os.close(fd)
-            except OSError:
-                pass
+        taken = [_take_fd(bundle) for bundle in bundles]
+        _close_fds([fd for fd in taken if fd is not None])

@@ -124,7 +124,7 @@ class UnavailableTraceSink:
         del prepared, event
         self._dropped += 1
 
-    def flush(self, run_id: str | None = None) -> BarrierFlushResult:
+    def flush(self, run_id: str) -> BarrierFlushResult:
         del run_id
         return BarrierFlushResult(
             outcome="failed", dropped_events=self._dropped, detail=self._detail
