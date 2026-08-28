@@ -33,7 +33,7 @@ dev = [
 ]
 
 [project.scripts]
-agent-alfred = "agent_alfred.cli:main"
+agent-alfred = "agent_alfred.gateway.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/agent_alfred"]

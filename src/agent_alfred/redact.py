@@ -8,7 +8,20 @@ from dataclasses import fields, is_dataclass, replace
 from decimal import Decimal
 from typing import Any
 
-from agent_alfred.events import UnsequencedEvent
+from agent_alfred.events import (
+    AttemptAborted,
+    AttemptCommitted,
+    AttemptStarted,
+    BlockDelta,
+    BlockStarted,
+    BlockStopped,
+    Notice,
+    RunFinished,
+    RunStarted,
+    StepFinished,
+    StepStarted,
+    UnsequencedEvent,
+)
 from agent_alfred.messages import (
     Message,
     TextBlock,
@@ -27,6 +40,20 @@ _SENSITIVE_KEYS = frozenset(
         "secret",
         "access_token",
     }
+)
+
+_EVENT_PAYLOAD_TYPES = (
+    RunStarted,
+    RunFinished,
+    StepStarted,
+    StepFinished,
+    AttemptStarted,
+    AttemptCommitted,
+    AttemptAborted,
+    BlockStarted,
+    BlockDelta,
+    BlockStopped,
+    Notice,
 )
 
 
@@ -53,6 +80,8 @@ class Redactor:
         return text
 
     def redact_jsonable(self, value: Any) -> Any:
+        if value is None or isinstance(value, (int, float, bool, Decimal)):
+            return value
         if isinstance(value, str):
             return self.redact_text(value)
         if isinstance(value, Mapping):
@@ -67,9 +96,13 @@ class Redactor:
             return out
         if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
             return [self.redact_jsonable(item) for item in value]
-        return value
+        raise TypeError(f"unredactable {type(value).__name__}")
 
     def redact(self, event: UnsequencedEvent) -> UnsequencedEvent:
+        if not isinstance(event.payload, _EVENT_PAYLOAD_TYPES):
+            raise TypeError(
+                f"unknown event payload {type(event.payload).__name__}"
+            )
         payload = self._redact_value(event.payload)
         if payload is event.payload:
             return event
@@ -121,13 +154,23 @@ class Redactor:
                 if field.name in ("name", "trace_policy"):
                     continue
                 current = getattr(value, field.name)
-                redacted = self._redact_value(current)
+                if field.name.lower() in _SENSITIVE_KEYS:
+                    redacted = "***"
+                else:
+                    redacted = self._redact_value(current)
                 if redacted != current:
                     updates[field.name] = redacted
             return replace(value, **updates) if updates else value
         if isinstance(value, Mapping):
             return self.redact_jsonable(value)
         if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+            if (
+                isinstance(value, tuple)
+                and len(value) == 2
+                and isinstance(value[0], str)
+                and value[0].lower() in _SENSITIVE_KEYS
+            ):
+                return (value[0], "***")
             items = [self._redact_value(item) for item in value]
             if isinstance(value, tuple):
                 return tuple(items)

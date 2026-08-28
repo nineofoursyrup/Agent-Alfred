@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import time
 import uuid
+from copy import copy
 from typing import Any
 
 from agent_alfred.events import (
@@ -22,6 +22,7 @@ from agent_alfred.model import (
     ModelRequest,
     ModelResponse,
     ModelResult,
+    Retryable,
     StopReason,
     Usage,
 )
@@ -30,10 +31,24 @@ from agent_alfred.model import (
 class OpenAICompatibleAdapter:
     """Wire encode/decode and attempt identity. No clock, retry, or fallback."""
 
-    def __init__(self, *, client: Any, model: ModelRef, stream: bool = False):
+    def __init__(
+        self,
+        *,
+        client: Any,
+        model: ModelRef,
+        stream: bool = False,
+        attempt_timeout_s: float | None = None,
+    ):
         self._client = client
         self._model = model
         self._stream = stream
+        self._attempt_timeout_s = attempt_timeout_s
+
+    def with_attempt_timeout(self, timeout_s: float) -> OpenAICompatibleAdapter:
+        """Return a wire-equivalent Adapter with a policy-computed timeout."""
+        bound = copy(self)
+        bound._attempt_timeout_s = timeout_s
+        return bound
 
     def respond(
         self,
@@ -50,6 +65,8 @@ class OpenAICompatibleAdapter:
             "messages": payload,
             "max_tokens": request.max_tokens,
         }
+        if self._attempt_timeout_s is not None:
+            kwargs["timeout"] = self._attempt_timeout_s
         if self._stream:
             return self._respond_stream(attempt_id, request, kwargs, events)
         return self._respond_once(attempt_id, request, kwargs, events)
@@ -61,11 +78,13 @@ class OpenAICompatibleAdapter:
         kwargs: dict[str, Any],
         events: Any | None,
     ) -> ModelResult:
-        started = time.monotonic()
         _emit(
             events,
             AttemptStarted(
-                attempt_id=attempt_id, model=request.model, streamed=False
+                attempt_id=attempt_id,
+                model=request.model,
+                streamed=False,
+                timeout_ms=_timeout_ms(self._attempt_timeout_s),
             ),
             attempt_id,
         )
@@ -79,17 +98,35 @@ class OpenAICompatibleAdapter:
                     attempt_id=attempt_id,
                     partial=False,
                     error=error,
-                    duration_ms=_duration_ms(started),
+                    duration_ms=0,
                 ),
                 attempt_id,
             )
             return _aborted(attempt_id, error, streamed=False)
-        choice = response.choices[0]
-        text = choice.message.content or ""
         usage = _usage_from_sdk(getattr(response, "usage", None))
-        blocks = (TextBlock(text),)
-        stop = _stop_reason(getattr(choice, "finish_reason", None))
-        duration = _duration_ms(started)
+        try:
+            choice = response.choices[0]
+            text = choice.message.content or ""
+            blocks = (TextBlock(text),)
+            stop = _stop_reason(getattr(choice, "finish_reason", None))
+        except Exception as exc:
+            error = _error_from_exc(
+                attempt_id, exc, retryable=False, code="invalid_response"
+            )
+            _emit(
+                events,
+                AttemptAborted(
+                    attempt_id=attempt_id,
+                    partial=False,
+                    usage=usage,
+                    error=error,
+                    duration_ms=0,
+                ),
+                attempt_id,
+            )
+            return _aborted(
+                attempt_id, error, streamed=False, usage=usage
+            )
         _emit(
             events,
             AttemptCommitted(
@@ -97,7 +134,7 @@ class OpenAICompatibleAdapter:
                 blocks=blocks,
                 stop_reason=stop,
                 usage=usage,
-                duration_ms=duration,
+                duration_ms=0,
             ),
             attempt_id,
         )
@@ -123,11 +160,13 @@ class OpenAICompatibleAdapter:
         kwargs: dict[str, Any],
         events: Any | None,
     ) -> ModelResult:
-        started = time.monotonic()
         _emit(
             events,
             AttemptStarted(
-                attempt_id=attempt_id, model=request.model, streamed=True
+                attempt_id=attempt_id,
+                model=request.model,
+                streamed=True,
+                timeout_ms=_timeout_ms(self._attempt_timeout_s),
             ),
             attempt_id,
         )
@@ -143,7 +182,7 @@ class OpenAICompatibleAdapter:
                     attempt_id=attempt_id,
                     partial=False,
                     error=error,
-                    duration_ms=_duration_ms(started),
+                    duration_ms=0,
                 ),
                 attempt_id,
             )
@@ -188,7 +227,7 @@ class OpenAICompatibleAdapter:
                 if reason:
                     finish = reason
         except Exception as exc:
-            error = _error_from_exc(attempt_id, exc)
+            error = _stream_error_from_exc(attempt_id, exc)
             blocks = _partial_blocks(text_parts)
             if block_open:
                 _emit(
@@ -204,7 +243,7 @@ class OpenAICompatibleAdapter:
                     blocks=blocks,
                     usage=usage,
                     error=error,
-                    duration_ms=_duration_ms(started),
+                    duration_ms=0,
                 ),
                 attempt_id,
             )
@@ -232,7 +271,7 @@ class OpenAICompatibleAdapter:
                     blocks=blocks,
                     usage=usage,
                     error=error,
-                    duration_ms=_duration_ms(started),
+                    duration_ms=0,
                 ),
                 attempt_id,
             )
@@ -243,7 +282,6 @@ class OpenAICompatibleAdapter:
             )
         blocks = (TextBlock("".join(text_parts)),)
         stop = _stop_reason(finish)
-        duration = _duration_ms(started)
         _emit(
             events,
             AttemptCommitted(
@@ -251,7 +289,7 @@ class OpenAICompatibleAdapter:
                 blocks=blocks,
                 stop_reason=stop,
                 usage=usage,
-                duration_ms=duration,
+                duration_ms=0,
             ),
             attempt_id,
         )
@@ -281,8 +319,10 @@ def _emit(events: Any | None, payload: object, attempt_id: str) -> None:
     emit(payload)
 
 
-def _duration_ms(started: float) -> int:
-    return max(0, int((time.monotonic() - started) * 1000))
+def _timeout_ms(timeout_s: float | None) -> int | None:
+    if timeout_s is None:
+        return None
+    return max(0, int(timeout_s * 1000))
 
 
 def _partial_blocks(parts: list[str]) -> tuple[TextBlock, ...]:
@@ -291,13 +331,34 @@ def _partial_blocks(parts: list[str]) -> tuple[TextBlock, ...]:
     return (TextBlock("".join(parts)),)
 
 
-def _error_from_exc(attempt_id: str, exc: BaseException) -> ModelError:
+def _error_from_exc(
+    attempt_id: str,
+    exc: BaseException,
+    *,
+    retryable: Retryable = "unknown",
+    code: str | None = None,
+) -> ModelError:
     return ModelError(
-        retryable="unknown",
+        retryable=retryable,
         status_code=getattr(exc, "status_code", None),
         body_excerpt=str(exc)[:500],
         attempt_id=attempt_id,
+        code=code,
     )
+
+
+def _stream_error_from_exc(
+    attempt_id: str, exc: BaseException
+) -> ModelError:
+    if isinstance(exc, (AttributeError, IndexError, KeyError, TypeError, ValueError)):
+        return _error_from_exc(
+            attempt_id, exc, retryable=False, code="invalid_response"
+        )
+    if getattr(exc, "status_code", None) is None:
+        return _error_from_exc(
+            attempt_id, exc, retryable=True, code="incomplete_stream"
+        )
+    return _error_from_exc(attempt_id, exc)
 
 
 def _aborted(

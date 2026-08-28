@@ -13,14 +13,21 @@ from agent_alfred.outcomes import RunOutcome
 
 TracePolicy = Literal["transient", "persist"]
 NoticeCode = Literal[
-    "replay_gap",
-    "deltas_dropped",
     "trace_incomplete",
     "sink_disabled",
     "redaction_failed",
     "model_support_flipped",
 ]
 NoticeLevel = Literal["info", "warning", "error"]
+
+_DOMAIN_NOTICE_CODES = frozenset(
+    {
+        "trace_incomplete",
+        "sink_disabled",
+        "redaction_failed",
+        "model_support_flipped",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -98,6 +105,10 @@ class Notice:
     code: NoticeCode = "sink_disabled"
     detail: tuple[tuple[str, str], ...] = ()
     evidence: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.code not in _DOMAIN_NOTICE_CODES:
+            raise ValueError(f"not a domain notice code: {self.code}")
 
 
 @dataclass(frozen=True)
@@ -279,22 +290,12 @@ class FanOutSink:
             trace_policy=trace_policy,
             replayable=replayable_for(trace_policy),
         )
-        redact_failed = False
         if self._redactor is not None:
             try:
                 unsequenced = self._redactor.redact(unsequenced)
             except Exception:
                 unsequenced = _fail_closed_event(unsequenced)
-                redact_failed = True
-        sequenced = self._publish(unsequenced, notify_disabled=True)
-        if redact_failed:
-            self._emit_notice(
-                envelope,
-                code="redaction_failed",
-                level="error",
-                detail=(),
-            )
-        return sequenced
+        return self._publish(unsequenced, notify_disabled=True)
 
     def _bound_envelope(self, payload: EventPayload) -> EventEnvelope:
         origin = self._origin
@@ -448,21 +449,11 @@ class FanOutSink:
 
 
 def _fail_closed_event(event: UnsequencedEvent) -> UnsequencedEvent:
-    payload = event.payload
-    if isinstance(payload, RunStarted):
-        payload = replace(payload, user_message=None)
-    elif isinstance(payload, RunFinished):
-        payload = replace(payload, reply=None, error="redaction_failed")
-    elif isinstance(payload, StepStarted):
-        payload = replace(payload, system=None)
-    elif isinstance(payload, AttemptCommitted):
-        payload = replace(payload, blocks=(), usage=None)
-    elif isinstance(payload, AttemptAborted):
-        payload = replace(
-            payload, blocks=(), error=None, unparsed_tool_arguments=()
-        )
-    elif isinstance(payload, BlockDelta):
-        payload = replace(payload, text="")
-    elif isinstance(payload, Notice):
-        payload = replace(payload, evidence=None, detail=())
-    return replace(event, payload=payload)
+    return replace(
+        event,
+        payload=Notice(
+            level="error", code="redaction_failed", detail=(), evidence=None
+        ),
+        trace_policy="persist",
+        replayable=True,
+    )

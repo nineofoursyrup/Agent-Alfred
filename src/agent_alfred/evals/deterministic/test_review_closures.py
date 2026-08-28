@@ -9,7 +9,11 @@ from __future__ import annotations
 import inspect
 import json
 import sqlite3
+import stat
+from dataclasses import dataclass
 from types import SimpleNamespace
+
+import pytest
 
 from agent_alfred import schema
 from agent_alfred.clock import FakeClock
@@ -18,6 +22,7 @@ from agent_alfred.events import (
     CapturingSink,
     FanOutSink,
     FlushResult,
+    Notice,
     SequencedEvent,
     UnsequencedEvent,
 )
@@ -33,7 +38,7 @@ from agent_alfred.runtime.config import MutableAssignmentProvider
 from agent_alfred.runtime.host import RuntimeHost, SubmitRequest
 from agent_alfred.settings import Settings
 from agent_alfred.stream_fallback import StreamFallback
-from agent_alfred.wiring import OpenCodeGoFactory
+from agent_alfred.wiring import OpenCodeGoFactory, open_database
 
 SECRET = "supersecret-key-value"
 ROTATED = "rotated-secret-key-value"
@@ -194,6 +199,22 @@ class AuthError(Exception):
     def __init__(self, status_code: int, message: str = "unauthorized"):
         super().__init__(message)
         self.status_code = status_code
+
+
+class InterruptedStream:
+    def __iter__(self):
+        yield _ns(
+            choices=[_ns(delta=_ns(content="partial"), finish_reason=None)],
+            usage=None,
+        )
+        raise ConnectionError("stream disconnected")
+
+
+@dataclass(frozen=True)
+class UnknownSensitivePayload:
+    name: str = "unknown.payload"
+    trace_policy: str = "persist"
+    token: str = "not-a-loaded-secret"
 
 
 def _client(
@@ -575,6 +596,100 @@ def test_adapter_fixture_has_no_clock_or_timeout_policy() -> None:
     assert result.response is not None
     assert fake.calls[0].get("timeout") in (None, inspect.Parameter.empty)
     assert "timeout" not in fake.calls[0] or fake.calls[0]["timeout"] is None
+
+
+def test_public_model_client_chain_enforces_attempt_deadline_on_transport() -> None:
+    fake = FakeOpenAI([_nonstream_completion("wire-ok")])
+    client = _client(fake, stream=False, clock=FakeClock(monotonic_value=2))
+
+    result = client.respond(_request(), deadline=7)
+
+    assert result.response is not None
+    assert fake.calls == [
+        {
+            "model": "deepseek-v4-flash",
+            "messages": [
+                {"role": "system", "content": "You are Alfred."},
+                {"role": "user", "content": "hi"},
+            ],
+            "max_tokens": None,
+            "timeout": 5,
+        }
+    ]
+
+
+def test_nonstream_parse_failure_is_an_aborted_real_attempt() -> None:
+    fake = FakeOpenAI([_ns(choices=[], usage=None)])
+    capture = CapturingSink(name="capture")
+    events = FanOutSink([capture], process_instance_id="proc-parse")
+    adapter = OpenAICompatibleAdapter(client=fake, model=_MODEL)
+
+    result = adapter.respond(_request(), events=events)
+
+    assert result.response is None
+    assert result.final_error is not None
+    assert result.final_error.code == "invalid_response"
+    assert [event.payload.name for event in capture.events] == [
+        "attempt.started",
+        "attempt.aborted",
+    ]
+    assert len(result.attempts) == 1
+    assert result.attempts[0].outcome == "aborted"
+
+
+def test_stream_iteration_disconnect_triggers_nonstream_fallback() -> None:
+    fake = FakeOpenAI(
+        [InterruptedStream(), _nonstream_completion("recovered")]
+    )
+    client = _client(fake, stream=True, stream_fallback=True)
+
+    result = client.respond(_request())
+
+    assert result.response is not None
+    assert result.response.blocks == (TextBlock("recovered"),)
+    assert [attempt.outcome for attempt in result.attempts] == [
+        "aborted",
+        "committed",
+    ]
+    assert len(fake.calls) == 2
+
+
+def test_unknown_payload_and_sensitive_notice_field_fail_closed() -> None:
+    capture = CapturingSink(name="capture")
+    fanout = FanOutSink(
+        [capture],
+        process_instance_id="proc-redaction",
+        redactor=__import__(
+            "agent_alfred.redact", fromlist=["Redactor"]
+        ).Redactor(()),
+    )
+
+    fanout.emit(UnknownSensitivePayload())
+    fanout.emit(Notice(detail=(("token", "not-a-loaded-secret"),)))
+
+    assert [event.payload.name for event in capture.events] == [
+        "notice",
+        "notice",
+    ]
+    assert capture.events[0].payload.code == "redaction_failed"
+    assert capture.events[1].payload.detail == (("token", "***"),)
+    assert "not-a-loaded-secret" not in _dumped_events(capture)
+
+
+def test_open_database_forces_managed_path_permissions(tmp_path) -> None:
+    state_dir = tmp_path / "state"
+
+    conn = open_database(state_dir)
+    conn.close()
+
+    assert stat.S_IMODE(state_dir.stat().st_mode) == 0o700
+    assert stat.S_IMODE((state_dir / "db.sqlite3").stat().st_mode) == 0o600
+
+
+def test_connection_local_transport_notices_are_not_domain_events() -> None:
+    for code in ("replay_gap", "deltas_dropped"):
+        with pytest.raises(ValueError, match="domain notice"):
+            Notice(code=code)  # type: ignore[arg-type]
 
 
 # --- 8. StepStarted.system is redacted for every sink ---
