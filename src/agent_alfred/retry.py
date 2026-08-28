@@ -11,6 +11,7 @@ from agent_alfred.model import (
     ModelResult,
     mark_final_error_non_retryable,
 )
+from agent_alfred.stream_fallback import OverallDeadlineExceeded
 
 
 class Sleeper(Protocol):
@@ -54,10 +55,16 @@ class RetryPolicy:
         deadline: float | None = None,
     ) -> ModelResult:
         attempts = []
+        last_failure: ModelResult | None = None
         for retry_index in range(self._max_retries + 1):
-            result = self._inner.respond(
-                request, events=events, deadline=deadline
-            )
+            try:
+                result = self._inner.respond(
+                    request, events=events, deadline=deadline
+                )
+            except OverallDeadlineExceeded:
+                if last_failure is None:
+                    raise
+                return mark_final_error_non_retryable(last_failure)
             attempts.extend(result.attempts)
             combined = ModelResult(
                 attempts=tuple(attempts),
@@ -66,6 +73,7 @@ class RetryPolicy:
             )
             if result.response is not None:
                 return combined
+            last_failure = combined
             error = result.final_error
             if (
                 error is None

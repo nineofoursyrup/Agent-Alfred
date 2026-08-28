@@ -806,6 +806,45 @@ def test_retry_sleep_crossing_deadline_preserves_paid_attempt() -> None:
     assert len(fake.calls) == 1
 
 
+def test_retry_deadline_toctou_preserves_paid_attempt() -> None:
+    from agent_alfred.retry import RetryPolicy
+
+    class BoundaryClock(FakeClock):
+        def __init__(self):
+            super().__init__(monotonic_value=0)
+            self.armed = False
+            self.armed_reads = 0
+
+        def monotonic(self) -> float:
+            if not self.armed:
+                return 0
+            self.armed_reads += 1
+            return 9 if self.armed_reads == 1 else 11
+
+    class ArmingSleeper:
+        def sleep(self, seconds: float) -> None:
+            del seconds
+            clock.armed = True
+
+    clock = BoundaryClock()
+    fake = FakeOpenAI([AuthError(429, "rate limited")])
+    client = RetryPolicy(
+        _client(fake, stream=False, clock=clock),
+        clock=clock,
+        sleeper=ArmingSleeper(),
+        max_retries=1,
+        retry_delay_s=0.25,
+    )
+
+    result = client.respond(_request(), deadline=10)
+
+    assert result.response is None
+    assert result.final_error is not None
+    assert result.final_error.retryable is False
+    assert len(result.attempts) == 1
+    assert len(fake.calls) == 1
+
+
 def test_concurrent_disable_prevents_commit_after_prepare() -> None:
     class InterleavingSink:
         name = "interleaving"
