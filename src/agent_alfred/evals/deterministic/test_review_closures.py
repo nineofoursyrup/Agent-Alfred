@@ -692,6 +692,91 @@ def test_connection_local_transport_notices_are_not_domain_events() -> None:
             Notice(code=code)  # type: ignore[arg-type]
 
 
+def test_usage_decode_failure_is_an_aborted_real_attempt() -> None:
+    def explode():
+        raise ValueError("malformed usage")
+
+    response = _nonstream_completion("paid response")
+    response.usage.model_dump = explode
+    fake = FakeOpenAI([response])
+    capture = CapturingSink(name="capture")
+    events = FanOutSink([capture], process_instance_id="proc-usage")
+
+    result = OpenAICompatibleAdapter(
+        client=fake, model=_MODEL
+    ).respond(_request(), events=events)
+
+    assert result.response is None
+    assert result.final_error is not None
+    assert result.final_error.code == "invalid_response"
+    assert [event.payload.name for event in capture.events] == [
+        "attempt.started",
+        "attempt.aborted",
+    ]
+    assert len(result.attempts) == 1
+
+
+def test_public_chain_measures_real_attempt_duration_outside_adapter() -> None:
+    clock = FakeClock(monotonic_value=2)
+
+    class AdvancingStream:
+        def __iter__(self):
+            clock.monotonic_value += 0.125
+            yield from _stream_chunks(["done"], finish="stop")
+
+    fake = FakeOpenAI([AdvancingStream()])
+    capture = CapturingSink(name="capture")
+    events = FanOutSink([capture], process_instance_id="proc-duration")
+
+    result = _client(fake, clock=clock).respond(
+        _request(), events=events, deadline=10
+    )
+
+    assert result.response is not None
+    committed = next(
+        event.payload
+        for event in capture.events
+        if event.payload.name == "attempt.committed"
+    )
+    assert committed.duration_ms == 125
+
+
+def test_retry_policy_retries_retryable_status_on_the_same_deadline() -> None:
+    from agent_alfred.retry import RetryPolicy
+
+    class FakeSleeper:
+        def __init__(self):
+            self.calls: list[float] = []
+
+        def sleep(self, seconds: float) -> None:
+            self.calls.append(seconds)
+            clock.monotonic_value += seconds
+
+    clock = FakeClock(monotonic_value=0)
+    sleeper = FakeSleeper()
+    fake = FakeOpenAI([AuthError(429, "rate limited"), _nonstream_completion("ok")])
+    fallback = _client(fake, stream=False, clock=clock)
+    client = RetryPolicy(
+        fallback,
+        clock=clock,
+        sleeper=sleeper,
+        max_retries=1,
+        retry_delay_s=0.25,
+    )
+
+    result = client.respond(_request(), deadline=10)
+
+    assert result.response is not None
+    assert result.response.blocks == (TextBlock("ok"),)
+    assert [attempt.outcome for attempt in result.attempts] == [
+        "aborted",
+        "committed",
+    ]
+    assert sleeper.calls == [0.25]
+    assert fake.calls[0]["timeout"] == 10
+    assert fake.calls[1]["timeout"] == 9.75
+
+
 # --- 8. StepStarted.system is redacted for every sink ---
 
 

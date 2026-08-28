@@ -103,8 +103,9 @@ class OpenAICompatibleAdapter:
                 attempt_id,
             )
             return _aborted(attempt_id, error, streamed=False)
-        usage = _usage_from_sdk(getattr(response, "usage", None))
+        usage = Usage()
         try:
+            usage = _usage_from_sdk(getattr(response, "usage", None))
             choice = response.choices[0]
             text = choice.message.content or ""
             blocks = (TextBlock(text),)
@@ -195,7 +196,10 @@ class OpenAICompatibleAdapter:
             for chunk in stream_resp:
                 usage_obj = getattr(chunk, "usage", None)
                 if usage_obj is not None:
-                    usage = _usage_from_sdk(usage_obj)
+                    try:
+                        usage = _usage_from_sdk(usage_obj)
+                    except Exception as exc:
+                        raise ResponseDecodeError(str(exc)) from exc
                 choices = getattr(chunk, "choices", None) or ()
                 if not choices:
                     continue
@@ -335,11 +339,15 @@ def _error_from_exc(
     attempt_id: str,
     exc: BaseException,
     *,
-    retryable: Retryable = "unknown",
+    retryable: Retryable | None = None,
     code: str | None = None,
 ) -> ModelError:
     return ModelError(
-        retryable=retryable,
+        retryable=(
+            _retryable_from_status(getattr(exc, "status_code", None))
+            if retryable is None
+            else retryable
+        ),
         status_code=getattr(exc, "status_code", None),
         body_excerpt=str(exc)[:500],
         attempt_id=attempt_id,
@@ -350,7 +358,17 @@ def _error_from_exc(
 def _stream_error_from_exc(
     attempt_id: str, exc: BaseException
 ) -> ModelError:
-    if isinstance(exc, (AttributeError, IndexError, KeyError, TypeError, ValueError)):
+    if isinstance(
+        exc,
+        (
+            AttributeError,
+            IndexError,
+            KeyError,
+            ResponseDecodeError,
+            TypeError,
+            ValueError,
+        ),
+    ):
         return _error_from_exc(
             attempt_id, exc, retryable=False, code="invalid_response"
         )
@@ -359,6 +377,20 @@ def _stream_error_from_exc(
             attempt_id, exc, retryable=True, code="incomplete_stream"
         )
     return _error_from_exc(attempt_id, exc)
+
+
+def _retryable_from_status(status_code: int | None) -> Retryable:
+    if status_code is None:
+        return "unknown"
+    if status_code in (408, 425, 429) or status_code >= 500:
+        return True
+    if 400 <= status_code < 500:
+        return False
+    return "unknown"
+
+
+class ResponseDecodeError(Exception):
+    """The network attempt completed but its response shape was invalid."""
 
 
 def _aborted(

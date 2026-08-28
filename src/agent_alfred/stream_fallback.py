@@ -6,6 +6,7 @@ from dataclasses import replace
 from typing import cast
 
 from agent_alfred.clock import Clock
+from agent_alfred.events import AttemptAborted, AttemptCommitted
 from agent_alfred.model import ModelClient, ModelRequest, ModelResult
 
 
@@ -47,7 +48,7 @@ class StreamFallback:
         target = self._bind_timeout(target, attempt_deadline)
         first = target.respond(
             request,
-            events=events,
+            events=self._timed_events(events),
             deadline=attempt_deadline,
         )
         if first.response is not None:
@@ -62,7 +63,7 @@ class StreamFallback:
         target = self._bind_timeout(self._nonstream, attempt_deadline)
         second = target.respond(
             request,
-            events=events,
+            events=self._timed_events(events),
             deadline=attempt_deadline,
         )
         return ModelResult(
@@ -92,6 +93,27 @@ class StreamFallback:
         if not callable(bind):
             return target
         return cast(ModelClient, bind(remaining))
+
+    def _timed_events(self, events: object | None) -> object | None:
+        if events is None:
+            return None
+        return _TimedAttemptEvents(events, self._clock)
+
+
+class _TimedAttemptEvents:
+    def __init__(self, inner: object, clock: Clock):
+        self._inner = inner
+        self._clock = clock
+        self._started = clock.monotonic()
+
+    def emit(self, payload: object) -> None:
+        if isinstance(payload, (AttemptCommitted, AttemptAborted)):
+            duration_ms = max(
+                0, int((self._clock.monotonic() - self._started) * 1000)
+            )
+            payload = replace(payload, duration_ms=duration_ms)
+        emit = getattr(self._inner, "emit")
+        emit(payload)
 
 
 def _is_incomplete_stream(result: ModelResult) -> bool:

@@ -19,6 +19,7 @@ from agent_alfred.model import (
 )
 from agent_alfred.openai_compatible import OpenAICompatibleAdapter
 from agent_alfred.redact import Redactor
+from agent_alfred.retry import RetryPolicy, SystemSleeper
 from agent_alfred.runtime.config import SettingsBackedSnapshotProvider
 from agent_alfred.runtime.host import RuntimeHost
 from agent_alfred.runtime.transport import VersionedTransportPool
@@ -54,13 +55,17 @@ class OpenCodeGoFactory:
         nonstream = OpenAICompatibleAdapter(
             client=transport, model=model, stream=False
         )
-        return StreamFallback(
-            streaming,
+        return RetryPolicy(
+            StreamFallback(
+                streaming,
+                clock=self._clock,
+                stream=snapshot.stream,
+                stream_fallback=snapshot.stream_fallback,
+                per_attempt_timeout_s=snapshot.per_attempt_timeout_s,
+                nonstream=nonstream,
+            ),
             clock=self._clock,
-            stream=snapshot.stream,
-            stream_fallback=snapshot.stream_fallback,
-            per_attempt_timeout_s=snapshot.per_attempt_timeout_s,
-            nonstream=nonstream,
+            sleeper=SystemSleeper(),
         )
 
 
