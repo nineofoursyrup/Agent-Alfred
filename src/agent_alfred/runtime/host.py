@@ -7,6 +7,7 @@ import sqlite3
 import threading
 import uuid
 from collections.abc import Callable
+from dataclasses import replace
 
 from agent_alfred import schema
 from agent_alfred.clock import Clock, format_instant
@@ -14,18 +15,20 @@ from agent_alfred.events import FanOutSink
 from agent_alfred.loop.assistant import Assistant, LoopResult
 from agent_alfred.model import ModelClientFactory
 from agent_alfred.redact import Redactor
+from agent_alfred.runtime import sessions as session_store
 from agent_alfred.runtime.admission import RunAdmission
 from agent_alfred.runtime.config import (
     ConfigSnapshotProvider,
     SettingsBackedSnapshotProvider,
 )
 from agent_alfred.runtime.execution import RunExecutor
-from agent_alfred.runtime.recording import RunRecorder
+from agent_alfred.runtime.recording import RecordingStore, RunRecorder
 from agent_alfred.runtime.snapshot import (
     ActiveRunSummary,
     CoordinatorState,
     RunStateStore,
     RuntimeSnapshot,
+    UnrecordedTerminalProjection,
 )
 from agent_alfred.runtime.work import (
     SubmitKind,
@@ -45,7 +48,14 @@ __all__ = [
 
 
 class RuntimeHost:
-    """Process-unique owner of seq, the write connection, and admission."""
+    """Process-unique owner of seq, the write connection, and admission.
+
+    The lifecycle below the Run loop is owned here as narrow, atomic
+    transitions (``recording_enter_pending``, ``recording_enter_failed``,
+    ``recording_publish_recorded_then_release``); the recorder drives them
+    through the :class:`~agent_alfred.runtime.recording.RecordingCoordinator`
+    protocol instead of manipulating this object's private state.
+    """
 
     def __init__(
         self,
@@ -92,7 +102,14 @@ class RuntimeHost:
         )
         self._admission = RunAdmission(self)
         self._executor = RunExecutor(self)
-        self._recorder = RunRecorder(self)
+        self._recorder = RunRecorder(
+            clock=clock,
+            fanout=fanout,
+            redactor=self._redactor,
+            store=RecordingStore(conn, self._db_lock),
+            coordinator=self,
+            before_recording_commit=before_recording_commit,
+        )
         self._worker = threading.Thread(
             target=self._executor.run_loop, name="run-worker", daemon=True
         )
@@ -100,6 +117,11 @@ class RuntimeHost:
     @property
     def process_instance_id(self) -> str:
         return self._process_instance_id
+
+    @property
+    def settings(self) -> Settings:
+        """The immutable settings injected at assembly. Never re-read."""
+        return self._settings
 
     def snapshot(self) -> RuntimeSnapshot:
         return self._states.get()
@@ -131,6 +153,111 @@ class RuntimeHost:
             )
             self._conn.commit()
         return session_id
+
+    # -- recording-settlement transitions (the only writer of these states) --
+
+    def recording_enter_pending(
+        self, projection: UnrecordedTerminalProjection
+    ) -> None:
+        """running -> recording_pending. The lease is NOT released here."""
+        with self._lock:
+            self._coord = "recording_pending"
+            if self._active_summary is not None:
+                self._active_summary = replace(
+                    self._active_summary,
+                    phase="finished",
+                    recording_state="pending",
+                )
+            self._states.replace(
+                coordinator_state="recording_pending",
+                active_run=self._active_summary,
+                unrecorded_terminal_projection=projection,
+            )
+
+    def recording_enter_failed(
+        self, projection: UnrecordedTerminalProjection
+    ) -> None:
+        """recording_pending -> recording_failed, keeping the same projection."""
+        if self._before_recording_failed is not None:
+            self._before_recording_failed.wait()
+        with self._lock:
+            failed_projection = replace(projection, recording_state="failed")
+            summary = self._active_summary
+            if summary is not None:
+                summary = replace(
+                    summary, recording_state="failed", phase="finished"
+                )
+                self._active_summary = summary
+            self._coord = "recording_failed"
+            self._states.replace(
+                coordinator_state="recording_failed",
+                active_run=self._active_summary,
+                unrecorded_terminal_projection=failed_projection,
+            )
+
+    def recording_publish_recorded_then_release(self) -> None:
+        """Authority first, lease second: the recorded snapshot becomes
+        visible while admission is still closed, then the lease releases."""
+        with self._lock:
+            recorded = None
+            if self._active_summary is not None:
+                recorded = replace(
+                    self._active_summary, recording_state="recorded"
+                )
+                self._active_summary = recorded
+            self._states.replace(
+                coordinator_state="recording_pending",
+                active_run=recorded,
+                unrecorded_terminal_projection=None,
+            )
+        if self._after_recorded_snapshot is not None:
+            self._after_recorded_snapshot.wait()
+        with self._lock:
+            self._coord = "idle"
+            self._active_summary = None
+            self._states.replace(coordinator_state="idle", active_run=None)
+
+    def publish_run_result(self, run_id: str, result: LoopResult) -> None:
+        self._results[run_id] = result
+
+    def notify_run_done(self, run_id: str) -> None:
+        event = self._done.get(run_id)
+        if event is not None:
+            event.set()
+
+    # -- public session read side (ADR-0027); callers never write SQL --
+
+    def list_sessions(
+        self,
+        *,
+        limit: int,
+        cursor: str | None = None,
+    ) -> session_store.SessionInboxPage:
+        with self._db_lock:
+            return session_store.list_sessions(
+                self._conn,
+                limit=limit,
+                cursor=cursor,
+                redactor=self._redactor,
+                title_max_chars=self._settings.prompt_preview_max_chars,
+            )
+
+    def open_session(
+        self,
+        session_id: str,
+        *,
+        page_size: int,
+        cursor: str | None = None,
+    ) -> session_store.SessionMessagesPage:
+        with self._db_lock:
+            return session_store.open_session(
+                self._conn,
+                session_id=session_id,
+                page_size=page_size,
+                cursor=cursor,
+                redactor=self._redactor,
+                title_max_chars=self._settings.prompt_preview_max_chars,
+            )
 
     def submit(self, request: SubmitRequest) -> SubmitResult:
         return self._admission.submit(request)

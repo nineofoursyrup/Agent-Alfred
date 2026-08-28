@@ -9,7 +9,7 @@ from pathlib import Path
 
 from agent_alfred import schema
 from agent_alfred.clock import Clock, SystemClock
-from agent_alfred.events import EventSink, FanOutSink
+from agent_alfred.events import BarrierFlushResult, EventSink, FanOutSink
 from agent_alfred.model import (
     ClientSnapshot,
     EndpointUnconfigured,
@@ -23,8 +23,14 @@ from agent_alfred.retry import RetryPolicy, SystemSleeper
 from agent_alfred.runtime.config import SettingsBackedSnapshotProvider
 from agent_alfred.runtime.host import RuntimeHost
 from agent_alfred.runtime.transport import VersionedTransportPool
-from agent_alfred.settings import OPENCODE_GO_BASE_URL, Settings, resolve_state_dir
+from agent_alfred.settings import (
+    OPENCODE_GO_BASE_URL,
+    Settings,
+    load_settings,
+    resolve_state_dir,
+)
 from agent_alfred.stream_fallback import StreamFallback
+from agent_alfred.trace import RunBundleTraceSink
 
 
 class OpenCodeGoFactory:
@@ -95,6 +101,55 @@ def _secrets_from_env(settings: Settings) -> tuple[str, ...]:
     return (value,)
 
 
+class UnavailableTraceSink:
+    """Fail-closed stand-in when the real TraceSink cannot be assembled.
+
+    It accepts every event (counting it as lost) and reports ``failed`` on
+    every flush, so a Run served through it can never be recorded as
+    ``trace_incomplete=false``. The reply itself is still delivered.
+    """
+
+    name = "trace"
+    flush_at_run_end = True
+
+    def __init__(self, *, detail: str):
+        self._detail = detail
+        self._dropped = 0
+
+    def prepare(self, event: object) -> object:
+        del event
+        return None
+
+    def commit(self, prepared: object, event: object) -> None:
+        del prepared, event
+        self._dropped += 1
+
+    def flush(self) -> BarrierFlushResult:
+        return BarrierFlushResult(
+            outcome="failed", dropped_events=self._dropped, detail=self._detail
+        )
+
+    def close(self) -> None:
+        return None
+
+
+def _trace_sink(trace_root: Path, clock: Clock, instance_id: str) -> EventSink:
+    """The production durability-critical sink, or an honest failure stub.
+
+    Initialization failure must not remove durability from the barrier: the
+    stub keeps the barrier critical and permanently incomplete instead of
+    letting a Run claim a trace that was never written.
+    """
+    try:
+        return RunBundleTraceSink(
+            root=trace_root, clock=clock, process_instance_id=instance_id
+        )
+    except Exception as exc:
+        return UnavailableTraceSink(
+            detail=f"trace_sink_init_failed {type(exc).__name__}"
+        )
+
+
 def build_host(
     *,
     conn: sqlite3.Connection,
@@ -103,15 +158,18 @@ def build_host(
     clock: Clock | None = None,
     extra_sinks: Sequence[EventSink] = (),
     process_instance_id: str | None = None,
+    trace_root: Path | None = None,
 ) -> RuntimeHost:
     settings = settings or Settings()
     clock = clock or SystemClock()
     instance_id = process_instance_id or uuid.uuid4().hex
     secrets = _secrets_from_env(settings)
     redactor = Redactor(secrets)
-    fanout = FanOutSink(
-        extra_sinks, process_instance_id=instance_id, redactor=redactor
-    )
+    sinks: list[EventSink] = []
+    if trace_root is not None:
+        sinks.append(_trace_sink(trace_root, clock, instance_id))
+    sinks.extend(extra_sinks)
+    fanout = FanOutSink(sinks, process_instance_id=instance_id, redactor=redactor)
     provider = SettingsBackedSnapshotProvider(settings)
     return RuntimeHost(
         conn=conn,
@@ -125,10 +183,22 @@ def build_host(
     )
 
 
-def build_default_host(*, state_dir: Path | None = None) -> RuntimeHost:
+def build_default_host(
+    *,
+    state_dir: Path | None = None,
+    settings: Settings | None = None,
+    factory: ModelClientFactory | None = None,
+) -> RuntimeHost:
     clock = SystemClock()
-    settings = Settings()
+    settings = settings or load_settings()
     directory = state_dir or resolve_state_dir()
     conn = open_database(directory)
-    factory = OpenCodeGoFactory(clock=clock)
-    return build_host(conn=conn, factory=factory, settings=settings, clock=clock)
+    if factory is None:
+        factory = OpenCodeGoFactory(clock=clock)
+    return build_host(
+        conn=conn,
+        factory=factory,
+        settings=settings,
+        clock=clock,
+        trace_root=directory / "traces",
+    )

@@ -1,15 +1,23 @@
-"""Finalizer, recovery, and the recording lease."""
+"""Finalizer, recovery, and the recording lease.
+
+The recorder touches the Host only through two narrow seams: a
+:class:`RecordingCoordinator` (the atomic coordinator state transitions and
+result publication) and a :class:`RecordingStore` (the Host-owned connection
+under its write lock). It never reaches into Host private state itself, so
+the state-machine invariants cannot be bypassed from here.
+"""
 
 from __future__ import annotations
 
 import json
 import sqlite3
-from dataclasses import replace
-from typing import Any
+import threading
+from contextlib import contextmanager
+from typing import Any, Protocol
 
 from agent_alfred import schema
-from agent_alfred.clock import format_instant
-from agent_alfred.events import EventEnvelope, RunFinished
+from agent_alfred.clock import Clock, format_instant
+from agent_alfred.events import EventEnvelope, FanOutSink, RunFinished
 from agent_alfred.loop.assistant import LoopResult
 from agent_alfred.messages import (
     Message,
@@ -19,28 +27,79 @@ from agent_alfred.messages import (
 )
 from agent_alfred.model import ModelResult
 from agent_alfred.outcomes import RunOutcome
+from agent_alfred.redact import Redactor
 from agent_alfred.runtime.snapshot import UnrecordedTerminalProjection
 from agent_alfred.runtime.telemetry import serialize_run_telemetry
 from agent_alfred.runtime.work import WorkItem
 from agent_alfred.settings import CONTROLLED_FAILURE_TEXT
 
+_REASON_LIMIT = 500
+
+
+class RecordingCoordinator(Protocol):
+    """The atomic coordinator transitions the recorder may trigger."""
+
+    def recording_enter_pending(
+        self, projection: UnrecordedTerminalProjection
+    ) -> None: ...
+
+    def recording_enter_failed(
+        self, projection: UnrecordedTerminalProjection
+    ) -> None: ...
+
+    def recording_publish_recorded_then_release(self) -> None: ...
+
+    def publish_run_result(self, run_id: str, result: LoopResult) -> None: ...
+
+    def notify_run_done(self, run_id: str) -> None: ...
+
+
+class RecordingStore:
+    """The Host-owned write connection under its lock; the caller commits."""
+
+    def __init__(self, conn: sqlite3.Connection, db_lock: threading.Lock):
+        self._conn = conn
+        self._db_lock = db_lock
+
+    @contextmanager
+    def transaction(self):
+        with self._db_lock:
+            try:
+                yield self._conn
+            finally:
+                if self._conn.in_transaction:
+                    self._conn.rollback()
+
 
 class RunRecorder:
-    def __init__(self, host: Any):
-        self._host = host
+    def __init__(
+        self,
+        *,
+        clock: Clock,
+        fanout: FanOutSink,
+        redactor: Redactor,
+        store: RecordingStore,
+        coordinator: Any,
+        before_recording_commit: threading.Event | None = None,
+    ):
+        self._clock = clock
+        self._fanout = fanout
+        self._redactor = redactor
+        self._store = store
+        self._coordinator: RecordingCoordinator = coordinator
+        self._before_recording_commit = before_recording_commit
 
     def recover(self) -> None:
-        h = self._host
-        now = format_instant(h._clock.wall_utc())
-        with h._db_lock:
-            rows = h._conn.execute(
-                """SELECT run_id, session_id, phase, started_at
+        now = format_instant(self._clock.wall_utc())
+        with self._store.transaction() as conn:
+            rows = conn.execute(
+                """SELECT run_id, session_id, phase
                    FROM runs WHERE phase != 'finished'"""
             ).fetchall()
-            for run_id, session_id, phase, _started_at in rows:
-                revision = schema.allocate_activity_revision(h._conn)
+            for run_id, session_id, phase in rows:
+                revision = schema.allocate_activity_revision(conn)
                 schema.update_run_phase(
-                    h._conn,
+                    conn,
                     run_id=run_id,
                     from_phase=phase,
                     to_phase="finished",
@@ -49,7 +108,7 @@ class RunRecorder:
                     finished_at=now,
                     session_id=session_id,
                 )
-            h._conn.commit()
+            conn.commit()
 
     def settle(
         self,
@@ -62,7 +121,6 @@ class RunRecorder:
         duration_ms: int,
         model_results: tuple[ModelResult, ...],
     ) -> None:
-        h = self._host
         if (
             item.request.purpose == "chat"
             and outcome == "failed"
@@ -70,7 +128,7 @@ class RunRecorder:
         ):
             reply = text_message("assistant", CONTROLLED_FAILURE_TEXT)
         envelope = EventEnvelope(
-            ts=h._clock.monotonic(),
+            ts=self._clock.monotonic(),
             run_id=item.run_id,
             session_id=item.session_id,
             step_index=None,
@@ -78,8 +136,12 @@ class RunRecorder:
             node_id=None,
             source=item.request.gateway,
         )
+        # A central publish failure must survive: it is merged into the
+        # barrier result below, so the telemetry can never claim a complete
+        # trace whose terminal event never reached the sinks.
+        publish_failed = False
         try:
-            h._fanout.emit(
+            self._fanout.emit(
                 RunFinished(
                     outcome=outcome,
                     reply=reply,
@@ -89,8 +151,9 @@ class RunRecorder:
                 ),
                 envelope,
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            publish_failed = True
+            self._fanout.note_publish_failure(item.run_id, exc)
         projection = UnrecordedTerminalProjection(
             run_id=item.run_id,
             purpose=item.request.purpose,
@@ -101,151 +164,122 @@ class RunRecorder:
             session_id=item.session_id,
             prompt_preview=item.prompt_preview,
         )
-        with h._lock:
-            h._coord = "recording_pending"
-            if h._active_summary is not None:
-                h._active_summary = replace(
-                    h._active_summary,
-                    phase="finished",
-                    recording_state="pending",
-                )
-            h._states.replace(
-                coordinator_state="recording_pending",
-                active_run=h._active_summary,
-                unrecorded_terminal_projection=projection,
-            )
-        h._results[item.run_id] = LoopResult(
-            outcome=outcome,
-            reply=reply,
-            error=error,
-            step_count=step_count,
-            duration_ms=duration_ms,
-            model_results=model_results,
+        self._coordinator.recording_enter_pending(projection)
+        self._coordinator.publish_run_result(
+            item.run_id,
+            LoopResult(
+                outcome=outcome,
+                reply=reply,
+                error=error,
+                step_count=step_count,
+                duration_ms=duration_ms,
+                model_results=model_results,
+            ),
         )
         try:
-            incomplete, reason = h._fanout.flush_barrier(item.run_id)
+            incomplete, reason = self._fanout.flush_barrier(item.run_id)
         except Exception as exc:
             incomplete, reason = True, type(exc).__name__
+        if publish_failed and not incomplete:
+            incomplete = True
+            reason = "run.finished publish failed"
+        reason = _finalize_reason(reason, self._redactor)
         telemetry = serialize_run_telemetry(
-            model_results, incomplete, reason, redactor=h._redactor
+            model_results, incomplete, reason, redactor=self._redactor
         )
-        if h._before_recording_commit is not None:
-            h._before_recording_commit.wait()
+        if self._before_recording_commit is not None:
+            self._before_recording_commit.wait()
         try:
-            self._finalize(item, outcome, reply, telemetry)
-        except Exception:
-            with h._db_lock:
-                try:
-                    h._conn.rollback()
-                except Exception:
-                    pass
-            self._enter_recording_failed(projection)
-            h._done[item.run_id].set()
-            return
-        self._publish_recorded_then_release()
-        h._done[item.run_id].set()
-
-    def _enter_recording_failed(
-        self, projection: UnrecordedTerminalProjection
-    ) -> None:
-        h = self._host
-        if h._before_recording_failed is not None:
-            h._before_recording_failed.wait()
-        failed = replace(projection, recording_state="failed")
-        with h._lock:
-            summary = h._active_summary
-            if summary is not None:
-                summary = replace(
-                    summary, recording_state="failed", phase="finished"
+            with self._store.transaction() as conn:
+                self._finalize(
+                    conn,
+                    item,
+                    outcome,
+                    reply,
+                    telemetry,
+                    now=format_instant(self._clock.wall_utc()),
                 )
-                h._active_summary = summary
-            h._coord = "recording_failed"
-            h._states.replace(
-                coordinator_state="recording_failed",
-                active_run=summary,
-                unrecorded_terminal_projection=failed,
-            )
-
-    def _publish_recorded_then_release(self) -> None:
-        h = self._host
-        with h._lock:
-            recorded = None
-            if h._active_summary is not None:
-                recorded = replace(h._active_summary, recording_state="recorded")
-                h._active_summary = recorded
-            h._states.replace(
-                coordinator_state="recording_pending",
-                active_run=recorded,
-                unrecorded_terminal_projection=None,
-            )
-        if h._after_recorded_snapshot is not None:
-            h._after_recorded_snapshot.wait()
-        with h._lock:
-            h._coord = "idle"
-            h._active_summary = None
-            h._states.replace(coordinator_state="idle", active_run=None)
+        except Exception:
+            self._coordinator.recording_enter_failed(projection)
+            self._coordinator.notify_run_done(item.run_id)
+            return
+        self._coordinator.recording_publish_recorded_then_release()
+        self._coordinator.notify_run_done(item.run_id)
 
     def _finalize(
         self,
+        conn: sqlite3.Connection,
         item: WorkItem,
         outcome: RunOutcome,
         reply: Message | None,
         telemetry: str,
+        *,
+        now: str,
     ) -> None:
-        h = self._host
-        now = format_instant(h._clock.wall_utc())
-        with h._db_lock:
-            phase = h._conn.execute(
-                "SELECT phase FROM runs WHERE run_id = ?", (item.run_id,)
-            ).fetchone()
-            from_phase = "running" if phase is None else phase[0]
-            if from_phase == "finished":
-                h._conn.commit()
-                return
-            revision = schema.allocate_activity_revision(h._conn)
-            schema.update_run_phase(
-                h._conn,
-                run_id=item.run_id,
-                from_phase=from_phase,
-                to_phase="finished",
-                activity_revision=revision,
-                outcome=outcome,
-                finished_at=now,
-                telemetry=telemetry,
+        phase = conn.execute(
+            "SELECT phase FROM runs WHERE run_id = ?", (item.run_id,)
+        ).fetchone()
+        from_phase = "running" if phase is None else phase[0]
+        if from_phase == "finished":
+            conn.commit()
+            return
+        revision = schema.allocate_activity_revision(conn)
+        schema.update_run_phase(
+            conn,
+            run_id=item.run_id,
+            from_phase=from_phase,
+            to_phase="finished",
+            activity_revision=revision,
+            outcome=outcome,
+            finished_at=now,
+            telemetry=telemetry,
+            session_id=item.session_id,
+        )
+        if item.request.purpose == "chat" and item.session_id is not None:
+            user = text_message("user", item.request.message)
+            _insert_log_message(
+                conn,
                 session_id=item.session_id,
+                role="user",
+                message=user,
+                source=item.request.gateway,
+                created_at=item.accepted_at,
+                run_id=item.run_id,
             )
-            if item.request.purpose == "chat" and item.session_id is not None:
-                user = text_message("user", item.request.message)
+            if outcome != "interrupted":
+                assistant = reply
+                if assistant is None:
+                    assistant = text_message("assistant", CONTROLLED_FAILURE_TEXT)
+                stored_text = self._redactor.redact_text(
+                    message_plain_text(assistant)
+                )
+                if stored_text != message_plain_text(assistant):
+                    assistant = text_message("assistant", stored_text)
                 _insert_log_message(
-                    h._conn,
+                    conn,
                     session_id=item.session_id,
-                    role="user",
-                    message=user,
+                    role="assistant",
+                    message=assistant,
                     source=item.request.gateway,
-                    created_at=item.accepted_at,
+                    created_at=now,
                     run_id=item.run_id,
                 )
-                if outcome != "interrupted":
-                    assistant = reply
-                    if assistant is None:
-                        assistant = text_message(
-                            "assistant", CONTROLLED_FAILURE_TEXT
-                        )
-                    stored_text = h._redactor.redact_text(
-                        message_plain_text(assistant)
-                    )
-                    if stored_text != message_plain_text(assistant):
-                        assistant = text_message("assistant", stored_text)
-                    _insert_log_message(
-                        h._conn,
-                        session_id=item.session_id,
-                        role="assistant",
-                        message=assistant,
-                        source=item.request.gateway,
-                        created_at=now,
-                        run_id=item.run_id,
-                    )
-            h._conn.commit()
+        conn.commit()
+
+
+def _finalize_reason(
+    reason: str | None, redactor: Redactor | None
+) -> str | None:
+    """Bound and centrally redact the machine-judgeable barrier reason."""
+    if reason is None:
+        return None
+    text = reason[:_REASON_LIMIT]
+    if redactor is not None:
+        try:
+            text = redactor.redact_text(text)
+        except Exception:
+            text = "trace_incomplete"
+    return text
 
 
 def _insert_log_message(

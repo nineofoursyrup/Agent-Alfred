@@ -12,6 +12,12 @@ import sqlite3
 import pytest
 
 from agent_alfred import schema
+from agent_alfred.clock import FakeClock
+from agent_alfred.events import CapturingSink, FanOutSink
+from agent_alfred.messages import blocks_to_jsonable
+from agent_alfred.model import ScriptedModel, ScriptedModelFactory
+from agent_alfred.runtime.host import RuntimeHost
+from agent_alfred.settings import Settings
 
 _TS = "2026-08-27T12:00:00+00:00"
 _BODY = json.dumps([{"type": "text", "text": "hello"}])
@@ -434,22 +440,38 @@ def test_v3_backfills_sessions_verbatim_from_a_real_v2_database() -> None:
     ]
     revisions = [row[2] for row in sessions]
     assert revisions == sorted(set(revisions))
-    # Inbox visibility: newest activity first, and opening the historic
-    # session still returns every original message.
-    inbox = conn.execute(
-        """SELECT session_id FROM sessions
-           ORDER BY activity_revision DESC, session_id DESC"""
-    ).fetchall()
-    assert inbox == [("s-old",), ("会话-2",), ("weird id",)]
-    opened = conn.execute(
-        """SELECT json_extract(content, '$[0].text'), telemetry
-           FROM agent_log WHERE session_id = ? ORDER BY id""",
-        ("weird id",),
-    ).fetchall()
-    assert opened == [
-        ("hello", None),
-        ("reply", json.dumps({"legacy": True, "trace_incomplete": False})),
-    ]
+    conn.commit()
+    # Inbox visibility and a complete open are asserted through the public
+    # read side only (ADR-0027): acceptance never hand-writes the SQL that
+    # production must own.
+    capture = CapturingSink(name="capture", flush_at_run_end=True)
+    host = RuntimeHost(
+        conn=conn,
+        factory=ScriptedModelFactory(ScriptedModel(["unused"])),
+        settings=Settings(),
+        clock=FakeClock(),
+        fanout=FanOutSink([capture], process_instance_id="proc-v3-read"),
+        process_instance_id="proc-v3-read",
+    )
+    host.start()
+    try:
+        inbox = [
+            summary.session_id for summary in host.list_sessions(limit=10).sessions
+        ]
+        assert inbox == ["s-old", "会话-2", "weird id"]
+        opened = host.open_session("weird id", page_size=10)
+        assert [
+            (json.dumps(blocks_to_jsonable(m.blocks), ensure_ascii=False), m.telemetry)
+            for m in opened.messages
+        ] == [
+            (_BODY, None),
+            (
+                json.dumps([{"type": "text", "text": "reply"}], ensure_ascii=False),
+                {"legacy": True, "trace_incomplete": False},
+            ),
+        ]
+    finally:
+        host.close()
     clock_after = conn.execute("SELECT next_revision FROM activity_clock").fetchone()
     schema.migrate(conn)
     assert conn.execute("SELECT next_revision FROM activity_clock").fetchone() == (

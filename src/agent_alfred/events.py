@@ -34,6 +34,9 @@ _DOMAIN_NOTICE_CODES = frozenset(
 class BarrierFlushResult:
     outcome: Literal["flushed", "failed"]
     dropped_events: int = 0
+    # Machine-judgeable first cause when outcome is "failed". Never carries
+    # payloads or paths -- the FanOutSink redacts it again anyway.
+    detail: str = ""
 
 
 @dataclass(frozen=True)
@@ -401,14 +404,25 @@ class FanOutSink:
         )
         self._publish(unsequenced, notify_disabled=False)
 
+    def note_publish_failure(self, run_id: str, exc: BaseException) -> None:
+        """Record that a central publish itself raised, so the barrier cannot
+        judge the run's trace complete. The exception text is never kept --
+        only its type survives into the reason string."""
+        with self._lock:
+            reasons = self._persist_lost.setdefault(run_id, [])
+            reasons.append(f"run.finished publish failed: {type(exc).__name__}")
+
     def flush_barrier(self, run_id: str | None = None) -> tuple[bool, str | None]:
         """Wait on flush_at_run_end sinks. Missing/failed/exception => incomplete."""
         reasons: list[str] = []
         if run_id is not None:
             reasons.extend(self._persist_lost.get(run_id, ()))
-        for sink in self._sinks:
-            if not sink.flush_at_run_end:
-                continue
+        critical = [sink for sink in self._sinks if sink.flush_at_run_end]
+        if not critical:
+            # Nobody behind this FanOut promises durability, so "flushed" is
+            # not a word the barrier is allowed to say. Fail closed.
+            reasons.append("no flush_at_run_end sink")
+        for sink in critical:
             try:
                 result = sink.flush()
             except Exception as exc:
@@ -418,10 +432,13 @@ class FanOutSink:
                 reasons.append(f"{sink.name} returned {type(result).__name__}")
                 continue
             if result.outcome != "flushed" or result.dropped_events != 0:
-                reasons.append(
+                reason = (
                     f"{sink.name} flush {result.outcome} "
                     f"dropped={result.dropped_events}"
                 )
+                if result.detail:
+                    reason += f" ({result.detail})"
+                reasons.append(reason)
         incomplete = bool(reasons)
         reason: str | None = None
         if incomplete:

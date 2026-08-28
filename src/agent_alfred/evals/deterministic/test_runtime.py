@@ -396,6 +396,133 @@ def test_barrier_failure_marks_trace_incomplete_but_still_records() -> None:
         host.close()
 
 
+class PublishExplodingFanout(FanOutSink):
+    """The central publish path itself raises on run.finished."""
+
+    def __init__(self, *args, secret: str, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._secret = secret
+
+    def emit(self, payload, envelope=None):
+        if getattr(payload, "name", None) == "run.finished":
+            raise RuntimeError(f"fanout exploded {self._secret}")
+        return super().emit(payload, envelope)
+
+
+def test_run_finished_publish_failure_is_merged_into_the_barrier_result() -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    secret = "supersecret-key-value"
+    fanout = PublishExplodingFanout(
+        [CapturingSink(name="capture", flush_at_run_end=True)],
+        process_instance_id="proc-pub-boom",
+        secret=secret,
+    )
+    host = RuntimeHost(
+        conn=conn,
+        factory=ScriptedModelFactory(ScriptedModel(["pong"])),
+        settings=Settings(),
+        clock=FakeClock(),
+        fanout=fanout,
+        process_instance_id="proc-pub-boom",
+        secrets=(secret,),
+    )
+    host.start()
+    try:
+        submitted = host.submit(SubmitRequest(message="hi"))
+        result = host.wait(submitted.run_id)
+        # The reply is delivered exactly as produced; tracing must not be able
+        # to rewrite a completed run into a business failure.
+        assert result.outcome == "completed"
+        assert message_plain_text(result.reply) == "pong"
+        raw = conn.execute("SELECT telemetry FROM runs").fetchone()[0]
+        payload = json.loads(raw)
+        assert payload["trace_incomplete"] is True
+        reason = payload["trace_incomplete_reason"]
+        assert "run.finished publish failed" in reason
+        assert "RuntimeError" in reason
+        assert len(reason) <= 500
+        # The reason went through the central redactor: no secret, no raw text.
+        assert secret not in reason
+        assert secret not in raw
+        rows = conn.execute(
+            "SELECT role, json_extract(content, '$[0].text') FROM agent_log"
+        ).fetchall()
+        assert rows == [("user", "hi"), ("assistant", "pong")]
+        assert host.snapshot().coordinator_state == "idle"
+    finally:
+        host.close()
+
+
+# --- the recorder stays out of Host private state (slice-1 re-review) --------
+
+
+def test_run_recorder_only_uses_narrow_seams() -> None:
+    """The recorder drives the lifecycle through the narrow coordinator and
+    store seams; the state machine's invariants must not be bypassable from
+    inside it. Any `.<host-attribute>` access here is a regression."""
+    import inspect
+
+    from agent_alfred.runtime import recording
+
+    source = inspect.getsource(recording)
+    assert "._host" not in source
+    forbidden = (
+        "_lock",
+        "_coord",
+        "_states",
+        "_done",
+        "_results",
+        "_active_summary",
+        "_queue",
+        "_conn",
+        "_db_lock",
+        "_fanout",  # reached via self._fanout, never via a host reference
+        "_redactor",
+        "_before_recording_commit",
+        "_after_recorded_snapshot",
+        "_before_recording_failed",
+    )
+    for attribute in forbidden:
+        assert f"h.{attribute}" not in source, attribute
+        assert f"host.{attribute}" not in source, attribute
+    init = inspect.signature(recording.RunRecorder.__init__)
+    assert "host" not in init.parameters
+    # The narrow seams exist and are the documented transitions.
+    for method in (
+        "recording_enter_pending",
+        "recording_enter_failed",
+        "recording_publish_recorded_then_release",
+        "publish_run_result",
+        "notify_run_done",
+    ):
+        assert callable(getattr(RuntimeHost, method))
+
+
+def test_unrecorded_projection_survives_every_rejection() -> None:
+    hold = threading.Event()
+    host, _conn, _capture = _host(["pong"], before_recording_commit=hold)
+    host.start()
+    try:
+        first = host.submit(SubmitRequest(message="one"))
+        _wait_until(
+            lambda: host.snapshot().coordinator_state == "recording_pending"
+        )
+        for _ in range(3):
+            rejected = host.submit(SubmitRequest(message="busy"))
+            assert rejected.kind == "run_in_progress"
+            projection = host.snapshot().unrecorded_terminal_projection
+            assert projection is not None
+            assert projection.run_id == first.run_id, (
+                "the second Run must never overwrite the bounded slot"
+            )
+        hold.set()
+        host.wait(first.run_id)
+    finally:
+        hold.set()
+        host.close()
+
+
 def test_seq_state_revision_and_activity_revision_are_not_compared() -> None:
     host, conn, capture = _host(["pong"])
     host.start()
