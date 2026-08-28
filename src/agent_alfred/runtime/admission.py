@@ -1,60 +1,117 @@
-"""Reserve the admission slot, capture config, persist accepted, hand off."""
+"""Reserve the admission slot, capture config, persist accepted, hand off.
+
+Admission touches the Host only through two narrow seams, the same shape the
+RunRecorder already uses:
+
+- an :class:`AdmissionCoordinator` -- the atomic lease transitions, the work
+  handoff, and result publication. The 409/503 orderings live on the other
+  side of this seam and cannot be bypassed from here;
+- a :class:`RunDatabase` -- the Host-owned write connection under its lock,
+  with the caller owning every transaction.
+
+It never reads or writes the Host's private state, so the state machine's
+invariants (the lease holds until recording settles; the failed state lands
+before anything answers 503) are structural, not conventions.
+"""
 
 from __future__ import annotations
 
-import threading
 import uuid
-from dataclasses import replace
-from typing import Any
+from typing import Protocol
 
 from agent_alfred import schema
-from agent_alfred.clock import format_instant
+from agent_alfred.clock import Clock, format_instant
 from agent_alfred.loop.assistant import LoopResult
+from agent_alfred.model import ModelClientFactory
+from agent_alfred.redact import Redactor
+from agent_alfred.runtime.config import ConfigSnapshotProvider
 from agent_alfred.runtime.snapshot import (
     ActiveRunSummary,
+    RuntimeSnapshot,
     UnrecordedTerminalProjection,
 )
 from agent_alfred.runtime.work import SubmitRequest, SubmitResult, WorkItem
+from agent_alfred.settings import Settings
+
+
+class AdmissionCoordinator(Protocol):
+    """The lease transitions, handoff, and publication admission may drive."""
+
+    def admission_reserve(
+        self, run_id: str
+    ) -> tuple[str, RuntimeSnapshot]: ...
+
+    def admission_mark_accepted(
+        self, summary: ActiveRunSummary
+    ) -> RuntimeSnapshot: ...
+
+    def admission_release(self, run_id: str) -> None: ...
+
+    def admission_close_idle(self) -> None: ...
+
+    def admission_fail_recording(
+        self, fallback: ActiveRunSummary, projection: UnrecordedTerminalProjection
+    ) -> None: ...
+
+    def publish_work_item(self, item: WorkItem) -> None: ...
+
+    def publish_run_result(self, run_id: str, result: LoopResult) -> None: ...
+
+    def notify_run_done(self, run_id: str) -> None: ...
+
+
+class RunDatabase(Protocol):
+    """The Host-owned write connection under its lock; the caller commits."""
+
+    def transaction(self): ...
 
 
 class RunAdmission:
-    def __init__(self, host: Any):
-        self._host = host
+    def __init__(
+        self,
+        *,
+        clock: Clock,
+        settings: Settings,
+        redactor: Redactor,
+        factory: ModelClientFactory,
+        snapshot_provider: ConfigSnapshotProvider,
+        database: RunDatabase,
+        coordinator: AdmissionCoordinator,
+    ):
+        self._clock = clock
+        self._settings = settings
+        self._redactor = redactor
+        self._factory = factory
+        self._snapshot_provider = snapshot_provider
+        self._database = database
+        self._coordinator = coordinator
 
     def submit(self, request: SubmitRequest) -> SubmitResult:
-        h = self._host
-        with h._lock:
-            snap = h._states.get()
-            if h._coord == "recording_failed":
-                return SubmitResult(
-                    kind="recording_unavailable", snapshot=snap
-                )
-            if h._coord != "idle":
-                return SubmitResult(kind="run_in_progress", snapshot=snap)
-            run_id = uuid.uuid4().hex
-            h._coord = "accepted"
-            h._done[run_id] = threading.Event()
+        run_id = uuid.uuid4().hex
+        kind, snapshot = self._coordinator.admission_reserve(run_id)
+        if kind != "reserved":
+            return SubmitResult(kind=kind, snapshot=snapshot)
 
         session_id = request.session_id
-        accepted_at = format_instant(h._clock.wall_utc())
+        accepted_at = format_instant(self._clock.wall_utc())
         try:
-            snapshot = h._snapshot_provider.capture(stream=request.stream)
-            h._redactor.remember(snapshot.api_key)
+            captured = self._snapshot_provider.capture(stream=request.stream)
+            self._redactor.remember(captured.api_key)
             preview = self._preview(request.message)
-            client = h._factory.create(snapshot)
+            client = self._factory.create(captured)
         except Exception:
-            self._release(run_id)
+            self._coordinator.admission_release(run_id)
             return SubmitResult(kind="admission_failed")
 
         try:
-            with h._db_lock:
+            with self._database.transaction() as conn:
                 if request.purpose == "chat" and session_id is None:
                     session_id = uuid.uuid4().hex
                     schema.insert_session(
-                        h._conn, session_id=session_id, created_at=accepted_at
+                        conn, session_id=session_id, created_at=accepted_at
                     )
                 schema.insert_accepted_run(
-                    h._conn,
+                    conn,
                     run_id=run_id,
                     purpose=request.purpose,
                     session_id=session_id,
@@ -63,14 +120,9 @@ class RunAdmission:
                     entry_surface_id=request.entry_surface_id,
                     prompt_preview=preview,
                 )
-                h._conn.commit()
+                conn.commit()
         except Exception:
-            with h._db_lock:
-                try:
-                    h._conn.rollback()
-                except Exception:
-                    pass
-            self._release(run_id)
+            self._coordinator.admission_release(run_id)
             return SubmitResult(kind="admission_failed")
 
         summary = ActiveRunSummary(
@@ -83,22 +135,19 @@ class RunAdmission:
             started_at=None,
             recording_state=None,
         )
-        with h._lock:
-            h._active_summary = summary
-        h._states.replace(coordinator_state="accepted", active_run=summary)
+        snapshot = self._coordinator.admission_mark_accepted(summary)
 
         item = WorkItem(
             run_id=run_id,
             request=request,
-            snapshot=snapshot,
+            snapshot=captured,
             client=client,
             session_id=session_id,
             prompt_preview=preview,
             accepted_at=accepted_at,
         )
         try:
-            publisher = h._publish_work or h._queue.put_nowait
-            publisher(item)
+            self._coordinator.publish_work_item(item)
         except Exception:
             self.interrupt_unstarted(item)
             return SubmitResult(kind="admission_failed", run_id=run_id)
@@ -107,33 +156,26 @@ class RunAdmission:
             kind="accepted",
             run_id=run_id,
             session_id=session_id,
-            snapshot=h._states.get(),
+            snapshot=snapshot,
         )
 
     def _preview(self, message: str) -> str:
-        h = self._host
-        text = h._redactor.redact_text(message)
-        limit = h._settings.prompt_preview_max_chars
+        text = self._redactor.redact_text(message)
+        limit = self._settings.prompt_preview_max_chars
         if len(text) <= limit:
             return text
         return text[: limit - 1] + "…"
 
-    def _release(self, run_id: str) -> None:
-        h = self._host
-        with h._lock:
-            h._done.pop(run_id, None)
-            h._coord = "idle"
-            h._active_summary = None
-        h._states.replace(coordinator_state="idle", active_run=None)
-
     def interrupt_unstarted(self, item: WorkItem) -> None:
-        h = self._host
-        now = format_instant(h._clock.wall_utc())
+        """The handoff failed before any execution: finalize the run as
+        finished/interrupted (only a null started_at may show an execution
+        pause) and reopen admission, or fail closed when even that fails."""
+        now = format_instant(self._clock.wall_utc())
         try:
-            with h._db_lock:
-                revision = schema.allocate_activity_revision(h._conn)
+            with self._database.transaction() as conn:
+                revision = schema.allocate_activity_revision(conn)
                 schema.update_run_phase(
-                    h._conn,
+                    conn,
                     run_id=item.run_id,
                     from_phase="accepted",
                     to_phase="finished",
@@ -142,49 +184,36 @@ class RunAdmission:
                     finished_at=now,
                     session_id=item.session_id,
                 )
-                h._conn.commit()
+                conn.commit()
         except Exception:
-            with h._db_lock:
-                try:
-                    h._conn.rollback()
-                except Exception:
-                    pass
             self._fail_closed(item)
             return
-        with h._lock:
-            h._coord = "idle"
-            h._active_summary = None
-        h._states.replace(
-            coordinator_state="idle",
-            active_run=None,
-            unrecorded_terminal_projection=None,
-        )
-        if item.run_id in h._done:
-            h._results[item.run_id] = LoopResult(
+        self._coordinator.admission_close_idle()
+        self._coordinator.publish_run_result(
+            item.run_id,
+            LoopResult(
                 outcome="interrupted",
                 reply=None,
                 error="handoff_failed",
                 step_count=0,
                 duration_ms=0,
-            )
-            h._done[item.run_id].set()
+            ),
+        )
+        self._coordinator.notify_run_done(item.run_id)
 
     def _fail_closed(self, item: WorkItem) -> None:
-        h = self._host
-        summary = h._active_summary
-        if summary is None:
-            summary = ActiveRunSummary(
-                run_id=item.run_id,
-                purpose=item.request.purpose,
-                gateway=item.request.gateway,
-                phase="accepted",
-                session_id=item.session_id,
-                prompt_preview=item.prompt_preview,
-                started_at=None,
-                recording_state="failed",
-            )
-        else:
-            summary = replace(summary, recording_state="failed")
+        """Even the interrupted finalize failed: recording_failed closes
+        admission and keeps one bounded projection of the lost run."""
+        summary = ActiveRunSummary(
+            run_id=item.run_id,
+            purpose=item.request.purpose,
+            gateway=item.request.gateway,
+            phase="accepted",
+            session_id=item.session_id,
+            prompt_preview=item.prompt_preview,
+            started_at=None,
+            recording_state="failed",
+        )
         projection = UnrecordedTerminalProjection(
             run_id=item.run_id,
             purpose=item.request.purpose,
@@ -195,20 +224,15 @@ class RunAdmission:
             session_id=item.session_id,
             prompt_preview=item.prompt_preview,
         )
-        with h._lock:
-            h._active_summary = summary
-            h._coord = "recording_failed"
-            h._states.replace(
-                coordinator_state="recording_failed",
-                active_run=summary,
-                unrecorded_terminal_projection=projection,
-            )
-        if item.run_id in h._done:
-            h._results[item.run_id] = LoopResult(
+        self._coordinator.admission_fail_recording(summary, projection)
+        self._coordinator.publish_run_result(
+            item.run_id,
+            LoopResult(
                 outcome="interrupted",
                 reply=None,
                 error="handoff_failed",
                 step_count=0,
                 duration_ms=0,
-            )
-            h._done[item.run_id].set()
+            ),
+        )
+        self._coordinator.notify_run_done(item.run_id)

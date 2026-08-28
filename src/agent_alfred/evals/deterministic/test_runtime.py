@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import queue
 import sqlite3
 import threading
 import time
@@ -19,9 +20,24 @@ from agent_alfred.events import (
     SequencedEvent,
     UnsequencedEvent,
 )
-from agent_alfred.messages import message_plain_text
-from agent_alfred.model import ScriptedModel, ScriptedModelFactory
+from agent_alfred.loop.assistant import LoopResult
+from agent_alfred.messages import message_plain_text, text_message
+from agent_alfred.model import (
+    ClientSnapshot,
+    ModelAssignment,
+    ScriptedModel,
+    ScriptedModelFactory,
+)
+from agent_alfred.redact import Redactor
+from agent_alfred.runtime.admission import RunAdmission
+from agent_alfred.runtime.config import SettingsBackedSnapshotProvider
+from agent_alfred.runtime.execution import RunExecutor
 from agent_alfred.runtime.host import RuntimeHost, SubmitRequest
+from agent_alfred.runtime.recording import RecordingStore
+from agent_alfred.runtime.snapshot import (
+    RuntimeSnapshot,
+)
+from agent_alfred.runtime.work import WorkItem
 from agent_alfred.settings import MAX_STEPS_REACHED_TEXT, Settings
 
 
@@ -454,7 +470,365 @@ def test_run_finished_publish_failure_is_merged_into_the_barrier_result() -> Non
         host.close()
 
 
-# --- the recorder stays out of Host private state (slice-1 re-review) --------
+# --- admission and execution stay on narrow seams (slice-1 re-review) --------
+
+
+def test_admission_and_execution_only_use_narrow_seams() -> None:
+    """admission and execution drive the lifecycle through narrow coordinator
+    and store seams, the same shape the recorder already uses. Any access to
+    the Host's private state from inside them is a regression."""
+    import inspect
+
+    from agent_alfred.runtime import admission, execution
+
+    forbidden = (
+        "_lock",
+        "_coord",
+        "_states",
+        "_done",
+        "_results",
+        "_active_summary",
+        "_queue",
+        "_conn",
+        "_db_lock",
+        "_fanout",
+        "_redactor",
+        "_settings",
+        "_clock",
+        "_assistant",
+        "_recorder",
+        "_factory",
+        "_snapshot_provider",
+        "_publish_work",
+        "_process_instance_id",
+        "_admission",
+        "_executor",
+        "_before_recording_commit",
+    )
+    for module in (admission, execution):
+        source = inspect.getsource(module)
+        assert "._host" not in source, module.__name__
+        for attribute in forbidden:
+            assert f"h.{attribute}" not in source, (module.__name__, attribute)
+            assert f"host.{attribute}" not in source, (module.__name__, attribute)
+    for cls in (admission.RunAdmission, execution.RunExecutor):
+        assert "host" not in inspect.signature(cls.__init__).parameters, cls
+    # The narrow seams exist and are the documented transitions.
+    for method in (
+        "admission_reserve",
+        "admission_mark_accepted",
+        "admission_release",
+        "admission_close_idle",
+        "admission_fail_recording",
+        "publish_work_item",
+        "execution_mark_running",
+    ):
+        assert callable(getattr(RuntimeHost, method))
+
+
+def _fake_runtime_snapshot() -> RuntimeSnapshot:
+    return RuntimeSnapshot(
+        process_instance_id="proc-fake",
+        state_revision=1,
+        coordinator_state="idle",
+        active_run=None,
+        unrecorded_terminal_projection=None,
+    )
+
+
+class _FakeAdmissionCoordinator:
+    """Minimal coordinator double: records the driven transitions."""
+
+    def __init__(self):
+        self.calls: list[tuple] = []
+        self.state = "idle"
+        self.done: dict[str, threading.Event] = {}
+        self.fail_publish = False
+
+    def admission_reserve(self, run_id):
+        if self.state == "recording_failed":
+            return "recording_unavailable", _fake_runtime_snapshot()
+        if self.state != "idle":
+            return "run_in_progress", _fake_runtime_snapshot()
+        self.state = "accepted"
+        self.done[run_id] = threading.Event()
+        self.calls.append(("reserve", run_id))
+        return "reserved", _fake_runtime_snapshot()
+
+    def admission_mark_accepted(self, summary):
+        self.calls.append(("mark_accepted", summary.run_id, summary.phase))
+        return _fake_runtime_snapshot()
+
+    def admission_release(self, run_id):
+        self.state = "idle"
+        self.done.pop(run_id, None)
+        self.calls.append(("release", run_id))
+
+    def admission_close_idle(self):
+        self.state = "idle"
+        self.calls.append(("close_idle",))
+
+    def admission_fail_recording(self, fallback, projection):
+        self.state = "recording_failed"
+        self.calls.append(
+            ("fail_recording", projection.run_id, projection.recording_state)
+        )
+
+    def publish_work_item(self, item):
+        if self.fail_publish:
+            raise RuntimeError("queue full")
+        self.calls.append(("publish", item.run_id))
+
+    def publish_run_result(self, run_id, result):
+        self.calls.append(("result", run_id, result.outcome))
+
+    def notify_run_done(self, run_id):
+        event = self.done.get(run_id)
+        if event is not None:
+            event.set()
+        self.calls.append(("notify", run_id))
+
+
+class _BoomFactory:
+    def create(self, snapshot):
+        del snapshot
+        raise RuntimeError("no client")
+
+
+def _fake_admission(conn, *, factory=None, coordinator=None):
+    if factory is None:
+        factory = ScriptedModelFactory(ScriptedModel(["pong"]))
+    if coordinator is None:
+        coordinator = _FakeAdmissionCoordinator()
+    return RunAdmission(
+        clock=FakeClock(),
+        settings=Settings(),
+        redactor=Redactor(()),
+        factory=factory,
+        snapshot_provider=SettingsBackedSnapshotProvider(Settings()),
+        database=RecordingStore(conn, threading.Lock()),
+        coordinator=coordinator,
+    )
+
+
+def test_admission_submits_through_the_narrow_seams_without_a_host() -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    coordinator = _FakeAdmissionCoordinator()
+    admission = _fake_admission(conn, coordinator=coordinator)
+
+    result = admission.submit(SubmitRequest(message="hello"))
+
+    assert result.kind == "accepted"
+    assert result.run_id is not None
+    assert [call[0] for call in coordinator.calls] == [
+        "reserve",
+        "mark_accepted",
+        "publish",
+    ]
+    row = conn.execute(
+        "SELECT purpose, phase, prompt_preview FROM runs"
+    ).fetchone()
+    assert row == ("chat", "accepted", "hello")
+    assert result.session_id is not None
+    assert conn.execute(
+        "SELECT COUNT(*) FROM sessions"
+    ).fetchone() == (1,), "a chat run without a session creates one"
+
+    # A busy coordinator answers 409 without admitting anything else.
+    calls_after_first = list(coordinator.calls)
+    busy = admission.submit(SubmitRequest(message="again"))
+    assert busy.kind == "run_in_progress"
+    assert conn.execute("SELECT COUNT(*) FROM runs").fetchone() == (1,)
+    assert coordinator.calls == calls_after_first, (
+        "the 409 answer drives no further transitions"
+    )
+
+
+def test_admission_releases_the_lease_when_client_capture_fails() -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    coordinator = _FakeAdmissionCoordinator()
+    admission = _fake_admission(conn, factory=_BoomFactory(), coordinator=coordinator)
+
+    result = admission.submit(SubmitRequest(message="hello"))
+
+    assert result.kind == "admission_failed"
+    assert [call[0] for call in coordinator.calls] == ["reserve", "release"]
+    assert conn.execute("SELECT COUNT(*) FROM runs").fetchone() == (0,)
+
+
+def test_admission_releases_the_lease_when_the_accepted_write_fails() -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    wrapped = _FailOn(conn, when=lambda sql: "INSERT INTO runs" in sql)
+    coordinator = _FakeAdmissionCoordinator()
+    admission = _fake_admission(wrapped, coordinator=coordinator)
+
+    result = admission.submit(SubmitRequest(message="hello"))
+
+    assert result.kind == "admission_failed"
+    assert [call[0] for call in coordinator.calls] == ["reserve", "release"]
+    assert conn.execute("SELECT COUNT(*) FROM runs").fetchone() == (0,)
+
+
+def test_unstarted_handoff_failure_finalizes_interrupted_through_seams() -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    coordinator = _FakeAdmissionCoordinator()
+    coordinator.fail_publish = True
+    admission = _fake_admission(conn, coordinator=coordinator)
+
+    result = admission.submit(SubmitRequest(message="hello"))
+
+    assert result.kind == "admission_failed"
+    assert result.run_id is not None
+    assert [call[0] for call in coordinator.calls] == [
+        "reserve",
+        "mark_accepted",
+        "close_idle",
+        "result",
+        "notify",
+    ]
+    row = conn.execute(
+        "SELECT phase, outcome, started_at FROM runs"
+    ).fetchone()
+    assert row == ("finished", "interrupted", None)
+    assert conn.execute("SELECT COUNT(*) FROM agent_log").fetchone() == (0,)
+
+
+def test_unstarted_db_failure_fails_closed_through_seams() -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    wrapped = _FailOn(
+        conn,
+        when=lambda sql: sql.lstrip().upper().startswith("UPDATE")
+        and "finished_at" in sql,
+    )
+    coordinator = _FakeAdmissionCoordinator()
+    coordinator.fail_publish = True
+    admission = _fake_admission(wrapped, coordinator=coordinator)
+
+    result = admission.submit(SubmitRequest(message="hello"))
+
+    assert result.kind == "admission_failed"
+    assert [call[0] for call in coordinator.calls] == [
+        "reserve",
+        "mark_accepted",
+        "fail_recording",
+        "result",
+        "notify",
+    ]
+    assert coordinator.state == "recording_failed"
+    fail_call = next(
+        call for call in coordinator.calls if call[0] == "fail_recording"
+    )
+    assert fail_call[2] == "failed", "the projection carries recording_state=failed"
+
+
+class _FakeExecutionCoordinator:
+    def __init__(self):
+        self.marked: list[str] = []
+
+    def execution_mark_running(self, started_at: str):
+        self.marked.append(started_at)
+
+
+class _FakeAssistant:
+    def __init__(self, result: LoopResult):
+        self._result = result
+        self.calls: list = []
+
+    def respond(self, message, **kwargs):
+        self.calls.append((message, kwargs))
+        return self._result
+
+
+class _FakeRecorder:
+    def __init__(self):
+        self.settled: list[dict] = []
+
+    def settle(self, item, **kwargs):
+        self.settled.append({"item": item, **kwargs})
+
+
+def _client_snapshot() -> ClientSnapshot:
+    return ClientSnapshot(
+        config_version="1",
+        primary=ModelAssignment(
+            endpoint_id="ep", model_id="m", wire_style="chat_completions"
+        ),
+        retrieval_gate=None,
+        api_key=None,
+        stream=False,
+        stream_fallback=True,
+        overall_deadline_s=None,
+        per_attempt_timeout_s=30.0,
+    )
+
+
+def test_execution_runs_one_item_through_the_narrow_seams() -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    schema.insert_accepted_run(
+        conn,
+        run_id="exec-1",
+        purpose="chat",
+        session_id=None,
+        gateway="cli",
+        accepted_at="2026-08-28T00:00:00Z",
+    )
+    conn.commit()
+    capture = CapturingSink(name="capture", flush_at_run_end=False)
+    fanout = FanOutSink([capture], process_instance_id="proc-exec")
+    coordinator = _FakeExecutionCoordinator()
+    recorder = _FakeRecorder()
+    work: queue.Queue = queue.Queue()
+    work.put(
+        WorkItem(
+            run_id="exec-1",
+            request=SubmitRequest(message="hi"),
+            snapshot=_client_snapshot(),
+            client=ScriptedModel(["pong"]),
+            session_id=None,
+            prompt_preview="hi",
+            accepted_at="2026-08-28T00:00:00Z",
+        )
+    )
+    work.put(None)
+    executor = RunExecutor(
+        clock=FakeClock(),
+        settings=Settings(),
+        redactor=Redactor(()),
+        assistant=_FakeAssistant(
+            LoopResult(
+                outcome="completed",
+                reply=text_message("assistant", "pong"),
+                error=None,
+                step_count=1,
+                duration_ms=1,
+                model_results=(),
+            )
+        ),
+        fanout=fanout,
+        store=RecordingStore(conn, threading.Lock()),
+        recorder=recorder,
+        coordinator=coordinator,
+        work_queue=work,
+    )
+
+    executor.run_loop()
+
+    assert conn.execute(
+        "SELECT phase FROM runs WHERE run_id = 'exec-1'"
+    ).fetchone() == ("running",)
+    assert len(coordinator.marked) == 1
+    assert [event.payload.name for event in capture.events] == ["run.started"]
+    assert len(recorder.settled) == 1
+    settled = recorder.settled[0]
+    assert settled["item"].run_id == "exec-1"
+    assert settled["outcome"] == "completed"
+    assert settled["step_count"] == 1
 
 
 def test_run_recorder_only_uses_narrow_seams() -> None:

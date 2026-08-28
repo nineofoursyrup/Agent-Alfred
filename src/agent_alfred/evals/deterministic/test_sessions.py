@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
+import time
 
 import pytest
 
@@ -61,7 +63,10 @@ def _seed_historic(conn: sqlite3.Connection, session_id: str, turns: list[str]) 
 
 
 def _migrated_host(
-    conn: sqlite3.Connection, script: list | None = None
+    conn: sqlite3.Connection,
+    script: list | None = None,
+    *,
+    before_recording_commit: threading.Event | None = None,
 ) -> RuntimeHost:
     schema.migrate(conn)
     capture = CapturingSink(name="capture", flush_at_run_end=True)
@@ -72,6 +77,7 @@ def _migrated_host(
         clock=FakeClock(),
         fanout=FanOutSink([capture], process_instance_id="proc-sessions"),
         process_instance_id="proc-sessions",
+        before_recording_commit=before_recording_commit,
     )
     return host
 
@@ -363,6 +369,443 @@ def test_malformed_cursor_is_rejected_not_restarted() -> None:
             host.open_session("s-cursor-0", page_size=2, cursor=inbox_cursor)
         with pytest.raises(SessionNotFound):
             host.open_session("no-such-session", page_size=2)
+    finally:
+        host.close()
+
+
+# --- an in-flight Run must not close the runs segment (the #30 lease) --------
+
+
+class _SelectiveLatch:
+    """``before_recording_commit`` stand-in that waits only while armed, so a
+    test can pause one Run's finalize transaction without stalling others."""
+
+    def __init__(self):
+        self._gate = threading.Event()
+        self._gate.set()
+
+    def arm(self) -> None:
+        self._gate.clear()
+
+    def release(self) -> None:
+        self._gate.set()
+
+    def wait(self, timeout=None):
+        return self._gate.wait(timeout)
+
+
+def _wait_until(predicate, timeout: float = 2.0) -> None:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if predicate():
+            return
+        time.sleep(0.01)
+    raise AssertionError("condition not met before timeout")
+
+
+def test_inflight_run_holds_the_runs_cursor_open() -> None:
+    """Run A recorded, Run B accepted-but-unrecorded: reading A and paging on
+    must not permanently close the runs segment; once B settles the same
+    cursor continues into B without duplication or omission."""
+    conn = _database_through_version(2)
+    _seed_historic(conn, "s-race", ["h1", "h2"])
+    latch = _SelectiveLatch()
+    host = _migrated_host(
+        conn, script=["a-reply", "b-reply"], before_recording_commit=latch
+    )
+    host.start()
+    try:
+        first = host.submit(SubmitRequest(message="a-q", session_id="s-race"))
+        host.wait(first.run_id)
+        latch.arm()
+        second = host.submit(SubmitRequest(message="b-q", session_id="s-race"))
+        assert second.kind == "accepted"
+        _wait_until(
+            lambda: host.snapshot().coordinator_state == "recording_pending"
+        )
+
+        page1 = host.open_session("s-race", page_size=1)
+        assert [
+            (m.role, message_plain_text_message(m)) for m in page1.messages
+        ] == [("user", "a-q"), ("assistant", "a-reply")]
+        # The runs segment is not closed while B is in flight: the cursor
+        # must remain a runs-segment cursor that can be continued later.
+        assert page1.next_cursor is not None
+        assert page1.runs_pending is True
+
+        latch.release()
+        host.wait(second.run_id)
+
+        page2 = host.open_session(
+            "s-race", page_size=1, cursor=page1.next_cursor
+        )
+        assert [
+            (m.role, message_plain_text_message(m)) for m in page2.messages
+        ] == [("user", "b-q"), ("assistant", "b-reply")]
+        assert all(m.run_id == second.run_id for m in page2.messages)
+
+        # Continuing the same walk reaches the historic segment exactly once.
+        rest: list = []
+        cursor = page2.next_cursor
+        while cursor is not None:
+            page = host.open_session("s-race", page_size=1, cursor=cursor)
+            rest.extend(page.messages)
+            cursor = page.next_cursor
+        assert [message_plain_text_message(m) for m in rest] == ["h1", "h2"]
+
+        everything, _ = _collect(host, "s-race", page_size=1)
+        assert [message_plain_text_message(m) for m in everything] == [
+            "a-q",
+            "a-reply",
+            "b-q",
+            "b-reply",
+            "h1",
+            "h2",
+        ]
+    finally:
+        latch.release()
+        host.close()
+
+
+def test_inflight_run_blocks_historic_until_it_settles() -> None:
+    """Historic messages wait behind an in-flight Run: handing them out first
+    would order the settled Run's later messages after the historic ones."""
+    conn = _database_through_version(2)
+    _seed_historic(conn, "s-wait", ["h1", "h2"])
+    latch = _SelectiveLatch()
+    host = _migrated_host(
+        conn, script=["a-reply", "b-reply"], before_recording_commit=latch
+    )
+    host.start()
+    try:
+        first = host.submit(SubmitRequest(message="a-q", session_id="s-wait"))
+        host.wait(first.run_id)
+        latch.arm()
+        second = host.submit(SubmitRequest(message="b-q", session_id="s-wait"))
+        _wait_until(
+            lambda: host.snapshot().coordinator_state == "recording_pending"
+        )
+
+        page = host.open_session("s-wait", page_size=5)
+        assert [
+            message_plain_text_message(m) for m in page.messages
+        ] == ["a-q", "a-reply"], "historic rows must not leak past an in-flight Run"
+        assert page.next_cursor is not None
+        assert page.runs_pending is True
+        # The wait cursor is positional (after A): polling it while B is in
+        # flight yields the deterministic empty wait page, not a tight-loop
+        # of fresh content.
+        again = host.open_session("s-wait", page_size=5, cursor=page.next_cursor)
+        assert again.messages == ()
+        assert again.runs_pending is True
+        once_more = host.open_session(
+            "s-wait", page_size=5, cursor=page.next_cursor
+        )
+        assert once_more == again
+
+        latch.release()
+        host.wait(second.run_id)
+        resumed = host.open_session(
+            "s-wait", page_size=5, cursor=page.next_cursor
+        )
+        assert [
+            message_plain_text_message(m) for m in resumed.messages
+        ] == ["b-q", "b-reply", "h1", "h2"]
+        assert resumed.next_cursor is None
+    finally:
+        latch.release()
+        host.close()
+
+
+def test_first_inflight_run_yields_an_empty_wait_page() -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    hold = threading.Event()
+    host = _migrated_host(conn, script=["b-reply"], before_recording_commit=hold)
+    host.start()
+    try:
+        session_id = host.create_session()
+        submitted = host.submit(
+            SubmitRequest(message="b-q", session_id=session_id)
+        )
+        assert submitted.kind == "accepted"
+        _wait_until(
+            lambda: host.snapshot().coordinator_state == "recording_pending"
+        )
+        page = host.open_session(session_id, page_size=3)
+        assert page.messages == ()
+        assert page.next_cursor is not None, (
+            "a fresh read must not declare the runs segment exhausted while "
+            "the Session's first Run is still in flight"
+        )
+        assert page.runs_pending is True
+
+        hold.set()
+        host.wait(submitted.run_id)
+        resumed = host.open_session(
+            session_id, page_size=3, cursor=page.next_cursor
+        )
+        assert [
+            message_plain_text_message(m) for m in resumed.messages
+        ] == ["b-q", "b-reply"]
+        assert resumed.next_cursor is None
+    finally:
+        hold.set()
+        host.close()
+
+
+class _FailFinalizeWhen:
+    """Connection wrapper that fails the finalize UPDATE while armed."""
+
+    def __init__(self, inner: sqlite3.Connection, flag: dict):
+        self._inner = inner
+        self._flag = flag
+
+    def execute(self, sql, parameters=()):
+        text = sql.lstrip().upper()
+        if self._flag["armed"] and text.startswith("UPDATE") and "finished_at" in sql:
+            raise sqlite3.OperationalError("injected finalize failure")
+        return self._inner.execute(sql, parameters)
+
+    def commit(self):
+        return self._inner.commit()
+
+    def rollback(self):
+        return self._inner.rollback()
+
+    def close(self):
+        return self._inner.close()
+
+    def __getattr__(self, name):
+        return getattr(self._inner, name)
+
+
+def test_recording_failed_run_releases_the_runs_segment() -> None:
+    """A Run whose recording failed never produces messages; the authoritative
+    failed projection must close the runs segment so the Session can reach its
+    historic rows instead of waiting on a Run that will never appear."""
+    flag = {"armed": False}
+    conn = _database_through_version(2)
+    _seed_historic(conn, "s-fail", ["h1"])
+    wrapped = _FailFinalizeWhen(conn, flag)
+    latch = _SelectiveLatch()
+    host = _migrated_host(
+        wrapped, script=["a-reply", "unused"], before_recording_commit=latch
+    )
+    host.start()
+    try:
+        first = host.submit(SubmitRequest(message="a-q", session_id="s-fail"))
+        host.wait(first.run_id)
+
+        latch.arm()
+        second = host.submit(SubmitRequest(message="b-q", session_id="s-fail"))
+        assert second.kind == "accepted"
+        _wait_until(
+            lambda: host.snapshot().coordinator_state == "recording_pending"
+        )
+        flag["armed"] = True
+        latch.release()
+        host.wait(second.run_id)
+        snap = host.snapshot()
+        assert snap.coordinator_state == "recording_failed"
+        assert snap.unrecorded_terminal_projection is not None
+        assert snap.unrecorded_terminal_projection.run_id == second.run_id
+        assert snap.unrecorded_terminal_projection.recording_state == "failed"
+
+        messages, pages = _collect(host, "s-fail", page_size=5)
+        texts = [message_plain_text_message(m) for m in messages]
+        assert texts == ["a-q", "a-reply", "h1"], (
+            "the failed Run is never fabricated into the chat record"
+        )
+        assert all(m.run_id != second.run_id for m in messages)
+        assert pages[-1].next_cursor is None
+        assert all(page.runs_pending is False for page in pages)
+    finally:
+        latch.release()
+        host.close()
+
+
+def test_open_session_cursor_is_bound_to_its_session() -> None:
+    conn = _database_through_version(2)
+    _seed_historic(conn, "s-left", ["q1", "a1"])
+    _seed_historic(conn, "s-right", ["q2"])
+    host = _migrated_host(conn)
+    host.start()
+    try:
+        left = host.open_session("s-left", page_size=1)
+        assert left.next_cursor is not None
+        # Re-playing another Session's cursor would silently skip rows; it
+        # must fail closed instead.
+        with pytest.raises(MalformedCursor):
+            host.open_session(
+                "s-right", page_size=1, cursor=left.next_cursor
+            )
+        # The session's own cursor keeps working.
+        right_first = host.open_session("s-right", page_size=1)
+        again = host.open_session(
+            "s-right", page_size=1, cursor=right_first.next_cursor
+        )
+        assert [message_plain_text_message(m) for m in again.messages] == ["q2"]
+    finally:
+        host.close()
+
+
+# --- #30: the Session title's source of truth --------------------------------
+
+
+def _insert_chat_run(
+    conn: sqlite3.Connection,
+    *,
+    run_id: str,
+    session_id: str,
+    prompt_preview: str | None,
+) -> None:
+    schema.insert_accepted_run(
+        conn,
+        run_id=run_id,
+        purpose="chat",
+        session_id=session_id,
+        gateway="cli",
+        accepted_at=f"2026-08-28T00:00:{len(run_id):02d}Z",
+        prompt_preview=prompt_preview,
+    )
+    conn.commit()
+
+
+def test_title_falls_back_to_created_at_when_the_earliest_preview_is_blank() -> None:
+    conn = _database_through_version(2)
+    _seed_historic(conn, "s-blank", ["历史上的用户消息", "回答"])
+    host = _migrated_host(conn)
+    host.start()
+    try:
+        # The migrated Session already exists (backfilled from agent_log);
+        # its created_at is the legacy time text copied verbatim.
+        _insert_chat_run(
+            conn, run_id="blank-1", session_id="s-blank", prompt_preview=""
+        )
+        conn.commit()
+        page = host.list_sessions(limit=10)
+        summary = next(
+            s for s in page.sessions if s.session_id == "s-blank"
+        )
+        # A Run exists, so the historic user message is never the title; the
+        # blank preview falls back to the created-at fallback.
+        assert summary.title.startswith("新会话 · ")
+        assert "历史上的用户消息" not in summary.title
+        assert summary.title == f"新会话 · {summary.created_at}"
+
+        page_open = host.open_session("s-blank", page_size=5)
+        assert page_open.title == summary.title
+    finally:
+        host.close()
+
+
+def test_title_ignores_a_whitespace_only_preview() -> None:
+    conn = _database_through_version(2)
+    _seed_historic(conn, "s-space", ["应被忽略的历史用户消息"])
+    host = _migrated_host(conn)
+    host.start()
+    try:
+        _insert_chat_run(
+            conn, run_id="space-1", session_id="s-space", prompt_preview="   "
+        )
+        conn.commit()
+        page = host.list_sessions(limit=10)
+        title = next(
+            s.title for s in page.sessions if s.session_id == "s-space"
+        )
+        assert title.startswith("新会话 · ")
+        assert "应被忽略的历史用户消息" not in title
+    finally:
+        host.close()
+
+
+def test_title_treats_a_null_preview_like_a_blank_one() -> None:
+    conn = _database_through_version(2)
+    _seed_historic(conn, "s-null", ["null 预览时不得使用的历史用户消息"])
+    host = _migrated_host(conn)
+    host.start()
+    try:
+        _insert_chat_run(
+            conn, run_id="null-1", session_id="s-null", prompt_preview=None
+        )
+        conn.commit()
+        page = host.list_sessions(limit=10)
+        title = next(
+            s.title for s in page.sessions if s.session_id == "s-null"
+        )
+        assert title.startswith("新会话 · ")
+        assert "null 预览时不得使用的历史用户消息" not in title
+    finally:
+        host.close()
+
+
+def test_title_uses_the_earliest_approved_chat_run_preview() -> None:
+    conn = _database_through_version(2)
+    host = _migrated_host(conn)
+    host.start()
+    try:
+        schema.insert_session(conn, session_id="s-multi", created_at=_TS)
+        _insert_chat_run(
+            conn,
+            run_id="multi-1",
+            session_id="s-multi",
+            prompt_preview="最早的预览",
+        )
+        _insert_chat_run(
+            conn,
+            run_id="multi-2",
+            session_id="s-multi",
+            prompt_preview="更晚的预览",
+        )
+        conn.commit()
+        page = host.list_sessions(limit=10)
+        title = next(
+            s.title for s in page.sessions if s.session_id == "s-multi"
+        )
+        assert title == "最早的预览"
+    finally:
+        host.close()
+
+
+def test_title_with_a_later_good_preview_but_blank_earliest_still_falls_back() -> None:
+    """The title source is the earliest approved Run; a blank preview there
+    is the created-at fallback, not the next Run's preview."""
+    conn = _database_through_version(2)
+    host = _migrated_host(conn)
+    host.start()
+    try:
+        schema.insert_session(conn, session_id="s-order", created_at=_TS)
+        _insert_chat_run(
+            conn, run_id="order-1", session_id="s-order", prompt_preview=""
+        )
+        _insert_chat_run(
+            conn,
+            run_id="order-2",
+            session_id="s-order",
+            prompt_preview="后来的预览",
+        )
+        conn.commit()
+        page = host.list_sessions(limit=10)
+        title = next(
+            s.title for s in page.sessions if s.session_id == "s-order"
+        )
+        assert title.startswith("新会话 · ")
+        assert "后来的预览" not in title
+    finally:
+        host.close()
+
+
+def test_title_without_any_run_still_uses_the_first_historic_user_message() -> None:
+    conn = _database_through_version(2)
+    _seed_historic(conn, "s-legacy", ["首条历史用户消息", "回答"])
+    host = _migrated_host(conn)
+    host.start()
+    try:
+        page = host.list_sessions(limit=10)
+        title = next(
+            s.title for s in page.sessions if s.session_id == "s-legacy"
+        )
+        assert title == "首条历史用户消息"
     finally:
         host.close()
 

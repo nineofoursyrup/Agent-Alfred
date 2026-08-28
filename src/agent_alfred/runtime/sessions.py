@@ -9,13 +9,22 @@ and the functions never commit (the caller owns any transaction):
 - :func:`open_session` -- one Session's messages, paged by the segmented
   cursor of ADR-0027: segment one returns the new-Run chat message pairs,
   stable-ordered by ``(activity_revision, run_id)``; once that segment is
-  exhausted the cursor moves to segment two, which returns the historic
+  safely closed the cursor moves to segment two, which returns the historic
   ``run_id IS NULL`` messages, stable-ordered by ``agent_log.id``. Historic
   messages are never attributed to a fabricated Run.
 
-The cursor is an opaque string that explicitly names its segment and position,
-so a page never spans a segment boundary unmarked and reuse of a cursor
-returns the same page again.
+Segment-one closure is a *derived* judgment, not a guess: the recording lease
+(#30) means a chat Run that will still enter the session record exists in
+phase ``accepted``/``running`` and always sorts beyond the recorded runs. While
+such a Run is in flight the cursor stays a runs-segment wait cursor
+(``runs_pending``) and historic rows are not handed out -- otherwise the Run's
+messages would later land behind them in the client's accumulated view. A Run
+whose recording failed (per the authoritative projection the Host passes in)
+never produces messages, so it releases the segment instead of blocking it.
+
+The cursor is an opaque string that names its Session, segment, and position,
+so a page never spans a segment boundary unmarked, re-using a cursor returns
+the same page again, and replaying it against another Session fails closed.
 """
 
 from __future__ import annotations
@@ -33,10 +42,13 @@ from agent_alfred.messages import (
 )
 from agent_alfred.redact import Redactor
 
-_CURSOR_VERSION = 1
+_CURSOR_VERSION = 2
 _INBOX_KIND = "inbox"
 _RUNS_SEGMENT = "runs"
 _HISTORIC_SEGMENT = "historic"
+# Chat Runs in these phases may still enter the session record (messages and
+# the phase flip commit in the same finalize transaction).
+_IN_FLIGHT_PHASES = ("accepted", "running")
 
 
 class SessionNotFound(ValueError):
@@ -79,6 +91,12 @@ class SessionMessagesPage:
     title: str
     messages: tuple[SessionMessage, ...]
     next_cursor: str | None
+    # True when next_cursor is a runs-segment wait cursor: a chat Run is
+    # still in flight, so there is no new message to deliver yet but the runs
+    # segment is not closed for this pagination view. Continue from this
+    # cursor after the Run settles (recorded, or failed per the projection);
+    # do not tight-loop: nothing changes until then.
+    runs_pending: bool = False
 
 
 # --- cursor codec -----------------------------------------------------------
@@ -161,17 +179,25 @@ def _session_title(
     redactor: Redactor | None,
     limit: int,
 ) -> str:
-    """Prompt preview of the earliest chat Run, else the first historic user
-    message's user-visible text (redacted, limited), else the created-at
-    fallback. Derived fresh on every read; nothing is stored."""
-    run = conn.execute(
+    """The #30 title contract: the earliest approved chat Run's prompt_preview
+    is the title source. Only a Session with no Run at all falls back to the
+    first historic user message's user-visible text; a Run whose preview is
+    missing or blank falls back to "新会话 · 创建时间". Derived fresh on every
+    read; nothing is stored."""
+    row = conn.execute(
         """SELECT prompt_preview FROM runs
            WHERE session_id = ? AND purpose = 'chat'
            ORDER BY activity_revision ASC, run_id ASC LIMIT 1""",
         (session_id,),
     ).fetchone()
-    if run is not None and run[0]:
-        return run[0]
+    if row is not None:
+        preview = row[0]
+        if preview is not None and preview.strip():
+            text = preview
+            if redactor is not None:
+                text = redactor.redact_text(text)
+            return _limit_text(text, limit)
+        return f"新会话 · {created_at}"
     try:
         row = conn.execute(
             """SELECT content FROM agent_log
@@ -210,12 +236,15 @@ def open_session(
     cursor: str | None = None,
     redactor: Redactor | None = None,
     title_max_chars: int = 240,
+    recording_failed_run_ids: frozenset[str] = frozenset(),
 ) -> SessionMessagesPage:
     """One Session's messages under the ADR-0027 segmented cursor.
 
     Page size counts items: Run message pairs in segment one, single historic
-    messages in segment two. When segment one is exhausted the same page
-    continues into segment two, so no empty intermediate pages exist; the
+    messages in segment two. When segment one is exhausted *and safely closed*
+    -- no in-flight chat Run remains beyond the cursor position, excluding
+    Runs the authoritative projection reports as recording-failed -- the same
+    page continues into segment two, so no empty intermediate pages exist. The
     returned cursor always names the segment (and position) the next page
     starts from, and re-using a cursor returns the same page again.
     """
@@ -232,13 +261,15 @@ def open_session(
     historic_position: int | None = None
     if cursor is not None:
         payload = _decode_cursor(cursor, _RUNS_SEGMENT)
+        _require_same_session(payload, session_id)
         segment = payload.get("seg")
         if segment == _RUNS_SEGMENT:
             ar = payload.get("ar")
             run_key = payload.get("r")
-            if not isinstance(ar, int) or not isinstance(run_key, str):
-                raise MalformedCursor("runs cursor position is malformed")
-            runs_position = (ar, run_key)
+            if ar is not None or run_key is not None:
+                if not isinstance(ar, int) or not isinstance(run_key, str):
+                    raise MalformedCursor("runs cursor position is malformed")
+                runs_position = (ar, run_key)
         elif segment == _HISTORIC_SEGMENT:
             last_id = payload.get("id")
             if not isinstance(last_id, int) or last_id < 0:
@@ -264,26 +295,104 @@ def open_session(
                 conn,
                 session_id,
                 messages,
-                _encode_cursor(
-                    {
-                        "v": _CURSOR_VERSION,
-                        "k": _RUNS_SEGMENT,
-                        "seg": _RUNS_SEGMENT,
-                        "ar": runs_position[0],
-                        "r": runs_position[1],
-                    }
-                ),
+                _runs_cursor(session_id, runs_position),
                 redactor,
                 title_max_chars,
+                runs_pending=False,
             )
-        # Segment one is exhausted; this page continues into segment two.
+        if _has_inflight_run(
+            conn, session_id, runs_position, recording_failed_run_ids
+        ):
+            # The runs segment is not closed for this view: a chat Run that
+            # will still enter the session record is in flight beyond the
+            # position. Historic rows wait behind it -- handing them out now
+            # would order the Run's messages after them later.
+            return _page(
+                conn,
+                session_id,
+                messages,
+                _runs_cursor(session_id, runs_position),
+                redactor,
+                title_max_chars,
+                runs_pending=True,
+            )
+        # Segment one is exhausted and safely closed; continue into segment two.
 
     next_cursor = _historic_tail(
         conn, session_id, historic_position, messages, remaining
     )
     return _page(
-        conn, session_id, messages, next_cursor, redactor, title_max_chars
+        conn,
+        session_id,
+        messages,
+        next_cursor,
+        redactor,
+        title_max_chars,
+        runs_pending=False,
     )
+
+
+def _require_same_session(payload: dict[str, Any], session_id: str) -> None:
+    bound = payload.get("s")
+    if bound != session_id:
+        raise MalformedCursor("cursor belongs to a different session")
+
+
+def _runs_cursor(session_id: str, position: tuple[int, str] | None) -> str:
+    payload: dict[str, Any] = {
+        "v": _CURSOR_VERSION,
+        "k": _RUNS_SEGMENT,
+        "seg": _RUNS_SEGMENT,
+        "s": session_id,
+    }
+    if position is not None:
+        payload["ar"] = position[0]
+        payload["r"] = position[1]
+    return _encode_cursor(payload)
+
+
+def _has_inflight_run(
+    conn,
+    session_id: str,
+    position: tuple[int, str] | None,
+    recording_failed_run_ids: frozenset[str],
+) -> bool:
+    """True while a chat Run that will still enter the session record is in
+    flight beyond the cursor position.
+
+    The recording lease (#30) keeps exactly one Run unrecorded at a time and
+    its messages, phase flip, and revision land in one finalize transaction,
+    so an unrecorded chat Run sits in phase accepted/running with no
+    agent_log rows and always sorts beyond every recorded key. A Run the
+    authoritative projection reports recording-failed never produces messages
+    and therefore releases the segment instead of blocking it forever.
+    """
+    sql = """
+        SELECT 1 FROM runs
+        WHERE runs.session_id = ?
+          AND runs.purpose = 'chat'
+          AND runs.phase IN (?, ?)
+          {failed}
+          {beyond}
+        LIMIT 1
+    """
+    params: list = [session_id, *_IN_FLIGHT_PHASES]
+    failed_clause = ""
+    if recording_failed_run_ids:
+        marks = ", ".join("?" for _ in recording_failed_run_ids)
+        failed_clause = f"AND runs.run_id NOT IN ({marks})\n"
+        params.extend(sorted(recording_failed_run_ids))
+    beyond_clause = ""
+    if position is not None:
+        beyond_clause = (
+            "AND (runs.activity_revision > ?"
+            " OR (runs.activity_revision = ? AND runs.run_id > ?))\n"
+        )
+        params.extend([position[0], position[0], position[1]])
+    row = conn.execute(
+        sql.format(failed=failed_clause, beyond=beyond_clause), params
+    ).fetchone()
+    return row is not None
 
 
 def _historic_tail(
@@ -324,6 +433,7 @@ def _historic_tail(
             "v": _CURSOR_VERSION,
             "k": _RUNS_SEGMENT,
             "seg": _HISTORIC_SEGMENT,
+            "s": session_id,
             "id": historic_position,
         }
     )
@@ -336,6 +446,8 @@ def _page(
     next_cursor: str | None,
     redactor: Redactor | None,
     title_max_chars: int,
+    *,
+    runs_pending: bool = False,
 ) -> SessionMessagesPage:
     return SessionMessagesPage(
         session_id=session_id,
@@ -348,6 +460,7 @@ def _page(
         ),
         messages=tuple(messages),
         next_cursor=next_cursor,
+        runs_pending=runs_pending,
     )
 
 
@@ -365,9 +478,9 @@ def _page_run_keys(
 
     Runs are only written into the message pair at finalize, in the same
     transaction that stamps activity_revision, so an in-flight Run has no
-    messages and no key -- and being the only in-flight Run it also holds the
-    highest key, so it can only appear in a later page, never be skipped by
-    one. The agent_log unique index guarantees at most one pair per Run.
+    messages and no key -- it is held out of this segment by the wait cursor
+    (:func:`_has_inflight_run`) instead of being mistaken for exhaustion.
+    The agent_log unique index guarantees at most one pair per Run.
     """
     sql = """
         SELECT runs.activity_revision, runs.run_id FROM runs

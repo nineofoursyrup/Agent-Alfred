@@ -8,6 +8,7 @@ import threading
 import uuid
 from collections.abc import Callable
 from dataclasses import replace
+from typing import Literal
 
 from agent_alfred import schema
 from agent_alfred.clock import Clock, format_instant
@@ -51,10 +52,21 @@ class RuntimeHost:
     """Process-unique owner of seq, the write connection, and admission.
 
     The lifecycle below the Run loop is owned here as narrow, atomic
-    transitions (``recording_enter_pending``, ``recording_enter_failed``,
-    ``recording_publish_recorded_then_release``); the recorder drives them
-    through the :class:`~agent_alfred.runtime.recording.RecordingCoordinator`
-    protocol instead of manipulating this object's private state.
+    transitions, and admission/execution/recorder never reach into this
+    object's private state: they drive it through the narrow seams they
+    actually need --
+
+    - recorder: ``recording_enter_pending`` / ``recording_enter_failed`` /
+      ``recording_publish_recorded_then_release`` / ``publish_run_result`` /
+      ``notify_run_done`` plus a :class:`RecordingStore`;
+    - admission: ``admission_reserve`` / ``admission_mark_accepted`` /
+      ``admission_release`` / ``admission_close_idle`` /
+      ``admission_fail_recording`` / ``publish_work_item``;
+    - execution: ``execution_mark_running``.
+
+    Each method below owns one state-machine invariant (authority before
+    lease release; failed state before 503; 409 while the lease holds); the
+    modules on the other side of the seams cannot bypass those orderings.
     """
 
     def __init__(
@@ -100,15 +112,34 @@ class RuntimeHost:
         self._snapshot_provider = snapshot_provider or SettingsBackedSnapshotProvider(
             settings
         )
-        self._admission = RunAdmission(self)
-        self._executor = RunExecutor(self)
+        self._store = RecordingStore(conn, self._db_lock)
         self._recorder = RunRecorder(
             clock=clock,
             fanout=fanout,
             redactor=self._redactor,
-            store=RecordingStore(conn, self._db_lock),
+            store=self._store,
             coordinator=self,
             before_recording_commit=before_recording_commit,
+        )
+        self._admission = RunAdmission(
+            clock=clock,
+            settings=settings,
+            redactor=self._redactor,
+            factory=factory,
+            snapshot_provider=self._snapshot_provider,
+            database=self._store,
+            coordinator=self,
+        )
+        self._executor = RunExecutor(
+            clock=clock,
+            settings=settings,
+            redactor=self._redactor,
+            assistant=self._assistant,
+            fanout=fanout,
+            store=self._store,
+            recorder=self._recorder,
+            coordinator=self,
+            work_queue=self._queue,
         )
         self._worker = threading.Thread(
             target=self._executor.run_loop, name="run-worker", daemon=True
@@ -154,7 +185,95 @@ class RuntimeHost:
             self._conn.commit()
         return session_id
 
-    # -- recording-settlement transitions (the only writer of these states) --
+    # -- admission lease transitions (the only writer of these states) -----
+
+    def admission_reserve(
+        self, run_id: str
+    ) -> tuple[SubmitKind | Literal["reserved"], RuntimeSnapshot]:
+        """Atomically decide 409/503/reserve. The lease, once reserved, holds
+        until the recording settles: a second submit during recording_pending
+        gets ``run_in_progress``; a recording-failed coordinator answers
+        ``recording_unavailable``."""
+        with self._lock:
+            snap = self._states.get()
+            if self._coord == "recording_failed":
+                return "recording_unavailable", snap
+            if self._coord != "idle":
+                return "run_in_progress", snap
+            self._coord = "accepted"
+            self._done[run_id] = threading.Event()
+            return "reserved", snap
+
+    def admission_mark_accepted(self, summary: ActiveRunSummary) -> RuntimeSnapshot:
+        with self._lock:
+            self._active_summary = summary
+            return self._states.replace(
+                coordinator_state="accepted", active_run=summary
+            )
+
+    def admission_release(self, run_id: str) -> None:
+        """Drop the lease after a failed admission; nothing was handed off."""
+        with self._lock:
+            self._done.pop(run_id, None)
+            self._coord = "idle"
+            self._active_summary = None
+        self._states.replace(coordinator_state="idle", active_run=None)
+
+    def admission_close_idle(self) -> None:
+        """An unstarted run finalized interrupted; admission reopens."""
+        with self._lock:
+            self._coord = "idle"
+            self._active_summary = None
+        self._states.replace(
+            coordinator_state="idle",
+            active_run=None,
+            unrecorded_terminal_projection=None,
+        )
+
+    def admission_fail_recording(
+        self,
+        fallback: ActiveRunSummary,
+        projection: UnrecordedTerminalProjection,
+    ) -> None:
+        """recording_failed: keep the same projection, mark the summary failed,
+        and close admission. Ordering is the #30 contract: the failed state is
+        authoritative before anything answers 503."""
+        with self._lock:
+            summary = self._active_summary or fallback
+            summary = replace(summary, recording_state="failed")
+            self._active_summary = summary
+            self._coord = "recording_failed"
+            self._states.replace(
+                coordinator_state="recording_failed",
+                active_run=summary,
+                unrecorded_terminal_projection=projection,
+            )
+
+    def publish_work_item(self, item: WorkItem) -> None:
+        """Hand a prepared work item to the single execution thread."""
+        publisher = (
+            self._publish_work
+            if self._publish_work is not None
+            else self._queue.put_nowait
+        )
+        publisher(item)
+
+    # -- execution transition ----------------------------------------------
+
+    def execution_mark_running(self, started_at: str) -> ActiveRunSummary | None:
+        with self._lock:
+            self._coord = "running"
+            if self._active_summary is not None:
+                self._active_summary = replace(
+                    self._active_summary,
+                    phase="running",
+                    started_at=started_at,
+                )
+            summary = self._active_summary
+        self._states.replace(coordinator_state="running", active_run=summary)
+        return summary
+
+    # -- recording-settlement transitions -----------------------------------
 
     def recording_enter_pending(
         self, projection: UnrecordedTerminalProjection
@@ -218,7 +337,10 @@ class RuntimeHost:
             self._states.replace(coordinator_state="idle", active_run=None)
 
     def publish_run_result(self, run_id: str, result: LoopResult) -> None:
-        self._results[run_id] = result
+        # Only a run whose done event exists has a waiter; anything else
+        # would leak an unreadable result entry.
+        if run_id in self._done:
+            self._results[run_id] = result
 
     def notify_run_done(self, run_id: str) -> None:
         event = self._done.get(run_id)
@@ -249,6 +371,15 @@ class RuntimeHost:
         page_size: int,
         cursor: str | None = None,
     ) -> session_store.SessionMessagesPage:
+        # The authoritative failure projection decides whether an in-flight
+        # Run can still produce messages (see runtime.sessions).
+        projection = self._states.get().unrecorded_terminal_projection
+        recording_failed: frozenset[str] = frozenset()
+        if (
+            projection is not None
+            and projection.recording_state == "failed"
+        ):
+            recording_failed = frozenset({projection.run_id})
         with self._db_lock:
             return session_store.open_session(
                 self._conn,
@@ -257,6 +388,7 @@ class RuntimeHost:
                 cursor=cursor,
                 redactor=self._redactor,
                 title_max_chars=self._settings.prompt_preview_max_chars,
+                recording_failed_run_ids=recording_failed,
             )
 
     def submit(self, request: SubmitRequest) -> SubmitResult:

@@ -70,6 +70,12 @@ class RecordingStore:
                 if self._conn.in_transaction:
                     self._conn.rollback()
 
+    @contextmanager
+    def reading(self):
+        """Read access under the write lock; no transaction is owned."""
+        with self._db_lock:
+            yield self._conn
+
 
 class RunRecorder:
     def __init__(
