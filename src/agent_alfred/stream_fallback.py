@@ -7,7 +7,12 @@ from typing import cast
 
 from agent_alfred.clock import Clock
 from agent_alfred.events import AttemptAborted, AttemptCommitted
-from agent_alfred.model import ModelClient, ModelRequest, ModelResult
+from agent_alfred.model import (
+    ModelClient,
+    ModelRequest,
+    ModelResult,
+    mark_final_error_non_retryable,
+)
 
 
 class OverallDeadlineExceeded(Exception):
@@ -58,7 +63,7 @@ class StreamFallback:
         if not _is_incomplete_stream(first):
             return first
         if self._deadline_elapsed(deadline):
-            return _with_retryable_false(first)
+            return mark_final_error_non_retryable(first)
         attempt_deadline = self._attempt_deadline(deadline)
         target = self._bind_timeout(self._nonstream, attempt_deadline)
         second = target.respond(
@@ -119,17 +124,3 @@ class _TimedAttemptEvents:
 def _is_incomplete_stream(result: ModelResult) -> bool:
     error = result.final_error
     return error is not None and error.code == "incomplete_stream"
-
-
-def _with_retryable_false(result: ModelResult) -> ModelResult:
-    error = result.final_error
-    if error is None:
-        return result
-    closed = replace(error, retryable=False)
-    attempts = tuple(
-        replace(record, error=closed)
-        if record.error is not None and record.attempt_id == closed.attempt_id
-        else record
-        for record in result.attempts
-    )
-    return ModelResult(attempts=attempts, response=None, final_error=closed)

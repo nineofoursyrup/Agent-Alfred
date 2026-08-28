@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
 from typing import Protocol
 
 from agent_alfred.clock import Clock
-from agent_alfred.model import ModelClient, ModelRequest, ModelResult
+from agent_alfred.model import (
+    ModelClient,
+    ModelRequest,
+    ModelResult,
+    mark_final_error_non_retryable,
+)
 
 
 class Sleeper(Protocol):
@@ -70,9 +74,11 @@ class RetryPolicy:
             ):
                 return combined
             if self._deadline_elapsed(deadline):
-                return _with_retryable_false(combined)
+                return mark_final_error_non_retryable(combined)
             if not self._sleep_before_retry(deadline):
-                return _with_retryable_false(combined)
+                return mark_final_error_non_retryable(combined)
+            if self._deadline_elapsed(deadline):
+                return mark_final_error_non_retryable(combined)
         raise AssertionError("retry loop exhausted without a ModelResult")
 
     def _deadline_elapsed(self, deadline: float | None) -> bool:
@@ -87,17 +93,3 @@ class RetryPolicy:
         if delay:
             self._sleeper.sleep(delay)
         return True
-
-
-def _with_retryable_false(result: ModelResult) -> ModelResult:
-    error = result.final_error
-    if error is None:
-        return result
-    closed = replace(error, retryable=False)
-    attempts = tuple(
-        replace(record, error=closed)
-        if record.error is not None and record.attempt_id == closed.attempt_id
-        else record
-        for record in result.attempts
-    )
-    return ModelResult(attempts=attempts, response=None, final_error=closed)

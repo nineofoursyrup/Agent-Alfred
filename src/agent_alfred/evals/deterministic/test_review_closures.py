@@ -10,6 +10,7 @@ import inspect
 import json
 import sqlite3
 import stat
+import threading
 from dataclasses import dataclass
 from types import SimpleNamespace
 
@@ -20,6 +21,7 @@ from agent_alfred.clock import FakeClock
 from agent_alfred.events import (
     BarrierFlushResult,
     CapturingSink,
+    EventEnvelope,
     FanOutSink,
     FlushResult,
     Notice,
@@ -775,6 +777,97 @@ def test_retry_policy_retries_retryable_status_on_the_same_deadline() -> None:
     assert sleeper.calls == [0.25]
     assert fake.calls[0]["timeout"] == 10
     assert fake.calls[1]["timeout"] == 9.75
+
+
+def test_retry_sleep_crossing_deadline_preserves_paid_attempt() -> None:
+    from agent_alfred.retry import RetryPolicy
+
+    class OversleepingSleeper:
+        def sleep(self, seconds: float) -> None:
+            del seconds
+            clock.monotonic_value = 11
+
+    clock = FakeClock(monotonic_value=0)
+    fake = FakeOpenAI([AuthError(429, "rate limited")])
+    client = RetryPolicy(
+        _client(fake, stream=False, clock=clock),
+        clock=clock,
+        sleeper=OversleepingSleeper(),
+        max_retries=1,
+        retry_delay_s=0.25,
+    )
+
+    result = client.respond(_request(), deadline=10)
+
+    assert result.response is None
+    assert result.final_error is not None
+    assert result.final_error.retryable is False
+    assert len(result.attempts) == 1
+    assert len(fake.calls) == 1
+
+
+def test_concurrent_disable_prevents_commit_after_prepare() -> None:
+    class InterleavingSink:
+        name = "interleaving"
+        flush_at_run_end = False
+
+        def __init__(self):
+            self.first_entered = threading.Event()
+            self.release_first = threading.Event()
+            self.prepare_calls = 0
+            self.commit_calls = 0
+            self._lock = threading.Lock()
+
+        def prepare(self, event):
+            del event
+            with self._lock:
+                self.prepare_calls += 1
+                call = self.prepare_calls
+            if call == 1:
+                self.first_entered.set()
+                assert self.release_first.wait(timeout=1)
+                return object()
+            raise RuntimeError("disable this sink")
+
+        def commit(self, prepared, event):
+            del prepared, event
+            self.commit_calls += 1
+
+        def flush(self):
+            from agent_alfred.events import BestEffortFlushResult
+
+            return BestEffortFlushResult(outcome="best_effort")
+
+        def close(self):
+            return None
+
+    bad = InterleavingSink()
+    capture = CapturingSink(name="capture")
+    fanout = FanOutSink([bad, capture], process_instance_id="proc-race")
+    envelope = EventEnvelope(
+        ts=0,
+        run_id="run-race",
+        session_id=None,
+        step_index=None,
+        attempt_id=None,
+        node_id=None,
+    )
+    first = threading.Thread(
+        target=fanout.emit,
+        args=(Notice(code="model_support_flipped"), envelope),
+    )
+    first.start()
+    assert bad.first_entered.wait(timeout=1)
+
+    fanout.emit(Notice(code="model_support_flipped"), envelope)
+    bad.release_first.set()
+    first.join(timeout=1)
+
+    assert not first.is_alive()
+    assert bad.commit_calls == 0
+    incomplete, reason = fanout.flush_barrier("run-race")
+    assert incomplete is True
+    assert reason is not None and "dropped persist" in reason
 
 
 # --- 8. StepStarted.system is redacted for every sink ---

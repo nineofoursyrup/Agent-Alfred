@@ -317,17 +317,21 @@ class FanOutSink:
         prepared: list[tuple[EventSink, object]] = []
         newly_disabled: list[tuple[str, str]] = []
         run_id = unsequenced.envelope.run_id
-        disabled = self._disabled.get(run_id, set())
         for sink in self._sinks:
-            if sink.name in disabled:
-                continue
+            with self._lock:
+                if sink.name in self._disabled.get(run_id, set()):
+                    continue
             try:
                 prep = sink.prepare(unsequenced)
             except Exception:
-                self._note_sink_failure(
-                    run_id, sink, "prepare", unsequenced.trace_policy
-                )
-                newly_disabled.append((sink.name, "prepare"))
+                with self._lock:
+                    disabled = self._disabled.setdefault(run_id, set())
+                    first_failure = sink.name not in disabled
+                    self._note_sink_failure_locked(
+                        run_id, sink, "prepare", unsequenced.trace_policy
+                    )
+                if first_failure:
+                    newly_disabled.append((sink.name, "prepare"))
                 continue
             prepared.append((sink, prep))
         with self._lock:
@@ -342,13 +346,24 @@ class FanOutSink:
                 replayable=unsequenced.replayable,
             )
             for sink, prep in prepared:
+                if sink.name in self._disabled.get(run_id, set()):
+                    self._note_sink_failure_locked(
+                        run_id,
+                        sink,
+                        "commit_skipped",
+                        unsequenced.trace_policy,
+                    )
+                    continue
                 try:
                     sink.commit(prep, sequenced)
                 except Exception:
-                    self._note_sink_failure(
+                    disabled = self._disabled.setdefault(run_id, set())
+                    first_failure = sink.name not in disabled
+                    self._note_sink_failure_locked(
                         run_id, sink, "commit", unsequenced.trace_policy
                     )
-                    newly_disabled.append((sink.name, "commit"))
+                    if first_failure:
+                        newly_disabled.append((sink.name, "commit"))
         if notify_disabled:
             for name, stage in newly_disabled:
                 self._emit_notice(
@@ -359,7 +374,7 @@ class FanOutSink:
                 )
         return sequenced
 
-    def _note_sink_failure(
+    def _note_sink_failure_locked(
         self, run_id: str, sink: EventSink, stage: str, trace_policy: TracePolicy
     ) -> None:
         self._disabled.setdefault(run_id, set()).add(sink.name)

@@ -5,7 +5,7 @@ from __future__ import annotations
 import threading
 import uuid
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from decimal import Decimal
 from typing import Any, Literal, Protocol
 
@@ -81,6 +81,21 @@ class ModelResult:
             raise ValueError("ModelResult.attempts must be non-empty")
         if (self.response is None) == (self.final_error is None):
             raise ValueError("ModelResult needs exactly one of response or final_error")
+
+
+def mark_final_error_non_retryable(result: ModelResult) -> ModelResult:
+    """Close only the final failed Attempt while preserving the full ledger."""
+    error = result.final_error
+    if error is None:
+        return result
+    closed = replace(error, retryable=False)
+    attempts = tuple(
+        replace(record, error=closed)
+        if record.error is not None and record.attempt_id == closed.attempt_id
+        else record
+        for record in result.attempts
+    )
+    return ModelResult(attempts=attempts, response=None, final_error=closed)
 
 
 @dataclass(frozen=True)
