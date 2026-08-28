@@ -16,9 +16,15 @@ from agent_alfred.loop.budget import RunBudget, StepBudgetExceeded
 from agent_alfred.memory.retrieval_gate import evaluate as evaluate_retrieval_gate
 from agent_alfred.messages import Message, TextBlock, text_message
 from agent_alfred.model import ModelClient, ModelRef, ModelRequest, ModelResult
-from agent_alfred.settings import LOOP_NODE_ID, MAX_STEPS_REACHED_TEXT, Settings
-
-RunOutcome = str
+from agent_alfred.outcomes import RunOutcome
+from agent_alfred.settings import (
+    CONTROLLED_FAILURE_TEXT,
+    LOOP_NODE_ID,
+    MAX_STEPS_REACHED_TEXT,
+    OVERALL_DEADLINE_TEXT,
+    Settings,
+)
+from agent_alfred.stream_fallback import OverallDeadlineExceeded
 
 
 @dataclass(frozen=True)
@@ -42,22 +48,30 @@ class Assistant:
         *,
         client: ModelClient,
         budget: RunBudget,
-        history: Sequence[Message],
+        working_memory: Sequence[Message],
         model: ModelRef,
         run_id: str,
         session_id: str | None,
         events: FanOutSink | None = None,
         source: str = "cli",
         stream: bool = False,
+        overall_deadline_s: float | None = None,
+        per_attempt_timeout_s: float | None = None,
     ) -> LoopResult:
-        del stream
+        del per_attempt_timeout_s
         started = self._clock.monotonic()
+        overall_s = (
+            self._settings.overall_deadline_s
+            if overall_deadline_s is None
+            else overall_deadline_s
+        )
+        overall_abs = None if overall_s is None else started + overall_s
         system = (
             TextBlock(self._settings.persona),
             TextBlock(f"Current local time: {self._clock.local_now().isoformat()}"),
         )
         user = text_message("user", message)
-        transcript: list[Message] = [*history, user]
+        transcript: list[Message] = [*working_memory, user]
         evaluate_retrieval_gate(transcript)
         results: list[ModelResult] = []
         outcome: RunOutcome = "failed"
@@ -65,6 +79,11 @@ class Assistant:
         error: str | None = None
         step_count = 0
         while True:
+            if overall_abs is not None and self._clock.monotonic() >= overall_abs:
+                outcome = "failed"
+                reply = text_message("assistant", OVERALL_DEADLINE_TEXT)
+                error = "overall_deadline"
+                break
             try:
                 lease = budget.reserve_step(LOOP_NODE_ID)
             except StepBudgetExceeded:
@@ -91,16 +110,24 @@ class Assistant:
                     ),
                     envelope,
                 )
-            deadline = self._step_deadline()
             request = ModelRequest(
                 model=model,
                 system=system,
                 messages=tuple(transcript),
                 max_tokens=self._settings.max_tokens,
             )
-            model_result = client.respond(
-                request, events=events, deadline=deadline
-            )
+            try:
+                model_result = client.respond(
+                    request,
+                    events=events,
+                    deadline=overall_abs,
+                    stream=stream,
+                )
+            except OverallDeadlineExceeded:
+                outcome = "failed"
+                reply = text_message("assistant", OVERALL_DEADLINE_TEXT)
+                error = "overall_deadline"
+                break
             results.append(model_result)
             stop_reason = "error"
             if model_result.response is not None:
@@ -113,9 +140,11 @@ class Assistant:
                 error = None
             else:
                 err = model_result.final_error
-                error = None if err is None else (err.body_excerpt or err.code)
+                error = "model_error"
+                if err is not None and err.code:
+                    error = err.code
                 outcome = "failed"
-                reply = None
+                reply = text_message("assistant", CONTROLLED_FAILURE_TEXT)
             if events is not None:
                 events.emit(
                     StepFinished(
@@ -136,15 +165,6 @@ class Assistant:
             duration_ms=_duration_ms(started, self._clock.monotonic()),
             model_results=tuple(results),
         )
-
-    def _step_deadline(self) -> float | None:
-        overall = self._settings.overall_deadline_s
-        per_attempt = self._settings.per_attempt_timeout_s
-        now = self._clock.monotonic()
-        candidates = [now + per_attempt]
-        if overall is not None:
-            candidates.append(now + overall)
-        return min(candidates)
 
 
 def _duration_ms(started: float, ended: float) -> int:

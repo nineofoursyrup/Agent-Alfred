@@ -9,6 +9,7 @@ from typing import TextIO
 
 from agent_alfred.loop.assistant import LoopResult
 from agent_alfred.messages import message_plain_text
+from agent_alfred.render import ReplyRenderer, render_markdown_reply
 from agent_alfred.runtime.host import RuntimeHost, SubmitRequest
 from agent_alfred.settings import MAX_STEPS_REACHED_TEXT
 
@@ -70,7 +71,12 @@ def _repl(host: RuntimeHost, session_id: str) -> int:
 
 
 def _send(
-    host: RuntimeHost, message: str, session_id: str, out: TextIO
+    host: RuntimeHost,
+    message: str,
+    session_id: str,
+    out: TextIO,
+    *,
+    renderer: ReplyRenderer | None = None,
 ) -> int:
     submitted = host.submit(
         SubmitRequest(message=message, session_id=session_id, gateway="cli")
@@ -79,7 +85,7 @@ def _send(
         _print_submit_failure(submitted.kind, out)
         return 1
     result = host.wait(submitted.run_id)
-    _print_result(result, out)
+    _print_result(result, out, renderer=renderer or render_markdown_reply)
     return 0 if result.outcome == "completed" else 1
 
 
@@ -92,9 +98,11 @@ def _print_submit_failure(kind: str, out: TextIO) -> None:
         out.write(f"Admission failed ({kind}).\n")
 
 
-def _print_result(result: LoopResult, out: TextIO) -> None:
+def _print_result(
+    result: LoopResult, out: TextIO, *, renderer: ReplyRenderer
+) -> None:
     if result.reply is not None:
-        out.write(message_plain_text(result.reply) + "\n")
+        renderer(message_plain_text(result.reply), out)
         return
     if result.outcome == "max_steps":
         out.write(MAX_STEPS_REACHED_TEXT + "\n")
@@ -109,6 +117,7 @@ def run_injected(
     *,
     session_id: str | None = None,
     out: TextIO | None = None,
+    renderer: ReplyRenderer | None = None,
 ) -> int:
     """Test seam: drive the CLI send path against an injected host."""
     stream = out if out is not None else sys.stdout
@@ -116,6 +125,6 @@ def run_injected(
         session_id = host.create_session()
     host.start()
     try:
-        return _send(host, message, session_id, stream)
+        return _send(host, message, session_id, stream, renderer=renderer)
     finally:
         host.close()

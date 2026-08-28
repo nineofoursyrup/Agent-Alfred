@@ -4,13 +4,22 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Literal, Protocol
 
 from agent_alfred.messages import Message, TextBlock
+from agent_alfred.outcomes import RunOutcome
 
 TracePolicy = Literal["transient", "persist"]
-RunOutcome = Literal["completed", "max_steps", "failed", "interrupted"]
+NoticeCode = Literal[
+    "replay_gap",
+    "deltas_dropped",
+    "trace_incomplete",
+    "sink_disabled",
+    "redaction_failed",
+    "model_support_flipped",
+]
+NoticeLevel = Literal["info", "warning", "error"]
 
 
 @dataclass(frozen=True)
@@ -44,7 +53,7 @@ class RunStarted:
     name: str = "run.started"
     trace_policy: TracePolicy = "persist"
     user_message: Message | None = None
-    history_message_count: int = 0
+    working_memory_message_count: int = 0
     persona_id: str | None = None
     purpose: str = "chat"
 
@@ -80,7 +89,17 @@ class StepFinished:
     duration_ms: int = 0
 
 
-EventPayload = RunStarted | RunFinished | StepStarted | StepFinished
+@dataclass(frozen=True)
+class Notice:
+    name: str = "notice"
+    trace_policy: TracePolicy = "persist"
+    level: NoticeLevel = "error"
+    code: NoticeCode = "sink_disabled"
+    detail: tuple[tuple[str, str], ...] = ()
+    evidence: str | None = None
+
+
+EventPayload = RunStarted | RunFinished | StepStarted | StepFinished | Notice
 
 
 @dataclass(frozen=True)
@@ -173,21 +192,38 @@ class FanOutSink:
             trace_policy=trace_policy,
             replayable=replayable_for(trace_policy),
         )
+        redact_failed = False
         if self._redactor is not None:
             try:
                 unsequenced = self._redactor.redact(unsequenced)
             except Exception:
-                unsequenced = UnsequencedEvent(
-                    envelope=envelope,
-                    payload=RunStarted(user_message=None),
-                    trace_policy="persist",
-                    replayable=True,
-                )
+                unsequenced = _fail_closed_event(unsequenced)
+                redact_failed = True
+        sequenced = self._publish(unsequenced, notify_disabled=True)
+        if redact_failed:
+            self._emit_notice(
+                envelope,
+                code="redaction_failed",
+                level="error",
+                detail=(),
+            )
+        return sequenced
+
+    def _publish(
+        self, unsequenced: UnsequencedEvent, *, notify_disabled: bool
+    ) -> SequencedEvent:
         prepared: list[tuple[EventSink, object]] = []
+        newly_disabled: list[tuple[str, str]] = []
         for sink in self._sinks:
             if sink.name in self._disabled:
                 continue
-            prepared.append((sink, sink.prepare(unsequenced)))
+            try:
+                prep = sink.prepare(unsequenced)
+            except Exception:
+                self._disabled.add(sink.name)
+                newly_disabled.append((sink.name, "prepare"))
+                continue
+            prepared.append((sink, prep))
         with self._lock:
             seq = self._seq
             self._seq += 1
@@ -199,12 +235,41 @@ class FanOutSink:
                 trace_policy=unsequenced.trace_policy,
                 replayable=unsequenced.replayable,
             )
+            surviving: list[tuple[EventSink, object]] = []
             for sink, prep in prepared:
+                surviving.append((sink, prep))
+            for sink, prep in surviving:
                 try:
                     sink.commit(prep, sequenced)
                 except Exception:
                     self._disabled.add(sink.name)
+                    newly_disabled.append((sink.name, "commit"))
+        if notify_disabled:
+            for name, stage in newly_disabled:
+                self._emit_notice(
+                    unsequenced.envelope,
+                    code="sink_disabled",
+                    level="error",
+                    detail=(("sink", name), ("stage", stage)),
+                )
         return sequenced
+
+    def _emit_notice(
+        self,
+        envelope: EventEnvelope,
+        *,
+        code: NoticeCode,
+        level: NoticeLevel,
+        detail: tuple[tuple[str, str], ...],
+    ) -> None:
+        notice = Notice(level=level, code=code, detail=detail)
+        unsequenced = UnsequencedEvent(
+            envelope=envelope,
+            payload=notice,
+            trace_policy="persist",
+            replayable=True,
+        )
+        self._publish(unsequenced, notify_disabled=False)
 
     def flush_barrier(self) -> tuple[bool, str | None]:
         """Wait on flush_at_run_end sinks. Missing/failed/exception => incomplete."""
@@ -234,3 +299,16 @@ class FanOutSink:
     def close(self) -> None:
         for sink in self._sinks:
             sink.close()
+
+
+def _fail_closed_event(event: UnsequencedEvent) -> UnsequencedEvent:
+    payload = event.payload
+    if isinstance(payload, RunStarted):
+        payload = replace(payload, user_message=None)
+    elif isinstance(payload, RunFinished):
+        payload = replace(payload, reply=None, error="redaction_failed")
+    elif isinstance(payload, StepStarted):
+        payload = replace(payload, system=None)
+    elif isinstance(payload, Notice):
+        payload = replace(payload, evidence=None, detail=())
+    return replace(event, payload=payload)

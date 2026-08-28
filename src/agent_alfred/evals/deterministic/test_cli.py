@@ -13,6 +13,26 @@ from agent_alfred.runtime.host import RuntimeHost
 from agent_alfred.settings import Settings
 
 
+def test_cli_markdown_reply_goes_through_the_rich_renderer() -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    sink = CapturingSink(flush_at_run_end=True)
+    host = RuntimeHost(
+        conn=conn,
+        factory=ScriptedModelFactory(ScriptedModel(["**hello**"])),
+        settings=Settings(),
+        clock=FakeClock(),
+        fanout=FanOutSink([sink], process_instance_id="cli-md"),
+        process_instance_id="cli-md",
+    )
+    out = io.StringIO()
+    code = cli.run_injected(host, "hi", out=out)
+    assert code == 0
+    rendered = out.getvalue()
+    assert rendered != "**hello**\n"
+    assert "hello" in rendered
+
+
 def test_cli_one_shot_prints_the_scripted_reply() -> None:
     conn = sqlite3.connect(":memory:", check_same_thread=False)
     schema.migrate(conn)

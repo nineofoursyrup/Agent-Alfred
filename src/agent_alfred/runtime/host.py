@@ -9,7 +9,7 @@ import threading
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, replace
-from typing import Any, Literal
+from typing import Literal
 
 from agent_alfred import schema
 from agent_alfred.clock import Clock, format_instant
@@ -28,7 +28,12 @@ from agent_alfred.messages import (
     message_plain_text,
     text_message,
 )
-from agent_alfred.model import ClientSnapshot, ModelClientFactory, ModelRef
+from agent_alfred.model import ClientSnapshot, ModelClientFactory, ModelRef, ModelResult
+from agent_alfred.outcomes import RunOutcome
+from agent_alfred.runtime.config import (
+    ConfigSnapshotProvider,
+    SettingsBackedSnapshotProvider,
+)
 from agent_alfred.runtime.snapshot import (
     ActiveRunSummary,
     CoordinatorState,
@@ -36,7 +41,8 @@ from agent_alfred.runtime.snapshot import (
     RuntimeSnapshot,
     UnrecordedTerminalProjection,
 )
-from agent_alfred.settings import Settings
+from agent_alfred.runtime.telemetry import serialize_run_telemetry
+from agent_alfred.settings import CONTROLLED_FAILURE_TEXT, Settings
 
 SubmitKind = Literal[
     "accepted",
@@ -90,6 +96,9 @@ class RuntimeHost:
         preview_redactor: Callable[[str], str] | None = None,
         publish_work: Callable[[_WorkItem], None] | None = None,
         before_recording_commit: threading.Event | None = None,
+        after_recorded_snapshot: threading.Event | None = None,
+        before_recording_failed: threading.Event | None = None,
+        snapshot_provider: ConfigSnapshotProvider | None = None,
     ):
         self._conn = conn
         self._factory = factory
@@ -119,6 +128,11 @@ class RuntimeHost:
         self._closed = False
         self._publish_work = publish_work
         self._before_recording_commit = before_recording_commit
+        self._after_recorded_snapshot = after_recorded_snapshot
+        self._before_recording_failed = before_recording_failed
+        self._snapshot_provider = snapshot_provider or SettingsBackedSnapshotProvider(
+            settings
+        )
 
     @property
     def process_instance_id(self) -> str:
@@ -237,7 +251,7 @@ class RuntimeHost:
         item = _WorkItem(
             run_id=run_id,
             request=request,
-            snapshot=self._client_snapshot(request),
+            snapshot=self._capture_snapshot(request),
             session_id=session_id,
             prompt_preview=preview,
             accepted_at=accepted_at,
@@ -264,18 +278,10 @@ class RuntimeHost:
             raise TimeoutError(f"timed out waiting for run {run_id}")
         return self._results[run_id]
 
-    def _client_snapshot(self, request: SubmitRequest) -> ClientSnapshot:
-        import os
-
-        raw = os.environ.get(self._settings.api_key_env)
-        key = None if raw is None or not raw.strip() else raw
-        return ClientSnapshot(
-            endpoint_id=self._settings.endpoint_id,
-            model_id=self._settings.model_id,
-            wire_style=self._settings.wire_style,
-            api_key=key,
-            stream=request.stream,
-        )
+    def _capture_snapshot(self, request: SubmitRequest) -> ClientSnapshot:
+        snapshot = self._snapshot_provider.capture(stream=request.stream)
+        self._redactor.remember(snapshot.api_key)
+        return snapshot
 
     def _preview(self, message: str) -> str:
         text = self._preview_redactor(message)
@@ -292,12 +298,12 @@ class RuntimeHost:
             self._execute(item)
 
     def _execute(self, item: _WorkItem) -> None:
-        outcome = "interrupted"
+        outcome: RunOutcome = "interrupted"
         reply: Message | None = None
         error: str | None = None
         step_count = 0
         duration_ms = 0
-        model_results: tuple[Any, ...] = ()
+        model_results: tuple[ModelResult, ...] = ()
         started_at = format_instant(self._clock.wall_utc())
         try:
             with self._db_lock:
@@ -334,9 +340,9 @@ class RuntimeHost:
                 source=item.request.gateway,
             )
             if item.request.purpose == "inference_probe":
-                history: tuple[Message, ...] = ()
+                working_memory: tuple[Message, ...] = ()
             else:
-                history = self._load_history(item.session_id)
+                working_memory = self._load_working_memory(item.session_id)
             self._fanout.emit(
                 RunStarted(
                     user_message=text_message(
@@ -344,7 +350,7 @@ class RuntimeHost:
                     )
                     if item.request.purpose == "chat"
                     else None,
-                    history_message_count=len(history),
+                    working_memory_message_count=len(working_memory),
                     purpose=item.request.purpose,
                 ),
                 envelope,
@@ -355,7 +361,7 @@ class RuntimeHost:
                 item.request.message,
                 client=client,
                 budget=budget,
-                history=history,
+                working_memory=working_memory,
                 model=ModelRef(
                     endpoint_id=item.snapshot.endpoint_id,
                     model_id=item.snapshot.model_id,
@@ -364,7 +370,9 @@ class RuntimeHost:
                 session_id=item.session_id,
                 events=self._fanout,
                 source=item.request.gateway,
-                stream=item.request.stream,
+                stream=item.snapshot.stream,
+                overall_deadline_s=item.snapshot.overall_deadline_s,
+                per_attempt_timeout_s=item.snapshot.per_attempt_timeout_s,
             )
             outcome = loop_result.outcome
             reply = loop_result.reply
@@ -375,22 +383,53 @@ class RuntimeHost:
         except KeyboardInterrupt:
             outcome = "interrupted"
             error = "interrupted"
+            reply = None
         except Exception as exc:
             outcome = "failed"
-            error = str(exc)
-        finally:
-            envelope = EventEnvelope(
-                ts=self._clock.monotonic(),
-                run_id=item.run_id,
-                session_id=item.session_id,
-                step_index=None,
-                attempt_id=None,
-                node_id=None,
-                source=item.request.gateway,
-            )
+            error = type(exc).__name__
+            if reply is None:
+                reply = text_message("assistant", CONTROLLED_FAILURE_TEXT)
+            del exc
+        self._settle_recording(
+            item,
+            outcome=outcome,
+            reply=reply,
+            error=error,
+            step_count=step_count,
+            duration_ms=duration_ms,
+            model_results=model_results,
+        )
+
+    def _settle_recording(
+        self,
+        item: _WorkItem,
+        *,
+        outcome: RunOutcome,
+        reply: Message | None,
+        error: str | None,
+        step_count: int,
+        duration_ms: int,
+        model_results: tuple[ModelResult, ...],
+    ) -> None:
+        if (
+            item.request.purpose == "chat"
+            and outcome == "failed"
+            and reply is None
+        ):
+            reply = text_message("assistant", CONTROLLED_FAILURE_TEXT)
+        envelope = EventEnvelope(
+            ts=self._clock.monotonic(),
+            run_id=item.run_id,
+            session_id=item.session_id,
+            step_index=None,
+            attempt_id=None,
+            node_id=None,
+            source=item.request.gateway,
+        )
+        try:
             self._fanout.emit(
                 RunFinished(
-                    outcome=outcome,  # type: ignore[arg-type]
+                    outcome=outcome,
                     reply=reply,
                     error=error,
                     step_count=step_count,
@@ -398,40 +437,46 @@ class RuntimeHost:
                 ),
                 envelope,
             )
-            projection = UnrecordedTerminalProjection(
-                run_id=item.run_id,
-                purpose=item.request.purpose,
-                outcome=outcome,
-                reply_text=None if reply is None else message_plain_text(reply),
-                error=error,
-                recording_state="pending",
-                session_id=item.session_id,
-                prompt_preview=item.prompt_preview,
-            )
-            with self._lock:
-                self._coord = "recording_pending"
-                if self._active_summary is not None:
-                    self._active_summary = replace(
-                        self._active_summary,
-                        phase="finished",
-                        recording_state="pending",
-                    )
+        except Exception:
+            pass
+        projection = UnrecordedTerminalProjection(
+            run_id=item.run_id,
+            purpose=item.request.purpose,
+            outcome=outcome,
+            reply_text=None if reply is None else message_plain_text(reply),
+            error=error,
+            recording_state="pending",
+            session_id=item.session_id,
+            prompt_preview=item.prompt_preview,
+        )
+        with self._lock:
+            self._coord = "recording_pending"
+            if self._active_summary is not None:
+                self._active_summary = replace(
+                    self._active_summary,
+                    phase="finished",
+                    recording_state="pending",
+                )
             self._states.replace(
                 coordinator_state="recording_pending",
                 active_run=self._active_summary,
                 unrecorded_terminal_projection=projection,
             )
-            self._results[item.run_id] = LoopResult(
-                outcome=outcome,
-                reply=reply,
-                error=error,
-                step_count=step_count,
-                duration_ms=duration_ms,
-                model_results=model_results,
-            )
-
-        incomplete, reason = self._fanout.flush_barrier()
-        telemetry = _run_telemetry(model_results, incomplete, reason)
+        self._results[item.run_id] = LoopResult(
+            outcome=outcome,
+            reply=reply,
+            error=error,
+            step_count=step_count,
+            duration_ms=duration_ms,
+            model_results=model_results,
+        )
+        try:
+            incomplete, reason = self._fanout.flush_barrier()
+        except Exception as exc:
+            incomplete, reason = True, type(exc).__name__
+        telemetry = serialize_run_telemetry(
+            model_results, incomplete, reason, redactor=self._redactor
+        )
         if self._before_recording_commit is not None:
             self._before_recording_commit.wait()
         try:
@@ -442,36 +487,53 @@ class RuntimeHost:
                     self._conn.rollback()
                 except Exception:
                     pass
-            failed = replace(projection, recording_state="failed")
-            with self._lock:
-                self._coord = "recording_failed"
-            self._states.replace(
-                coordinator_state="recording_failed",
-                active_run=self._active_summary,
-                unrecorded_terminal_projection=failed,
-            )
+            self._enter_recording_failed(projection)
             self._done[item.run_id].set()
             return
+        self._publish_recorded_then_release()
+        self._done[item.run_id].set()
 
-        recorded = None
-        if self._active_summary is not None:
-            recorded = replace(self._active_summary, recording_state="recorded")
-        self._states.replace(
-            coordinator_state="recording_pending",
-            active_run=recorded,
-            unrecorded_terminal_projection=None,
-        )
+    def _enter_recording_failed(
+        self, projection: UnrecordedTerminalProjection
+    ) -> None:
+        if self._before_recording_failed is not None:
+            self._before_recording_failed.wait()
+        failed = replace(projection, recording_state="failed")
+        with self._lock:
+            summary = self._active_summary
+            if summary is not None:
+                summary = replace(summary, recording_state="failed", phase="finished")
+                self._active_summary = summary
+            self._coord = "recording_failed"
+            self._states.replace(
+                coordinator_state="recording_failed",
+                active_run=summary,
+                unrecorded_terminal_projection=failed,
+            )
+
+    def _publish_recorded_then_release(self) -> None:
+        with self._lock:
+            recorded = None
+            if self._active_summary is not None:
+                recorded = replace(self._active_summary, recording_state="recorded")
+                self._active_summary = recorded
+            self._states.replace(
+                coordinator_state="recording_pending",
+                active_run=recorded,
+                unrecorded_terminal_projection=None,
+            )
+        if self._after_recorded_snapshot is not None:
+            self._after_recorded_snapshot.wait()
         with self._lock:
             self._coord = "idle"
             self._active_run_id = None
             self._active_summary = None
-        self._states.replace(coordinator_state="idle", active_run=None)
-        self._done[item.run_id].set()
+            self._states.replace(coordinator_state="idle", active_run=None)
 
     def _finalize(
         self,
         item: _WorkItem,
-        outcome: str,
+        outcome: RunOutcome,
         reply: Message | None,
         telemetry: str,
     ) -> None:
@@ -507,12 +569,22 @@ class RuntimeHost:
                     created_at=item.accepted_at,
                     run_id=item.run_id,
                 )
-                if outcome != "interrupted" and reply is not None:
+                if outcome != "interrupted":
+                    assistant = reply
+                    if assistant is None:
+                        assistant = text_message(
+                            "assistant", CONTROLLED_FAILURE_TEXT
+                        )
+                    stored_text = self._redactor.redact_text(
+                        message_plain_text(assistant)
+                    )
+                    if stored_text != message_plain_text(assistant):
+                        assistant = text_message("assistant", stored_text)
                     _insert_log_message(
                         self._conn,
                         session_id=item.session_id,
                         role="assistant",
-                        message=reply,
+                        message=assistant,
                         source=item.request.gateway,
                         created_at=now,
                         run_id=item.run_id,
@@ -560,7 +632,7 @@ class RuntimeHost:
             )
             self._done[item.run_id].set()
 
-    def _load_history(self, session_id: str | None) -> tuple[Message, ...]:
+    def _load_working_memory(self, session_id: str | None) -> tuple[Message, ...]:
         if session_id is None:
             return ()
         limit = self._settings.working_memory_rounds * 2
@@ -602,24 +674,3 @@ def _insert_log_message(
             run_id,
         ),
     )
-
-
-def _run_telemetry(
-    model_results: tuple[Any, ...], incomplete: bool, reason: str | None
-) -> str:
-    attempts = []
-    for result in model_results:
-        for record in result.attempts:
-            attempts.append(
-                {
-                    "attempt_id": record.attempt_id,
-                    "streamed": record.streamed,
-                    "outcome": record.outcome,
-                }
-            )
-    payload = {
-        "attempts": attempts,
-        "trace_incomplete": incomplete,
-        "trace_incomplete_reason": reason,
-    }
-    return json.dumps(payload)

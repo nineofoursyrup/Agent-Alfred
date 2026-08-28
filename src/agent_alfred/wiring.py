@@ -10,19 +10,28 @@ from pathlib import Path
 from agent_alfred import schema
 from agent_alfred.clock import Clock, SystemClock
 from agent_alfred.events import EventSink, FanOutSink
-from agent_alfred.model import ClientSnapshot, ModelClient, ModelClientFactory, ModelRef
+from agent_alfred.model import (
+    ClientSnapshot,
+    ModelClient,
+    ModelClientFactory,
+    ModelRef,
+)
 from agent_alfred.openai_compatible import OpenAICompatibleAdapter, UnconfiguredClient
 from agent_alfred.redact import Redactor
+from agent_alfred.runtime.config import SettingsBackedSnapshotProvider
 from agent_alfred.runtime.host import RuntimeHost
+from agent_alfred.runtime.transport import VersionedTransportPool
 from agent_alfred.settings import OPENCODE_GO_BASE_URL, Settings, resolve_state_dir
+from agent_alfred.stream_fallback import StreamFallback
 
 
 class OpenCodeGoFactory:
     def __init__(self, *, clock: Clock, settings: Settings):
         self._clock = clock
         self._settings = settings
+        self._pool = VersionedTransportPool(self._build_adapter)
 
-    def create(self, snapshot: ClientSnapshot) -> ModelClient:
+    def _build_adapter(self, snapshot: ClientSnapshot) -> ModelClient:
         if snapshot.api_key is None:
             return UnconfiguredClient()
         from openai import OpenAI
@@ -37,6 +46,16 @@ class OpenCodeGoFactory:
                 endpoint_id=snapshot.endpoint_id, model_id=snapshot.model_id
             ),
             clock=self._clock,
+        )
+
+    def create(self, snapshot: ClientSnapshot) -> ModelClient:
+        adapter = self._pool.client_for(snapshot)
+        return StreamFallback(
+            adapter,
+            clock=self._clock,
+            stream=snapshot.stream,
+            stream_fallback=snapshot.stream_fallback,
+            per_attempt_timeout_s=snapshot.per_attempt_timeout_s,
         )
 
 
@@ -83,6 +102,7 @@ def build_host(
         extra_sinks, process_instance_id=instance_id, redactor=redactor
     )
     redact = preview_redactor if callable(preview_redactor) else redactor.redact_text
+    provider = SettingsBackedSnapshotProvider(settings)
     return RuntimeHost(
         conn=conn,
         factory=factory,
@@ -92,6 +112,7 @@ def build_host(
         process_instance_id=instance_id,
         secrets=secrets,
         preview_redactor=redact,
+        snapshot_provider=provider,
     )
 
 

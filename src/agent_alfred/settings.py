@@ -17,6 +17,12 @@ LOOP_NODE_ID = "loop"
 MAX_STEPS_REACHED_TEXT = (
     "Reached the configured max_steps limit; no further model request was sent."
 )
+CONTROLLED_FAILURE_TEXT = (
+    "The model request failed; no assistant reply was produced."
+)
+OVERALL_DEADLINE_TEXT = (
+    "The run overall deadline elapsed; no further model request was sent."
+)
 DEFAULT_PERSONA = (
     "You are Alfred, a local-first private AI assistant. "
     "Answer helpfully and concisely."

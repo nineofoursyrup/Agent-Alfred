@@ -8,6 +8,8 @@ from collections.abc import Callable, Iterable
 from datetime import datetime
 from typing import NamedTuple
 
+from agent_alfred.outcomes import RUN_OUTCOMES
+
 BUSY_TIMEOUT_MS = 5000
 # Highest first. One deletion may match several reasons; the stored
 # value is whichever of these wins, so the same set always records the same row.
@@ -48,7 +50,7 @@ PURPOSES = ("chat", "inference_probe")
 _PURPOSE_SQL = ", ".join(f"'{purpose}'" for purpose in PURPOSES)
 PHASES = ("accepted", "running", "finished")
 _PHASE_SQL = ", ".join(f"'{phase}'" for phase in PHASES)
-OUTCOMES = ("completed", "max_steps", "failed", "interrupted")
+OUTCOMES = RUN_OUTCOMES
 _OUTCOME_SQL = ", ".join(f"'{outcome}'" for outcome in OUTCOMES)
 # Non-terminal phases may only pair with a null outcome; finished must pair
 # with a closed outcome. The CHECK is the shape; callers still have to

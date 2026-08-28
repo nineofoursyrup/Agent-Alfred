@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -98,18 +99,43 @@ class ModelClient(Protocol):
         *,
         events: Any | None = None,
         deadline: float | None = None,
+        stream: bool = False,
     ) -> ModelResult: ...
+
+
+@dataclass(frozen=True)
+class ModelAssignment:
+    """One assignable slot: a pinned (endpoint, model, wire style)."""
+
+    endpoint_id: str
+    model_id: str
+    wire_style: str
 
 
 @dataclass(frozen=True)
 class ClientSnapshot:
     """Captured at admission. The api_key stays in memory; it is not an event."""
 
-    endpoint_id: str
-    model_id: str
-    wire_style: str
+    config_version: str
+    primary: ModelAssignment
+    retrieval_gate: ModelAssignment | None
     api_key: str | None
     stream: bool
+    stream_fallback: bool
+    overall_deadline_s: float | None
+    per_attempt_timeout_s: float
+
+    @property
+    def endpoint_id(self) -> str:
+        return self.primary.endpoint_id
+
+    @property
+    def model_id(self) -> str:
+        return self.primary.model_id
+
+    @property
+    def wire_style(self) -> str:
+        return self.primary.wire_style
 
 
 class ModelClientFactory(Protocol):
@@ -123,10 +149,19 @@ class ScriptedModel:
     can sit at the inner Adapter seam to script retries.
     """
 
-    def __init__(self, script: Sequence[str | ModelResult | ModelError | Exception]):
+    def __init__(
+        self,
+        script: Sequence[str | ModelResult | ModelError | BaseException],
+        *,
+        gate: threading.Event | None = None,
+    ):
         self._script = list(script)
         self._index = 0
         self.requests: list[ModelRequest] = []
+        self.deadlines: list[float | None] = []
+        self.stream_flags: list[bool] = []
+        self._gate = gate
+        self.entered = threading.Event()
 
     def respond(
         self,
@@ -134,14 +169,20 @@ class ScriptedModel:
         *,
         events: Any | None = None,
         deadline: float | None = None,
+        stream: bool = False,
     ) -> ModelResult:
-        del events, deadline
+        del events
+        self.entered.set()
+        if self._gate is not None:
+            self._gate.wait()
         self.requests.append(request)
+        self.deadlines.append(deadline)
+        self.stream_flags.append(stream)
         if self._index >= len(self._script):
             raise AssertionError("ScriptedModel has no remaining responses")
         item = self._script[self._index]
         self._index += 1
-        if isinstance(item, Exception):
+        if isinstance(item, BaseException):
             raise item
         if isinstance(item, ModelResult):
             return item
@@ -151,7 +192,7 @@ class ScriptedModel:
                 attempts=(
                     AttemptRecord(
                         attempt_id=attempt_id,
-                        streamed=False,
+                        streamed=stream,
                         outcome="aborted",
                         usage=Usage(),
                         error=item,
@@ -169,7 +210,7 @@ class ScriptedModel:
             attempts=(
                 AttemptRecord(
                     attempt_id=attempt_id,
-                    streamed=False,
+                    streamed=stream,
                     outcome="committed",
                     usage=Usage(),
                 ),
@@ -182,9 +223,8 @@ class ScriptedModel:
 class ScriptedModelFactory:
     def __init__(self, model: ScriptedModel):
         self._model = model
+        self.snapshots: list[ClientSnapshot] = []
 
     def create(self, snapshot: ClientSnapshot) -> ModelClient:
-        del snapshot
+        self.snapshots.append(snapshot)
         return self._model
-
-

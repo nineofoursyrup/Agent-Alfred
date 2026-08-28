@@ -76,6 +76,8 @@ def _host(
     conn: sqlite3.Connection | None = None,
     secrets: tuple[str, ...] = (),
     before_recording_commit: threading.Event | None = None,
+    after_recorded_snapshot: threading.Event | None = None,
+    before_recording_failed: threading.Event | None = None,
 ) -> tuple[RuntimeHost, sqlite3.Connection, CapturingSink]:
     if conn is None:
         conn = sqlite3.connect(":memory:", check_same_thread=False)
@@ -94,6 +96,8 @@ def _host(
         publish_work=publish_work,
         secrets=secrets,
         before_recording_commit=before_recording_commit,
+        after_recorded_snapshot=after_recorded_snapshot,
+        before_recording_failed=before_recording_failed,
     )
     return host, conn, capture
 
@@ -113,7 +117,7 @@ def test_prompt_preview_redacts_loaded_secrets() -> None:
         host.close()
 
 
-def test_a_new_host_reuses_session_history_from_sqlite() -> None:
+def test_a_new_host_reuses_session_record_as_working_memory() -> None:
     conn = sqlite3.connect(":memory:", check_same_thread=False)
     schema.migrate(conn)
     host1, conn, _ = _host(["first-reply"], conn=conn)
@@ -463,3 +467,357 @@ def _wait_until(predicate, timeout: float = 2.0) -> None:
             return
         time.sleep(0.01)
     raise AssertionError("condition not met before timeout")
+
+
+def test_recording_failed_snapshot_is_authoritative_before_503() -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    wrapped = _FailOn(
+        conn,
+        when=lambda sql: sql.lstrip().upper().startswith("UPDATE")
+        and "finished_at" in sql,
+    )
+    host, _conn, _ = _host(["pong"], conn=wrapped)
+    host.start()
+    try:
+        submitted = host.submit(SubmitRequest(message="ping"))
+        host.wait(submitted.run_id)
+        snap = host.snapshot()
+        assert snap.coordinator_state == "recording_failed"
+        assert snap.active_run is not None
+        assert snap.active_run.recording_state == "failed"
+        assert snap.unrecorded_terminal_projection is not None
+        assert snap.unrecorded_terminal_projection.recording_state == "failed"
+        assert snap.unrecorded_terminal_projection.run_id == submitted.run_id
+        again = host.submit(SubmitRequest(message="next"))
+        assert again.kind == "recording_unavailable"
+        assert again.snapshot is not None
+        assert again.snapshot.coordinator_state == "recording_failed"
+        assert again.snapshot.active_run is not None
+        assert again.snapshot.active_run.recording_state == "failed"
+        assert again.snapshot.unrecorded_terminal_projection is not None
+        assert again.snapshot.unrecorded_terminal_projection.recording_state == (
+            "failed"
+        )
+    finally:
+        host.close()
+
+
+def test_pending_to_recorded_has_no_idle_unrecorded_window() -> None:
+    after_recorded = threading.Event()
+    host, _conn, _ = _host(["pong"], after_recorded_snapshot=after_recorded)
+    host.start()
+    try:
+        first = host.submit(SubmitRequest(message="one"))
+        _wait_until(
+            lambda: host.snapshot().active_run is not None
+            and host.snapshot().active_run.recording_state == "recorded"
+        )
+        snap = host.snapshot()
+        assert snap.coordinator_state == "recording_pending"
+        assert snap.active_run is not None
+        assert snap.active_run.recording_state == "recorded"
+        second = host.submit(SubmitRequest(message="two"))
+        assert second.kind == "run_in_progress"
+        after_recorded.set()
+        host.wait(first.run_id)
+        idle = host.snapshot()
+        assert idle.coordinator_state == "idle"
+        assert idle.active_run is None
+        third = host.submit(SubmitRequest(message="three"))
+        assert third.kind == "accepted"
+        after_recorded.set()
+        host.wait(third.run_id)
+    finally:
+        after_recorded.set()
+        host.close()
+
+
+def test_pending_to_failed_never_returns_503_with_pending_snapshot() -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    wrapped = _FailOn(
+        conn,
+        when=lambda sql: sql.lstrip().upper().startswith("UPDATE")
+        and "finished_at" in sql,
+    )
+    before_failed = threading.Event()
+    host, _conn, _ = _host(
+        ["pong"], conn=wrapped, before_recording_failed=before_failed
+    )
+    seen: list[tuple[str, str | None, str | None]] = []
+    stop = threading.Event()
+
+    def hammer() -> None:
+        while not stop.is_set():
+            result = host.submit(SubmitRequest(message="x"))
+            snap = result.snapshot or host.snapshot()
+            active = (
+                None
+                if snap.active_run is None
+                else snap.active_run.recording_state
+            )
+            proj = snap.unrecorded_terminal_projection
+            proj_state = None if proj is None else proj.recording_state
+            seen.append((result.kind, active, proj_state))
+            if result.kind == "recording_unavailable":
+                assert snap.coordinator_state == "recording_failed"
+                assert active == "failed"
+                assert proj_state == "failed"
+            time.sleep(0.005)
+
+    host.start()
+    try:
+        first = host.submit(SubmitRequest(message="one"))
+        _wait_until(
+            lambda: host.snapshot().coordinator_state == "recording_pending"
+        )
+        worker = threading.Thread(target=hammer)
+        worker.start()
+        time.sleep(0.05)
+        before_failed.set()
+        host.wait(first.run_id)
+        time.sleep(0.05)
+        stop.set()
+        worker.join(timeout=2)
+        for kind, active, proj_state in seen:
+            if kind == "recording_unavailable":
+                assert active == "failed"
+                assert proj_state == "failed"
+            if kind == "accepted":
+                raise AssertionError("a second Run was admitted during recording")
+        snap = host.snapshot()
+        assert snap.coordinator_state == "recording_failed"
+        assert snap.active_run is not None
+        assert snap.active_run.recording_state == "failed"
+    finally:
+        stop.set()
+        before_failed.set()
+        host.close()
+
+
+def test_run_telemetry_aggregates_every_usage_field() -> None:
+    from decimal import Decimal
+
+    from agent_alfred.messages import TextBlock
+    from agent_alfred.model import (
+        AttemptRecord,
+        ModelError,
+        ModelRef,
+        ModelResponse,
+        ModelResult,
+        Usage,
+    )
+
+    secret = "supersecret-key-value"
+    aborted = ModelError(
+        retryable=True,
+        status_code=None,
+        body_excerpt="incomplete",
+        attempt_id="att-abort",
+        code="incomplete_stream",
+    )
+    result = ModelResult(
+        attempts=(
+            AttemptRecord(
+                attempt_id="att-abort",
+                streamed=True,
+                outcome="aborted",
+                usage=Usage(
+                    total_input_tokens=10,
+                    uncached_input_tokens=8,
+                    cache_read_tokens=2,
+                    cache_write_tokens=0,
+                    output_tokens=None,
+                    reasoning_tokens=3,
+                    endpoint_reported_cost_usd=Decimal("0.123456789012345678"),
+                    raw={
+                        "prompt_tokens": 10,
+                        "api_key": secret,
+                        "nested": {"password": secret},
+                    },
+                ),
+                error=aborted,
+            ),
+            AttemptRecord(
+                attempt_id="att-ok",
+                streamed=False,
+                outcome="committed",
+                usage=Usage(total_input_tokens=4, output_tokens=5),
+            ),
+        ),
+        response=ModelResponse(
+            blocks=(TextBlock("ok"),),
+            stop_reason="end_turn",
+            model=ModelRef(endpoint_id="opencode-go", model_id="deepseek-v4-flash"),
+        ),
+        final_error=None,
+    )
+    host, conn, _ = _host([result], secrets=(secret,))
+    host.start()
+    try:
+        submitted = host.submit(SubmitRequest(message="hi"))
+        host.wait(submitted.run_id)
+        raw = conn.execute("SELECT telemetry FROM runs").fetchone()[0]
+        payload = json.loads(raw)
+        attempts = payload["attempts"]
+        assert len(attempts) == 2
+        first = attempts[0]
+        assert first["attempt_id"] == "att-abort"
+        assert first["streamed"] is True
+        assert first["outcome"] == "aborted"
+        usage = first["usage"]
+        assert usage["total_input_tokens"] == 10
+        assert usage["uncached_input_tokens"] == 8
+        assert usage["cache_read_tokens"] == 2
+        assert usage["cache_write_tokens"] == 0
+        assert usage["output_tokens"] is None
+        assert usage["reasoning_tokens"] == 3
+        assert usage["endpoint_reported_cost_usd"] == "0.123456789012345678"
+        assert usage["raw"]["prompt_tokens"] == 10
+        assert secret not in json.dumps(payload)
+        assert attempts[1]["usage"]["total_input_tokens"] == 4
+        log_tel = conn.execute(
+            "SELECT telemetry FROM agent_log WHERE run_id = ?",
+            (submitted.run_id,),
+        ).fetchall()
+        assert log_tel == [(None,), (None,)]
+    finally:
+        host.close()
+
+
+def test_events_none_and_inference_probe_still_record_usage() -> None:
+    from agent_alfred.messages import TextBlock
+    from agent_alfred.model import (
+        AttemptRecord,
+        ModelRef,
+        ModelResponse,
+        ModelResult,
+        Usage,
+    )
+    from agent_alfred.runtime.telemetry import serialize_run_telemetry
+
+    usage = Usage(total_input_tokens=9, output_tokens=1)
+    model_result = ModelResult(
+        attempts=(
+            AttemptRecord(
+                attempt_id="probe-1",
+                streamed=False,
+                outcome="committed",
+                usage=usage,
+            ),
+        ),
+        response=ModelResponse(
+            blocks=(TextBlock("ok"),),
+            stop_reason="end_turn",
+            model=ModelRef(endpoint_id="opencode-go", model_id="deepseek-v4-flash"),
+        ),
+        final_error=None,
+    )
+    serialized = json.loads(
+        serialize_run_telemetry((model_result,), False, None, redactor=None)
+    )
+    assert serialized["attempts"][0]["usage"]["total_input_tokens"] == 9
+    host, conn, _ = _host([model_result])
+    host.start()
+    try:
+        submitted = host.submit(
+            SubmitRequest(message="probe", purpose="inference_probe")
+        )
+        host.wait(submitted.run_id)
+        assert conn.execute("SELECT COUNT(*) FROM agent_log").fetchone() == (0,)
+        raw = conn.execute("SELECT telemetry FROM runs").fetchone()[0]
+        payload = json.loads(raw)
+        assert payload["attempts"][0]["usage"]["total_input_tokens"] == 9
+    finally:
+        host.close()
+
+
+def test_chat_outcomes_write_the_specified_message_pairs() -> None:
+    from agent_alfred.settings import CONTROLLED_FAILURE_TEXT
+
+    cases = [
+        ("completed", ["pong"], "pong"),
+        ("max_steps", ["unused"], None),
+        (
+            "failed",
+            [RuntimeError("provider exploded sk-secret")],
+            CONTROLLED_FAILURE_TEXT,
+        ),
+        ("interrupted", [KeyboardInterrupt()], None),
+    ]
+    for outcome, script, expected_assistant in cases:
+        settings = Settings(max_steps=0) if outcome == "max_steps" else Settings()
+        host, conn, _ = _host(script, settings=settings)
+        host.start()
+        try:
+            submitted = host.submit(SubmitRequest(message="hello"))
+            result = host.wait(submitted.run_id)
+            assert result.outcome == outcome
+            rows = conn.execute(
+                "SELECT role, json_extract(content, '$[0].text') FROM agent_log "
+                "WHERE run_id = ? ORDER BY id",
+                (submitted.run_id,),
+            ).fetchall()
+            roles = [row[0] for row in rows]
+            texts = [row[1] for row in rows]
+            assert roles[0] == "user"
+            assert texts[0] == "hello"
+            if outcome == "interrupted":
+                assert roles == ["user"]
+            else:
+                assert roles == ["user", "assistant"]
+                if expected_assistant is not None:
+                    assert texts[1] == expected_assistant
+                if outcome == "failed":
+                    assert "provider exploded" not in texts[1]
+                    assert "sk-secret" not in texts[1]
+                    assert result.outcome == "failed"
+        finally:
+            host.close()
+
+
+def test_file_database_survives_closing_the_host_and_connection(tmp_path) -> None:
+    path = tmp_path / "db.sqlite3"
+    conn = sqlite3.connect(str(path), check_same_thread=False)
+    schema.migrate(conn)
+    host, conn, _ = _host(["remembered"], conn=conn)
+    host.start()
+    try:
+        session_id = host.create_session()
+        submitted = host.submit(
+            SubmitRequest(message="hello file", session_id=session_id)
+        )
+        host.wait(submitted.run_id)
+    finally:
+        host.close()
+        conn.close()
+
+    conn2 = sqlite3.connect(str(path), check_same_thread=False)
+    model = ScriptedModel(["second"])
+    capture = CapturingSink(name="capture", flush_at_run_end=True)
+    host2 = RuntimeHost(
+        conn=conn2,
+        factory=ScriptedModelFactory(model),
+        settings=Settings(),
+        clock=FakeClock(),
+        fanout=FanOutSink([capture], process_instance_id="proc-reopen"),
+        process_instance_id="proc-reopen",
+    )
+    host2.start()
+    try:
+        stored = conn2.execute(
+            "SELECT role, json_extract(content, '$[0].text') FROM agent_log "
+            "ORDER BY id"
+        ).fetchall()
+        assert ("user", "hello file") in stored
+        assert ("assistant", "remembered") in stored
+        again = host2.submit(
+            SubmitRequest(message="again", session_id=session_id)
+        )
+        host2.wait(again.run_id)
+        roles = [message.role for message in model.requests[0].messages]
+        assert roles == ["user", "assistant", "user"]
+    finally:
+        host2.close()
+        conn2.close()
