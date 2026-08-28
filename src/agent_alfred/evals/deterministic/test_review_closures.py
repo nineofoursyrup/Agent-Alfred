@@ -105,7 +105,8 @@ class BoomPrepareSink:
         del prepared, event
         self.commit_calls += 1
 
-    def flush(self) -> FlushResult:
+    def flush(self, run_id: str | None = None) -> FlushResult:
+        del run_id
         if self.flush_at_run_end:
             return BarrierFlushResult(outcome="flushed", dropped_events=0)
         from agent_alfred.events import BestEffortFlushResult
@@ -128,7 +129,8 @@ class FailingFlushSink:
     def commit(self, prepared: object, event: SequencedEvent) -> None:
         del prepared, event
 
-    def flush(self) -> FlushResult:
+    def flush(self, run_id: str | None = None) -> FlushResult:
+        del run_id
         return BarrierFlushResult(outcome="failed", dropped_events=3)
 
     def close(self) -> None:
@@ -872,7 +874,8 @@ def test_concurrent_disable_prevents_commit_after_prepare() -> None:
             del prepared, event
             self.commit_calls += 1
 
-        def flush(self):
+        def flush(self, run_id: str | None = None):
+            del run_id
             from agent_alfred.events import BestEffortFlushResult
 
             return BestEffortFlushResult(outcome="best_effort")

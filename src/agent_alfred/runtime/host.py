@@ -8,7 +8,6 @@ import threading
 import uuid
 from collections.abc import Callable
 from dataclasses import replace
-from typing import Literal
 
 from agent_alfred import schema
 from agent_alfred.clock import Clock, format_instant
@@ -32,6 +31,7 @@ from agent_alfred.runtime.snapshot import (
     UnrecordedTerminalProjection,
 )
 from agent_alfred.runtime.work import (
+    ReserveKind,
     SubmitKind,
     SubmitRequest,
     SubmitResult,
@@ -187,9 +187,7 @@ class RuntimeHost:
 
     # -- admission lease transitions (the only writer of these states) -----
 
-    def admission_reserve(
-        self, run_id: str
-    ) -> tuple[SubmitKind | Literal["reserved"], RuntimeSnapshot]:
+    def admission_reserve(self, run_id: str) -> tuple[ReserveKind, RuntimeSnapshot]:
         """Atomically decide 409/503/reserve. The lease, once reserved, holds
         until the recording settles: a second submit during recording_pending
         gets ``run_in_progress``; a recording-failed coordinator answers
@@ -217,18 +215,21 @@ class RuntimeHost:
             self._done.pop(run_id, None)
             self._coord = "idle"
             self._active_summary = None
-        self._states.replace(coordinator_state="idle", active_run=None)
+            # The authoritative snapshot moves under the same lock as the
+            # coordinator state, so no reader ever sees a snapshot that
+            # disagrees with the decision the coordinator has made.
+            self._states.replace(coordinator_state="idle", active_run=None)
 
     def admission_close_idle(self) -> None:
         """An unstarted run finalized interrupted; admission reopens."""
         with self._lock:
             self._coord = "idle"
             self._active_summary = None
-        self._states.replace(
-            coordinator_state="idle",
-            active_run=None,
-            unrecorded_terminal_projection=None,
-        )
+            self._states.replace(
+                coordinator_state="idle",
+                active_run=None,
+                unrecorded_terminal_projection=None,
+            )
 
     def admission_fail_recording(
         self,
@@ -270,7 +271,9 @@ class RuntimeHost:
                     started_at=started_at,
                 )
             summary = self._active_summary
-        self._states.replace(coordinator_state="running", active_run=summary)
+            # Same-lock snapshot replacement: the running state is never
+            # observable apart from the summary that describes it.
+            self._states.replace(coordinator_state="running", active_run=summary)
         return summary
 
     # -- recording-settlement transitions -----------------------------------

@@ -42,7 +42,8 @@ class BoomPrepareSink:
         del prepared, event
         self.commit_calls += 1
 
-    def flush(self):
+    def flush(self, run_id: str | None = None):
+        del run_id
         from agent_alfred.events import BestEffortFlushResult
 
         return BestEffortFlushResult(outcome="best_effort")

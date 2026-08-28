@@ -56,7 +56,8 @@ class HoldingBarrierSink:
         del prepared
         self.events.append(event)
 
-    def flush(self) -> FlushResult:
+    def flush(self, run_id: str | None = None) -> FlushResult:
+        del run_id
         self._hold.wait()
         return BarrierFlushResult(outcome="flushed", dropped_events=0)
 
@@ -76,7 +77,8 @@ class FailingBarrierSink:
     def commit(self, prepared: object, event: SequencedEvent) -> None:
         del prepared, event
 
-    def flush(self) -> FlushResult:
+    def flush(self, run_id: str | None = None) -> FlushResult:
+        del run_id
         return BarrierFlushResult(outcome="failed", dropped_events=0)
 
     def close(self) -> None:

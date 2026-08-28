@@ -15,6 +15,11 @@ SubmitKind = Literal[
     "admission_failed",
 ]
 
+# What admission_reserve answers before the handoff: the SubmitKind
+# vocabulary plus the internal "reserved" outcome that never escapes into a
+# SubmitResult.
+ReserveKind = SubmitKind | Literal["reserved"]
+
 
 @dataclass(frozen=True)
 class SubmitRequest:

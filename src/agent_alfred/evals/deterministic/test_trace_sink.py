@@ -250,7 +250,8 @@ class CommitBoomSink:
         del prepared, event
         raise RuntimeError("commit exploded")
 
-    def flush(self) -> FlushResult:
+    def flush(self, run_id: str | None = None) -> FlushResult:
+        del run_id
         return BarrierFlushResult(outcome="flushed", dropped_events=0)
 
     def close(self) -> None:
@@ -887,3 +888,256 @@ def test_sink_close_is_idempotent_and_survives_an_active_run(tmp_path) -> None:
     finally:
         second.close()  # closing mid-run (barrier never reached) must not raise
         second.close()
+
+
+# --- re-review round 3: the barrier seal, scoped retirement, and close() ----
+
+
+def _wait_for_queued_barrier(sink: RunBundleTraceSink) -> None:
+    """Deterministically wait until a barrier item sits in the queue while
+    the drain is blocked elsewhere (it holds no lock while writing)."""
+    import agent_alfred.trace as trace_module
+
+    deadline = time.monotonic() + 2.0
+    while time.monotonic() < deadline:
+        with sink._wake:
+            queued = any(
+                isinstance(item, trace_module._WriteBarrier)
+                for item in sink._queue
+            )
+        if queued:
+            return
+        time.sleep(0.005)
+    raise AssertionError("the barrier was never enqueued")
+
+
+def test_commit_racing_the_barrier_seal_is_rejected_fail_closed(
+    tmp_path, monkeypatch
+) -> None:
+    """An event committed while the Run's final barrier is already enqueued
+    must be rejected fail-closed. The old code enqueued it behind the barrier
+    and silently dropped it into a write-only counter."""
+    from agent_alfred.trace import LateCommitRejected
+
+    real = os.write
+    gate = threading.Event()
+    first_line_reached = threading.Event()
+
+    def slow_first_write(fd, data):
+        if bytes(data[:6]) == b'{"seq"' and not first_line_reached.is_set():
+            first_line_reached.set()
+            gate.wait(5.0)
+        return real(fd, data)
+
+    monkeypatch.setattr(os, "write", slow_first_write)
+    sink = _utc_sink(tmp_path)
+    flush_box: dict[str, FlushResult] = {}
+    try:
+        _commit(sink, RunStarted(purpose="chat", user_message=None), 1, "persist")
+        assert first_line_reached.wait(2.0), "the drain must reach the write"
+        flusher = threading.Thread(
+            target=lambda: flush_box.update(result=sink.flush()), daemon=True
+        )
+        flusher.start()
+        _wait_for_queued_barrier(sink)
+
+        with pytest.raises(LateCommitRejected):
+            _commit(sink, StepFinished(step_index=0), 2, "persist")
+        gate.set()
+        flusher.join(5.0)
+        assert flush_box["result"].outcome == "flushed"
+        assert flush_box["result"].dropped_events == 0
+    finally:
+        gate.set()
+        sink.close()
+
+    bundle = (
+        tmp_path / "traces" / "2026-08-28" / f"123456Z-{_storage_id('run-policy')}"
+    )
+    names = [line["payload_name"] for line in _trace_lines(bundle)]
+    assert names == ["run.started"], (
+        "the rejected event must never reach the trace, visibly or silently"
+    )
+
+
+def test_a_scoped_barrier_retires_only_its_own_bundle(tmp_path) -> None:
+    """Two bundles coexist (production is single-slot, but the sink must
+    allow the construction): run-a's barrier retires run-a's bundle only,
+    and run-b keeps committing and retires through its own barrier."""
+    sink = _utc_sink(tmp_path)
+    try:
+        _commit(
+            sink,
+            RunStarted(purpose="chat", user_message=None),
+            1,
+            "persist",
+            run_id="run-a",
+        )
+        _commit(
+            sink,
+            RunStarted(purpose="chat", user_message=None),
+            2,
+            "persist",
+            run_id="run-b",
+        )
+        result = sink.flush(run_id="run-a")
+        assert result.outcome == "flushed"
+        assert set(sink._bundles) == {"run-b"}, (
+            "a Run's barrier must not retire another Run's bundle"
+        )
+        _commit(sink, StepFinished(step_index=0), 3, "persist", run_id="run-b")
+        result = sink.flush(run_id="run-b")
+        assert result.outcome == "flushed"
+        assert sink._bundles == {}
+    finally:
+        sink.close()
+
+
+def test_flush_barrier_scopes_the_trace_sink_to_the_finishing_run(tmp_path) -> None:
+    """The FanOut passes the finishing Run to the persistence-critical sink,
+    so the production barrier retires exactly that Run's bundle."""
+    sink = _utc_sink(tmp_path)
+    fanout = FanOutSink([sink], process_instance_id="proc-scope")
+    try:
+        for run_id in ("run-a", "run-b"):
+            fanout.emit(
+                RunStarted(purpose="chat", user_message=None),
+                EventEnvelope(0.0, run_id, None, None, None, None),
+            )
+        incomplete, reason = fanout.flush_barrier("run-a")
+        assert incomplete is False, reason
+        assert set(sink._bundles) == {"run-b"}, (
+            "run-a's barrier must not retire run-b's bundle"
+        )
+        # run-b is still live: its events commit and its own barrier closes it.
+        fanout.emit(
+            StepFinished(step_index=0),
+            EventEnvelope(0.0, "run-b", None, 0, None, None),
+        )
+        incomplete, reason = fanout.flush_barrier("run-b")
+        assert incomplete is False, reason
+        assert sink._bundles == {}
+    finally:
+        sink.close()
+
+
+def test_close_leaves_fd_ownership_to_the_drain_and_answers_queued_barriers(
+    tmp_path, monkeypatch
+) -> None:
+    """close() must never close an fd the drain thread may hold, and a
+    barrier still queued when the sink stops must fail fast with an honest
+    reason instead of hanging for the full flush timeout."""
+    import agent_alfred.trace as trace_module
+
+    real_write, real_close = os.write, os.close
+    gate = threading.Event()
+    first_line_reached = threading.Event()
+    trace_fd: list[int] = []
+    closed: list[int] = []
+
+    def slow_first_write(fd, data):
+        if bytes(data[:6]) == b'{"seq"' and not first_line_reached.is_set():
+            first_line_reached.set()
+            trace_fd.append(fd)
+            gate.wait(5.0)
+        return real_write(fd, data)
+
+    def counting_close(fd):
+        if trace_fd and fd == trace_fd[0]:
+            closed.append(fd)
+        return real_close(fd)
+
+    monkeypatch.setattr(os, "write", slow_first_write)
+    monkeypatch.setattr(os, "close", counting_close)
+    monkeypatch.setattr(
+        trace_module, "_CLOSE_JOIN_TIMEOUT_S", 0.05, raising=False
+    )
+    sink = _utc_sink(tmp_path)
+    flush_box: dict[str, FlushResult] = {}
+    try:
+        _commit(sink, RunStarted(purpose="chat", user_message=None), 1, "persist")
+        assert first_line_reached.wait(2.0), "the drain must reach the write"
+        flusher = threading.Thread(
+            target=lambda: flush_box.update(result=sink.flush()), daemon=True
+        )
+        flusher.start()
+        _wait_for_queued_barrier(sink)
+
+        sink.close()  # its join times out while the drain is stuck on disk
+
+        assert closed == [], (
+            "close() must never close an fd the drain thread may hold"
+        )
+        flusher.join(5.0)
+        result = flush_box["result"]
+        assert result.outcome == "failed"
+        # The barrier was queued before close(): the close sweep answered it.
+        assert "sink_closed" in result.detail, result.detail
+        assert "flush_timeout" not in result.detail, result.detail
+    finally:
+        gate.set()
+        sink.close()
+
+    sink._drain.join(2.0)
+    assert closed == trace_fd, "the drain unwind closes the fd exactly once"
+
+
+def test_flush_after_close_reports_an_honest_reason(tmp_path) -> None:
+    """A flush answered by the stopping path is not a timeout: the reason
+    must say the sink is going away."""
+    sink = _utc_sink(tmp_path)
+    _commit(sink, RunStarted(purpose="chat", user_message=None), 1, "persist")
+    sink.close()
+    try:
+        result = sink.flush()
+        assert result.outcome == "failed"
+        assert result.detail == "sink_stopping", result.detail
+        again = sink.flush()
+        assert again.detail == "sink_stopping"
+    finally:
+        sink.close()
+
+
+def test_queue_overflow_drop_is_reported_by_the_run_s_barrier(
+    tmp_path, monkeypatch
+) -> None:
+    """A queue-full commit is dropped fail-closed, and the drop must be
+    visible in the Run's FlushResult -- never only in some private counter."""
+    from agent_alfred.trace import _QUEUE_LIMIT
+
+    real = os.write
+    gate = threading.Event()
+    first_line_reached = threading.Event()
+
+    def slow_first_write(fd, data):
+        if bytes(data[:6]) == b'{"seq"' and not first_line_reached.is_set():
+            first_line_reached.set()
+            gate.wait(5.0)
+        return real(fd, data)
+
+    monkeypatch.setattr(os, "write", slow_first_write)
+    sink = _utc_sink(tmp_path)
+    try:
+        _commit(sink, RunStarted(purpose="chat", user_message=None), 1, "persist")
+        assert first_line_reached.wait(2.0), "the drain must reach the write"
+        # Fill the queue while the drain is stuck on the first line, then
+        # commit one more: the bounded queue refuses it fail-closed.
+        for seq in range(2, 2 + _QUEUE_LIMIT):
+            _commit(sink, StepStarted(step_index=seq), seq, "persist")
+        _commit(
+            sink, StepFinished(step_index=0), 2 + _QUEUE_LIMIT, "persist"
+        )
+        gate.set()
+        result = sink.flush()
+        assert result.outcome == "failed"
+        assert "queue_overflow" in result.detail, result.detail
+        assert result.dropped_events >= 1
+    finally:
+        gate.set()
+        sink.close()
+
+    bundle = (
+        tmp_path / "traces" / "2026-08-28" / f"123456Z-{_storage_id('run-policy')}"
+    )
+    names = [line["payload_name"] for line in _trace_lines(bundle)]
+    assert names == ["run.started"], "the overflowed event never reaches disk"

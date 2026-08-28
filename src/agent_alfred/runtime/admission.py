@@ -6,8 +6,9 @@ RunRecorder already uses:
 - an :class:`AdmissionCoordinator` -- the atomic lease transitions, the work
   handoff, and result publication. The 409/503 orderings live on the other
   side of this seam and cannot be bypassed from here;
-- a :class:`RunDatabase` -- the Host-owned write connection under its lock,
-  with the caller owning every transaction.
+- the Host-owned :class:`~agent_alfred.runtime.recording.RecordingStore` --
+  the write connection under its lock, with the caller owning every
+  transaction.
 
 It never reads or writes the Host's private state, so the state machine's
 invariants (the lease holds until recording settles; the failed state lands
@@ -25,12 +26,18 @@ from agent_alfred.loop.assistant import LoopResult
 from agent_alfred.model import ModelClientFactory
 from agent_alfred.redact import Redactor
 from agent_alfred.runtime.config import ConfigSnapshotProvider
+from agent_alfred.runtime.recording import RecordingStore
 from agent_alfred.runtime.snapshot import (
     ActiveRunSummary,
     RuntimeSnapshot,
     UnrecordedTerminalProjection,
 )
-from agent_alfred.runtime.work import SubmitRequest, SubmitResult, WorkItem
+from agent_alfred.runtime.work import (
+    ReserveKind,
+    SubmitRequest,
+    SubmitResult,
+    WorkItem,
+)
 from agent_alfred.settings import Settings
 
 
@@ -39,7 +46,7 @@ class AdmissionCoordinator(Protocol):
 
     def admission_reserve(
         self, run_id: str
-    ) -> tuple[str, RuntimeSnapshot]: ...
+    ) -> tuple[ReserveKind, RuntimeSnapshot]: ...
 
     def admission_mark_accepted(
         self, summary: ActiveRunSummary
@@ -60,12 +67,6 @@ class AdmissionCoordinator(Protocol):
     def notify_run_done(self, run_id: str) -> None: ...
 
 
-class RunDatabase(Protocol):
-    """The Host-owned write connection under its lock; the caller commits."""
-
-    def transaction(self): ...
-
-
 class RunAdmission:
     def __init__(
         self,
@@ -75,7 +76,7 @@ class RunAdmission:
         redactor: Redactor,
         factory: ModelClientFactory,
         snapshot_provider: ConfigSnapshotProvider,
-        database: RunDatabase,
+        database: RecordingStore,
         coordinator: AdmissionCoordinator,
     ):
         self._clock = clock
@@ -189,6 +190,11 @@ class RunAdmission:
             self._fail_closed(item)
             return
         self._coordinator.admission_close_idle()
+        self._publish_handoff_interrupted(item)
+
+    def _publish_handoff_interrupted(self, item: WorkItem) -> None:
+        """The one result an unstarted Run can produce, published exactly
+        once with its done notification."""
         self._coordinator.publish_run_result(
             item.run_id,
             LoopResult(
@@ -225,14 +231,4 @@ class RunAdmission:
             prompt_preview=item.prompt_preview,
         )
         self._coordinator.admission_fail_recording(summary, projection)
-        self._coordinator.publish_run_result(
-            item.run_id,
-            LoopResult(
-                outcome="interrupted",
-                reply=None,
-                error="handoff_failed",
-                step_count=0,
-                duration_ms=0,
-            ),
-        )
-        self._coordinator.notify_run_done(item.run_id)
+        self._publish_handoff_interrupted(item)

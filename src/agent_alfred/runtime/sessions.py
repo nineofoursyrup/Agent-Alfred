@@ -194,6 +194,10 @@ def _session_title(
         preview = row[0]
         if preview is not None and preview.strip():
             text = preview
+            # prompt_preview was already redacted when the run was accepted;
+            # re-redacting on read is deliberate defense in depth under the
+            # ADR-0003 central-redaction rule, and idempotent: a remembered
+            # secret is replaced by "***", which no later pass can re-match.
             if redactor is not None:
                 text = redactor.redact_text(text)
             return _limit_text(text, limit)
@@ -209,6 +213,8 @@ def _session_title(
             blocks = blocks_from_jsonable(json.loads(row[0]))
             text = message_plain_text(Message(role="user", blocks=blocks))
             if text:
+                # Same read-side re-redaction: historic rows predate the
+                # central rule and are the one place a raw value can survive.
                 if redactor is not None:
                     text = redactor.redact_text(text)
                 return _limit_text(text, limit)
@@ -351,6 +357,15 @@ def _runs_cursor(session_id: str, position: tuple[int, str] | None) -> str:
     return _encode_cursor(payload)
 
 
+def _runs_beyond_clause() -> str:
+    """The shared keyset predicate over the (activity_revision, run_id) sort
+    key, bound to three parameters: (position_ar, position_ar, position_r)."""
+    return (
+        "AND (runs.activity_revision > ?"
+        " OR (runs.activity_revision = ? AND runs.run_id > ?))\n"
+    )
+
+
 def _has_inflight_run(
     conn,
     session_id: str,
@@ -382,12 +397,8 @@ def _has_inflight_run(
         marks = ", ".join("?" for _ in recording_failed_run_ids)
         failed_clause = f"AND runs.run_id NOT IN ({marks})\n"
         params.extend(sorted(recording_failed_run_ids))
-    beyond_clause = ""
+    beyond_clause = _runs_beyond_clause() if position is not None else ""
     if position is not None:
-        beyond_clause = (
-            "AND (runs.activity_revision > ?"
-            " OR (runs.activity_revision = ? AND runs.run_id > ?))\n"
-        )
         params.extend([position[0], position[0], position[1]])
     row = conn.execute(
         sql.format(failed=failed_clause, beyond=beyond_clause), params
@@ -497,12 +508,7 @@ def _page_run_keys(
         rows = conn.execute(sql.format(keyset=""), (session_id, count)).fetchall()
     else:
         rows = conn.execute(
-            sql.format(
-                keyset=(
-                    "AND (runs.activity_revision > ?"
-                    " OR (runs.activity_revision = ? AND runs.run_id > ?))\n"
-                )
-            ),
+            sql.format(keyset=_runs_beyond_clause()),
             (session_id, position[0], position[0], position[1], count),
         ).fetchall()
     return [(row[0], row[1]) for row in rows]

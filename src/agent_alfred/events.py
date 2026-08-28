@@ -220,7 +220,10 @@ class EventSink(Protocol):
 
     def commit(self, prepared: object, event: SequencedEvent) -> None: ...
 
-    def flush(self) -> FlushResult: ...
+    def flush(self, run_id: str | None = None) -> FlushResult:
+        """Settle this sink. ``run_id`` scopes a durability-critical sink's
+        barrier to the finishing Run; sinks that do not scope may ignore it."""
+        ...
 
     def close(self) -> None: ...
 
@@ -241,7 +244,8 @@ class CapturingSink:
         del prepared
         self.events.append(event)
 
-    def flush(self) -> FlushResult:
+    def flush(self, run_id: str | None = None) -> FlushResult:
+        del run_id
         if self.flush_at_run_end:
             return BarrierFlushResult(outcome="flushed", dropped_events=0)
         return BestEffortFlushResult(outcome="best_effort")
@@ -424,7 +428,9 @@ class FanOutSink:
             reasons.append("no flush_at_run_end sink")
         for sink in critical:
             try:
-                result = sink.flush()
+                # The finishing Run scopes a durability-critical sink's
+                # barrier, so it settles exactly that Run's state.
+                result = sink.flush(run_id)
             except Exception as exc:
                 reasons.append(f"{sink.name} flush raised {type(exc).__name__}")
                 continue
