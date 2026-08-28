@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Callable
+from typing import Any
 
-from agent_alfred.model import ClientSnapshot, ModelClient
+from agent_alfred.model import ClientSnapshot
 
 
 class VersionedTransportPool:
@@ -16,17 +17,17 @@ class VersionedTransportPool:
     the cache key.
     """
 
-    def __init__(self, build: Callable[[ClientSnapshot], ModelClient]):
+    def __init__(self, build: Callable[[ClientSnapshot], Any]):
         self._build = build
         self._lock = threading.Lock()
-        self._clients: dict[tuple[str, str], ModelClient] = {}
+        self._clients: dict[tuple[str, str], Any] = {}
         self._observation: dict[str, object] = {}
         self._catalog: dict[str, object] = {}
 
-    def create(self, snapshot: ClientSnapshot) -> ModelClient:
+    def create(self, snapshot: ClientSnapshot) -> Any:
         return self.client_for(snapshot)
 
-    def client_for(self, snapshot: ClientSnapshot) -> ModelClient:
+    def client_for(self, snapshot: ClientSnapshot) -> Any:
         endpoint_id = snapshot.endpoint_id
         version = snapshot.config_version
         key = (endpoint_id, version)

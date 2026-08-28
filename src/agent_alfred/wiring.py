@@ -12,11 +12,12 @@ from agent_alfred.clock import Clock, SystemClock
 from agent_alfred.events import EventSink, FanOutSink
 from agent_alfred.model import (
     ClientSnapshot,
+    EndpointUnconfigured,
     ModelClient,
     ModelClientFactory,
     ModelRef,
 )
-from agent_alfred.openai_compatible import OpenAICompatibleAdapter, UnconfiguredClient
+from agent_alfred.openai_compatible import OpenAICompatibleAdapter
 from agent_alfred.redact import Redactor
 from agent_alfred.runtime.config import SettingsBackedSnapshotProvider
 from agent_alfred.runtime.host import RuntimeHost
@@ -26,36 +27,40 @@ from agent_alfred.stream_fallback import StreamFallback
 
 
 class OpenCodeGoFactory:
-    def __init__(self, *, clock: Clock, settings: Settings):
+    def __init__(self, *, clock: Clock):
         self._clock = clock
-        self._settings = settings
-        self._pool = VersionedTransportPool(self._build_adapter)
+        self._pool = VersionedTransportPool(self._build_transport)
 
-    def _build_adapter(self, snapshot: ClientSnapshot) -> ModelClient:
+    def _build_transport(self, snapshot: ClientSnapshot) -> object:
         if snapshot.api_key is None:
-            return UnconfiguredClient()
+            raise EndpointUnconfigured("endpoint_unconfigured")
         from openai import OpenAI
 
-        client = OpenAI(
+        return OpenAI(
             base_url=OPENCODE_GO_BASE_URL,
             api_key=snapshot.api_key,
         )
-        return OpenAICompatibleAdapter(
-            client=client,
-            model=ModelRef(
-                endpoint_id=snapshot.endpoint_id, model_id=snapshot.model_id
-            ),
-            clock=self._clock,
-        )
 
     def create(self, snapshot: ClientSnapshot) -> ModelClient:
-        adapter = self._pool.client_for(snapshot)
+        if snapshot.api_key is None:
+            raise EndpointUnconfigured("endpoint_unconfigured")
+        transport = self._pool.client_for(snapshot)
+        model = ModelRef(
+            endpoint_id=snapshot.endpoint_id, model_id=snapshot.model_id
+        )
+        streaming = OpenAICompatibleAdapter(
+            client=transport, model=model, stream=True
+        )
+        nonstream = OpenAICompatibleAdapter(
+            client=transport, model=model, stream=False
+        )
         return StreamFallback(
-            adapter,
+            streaming,
             clock=self._clock,
             stream=snapshot.stream,
             stream_fallback=snapshot.stream_fallback,
             per_attempt_timeout_s=snapshot.per_attempt_timeout_s,
+            nonstream=nonstream,
         )
 
 
@@ -91,7 +96,6 @@ def build_host(
     clock: Clock | None = None,
     extra_sinks: Sequence[EventSink] = (),
     process_instance_id: str | None = None,
-    preview_redactor: None | object = None,
 ) -> RuntimeHost:
     settings = settings or Settings()
     clock = clock or SystemClock()
@@ -101,7 +105,6 @@ def build_host(
     fanout = FanOutSink(
         extra_sinks, process_instance_id=instance_id, redactor=redactor
     )
-    redact = preview_redactor if callable(preview_redactor) else redactor.redact_text
     provider = SettingsBackedSnapshotProvider(settings)
     return RuntimeHost(
         conn=conn,
@@ -110,8 +113,7 @@ def build_host(
         clock=clock,
         fanout=fanout,
         process_instance_id=instance_id,
-        secrets=secrets,
-        preview_redactor=redact,
+        redactor=redactor,
         snapshot_provider=provider,
     )
 
@@ -121,5 +123,5 @@ def build_default_host(*, state_dir: Path | None = None) -> RuntimeHost:
     settings = Settings()
     directory = state_dir or resolve_state_dir()
     conn = open_database(directory)
-    factory = OpenCodeGoFactory(clock=clock, settings=settings)
+    factory = OpenCodeGoFactory(clock=clock)
     return build_host(conn=conn, factory=factory, settings=settings, clock=clock)

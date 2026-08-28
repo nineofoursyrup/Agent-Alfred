@@ -54,11 +54,8 @@ class Assistant:
         session_id: str | None,
         events: FanOutSink | None = None,
         source: str = "cli",
-        stream: bool = False,
         overall_deadline_s: float | None = None,
-        per_attempt_timeout_s: float | None = None,
     ) -> LoopResult:
-        del per_attempt_timeout_s
         started = self._clock.monotonic()
         overall_s = (
             self._settings.overall_deadline_s
@@ -116,18 +113,23 @@ class Assistant:
                 messages=tuple(transcript),
                 max_tokens=self._settings.max_tokens,
             )
+            bind = getattr(events, "bind_origin", None) if events is not None else None
+            if bind is not None:
+                bind(envelope)
             try:
                 model_result = client.respond(
                     request,
                     events=events,
                     deadline=overall_abs,
-                    stream=stream,
                 )
             except OverallDeadlineExceeded:
                 outcome = "failed"
                 reply = text_message("assistant", OVERALL_DEADLINE_TEXT)
                 error = "overall_deadline"
                 break
+            finally:
+                if bind is not None:
+                    bind(None)
             results.append(model_result)
             stop_reason = "error"
             if model_result.response is not None:

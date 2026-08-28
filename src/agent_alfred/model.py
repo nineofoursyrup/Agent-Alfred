@@ -92,6 +92,10 @@ class ModelRequest:
     max_tokens: int | None = None
 
 
+class EndpointUnconfigured(Exception):
+    """No credential is available; no network round-trip may be sent."""
+
+
 class ModelClient(Protocol):
     def respond(
         self,
@@ -99,7 +103,6 @@ class ModelClient(Protocol):
         *,
         events: Any | None = None,
         deadline: float | None = None,
-        stream: bool = False,
     ) -> ModelResult: ...
 
 
@@ -159,7 +162,6 @@ class ScriptedModel:
         self._index = 0
         self.requests: list[ModelRequest] = []
         self.deadlines: list[float | None] = []
-        self.stream_flags: list[bool] = []
         self._gate = gate
         self.entered = threading.Event()
 
@@ -169,7 +171,6 @@ class ScriptedModel:
         *,
         events: Any | None = None,
         deadline: float | None = None,
-        stream: bool = False,
     ) -> ModelResult:
         del events
         self.entered.set()
@@ -177,7 +178,6 @@ class ScriptedModel:
             self._gate.wait()
         self.requests.append(request)
         self.deadlines.append(deadline)
-        self.stream_flags.append(stream)
         if self._index >= len(self._script):
             raise AssertionError("ScriptedModel has no remaining responses")
         item = self._script[self._index]
@@ -192,7 +192,7 @@ class ScriptedModel:
                 attempts=(
                     AttemptRecord(
                         attempt_id=attempt_id,
-                        streamed=stream,
+                        streamed=False,
                         outcome="aborted",
                         usage=Usage(),
                         error=item,
@@ -210,7 +210,7 @@ class ScriptedModel:
             attempts=(
                 AttemptRecord(
                     attempt_id=attempt_id,
-                    streamed=stream,
+                    streamed=False,
                     outcome="committed",
                     usage=Usage(),
                 ),

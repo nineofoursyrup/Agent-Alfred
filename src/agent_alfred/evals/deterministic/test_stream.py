@@ -36,12 +36,9 @@ class RecordingInner:
         *,
         events=None,
         deadline: float | None = None,
-        stream: bool = False,
     ) -> ModelResult:
         del events
-        self.calls.append(
-            {"deadline": deadline, "stream": stream, "model": request.model}
-        )
+        self.calls.append({"deadline": deadline, "model": request.model})
         if self._clock is not None:
             self._clock.monotonic_value += 5
         if not self._script:
@@ -111,17 +108,13 @@ def test_stream_interrupt_falls_back_on_the_same_step_lease() -> None:
         model=_MODEL,
         run_id="run-1",
         session_id="s1",
-        stream=True,
         overall_deadline_s=10,
-        per_attempt_timeout_s=8,
     )
     assert result.outcome == "completed"
     assert result.reply is not None
     assert message_plain_text(result.reply) == "recovered"
     assert budget.used == 1
     assert len(inner.calls) == 2
-    assert inner.calls[0]["stream"] is True
-    assert inner.calls[1]["stream"] is False
     attempts = result.model_results[0].attempts
     assert [record.outcome for record in attempts] == ["aborted", "committed"]
     assert attempts[0].attempt_id != attempts[1].attempt_id
@@ -150,13 +143,10 @@ def test_disabled_fallback_does_not_issue_a_non_stream_attempt() -> None:
         model=_MODEL,
         run_id="run-1",
         session_id="s1",
-        stream=True,
         overall_deadline_s=10,
-        per_attempt_timeout_s=8,
     )
     assert result.outcome == "failed"
     assert len(inner.calls) == 1
-    assert inner.calls[0]["stream"] is True
     assert budget.used == 1
 
 
@@ -173,7 +163,6 @@ def test_attempt_deadline_is_min_of_remaining_overall_and_per_attempt() -> None:
     client.respond(
         ModelRequest(model=_MODEL, system=None, messages=()),
         deadline=10,
-        stream=True,
     )
     assert inner.calls[0]["deadline"] == 8
     assert inner.calls[1]["deadline"] == 10
@@ -201,9 +190,7 @@ def test_overall_deadline_does_not_reset_between_attempts() -> None:
         model=_MODEL,
         run_id="run-1",
         session_id="s1",
-        stream=True,
         overall_deadline_s=10,
-        per_attempt_timeout_s=8,
     )
     # start=0, overall abs=10. Attempt 1: min(10, 0+8)=8, then clock += 5.
     # Attempt 2: min(10, 5+8)=10. A reset would yield 5+10=15 or 5+8=13.
@@ -231,9 +218,7 @@ def test_expired_overall_deadline_sends_zero_network_requests() -> None:
         model=_MODEL,
         run_id="run-1",
         session_id="s1",
-        stream=True,
         overall_deadline_s=0,
-        per_attempt_timeout_s=8,
     )
     assert result.outcome == "failed"
     assert inner.calls == []

@@ -111,8 +111,8 @@ def test_prepare_failure_does_not_abort_the_run_or_revisit_the_dead_sink() -> No
             if event.payload.name == "notice"
         ]
         assert notices
-        assert all(
-            getattr(notice, "code", None) == "sink_disabled" for notice in notices
-        )
+        codes = {getattr(notice, "code", None) for notice in notices}
+        assert "sink_disabled" in codes
+        assert codes <= {"sink_disabled", "trace_incomplete"}
     finally:
         host.close()

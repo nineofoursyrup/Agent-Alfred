@@ -7,7 +7,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from typing import Any, Literal, Protocol
 
-from agent_alfred.messages import Message, TextBlock
+from agent_alfred.messages import Block, Message, TextBlock
+from agent_alfred.model import ModelError, ModelRef, Usage
 from agent_alfred.outcomes import RunOutcome
 
 TracePolicy = Literal["transient", "persist"]
@@ -99,7 +100,79 @@ class Notice:
     evidence: str | None = None
 
 
-EventPayload = RunStarted | RunFinished | StepStarted | StepFinished | Notice
+@dataclass(frozen=True)
+class AttemptStarted:
+    name: str = "attempt.started"
+    trace_policy: TracePolicy = "persist"
+    attempt_id: str = ""
+    model: ModelRef | None = None
+    streamed: bool = False
+    timeout_ms: int | None = None
+
+
+@dataclass(frozen=True)
+class AttemptCommitted:
+    name: str = "attempt.committed"
+    trace_policy: TracePolicy = "persist"
+    attempt_id: str = ""
+    blocks: tuple[Block, ...] = ()
+    stop_reason: str = "end_turn"
+    usage: Usage | None = None
+    duration_ms: int = 0
+
+
+@dataclass(frozen=True)
+class AttemptAborted:
+    name: str = "attempt.aborted"
+    trace_policy: TracePolicy = "persist"
+    attempt_id: str = ""
+    partial: bool = False
+    blocks: tuple[Block, ...] = ()
+    unparsed_tool_arguments: tuple[tuple[str, str], ...] = ()
+    usage: Usage | None = None
+    error: ModelError | None = None
+    duration_ms: int = 0
+
+
+@dataclass(frozen=True)
+class BlockStarted:
+    name: str = "block.started"
+    trace_policy: TracePolicy = "transient"
+    attempt_id: str = ""
+    index: int = 0
+    block_type: str = "text"
+
+
+@dataclass(frozen=True)
+class BlockDelta:
+    name: str = "block.delta"
+    trace_policy: TracePolicy = "transient"
+    attempt_id: str = ""
+    index: int = 0
+    text: str = ""
+
+
+@dataclass(frozen=True)
+class BlockStopped:
+    name: str = "block.stopped"
+    trace_policy: TracePolicy = "transient"
+    attempt_id: str = ""
+    index: int = 0
+
+
+EventPayload = (
+    RunStarted
+    | RunFinished
+    | StepStarted
+    | StepFinished
+    | AttemptStarted
+    | AttemptCommitted
+    | AttemptAborted
+    | BlockStarted
+    | BlockDelta
+    | BlockStopped
+    | Notice
+)
 
 
 @dataclass(frozen=True)
@@ -178,13 +251,27 @@ class FanOutSink:
         self._redactor = redactor
         self._lock = threading.Lock()
         self._seq = 1
-        self._disabled: set[str] = set()
+        self._disabled: dict[str, set[str]] = {}
+        self._persist_lost: dict[str, list[str]] = {}
+        self._last_envelope: dict[str, EventEnvelope] = {}
+        self._origin: EventEnvelope | None = None
 
     @property
     def sinks(self) -> tuple[EventSink, ...]:
         return tuple(self._sinks)
 
-    def emit(self, payload: EventPayload, envelope: EventEnvelope) -> SequencedEvent:
+    def bind_redactor(self, redactor: Any | None) -> None:
+        self._redactor = redactor
+
+    def bind_origin(self, envelope: EventEnvelope | None) -> None:
+        self._origin = envelope
+
+    def emit(
+        self, payload: EventPayload, envelope: EventEnvelope | None = None
+    ) -> SequencedEvent:
+        if envelope is None:
+            envelope = self._bound_envelope(payload)
+        self._last_envelope[envelope.run_id] = envelope
         trace_policy: TracePolicy = payload.trace_policy
         unsequenced = UnsequencedEvent(
             envelope=envelope,
@@ -209,18 +296,36 @@ class FanOutSink:
             )
         return sequenced
 
+    def _bound_envelope(self, payload: EventPayload) -> EventEnvelope:
+        origin = self._origin
+        attempt_id = getattr(payload, "attempt_id", None)
+        if origin is None:
+            return EventEnvelope(
+                ts=0.0,
+                run_id="",
+                session_id=None,
+                step_index=None,
+                attempt_id=attempt_id,
+                node_id=None,
+            )
+        return replace(origin, attempt_id=attempt_id)
+
     def _publish(
         self, unsequenced: UnsequencedEvent, *, notify_disabled: bool
     ) -> SequencedEvent:
         prepared: list[tuple[EventSink, object]] = []
         newly_disabled: list[tuple[str, str]] = []
+        run_id = unsequenced.envelope.run_id
+        disabled = self._disabled.get(run_id, set())
         for sink in self._sinks:
-            if sink.name in self._disabled:
+            if sink.name in disabled:
                 continue
             try:
                 prep = sink.prepare(unsequenced)
             except Exception:
-                self._disabled.add(sink.name)
+                self._note_sink_failure(
+                    run_id, sink, "prepare", unsequenced.trace_policy
+                )
                 newly_disabled.append((sink.name, "prepare"))
                 continue
             prepared.append((sink, prep))
@@ -235,14 +340,13 @@ class FanOutSink:
                 trace_policy=unsequenced.trace_policy,
                 replayable=unsequenced.replayable,
             )
-            surviving: list[tuple[EventSink, object]] = []
             for sink, prep in prepared:
-                surviving.append((sink, prep))
-            for sink, prep in surviving:
                 try:
                     sink.commit(prep, sequenced)
                 except Exception:
-                    self._disabled.add(sink.name)
+                    self._note_sink_failure(
+                        run_id, sink, "commit", unsequenced.trace_policy
+                    )
                     newly_disabled.append((sink.name, "commit"))
         if notify_disabled:
             for name, stage in newly_disabled:
@@ -253,6 +357,16 @@ class FanOutSink:
                     detail=(("sink", name), ("stage", stage)),
                 )
         return sequenced
+
+    def _note_sink_failure(
+        self, run_id: str, sink: EventSink, stage: str, trace_policy: TracePolicy
+    ) -> None:
+        self._disabled.setdefault(run_id, set()).add(sink.name)
+        reasons = self._persist_lost.setdefault(run_id, [])
+        if sink.flush_at_run_end:
+            reasons.append(f"{sink.name} {stage} failed")
+        if trace_policy == "persist":
+            reasons.append(f"{sink.name} dropped persist")
 
     def _emit_notice(
         self,
@@ -271,29 +385,61 @@ class FanOutSink:
         )
         self._publish(unsequenced, notify_disabled=False)
 
-    def flush_barrier(self) -> tuple[bool, str | None]:
+    def flush_barrier(self, run_id: str | None = None) -> tuple[bool, str | None]:
         """Wait on flush_at_run_end sinks. Missing/failed/exception => incomplete."""
-        incomplete = False
-        reason: str | None = None
+        reasons: list[str] = []
+        if run_id is not None:
+            reasons.extend(self._persist_lost.get(run_id, ()))
         for sink in self._sinks:
             if not sink.flush_at_run_end:
                 continue
             try:
                 result = sink.flush()
             except Exception as exc:
-                incomplete = True
-                reason = f"{sink.name} flush raised {type(exc).__name__}"
+                reasons.append(f"{sink.name} flush raised {type(exc).__name__}")
                 continue
             if not isinstance(result, BarrierFlushResult):
-                incomplete = True
-                reason = f"{sink.name} returned {type(result).__name__}"
+                reasons.append(f"{sink.name} returned {type(result).__name__}")
                 continue
             if result.outcome != "flushed" or result.dropped_events != 0:
-                incomplete = True
-                reason = (
+                reasons.append(
                     f"{sink.name} flush {result.outcome} "
                     f"dropped={result.dropped_events}"
                 )
+        incomplete = bool(reasons)
+        reason: str | None = None
+        if incomplete:
+            # Keep every reason; later failures must not erase earlier ones.
+            reason = "; ".join(dict.fromkeys(reasons))[:500]
+            if self._redactor is not None:
+                try:
+                    reason = self._redactor.redact_text(reason)
+                except Exception:
+                    reason = "trace_incomplete"
+            envelope = (
+                self._last_envelope.get(run_id or "")
+                or self._origin
+                or EventEnvelope(
+                    ts=0.0,
+                    run_id=run_id or "",
+                    session_id=None,
+                    step_index=None,
+                    attempt_id=None,
+                    node_id=None,
+                )
+            )
+            if run_id:
+                envelope = replace(envelope, run_id=run_id)
+            self._emit_notice(
+                envelope,
+                code="trace_incomplete",
+                level="error",
+                detail=(("reason", reason),),
+            )
+        if run_id is not None:
+            self._disabled.pop(run_id, None)
+            self._persist_lost.pop(run_id, None)
+            self._last_envelope.pop(run_id, None)
         return incomplete, reason
 
     def close(self) -> None:
@@ -309,6 +455,14 @@ def _fail_closed_event(event: UnsequencedEvent) -> UnsequencedEvent:
         payload = replace(payload, reply=None, error="redaction_failed")
     elif isinstance(payload, StepStarted):
         payload = replace(payload, system=None)
+    elif isinstance(payload, AttemptCommitted):
+        payload = replace(payload, blocks=(), usage=None)
+    elif isinstance(payload, AttemptAborted):
+        payload = replace(
+            payload, blocks=(), error=None, unparsed_tool_arguments=()
+        )
+    elif isinstance(payload, BlockDelta):
+        payload = replace(payload, text="")
     elif isinstance(payload, Notice):
         payload = replace(payload, evidence=None, detail=())
     return replace(event, payload=payload)
