@@ -203,7 +203,7 @@ def test_reconnect_never_duplicates_and_never_leaves_a_hole() -> None:
 
 
 def test_a_rolled_out_ring_answers_a_gap_not_a_silent_resume() -> None:
-    harness = Harness(ring=ReplayRing(max_entries=2, max_bytes=1 << 20))
+    harness = Harness(ring=ReplayRing(max_frames=2, max_bytes=1 << 20))
     harness.emit_many(5)
     handle = harness.connect(cursor=_cursor_for(1))
     items = _drain(handle)
@@ -217,7 +217,7 @@ def test_a_rolled_out_ring_answers_a_gap_not_a_silent_resume() -> None:
 
 
 def test_the_four_illegal_cursors_each_name_their_reason() -> None:
-    harness = Harness(ring=ReplayRing(max_entries=2, max_bytes=1 << 20))
+    harness = Harness(ring=ReplayRing(max_frames=2, max_bytes=1 << 20))
     harness.emit_many(4)
     cases = {
         "garbage": "malformed",
@@ -235,7 +235,7 @@ def test_the_four_illegal_cursors_each_name_their_reason() -> None:
 
 
 def test_the_gap_notice_distinguishes_no_run_from_unrecoverable_run() -> None:
-    harness = Harness(ring=ReplayRing(max_entries=1, max_bytes=1 << 20))
+    harness = Harness(ring=ReplayRing(max_frames=1, max_bytes=1 << 20))
     harness.emit(RunStarted(purpose="chat"), run_id="r1")
     harness.emit_many(3, start=10)
     # No active Run in the snapshot: absent.
@@ -579,7 +579,7 @@ def test_capacity_defaults_match_the_decided_table() -> None:
     )
     assert broker._ingress.max_frames == 4096
     assert broker._ingress.max_bytes == 32 * 1024 * 1024
-    assert broker._ring.max_entries == 2048
+    assert broker._ring.max_frames == 2048
     assert broker._ring.max_bytes == 32 * 1024 * 1024
 
 
@@ -718,8 +718,20 @@ def test_a_broker_without_a_session_source_refuses_to_guess() -> None:
 
 def test_the_dispatcher_stops_on_the_sentinel() -> None:
     harness = Harness()
-    harness.broker._ingress.put_control(_IngressStop())
+    harness.broker._ingress.put_stop()
     assert harness.broker.deliver_next(timeout=0.1) is False
+
+
+def test_only_the_stop_sentinel_may_bypass_the_budget() -> None:
+    """``put_stop`` takes no argument, so nothing else can ride it."""
+    harness = Harness(max_ingress_frames=1, max_ingress_bytes=1)
+    # A full ingress still accepts the sentinel: the dispatcher's own end
+    # cannot be refused for want of room.
+    harness.emit_many(1)
+    harness.broker._ingress.put_stop()
+    assert harness.broker._ingress.take(timeout=0.1) is not None
+    with pytest.raises(TypeError):
+        harness.broker._ingress.put_stop(_IngressStop())
 
 
 def test_commit_is_quantitative_and_never_writes_io() -> None:

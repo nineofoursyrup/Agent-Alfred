@@ -85,6 +85,27 @@ class _Facade:
         self.created = []
         self.requests = []
         self.run_queries: list[tuple[str, int, str | None]] = []
+        # The gate's authority, in the shape the Host provides it. This
+        # facade stands in for a Host with no Run in flight, so the slot is
+        # the only thing that can busy the gate -- which is what lets a test
+        # hold it and prove a second write is refused instead of queued.
+        self.mutating = False
+        self.begun = 0
+        self.ended = 0
+
+    def try_begin_mutation(self) -> str | None:
+        if self.mutating:
+            return "mutation_in_flight"
+        self.mutating = True
+        self.begun += 1
+        return None
+
+    def end_mutation(self) -> None:
+        self.mutating = False
+        self.ended += 1
+
+    def mutation_in_flight(self) -> bool:
+        return self.mutating
 
     def create_session(self) -> str:
         session_id = "new-session"
@@ -520,25 +541,37 @@ def test_every_write_goes_through_one_gate() -> None:
 
 
 def test_the_gate_never_queues_a_write() -> None:
-    """Refused, not held.
+    """Refused, not held -- and refused for as long as the lease is held.
 
     A gate that blocked until the current write finished would be the queue
-    ADR-0016 forbids, wearing a different hat. The proof is that a re-entrant
-    write from inside a write returns a refusal instead of deadlocking.
+    ADR-0016 forbids, wearing a different hat. The proof here is stronger
+    than "no deadlock": a write attempted *after* the Run has taken the lease
+    is refused too, which is what makes the lease a lease rather than a
+    critical section around one function call.
     """
     api = _api(_accepted())
     gate = api._gate
 
     class Reentrant:
-        """A facade whose submit tries to create a Session while it runs."""
+        """A facade that holds the lease the way a Run does, once accepted."""
 
         def __init__(self, inner):
             self._inner = inner
             self.observed = None
+            self.leased = False
 
         def submit(self, request):
+            result = self._inner.submit(request)
+            # The Run now holds the admission lease: from here until its
+            # recording settles, no other write may enter.
+            self.leased = True
             self.observed = gate.create_session()
-            return self._inner.submit(request)
+            return result
+
+        def try_begin_mutation(self) -> str | None:
+            if self.leased:
+                return "run_in_progress"
+            return self._inner.try_begin_mutation()
 
         def __getattr__(self, name):
             return getattr(self._inner, name)
@@ -546,34 +579,28 @@ def test_the_gate_never_queues_a_write() -> None:
     reentrant = Reentrant(api._facade)
     gate._facade = reentrant
     outcome = api.submit({"message": "hi"})
-    # The inner write was refused rather than waited for.
-    assert reentrant.observed is None
+    # The second write was refused rather than waited for, and told why.
+    session_id, reason = reentrant.observed
+    assert session_id is None
+    assert reason == "run_in_progress"
     # And the outer one still completed: a refusal is not a failure cascade.
     assert outcome.status == 202
 
 
 def test_a_refused_session_creation_says_so() -> None:
     api = _api(_accepted())
-    held = MutationGate(api._facade)
-    assert held._lock.acquire(blocking=False)
-    try:
-        result = DashboardApi(facade=api._facade, gate=held).create_session()
-    finally:
-        held._lock.release()
+    api._facade.mutating = True  # another write is inside the gate
+    result = api.create_session()
     assert result.session_id is None
-    assert result.code == "write_in_progress"
+    assert result.status == 409
+    assert result.code == "mutation_in_flight"
 
 
 def test_a_refused_submit_is_never_an_accepted_run() -> None:
     api = _api(_accepted())
-    held = MutationGate(api._facade)
-    assert held._lock.acquire(blocking=False)
-    try:
-        outcome = DashboardApi(facade=api._facade, gate=held).submit(
-            {"message": "hi"}
-        )
-    finally:
-        held._lock.release()
-    assert outcome.status == 503
-    assert outcome.code == "write_in_progress"
+    api._facade.mutating = True  # another write is inside the gate
+    outcome = api.submit({"message": "hi"})
+    # A conflict, not an unavailability: 409, and never a run id.
+    assert outcome.status == 409
+    assert outcome.code == "mutation_in_flight"
     assert outcome.run_id is None

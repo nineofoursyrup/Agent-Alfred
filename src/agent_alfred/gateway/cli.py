@@ -15,13 +15,18 @@ from __future__ import annotations
 import argparse
 import sys
 import threading
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import TextIO
+from typing import Any, TextIO
 
-from agent_alfred.gateway.web.lifecycle import DEFAULT_PORT
+from agent_alfred.gateway.web.lifecycle import (
+    DEFAULT_HOST,
+    DEFAULT_PORT,
+    EntryDescriptor,
+)
 from agent_alfred.loop.assistant import LoopResult
 from agent_alfred.messages import message_plain_text
+from agent_alfred.model import ModelClientFactory
 from agent_alfred.render import ReplyRenderer, render_markdown_reply
 from agent_alfred.runtime.host import RuntimeHost, SubmitRequest
 from agent_alfred.settings import (
@@ -172,7 +177,18 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def main(
+    argv: Sequence[str] | None = None,
+    *,
+    factory: ModelClientFactory | None = None,
+    build: Callable[..., Any] | None = None,
+) -> int:
+    """The one entry point. ``--serve`` serves; the default serves *and* chats.
+
+    ``factory`` and ``build`` are seams: without them this function would
+    build the production model client and the production Dashboard, neither
+    of which a test can drive.
+    """
     parser = build_parser()
     args = parser.parse_args(list(argv) if argv is not None else None)
 
@@ -202,25 +218,107 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     from pathlib import Path
 
-    from agent_alfred.wiring import build_default_host
-
-    state_dir = Path(args.state_dir) if args.state_dir else None
+    directory = Path(args.state_dir) if args.state_dir else None
+    port = DEFAULT_PORT if args.port is None else args.port
     if args.serve:
         return serve_dashboard(
-            state_dir=state_dir,
+            state_dir=directory,
             settings=settings,
-            port=args.port,
+            port=port,
             out=sys.stdout,
+            factory=factory,
+            build=build,
         )
-    host = build_default_host(state_dir=state_dir, settings=settings)
-    host.start()
+    runtime = _build_runtime(
+        build=build,
+        state_dir=directory,
+        settings=settings,
+        port=port,
+        factory=factory,
+    )
+    return _chat_in_the_foreground(runtime, args, settings, out=sys.stdout)
+
+
+def _build_runtime(
+    *,
+    build: Callable[..., Any] | None,
+    state_dir: Path | None,
+    settings: Settings,
+    port: int,
+    factory: ModelClientFactory | None,
+) -> Any:
+    from agent_alfred.settings import resolve_state_dir
+    from agent_alfred.wiring import build_dashboard
+
+    directory = (
+        Path(state_dir) if state_dir is not None else resolve_state_dir()
+    )
+    assemble = build if build is not None else build_dashboard
+    return assemble(
+        state_dir=directory,
+        settings=settings,
+        factory=factory,
+        port=port,
+        trace_root=directory / "traces",
+    )
+
+
+def _start_or_report(runtime: Any, out: TextIO) -> int | None:
+    """Start the Dashboard, or say why it did not come up.
+
+    Both surfaces answer a refused start the same way: name the reason and
+    return a failure, having left nothing behind. A silent fallback to "chat
+    without a Dashboard" would hide a held lock or a taken port -- and those
+    are precisely the two situations the user has to hear about.
+    """
+    try:
+        runtime.start()
+    except BaseException as exc:  # noqa: BLE001 - reported, then closed
+        runtime.close()
+        out.write(f"dashboard unavailable: {exc}\n")
+        out.flush()
+        return 1
+    return None
+
+
+def _announce(descriptor: EntryDescriptor, out: TextIO) -> None:
+    """Name the port, the instance and the pid -- the entry descriptor's
+    whole content, spoken once, on whichever surface started it."""
+    out.write(
+        f"dashboard on {DEFAULT_HOST}:{descriptor.port} "
+        f"(instance {descriptor.instance_id}, pid {descriptor.pid})\n"
+    )
+    out.flush()
+
+
+def _chat_in_the_foreground(
+    runtime: Any, args: Any, settings: Settings, *, out: TextIO
+) -> int:
+    """The default path: the Dashboard behind, the CLI in front.
+
+    One process, one Host (#23 §1). The CLI's transient events never touch
+    the database, so a separate process would have no way to show them to a
+    browser; and two processes would split ``seq`` and
+    ``process_instance_id``, which is what every SSE cursor is made of.
+
+    The Dashboard is therefore started here, before the first prompt, and
+    closed after the last one -- in reverse order, so the socket, the
+    descriptor and the lock are all released before this function returns.
+    """
+    failure = _start_or_report(runtime, out)
+    if failure is not None:
+        return failure
+    host = runtime.host
+    _announce(runtime.descriptor, out)
     try:
         session_id = host.create_session()
         if args.message is not None:
-            return _one_shot(host, args.message, session_id, stream=settings.stream)
+            return _one_shot(
+                host, args.message, session_id, out, stream=settings.stream
+            )
         return _repl(host, session_id, stream=settings.stream)
     finally:
-        host.close()
+        runtime.close()
 
 
 def serve_dashboard(
@@ -230,6 +328,8 @@ def serve_dashboard(
     port: int | None = None,
     out: TextIO | None = None,
     stop: threading.Event | None = None,
+    factory: ModelClientFactory | None = None,
+    build: Callable[..., Any] | None = None,
 ) -> int:
     """Run the Dashboard and nothing else, until interrupted.
 
@@ -238,34 +338,24 @@ def serve_dashboard(
     would have to invent a second one. Refusing to start is therefore the
     right answer to a held lock or a busy port -- the alternative is a
     Dashboard that shows a different truth than the one being recorded.
-    """
-    from agent_alfred.settings import resolve_state_dir
-    from agent_alfred.wiring import build_dashboard, open_database
 
+    It goes through the same ordered start-up the CLI path uses, because
+    there is only one correct order and it is not up to a caller to
+    rediscover it.
+    """
     stream = sys.stdout if out is None else out
-    directory = Path(state_dir) if state_dir is not None else resolve_state_dir()
-    conn = open_database(directory)
-    host, dashboard = build_dashboard(
-        conn=conn,
+    directory = Path(state_dir) if state_dir is not None else None
+    runtime = _build_runtime(
+        build=build,
         state_dir=directory,
         settings=settings,
         port=DEFAULT_PORT if port is None else port,
+        factory=factory,
     )
-    host.start()
-    try:
-        descriptor = dashboard.start()
-    except BaseException as exc:  # noqa: BLE001 - reported, then closed
-        # Nothing is left running: the lock is released and no descriptor
-        # claims a port nobody is answering.
-        host.close()
-        conn.close()
-        stream.write(f"dashboard unavailable: {exc}\n")
-        return 1
-    stream.write(
-        f"dashboard on 127.0.0.1:{descriptor.port} "
-        f"(instance {descriptor.instance_id}, pid {descriptor.pid})\n"
-    )
-    stream.flush()
+    failure = _start_or_report(runtime, stream)
+    if failure is not None:
+        return failure
+    _announce(runtime.descriptor, stream)
     try:
         if stop is None:
             while True:
@@ -276,16 +366,19 @@ def serve_dashboard(
     except KeyboardInterrupt:
         pass
     finally:
-        dashboard.close()
-        host.close()
-        conn.close()
+        runtime.close()
     return 0
 
 
 def _one_shot(
-    host: RuntimeHost, message: str, session_id: str, *, stream: bool
+    host: RuntimeHost,
+    message: str,
+    session_id: str,
+    out: TextIO,
+    *,
+    stream: bool,
 ) -> int:
-    return _send(host, message, session_id, sys.stdout, stream=stream)
+    return _send(host, message, session_id, out, stream=stream)
 
 
 def _repl(host: RuntimeHost, session_id: str, *, stream: bool) -> int:

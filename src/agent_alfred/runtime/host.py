@@ -118,6 +118,12 @@ class RuntimeHost:
         self._handoff = threading.Condition(self._lock)
         self._pending_handoff: set[str] = set()
         self._db_lock = threading.Lock()
+        # A write from a door that is not ``submit`` -- a Session creation
+        # today, memory or settings tomorrow. It shares ``_lock`` with every
+        # admission decision, so "is a mutation in flight" and "is the lease
+        # held" are one question with one answer rather than two flags that
+        # can disagree for a moment.
+        self._mutating = False
         self._coord: CoordinatorState = "idle"
         self._active_summary: ActiveRunSummary | None = None
         self._queue: queue.Queue[WorkItem | None] = queue.Queue()
@@ -311,6 +317,47 @@ class RuntimeHost:
             self._conn.commit()
         return session_id
 
+    # -- the mutation gate's authority -------------------------------------
+    #
+    # These three are the whole interface the entry-side write gate needs,
+    # and they are deliberately not a lock object handed out to callers: the
+    # judgement has to be this Host's, taken under the same lock that
+    # decides admission, because a lease spans the whole Run while a plain
+    # write spans one call. A short lock around the call would answer "free"
+    # for the entire window in which a Run is still holding the lease.
+
+    def try_begin_mutation(self) -> str | None:
+        """Reserve the one mutation slot, or say why not. Never waits.
+
+        Returns ``None`` when the write may begin, and otherwise the reason
+        in the coordinator's own vocabulary, so the caller can say
+        something true rather than guessing from "no":
+
+        - ``recording_unavailable`` -- admission is *closed*, not busy.
+          After a recording failure nothing will be admitted until the
+          process restarts (ADR-0026), so calling that "busy" would send
+          the client back to try again in a moment.
+        - ``mutation_in_flight`` -- the gate is merely held: a Run has the
+          lease (``accepted``, ``running`` and ``recording_pending`` all
+          still hold it) or another write is inside it.
+        """
+        with self._lock:
+            if self._coord == "recording_failed":
+                return "recording_unavailable"
+            if self._mutating or self._coord != "idle":
+                return "mutation_in_flight"
+            self._mutating = True
+            return None
+
+    def end_mutation(self) -> None:
+        with self._lock:
+            self._mutating = False
+
+    def mutation_in_flight(self) -> bool:
+        """Whether a write from another door is inside the gate right now."""
+        with self._lock:
+            return self._mutating
+
     # -- admission lease transitions (the only writer of these states) -----
 
     def admission_reserve(self, run_id: str) -> tuple[ReserveKind, RuntimeSnapshot]:
@@ -346,6 +393,13 @@ class RuntimeHost:
                 return "recording_unavailable", snap
             if self._coord != "idle":
                 return "run_in_progress", snap
+            if self._mutating:
+                # The other direction of the same gate: a plain write is
+                # already inside, and this Run must not be admitted behind
+                # it. Checked under this lock so a write that slips in
+                # between the gate's question and the reserve is caught
+                # here rather than interleaved.
+                return "mutation_in_flight", snap
             self._coord = "accepted"
             self._pending_handoff.add(run_id)
             self._done[run_id] = threading.Event()

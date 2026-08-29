@@ -30,7 +30,7 @@ import time
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Protocol
 
 from agent_alfred.clock import Clock, SystemClock
 from agent_alfred.events import (
@@ -95,14 +95,67 @@ class _BroadcastPatch:
     queues so that patches and domain events leave in one order: a client
     that receives the patch before the event it describes sees a state that
     was never published.
+
+    It pays the same two budgets as an event. A patch that bypassed them
+    would be the one item that can grow without bound while a dispatcher is
+    wedged -- and it is precisely the item whose loss is invisible, because
+    the state it carries is absolute rather than incremental.
     """
 
     snapshot: RuntimeSnapshot
     step: StepProjection | None
+    cost: tuple[int, int]
+
+    def ingress_cost(self) -> tuple[int, int]:
+        return self.cost
+
+
+class IngressItem(Protocol):
+    """Anything the ingress will carry: a cost in frames *and* in bytes.
+
+    Both budgets are counted on the way in and released on the way out, so
+    an item that could not say what it costs could not be accounted for --
+    which is how a patch would end up growing a queue without limit.
+    """
+
+    def ingress_cost(self) -> tuple[int, int]: ...
+
+
+def _patch_frames(
+    snapshot: RuntimeSnapshot, step: StepProjection | None, session_valid: bool
+) -> PreparedFrames:
+    """One connection's patch frame. The only way a patch is ever encoded.
+
+    A patch is absolute, so what one connection gets differs from another's
+    in exactly one field -- whether *this* connection's Session still exists.
+    Everything else is the same state, encoded once per connection.
+    """
+    view = build_snapshot(snapshot, step=step, session_valid=session_valid)
+    return frames.state_patch_frames(snapshot_payload(view))
+
+
+def _patch_cost(snapshot: RuntimeSnapshot, step: StepProjection | None) -> int:
+    """What one patch costs the ingress, in encoded bytes.
+
+    Measured rather than estimated -- a budget that guessed at the payload
+    would be a budget that did not apply -- but measured with the same
+    encoder the frame uses, without building the frame: this runs inside a
+    state transition, where the listener has to be bounded and must not
+    fail. ``session_valid=False`` is the larger of the two encodings, so
+    the charge is never less than what any connection's frame will cost.
+    """
+    view = build_snapshot(snapshot, step=step, session_valid=False)
+    return frames.payload_cost(frames.STATE_PATCH, snapshot_payload(view))
 
 
 class _Ingress:
-    """The shared, bounded, dual-counted hand-off to the dispatcher."""
+    """The shared, bounded, dual-counted hand-off to the dispatcher.
+
+    Everything that can be dropped, grown without bound, or left unread by a
+    wedged dispatcher is counted here. The one exception is the sentinel
+    that ends the dispatcher itself, which has its own door and cannot be
+    used to smuggle anything else through.
+    """
 
     def __init__(
         self,
@@ -121,29 +174,41 @@ class _Ingress:
         self._frames = 0
         self._bytes = 0
 
-    def offer(self, item: PreparedFrames) -> bool:
-        """Queue one logical event. Non-blocking, O(1), never partial."""
+    def offer(self, item: IngressItem) -> bool:
+        """Queue one item. Non-blocking, O(1), never partial.
+
+        Domain events and state patches are the only two kinds of traffic
+        here, and both are measured in frames *and* encoded bytes.
+        """
+        frames_used, bytes_used = item.ingress_cost()
         with self._lock:
             if (
-                self._frames + len(item.frames) > self.max_frames
-                or self._bytes + item.byte_size > self.max_bytes
+                self._frames + frames_used > self.max_frames
+                or self._bytes + bytes_used > self.max_bytes
             ):
                 return False
             self._items.put(item)
-            self._frames += len(item.frames)
-            self._bytes += item.byte_size
+            self._frames += frames_used
+            self._bytes += bytes_used
             return True
 
-    def put_control(self, item: Any) -> None:
-        """Sentinels and patches never wait for room."""
-        self._items.put(item)
+    def put_stop(self) -> None:
+        """The dispatcher's own end signal. The one item with no cost.
 
-    def take(self, timeout: float | None = None) -> Any:
+        It takes no argument on purpose: a ``put_control`` that accepted an
+        arbitrary item is how a patch would have been classed as "control"
+        and waved past both budgets.
+        """
+        self._items.put(_IngressStop())
+
+    def take(self, timeout: float | None = None) -> IngressItem | _IngressStop:
         item = self._items.get(timeout=timeout)
-        if isinstance(item, PreparedFrames):
-            with self._lock:
-                self._frames -= len(item.frames)
-                self._bytes -= item.byte_size
+        if isinstance(item, _IngressStop):
+            return item
+        frames_used, bytes_used = item.ingress_cost()
+        with self._lock:
+            self._frames -= frames_used
+            self._bytes -= bytes_used
         return item
 
 
@@ -277,8 +342,15 @@ class SSEBroker:
                 # is updated under the same lock that decides a connecting
                 # client's high-water mark: registration and publication can
                 # never interleave into a duplicate or a hole.
-                item = item.with_checkpoint(event.seq, self._instance)
-                self._ring.append(item)
+                #
+                # The checkpoint is only attached once the ring has accepted
+                # the event. An event too large for either budget is still
+                # delivered live -- the client did see it -- but it carries
+                # no ``id:``, because a cursor naming a fact the ring cannot
+                # reproduce would be a checkpoint this process cannot honour.
+                checkpointed = item.with_checkpoint(event.seq, self._instance)
+                if self._ring.append(checkpointed).accepted:
+                    item = checkpointed
             if not self._ingress.offer(item):
                 if item.replayable or item.must_deliver:
                     # Ingress overflow costs liveness, never recoverability:
@@ -323,7 +395,7 @@ class SSEBroker:
         if dispatcher is not None:
             # The stop sentinel is queued behind everything already pending,
             # so the dispatcher drains first and only then returns.
-            self._ingress.put_control(_IngressStop())
+            self._ingress.put_stop()
             dispatcher.join(max(0.0, deadline - time.monotonic()))
         for handle in handles:
             handle.queue.stop()
@@ -450,20 +522,41 @@ class SSEBroker:
         with self._lock:
             return tuple(self._connections)
 
-    def publish_state_patch(self, snapshot: RuntimeSnapshot) -> None:
-        """Broadcast an absolute lifecycle replacement.
+    def publish_state_patch(self, snapshot: RuntimeSnapshot) -> bool:
+        """Broadcast an absolute lifecycle replacement. Never blocks.
 
-        The authoritative snapshot has already been published by the time
-        this is called (the Host does that before notifying), so a patch can
-        never describe a state that is not yet the state. It rides the
-        ingress so patches and events leave in one order.
+        Two things happen in this order and it is the whole contract
+        (ADR-0025):
+
+        1. the authoritative ``_latest`` moves, so that anything that reads
+           the state from here on -- including a connection that registers
+           while the patch is being refused -- sees the new revision;
+        2. the patch is offered to the bounded ingress.
+
+        If the offer fails, the patch is not dropped and the caller is not
+        made to wait: every connection already registered is asked to hang
+        up, so each one reconnects and is primed with an atomic snapshot
+        from the ``_latest`` that already moved. A patch that silently
+        failed to arrive is the one delivery failure a client cannot detect
+        -- it shows a lifetime state, not a missing event -- so it becomes a
+        disconnect instead.
+
+        Returns whether the patch was queued.
         """
         with self._lock:
             if self._stopping or self._closed:
-                return
+                return False
             self._latest = snapshot
             step = self._progress.projection()
-        self._ingress.put_control(_BroadcastPatch(snapshot=snapshot, step=step))
+            handles = tuple(self._connections)
+        patch = _BroadcastPatch(
+            snapshot=snapshot, step=step, cost=(1, _patch_cost(snapshot, step))
+        )
+        if self._ingress.offer(patch):
+            return True
+        for handle in handles:
+            handle.queue.request_close()
+        return False
 
     # -- internals ---------------------------------------------------------
 
@@ -579,13 +672,12 @@ class SSEBroker:
         patch: _BroadcastPatch,
         session_valid: bool,
     ) -> None:
-        payload = build_snapshot(
-            patch.snapshot, step=patch.step, session_valid=session_valid
-        )
         # Undeliverable means the connection closes and the client comes
         # back for an atomic snapshot; a patch that silently failed to
         # arrive would leave a lifetime state nothing corrects.
-        handle.queue.offer(frames.state_patch_frames(snapshot_payload(payload)))
+        handle.queue.offer(
+            _patch_frames(patch.snapshot, patch.step, session_valid)
+        )
 
     def _note_run_event(self, event: SequencedEvent) -> None:
         name = getattr(event.payload, "name", None)

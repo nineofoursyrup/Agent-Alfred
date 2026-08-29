@@ -261,10 +261,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
             if result.session_id is None:
                 # The write gate is busy. Refused rather than queued, so the
                 # browser knows to try again instead of waiting on a
-                # connection that will never answer.
-                self._send(503, {"code": result.code})
+                # connection that will never answer. The status is the
+                # gate's -- 409, not 503: the process is busy, not broken.
+                self._send(result.status, {"code": result.code})
                 return
-            self._send(201, {"session_id": result.session_id})
+            self._send(result.status, {"session_id": result.session_id})
             return
         if path == RUNS_PATH:
             body, error = self._read_body()

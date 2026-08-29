@@ -88,6 +88,16 @@ class PreparedFrames:
     # for an atomic snapshot instead.
     must_deliver: bool = False
 
+    def ingress_cost(self) -> tuple[int, int]:
+        """What this thing costs a queue that counts frames *and* bytes.
+
+        Named rather than derived at the call site so that a queue cannot
+        accidentally count one of the two: every queue in the Dashboard
+        budgets both, and an item that was admitted on frames alone would be
+        the one that quietly breaks the byte promise.
+        """
+        return len(self.frames), self.byte_size
+
     def wire_frames(self) -> tuple[bytes, ...]:
         """The exact bytes, in order. Only the last frame carries the id.
 
@@ -323,13 +333,32 @@ def domain_event_frames(
     )
 
 
+def _payload_frame(sse_event: str, body: dict) -> bytes:
+    return b"event: " + sse_event.encode() + _NEWLINE + _DATA_PREFIX + _dump(body)
+
+
 def _single_payload_frame(sse_event: str, body: dict) -> PreparedFrames:
     """One frame for a bounded payload. Over the hard limit is a refusal,
     never a silently oversized frame."""
-    frame = b"event: " + sse_event.encode() + _NEWLINE + _DATA_PREFIX + _dump(body)
+    frame = _payload_frame(sse_event, body)
     if len(frame) + 2 > MAX_FRAME_BYTES:
         raise ValueError(f"{sse_event} payload exceeds {MAX_FRAME_BYTES} bytes")
     return measured_frames(frames=(frame,))
+
+
+def payload_cost(sse_event: str, body: dict) -> int:
+    """Exactly what this payload would cost a queue counting encoded bytes.
+
+    The same number the frame would carry, arrived at without building the
+    frame -- and without the hard frame limit being a reason to fail. That
+    second property is the point: this is called from a state transition,
+    on the thread that owns the Run, while the authoritative snapshot has
+    already moved, and an exception raised here would leave the Host's
+    state machine half-finished. Measuring must be total and bounded; the
+    limit's refusal belongs to the thread that writes, not the one that
+    decides.
+    """
+    return len(_payload_frame(sse_event, body)) + 2
 
 
 def replay_gap_notice(

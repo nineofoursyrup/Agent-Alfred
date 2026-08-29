@@ -16,7 +16,6 @@ never committed.
 
 from __future__ import annotations
 
-import threading
 from dataclasses import dataclass
 from typing import Any, Protocol
 from urllib.parse import quote
@@ -74,6 +73,15 @@ class DashboardFacade(Protocol):
     def create_session(self) -> str: ...
 
     def submit(self, request: SubmitRequest) -> SubmitResult: ...
+
+    # The mutation gate needs the Host's own judgement, not a lock it could
+    # hold for the length of a function call. Delegated through the facade
+    # so a test can drive the gate without a Host.
+    def try_begin_mutation(self) -> str | None: ...
+
+    def end_mutation(self) -> None: ...
+
+    def mutation_in_flight(self) -> bool: ...
 
     def session_exists(self, session_id: str) -> bool: ...
 
@@ -203,6 +211,7 @@ def busy_summary_from(snapshot: RuntimeSnapshot) -> BusySummary | None:
 class CreateSessionResult:
     """A signed Session id, or the reason none was issued."""
 
+    status: int = 201
     session_id: str | None = None
     code: str | None = None
 
@@ -216,34 +225,54 @@ class MutationGate:
     changes memory, settings or the outside world has exactly one place to
     go instead of a convention to remember.
 
-    It never queues. A gate that held a request until the current mutation
-    finished would be a queue with extra steps, and ADR-0016 is explicit
-    that a busy process answers at once. What it guards are two O(1)
-    non-blocking operations, so it is held for microseconds; what it buys is
-    that two writes can never interleave at all.
+    **The judgement is not this object's.** A lock held for the duration of
+    one call cannot express the thing that has to be guarded: the admission
+    lease a Run holds runs from ``accepted`` until its recording settles
+    (ADR-0026), which is minutes, not microseconds. A gate that only
+    serialised the calls would answer "free" for that entire window and let
+    a Session write through underneath a Run that is still saving -- which
+    is precisely the promise #23 §4 was making.
+
+    So the gate holds no lock at all. It asks the one authority that knows
+    both facts -- whether a Run holds the lease and whether another write is
+    inside -- and that authority answers under the lock that also decides
+    admission. Two writes therefore cannot interleave, a write cannot slip
+    under a Run, and a Run cannot be admitted behind a write.
+
+    It never queues. Both operations are O(1) and non-blocking, and a
+    refusal is returned the instant it is known.
     """
 
     def __init__(self, facade: "DashboardFacade"):
         self._facade = facade
-        self._lock = threading.Lock()
 
     def submit(self, request: SubmitRequest) -> SubmitResult | None:
-        """None means the gate is busy. It never means "wait"."""
-        if not self._lock.acquire(blocking=False):
-            return None
-        try:
-            return self._facade.submit(request)
-        finally:
-            self._lock.release()
+        """None means another write owns the gate. It never means "wait".
 
-    def create_session(self) -> str | None:
-        """None means the gate is busy. It never means "wait"."""
-        if not self._lock.acquire(blocking=False):
+        A Run submit asks nothing of the gate's own slot: admission is the
+        authority for Runs, and it refuses on its own terms -- with the busy
+        card that says what is running. The gate only has to keep a Run from
+        starting behind a write from another door.
+        """
+        if self._facade.mutation_in_flight():
             return None
+        return self._facade.submit(request)
+
+    def create_session(self) -> tuple[str | None, str | None]:
+        """``(session id, refusal code)`` -- exactly one of the two is set.
+
+        The refusal comes back as the authority's own word for why the gate
+        did not open, passed through rather than reinterpreted: a caller
+        that has to report the reason has to report the true one, and
+        "busy" is not the same thing as "closed".
+        """
+        reason = self._facade.try_begin_mutation()
+        if reason is not None:
+            return None, reason
         try:
-            return self._facade.create_session()
+            return self._facade.create_session(), None
         finally:
-            self._lock.release()
+            self._facade.end_mutation()
 
 
 class DashboardApi:
@@ -263,12 +292,14 @@ class DashboardApi:
         # The id is minted by the server and never taken from the client: a
         # Session is not a label the caller gets to choose, and letting it
         # pick would let two Sessions collide into one.
-        session_id = self._gate.create_session()
+        session_id, reason = self._gate.create_session()
         if session_id is None:
-            # Refused, not queued: a write gate that made the caller wait
-            # would be the queue ADR-0016 forbids, wearing a different hat.
-            return CreateSessionResult(code="write_in_progress")
-        return CreateSessionResult(session_id=session_id)
+            # Refused, not queued -- and 409, not 503: a write gate that made
+            # the caller wait would be the queue ADR-0016 forbids, and
+            # reporting a conflict as an unavailability would say the
+            # process cannot do something it is merely busy doing.
+            return CreateSessionResult(status=409, code=reason)
+        return CreateSessionResult(status=201, session_id=session_id)
 
     def submit(self, body: dict[str, Any]) -> SubmitOutcome:
         message = body.get("message")
@@ -293,7 +324,9 @@ class DashboardApi:
             )
         )
         if result is None:
-            return SubmitOutcome(status=503, code="write_in_progress")
+            # Another write is inside the gate. A conflict, answered at
+            # once: nothing in this process is unavailable.
+            return SubmitOutcome(status=409, code="mutation_in_flight")
         return self._outcome(result)
 
     def _outcome(self, result: SubmitResult) -> SubmitOutcome:
@@ -323,6 +356,11 @@ class DashboardApi:
             return SubmitOutcome(
                 status=503, code="recording_unavailable", busy=busy
             )
+        if result.kind == "mutation_in_flight":
+            # The same conflict the gate reports, reached through admission
+            # because the write arrived between the gate's question and the
+            # reserve. One code for one fact, whichever door saw it first.
+            return SubmitOutcome(status=409, code="mutation_in_flight", busy=busy)
         return SubmitOutcome(status=500, code="admission_failed", busy=busy)
 
     # -- reads -------------------------------------------------------------

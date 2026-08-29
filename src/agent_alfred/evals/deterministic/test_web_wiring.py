@@ -16,10 +16,10 @@ import io
 import socket
 import sqlite3
 import threading
+from pathlib import Path
 
 import pytest
 
-from agent_alfred import schema
 from agent_alfred.clock import FakeClock
 from agent_alfred.evals.deterministic.test_web_lifecycle import _free_port
 from agent_alfred.gateway.cli import serve_dashboard
@@ -37,10 +37,15 @@ def _factory() -> ScriptedModelFactory:
     return ScriptedModelFactory(ScriptedModel(["pong"]))
 
 
-def _database() -> sqlite3.Connection:
-    conn = sqlite3.connect(":memory:", check_same_thread=False)
-    schema.migrate(conn)
-    return conn
+def _database(directory: Path) -> sqlite3.Connection:
+    """The production database seam, on a real file in the state directory.
+
+    A file rather than ``:memory:`` so that "the database appeared after the
+    lock was taken" is a question a test can ask of the disk.
+    """
+    from agent_alfred.wiring import open_database
+
+    return open_database(directory)
 
 
 def _wait_until(predicate, timeout: float = 5.0) -> None:
@@ -55,41 +60,40 @@ def _wait_until(predicate, timeout: float = 5.0) -> None:
 
 
 def test_build_dashboard_gives_the_host_and_the_broker_one_identity(tmp_path) -> None:
-    conn = _database()
-    host, dashboard = build_dashboard(
-        conn=conn,
+    dashboard = build_dashboard(
         state_dir=tmp_path,
         factory=_factory(),
         clock=FakeClock(),
         port=_free_port(),
+        open_database=_database,
     )
-    host.start()
     try:
         descriptor = dashboard.start()
+        host = dashboard.host
         # One instance id, shared by the cursor a browser sends back and by
         # the descriptor a bookmark reads.
         assert descriptor.instance_id == host.process_instance_id
         assert read_entry_descriptor(tmp_path) == descriptor
         assert dashboard.started is True
+        # The Host came up inside start(), not before it: no lock, no socket
+        # and no database are touched by assembly.
+        assert host.started is True
     finally:
         dashboard.close()
-        host.close()
-        conn.close()
 
 
 def test_the_broker_sees_events_and_patches_from_the_real_host(tmp_path) -> None:
-    conn = _database()
     seen: list = []
-    host, dashboard = build_dashboard(
-        conn=conn,
+    dashboard = build_dashboard(
         state_dir=tmp_path,
         factory=_factory(),
         clock=FakeClock(),
         port=_free_port(),
+        open_database=_database,
     )
-    host.start()
     try:
         dashboard.start()
+        host = dashboard.host
         session_id = host.create_session()
         result = host.submit(
             SubmitRequest(message="hello", session_id=session_id, gateway="web")
@@ -107,8 +111,6 @@ def test_the_broker_sees_events_and_patches_from_the_real_host(tmp_path) -> None
         seen.append(dashboard.broker._latest.state_revision)
     finally:
         dashboard.close()
-        host.close()
-        conn.close()
     assert seen
 
 
@@ -195,18 +197,17 @@ def test_a_dead_dispatcher_is_published_as_sink_disabled(tmp_path) -> None:
     from agent_alfred.gateway.web.connection import FakeConnection
 
     capture = CapturingSink(name="capture", flush_at_run_end=True)
-    conn = _database()
-    host, dashboard = build_dashboard(
-        conn=conn,
+    dashboard = build_dashboard(
         state_dir=tmp_path,
         factory=_factory(),
         clock=FakeClock(),
         port=_free_port(),
         extra_sinks=[capture],
+        open_database=_database,
     )
-    host.start()
     try:
         dashboard.start()
+        host = dashboard.host
 
         class Exploding:
             def offer(self, item):
@@ -237,5 +238,3 @@ def test_a_dead_dispatcher_is_published_as_sink_disabled(tmp_path) -> None:
         assert dashboard.broker._stopping is True  # noqa: SLF001
     finally:
         dashboard.close()
-        host.close()
-        conn.close()

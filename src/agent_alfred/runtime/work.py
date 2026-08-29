@@ -12,6 +12,11 @@ SubmitKind = Literal[
     "accepted",
     "run_in_progress",
     "recording_unavailable",
+    # A mutation from another door is already in flight. It is a conflict,
+    # not an unavailability: nothing here is broken, something else is busy
+    # (ADR-0016). Keeping it apart from ``recording_unavailable`` is what
+    # lets the HTTP layer answer 409 for one and 503 for the other.
+    "mutation_in_flight",
     "admission_failed",
 ]
 

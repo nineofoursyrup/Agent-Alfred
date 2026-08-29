@@ -82,7 +82,6 @@ def _service(tmp_path, **kwargs):
         state_dir=tmp_path,
         handler=_Handler,
         instance_id="inst-lifecycle",
-        host=DEFAULT_HOST,
         port=DEFAULT_PORT if port is None else port,
         server_factory=_RecordingServer,
         **kwargs,
@@ -189,7 +188,6 @@ def test_a_busy_port_fails_and_leaves_nothing_behind(tmp_path) -> None:
         state_dir=tmp_path,
         handler=_Handler,
         instance_id="inst-lifecycle",
-        host=DEFAULT_HOST,
         port=port,
     )
     try:
@@ -388,7 +386,6 @@ def test_the_real_server_binds_only_the_loopback_address(tmp_path) -> None:
         state_dir=tmp_path,
         handler=_Handler,
         instance_id="inst-real",
-        host=DEFAULT_HOST,
         port=port,
     )
     try:
@@ -410,7 +407,6 @@ def test_a_real_close_releases_the_socket_and_the_port(tmp_path) -> None:
         state_dir=tmp_path,
         handler=_Handler,
         instance_id="inst-real",
-        host=DEFAULT_HOST,
         port=port,
     )
     service.start()

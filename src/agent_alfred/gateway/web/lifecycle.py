@@ -35,13 +35,18 @@ import fcntl
 import json
 import os
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-# Only the loopback address is ever bound. "Only listen locally" is one of
-# four independent defences (ADR-0014) and it is the one that shrinks the
-# attack surface rather than rejecting a request.
+# The one and only bindable address. "Only listen locally" is one of four
+# independent defences (ADR-0014) and it is the one that shrinks the attack
+# surface rather than rejecting a request -- which is exactly why it is not a
+# parameter. ``127.0.0.1`` is accepted and every other spelling is refused at
+# construction, before a socket can be asked for: a value that reached the
+# bind would already have made the other three defences the only thing
+# standing between an unauthenticated Dashboard and the network.
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 7717
 
@@ -271,25 +276,30 @@ class DashboardService:
         state_dir: Path,
         handler: Any,
         instance_id: str,
-        host: str = DEFAULT_HOST,
         port: int = DEFAULT_PORT,
         server_factory: Any = None,
         context: Any = None,
         pid: int | None = None,
+        lock: "ProcessLock | None" = None,
+        write_descriptor: Callable[[Path, EntryDescriptor], Path] | None = None,
     ):
-        if not host:
-            raise ValueError("host must not be empty")
+        # There is deliberately no address parameter. Refusing a value that
+        # was never accepted is stronger than validating one that was: no
+        # caller -- and no injected server factory, the seam every test uses
+        # to avoid a real socket -- can carry another address to the bind.
         if port < 1 or port > 65535:
             raise ValueError(f"port must be in 1..65535, got {port}")
         self._state_dir = state_dir
         self._handler = handler
         self._instance_id = instance_id
-        self._host = host
         self._requested_port = port
         self._server_factory = server_factory
         self._context = context
         self._pid = os.getpid() if pid is None else pid
-        self._lock = ProcessLock(state_dir / LOCK_NAME)
+        self._lock = lock if lock is not None else ProcessLock(
+            state_dir / LOCK_NAME
+        )
+        self._write_descriptor_fn = write_descriptor or write_entry_descriptor
         self._server: Any = None
         self._serving = False
         self._descriptor: EntryDescriptor | None = None
@@ -297,8 +307,15 @@ class DashboardService:
     # -- reads ------------------------------------------------------------
 
     @property
-    def host(self) -> str:
-        return self._host
+    def bind_address(self) -> str:
+        """The address the socket is bound to. Not a knob -- the answer.
+
+        Named for what it is rather than ``host``, because in this codebase
+        "host" means :class:`~agent_alfred.runtime.host.RuntimeHost`, and a
+        property that returned a process owner would be a worse surprise
+        than one that returns an address.
+        """
+        return DEFAULT_HOST
 
     @property
     def port(self) -> int:
@@ -327,9 +344,22 @@ class DashboardService:
     # -- lifecycle --------------------------------------------------------
 
     def start(self) -> EntryDescriptor:
-        """Lock, then bind, then describe. Anything less is fully undone."""
+        """Lock, then bind, then describe. Anything less is fully undone.
+
+        This is the first third of start-up and deliberately nothing more:
+        the database, the Host and the stream all belong to later steps that
+        may fail for their own reasons, and running any of them before the
+        lock is held would let a second instance migrate the database or
+        write Run state before being told it may not.
+        """
         if self._server is not None:
             return self._descriptor or self._write_descriptor()
+        # The one thing that has to precede the lock: the lock file lives in
+        # the state directory, and a file cannot be locked inside a
+        # directory that does not exist. Creating it takes no part in the
+        # arbitration -- it is idempotent, it is 0700, and it contains
+        # nothing a competing instance could misread. Every *decision*
+        # follows the lock.
         self._state_dir.mkdir(mode=0o700, exist_ok=True)
         self._lock.acquire()
         try:
@@ -349,15 +379,30 @@ class DashboardService:
         if factory is None:
             factory = _default_server_factory
         try:
-            self._server = factory((self._host, self._requested_port), self._handler)
+            self._server = factory(
+                (DEFAULT_HOST, self._requested_port), self._handler
+            )
         except OSError as exc:
             raise PortUnavailable(
-                self._host, self._requested_port, _bind_error_reason(exc)
+                DEFAULT_HOST, self._requested_port, _bind_error_reason(exc)
             ) from exc
         # Attached before anything can be accepted, so a handler instance can
         # never find itself without the process-wide context it needs.
         if self._context is not None:
             self._server.context = self._context
+
+    def attach_context(self, context: Any) -> None:
+        """Give the bound server the context it could not have had yet.
+
+        The context is built from the Host, and the Host is built after the
+        bind -- the bind has to precede any write to the state directory, and
+        building a Host means migrating it. So the context arrives here,
+        still before the first request can be accepted, because serving does
+        not start until the caller says so.
+        """
+        self._context = context
+        if self._server is not None:
+            self._server.context = context
 
     def _write_descriptor(self) -> EntryDescriptor:
         descriptor = EntryDescriptor(
@@ -365,7 +410,7 @@ class DashboardService:
             pid=self._pid,
             port=self.port,
         )
-        write_entry_descriptor(self._state_dir, descriptor)
+        self._write_descriptor_fn(self._state_dir, descriptor)
         self._descriptor = descriptor
         return descriptor
 
@@ -391,6 +436,17 @@ class DashboardService:
         )
         thread.start()
         return thread
+
+    def stop_serving(self) -> None:
+        """Close the listening socket and stop accepting. Idempotent.
+
+        Separate from :meth:`close` because the rest of the process has to
+        be wound down *before* the descriptor is deleted and the lock
+        dropped: a second instance allowed to start while this one's worker
+        is still finishing a Run would be two processes with one state
+        directory, which is the exact thing the lock exists to prevent.
+        """
+        self._release_server()
 
     def close(self) -> None:
         """Undo the lifecycle from the outside in. Idempotent.

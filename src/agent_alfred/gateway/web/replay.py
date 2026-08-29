@@ -8,12 +8,30 @@ client is handed something that looks complete but is not.
 
 Two independent budgets bound it, counted at once (frames *and* encoded
 bytes): a frame count alone lets a few 1 MiB frames pin far more memory than
-the byte budget ever meant to allow.
+the byte budget ever meant to allow. Both count **physical frames**, not
+logical events -- a logical event may be many frames, so counting entries
+would let a handful of chunked events pin far more than the budget allows.
+Eviction still removes whole logical events, because half an event is not
+expressible.
 
 The ring also owns the cursor vocabulary. A cursor is ``{instance}:{seq}``
 and must name a checkpoint this process actually issued -- the global
 sequence carries transient and non-replayable positions, so the arithmetic
 predecessor of a checkpoint is not itself a checkpoint.
+
+"Issued" carries weight, and the ring keeps two boundaries apart because of
+it:
+
+- :attr:`ReplayRing.replay_floor_seq` is the **unrecoverable boundary** -- the
+  newest fact this ring can no longer produce, for any reason. It only ever
+  moves forward, including past events that were never stored at all.
+- the eviction floor is the subset of that boundary this process *did* issue
+  and later dropped. Everything past an issued checkpoint is still held, so
+  resuming from one loses nothing.
+
+Conflating the two is how a forged cursor for an event that was too large to
+store would be answered "valid", skipping the one fact the client was owed a
+``replay_gap`` for.
 """
 
 from __future__ import annotations
@@ -25,8 +43,9 @@ from agent_alfred.gateway.web.frames import PreparedFrames
 
 # The decided capacity table. Constructor defaults on purpose: these are not
 # user-facing knobs, and a test needs a two-frame ring to reach the overflow
-# paths at all.
-DEFAULT_MAX_ENTRIES = 2048
+# paths at all. ``max_frames`` counts *physical* frames; calling it
+# ``max_entries`` would invite the reader to assume one entry is one frame.
+DEFAULT_MAX_FRAMES = 2048
 DEFAULT_MAX_BYTES = 32 * 1024 * 1024
 
 GapReason = Literal["malformed", "instance_mismatch", "too_old", "ahead"]
@@ -107,19 +126,26 @@ class ReplayRing:
     def __init__(
         self,
         *,
-        max_entries: int = DEFAULT_MAX_ENTRIES,
+        max_frames: int = DEFAULT_MAX_FRAMES,
         max_bytes: int = DEFAULT_MAX_BYTES,
     ):
-        if max_entries < 1:
-            raise ValueError("max_entries must be >= 1")
+        if max_frames < 1:
+            raise ValueError("max_frames must be >= 1")
         if max_bytes < 1:
             raise ValueError("max_bytes must be >= 1")
-        self.max_entries = max_entries
+        self.max_frames = max_frames
         self.max_bytes = max_bytes
         self._entries: list[PreparedFrames] = []
         self._issued: set[int] = set()
+        self._frames = 0
         self._bytes = 0
-        self._floor = 0
+        # The unrecoverable boundary: the newest seq this ring can no longer
+        # produce, whatever the reason. Monotonic.
+        self._unrecoverable_floor = 0
+        # The subset of that boundary this process actually issued and then
+        # evicted -- the only floor a cursor may stand on.
+        self._evicted_floor = 0
+        self._last_issued: int | None = None
         self._high_water = 0
         self._emitted_any = False
 
@@ -132,7 +158,7 @@ class ReplayRing:
         tells "no event was ever produced" apart from "events were produced
         and then walked over".
         """
-        return self._floor
+        return self._unrecoverable_floor
 
     def high_water_seq(self) -> int:
         """The highest seq this ring has seen.
@@ -145,8 +171,13 @@ class ReplayRing:
         return self._high_water
 
     def latest_complete_seq(self) -> int | None:
-        """The newest complete checkpoint, or None before the first event."""
-        return self._high_water or None
+        """The newest checkpoint this ring can actually reproduce.
+
+        Not the high-water mark: an event too large to store still advances
+        it, and handing a client a cursor for a fact this ring does not hold
+        would be issuing a checkpoint it cannot honour.
+        """
+        return self._last_issued
 
     def oldest_seq(self) -> int | None:
         return self._entries[0].seq if self._entries else None
@@ -170,24 +201,31 @@ class ReplayRing:
     def classify_seq(self, seq: int) -> SeqVerdict:
         """Close a cursor's position into one of the four decided reasons.
 
-        "In range but never issued" is ``malformed``: the closed table has no
-        other slot for it, and a seq that only a transient event consumed is
-        precisely the arithmetic predecessor that is not a checkpoint.
+        The two floors are not interchangeable. A seq that was issued and
+        later evicted names a real boundary -- everything past it is still
+        held, so resuming from it loses nothing. A seq the ring never stored
+        (an event too large for either budget) also moves the floor, but it
+        was never issued and so it is not a checkpoint: answering "valid"
+        for it would let a client skip the one fact it was owed a gap for.
+
+        "In range but never issued" is therefore ``malformed`` -- the closed
+        table has no other slot for it, and a seq that only a transient
+        event consumed is precisely the arithmetic predecessor that is not a
+        checkpoint.
         """
         if not isinstance(seq, int) or isinstance(seq, bool):
             return "malformed"
         if seq > self._high_water:
             return "ahead"
-        if seq < self._floor:
+        if seq < self._unrecoverable_floor:
             return "too_old"
         if seq in self._issued:
             return "valid"
-        # Two edges are usable even though the ring holds no entry under
-        # them: the floor, because everything past it is still here, and the
-        # high-water mark, because there is nothing past it to miss. A floor
-        # of zero is neither -- it means nothing was ever dropped, so a zero
-        # cursor is a client that has received nothing, not a checkpoint.
-        if (seq == self._floor and self._floor > 0) or seq == self._high_water:
+        # The one edge that is usable with nothing under it: a checkpoint
+        # this process issued and then dropped, whose whole tail is still
+        # here. A floor of zero is not it -- it means nothing was ever
+        # dropped, so a zero cursor is a client that has received nothing.
+        if seq == self._evicted_floor and self._evicted_floor > 0:
             return "valid"
         return "malformed"
 
@@ -196,11 +234,16 @@ class ReplayRing:
     def append(self, entry: PreparedFrames) -> AppendResult:
         """Publish one logical event. Seq must be strictly increasing.
 
-        An event larger than the whole byte budget cannot be carried at all:
-        the ring is cleared and the floor jumps past it, so no client is
-        told it can recover a fact this process no longer holds. The event
-        still counts towards the high-water mark -- it was published, and a
-        client that saw it must not read as "ahead".
+        An event the ring cannot carry at all -- one with no frames, more
+        physical frames than the whole frame budget, or more encoded bytes
+        than the whole byte budget -- is refused whole: the ring is cleared
+        and the unrecoverable boundary jumps past it, so no client is told
+        it can recover a fact this process does not hold.
+
+        The event still counts towards the high-water mark -- it was
+        published, and a client that saw it must not read as "ahead". What
+        it does not get is a checkpoint: the caller is told the append was
+        refused precisely so it can withhold the ``id:`` line.
         """
         if entry.seq <= self._high_water:
             raise ValueError(
@@ -208,12 +251,18 @@ class ReplayRing:
             )
         self._high_water = entry.seq
         self._emitted_any = True
-        if entry.byte_size > self.max_bytes or not entry.frames:
+        if (
+            not entry.frames
+            or len(entry.frames) > self.max_frames
+            or entry.byte_size > self.max_bytes
+        ):
             self._clear()
-            self._floor = entry.seq
+            self._unrecoverable_floor = entry.seq
             return AppendResult(accepted=False, evicted=(), ring_cleared=True)
         self._entries.append(entry)
         self._issued.add(entry.seq)
+        self._last_issued = entry.seq
+        self._frames += len(entry.frames)
         self._bytes += entry.byte_size
         evicted = self._evict_while_over_budget()
         return AppendResult(accepted=True, evicted=evicted)
@@ -221,21 +270,38 @@ class ReplayRing:
     def _evict_while_over_budget(self) -> tuple[int, ...]:
         evicted: list[int] = []
         while self._entries and (
-            len(self._entries) > self.max_entries or self._bytes > self.max_bytes
+            self._frames > self.max_frames or self._bytes > self.max_bytes
         ):
             dropped = self._entries.pop(0)
             self._issued.discard(dropped.seq)
+            # Whole logical events only: frames and bytes both come off in
+            # the unit they went on, so the ring can never hold a fragment
+            # and a client can never be handed one.
+            self._frames -= len(dropped.frames)
             self._bytes -= dropped.byte_size
-            # The floor is monotonic: it names the newest fact this ring can
-            # no longer produce, so it only ever moves forward.
-            if dropped.seq > self._floor:
-                self._floor = dropped.seq
+            # Both boundaries are monotonic: they name the newest fact this
+            # ring can no longer produce, so they only ever move forward.
+            if dropped.seq > self._unrecoverable_floor:
+                self._unrecoverable_floor = dropped.seq
+            if dropped.seq > self._evicted_floor:
+                self._evicted_floor = dropped.seq
             evicted.append(dropped.seq)
         return tuple(evicted)
 
     def _clear(self) -> None:
+        """Drop everything the ring was holding. Only the unrecoverable
+        path calls this.
+
+        ``_last_issued`` goes too, and that is the point: every checkpoint
+        left behind it is now below the unrecoverable floor, so the ring
+        cannot reproduce it. Keeping one would hand a reconnecting client a
+        cursor this same ring would then call ``too_old`` -- issuing a
+        checkpoint and disowning it in the same breath.
+        """
         self._entries.clear()
         self._issued.clear()
+        self._last_issued = None
+        self._frames = 0
         self._bytes = 0
 
 
@@ -245,7 +311,15 @@ def classify_cursor(
     *,
     process_instance_id: str,
 ) -> CursorVerdict:
-    """Decide what one reconnecting client gets. No cursor is not a gap."""
+    """Decide what one reconnecting client gets. No cursor is not a gap.
+
+    ``reseed_seq`` is ``None`` when the ring holds no checkpoint it can
+    honour -- before the first event, and after an event too large to store
+    has cleared it. In both cases there is nothing to re-plant, and
+    planting the previous seq anyway would be worse than planting nothing:
+    the client would come back holding a cursor this same ring calls
+    ``too_old``.
+    """
     reseed = ring.latest_complete_seq()
     if cursor is None:
         return CursorVerdict(kind="absent", reseed_seq=reseed)

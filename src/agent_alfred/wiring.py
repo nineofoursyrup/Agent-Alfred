@@ -6,12 +6,17 @@ import sqlite3
 import uuid
 from collections.abc import Callable, Sequence
 from pathlib import Path
+from typing import Any
 
 from agent_alfred import schema
 from agent_alfred.clock import Clock, SystemClock
 from agent_alfred.events import BarrierFlushResult, EventSink, FanOutSink
 from agent_alfred.gateway.web.broker import SSEBroker
-from agent_alfred.gateway.web.lifecycle import DEFAULT_HOST, DEFAULT_PORT
+from agent_alfred.gateway.web.lifecycle import (
+    DEFAULT_PORT,
+    EntryDescriptor,
+    ProcessLock,
+)
 from agent_alfred.gateway.web.server import DashboardRuntime
 from agent_alfred.model import (
     ClientSnapshot,
@@ -192,19 +197,29 @@ def build_host(
 
 def build_dashboard(
     *,
-    conn: sqlite3.Connection,
     state_dir: Path,
     settings: Settings | None = None,
     factory: ModelClientFactory | None = None,
     clock: Clock | None = None,
     trace_root: Path | None = None,
     port: int = DEFAULT_PORT,
-    bind_host: str = DEFAULT_HOST,
     extra_sinks: Sequence[EventSink] = (),
-) -> tuple[RuntimeHost, DashboardRuntime]:
-    """One process: one Host, one broker, one socket, one descriptor.
+    instance_id: str | None = None,
+    open_database: Callable[[Path], sqlite3.Connection] | None = None,
+    server_factory: Any = None,
+    write_descriptor: Callable[[Path, EntryDescriptor], Path] | None = None,
+    lock: ProcessLock | None = None,
+    pid: int | None = None,
+) -> DashboardRuntime:
+    """Build the one Dashboard object. Take no ownership yet.
 
-    The order is the decided one, and it is forced by a real dependency loop
+    Nothing here takes the lock, binds a socket or opens the database --
+    those are process-level facts and :meth:`DashboardRuntime.start` owns
+    them, in that order. What this function assembles is the one thing that
+    has to exist *before* any of that can happen and *after* it is decided:
+    how a Host and a broker are built around one connection.
+
+    That order inside :meth:`start` is forced by a real dependency loop
     rather than by convention:
 
     1. the broker is built first, because the Host's authoritative state
@@ -214,53 +229,55 @@ def build_dashboard(
        snapshot listener, so what a browser sees is the state the Host
        decided, published after the decision;
     3. the broker is then pointed at the Host, which is the only thing that
-       can answer "does this Session exist";
-    4. the Dashboard runtime takes the lock, binds, describes -- in that
-       order -- and only then serves.
-
-    Nothing can reach the socket before step 4, so the broker is never asked
-    a question it cannot answer.
+       can answer "does this Session exist".
     """
     clock = clock or SystemClock()
     settings = settings or Settings()
-    instance_id = uuid.uuid4().hex
-    broker = SSEBroker(
-        process_instance_id=instance_id,
-        snapshot=RuntimeSnapshot(
-            process_instance_id=instance_id,
-            state_revision=0,
-            coordinator_state="idle",
-            active_run=None,
-            unrecorded_terminal_projection=None,
-        ),
-    )
-    if factory is None:
-        factory = OpenCodeGoFactory(clock=clock)
-    host = build_host(
-        conn=conn,
-        factory=factory,
-        settings=settings,
-        clock=clock,
-        trace_root=trace_root,
-        extra_sinks=[broker, *extra_sinks],
-        process_instance_id=instance_id,
-        snapshot_listener=broker.publish_state_patch,
-    )
-    broker.bind_session_check(host.session_exists)
-    # A dead dispatcher is the one failure the broker cannot fix on its own,
-    # so it is reported where a process-level fact belongs: into the trace,
-    # through the same notice every other sink failure uses.
-    broker.bind_fatal_handler(
-        lambda exc: host.note_sink_disabled("sse", "dispatch")
-    )
-    dashboard = DashboardRuntime(
-        host=host,
+    resolved_factory = factory or OpenCodeGoFactory(clock=clock)
+
+    def assemble(
+        conn: sqlite3.Connection, instance: str
+    ) -> tuple[RuntimeHost, SSEBroker]:
+        broker = SSEBroker(
+            process_instance_id=instance,
+            snapshot=RuntimeSnapshot(
+                process_instance_id=instance,
+                state_revision=0,
+                coordinator_state="idle",
+                active_run=None,
+                unrecorded_terminal_projection=None,
+            ),
+        )
+        host = build_host(
+            conn=conn,
+            factory=resolved_factory,
+            settings=settings,
+            clock=clock,
+            trace_root=trace_root,
+            extra_sinks=[broker, *extra_sinks],
+            process_instance_id=instance,
+            snapshot_listener=broker.publish_state_patch,
+        )
+        broker.bind_session_check(host.session_exists)
+        # A dead dispatcher is the one failure the broker cannot fix on its
+        # own, so it is reported where a process-level fact belongs: into
+        # the trace, through the same notice every other sink failure uses.
+        broker.bind_fatal_handler(
+            lambda exc: host.note_sink_disabled("sse", "dispatch")
+        )
+        return host, broker
+
+    return DashboardRuntime(
         state_dir=state_dir,
-        broker=broker,
+        assemble=assemble,
         port=port,
-        bind_host=bind_host,
+        instance_id=instance_id,
+        open_database=open_database,
+        server_factory=server_factory,
+        write_descriptor=write_descriptor,
+        lock=lock,
+        pid=pid,
     )
-    return host, dashboard
 
 
 def build_default_host(

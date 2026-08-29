@@ -49,6 +49,24 @@ def _snapshot() -> RuntimeSnapshot:
 class _Facade:
     """The smallest facade that lets the wire be the thing under test."""
 
+    def __init__(self) -> None:
+        self.mutating = False
+
+    # The gate's authority, in the shape the Host provides it. No Run is
+    # ever in flight behind this facade, so the only thing that can busy the
+    # gate here is another write -- which these tests never start.
+    def try_begin_mutation(self) -> str | None:
+        if self.mutating:
+            return "mutation_in_flight"
+        self.mutating = True
+        return None
+
+    def end_mutation(self) -> None:
+        self.mutating = False
+
+    def mutation_in_flight(self) -> bool:
+        return self.mutating
+
     def create_session(self) -> str:
         return "session-from-server"
 
@@ -128,8 +146,7 @@ class _Server:
             handler=DashboardHandler,
             context=context,
             instance_id=INSTANCE,
-            host=DEFAULT_HOST,
-            port=self.port,
+                port=self.port,
         )
         self.service.start()
         self.thread = self.service.start_serving()
