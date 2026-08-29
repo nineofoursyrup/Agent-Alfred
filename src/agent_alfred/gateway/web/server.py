@@ -84,6 +84,25 @@ DashboardState = Literal[
     "new", "starting", "running", "closing", "closed", "failed"
 ]
 
+# How long each step of a **failed start's** rollback may wait, when the
+# caller has not said.
+#
+# Bounded on purpose, and not borrowed from the components' own defaults the
+# way :meth:`DashboardRuntime.close` borrows them. ``close()`` may be asked
+# again, so an expired wait there costs the caller a second call; a rollback
+# is the one close that has to *return*, because the caller is waiting to be
+# told why the Dashboard did not come up.
+#
+# And on that path there is provably nothing to wait for: a Run can only be
+# admitted through the HTTP surface, which is step 8 and therefore the step
+# whose failure is the interesting case; recovery (step 7) rewrites the
+# index rows of interrupted Runs, it does not execute them. So what the
+# rollback waits on is a worker and a dispatcher with empty queues. If that
+# turns out to be wrong, the honest answer is the ``closing`` state -- which
+# keeps the database, the descriptor and the lock, and lets the caller ask
+# again -- not a longer wait.
+ROLLBACK_TIMEOUT_S = 2.0
+
 
 class HostFacade:
     """The Dashboard's view of the Host: the read side plus one write gate.
@@ -165,7 +184,7 @@ class DashboardRuntime:
         lock: ProcessLock | None = None,
         pid: int | None = None,
         spawn: SpawnThread | None = None,
-        rollback_timeout: float | None = None,
+        rollback_timeout: float | None = ROLLBACK_TIMEOUT_S,
     ):
         self._state_dir = state_dir
         self._assemble = assemble
@@ -198,12 +217,11 @@ class DashboardRuntime:
         # that cannot be created, and one that cannot be started. Both are
         # failures like any other and both undo steps 1-7.
         self._spawn = spawn
-        # How long each step of a failed start's rollback may wait. ``None``
-        # means every component's own shutdown default, which is the honest
-        # answer from a layer that does not know how long a Run takes; it is
-        # injectable because a caller that has to come back and report a
-        # refusal must be able to say how long it can afford to wait while
-        # the rollback holds the lifecycle lock.
+        # How long each step of a failed start's rollback may wait. Defaults
+        # to :data:`ROLLBACK_TIMEOUT_S` rather than to the components' own
+        # answers, and injectable so a caller that has to report a refusal
+        # quickly can say how long it can afford while the rollback holds
+        # the lifecycle lock.
         self._rollback_timeout = rollback_timeout
         self._host: RuntimeHost | None = None
         self._broker: SSEBroker | None = None
