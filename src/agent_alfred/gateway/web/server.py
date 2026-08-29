@@ -84,24 +84,28 @@ DashboardState = Literal[
     "new", "starting", "running", "closing", "closed", "failed"
 ]
 
-# How long each step of a **failed start's** rollback may wait, when the
-# caller has not said.
+# How long each **step** of a failed start's rollback may wait, when the
+# caller has not said. Not the whole rollback: every step that has not run
+# yet gets its own bound, which is the same reading
+# :meth:`DashboardRuntime.close` gives its ``timeout``.
 #
 # Bounded on purpose, and not borrowed from the components' own defaults the
-# way :meth:`DashboardRuntime.close` borrows them. ``close()`` may be asked
-# again, so an expired wait there costs the caller a second call; a rollback
-# is the one close that has to *return*, because the caller is waiting to be
-# told why the Dashboard did not come up.
+# way ``close()`` borrows them. ``close()`` may be asked again, so an expired
+# wait there costs the caller a second call; a rollback is the one close that
+# has to *return*, because the caller is waiting to be told why the
+# Dashboard did not come up.
 #
-# And on that path there is provably nothing to wait for: a Run can only be
-# admitted through the HTTP surface, which is step 8 and therefore the step
-# whose failure is the interesting case; recovery (step 7) rewrites the
-# index rows of interrupted Runs, it does not execute them. So what the
-# rollback waits on is a worker and a dispatcher with empty queues. If that
-# turns out to be wrong, the honest answer is the ``closing`` state -- which
-# keeps the database, the descriptor and the lock, and lets the caller ask
-# again -- not a longer wait.
-ROLLBACK_TIMEOUT_S = 2.0
+# And on that path nothing has been admitted yet, on any surface. The HTTP
+# one needs step 8, which is the step whose failure is the interesting case;
+# the CLI one submits to the same Host directly, but only after
+# ``start()`` has returned (gateway/cli.py starts the Dashboard before its
+# first prompt). Recovery, step 7, rewrites the index rows of interrupted
+# Runs rather than executing them. So what the rollback waits on is a worker
+# and a dispatcher with empty queues. If that turns out to be wrong, the
+# honest answer is the ``closing`` state -- which keeps the database, the
+# descriptor and the lock, and lets the caller ask again -- not a longer
+# wait.
+ROLLBACK_STEP_TIMEOUT_S = 2.0
 
 
 class HostFacade:
@@ -184,7 +188,7 @@ class DashboardRuntime:
         lock: ProcessLock | None = None,
         pid: int | None = None,
         spawn: SpawnThread | None = None,
-        rollback_timeout: float | None = ROLLBACK_TIMEOUT_S,
+        rollback_step_timeout: float | None = ROLLBACK_STEP_TIMEOUT_S,
     ):
         self._state_dir = state_dir
         self._assemble = assemble
@@ -218,11 +222,9 @@ class DashboardRuntime:
         # failures like any other and both undo steps 1-7.
         self._spawn = spawn
         # How long each step of a failed start's rollback may wait. Defaults
-        # to :data:`ROLLBACK_TIMEOUT_S` rather than to the components' own
-        # answers, and injectable so a caller that has to report a refusal
-        # quickly can say how long it can afford while the rollback holds
-        # the lifecycle lock.
-        self._rollback_timeout = rollback_timeout
+        # to :data:`ROLLBACK_STEP_TIMEOUT_S`, not to the components' own
+        # answers the way ``close()`` uses them.
+        self._rollback_step_timeout = rollback_step_timeout
         self._host: RuntimeHost | None = None
         self._broker: SSEBroker | None = None
         self._conn: sqlite3.Connection | None = None
@@ -336,7 +338,7 @@ class DashboardRuntime:
                 # end is simply ``failed``, with nothing left.
                 self._state = (
                     "failed"
-                    if self._stop_all_locked(self._rollback_timeout)
+                    if self._stop_all_locked(self._rollback_step_timeout)
                     else "closing"
                 )
                 raise
@@ -409,6 +411,11 @@ class DashboardRuntime:
         A half-dead instance holding the state directory is not hostage-taking;
         it is the alternative to a second instance taking write authority
         over a Run that is still being recorded.
+
+        ``timeout`` bounds *each* step that has not run yet, not the whole
+        close, and ``None`` hands every component its own default -- which is
+        why this one may wait a lot longer than a failed start's rollback,
+        whose bound is :data:`ROLLBACK_STEP_TIMEOUT_S`.
         """
         with self._lifecycle_lock:
             if self._state in ("closed", "failed"):

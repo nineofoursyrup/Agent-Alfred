@@ -101,10 +101,9 @@ class CursorVerdict:
     plus the snapshot).
 
     ``reseed_seq`` is the boundary the response body must re-plant before any
-    data frame, and it is always present: the SSE dispatch algorithm copies
-    the id buffer into the last-event-id string even for a dataless frame, so
-    without a re-seed the first id-less frame silently erases the client's
-    cursor and its next connection carries no ``Last-Event-ID`` at all.
+    data frame, and it is always present -- why it cannot be conditional is
+    argued once, at
+    :data:`~agent_alfred.gateway.web.frames.STARTUP_CHECKPOINT_SEQ`.
 
     It is a boundary, not a promise. What the ring can reproduce is decided
     when the client brings it back.
@@ -236,9 +235,9 @@ class ReplayRing:
         Deliberately *not* the same as :meth:`latest_complete_seq`. After an
         unrecoverable clear the ring cannot reproduce what it issued, but
         the client that was issued it still holds it, and dropping it here
-        would mean planting nothing -- which empties the browser's id buffer
-        and turns its next reconnect into a first connection, the one shape
-        that is never told it has a gap.
+        would mean planting nothing -- see
+        :data:`~agent_alfred.gateway.web.frames.STARTUP_CHECKPOINT_SEQ` for
+        why "nothing" is the one answer a stream may not give.
 
         Planting a boundary the ring will call ``too_old`` is not a
         contradiction: it is how the client finds out, on every reconnect,
@@ -381,11 +380,10 @@ class ReplayRing:
 
         ``_reseed_boundary`` stays. It records what this process *issued*,
         not what it can still produce, and a re-seed is a boundary rather
-        than a promise. Dropping it would leave a reconnecting client with
-        no cursor at all, and a client with no cursor sends no
-        ``Last-Event-ID`` -- so the gap it was owed would never be reported.
-        Keeping it means the client comes back holding a real boundary that
-        this same ring classifies ``too_old`` and reports, every time.
+        than a promise. Keeping it means the client comes back holding a real
+        boundary that this same ring classifies ``too_old`` and reports,
+        every time; dropping it would leave that client with nothing to send
+        back at all.
         """
         self._entries.clear()
         self._issued.clear()

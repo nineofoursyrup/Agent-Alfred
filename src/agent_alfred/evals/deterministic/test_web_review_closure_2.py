@@ -41,7 +41,7 @@ from agent_alfred.gateway.web.lifecycle import (
     write_entry_descriptor,
 )
 from agent_alfred.gateway.web.replay import ReplayRing, classify_cursor
-from agent_alfred.gateway.web.server import ROLLBACK_TIMEOUT_S, DashboardRuntime
+from agent_alfred.gateway.web.server import ROLLBACK_STEP_TIMEOUT_S, DashboardRuntime
 
 # A RunStarted frame is ~467 bytes, so 512 admits one and refuses a padded
 # one -- the two events a test needs in order to reach the clear path with
@@ -175,7 +175,7 @@ class _Rig:
         host_results: tuple[bool, ...] = (True,),
         broker_results: tuple[bool, ...] = (True,),
         spawn: Any = None,
-        rollback_timeout: float | None = ROLLBACK_TIMEOUT_S,
+        rollback_step_timeout: float | None = ROLLBACK_STEP_TIMEOUT_S,
     ):
         self.tmp_path = Path(tmp_path)
         self.trace: list[str] = []
@@ -200,7 +200,7 @@ class _Rig:
             write_descriptor=self._write_descriptor,
             lock=self.lock,
             spawn=spawn,
-            rollback_timeout=rollback_timeout,
+            rollback_step_timeout=rollback_step_timeout,
         )
 
     def _server_factory(self, address, handler):
@@ -408,18 +408,17 @@ def test_a_rollback_is_bounded(tmp_path) -> None:
 
     The rollback holds the lifecycle lock while it waits, so an unbounded
     wait would turn "the Dashboard could not start" into a hang a caller
-    cannot tell from a slow start. The bound is a constructor fact, and it
-    is a number even when the caller says nothing -- unlike ``close()``,
-    whose ``None`` means "each component's own default" precisely because it
-    can be asked again and a rollback cannot.
+    cannot tell from a slow start. It is a number even when the caller says
+    nothing; why that differs from ``close()``'s ``None`` is argued on
+    :data:`ROLLBACK_STEP_TIMEOUT_S`.
     """
     rig = _Rig(tmp_path, spawn=_SpawnThatRefuses())
     with pytest.raises(RuntimeError):
         rig.runtime.start()
     assert rig.host is not None
-    assert rig.host.saw_timeouts == [ROLLBACK_TIMEOUT_S]
+    assert rig.host.saw_timeouts == [ROLLBACK_STEP_TIMEOUT_S]
 
-    explicit = _Rig(tmp_path, spawn=_SpawnThatRefuses(), rollback_timeout=0.25)
+    explicit = _Rig(tmp_path, spawn=_SpawnThatRefuses(), rollback_step_timeout=0.25)
     with pytest.raises(RuntimeError):
         explicit.runtime.start()
     assert explicit.host is not None
