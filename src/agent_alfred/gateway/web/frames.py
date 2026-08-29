@@ -67,18 +67,23 @@ BACKOFF_RETRY_MS = 3000
 # connection, which is indistinguishable from a client that never connected.
 # (The re-seed itself is ADR-0013's, not this constant's idea.)
 #
-# _Contradicts ADR-0013, but only in its last line, and deliberately._ The
-# ADR ends by concluding that "the cursor is therefore a complete event
-# checkpoint this process once issued, not an arbitrary number that happens
-# to fall inside the numeric range". Zero is not one of those: it is below
-# the event sequence entirely, it names no event, and the ring still refuses
-# every positive seq it never issued -- so the property the ADR was
-# protecting (a forged in-range cursor cannot be answered "valid") is
-# untouched. What the ADR did not settle is what a stream plants when the
-# ring is empty and no checkpoint exists yet; answering "nothing" empties
-# the client's id buffer, which is why the re-seed the ADR mandates cannot
-# be conditional on there being something to replay. The reserved boundary
-# is the smaller break.
+# _Contradicts ADR-0013 (重连只恢复已完成的可重放状态，不恢复暂态呈现), but
+# only in its closing line, and deliberately._ The ADR ends by concluding
+# that "the cursor is therefore a complete event checkpoint this process
+# once issued, not an arbitrary number that happens to fall inside the
+# numeric range". Zero is not one of those: it is below the event sequence
+# entirely, it names no event, and the ring still refuses every positive seq
+# it never issued -- so the property the ADR was protecting (a forged
+# in-range cursor cannot be answered "valid") is untouched.
+#
+# What the ADR did not settle is what a stream plants when the ring is empty
+# and no checkpoint exists yet, and planting nothing is not an answer: it
+# empties the client's id buffer, and a browser with an empty buffer sends
+# no ``Last-Event-ID`` -- which is indistinguishable from a first
+# connection, and a first connection is the one shape that never receives a
+# ``replay_gap``. That is the argument, in full; the rest of the codebase
+# points here rather than repeating it. The reserved boundary is the smaller
+# break.
 #
 # It is defined here, beside the ``id:`` line's shape, because that is where
 # both producers of the line live: :func:`reseed_frame` and
@@ -218,23 +223,18 @@ def retry_frame(milliseconds: int) -> PreparedFrames:
 def reseed_frame(process_instance_id: str, seq: int) -> PreparedFrames:
     """The dataless ``id:`` frame that re-plants the cursor.
 
-    It must precede every data frame: a new stream starts with an empty id
-    buffer, so the first dataless dispatch would otherwise assign an empty
-    string to the last-event-id.
+    It must precede every data frame, and it is unconditional -- the argument
+    is on :data:`STARTUP_CHECKPOINT_SEQ`.
 
     What it plants is a **re-seed boundary**, not a promise: the seq names
     where this process last stood, and the ring decides whether that
-    position is resumable or too old. Planting one that turns out to be too
-    old is the correct answer, because the alternative -- planting nothing --
-    erases the client's cursor and with it the only thing that can ever
-    produce a ``replay_gap``. The ring's half of the vocabulary is in
-    :mod:`agent_alfred.gateway.web.replay`.
+    position is resumable or too old. The ring's half of the vocabulary is
+    in :mod:`agent_alfred.gateway.web.replay`.
 
     ``STARTUP_CHECKPOINT_SEQ`` is the one seq allowed here that no event
     ever owned; anything below it is not a boundary of any kind. It is also
     the one value for which the trailing-line rule is relaxed, because it is
-    a boundary with no event under it rather than an event boundary (see the
-    ADR-0013 note on the constant).
+    a boundary with no event under it rather than an event boundary.
     """
     if seq < STARTUP_CHECKPOINT_SEQ:
         raise ValueError(

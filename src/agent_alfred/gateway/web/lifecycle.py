@@ -448,9 +448,10 @@ class DashboardService:
         same shape :class:`~agent_alfred.gateway.web.broker.SSEBroker` takes,
         for the same reason.
 
-        ``_serving`` is set only once the thread is actually running. It is
-        what makes :meth:`stop_serving` call ``shutdown()``, and calling
-        ``shutdown()`` on a server whose loop never started waits forever --
+        ``_serving`` is set only after ``start()`` has returned, so a thread
+        that could not be created or started leaves it False. It is what
+        makes :meth:`stop_serving` call ``shutdown()``, and calling
+        ``shutdown()`` on a server whose loop never began waits forever --
         which would turn a failed start into a hung process.
         """
         if self._server is None:
