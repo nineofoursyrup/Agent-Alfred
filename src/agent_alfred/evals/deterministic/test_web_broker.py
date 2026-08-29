@@ -630,6 +630,86 @@ def test_a_wedged_connection_does_not_hold_close_open() -> None:
     assert connection.closed is True
 
 
+# --- close() is a completion report, not an intention -----------------------
+
+
+class _GatedThreads:
+    """Thread stand-ins a test can hold at the starting line.
+
+    Every spawned thread runs its real target only when the gate named for
+    that target opens, so a test decides exactly which part of the broker
+    is still alive -- without a sleep and without guessing at scheduling.
+    The dispatcher's target is the bound method ``_dispatch_loop``; each
+    writer's target is the ``<lambda>`` that wraps ``_run_writer``.
+    """
+
+    def __init__(self):
+        self.gates: dict[str, threading.Event] = {}
+        self.by_name: dict[str, threading.Thread] = {}
+        self._lock = threading.Lock()
+
+    def spawn(self, target):
+        name = getattr(target, "__name__", "<lambda>")
+        with self._lock:
+            gate = self.gates.setdefault(name, threading.Event())
+
+        def run():
+            gate.wait()
+            target()
+
+        thread = threading.Thread(target=run, daemon=True)
+        thread.start()
+        self.by_name.setdefault(name, thread)
+        return thread
+
+    def open(self, name: str) -> None:
+        self.gates[name].set()
+
+
+def test_close_reports_false_until_every_thread_has_really_exited() -> None:
+    """close() answers a question about threads, not about bookkeeping.
+
+    While the dispatcher or any writer is still alive, close() must answer
+    False -- on *every* attempt, not only the first. A True that comes from
+    the first attempt's own state rather than from the threads having
+    exited tells the caller to release what the broker is still draining:
+    the database those frames were built from and the process lock the
+    stream lives under.
+    """
+    gates = _GatedThreads()
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=_snapshot(),
+        session_is_valid=lambda _sid: True,
+        spawn=gates.spawn,
+    )
+    broker.start()
+    broker.connect(connection=FakeConnection())
+    dispatcher = gates.by_name["_dispatch_loop"]
+    writer = gates.by_name["<lambda>"]
+
+    # First attempt: both threads alive. Stopping has begun; closing has not.
+    assert broker.close(timeout=0.05) is False
+    assert dispatcher.is_alive()
+    assert writer.is_alive()
+
+    # The dispatcher drains as soon as it is allowed to run, but the writer
+    # is still alive. A repeated close must keep joining and keep saying
+    # False rather than flip to True on the strength of the first attempt.
+    gates.open("_dispatch_loop")
+    dispatcher.join(timeout=5.0)
+    assert not dispatcher.is_alive()
+    assert broker.close(timeout=0.05) is False
+    assert writer.is_alive()
+
+    # The last thread exits; the next close completes, and stays complete.
+    gates.open("<lambda>")
+    writer.join(timeout=5.0)
+    assert not writer.is_alive()
+    assert broker.close(timeout=0.05) is True
+    assert broker.close(timeout=0.05) is True
+
+
 def test_one_connections_failure_does_not_touch_the_others() -> None:
     class Exploding(FakeConnection):
         def write(self, data: bytes) -> None:

@@ -179,7 +179,6 @@ class _Rig:
     ):
         self.tmp_path = Path(tmp_path)
         self.trace: list[str] = []
-        self.conn = _FakeConnection(self.trace)
         self.host_results = list(host_results)
         self.broker_results = list(broker_results)
         self.binds = 0
@@ -189,7 +188,8 @@ class _Rig:
         self.on_assemble: Any = None
         self.host: _FakeHost | None = None
         self.broker: _FakeBroker | None = None
-        self.lock = _RecordingLock(self.tmp_path / LOCK_NAME, self.trace)
+        self.conn = self._make_conn()
+        self.lock = self._make_lock()
         self.runtime = DashboardRuntime(
             state_dir=self.tmp_path,
             assemble=self._assemble,
@@ -202,6 +202,14 @@ class _Rig:
             spawn=spawn,
             rollback_step_timeout=rollback_step_timeout,
         )
+
+    # The two seams a later closure needs to make refusable: the database
+    # and the lock are built here so a subclass can stand in its own.
+    def _make_conn(self) -> _FakeConnection:
+        return _FakeConnection(self.trace)
+
+    def _make_lock(self) -> ProcessLock:
+        return _RecordingLock(self.tmp_path / LOCK_NAME, self.trace)
 
     def _server_factory(self, address, handler):
         self.binds += 1

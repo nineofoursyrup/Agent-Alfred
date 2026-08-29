@@ -371,6 +371,105 @@ def test_a_negative_port_is_refused_before_anything_else(tmp_path) -> None:
         _service(tmp_path, port=0)
 
 
+# --- a release that fails keeps what it still needs -------------------------
+
+
+class _RefusingServer(_RecordingServer):
+    """A server whose shutdown()/server_close() refuse the first time.
+
+    The counting matters: a resumed close must retry exactly the step that
+    refused, never one that already succeeded.
+    """
+
+    def __init__(self, address, handler, *, fail_shutdown=False, fail_close=False):
+        super().__init__(address, handler)
+        self.shutdown_calls = 0
+        self.close_calls = 0
+        self._fail_shutdown = fail_shutdown
+        self._fail_close = fail_close
+
+    def shutdown(self) -> None:
+        self.shutdown_calls += 1
+        if self._fail_shutdown and self.shutdown_calls == 1:
+            raise RuntimeError("shutdown refused")
+        self.shut_down = True
+
+    def server_close(self) -> None:
+        self.close_calls += 1
+        if self._fail_close and self.close_calls == 1:
+            raise RuntimeError("socket busy")
+        self.closed = True
+
+
+def _refusing_service(tmp_path, **failures) -> DashboardService:
+    def factory(address, handler):
+        return _RefusingServer(address, handler, **failures)
+
+    return DashboardService(
+        state_dir=tmp_path,
+        handler=_Handler,
+        instance_id="inst-lifecycle",
+        port=_free_port(),
+        server_factory=factory,
+    )
+
+
+def test_a_failed_server_close_keeps_the_server_until_the_socket_is_closed(
+    tmp_path,
+) -> None:
+    """server_close() raising is a step that did not finish, not one that ran.
+
+    The reference to the server must survive the failed attempt, so the
+    next close resumes at the socket -- and the descriptor and the lock,
+    which may only follow a *confirmed* close, stay exactly where they are.
+    Dropping the reference first would make the next close skip the socket
+    and hand the state directory over while it is still open.
+    """
+    service = _refusing_service(tmp_path, fail_close=True)
+    service.start()
+    server = service.server
+    service.start_serving()
+    with pytest.raises(RuntimeError, match="socket busy"):
+        service.close()
+    # Nothing has been given up: the socket is not confirmed closed.
+    assert service.server is server
+    assert service.lock_held is True
+    assert read_entry_descriptor(tmp_path) is not None
+    # The resume finishes the socket -- without asking shutdown() again --
+    # and only then runs the tail.
+    service.close()
+    assert server.shutdown_calls == 1, "shutdown already succeeded; not re-asked"
+    assert server.close_calls == 2
+    assert server.closed is True
+    assert service.lock_held is False
+    assert read_entry_descriptor(tmp_path) is None
+
+
+def test_a_failed_shutdown_keeps_the_server_and_retries(tmp_path) -> None:
+    """shutdown() raising leaves the loop stoppable by the next close.
+
+    The second close must ask shutdown() again -- it is the only step that
+    stops the serving loop -- and only then close the socket, delete the
+    descriptor and release the lock. Skipping it on a resume would leave a
+    serving loop running behind a closed-looking Dashboard.
+    """
+    service = _refusing_service(tmp_path, fail_shutdown=True)
+    service.start()
+    server = service.server
+    service.start_serving()
+    with pytest.raises(RuntimeError, match="shutdown refused"):
+        service.close()
+    assert service.server is server
+    assert service.lock_held is True
+    assert read_entry_descriptor(tmp_path) is not None
+    service.close()
+    assert server.shutdown_calls == 2
+    assert server.close_calls == 1
+    assert server.closed is True
+    assert service.lock_held is False
+    assert read_entry_descriptor(tmp_path) is None
+
+
 # --- the real socket ------------------------------------------------------
 
 

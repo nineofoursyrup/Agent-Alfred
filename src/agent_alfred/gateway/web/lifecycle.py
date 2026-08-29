@@ -316,6 +316,12 @@ class DashboardService:
         self._server: Any = None
         self._serving = False
         self._descriptor: EntryDescriptor | None = None
+        # The release's own progress: which of its steps have actually
+        # succeeded. They live beside the references they are about, so a
+        # close that resumes after a refusal picks up at the refused step
+        # instead of re-running the whole list or skipping its remainder.
+        self._server_shutdown_done = False
+        self._server_closed = False
 
     # -- reads ------------------------------------------------------------
 
@@ -486,17 +492,34 @@ class DashboardService:
     # -- internals --------------------------------------------------------
 
     def _release_server(self) -> None:
-        server, self._server = self._server, None
-        serving, self._serving = self._serving, False
+        """Stop the serving loop and close the listening socket. Resumable.
+
+        The server reference survives every failed attempt: ``shutdown()``
+        and ``server_close()`` are retryable steps, and dropping the
+        reference before they succeed would make the next close skip them
+        entirely -- handing the descriptor and the lock over on top of a
+        socket that was never confirmed closed. Each progress bit advances
+        only after the action behind it has returned, so a close that
+        resumes never re-runs a step that succeeded and never skips one
+        that did not.
+        """
+        server = self._server
         if server is None:
             return
-        if serving:
+        if self._serving and not self._server_shutdown_done:
             # Only ever called once a serving loop was asked for.
             # ``shutdown()`` waits for that loop to observe the request, so
             # calling it on a server that never served would wait forever --
             # which is how a failed start would turn into a hung process.
             server.shutdown()
-        server.server_close()
+            self._server_shutdown_done = True
+        if not self._server_closed:
+            server.server_close()
+            self._server_closed = True
+        # Reached only when the socket is confirmed closed; this is what
+        # makes "the port is free" a fact rather than an intention.
+        self._server = None
+        self._serving = False
 
     def _forget_descriptor(self) -> None:
         if self._descriptor is None:

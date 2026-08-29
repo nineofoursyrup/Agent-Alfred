@@ -239,9 +239,15 @@ class DashboardRuntime:
         # nothing to stop.
         self._host_stopped = True
         self._broker_stopped = True
-        # Whether the tail -- database, descriptor, lock -- has run. It runs
-        # at most once, however many times close() is called.
-        self._released = False
+        # The tail's real progress: which of its steps have actually
+        # succeeded. "Released" is not a flag raised when the tail *begins*
+        # -- a database that refuses to close, or a lock that refuses to
+        # let go, leaves the tail unfinished, and the next close() resumes
+        # from exactly the step that refused. Both start unrun for the same
+        # reason ``_host_stopped`` starts True: before start() there is
+        # nothing here to release.
+        self._db_closed = False
+        self._entry_released = False
         # Whether steps 1-3 ever completed, i.e. whether this process owns
         # the socket, the descriptor and the lock. Without it a start that
         # was refused at the lock would go on to release a lock it never
@@ -335,12 +341,20 @@ class DashboardRuntime:
                 # One rollback, run once, for all eight steps. A rollback
                 # that cannot stop the Host has not finished, so it stays in
                 # ``closing`` still owning everything; one that ran to the
-                # end is simply ``failed``, with nothing left.
-                self._state = (
-                    "failed"
-                    if self._stop_all_locked(self._rollback_step_timeout)
-                    else "closing"
-                )
+                # end is simply ``failed``, with nothing left. A rollback
+                # whose tail *raises* -- a database that refuses to close --
+                # has also not finished: it stays in ``closing`` too, and
+                # the next close() resumes from the step that refused and
+                # reports that failure there. The start failure is the one
+                # the caller is waiting for, so it is the one re-raised.
+                rollback_done = False
+                try:
+                    rollback_done = self._stop_all_locked(
+                        self._rollback_step_timeout
+                    )
+                except BaseException:  # noqa: BLE001 - the tail retries later
+                    rollback_done = False
+                self._state = "failed" if rollback_done else "closing"
                 raise
             self._state = "running"
             return descriptor
@@ -485,28 +499,35 @@ class DashboardRuntime:
         return True
 
     def _release_locked(self) -> None:
-        """The tail: database, descriptor, socket, lock. At most once."""
-        if self._released:
-            return
-        # Marked before anything can throw: a database that raises on close
-        # must not become a reason to hold the state directory forever, and
-        # "the tail has run" has to be true even if it ran badly.
-        self._released = True
-        conn, self._conn = self._conn, None
-        try:
+        """The tail: database, descriptor, socket, lock. Resumable progress.
+
+        Each step advances its own bit only after the action behind it has
+        returned, so a step that raises leaves everything a later attempt
+        needs right where it is -- the open connection, the Host and broker
+        references, the entry -- and the exception reaches the caller, who
+        is told the close did not finish rather than being handed a
+        completion that ran halfway and let go of a state directory whose
+        database is still open.
+        """
+        if not self._db_closed:
+            conn = self._conn
             if conn is not None:
                 conn.close()
-        finally:
-            # Everything that was being waited for has confirmed it stopped,
-            # so this runtime owns none of it any more. The Host and the
-            # broker are let go here and not before: a close that has not
-            # finished still needs to ask them again.
-            self._host = None
-            self._broker = None
+            self._db_closed = True
+            self._conn = None
+        if not self._entry_released:
             if self._entry_owned:
                 # The descriptor stops claiming a port this process no
-                # longer answers, and only then does the lock go. Not reached
-                # when the start was refused before the lock was taken:
-                # there is no entry to withdraw, and the lock is not ours.
+                # longer answers, and only then does the lock go. Not
+                # reached when the start was refused before the lock was
+                # taken: there is no entry to withdraw, and the lock is not
+                # ours.
                 self._service.close()
-            self._thread = None
+            self._entry_released = True
+        # Everything that was being waited for has confirmed it stopped, so
+        # this runtime owns none of it any more. The Host and the broker
+        # are let go here and not before: a close that has not finished
+        # still needs to ask them again.
+        self._host = None
+        self._broker = None
+        self._thread = None

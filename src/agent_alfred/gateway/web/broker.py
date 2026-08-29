@@ -294,6 +294,13 @@ class SSEBroker:
         self._dispatcher: threading.Thread | None = None
         self._on_fatal = on_fatal
         self._stopping = False
+        # The close's own progress, kept apart from "closed": which of its
+        # steps have already run. A close that runs out of time has executed
+        # its steps but not finished its job, and the next call resumes --
+        # re-posting the sentinel would just be an item nobody reads, and
+        # re-stopping queues is a lie about progress even when it is harmless.
+        self._stop_sent = False
+        self._queues_stopped = False
         self._closed = False
 
     def bind_session_check(self, check: Callable[[str | None], bool]) -> None:
@@ -382,8 +389,14 @@ class SSEBroker:
     def close(self, timeout: float = _DRAIN_TIMEOUT_S) -> bool:
         """Drain what is queued, stop every thread, release every socket.
 
-        Idempotent and bounded: a peer that stopped reading cannot hold
-        ``close()`` open, and a descriptor is never left to outlive it.
+        Resumable and idempotent: a peer that stopped reading cannot hold
+        ``close()`` open, a descriptor is never left to outlive it, and
+        False means "still draining -- ask again". The answer is a fact
+        about the threads: True only once the dispatcher and every writer
+        have really exited, because a caller that takes True for an answer
+        and tears down what the broker is still draining -- the database
+        the frames were built from, the process lock the stream lives
+        under -- is the exact failure this return value exists to prevent.
         """
         with self._lock:
             if self._closed:
@@ -391,16 +404,27 @@ class SSEBroker:
             self._stopping = True
             dispatcher = self._dispatcher
             handles = tuple(self._connections)
+            stop_sent = self._stop_sent
+            queues_stopped = self._queues_stopped
         deadline = time.monotonic() + timeout
-        if dispatcher is not None:
+        if dispatcher is not None and not stop_sent:
             # The stop sentinel is queued behind everything already pending,
-            # so the dispatcher drains first and only then returns.
+            # so the dispatcher drains first and only then returns. Posted
+            # once across every attempt: it is the step "asked the
+            # dispatcher to stop", which does not become un-done by timing
+            # out, and a second sentinel is an item with no reader.
             self._ingress.put_stop()
+            with self._lock:
+                self._stop_sent = True
+        if dispatcher is not None:
             dispatcher.join(max(0.0, deadline - time.monotonic()))
+        if not queues_stopped:
+            for handle in handles:
+                handle.queue.stop()
+            with self._lock:
+                self._queues_stopped = True
         for handle in handles:
-            handle.queue.stop()
-        for handle in handles:
-            if handle.thread is None:
+            if handle.thread is None or not handle.thread.is_alive():
                 continue
             handle.thread.join(max(0.0, deadline - time.monotonic()))
             if handle.thread.is_alive():
@@ -408,12 +432,17 @@ class SSEBroker:
                 # reading. It stays a daemon thread so it cannot hold the
                 # interpreter open, but the descriptor is ours to release.
                 handle.connection.close()
-        with self._lock:
-            self._closed = True
-        return all(
+        drained = dispatcher is None or not dispatcher.is_alive()
+        drained = drained and all(
             handle.thread is None or not handle.thread.is_alive()
             for handle in handles
-        ) and (dispatcher is None or not dispatcher.is_alive())
+        )
+        if drained:
+            # Only a confirmed exit may publish "closed"; until then every
+            # close() comes back here and keeps joining.
+            with self._lock:
+                self._closed = True
+        return drained
 
     # -- connections -------------------------------------------------------
 
