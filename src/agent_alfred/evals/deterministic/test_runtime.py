@@ -518,7 +518,6 @@ def test_admission_and_execution_only_use_narrow_seams() -> None:
     # The narrow seams exist and are the documented transitions.
     for method in (
         "admission_reserve",
-        "admission_mark_accepted",
         "admission_release",
         "admission_close_idle",
         "admission_fail_recording",
@@ -546,24 +545,23 @@ class _FakeAdmissionCoordinator:
         self.state = "idle"
         self.done: dict[str, threading.Event] = {}
         self.fail_publish = False
+        self.reserved_summaries: dict[str, object] = {}
 
-    def admission_reserve(self, run_id):
+    def admission_reserve(self, run_id, summary):
         if self.state == "recording_failed":
             return "recording_unavailable", _fake_runtime_snapshot()
         if self.state != "idle":
             return "run_in_progress", _fake_runtime_snapshot()
         self.state = "accepted"
         self.done[run_id] = threading.Event()
+        self.reserved_summaries[run_id] = summary
         self.calls.append(("reserve", run_id))
         return "reserved", _fake_runtime_snapshot()
-
-    def admission_mark_accepted(self, summary):
-        self.calls.append(("mark_accepted", summary.run_id, summary.phase))
-        return _fake_runtime_snapshot()
 
     def admission_release(self, run_id):
         self.state = "idle"
         self.done.pop(run_id, None)
+        self.reserved_summaries.pop(run_id, None)
         self.calls.append(("release", run_id))
 
     def admission_close_idle(self):
@@ -625,9 +623,15 @@ def test_admission_submits_through_the_narrow_seams_without_a_host() -> None:
     assert result.run_id is not None
     assert [call[0] for call in coordinator.calls] == [
         "reserve",
-        "mark_accepted",
         "publish",
     ]
+    # The summary reached the coordinator with the reserve, fully formed:
+    # the lease and its busy card are one publication.
+    summary = coordinator.reserved_summaries[result.run_id]
+    assert summary.phase == "accepted"
+    assert summary.prompt_preview == "hello"
+    assert summary.session_id == result.session_id
+    assert result.session_id is not None
     row = conn.execute(
         "SELECT purpose, phase, prompt_preview FROM runs"
     ).fetchone()
@@ -687,7 +691,6 @@ def test_unstarted_handoff_failure_finalizes_interrupted_through_seams() -> None
     assert result.run_id is not None
     assert [call[0] for call in coordinator.calls] == [
         "reserve",
-        "mark_accepted",
         "close_idle",
         "result",
         "notify",
@@ -716,7 +719,6 @@ def test_unstarted_db_failure_fails_closed_through_seams() -> None:
     assert result.kind == "admission_failed"
     assert [call[0] for call in coordinator.calls] == [
         "reserve",
-        "mark_accepted",
         "fail_recording",
         "result",
         "notify",

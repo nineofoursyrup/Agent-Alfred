@@ -529,3 +529,154 @@ def test_the_busy_card_is_rendered_from_the_authoritative_snapshot() -> None:
         assert busy_summary_from(host.snapshot()) is None
     finally:
         host.close()
+
+
+# --- the lease and the busy card are one publication -------------------------
+
+
+def test_a_submit_holding_the_lease_publishes_the_busy_card_with_it() -> None:
+    """A second submit in the reserve window gets the real card, not a blank.
+
+    Between "the lease is reserved" and "the accepted row is committed"
+    there is a window a second submit can walk into. The lease and the busy
+    card must become observable in one step: the refused submit reads the
+    authoritative snapshot that already carries the active Run, and renders
+    the same card a known-busy client would get -- not a 409 whose body
+    says, in effect, that nothing is running.
+    """
+    from contextlib import contextmanager
+
+    from agent_alfred.runtime.work import SubmitRequest
+
+    reserved = threading.Event()
+    proceed = threading.Event()
+    host, conn = _host(["pong"])
+    store = host._admission._database  # noqa: SLF001 - the real store, gated
+
+    class _GatedStore:
+        def __init__(self):
+            self.fail = False
+
+        @contextmanager
+        def transaction(self):
+            reserved.set()
+            if not proceed.wait(5.0):
+                raise RuntimeError("nobody released the database gate")
+            if self.fail:
+                raise sqlite3.OperationalError("database is locked")
+            with store.transaction() as conn:
+                yield conn
+
+        @contextmanager
+        def reading(self):
+            with store.reading() as conn:
+                yield conn
+
+    gated = _GatedStore()
+    host._admission._database = gated  # noqa: SLF001
+
+    host.start()
+    outcomes: dict[str, object] = {}
+    errors: list[tuple[str, BaseException]] = []
+
+    def submit(name: str, message: str) -> None:
+        try:
+            outcomes[name] = host.submit(
+                SubmitRequest(message=message, gateway="web")
+            )
+        except BaseException as exc:  # noqa: BLE001 - collected, not swallowed
+            errors.append((name, exc))
+
+    try:
+        first = threading.Thread(target=submit, args=("first", "first"))
+        first.start()
+        assert reserved.wait(5.0), "the first submit never reached its write"
+
+        # The lease is held, and the authoritative snapshot already says so.
+        published = host.snapshot()
+        assert published.coordinator_state == "accepted"
+        assert published.active_run is not None
+        assert published.active_run.prompt_preview == "first"
+        assert published.active_run.phase == "accepted"
+
+        second = threading.Thread(target=submit, args=("second", "second"))
+        second.start()
+        second.join(5.0)
+        assert not second.is_alive()
+        assert errors == []
+        refused = outcomes["second"]
+        assert refused.kind == "run_in_progress"
+        card = busy_summary_from(refused.snapshot)
+        assert card is not None
+        payload = card.to_json()
+        assert payload["purpose"] == "chat"
+        assert payload["gateway"] == "web"
+        assert payload["stage"] == "已接受"
+        assert payload["prompt_preview"] == "first"
+        assert payload["current_step"] is None
+        assert payload["navigation"]["run_id"] == published.active_run.run_id
+        assert payload["navigation"]["filter"] == "chat"
+        assert payload["navigation"]["href"].startswith("/runs/")
+
+        # The first submit's write now fails: the lease and the card go
+        # back together, no accepted row lands, and admission reopens.
+        gated.fail = True
+        proceed.set()
+        first.join(5.0)
+        assert not first.is_alive()
+        assert errors == []
+        assert outcomes["first"].kind == "admission_failed"
+        idle = host.snapshot()
+        assert idle.coordinator_state == "idle"
+        assert idle.active_run is None
+        assert conn.execute("SELECT COUNT(*) FROM runs").fetchone() == (0,)
+
+        # The database gate is healthy again; the lease was really reopened.
+        gated.fail = False
+        third = host.submit(SubmitRequest(message="third", gateway="web"))
+        assert third.kind == "accepted"
+        host.wait(third.run_id)
+    finally:
+        proceed.set()
+        host.close()
+
+
+def test_a_handoff_failure_retracts_the_lease_and_the_busy_card() -> None:
+    """A Run whose handoff failed never leaves its card behind.
+
+    The summary is published with the lease, so the handoff failure path
+    has to take both back at once: idle coordinator, no active run, the
+    Run finalized as interrupted in the index, and admission genuinely
+    reopened for the next submit.
+    """
+    from agent_alfred.runtime.work import SubmitRequest
+
+    remaining_failures = [1]
+
+    def explode(item) -> None:
+        # The first handoff fails; the publisher is healthy again for the
+        # Run that proves admission really reopened.
+        if remaining_failures[0]:
+            remaining_failures[0] -= 1
+            raise RuntimeError("queue gone")
+        host._queue.put_nowait(item)
+
+    host, conn = _host(["pong"], publish_work=explode)
+    host.start()
+    try:
+        result = host.submit(SubmitRequest(message="hello", gateway="web"))
+        assert result.kind == "admission_failed"
+        assert result.run_id is not None
+        idle = host.snapshot()
+        assert idle.coordinator_state == "idle"
+        assert idle.active_run is None
+        assert busy_summary_from(idle) is None
+        row = conn.execute(
+            "SELECT phase, outcome FROM runs WHERE run_id = ?", (result.run_id,)
+        ).fetchone()
+        assert row == ("finished", "interrupted")
+        again = host.submit(SubmitRequest(message="again", gateway="web"))
+        assert again.kind == "accepted"
+        host.wait(again.run_id)
+    finally:
+        host.close()

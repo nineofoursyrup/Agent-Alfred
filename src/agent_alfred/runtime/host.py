@@ -67,7 +67,7 @@ class RuntimeHost:
     - recorder: ``recording_enter_pending`` / ``recording_enter_failed`` /
       ``recording_publish_recorded_then_release`` / ``publish_run_result`` /
       ``notify_run_done`` plus a :class:`RecordingStore`;
-    - admission: ``admission_reserve`` / ``admission_mark_accepted`` /
+    - admission: ``admission_reserve`` (lease and busy card together) /
       ``admission_release`` / ``admission_close_idle`` /
       ``admission_fail_recording`` / ``publish_work_item``;
     - execution: ``execution_mark_running``.
@@ -360,11 +360,24 @@ class RuntimeHost:
 
     # -- admission lease transitions (the only writer of these states) -----
 
-    def admission_reserve(self, run_id: str) -> tuple[ReserveKind, RuntimeSnapshot]:
-        """Atomically decide 409/503/reserve. The lease, once reserved, holds
-        until the recording settles: a second submit during recording_pending
-        gets ``run_in_progress``; a recording-failed coordinator answers
-        ``recording_unavailable``."""
+    def admission_reserve(
+        self, run_id: str, summary: ActiveRunSummary
+    ) -> tuple[ReserveKind, RuntimeSnapshot]:
+        """Atomically decide 409/503/reserve -- and, on reserve, publish
+        the busy card in the same critical section.
+
+        The lease, once reserved, holds until the recording settles: a
+        second submit during recording_pending gets ``run_in_progress``; a
+        recording-failed coordinator answers ``recording_unavailable``.
+
+        ``summary`` is published with the lease or not at all. Reserving
+        here and publishing the card later would leave a window in which a
+        second submit is refused against a snapshot that still says "idle"
+        -- a 409 whose body claims nothing is running, from a coordinator
+        that is in fact busy. Every failure after the reserve takes both
+        back through :meth:`admission_release` or
+        :meth:`admission_close_idle`, so the card can never outlive the
+        lease it was published with."""
         # _lock is held across the _lifecycle read below on purpose. close()
         # raises its flag under _lifecycle and then waits for the pending set
         # under _lock, so holding _lock here is what makes the two orderings
@@ -403,17 +416,21 @@ class RuntimeHost:
             self._coord = "accepted"
             self._pending_handoff.add(run_id)
             self._done[run_id] = threading.Event()
-            return "reserved", snap
-
-    def admission_mark_accepted(self, summary: ActiveRunSummary) -> RuntimeSnapshot:
-        with self._lock:
+            # The safe busy card and the authoritative snapshot move under
+            # the same lock that takes the lease, so no refused submit can
+            # observe the one without the other.
             self._active_summary = summary
-            return self._states.replace(
+            snapshot = self._states.replace(
                 coordinator_state="accepted", active_run=summary
             )
+            return "reserved", snapshot
 
     def admission_release(self, run_id: str) -> None:
-        """Drop the lease after a failed admission; nothing was handed off.
+        """Take back the lease after a failed admission; nothing was handed
+        off. The busy card published with the lease goes with it: idle
+        coordinator, no active run, one authoritative replacement -- a card
+        that outlived the lease it was published with would keep telling
+        every reader a Run is running that nobody is running.
 
         A Run that failed before the handoff still has to leave the pending
         set, or close() would wait out its whole budget for a handoff that

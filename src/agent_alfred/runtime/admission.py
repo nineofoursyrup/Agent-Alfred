@@ -45,14 +45,15 @@ class AdmissionCoordinator(Protocol):
     """The lease transitions, handoff, and publication admission may drive."""
 
     def admission_reserve(
-        self, run_id: str
-    ) -> tuple[ReserveKind, RuntimeSnapshot]: ...
+        self, run_id: str, summary: ActiveRunSummary
+    ) -> tuple[ReserveKind, RuntimeSnapshot]:
+        """Reserve the lease and publish the busy card, or say why neither
+        happened. The two answers are one atomic step: a refused submit
+        must be able to render the card of whoever holds the lease, and a
+        reserved one must never be observable without its card."""
 
-    def admission_mark_accepted(
-        self, summary: ActiveRunSummary
-    ) -> RuntimeSnapshot: ...
-
-    def admission_release(self, run_id: str) -> None: ...
+    def admission_release(self, run_id: str) -> None:
+        """Take back the lease and the card this run_id published."""
 
     def admission_close_idle(self) -> None: ...
 
@@ -88,17 +89,46 @@ class RunAdmission:
         self._coordinator = coordinator
 
     def submit(self, request: SubmitRequest) -> SubmitResult:
+        # Everything the lease's busy card needs is minted before the
+        # reserve: run id, timestamp, the server-side session id, the
+        # redacted preview and the summary itself. None of it is a decision
+        # -- every decision (conflict, lease, publication) lives inside the
+        # one reserve call below, which is what keeps the lease and the
+        # card from ever being observable apart.
         run_id = uuid.uuid4().hex
-        kind, snapshot = self._coordinator.admission_reserve(run_id)
-        if kind != "reserved":
-            return SubmitResult(kind=kind, snapshot=snapshot)
-
-        session_id = request.session_id
         accepted_at = format_instant(self._clock.wall_utc())
+        session_id = request.session_id
+        if request.purpose == "chat" and session_id is None:
+            session_id = uuid.uuid4().hex
+        # The capture has to precede the preview it feeds: the key it
+        # carries enters the shared redactor first, so the preview this
+        # submit publishes -- in the summary and later in the database --
+        # is redacted against its own key on the very first run. A capture
+        # that fails never reaches the reserve, so there is nothing to
+        # take back.
         try:
             captured = self._snapshot_provider.capture(stream=request.stream)
             self._redactor.remember(captured.api_key)
-            preview = self._preview(request.message)
+        except Exception:
+            return SubmitResult(kind="admission_failed")
+        summary = ActiveRunSummary(
+            run_id=run_id,
+            purpose=request.purpose,
+            gateway=request.gateway,
+            phase="accepted",
+            session_id=session_id,
+            prompt_preview=self._preview(request.message),
+            started_at=None,
+            recording_state=None,
+        )
+        kind, snapshot = self._coordinator.admission_reserve(run_id, summary)
+        if kind != "reserved":
+            # Refused before the lease: the snapshot that came back already
+            # carries whoever holds it, so the caller renders the same busy
+            # card a known-busy client gets.
+            return SubmitResult(kind=kind, snapshot=snapshot)
+
+        try:
             client = self._factory.create(captured)
         except Exception:
             self._coordinator.admission_release(run_id)
@@ -106,8 +136,7 @@ class RunAdmission:
 
         try:
             with self._database.transaction() as conn:
-                if request.purpose == "chat" and session_id is None:
-                    session_id = uuid.uuid4().hex
+                if request.purpose == "chat" and request.session_id is None:
                     schema.insert_session(
                         conn, session_id=session_id, created_at=accepted_at
                     )
@@ -119,24 +148,12 @@ class RunAdmission:
                     gateway=request.gateway,
                     accepted_at=accepted_at,
                     entry_surface_id=request.entry_surface_id,
-                    prompt_preview=preview,
+                    prompt_preview=summary.prompt_preview,
                 )
                 conn.commit()
         except Exception:
             self._coordinator.admission_release(run_id)
             return SubmitResult(kind="admission_failed")
-
-        summary = ActiveRunSummary(
-            run_id=run_id,
-            purpose=request.purpose,
-            gateway=request.gateway,
-            phase="accepted",
-            session_id=session_id,
-            prompt_preview=preview,
-            started_at=None,
-            recording_state=None,
-        )
-        snapshot = self._coordinator.admission_mark_accepted(summary)
 
         item = WorkItem(
             run_id=run_id,
@@ -144,7 +161,7 @@ class RunAdmission:
             snapshot=captured,
             client=client,
             session_id=session_id,
-            prompt_preview=preview,
+            prompt_preview=summary.prompt_preview,
             accepted_at=accepted_at,
         )
         try:
