@@ -75,10 +75,10 @@ BACKOFF_RETRY_MS = 3000
 # every positive seq it never issued -- so the property the ADR was
 # protecting (a forged in-range cursor cannot be answered "valid") is
 # untouched. What the ADR did not settle is what a stream plants when the
-# ring is empty and no checkpoint exists yet, and answering "nothing" is
-# what empties the client's id buffer and makes its next reconnect
-# indistinguishable from a first connection -- the one shape that never
-# receives a ``replay_gap``. The reserved boundary is the smaller break.
+# ring is empty and no checkpoint exists yet; answering "nothing" empties
+# the client's id buffer, which is why the re-seed the ADR mandates cannot
+# be conditional on there being something to replay. The reserved boundary
+# is the smaller break.
 #
 # It is defined here, beside the ``id:`` line's shape, because that is where
 # both producers of the line live: :func:`reseed_frame` and

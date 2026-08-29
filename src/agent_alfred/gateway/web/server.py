@@ -198,12 +198,12 @@ class DashboardRuntime:
         # that cannot be created, and one that cannot be started. Both are
         # failures like any other and both undo steps 1-7.
         self._spawn = spawn
-        # How long a *failed start* may spend undoing itself. ``None`` means
-        # the Host's and the stream's own shutdown defaults, which is the
-        # honest answer from a layer that does not know how long a Run
-        # takes; it is injectable because a caller that has to come back and
-        # report a refusal must be able to say how long it can afford to
-        # wait while the rollback holds the lifecycle lock.
+        # How long each step of a failed start's rollback may wait. ``None``
+        # means every component's own shutdown default, which is the honest
+        # answer from a layer that does not know how long a Run takes; it is
+        # injectable because a caller that has to come back and report a
+        # refusal must be able to say how long it can afford to wait while
+        # the rollback holds the lifecycle lock.
         self._rollback_timeout = rollback_timeout
         self._host: RuntimeHost | None = None
         self._broker: SSEBroker | None = None

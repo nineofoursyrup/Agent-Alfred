@@ -53,9 +53,16 @@ DEFAULT_PORT = 7717
 LOCK_NAME = "dashboard.lock"
 DESCRIPTOR_NAME = "dashboard.json"
 
-# The seam every thread-making step takes: a target, in; a started thread,
-# out. Injected so both failures of the step -- cannot be created, cannot be
-# started -- are reachable from a test.
+# The seam ``start_serving`` takes: a target, in; an **unstarted** thread,
+# out. Injected so both failures of the step are reachable from a test --
+# "cannot be created" from the factory raising, "cannot be started" from the
+# ``start()`` the caller performs itself.
+#
+# Unstarted on purpose, and that is the one way this differs from
+# :class:`~agent_alfred.gateway.web.broker.SSEBroker`'s same-shaped seam,
+# which starts the thread before returning. Both shapes are right where they
+# are: the broker wants a running thread, while a start-up step has to be
+# able to tell the two failures apart and therefore does the starting.
 SpawnThread = Callable[[Callable[[], None]], Any]
 
 __all__ = [
@@ -448,8 +455,8 @@ class DashboardService:
         """
         if self._server is None:
             raise RuntimeError("DashboardService.start() must precede serving")
-        factory = spawn if spawn is not None else _spawn_thread
-        thread = factory(self._server.serve_forever)
+        make = spawn if spawn is not None else _new_thread
+        thread = make(self._server.serve_forever)
         thread.start()
         self._serving = True
         return thread
@@ -507,8 +514,8 @@ class DashboardService:
         self.close()
 
 
-def _spawn_thread(target: Callable[[], None]) -> Any:
-    """The only thing that makes a serving thread, when nothing is injected.
+def _new_thread(target: Callable[[], None]) -> Any:
+    """An **unstarted** serving thread: the caller starts it.
 
     Daemon and named here rather than at the call site: a Dashboard thread
     has one shape, and the name is what shows up in a stack dump.

@@ -15,9 +15,11 @@ Eviction still removes whole logical events, because half an event is not
 expressible.
 
 The ring also owns the cursor vocabulary. A cursor is ``{instance}:{seq}``
-and must name a checkpoint this process actually issued -- the global
-sequence carries transient and non-replayable positions, so the arithmetic
-predecessor of a checkpoint is not itself a checkpoint.
+and, for every positive seq, must name a checkpoint this process actually
+issued -- the global sequence carries transient and non-replayable
+positions, so the arithmetic predecessor of a checkpoint is not itself a
+checkpoint. (The one non-positive seq, reserved and argued below, is not a
+checkpoint of any event; it is the boundary in front of them all.)
 
 "Checkpoint" is three different things and the ring keeps them apart,
 because conflating any two of them is how a client is handed a cursor that

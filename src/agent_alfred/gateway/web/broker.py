@@ -708,6 +708,13 @@ class SSEBroker:
 
 
 def _spawn_thread(target: Callable[[], None]) -> threading.Thread:
+    """A **running** thread: this one starts it before returning.
+
+    Note the contract, because ``lifecycle.SpawnThread`` has the same shape
+    and the opposite one -- it hands back an unstarted thread so that
+    "cannot be created" and "cannot be started" stay distinguishable at a
+    start-up step. The broker wants a running thread and no such split.
+    """
     thread = threading.Thread(target=target, name="sse-dispatch", daemon=True)
     thread.start()
     return thread
