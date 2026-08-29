@@ -432,6 +432,14 @@ class SSEBroker:
         one critical section. Split them and a client that connects while
         events are being emitted gets either a duplicate or a hole, with no
         way to tell which.
+
+        The opening sequence is the decided order, always, in full:
+        ``retry`` -> **re-seed** -> optional ``replay_gap`` -> ``state_patch``
+        / exact catch-up -> live frames. The re-seed is not optional and not
+        conditional on there being something to replay: a stream that opens
+        with data leaves the browser's id buffer empty, an empty buffer sends
+        no ``Last-Event-ID``, and a client with no cursor is one this process
+        can never tell it has a gap.
         """
         # Read before the lock: this is a database question, and the
         # critical section below is not allowed to do IO.
@@ -456,8 +464,11 @@ class SSEBroker:
             startup: list[PreparedFrames] = [
                 frames.retry_frame(frames.DEFAULT_RETRY_MS)
             ]
-            if verdict.reseed_seq is not None:
-                startup.append(frames.reseed_frame(self._instance, verdict.reseed_seq))
+            # Unconditionally, because a verdict always carries one: the
+            # boundary this process last stood at, or the reserved startup
+            # boundary when it has never issued any. Omitting it on an empty
+            # ring is what erases the browser's cursor.
+            startup.append(frames.reseed_frame(self._instance, verdict.reseed_seq))
             if verdict.kind == "gap":
                 startup.append(
                     frames.replay_gap_notice(

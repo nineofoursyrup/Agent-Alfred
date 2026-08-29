@@ -141,13 +141,32 @@ def test_cursors_that_were_never_issued_are_not_valid_checkpoints() -> None:
     ring = replay.ReplayRing(max_frames=10, max_bytes=1 << 20)
     ring.append(_entry(1))
     ring.append(_entry(2))
-    # seq 3 has not been produced yet; seq 0 is not a checkpoint; a seq inside
-    # the range that only a transient event consumed is not one either.
-    assert ring.classify_seq(0) == "malformed"
+    # seq 3 has not been produced yet; a seq inside the range that only a
+    # transient event consumed is not a checkpoint either.
     assert ring.classify_seq(3) == "ahead"
+    # seq 0 is the one exception, and it is not an event position: it is the
+    # reserved boundary before the first event, and a ring that has lost
+    # nothing can prove continuity from there.
+    assert ring.classify_seq(0) == "valid"
+    assert ring.entries_after(0) == tuple(ring._entries)
     # 1 and 2 were issued and are still in the ring.
     assert ring.classify_seq(1) == "valid"
     assert ring.classify_seq(2) == "valid"
+
+
+def test_the_startup_boundary_dies_with_the_first_unrecoverable_loss() -> None:
+    """Zero is a starting point, not a free pass.
+
+    Once the ring has dropped anything it cannot prove what happened between
+    the beginning and here, so the reserved boundary stops being a position
+    a client may stand on -- and says so, rather than replaying a hole.
+    """
+    ring = replay.ReplayRing(max_frames=10, max_bytes=1 << 10)
+    ring.append(_entry(1))
+    ring.append(_entry(2, size=(1 << 10) + 1))  # unrecoverable
+    assert ring.replay_floor_seq() == 2
+    assert ring.classify_seq(0) == "too_old"
+    assert ring.entries_after(0) is None
 
 
 def test_a_transient_seq_in_the_middle_is_not_a_checkpoint() -> None:
@@ -190,10 +209,24 @@ def test_cursor_text_parses_only_the_issued_shape() -> None:
     assert replay.parse_cursor("inst:7", "other")[1] == "instance_mismatch"
     assert replay.parse_cursor("nonsense", "inst")[1] == "malformed"
     assert replay.parse_cursor("", "inst")[1] == "malformed"
-    assert replay.parse_cursor("inst:0", "inst")[1] == "malformed"
     assert replay.parse_cursor("inst:-1", "inst")[1] == "malformed"
     assert replay.parse_cursor("inst:7:8", "inst")[1] == "malformed"
     assert replay.parse_cursor("inst:x", "inst")[1] == "malformed"
+
+
+def test_the_reserved_startup_cursor_parses_and_formats() -> None:
+    """``instance:0`` is a real cursor, and the only non-positive one.
+
+    It names the boundary before the first domain event. Refusing to read it
+    back would turn every client that connected before the first event into
+    a client whose history cannot be read.
+    """
+    assert replay.parse_cursor("inst:0", "inst") == (0, None)
+    assert replay.format_cursor("inst", 0) == "inst:0"
+    # Padded zeros are still junk: the reserved boundary is one spelling.
+    assert replay.parse_cursor("inst:00", "inst")[1] == "malformed"
+    with pytest.raises(ValueError):
+        replay.format_cursor("inst", -1)
 
 
 def test_format_cursor_is_the_inverse_of_parse() -> None:

@@ -19,19 +19,38 @@ and must name a checkpoint this process actually issued -- the global
 sequence carries transient and non-replayable positions, so the arithmetic
 predecessor of a checkpoint is not itself a checkpoint.
 
-"Issued" carries weight, and the ring keeps two boundaries apart because of
-it:
+"Checkpoint" is three different things and the ring keeps them apart,
+because conflating any two of them is how a client is handed a cursor that
+lies:
 
-- :attr:`ReplayRing.replay_floor_seq` is the **unrecoverable boundary** -- the
-  newest fact this ring can no longer produce, for any reason. It only ever
-  moves forward, including past events that were never stored at all.
-- the eviction floor is the subset of that boundary this process *did* issue
-  and later dropped. Everything past an issued checkpoint is still held, so
-  resuming from one loses nothing.
+- :meth:`ReplayRing.reseed_boundary_seq` is the **re-seed boundary** -- the
+  newest checkpoint this process has ever issued, whether or not the ring
+  can still reproduce it. It is what a stream re-plants in front of its
+  first data frame. It is allowed to be stale: a client that comes back
+  holding it is *classified*, and a stale one is classified ``too_old`` and
+  gets a ``replay_gap``. The alternative -- planting nothing -- leaves the
+  browser with an empty id buffer, and a browser with an empty buffer sends
+  no ``Last-Event-ID``, which is indistinguishable from a first connection
+  and therefore never gets a gap notice at all.
+- :meth:`ReplayRing.latest_complete_seq` is the **currently replayable
+  checkpoint** -- the newest one the ring can actually hand back. It is not
+  what a re-seed has to be; it is only what an exact catch-up is built from.
+- :meth:`ReplayRing.replay_floor_seq` is the **unrecoverable boundary** --
+  the newest fact this ring can no longer produce, for any reason. It only
+  ever moves forward, including past events that were never stored at all.
+  The eviction floor is the subset of it this process *did* issue and later
+  dropped; everything past an issued checkpoint is still held, so resuming
+  from an evicted one loses nothing.
 
-Conflating the two is how a forged cursor for an event that was too large to
-store would be answered "valid", skipping the one fact the client was owed a
-``replay_gap`` for.
+Below all three sits :data:`~agent_alfred.gateway.web.frames.STARTUP_CHECKPOINT_SEQ`,
+the reserved boundary before the first domain event. It names no event, so
+it is never "issued" and never replayable -- but a clean ring accepts it,
+because a ring that has lost nothing can prove continuity from the very
+beginning.
+
+Conflating the replayable checkpoint with the unrecoverable boundary is how
+a forged cursor for an event that was too large to store would be answered
+"valid", skipping the one fact the client was owed a ``replay_gap`` for.
 """
 
 from __future__ import annotations
@@ -39,7 +58,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal, NewType
 
-from agent_alfred.gateway.web.frames import PreparedFrames
+from agent_alfred.gateway.web.frames import (
+    STARTUP_CHECKPOINT_SEQ,
+    PreparedFrames,
+)
 
 # The decided capacity table. Constructor defaults on purpose: these are not
 # user-facing knobs, and a test needs a two-frame ring to reach the overflow
@@ -72,15 +94,19 @@ class CursorVerdict:
     degradation), ``valid`` (exact catch-up), or ``gap`` (a transport notice
     plus the snapshot).
 
-    ``reseed_seq`` is the checkpoint the response body must re-plant before
-    any data frame. The SSE dispatch algorithm copies the id buffer into the
-    last-event-id string even for a dataless frame, so without a re-seed the
-    first id-less frame silently erases the client's cursor.
+    ``reseed_seq`` is the boundary the response body must re-plant before any
+    data frame, and it is always present: the SSE dispatch algorithm copies
+    the id buffer into the last-event-id string even for a dataless frame, so
+    without a re-seed the first id-less frame silently erases the client's
+    cursor and its next connection carries no ``Last-Event-ID`` at all.
+
+    It is a boundary, not a promise. What the ring can reproduce is decided
+    when the client brings it back.
     """
 
     kind: CursorVerdictKind
+    reseed_seq: int
     entries: tuple[PreparedFrames, ...] = ()
-    reseed_seq: int | None = None
     reason: GapReason | None = None
     # The seq the client asked to resume from, so the notice can name it.
     # Absent for a first connection, which is not a gap.
@@ -90,8 +116,12 @@ class CursorVerdict:
 def format_cursor(process_instance_id: str, seq: int) -> CursorText:
     if ":" in process_instance_id:
         raise ValueError("process_instance_id may not contain ':'")
-    if seq < 1:
-        raise ValueError(f"cursor seq must be >= 1, got {seq}")
+    # Zero is the reserved startup boundary, not an event position, so it is
+    # the one non-positive-of-events value this will write.
+    if seq < STARTUP_CHECKPOINT_SEQ:
+        raise ValueError(
+            f"cursor seq must be >= {STARTUP_CHECKPOINT_SEQ}, got {seq}"
+        )
     return CursorText(f"{process_instance_id}:{seq}")
 
 
@@ -103,6 +133,11 @@ def parse_cursor(
     Instance mismatch is reported ahead of any shape complaint about the
     seq: "this came from another process" and "this is unreadable" are
     different facts and the client shows different words for them.
+
+    ``0`` parses. It is the reserved startup boundary this process mints for
+    a clean ring, and reading it back as "malformed" would turn every client
+    that connected before the first event into a client whose history cannot
+    be read.
     """
     if not isinstance(text, str) or not text:
         return None, "malformed"
@@ -115,7 +150,7 @@ def parse_cursor(
     if not raw.isdigit() or (len(raw) > 1 and raw[0] == "0"):
         return None, "malformed"
     seq = int(raw)
-    if seq < 1:
+    if seq < STARTUP_CHECKPOINT_SEQ:
         return None, "malformed"
     return seq, None
 
@@ -146,6 +181,11 @@ class ReplayRing:
         # evicted -- the only floor a cursor may stand on.
         self._evicted_floor = 0
         self._last_issued: int | None = None
+        # The re-seed boundary: the newest checkpoint this process *ever*
+        # issued. A clear takes away the ring's ability to reproduce a
+        # checkpoint, not the fact that it was issued, so this one never
+        # goes back.
+        self._reseed_boundary: int | None = None
         self._high_water = 0
         self._emitted_any = False
 
@@ -176,8 +216,34 @@ class ReplayRing:
         Not the high-water mark: an event too large to store still advances
         it, and handing a client a cursor for a fact this ring does not hold
         would be issuing a checkpoint it cannot honour.
+
+        This is the checkpoint an **exact catch-up** is measured from. It is
+        not what a stream has to re-plant -- see
+        :meth:`reseed_boundary_seq`, which is allowed to name a checkpoint
+        this one has forgotten.
         """
         return self._last_issued
+
+    def reseed_boundary_seq(self) -> int | None:
+        """The newest checkpoint this process has ever issued. Monotonic.
+
+        Deliberately *not* the same as :meth:`latest_complete_seq`. After an
+        unrecoverable clear the ring cannot reproduce what it issued, but
+        the client that was issued it still holds it, and dropping it here
+        would mean planting nothing -- which empties the browser's id buffer
+        and turns its next reconnect into a first connection, the one shape
+        that is never told it has a gap.
+
+        Planting a boundary the ring will call ``too_old`` is not a
+        contradiction: it is how the client finds out, on every reconnect,
+        until the ring has something it can actually prove.
+
+        ``None`` means this process has never issued one, which is the only
+        case in which the reserved
+        :data:`~agent_alfred.gateway.web.frames.STARTUP_CHECKPOINT_SEQ` is
+        planted instead.
+        """
+        return self._reseed_boundary
 
     def oldest_seq(self) -> int | None:
         return self._entries[0].seq if self._entries else None
@@ -219,6 +285,14 @@ class ReplayRing:
             return "ahead"
         if seq < self._unrecoverable_floor:
             return "too_old"
+        if seq == STARTUP_CHECKPOINT_SEQ:
+            # The reserved boundary before the first domain event. Valid
+            # exactly while the ring has lost nothing -- a floor of zero is
+            # a ring that can prove continuity from the beginning. Once
+            # anything is unrecoverable, the check above has already called
+            # it ``too_old``, which is the honest answer: this process
+            # cannot prove what happened between there and here.
+            return "valid"
         if seq in self._issued:
             return "valid"
         # The one edge that is usable with nothing under it: a checkpoint
@@ -262,6 +336,7 @@ class ReplayRing:
         self._entries.append(entry)
         self._issued.add(entry.seq)
         self._last_issued = entry.seq
+        self._reseed_boundary = entry.seq
         self._frames += len(entry.frames)
         self._bytes += entry.byte_size
         evicted = self._evict_while_over_budget()
@@ -292,11 +367,17 @@ class ReplayRing:
         """Drop everything the ring was holding. Only the unrecoverable
         path calls this.
 
-        ``_last_issued`` goes too, and that is the point: every checkpoint
-        left behind it is now below the unrecoverable floor, so the ring
-        cannot reproduce it. Keeping one would hand a reconnecting client a
-        cursor this same ring would then call ``too_old`` -- issuing a
-        checkpoint and disowning it in the same breath.
+        ``_last_issued`` goes, and that is the point: every checkpoint left
+        behind it is now below the unrecoverable floor, so the ring cannot
+        reproduce it and must not offer one for an exact catch-up.
+
+        ``_reseed_boundary`` stays. It records what this process *issued*,
+        not what it can still produce, and a re-seed is a boundary rather
+        than a promise. Dropping it would leave a reconnecting client with
+        no cursor at all, and a client with no cursor sends no
+        ``Last-Event-ID`` -- so the gap it was owed would never be reported.
+        Keeping it means the client comes back holding a real boundary that
+        this same ring classifies ``too_old`` and reports, every time.
         """
         self._entries.clear()
         self._issued.clear()
@@ -313,14 +394,17 @@ def classify_cursor(
 ) -> CursorVerdict:
     """Decide what one reconnecting client gets. No cursor is not a gap.
 
-    ``reseed_seq`` is ``None`` when the ring holds no checkpoint it can
-    honour -- before the first event, and after an event too large to store
-    has cleared it. In both cases there is nothing to re-plant, and
-    planting the previous seq anyway would be worse than planting nothing:
-    the client would come back holding a cursor this same ring calls
-    ``too_old``.
+    Every answer carries a ``reseed_seq``, because every stream owes one:
+    the newest boundary this process issued, or the reserved startup
+    boundary when it has never issued any. It is not required to be
+    replayable -- a re-seed that comes back ``too_old`` is the mechanism by
+    which a gap is reported at all, and the only thing worse than a stale
+    boundary is no boundary, which makes the client's next connection look
+    like a first one.
     """
-    reseed = ring.latest_complete_seq()
+    reseed = ring.reseed_boundary_seq()
+    if reseed is None:
+        reseed = STARTUP_CHECKPOINT_SEQ
     if cursor is None:
         return CursorVerdict(kind="absent", reseed_seq=reseed)
     seq, reason = parse_cursor(cursor, process_instance_id)

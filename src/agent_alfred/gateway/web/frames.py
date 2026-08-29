@@ -11,9 +11,16 @@ section.
 The wire shape in one place:
 
 - ``retry:`` then the **re-seed** (a dataless ``id:`` frame) come first,
-  always, before any data. The SSE dispatch algorithm copies the id buffer
-  into the last-event-id string even for a dataless frame, so without the
-  re-seed the first id-less frame silently erases the client's cursor.
+  always, before any data -- including when there is no data yet. The SSE
+  dispatch algorithm copies the id buffer into the last-event-id string even
+  for a dataless frame, so without the re-seed the first id-less frame
+  silently erases the client's cursor, and a browser with an empty buffer
+  sends no ``Last-Event-ID`` on its next connection. A stream that never
+  plants an id therefore makes its own reconnect look like a first
+  connection, which is the one shape that never receives a ``replay_gap``.
+  The re-seed is a **boundary this process once stood at**, not a promise
+  that everything past it is still replayable; on an empty ring it is the
+  reserved :data:`STARTUP_CHECKPOINT_SEQ`, which costs no event seq.
 - ``id:`` appears only at a replayable *and* complete boundary: the last
   frame of a replayable logical event, and nowhere else.
 - A logical event that does not fit one frame is split into consecutive
@@ -43,6 +50,22 @@ MIN_FRAME_BYTES = 256
 # storm, so it raises the backoff before hanging up.
 DEFAULT_RETRY_MS = 1000
 BACKOFF_RETRY_MS = 3000
+
+# The reserved starting cursor: ``{process_instance_id}:0``.
+#
+# It is the transport boundary *before* the first domain event, not an event
+# position: no event ever owns seq 0 and nothing consumes it, so planting it
+# costs the sequence nothing. It exists because a stream that opens on an
+# empty ring still has to put an ``id:`` line in front of its first data
+# frame -- the dispatch algorithm copies the id buffer even for a dataless
+# frame, so a stream with no ``id:`` leaves the browser holding an empty
+# buffer, and an empty buffer sends no ``Last-Event-ID`` on the next
+# connection, which is indistinguishable from a client that never connected.
+#
+# It is defined here, beside the ``id:`` line's shape, because that is where
+# both producers of the line live: :func:`reseed_frame` and
+# :meth:`PreparedFrames.with_checkpoint`.
+STARTUP_CHECKPOINT_SEQ = 0
 
 DOMAIN_EVENT = "domain_event"
 TRANSPORT_NOTICE = "transport_notice"
@@ -180,9 +203,21 @@ def reseed_frame(process_instance_id: str, seq: int) -> PreparedFrames:
     It must precede every data frame: a new stream starts with an empty id
     buffer, so the first dataless dispatch would otherwise assign an empty
     string to the last-event-id.
+
+    What it plants is a **re-seed boundary**, not a promise: the seq names
+    where this process last stood, and the ring decides whether that
+    position is resumable or too old. Planting one that turns out to be too
+    old is the correct answer, because the alternative -- planting nothing --
+    erases the client's cursor and with it the only thing that can ever
+    produce a ``replay_gap``.
+
+    ``STARTUP_CHECKPOINT_SEQ`` is the one seq allowed here that no event
+    ever owned; anything below it is not a boundary of any kind.
     """
-    if seq < 1:
-        raise ValueError(f"reseed seq must be >= 1, got {seq}")
+    if seq < STARTUP_CHECKPOINT_SEQ:
+        raise ValueError(
+            f"reseed seq must be >= {STARTUP_CHECKPOINT_SEQ}, got {seq}"
+        )
     return _control(b"id: %s:%d" % (process_instance_id.encode("utf-8"), seq))
 
 

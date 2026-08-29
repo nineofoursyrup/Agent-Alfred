@@ -20,19 +20,43 @@ Nothing here is done twice and nothing is done early: the listening socket
 exists before the database is touched, the descriptor before the Host has
 recovered, and serving before nothing else is left to fail.
 
-Closing runs the list backwards: stop serving, stop the stream, stop the
-Host, close the database, forget the descriptor, drop the socket, drop the
-lock.
+Closing runs the list backwards -- stop accepting, stop the Host, stop the
+stream, close the database, forget the descriptor, drop the lock -- but it
+runs **as far as it gets, and no further**. A Host that will not stop within
+the timeout means a worker is still inside its Run, and that worker is still
+using the database this process opened. So a refused stop ends the close
+there: the listening socket is shut, the runtime sits in ``closing``, and
+the database, the descriptor and the lock are all still held. The next
+``close()`` resumes from the step that did not finish rather than starting
+over, and the tail -- database, descriptor, lock -- runs only once both the
+Host and the stream have confirmed they are down.
+
+Releasing any of them early is worse than not closing: a descriptor naming a
+dead port sends a browser into a reconnect loop, a closed database crashes
+the worker mid-Run, and a released lock lets a second instance take write
+authority over state that is still being written. "Not closed yet" is an
+answer this process can give honestly; "closed, but a worker is still
+writing" is not.
+
+The eight steps are one state machine, not eight independent steps
+(``new`` -> ``starting`` -> ``running`` -> ``closing`` -> ``closed``, with
+``failed`` for a start that undid itself), and one lock covers checking the
+state, doing the start, publishing the state and doing the close. Two
+threads calling ``start()`` therefore produce one Dashboard and two copies
+of the same descriptor, and a ``close()`` that arrives while a ``start()``
+is in flight waits for it instead of closing a database that is still being
+opened.
 """
 
 from __future__ import annotations
 
 import secrets
 import sqlite3
+import threading
 import uuid
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from agent_alfred.gateway.web.api import DashboardApi
 from agent_alfred.gateway.web.broker import SSEBroker
@@ -52,6 +76,12 @@ from agent_alfred.runtime.work import SubmitRequest, SubmitResult
 # only place that knows about settings, factories and trace roots -- and the
 # seam a test replaces to prove the order without a real Host.
 AssembleHost = Callable[[sqlite3.Connection, str], tuple[RuntimeHost, SSEBroker]]
+
+# Where the Dashboard is in its one life. Closed and failed are both
+# terminal: neither is a state a Dashboard comes back from.
+DashboardState = Literal[
+    "new", "starting", "running", "closing", "closed", "failed"
+]
 
 
 class HostFacade:
@@ -133,6 +163,7 @@ class DashboardRuntime:
         write_descriptor: Callable[[Path, EntryDescriptor], Path] | None = None,
         lock: ProcessLock | None = None,
         pid: int | None = None,
+        spawn: Any = None,
     ):
         self._state_dir = state_dir
         self._assemble = assemble
@@ -161,20 +192,50 @@ class DashboardRuntime:
             lock=lock,
             pid=pid,
         )
+        # The seam that makes step 8's failures reachable: a serving thread
+        # that cannot be created, and one that cannot be started. Both are
+        # failures like any other and both undo steps 1-7.
+        self._spawn = spawn
         self._host: RuntimeHost | None = None
         self._broker: SSEBroker | None = None
         self._conn: sqlite3.Connection | None = None
         self._thread: Any = None
+        # One lock for the whole lifecycle: the check, the start, the state
+        # it publishes and the close transitions. Re-entrant because the
+        # rollback path closes from inside the start that holds it.
+        self._lifecycle_lock = threading.RLock()
+        self._state: DashboardState = "new"
+        # Which of the two things that can refuse to stop have actually
+        # stopped. Both start "stopped" because before start() there is
+        # nothing to stop.
+        self._host_stopped = True
+        self._broker_stopped = True
+        # Whether the tail -- database, descriptor, lock -- has run. It runs
+        # at most once, however many times close() is called.
+        self._released = False
+        # Whether steps 1-3 ever completed, i.e. whether this process owns
+        # the socket, the descriptor and the lock. Without it a start that
+        # was refused at the lock would go on to release a lock it never
+        # held -- and "released a lock it never held" is only harmless
+        # because ``ProcessLock`` happens to be idempotent.
+        self._entry_owned = False
 
     # -- reads ------------------------------------------------------------
 
     @property
     def host(self) -> RuntimeHost | None:
-        """The one Host. ``None`` until :meth:`start` has built it."""
+        """The one Host this runtime owns.
+
+        ``None`` until :meth:`start` has built it, and ``None`` again once a
+        close has run to the end. In between there is a third answer: while a
+        close is still waiting for the Host to stop, the reference is still
+        here, because it is what the next ``close()`` has to ask.
+        """
         return self._host
 
     @property
     def broker(self) -> SSEBroker | None:
+        """The one stream this runtime owns. Same three answers as :attr:`host`."""
         return self._broker
 
     @property
@@ -199,7 +260,18 @@ class DashboardRuntime:
 
     @property
     def started(self) -> bool:
-        return self._service.started and self._host is not None
+        return self.state == "running"
+
+    @property
+    def state(self) -> DashboardState:
+        """Where this Dashboard is in its one life.
+
+        Read under the same lock that moves it, so a caller never sees a
+        state that is half-published: ``state == "running"`` and "the
+        descriptor is on disk and the Host is up" are the same observation.
+        """
+        with self._lifecycle_lock:
+            return self._state
 
     # -- lifecycle --------------------------------------------------------
 
@@ -209,64 +281,116 @@ class DashboardRuntime:
         Every failure undoes exactly the steps that succeeded, in reverse,
         and the whole thing is one object's job rather than a convention
         shared between an assembler and a service.
+
+        The check, the start and the state it publishes are one critical
+        section, so two callers produce one Dashboard: the second waits for
+        the first and is handed the same descriptor.
+        """
+        with self._lifecycle_lock:
+            if self._state == "running":
+                descriptor = self._service.descriptor
+                assert descriptor is not None
+                return descriptor
+            if self._state != "new":
+                # Closing, closed and failed are all terminal. Restarting a
+                # Dashboard that was closed would take the lock, migrate the
+                # database and mint a second instance id behind the back of
+                # whoever closed it.
+                raise RuntimeError(
+                    f"this Dashboard is {self._state}; start() runs once"
+                )
+            self._state = "starting"
+            try:
+                descriptor = self._start_locked()
+            except BaseException:
+                # One rollback, run once, for all eight steps. A rollback
+                # that cannot stop the Host has not finished, so it stays in
+                # ``closing`` still owning everything; one that ran to the
+                # end is simply ``failed``, with nothing left.
+                self._state = (
+                    "failed" if self._stop_all_locked(None) else "closing"
+                )
+                raise
+            self._state = "running"
+            return descriptor
+
+    def _start_locked(self) -> EntryDescriptor:
+        """Steps 1-8. The caller owns the rollback for all of them.
+
+        Deliberately no ``try`` of its own: eight steps with two rollback
+        paths is how a failure ends up being undone twice, and an undone
+        twice is a Host asked to stop twice and a close that "finishes"
+        because the second ask happened to succeed.
         """
         service = self._service
-        if service.started:
-            assert service.descriptor is not None
-            return service.descriptor
         # 1-3. The lock, the socket and the descriptor. Nothing below this
         #      line is reachable unless all three are held, so a second
-        #      instance never migrates, recovers or writes.
+        #      instance never migrates, recovers or writes. ``service.start``
+        #      undoes its own steps.
         descriptor = service.start()
-        try:
-            # 4. The database: opened (and migrated) only once this process
-            #    is the one that owns the state directory.
-            conn = self._open_conn()
-            self._conn = conn
-        except BaseException:
-            service.close()
-            raise
-        try:
-            # 5. The Host and the broker, around that one connection.
-            host, broker = self._assemble(conn, self._instance_id)
-            self._host, self._broker = host, broker
-            # The guard depends on the port that was actually bound, which
-            # is only knowable now, so the context is attached here -- still
-            # before anything can be accepted.
-            service.attach_context(
-                HandlerContext(
-                    guard=RequestGuard(
-                        port=service.port, csrf_token=self._csrf_token
-                    ),
-                    api=DashboardApi(facade=HostFacade(host)),
-                    broker=broker,
-                    instance_id=self._instance_id,
-                )
+        self._entry_owned = True
+        # 4. The database: opened (and migrated) only once this process is
+        #    the one that owns the state directory.
+        conn = self._open_conn()
+        self._conn = conn
+        # 5. The Host and the broker, around that one connection.
+        host, broker = self._assemble(conn, self._instance_id)
+        self._host, self._broker = host, broker
+        self._host_stopped = False
+        self._broker_stopped = False
+        # The guard depends on the port that was actually bound, which is
+        # only knowable now, so the context is attached here -- still before
+        # anything can be accepted.
+        service.attach_context(
+            HandlerContext(
+                guard=RequestGuard(port=service.port, csrf_token=self._csrf_token),
+                api=DashboardApi(facade=HostFacade(host)),
+                broker=broker,
+                instance_id=self._instance_id,
             )
-            # 6. The dispatcher starts before the Host recovers, so an event
-            #    published during recovery is delivered to the first
-            #    connection that arrives rather than left sitting in a queue
-            #    nobody is draining.
-            broker.start()
-            # 7. Recovery and the worker. The Host's last chance to fail
-            #    before the port is open to a browser.
-            host.start()
-        except BaseException:
-            self._stop_all()
-            raise
-        # 8. Serving, once nothing else is left that can fail.
-        self._thread = service.start_serving()
+        )
+        # 6. The dispatcher starts before the Host recovers, so an event
+        #    published during recovery is delivered to the first connection
+        #    that arrives rather than left sitting in a queue nobody is
+        #    draining.
+        broker.start()
+        # 7. Recovery and the worker. The Host's last chance to fail before
+        #    the port is open to a browser.
+        host.start()
+        # 8. Serving. Inside the rollback boundary on purpose: a thread that
+        #    cannot be created, or cannot be started, is a step that failed,
+        #    and it undoes 1-7 exactly as a failure at step 5 would. Leaving
+        #    it outside would produce a Dashboard that reports "failed to
+        #    start" while its Host, its worker and its open database are all
+        #    still running behind it.
+        self._thread = service.start_serving(self._spawn)
         return descriptor
 
     def close(self, timeout: float | None = None) -> bool:
-        """Undo the whole list, from the outside in. Idempotent.
+        """Undo the whole list, from the outside in. Resumable and idempotent.
 
-        Returns False when the stream or the Host could not be brought down
-        within the timeout -- an honest "not closed" -- but the listening
-        socket, the descriptor and the lock are released either way: a
-        half-dead instance must not hold the state directory hostage.
+        Returns False when the Host or the stream could not be brought down
+        within the timeout -- an honest "not closed". New HTTP admission has
+        stopped, but the database, the descriptor and the lock are all still
+        held: a worker is still inside its Run and those are exactly the
+        things it is using. Calling ``close()`` again resumes from the step
+        that did not finish and, once the Host and the stream have both
+        confirmed they are down, runs the tail exactly once.
+
+        A half-dead instance holding the state directory is not hostage-taking;
+        it is the alternative to a second instance taking write authority
+        over a Run that is still being recorded.
         """
-        return self._stop_all(timeout)
+        with self._lifecycle_lock:
+            if self._state in ("closed", "failed"):
+                # Both are terminal and both left nothing behind. Re-running
+                # the steps would be pointless.
+                return True
+            self._state = "closing"
+            if not self._stop_all_locked(timeout):
+                return False
+            self._state = "closed"
+            return True
 
     # -- internals --------------------------------------------------------
 
@@ -277,34 +401,70 @@ class DashboardRuntime:
 
         return open_database(self._state_dir)
 
-    def _stop_all(self, timeout: float | None = None) -> bool:
+    def _stop_all_locked(self, timeout: float | None) -> bool:
+        """Run every step of the close that has not run yet.
+
+        True means all of them ran. False means one of them refused, and
+        everything the refusing step may still be using is still here --
+        including the database, the descriptor and the lock.
+        """
         service = self._service
         # 8. Stop accepting first: nothing new may arrive while the rest is
         #    being wound down.
         service.stop_serving()
-        host, self._host = self._host, None
-        broker, self._broker = self._broker, None
-        conn, self._conn = self._conn, None
-        stopped = True
-        # 7-6. The Host before the stream it emits into, and the stream
-        #      before the socket: a late patch must not re-prime a stream
-        #      whose Host is already gone.
-        if host is not None:
+        # 7. The Host before the stream it emits into. A worker that is still
+        #    inside its Run owns the database, so a refused stop ends here:
+        #    tearing the Broker down under a Host that is still publishing
+        #    would take the stream away from the very worker we are waiting
+        #    for.
+        if not self._host_stopped and self._host is not None:
             stopped = (
-                host.close() if timeout is None else host.close(timeout)
-            )
-        if broker is not None:
-            drained = (
-                broker.close()
+                self._host.close()
                 if timeout is None
-                else broker.close(timeout=timeout)
+                else self._host.close(timeout)
             )
-            stopped = drained and stopped
-        # 5. The database last of the process's own state.
-        if conn is not None:
-            conn.close()
-        # 3-1. The descriptor stops claiming a port this process no longer
-        #      answers, and only then does the lock go.
-        service.close()
-        self._thread = None
-        return stopped
+            if not stopped:
+                return False
+            self._host_stopped = True
+        # 6. The stream. A broker that has not drained still holds frames a
+        #    client is owed, and those frames were built from this database.
+        if not self._broker_stopped and self._broker is not None:
+            drained = (
+                self._broker.close()
+                if timeout is None
+                else self._broker.close(timeout=timeout)
+            )
+            if not drained:
+                return False
+            self._broker_stopped = True
+        # 5-1. Only once nothing is running does this process give up what
+        #      the running parts were using.
+        self._release_locked()
+        return True
+
+    def _release_locked(self) -> None:
+        """The tail: database, descriptor, socket, lock. At most once."""
+        if self._released:
+            return
+        # Marked before anything can throw: a database that raises on close
+        # must not become a reason to hold the state directory forever, and
+        # "the tail has run" has to be true even if it ran badly.
+        self._released = True
+        conn, self._conn = self._conn, None
+        try:
+            if conn is not None:
+                conn.close()
+        finally:
+            # Everything that was being waited for has confirmed it stopped,
+            # so this runtime owns none of it any more. The Host and the
+            # broker are let go here and not before: a close that has not
+            # finished still needs to ask them again.
+            self._host = None
+            self._broker = None
+            if self._entry_owned:
+                # The descriptor stops claiming a port this process no
+                # longer answers, and only then does the lock go. Not reached
+                # when the start was refused before the lock was taken:
+                # there is no entry to withdraw, and the lock is not ours.
+                self._service.close()
+            self._thread = None

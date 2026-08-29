@@ -669,8 +669,10 @@ def test_one_connections_failure_does_not_touch_the_others() -> None:
         )
     time.sleep(0.3)
     broker.close(timeout=2.0)
-    # The healthy tab saw every event even though its neighbour died.
-    assert sorted(set(_ids_from_wire(healthy.written))) == [1, 2, 3, 4, 5]
+    # The healthy tab saw every event even though its neighbour died. The 0
+    # is the re-seed: both connections connected to an empty ring, so both
+    # were planted the reserved startup boundary before any data.
+    assert sorted(set(_ids_from_wire(healthy.written))) == [0, 1, 2, 3, 4, 5]
     assert broken.closed is True
 
 
@@ -772,10 +774,12 @@ def test_sequenced_events_pass_through_unchanged() -> None:
     assert isinstance(first, SequencedEvent)
     assert first.process_instance_id == INSTANCE
     second = harness.emit(RunStarted(purpose="chat"), run_id="r2")
-    # Zero is not a checkpoint anyone was issued, so the honest answer is a
-    # gap rather than a replay from a position that never existed.
+    # Zero is the reserved boundary before the first event, not an event
+    # position: on a ring that has lost nothing it is a real starting point,
+    # and resuming from it replays everything.
     handle = harness.connect(cursor=_cursor_for(0))
-    assert b'"gap_reason":"malformed"' in _wire_containing(handle, b"replay_gap")
+    assert _ids(_drain(handle)) == [first.seq, second.seq]
+    assert not any(b"replay_gap" in item.wire_bytes() for item in _drain(handle))
     # A checkpoint this process did issue replays exactly its own tail.
     handle = harness.connect(cursor=_cursor_for(first.seq))
     assert _ids(_drain(handle)) == [second.seq]

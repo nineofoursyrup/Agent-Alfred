@@ -491,19 +491,23 @@ def test_a_forged_cursor_on_an_unrecoverable_event_is_a_gap() -> None:
     assert ring.high_water_seq() == 2
     # The boundary moved, but no checkpoint was issued for it.
     assert ring.classify_seq(2) != "valid"
-    # Nor for anything before it: the ring was cleared, so every earlier
-    # seq is now below the floor and unusable. Handing a client one of
-    # those as its re-seed would be issuing a checkpoint this same ring
-    # calls "too old" the moment it comes back.
+    # Nor for anything before it: the ring was cleared, so every earlier seq
+    # is now below the floor and unusable for an exact catch-up.
     assert ring.latest_complete_seq() is None
     assert ring.entries_after(1) is None
     forged = classify_cursor(
         replay.format_cursor("inst", 2), ring, process_instance_id="inst"
     )
     assert forged.kind == "gap"
-    # A first connection is told nothing it cannot stand behind.
+    # A first connection is still given a boundary to stand on -- the one
+    # this process issued before the loss. It is not replayable and the ring
+    # will call it ``too_old`` when it comes back, which is the point: a
+    # client holding nothing at all sends no ``Last-Event-ID``, and that is
+    # the one shape that never gets a gap notice.
     first = classify_cursor(None, ring, process_instance_id="inst")
-    assert first.reseed_seq is None
+    assert first.reseed_seq == 1
+    assert ring.reseed_boundary_seq() == 1
+    assert ring.classify_seq(1) == "too_old"
 
 
 def test_an_unrecoverable_seq_never_appears_in_an_id_line() -> None:

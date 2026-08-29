@@ -421,20 +421,31 @@ class DashboardService:
         self._serving = True
         self._server.serve_forever()
 
-    def start_serving(self) -> Any:
+    def start_serving(self, spawn: Any = None) -> Any:
         """Handle requests on a daemon thread; return it.
 
         Daemon because a Dashboard thread must never keep the interpreter
         alive past the process the user asked to exit -- there is no reply
         in flight that outlives the Run it belongs to.
+
+        ``spawn`` is the seam for the two ways this step can fail: a thread
+        that cannot be created, and one that cannot be started. Both are
+        failures of the last start-up step like any other, so the caller has
+        to be able to reach them without crashing the interpreter.
+
+        ``_serving`` is set only once the thread is actually running. It is
+        what makes :meth:`stop_serving` call ``shutdown()``, and calling
+        ``shutdown()`` on a server whose loop never started waits forever --
+        which would turn a failed start into a hung process.
         """
         if self._server is None:
             raise RuntimeError("DashboardService.start() must precede serving")
-        self._serving = True
-        thread = threading.Thread(
+        factory = spawn if spawn is not None else _default_spawn
+        thread = factory(
             target=self._server.serve_forever, name="dashboard-http", daemon=True
         )
         thread.start()
+        self._serving = True
         return thread
 
     def stop_serving(self) -> None:
@@ -488,6 +499,11 @@ class DashboardService:
 
     def __exit__(self, *exc_info: object) -> None:
         self.close()
+
+
+def _default_spawn(**kwargs: Any) -> Any:
+    """The only thing that makes a serving thread, when nothing is injected."""
+    return threading.Thread(**kwargs)
 
 
 def _default_server_factory(address: tuple[str, int], handler: Any) -> Any:
