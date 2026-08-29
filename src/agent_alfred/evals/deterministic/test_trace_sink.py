@@ -24,6 +24,10 @@ import pytest
 
 from agent_alfred import schema
 from agent_alfred.clock import FakeClock
+from agent_alfred.evals.deterministic._trace_test_helpers import (
+    _captured_thread_exception,
+    _open_fd_count,
+)
 from agent_alfred.events import (
     AttemptCommitted,
     AttemptStarted,
@@ -819,15 +823,6 @@ def test_commit_returns_while_the_drain_is_blocked_on_disk_io(
 # --- the Run's final barrier releases its fd and active bundle ---------------
 
 
-def _open_fd_count() -> int:
-    for candidate in ("/proc/self/fd", "/dev/fd"):
-        try:
-            return len(os.listdir(candidate))
-        except OSError:
-            continue
-    pytest.skip("no /proc/self/fd or /dev/fd on this platform")
-
-
 def test_active_bundles_and_fds_do_not_grow_with_run_count(tmp_path) -> None:
     host = build_default_host(
         state_dir=tmp_path, factory=_scripted_factory(["ok"] * 8)
@@ -1203,9 +1198,17 @@ def test_a_crashing_drain_answers_its_queued_barrier_and_releases_the_fd(
         )
         flusher.start()
         _wait_for_queued_barrier(sink)
-        gate.set()  # the crash happens with the barrier already queued
-
-        flusher.join(5.0)
+        with _captured_thread_exception() as caught:
+            gate.set()  # the crash happens with the barrier already queued
+            flusher.join(5.0)
+            # The barrier is answered from the drain's unwind, so the
+            # waiter comes back before the thread actually dies -- and the
+            # hook is only invoked as it does. Join inside the capture so
+            # the expected crash is the one recorded.
+            sink._drain.join(5.0)
+        assert caught.get("exc_type") is AssertionError, (
+            f"the injected crash stayed observable: {caught}"
+        )
         assert not flusher.is_alive(), (
             "the barrier waiter was left hanging for the full flush timeout "
             "by a drain that already exited"

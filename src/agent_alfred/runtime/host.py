@@ -5,6 +5,7 @@ from __future__ import annotations
 import queue
 import sqlite3
 import threading
+import time
 import uuid
 from collections.abc import Callable
 from dataclasses import replace
@@ -46,6 +47,12 @@ __all__ = [
     "SubmitResult",
     "WorkItem",
 ]
+
+# How long close() waits for a worker that may be inside a model round-trip,
+# a retry, or a finalizer. The wait's outcome changes nothing about what may
+# be torn down: the FanOut outlives every Run, so it closes strictly after
+# the worker stops -- a wait that expires reports "not closed" instead.
+_WORKER_JOIN_TIMEOUT_S = 5.0
 
 
 class RuntimeHost:
@@ -97,6 +104,17 @@ class RuntimeHost:
         self._assistant = Assistant(clock=clock, settings=settings)
         self._states = RunStateStore(process_instance_id)
         self._lock = threading.Lock()
+        # Admission, execution and recording decisions move under self._lock.
+        # The lifecycle below moves under its own lock, and the two are only
+        # ever taken in this order (never the reverse), because a lifecycle
+        # transition must be able to read admission state but no admission
+        # decision may wait on a lifecycle transition that waits for a Run.
+        self._lifecycle = threading.Lock()
+        # Signalled when the last Run admitted before close() began has
+        # reached the work queue -- or been given up on. Shares _lock: the
+        # handoff is an admission fact, and close() has to wait on it.
+        self._handoff = threading.Condition(self._lock)
+        self._pending_handoff: set[str] = set()
         self._db_lock = threading.Lock()
         self._coord: CoordinatorState = "idle"
         self._active_summary: ActiveRunSummary | None = None
@@ -104,7 +122,11 @@ class RuntimeHost:
         self._done: dict[str, threading.Event] = {}
         self._results: dict[str, LoopResult] = {}
         self._started = False
+        self._start_error: BaseException | None = None
+        self._closing = False
         self._closed = False
+        self._stop_sent = False
+        self._fanout_closed = False
         self._publish_work = publish_work
         self._before_recording_commit = before_recording_commit
         self._after_recorded_snapshot = after_recorded_snapshot
@@ -154,23 +176,125 @@ class RuntimeHost:
         """The immutable settings injected at assembly. Never re-read."""
         return self._settings
 
+    @property
+    def started(self) -> bool:
+        """Whether this Host actually came up. False after a failed start."""
+        return self._started
+
+    @property
+    def closed(self) -> bool:
+        """Whether the sinks are released and the worker has stopped."""
+        return self._closed
+
+    @property
+    def start_error(self) -> BaseException | None:
+        """Why this Host did not come up, if it did not."""
+        return self._start_error
+
     def snapshot(self) -> RuntimeSnapshot:
         return self._states.get()
 
     def start(self) -> None:
-        self.recover()
-        if not self._started:
-            self._worker.start()
+        """Bring the Host up exactly once.
+
+        Recovery belongs to the first start and to nothing else. Running it
+        before the "already started" check meant a second ``start()``
+        rewrote the executing Run's index row to finished/interrupted
+        underneath the worker still running it, after which that worker's
+        finalizer saw a terminal Run and silently dropped the reply -- the
+        index, the returned result and the session record then disagreed.
+
+        The lifecycle lock covers the check, the recovery, the thread start
+        and the publication of the started flag as one step, so concurrent
+        callers can neither double-recover nor double-start nor observe a
+        half-started Host.
+        """
+        with self._lifecycle:
+            if self._closing or self._closed:
+                # Checked before "already started": a Host that came up and
+                # was then closed cannot be restarted -- its worker thread
+                # cannot be started twice and its sinks are released -- so
+                # answering with a silent no-op would claim it is up.
+                raise RuntimeError("a closed RuntimeHost cannot be started")
+            if self._started:
+                return
+            if self._start_error is not None:
+                # A stable refusal, not a retry: the first attempt's partial
+                # result is a fact this Host has no way to account for, and
+                # recovering twice would rewrite Runs a second time.
+                raise RuntimeError(
+                    "this RuntimeHost did not start and will not retry"
+                ) from self._start_error
+            try:
+                self.recover()
+                self._worker.start()
+            except BaseException as exc:  # noqa: BLE001 - recorded, then raised
+                # Honest state: a Host whose recovery or worker failed is
+                # not started, and it must never be mistaken for one.
+                self._start_error = exc
+                raise
             self._started = True
 
-    def close(self) -> None:
-        if self._closed:
-            return
-        self._closed = True
-        self._queue.put(None)
-        if self._started:
-            self._worker.join(timeout=5)
-        self._fanout.close()
+    def close(self, timeout: float | None = None) -> bool:
+        """Stop taking work, let the worker finish, then release the sinks.
+
+        Returns True only when the Host is fully closed.
+
+        The FanOut covers the whole process (ADR-0004), and the worker is the
+        thread that emits into it: events, the durability barrier, and the
+        finalizer all run there. Closing the sinks on a timer therefore cut
+        the ground out from under a Run that was still being recorded. The
+        order here is the other way round -- refuse new work, let the
+        in-flight Run finish, wait for the worker to actually stop, and only
+        then close the sinks, once.
+
+        A bounded wait that expires returns False and closes nothing: an
+        honest "not yet closed" beats a FanOut pulled out from under a live
+        Run, and the caller may ask again.
+        """
+        deadline = time.monotonic() + (
+            _WORKER_JOIN_TIMEOUT_S if timeout is None else timeout
+        )
+        with self._lifecycle:
+            started = self._started
+            self._closing = True
+        # 1. Let every Run already admitted reach the queue. Admission is
+        #    closed from here on, so this drains to zero -- and the stop
+        #    sentinel is only posted afterwards, which is what keeps an
+        #    accepted Run from being enqueued behind a sentinel nobody will
+        #    read. The flag is raised under _lifecycle and the drain observed
+        #    under _lock; admission_reserve holds _lock across the same pair,
+        #    so no Run can slip in between the two.
+        if not self._await_handoffs(deadline):
+            return False
+        with self._lifecycle:
+            if not self._stop_sent:
+                self._stop_sent = True
+                self._queue.put(None)
+        # 2. Wait for the worker. Nothing downstream is torn down before it
+        #    stops. It stays a daemon thread so a wedged model call cannot
+        #    hold the interpreter open, but close() says so rather than
+        #    letting the exit hide an unfinished finalizer.
+        if started:
+            self._worker.join(max(0.0, deadline - time.monotonic()))
+            if self._worker.is_alive():
+                return False
+        with self._lifecycle:
+            if not self._fanout_closed:
+                self._fanout_closed = True
+                self._fanout.close()
+            self._closed = True
+        return True
+
+    def _await_handoffs(self, deadline: float) -> bool:
+        """Wait until no Run admitted before close() is still unpublished."""
+        with self._handoff:
+            while self._pending_handoff:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return False
+                self._handoff.wait(remaining)
+        return True
 
     def recover(self) -> None:
         self._recorder.recover()
@@ -192,13 +316,36 @@ class RuntimeHost:
         until the recording settles: a second submit during recording_pending
         gets ``run_in_progress``; a recording-failed coordinator answers
         ``recording_unavailable``."""
+        # _lock is held across the _lifecycle read below on purpose. close()
+        # raises its flag under _lifecycle and then waits for the pending set
+        # under _lock, so holding _lock here is what makes the two orderings
+        # safe: either this reserve sees the flag and refuses, or it lands
+        # its Run in the pending set before close() can observe that set and
+        # post the stop sentinel. Lock order is _lock -> _lifecycle, never the
+        # reverse; no path takes _lifecycle and then _lock.
         with self._lock:
             snap = self._states.get()
+            if self._executor.stopped_by is not None:
+                # The execution thread unwound. Admitting a Run would accept
+                # work nobody is left to execute, so it is refused instead of
+                # left hanging in a queue with no reader.
+                return "admission_failed", snap
+            with self._lifecycle:
+                unstartable = (
+                    self._start_error is not None
+                    or self._closing
+                    or self._closed
+                )
+            if unstartable:
+                # Closing, closed, or never up: every one of them means this
+                # Host cannot promise the Run will run.
+                return "admission_failed", snap
             if self._coord == "recording_failed":
                 return "recording_unavailable", snap
             if self._coord != "idle":
                 return "run_in_progress", snap
             self._coord = "accepted"
+            self._pending_handoff.add(run_id)
             self._done[run_id] = threading.Event()
             return "reserved", snap
 
@@ -210,9 +357,16 @@ class RuntimeHost:
             )
 
     def admission_release(self, run_id: str) -> None:
-        """Drop the lease after a failed admission; nothing was handed off."""
+        """Drop the lease after a failed admission; nothing was handed off.
+
+        A Run that failed before the handoff still has to leave the pending
+        set, or close() would wait out its whole budget for a handoff that
+        was never going to happen.
+        """
         with self._lock:
             self._done.pop(run_id, None)
+            self._pending_handoff.discard(run_id)
+            self._handoff.notify_all()
             self._coord = "idle"
             self._active_summary = None
             # The authoritative snapshot moves under the same lock as the
@@ -251,13 +405,26 @@ class RuntimeHost:
             )
 
     def publish_work_item(self, item: WorkItem) -> None:
-        """Hand a prepared work item to the single execution thread."""
+        """Hand a prepared work item to the single execution thread.
+
+        The handoff is accounted for either way it ends -- enqueued or
+        refused -- so close() never waits on a Run that is no longer coming.
+        """
         publisher = (
             self._publish_work
             if self._publish_work is not None
             else self._queue.put_nowait
         )
-        publisher(item)
+        try:
+            publisher(item)
+        finally:
+            with self._handoff:
+                # discard, not a counter: an admission that fails before the
+                # handoff clears the same reservation through
+                # admission_release, and the two must not cancel out into a
+                # negative that hides a Run still in flight.
+                self._pending_handoff.discard(item.run_id)
+                self._handoff.notify_all()
 
     # -- execution transition ----------------------------------------------
 

@@ -52,6 +52,19 @@ PHASES = ("accepted", "running", "finished")
 _PHASE_SQL = ", ".join(f"'{phase}'" for phase in PHASES)
 OUTCOMES = RUN_OUTCOMES
 _OUTCOME_SQL = ", ".join(f"'{outcome}'" for outcome in OUTCOMES)
+# The closed Run transition graph. ``update_run_phase`` is the only entry
+# point that moves a Run, so the graph lives here rather than in callers'
+# conventions: a terminal Run has no outgoing edge at all -- not even one
+# back to ``finished``, which is how a completed Run used to be rewritten
+# into an interrupted one by a second finalize.
+#   accepted -> running   the execution thread took the handed-off Run
+#   accepted -> finished  the handoff failed, or startup recovery found it
+#   running  -> finished  the Run's terminal outcome was decided
+RUN_PHASE_TRANSITIONS: dict[str, tuple[str, ...]] = {
+    "accepted": ("running", "finished"),
+    "running": ("finished",),
+    "finished": (),
+}
 # Non-terminal phases may only pair with a null outcome; finished must pair
 # with a closed outcome. The CHECK is the shape; callers still have to
 # UPDATE with an old-phase predicate that affects exactly one row.
@@ -1238,6 +1251,41 @@ def insert_accepted_run(
     return revision
 
 
+def _check_transition(*, from_phase: str, to_phase: str, outcome: str | None) -> None:
+    """Reject any transition the closed Run graph does not contain.
+
+    Raises :class:`RunPhaseError` before the caller's UPDATE runs. The
+    messages name phases and outcomes only -- never paths, payloads, or the
+    caller -- so they are safe to surface.
+    """
+    if from_phase not in RUN_PHASE_TRANSITIONS:
+        raise RunPhaseError(f"unknown from_phase {from_phase!r}")
+    if from_phase == "finished":
+        raise RunPhaseError(
+            f"run is already in terminal phase {from_phase!r}; "
+            f"a terminal run has no outgoing edge (refused -> {to_phase!r})"
+        )
+    if to_phase not in RUN_PHASE_TRANSITIONS:
+        raise RunPhaseError(f"unknown to_phase {to_phase!r}")
+    if to_phase not in RUN_PHASE_TRANSITIONS[from_phase]:
+        allowed = ", ".join(RUN_PHASE_TRANSITIONS[from_phase]) or "none"
+        raise RunPhaseError(
+            f"illegal run transition {from_phase!r} -> {to_phase!r}; "
+            f"allowed from {from_phase!r}: {allowed}"
+        )
+    if to_phase == "finished":
+        if outcome not in OUTCOMES:
+            raise RunPhaseError(
+                f"phase 'finished' requires an outcome in "
+                f"{', '.join(OUTCOMES)}, got {outcome!r}"
+            )
+    elif outcome is not None:
+        raise RunPhaseError(
+            f"phase {to_phase!r} is not terminal and must pair with a null "
+            f"outcome, got {outcome!r}"
+        )
+
+
 def update_run_phase(
     conn: sqlite3.Connection,
     *,
@@ -1253,10 +1301,21 @@ def update_run_phase(
 ) -> None:
     """Move a Run from from_phase to to_phase. Must affect exactly one row.
 
-    The WHERE clause carries the old phase so a concurrent or repeated
-    transition cannot silently rewrite a different state. rowcount != 1
-    is a hard failure, not a retry.
+    Two guards stack, and both are needed:
+
+    - The transition graph is checked here, before any SQL runs, so no
+      caller's ``from_phase`` can move a terminal Run or skip a phase. A
+      rejected transition raises before the UPDATE, before the caller's
+      activity_revision is spent, and before the Session is stamped, so the
+      whole transaction rolls back with no clock hole.
+    - The WHERE clause still carries the old phase, so a concurrent or
+      repeated transition cannot silently rewrite a different state.
+      rowcount != 1 is a hard failure, not a retry.
+
+    The database CHECK remains the data-shape backstop; this function owns
+    the graph.
     """
+    _check_transition(from_phase=from_phase, to_phase=to_phase, outcome=outcome)
     assignments = ["phase = ?", "activity_revision = ?"]
     params: list[object] = [to_phase, activity_revision]
     if to_phase == "running":

@@ -34,9 +34,14 @@ Ownership rules that keep ADR-0015 true:
 
 from __future__ import annotations
 
+import ctypes
 import hashlib
 import json
 import os
+import re
+import shutil
+import stat
+import sys
 import threading
 from collections import deque
 from dataclasses import dataclass, field, is_dataclass
@@ -73,6 +78,10 @@ REASON_FLUSH_TIMEOUT = "flush_timeout"
 REASON_QUEUE_OVERFLOW = "queue_overflow"
 REASON_SINK_STOPPING = "sink_stopping"
 REASON_SINK_CLOSED = "sink_closed"
+# The platform offers no atomic no-replace rename, so the bundle cannot be
+# published without risking an overwrite. Publication refuses rather than
+# degrade: a bundle overwritten is a bundle silently destroyed.
+REASON_NO_REPLACE_UNSUPPORTED = "no_replace_unsupported"
 # The drain exited still holding a barrier it never reached: the writer is
 # gone, not slow. Kept distinct from ``sink_closed`` (close() was called and
 # the queue is deliberately abandoned) and from ``flush_timeout`` (the drain
@@ -95,6 +104,171 @@ class LateCommitRejected(RuntimeError):
     The published bundle is never reopened or extended; the caller sees the
     refusal instead of a silently lost event.
     """
+
+
+class NoReplaceUnsupported(RuntimeError):
+    """This platform exposes no atomic no-replace rename for directories.
+
+    Publication fails closed instead of falling back to ``os.rename``: on the
+    platforms this runs on, a plain rename replaces an existing directory,
+    which would overwrite or merge a bundle that is not ours.
+    """
+
+
+# --- atomic no-replace publication (ADR-0017) ------------------------------
+#
+# Publication is the moment a bundle becomes recognizable. It has to be one
+# atomic, non-destructive step, and "does the target exist?" followed by a
+# rename is neither: the check and the rename are two steps with a window
+# between them, and a plain rename overwrites. These are the platform
+# primitives that make the rename itself refuse an existing target.
+
+_AT_FDCWD = -2
+_RENAME_NOREPLACE = 1  # Linux renameat2 flag
+_RENAME_EXCL = 0x0004  # macOS renamex_np flag
+
+
+def _platform_rename(platform: str):
+    """The no-replace rename this platform offers, or None.
+
+    Returns a callable taking encoded source and destination paths and
+    returning 0 on success or -1 with errno set -- the contract both
+    primitives share. Kept a pure lookup so the unsupported-platform path can
+    be exercised without having to run on one.
+    """
+    if platform == "darwin":
+        libc = _libc()
+        if libc is None or not hasattr(libc, "renamex_np"):
+            return None
+        libc.renamex_np.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint]
+        libc.renamex_np.restype = ctypes.c_int
+
+        def renamex(src: bytes, dst: bytes) -> int:
+            ctypes.set_errno(0)
+            return libc.renamex_np(src, dst, _RENAME_EXCL)
+
+        return renamex
+    if platform.startswith("linux"):
+        libc = _libc()
+        if libc is None or not hasattr(libc, "renameat2"):
+            return None
+        libc.renameat2.argtypes = [
+            ctypes.c_int,
+            ctypes.c_char_p,
+            ctypes.c_int,
+            ctypes.c_char_p,
+            ctypes.c_uint,
+        ]
+        libc.renameat2.restype = ctypes.c_int
+
+        def renameat2(src: bytes, dst: bytes) -> int:
+            ctypes.set_errno(0)
+            return libc.renameat2(
+                _AT_FDCWD, src, _AT_FDCWD, dst, _RENAME_NOREPLACE
+            )
+
+        return renameat2
+    return None
+
+
+def _libc():
+    """The process' C library, or None when it cannot be reached."""
+    try:
+        return ctypes.CDLL(None, use_errno=True)
+    except OSError:
+        return None
+
+
+def _rename_no_replace(staging: Path, target: Path) -> None:
+    """Publish ``staging`` as ``target`` in one atomic, non-destructive step.
+
+    Raises :class:`FileExistsError` when the target already exists -- empty,
+    non-empty, or created by another publisher a moment ago -- leaving both
+    paths exactly as they were; and :class:`NoReplaceUnsupported` where the
+    platform offers no primitive to ask the question. Paths never reach the
+    error text: the caller keeps its reasons in the closed set.
+    """
+    if staging.parent != target.parent:
+        raise ValueError(
+            "staging and target must live in the same directory to be renamed "
+            "within one filesystem"
+        )
+    rename = _platform_rename(sys.platform)
+    if rename is None:
+        raise NoReplaceUnsupported(
+            f"no atomic no-replace rename on platform {sys.platform!r}"
+        )
+    source = os.fsencode(staging)
+    destination = os.fsencode(target)
+    if rename(source, destination) != 0:
+        errno = ctypes.get_errno()
+        raise OSError(errno, os.strerror(errno), str(staging), None, str(target))
+
+
+# The exact shape the publisher writes into a staging directory. Reclamation
+# recognizes it and refuses anything else rather than deleting broadly.
+_STAGING_NAME = re.compile(r"\A\.staging-[0-9a-f]{32}\Z")
+# The file type is part of the shape, not a detail. A crash can leave the
+# entry set *incomplete* -- the publisher creates these one at a time -- but
+# it can never leave a managed name carrying a type the publisher does not
+# write. So reclamation validates the type of every entry that exists, and
+# demands no particular entry be present at all.
+_STAGING_FILE_ENTRIES = frozenset({"meta.json", "trace.jsonl"})
+_STAGING_DIR_ENTRIES = frozenset({"artifacts"})
+_STAGING_ENTRIES = _STAGING_FILE_ENTRIES | _STAGING_DIR_ENTRIES
+
+
+def _remove_staging(staging: Path) -> bool:
+    """Delete a staging directory this sink created but failed to publish.
+
+    ADR-0017: reclamation validates the exact managed shape first -- the name
+    pattern, a real directory rather than a symlink, only the entries the
+    publisher itself writes, and each of those carrying the type the
+    publisher gives it. Anything unrecognizable is left for the reclaimer,
+    because a broad recursive delete of a path this code did not shape is how
+    a crash leftover turns into data loss.
+
+    Raises ValueError on a shape this publisher does not produce; nothing is
+    deleted in that case.
+    """
+    if _STAGING_NAME.match(staging.name) is None:
+        raise ValueError(f"not a managed staging directory: {staging.name!r}")
+    if staging.is_symlink() or not staging.is_dir():
+        raise ValueError(f"not a managed staging directory: {staging.name!r}")
+    entries = sorted(path.name for path in staging.iterdir())
+    unexpected = [name for name in entries if name not in _STAGING_ENTRIES]
+    if unexpected:
+        raise ValueError(
+            f"unexpected entries in staging {staging.name!r}: {unexpected}"
+        )
+    for path in staging.iterdir():
+        # lstat, never stat, and a single one: a symlink is judged by being a
+        # symlink and refused, never followed and judged by what it points
+        # at, and the type is read once so it cannot change between checks.
+        mode = path.lstat().st_mode
+        if stat.S_ISLNK(mode):
+            raise ValueError(f"unexpected symlink in staging: {path.name!r}")
+        if path.name in _STAGING_DIR_ENTRIES:
+            if not stat.S_ISDIR(mode):
+                raise ValueError(f"staging entry {path.name!r} is not a directory")
+        elif path.name in _STAGING_FILE_ENTRIES:
+            if not stat.S_ISREG(mode):
+                raise ValueError(
+                    f"staging entry {path.name!r} is not a regular file"
+                )
+    shutil.rmtree(staging)
+    return True
+
+
+def _discard_staging(staged: Path | None) -> None:
+    """Clean up after a publish that created a staging directory and then
+    failed to rename it. A shape it does not recognize is left alone."""
+    if staged is None or not staged.exists():
+        return
+    try:
+        _remove_staging(staged)
+    except (ValueError, OSError):
+        pass
 
 
 def _storage_id(run_id: str) -> str:
@@ -478,6 +652,7 @@ class RunBundleTraceSink:
 
     def _publish(self, bundle: _RunBundle) -> None:
         run_id = bundle.run_id
+        staged: Path | None = None
         try:
             now: datetime = self._clock.wall_utc()
             storage_id = _storage_id(run_id)
@@ -485,17 +660,17 @@ class RunBundleTraceSink:
             dir_name = f"{now.strftime('%H%M%S')}Z-{storage_id}"
             target = date_dir / dir_name
             staging = date_dir / f"{_STAGING_PREFIX}{storage_id}"
-            if target.exists():
-                bundle.mark_broken(REASON_ID_COLLISION)
-                return
             if staging.exists():
-                # A leftover from a crashed publish is never reused (ADR-0017).
+                # A leftover from a crashed publish is never reused (ADR-0017):
+                # reusing one would treat a previous crash's half-written
+                # bundle as a clean start. It belongs to the reclaimer.
                 bundle.mark_broken(REASON_STAGING_LEFTOVER)
                 return
             date_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
             date_dir.chmod(0o700)
             staging.mkdir(mode=0o700)
             staging.chmod(0o700)
+            staged = staging
             meta_fd = os.open(
                 staging / "meta.json",
                 os.O_WRONLY | os.O_CREAT | os.O_EXCL,
@@ -526,7 +701,27 @@ class RunBundleTraceSink:
             (staging / "artifacts").mkdir(mode=0o700)
             (staging / "artifacts").chmod(0o700)
             _fsync_dir(staging)
-            os.rename(staging, target)
+            try:
+                # Publication proper. The target's absence is deliberately
+                # not checked first: a check that ran before the rename would
+                # be a TOCTOU window, not exclusivity. The primitive refuses
+                # an existing target on its own, atomically.
+                _rename_no_replace(staging, target)
+            except FileExistsError:
+                # Somebody already published a bundle under this Run's
+                # storage identity -- a concurrent publisher, or a directory
+                # left by an earlier Run. Either way it is not ours to
+                # replace, merge into, or delete, so the Run's trace fails
+                # closed and the existing bundle is left exactly as found.
+                bundle.mark_broken(REASON_ID_COLLISION)
+                return
+            except NoReplaceUnsupported as exc:
+                # Fail closed: without the primitive, publishing would mean
+                # an overwriting rename, and a silently overwritten bundle is
+                # worse than an unpublished one.
+                bundle.mark_broken(REASON_NO_REPLACE_UNSUPPORTED)
+                del exc
+                return
             _fsync_dir(date_dir)
             bundle.run_dir = target
             bundle.trace_fd = os.open(
@@ -534,6 +729,11 @@ class RunBundleTraceSink:
             )
         except Exception as exc:
             bundle.mark_broken_with_exception(REASON_PUBLISH_FAILED, exc)
+        finally:
+            # A staging directory this publish created and never renamed is
+            # debris of our own making; anything else is left to the
+            # reclaimer, which validates the shape before deleting.
+            _discard_staging(staged)
 
     # -- flush barrier (ADR-0019) ------------------------------------------
 
@@ -577,10 +777,10 @@ class RunBundleTraceSink:
     def _process_barrier(self, barrier: _WriteBarrier) -> None:
         details: list[str] = []
         dropped = 0
-        # (bundle, the fd this barrier closes. None for a broken Run: its
-        # bundle is retired without closing the fd, so nothing closes it
-        # afterwards -- the OS reclaims it at process exit.)
-        to_retire: list[tuple[_RunBundle, int | None]] = []
+        # Every bundle this barrier retires, broken or not. A broken Run
+        # still owns an fd: it was opened before the write failed, and the
+        # drain is the only thread that ever closes one.
+        to_retire: list[_RunBundle] = []
         for bundle in barrier.bundles:
             with bundle.lock:
                 broken = bundle.broken
@@ -590,27 +790,34 @@ class RunBundleTraceSink:
                 run_dir = bundle.run_dir
             if broken is not None:
                 details.append(first_error or broken)
-                to_retire.append((bundle, None))
-                continue
-            if fd is not None and run_dir is not None:
+            elif fd is not None and run_dir is not None:
+                # Only an unbroken bundle gets fsynced: a broken one has
+                # bytes on disk the barrier cannot vouch for, and fsyncing
+                # them would be polishing a damaged audit file. Skipping the
+                # fsync skips nothing else -- the fd below is still owned,
+                # still claimed, and still closed.
                 error = self._fsync_bundle(fd, run_dir)
                 if error is not None:
                     details.append(error)
-            to_retire.append((bundle, fd))
+            to_retire.append(bundle)
         # The writes are fsynced; now the drain releases each Run's fd and
         # retires the bundle, so nothing is held until sink.close().
         closed_fds: list[int] = []
         with self._wake:
-            for bundle, fd in to_retire:
+            for bundle in to_retire:
+                # Unpublished first: once the bundle is out of the map and
+                # recorded as terminated, no commit thread can reach it or
+                # the fd it referenced, so the close below cannot race a
+                # write and cannot close a number the OS has already handed
+                # to somebody else.
                 self._bundles.pop(bundle.run_id, None)
                 self._terminated.add(bundle.run_id)
-                if fd is not None:
-                    # Claimed under the bundle's lock (wake -> bundle.lock
-                    # only), so the bundle stops referencing the fd the drain
-                    # is about to close.
-                    claimed = _take_fd(bundle)
-                    if claimed is not None:
-                        closed_fds.append(claimed)
+                # Claimed under the bundle's lock (wake -> bundle.lock only),
+                # so the bundle stops referencing the fd the drain is about
+                # to close and a second claim gets nothing.
+                claimed = _take_fd(bundle)
+                if claimed is not None:
+                    closed_fds.append(claimed)
         _close_fds(closed_fds)
         barrier.answer(
             "; ".join(dict.fromkeys(details))[:200] if details else None, dropped
