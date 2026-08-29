@@ -49,14 +49,10 @@ because a ring that has lost nothing can prove continuity from the very
 beginning, and planting nothing is not an option because a browser with an
 empty id buffer sends no ``Last-Event-ID`` -- which is indistinguishable
 from a first connection, and a first connection is the one shape that never
-gets a gap notice.
-
-_Contradicts ADR-0013 (重连只恢复已完成的可重放状态，不恢复暂态呈现), but
-only in its closing line_ ("the cursor is a complete event checkpoint this
-process once issued"), and not in the property that line exists to protect:
-the ring still refuses every positive seq it never issued, and zero sits
-below the event sequence entirely rather than being an arbitrary number
-inside it. The full argument is on the constant.
+gets a gap notice. Formally defined (ADR-0013, 修订 2026-08-30) as a
+**transport startup boundary, not an event checkpoint**: it consumes no
+domain seq, and it is the one non-positive value the cursor vocabulary
+writes.
 
 Conflating the replayable checkpoint with the unrecoverable boundary is how
 a forged cursor for an event that was too large to store would be answered
@@ -292,14 +288,14 @@ class ReplayRing:
         if seq < self._unrecoverable_floor:
             return "too_old"
         if seq == STARTUP_CHECKPOINT_SEQ:
-            # The reserved boundary before the first domain event (the one
-            # deliberate departure from ADR-0013's "an issued complete event
-            # checkpoint", argued on the constant). Valid exactly while the
-            # ring has lost nothing -- a floor of zero is a ring that can
-            # prove continuity from the beginning. Once anything is
-            # unrecoverable, the check above has already called it
-            # ``too_old``, which is the honest answer: this process cannot
-            # prove what happened between there and here.
+            # The transport startup boundary before the first domain event
+            # (ADR-0013, 修订 2026-08-30: a boundary, not an event
+            # checkpoint). Valid exactly while the ring has lost nothing --
+            # a floor of zero is a ring that can prove continuity from the
+            # beginning. Once anything is unrecoverable, the check above has
+            # already called it ``too_old``, which is the honest answer:
+            # this process cannot prove what happened between there and
+            # here.
             return "valid"
         if seq in self._issued:
             return "valid"

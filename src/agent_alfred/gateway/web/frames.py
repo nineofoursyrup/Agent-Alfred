@@ -51,29 +51,23 @@ BACKOFF_RETRY_MS = 3000
 
 # The reserved starting cursor: ``{process_instance_id}:0``.
 #
-# It is the transport boundary *before* the first domain event, not an event
-# position: no event ever owns seq 0 and nothing consumes it, so planting it
-# costs the sequence nothing.
-#
-# Why a stream has to plant *something* even when the ring is empty, and why
-# the only alternative -- planting nothing -- is not an answer: the SSE
+# It is the transport boundary *before* the first domain event, formally
+# defined (ADR-0013, 修订 2026-08-30) as **not an event checkpoint**: no
+# event ever owns seq 0, nothing consumes it, and it never appears as the
+# ``id:`` of a data frame. It is a boundary this process owns, planted
+# because a stream has to plant *something* before any data: the SSE
 # dispatch algorithm copies the id buffer even for a dataless frame, so a
-# stream with no ``id:`` leaves the browser holding an empty buffer, an empty
-# buffer sends no ``Last-Event-ID`` on the next connection, and a client that
-# sends no cursor is indistinguishable from one that never connected -- the
-# one shape that never receives a ``replay_gap``. That is the argument in
-# full; the rest of the codebase points here rather than repeating it.
+# stream with no ``id:`` leaves the browser holding an empty buffer, an
+# empty buffer sends no ``Last-Event-ID`` on the next connection, and a
+# client that sends no cursor is indistinguishable from one that never
+# connected -- the one shape that never receives a ``replay_gap``. On a
+# ring that has never issued a checkpoint, the boundary in front of them
+# all is the only thing there is to plant.
 #
-# _Contradicts ADR-0013 (重连只恢复已完成的可重放状态，不恢复暂态呈现), but
-# only in its closing line, and deliberately._ The ADR ends by concluding
-# that "the cursor is therefore a complete event checkpoint this process
-# once issued, not an arbitrary number that happens to fall inside the
-# numeric range". Zero is not one of those: it is below the event sequence
-# entirely, it names no event, and the ring still refuses every positive seq
-# it never issued -- so the property the ADR was protecting (a forged
-# in-range cursor cannot be answered "valid") is untouched. What the ADR did
-# not settle is what a stream plants when the ring is empty and no checkpoint
-# exists yet. The reserved boundary is the smaller break.
+# It is a boundary, not a promise: the ring accepts it as a starting
+# position exactly while it has lost nothing, and classifies it ``too_old``
+# the moment anything is unrecoverable. Every positive seq the ring never
+# issued is still refused outright -- the property the ADR protects.
 #
 # It is defined here, beside the ``id:`` line's shape, because that is where
 # both producers of the line live: :func:`reseed_frame` and
