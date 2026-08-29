@@ -44,10 +44,8 @@ import stat
 import sys
 import threading
 from collections import deque
-from dataclasses import dataclass, field, is_dataclass
-from dataclasses import fields as dc_fields
+from dataclasses import dataclass, field
 from datetime import datetime
-from decimal import Decimal
 from pathlib import Path
 
 from agent_alfred.clock import Clock, format_instant
@@ -57,15 +55,9 @@ from agent_alfred.events import (
     SequencedEvent,
     UnsequencedEvent,
 )
-from agent_alfred.messages import (
-    Message,
-    TextBlock,
-    ThinkingBlock,
-    ToolCallBlock,
-    ToolResultBlock,
-    blocks_to_jsonable,
+from agent_alfred.events import (
+    event_json_default as _json_default,
 )
-from agent_alfred.model import ModelError, ModelRef, Usage
 
 # Closed set of machine-judgeable causes. The barrier reason joins this with
 # the exception type name only -- never paths, never payloads.
@@ -274,45 +266,6 @@ def _discard_staging(staged: Path | None) -> None:
 def _storage_id(run_id: str) -> str:
     """ADR-0018: opaque run_id never enters a path; only its digest does."""
     return hashlib.sha256(run_id.encode("utf-8")).hexdigest()[:32]
-
-
-def _json_default(value: object) -> object:
-    if isinstance(value, Message):
-        return {"role": value.role, "blocks": blocks_to_jsonable(value.blocks)}
-    if isinstance(value, (TextBlock, ThinkingBlock, ToolCallBlock, ToolResultBlock)):
-        return blocks_to_jsonable([value])[0]
-    if isinstance(value, Usage):
-        cost = value.endpoint_reported_cost_usd
-        return {
-            "total_input_tokens": value.total_input_tokens,
-            "uncached_input_tokens": value.uncached_input_tokens,
-            "cache_read_tokens": value.cache_read_tokens,
-            "cache_write_tokens": value.cache_write_tokens,
-            "output_tokens": value.output_tokens,
-            "reasoning_tokens": value.reasoning_tokens,
-            "endpoint_reported_cost_usd": (
-                None if cost is None else format(cost, "f")
-            ),
-            "raw": value.raw,
-        }
-    if isinstance(value, ModelError):
-        return {
-            "retryable": value.retryable,
-            "status_code": value.status_code,
-            "body_excerpt": value.body_excerpt,
-            "attempt_id": value.attempt_id,
-            "code": value.code,
-        }
-    if isinstance(value, ModelRef):
-        return {"endpoint_id": value.endpoint_id, "model_id": value.model_id}
-    if isinstance(value, Decimal):
-        return format(value, "f")
-    if is_dataclass(value) and not isinstance(value, type):
-        return {
-            "_type": type(value).__name__,
-            **{f.name: getattr(value, f.name) for f in dc_fields(value)},
-        }
-    raise TypeError(f"unserializable trace payload part {type(value).__name__}")
 
 
 def _prepare_payload(payload: object) -> str:

@@ -14,9 +14,12 @@ from __future__ import annotations
 
 import argparse
 import sys
+import threading
 from collections.abc import Sequence
+from pathlib import Path
 from typing import TextIO
 
+from agent_alfred.gateway.web.lifecycle import DEFAULT_PORT
 from agent_alfred.loop.assistant import LoopResult
 from agent_alfred.messages import message_plain_text
 from agent_alfred.render import ReplyRenderer, render_markdown_reply
@@ -31,6 +34,7 @@ from agent_alfred.settings import (
     ENV_STREAM_FALLBACK,
     ENV_WORKING_MEMORY_ROUNDS,
     MAX_STEPS_REACHED_TEXT,
+    Settings,
 )
 
 
@@ -150,6 +154,21 @@ def build_parser() -> argparse.ArgumentParser:
             "transcript."
         ),
     )
+    parser.add_argument(
+        "--serve",
+        action="store_true",
+        help=(
+            "Run the local Dashboard instead of the REPL. It binds "
+            "127.0.0.1 and never picks another port, so a busy port or a "
+            "second instance fails loudly instead of moving."
+        ),
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=None,
+        help=f"Dashboard port (default {DEFAULT_PORT}). Only this port is tried.",
+    )
     return parser
 
 
@@ -186,6 +205,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     from agent_alfred.wiring import build_default_host
 
     state_dir = Path(args.state_dir) if args.state_dir else None
+    if args.serve:
+        return serve_dashboard(
+            state_dir=state_dir,
+            settings=settings,
+            port=args.port,
+            out=sys.stdout,
+        )
     host = build_default_host(state_dir=state_dir, settings=settings)
     host.start()
     try:
@@ -195,6 +221,65 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _repl(host, session_id, stream=settings.stream)
     finally:
         host.close()
+
+
+def serve_dashboard(
+    *,
+    state_dir: Path | None,
+    settings: Settings,
+    port: int | None = None,
+    out: TextIO | None = None,
+    stop: threading.Event | None = None,
+) -> int:
+    """Run the Dashboard and nothing else, until interrupted.
+
+    The Host and the Dashboard share one process on purpose (ADR-0013): the
+    replay ring is the only source for an active Run, and a second process
+    would have to invent a second one. Refusing to start is therefore the
+    right answer to a held lock or a busy port -- the alternative is a
+    Dashboard that shows a different truth than the one being recorded.
+    """
+    from agent_alfred.settings import resolve_state_dir
+    from agent_alfred.wiring import build_dashboard, open_database
+
+    stream = sys.stdout if out is None else out
+    directory = Path(state_dir) if state_dir is not None else resolve_state_dir()
+    conn = open_database(directory)
+    host, dashboard = build_dashboard(
+        conn=conn,
+        state_dir=directory,
+        settings=settings,
+        port=DEFAULT_PORT if port is None else port,
+    )
+    host.start()
+    try:
+        descriptor = dashboard.start()
+    except BaseException as exc:  # noqa: BLE001 - reported, then closed
+        # Nothing is left running: the lock is released and no descriptor
+        # claims a port nobody is answering.
+        host.close()
+        conn.close()
+        stream.write(f"dashboard unavailable: {exc}\n")
+        return 1
+    stream.write(
+        f"dashboard on 127.0.0.1:{descriptor.port} "
+        f"(instance {descriptor.instance_id}, pid {descriptor.pid})\n"
+    )
+    stream.flush()
+    try:
+        if stop is None:
+            while True:
+                threading.Event().wait(3600)
+        else:
+            while not stop.is_set():
+                stop.wait(0.05)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        dashboard.close()
+        host.close()
+        conn.close()
+    return 0
 
 
 def _one_shot(

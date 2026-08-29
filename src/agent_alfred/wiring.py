@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import sqlite3
 import uuid
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from agent_alfred import schema
 from agent_alfred.clock import Clock, SystemClock
 from agent_alfred.events import BarrierFlushResult, EventSink, FanOutSink
+from agent_alfred.gateway.web.broker import SSEBroker
+from agent_alfred.gateway.web.lifecycle import DEFAULT_HOST, DEFAULT_PORT
+from agent_alfred.gateway.web.server import DashboardRuntime
 from agent_alfred.model import (
     ClientSnapshot,
     EndpointUnconfigured,
@@ -22,6 +25,7 @@ from agent_alfred.redact import Redactor
 from agent_alfred.retry import RetryPolicy, SystemSleeper
 from agent_alfred.runtime.config import SettingsBackedSnapshotProvider
 from agent_alfred.runtime.host import RuntimeHost
+from agent_alfred.runtime.snapshot import RuntimeSnapshot
 from agent_alfred.runtime.transport import VersionedTransportPool
 from agent_alfred.settings import (
     OPENCODE_GO_BASE_URL,
@@ -160,6 +164,7 @@ def build_host(
     extra_sinks: Sequence[EventSink] = (),
     process_instance_id: str | None = None,
     trace_root: Path | None = None,
+    snapshot_listener: Callable[[RuntimeSnapshot], None] | None = None,
 ) -> RuntimeHost:
     settings = settings or Settings()
     clock = clock or SystemClock()
@@ -181,7 +186,81 @@ def build_host(
         process_instance_id=instance_id,
         redactor=redactor,
         snapshot_provider=provider,
+        snapshot_listener=snapshot_listener,
     )
+
+
+def build_dashboard(
+    *,
+    conn: sqlite3.Connection,
+    state_dir: Path,
+    settings: Settings | None = None,
+    factory: ModelClientFactory | None = None,
+    clock: Clock | None = None,
+    trace_root: Path | None = None,
+    port: int = DEFAULT_PORT,
+    bind_host: str = DEFAULT_HOST,
+    extra_sinks: Sequence[EventSink] = (),
+) -> tuple[RuntimeHost, DashboardRuntime]:
+    """One process: one Host, one broker, one socket, one descriptor.
+
+    The order is the decided one, and it is forced by a real dependency loop
+    rather than by convention:
+
+    1. the broker is built first, because the Host's authoritative state
+       store publishes patches into it from its very first transition --
+       including the ones start-up recovery makes;
+    2. the Host is built with the broker as an event sink *and* as the
+       snapshot listener, so what a browser sees is the state the Host
+       decided, published after the decision;
+    3. the broker is then pointed at the Host, which is the only thing that
+       can answer "does this Session exist";
+    4. the Dashboard runtime takes the lock, binds, describes -- in that
+       order -- and only then serves.
+
+    Nothing can reach the socket before step 4, so the broker is never asked
+    a question it cannot answer.
+    """
+    clock = clock or SystemClock()
+    settings = settings or Settings()
+    instance_id = uuid.uuid4().hex
+    broker = SSEBroker(
+        process_instance_id=instance_id,
+        snapshot=RuntimeSnapshot(
+            process_instance_id=instance_id,
+            state_revision=0,
+            coordinator_state="idle",
+            active_run=None,
+            unrecorded_terminal_projection=None,
+        ),
+    )
+    if factory is None:
+        factory = OpenCodeGoFactory(clock=clock)
+    host = build_host(
+        conn=conn,
+        factory=factory,
+        settings=settings,
+        clock=clock,
+        trace_root=trace_root,
+        extra_sinks=[broker, *extra_sinks],
+        process_instance_id=instance_id,
+        snapshot_listener=broker.publish_state_patch,
+    )
+    broker.bind_session_check(host.session_exists)
+    # A dead dispatcher is the one failure the broker cannot fix on its own,
+    # so it is reported where a process-level fact belongs: into the trace,
+    # through the same notice every other sink failure uses.
+    broker.bind_fatal_handler(
+        lambda exc: host.note_sink_disabled("sse", "dispatch")
+    )
+    dashboard = DashboardRuntime(
+        host=host,
+        state_dir=state_dir,
+        broker=broker,
+        port=port,
+        bind_host=bind_host,
+    )
+    return host, dashboard
 
 
 def build_default_host(

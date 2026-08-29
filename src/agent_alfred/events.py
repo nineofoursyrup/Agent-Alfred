@@ -4,10 +4,20 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, is_dataclass, replace
+from dataclasses import fields as dc_fields
+from decimal import Decimal
 from typing import Any, Literal, Protocol
 
-from agent_alfred.messages import Block, Message, TextBlock
+from agent_alfred.messages import (
+    Block,
+    Message,
+    TextBlock,
+    ThinkingBlock,
+    ToolCallBlock,
+    ToolResultBlock,
+    blocks_to_jsonable,
+)
 from agent_alfred.model import ModelError, ModelRef, Usage
 from agent_alfred.outcomes import RunOutcome
 
@@ -210,6 +220,52 @@ class SequencedEvent:
 def replayable_for(trace_policy: TracePolicy) -> bool:
     """v1: replayable tracks persist. Named separately so the axes can diverge."""
     return trace_policy == "persist"
+
+
+def event_json_default(value: object) -> object:
+    """The one ``json.dumps`` default every event consumer shares.
+
+    The trace bundle and the Dashboard stream are two renderings of the same
+    event, so they must agree on the payload shape -- a reply that reads one
+    way in the audit file and another in the browser is two facts where there
+    is one. It lives here rather than in either sink so neither can drift.
+    """
+    if isinstance(value, Message):
+        return {"role": value.role, "blocks": blocks_to_jsonable(value.blocks)}
+    if isinstance(value, (TextBlock, ThinkingBlock, ToolCallBlock, ToolResultBlock)):
+        return blocks_to_jsonable([value])[0]
+    if isinstance(value, Usage):
+        cost = value.endpoint_reported_cost_usd
+        return {
+            "total_input_tokens": value.total_input_tokens,
+            "uncached_input_tokens": value.uncached_input_tokens,
+            "cache_read_tokens": value.cache_read_tokens,
+            "cache_write_tokens": value.cache_write_tokens,
+            "output_tokens": value.output_tokens,
+            "reasoning_tokens": value.reasoning_tokens,
+            "endpoint_reported_cost_usd": (
+                None if cost is None else format(cost, "f")
+            ),
+            "raw": value.raw,
+        }
+    if isinstance(value, ModelError):
+        return {
+            "retryable": value.retryable,
+            "status_code": value.status_code,
+            "body_excerpt": value.body_excerpt,
+            "attempt_id": value.attempt_id,
+            "code": value.code,
+        }
+    if isinstance(value, ModelRef):
+        return {"endpoint_id": value.endpoint_id, "model_id": value.model_id}
+    if isinstance(value, Decimal):
+        return format(value, "f")
+    if is_dataclass(value) and not isinstance(value, type):
+        return {
+            "_type": type(value).__name__,
+            **{f.name: getattr(value, f.name) for f in dc_fields(value)},
+        }
+    raise TypeError(f"unserializable event payload part {type(value).__name__}")
 
 
 class EventSink(Protocol):

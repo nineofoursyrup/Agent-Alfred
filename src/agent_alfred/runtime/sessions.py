@@ -292,7 +292,7 @@ def open_session(
         keys = _page_run_keys(conn, session_id, runs_position, remaining + 1)
         taken = keys[:remaining]
         for activity_revision, run_id in taken:
-            messages.extend(_run_messages(conn, run_id))
+            messages.extend(_run_messages(conn, run_id, redactor))
             runs_position = (activity_revision, run_id)
             remaining -= 1
         if len(keys) > len(taken):
@@ -325,7 +325,7 @@ def open_session(
         # Segment one is exhausted and safely closed; continue into segment two.
 
     next_cursor = _historic_tail(
-        conn, session_id, historic_position, messages, remaining
+        conn, session_id, historic_position, messages, remaining, redactor
     )
     return _page(
         conn,
@@ -417,6 +417,7 @@ def _historic_tail(
     historic_position: int | None,
     messages: list[SessionMessage],
     remaining: int,
+    redactor: Redactor | None = None,
 ) -> str | None:
     """Fill the page from segment two and decide whether more of it remains.
 
@@ -431,7 +432,7 @@ def _historic_tail(
         )
         taken = rows[:remaining]
         for row in taken:
-            messages.append(_historic_message(row))
+            messages.append(_historic_message(row, redactor))
             historic_position = row[0]
         if len(rows) <= len(taken):
             return None
@@ -520,7 +521,9 @@ def _page_run_keys(
     return [(row[0], row[1]) for row in rows]
 
 
-def _run_messages(conn, run_id: str) -> list[SessionMessage]:
+def _run_messages(
+    conn, run_id: str, redactor: Redactor | None = None
+) -> list[SessionMessage]:
     rows = conn.execute(
         """SELECT role, content, source, telemetry, created_at, run_id
            FROM agent_log WHERE run_id = ? ORDER BY id ASC""",
@@ -529,7 +532,7 @@ def _run_messages(conn, run_id: str) -> list[SessionMessage]:
     return [
         SessionMessage(
             role=role,
-            blocks=blocks_from_jsonable(json.loads(content)),
+            blocks=blocks_from_jsonable(_redacted_json(content, redactor)),
             source=source,
             created_at=created_at,
             run_id=run_id,
@@ -537,6 +540,22 @@ def _run_messages(conn, run_id: str) -> list[SessionMessage]:
         )
         for role, content, source, telemetry, created_at, run_id in rows
     ]
+
+
+def _redacted_json(content: str, redactor: Redactor | None) -> Any:
+    """The stored blocks, through the central redactor before they are shown.
+
+    The user message is written into the session record verbatim -- only the
+    assistant reply was redacted on the way in -- and historic rows predate
+    the central rule altogether. So this read is the one place a raw value
+    can reach a surface, and it is the last chance to stop it (ADR-0003).
+    Redacting the jsonable form rather than the blocks keeps one convergence
+    point: the same pass handles text, thinking and tool results.
+    """
+    parsed = json.loads(content)
+    if redactor is None:
+        return parsed
+    return redactor.redact_jsonable(parsed)
 
 
 def _page_historic(conn, session_id: str, after_id: int | None, count: int):
@@ -553,12 +572,12 @@ def _page_historic(conn, session_id: str, after_id: int | None, count: int):
     ).fetchall()
 
 
-def _historic_message(row) -> SessionMessage:
+def _historic_message(row, redactor: Redactor | None = None) -> SessionMessage:
     row_id, role, content, source, telemetry, created_at, run_id = row
     del row_id
     return SessionMessage(
         role=role,
-        blocks=blocks_from_jsonable(json.loads(content)),
+        blocks=blocks_from_jsonable(_redacted_json(content, redactor)),
         source=source,
         created_at=created_at,
         run_id=run_id,

@@ -1,0 +1,508 @@
+"""The Dashboard's HTTP API: what a request asks for and what it is told.
+
+Everything here is transport-shaped logic over an injected facade, with no
+sockets and no ``http.server``: the handler is a thin IO shroud around these
+functions, so the contract -- 202 only after the lease, accepted transaction
+and handoff have all happened; 409 while the lease is held, including while
+the recording is pending; 503 only once ``recording_failed`` has landed; a
+busy card that reads the same whether it came from a race or from a known-busy
+client -- is testable without a browser.
+
+Nothing here infers "recorded" from anything but the database. A trace that
+flushed, an event that persisted, a cursor that advanced and an entry in the
+replay ring are all things that can happen in a process whose transaction
+never committed.
+"""
+
+from __future__ import annotations
+
+import threading
+from dataclasses import dataclass
+from typing import Any, Protocol
+from urllib.parse import quote
+
+from agent_alfred.runtime import runs
+from agent_alfred.runtime.sessions import (
+    SessionInboxPage,
+    SessionMessagesPage,
+    SessionNotFound,
+)
+from agent_alfred.runtime.snapshot import RuntimeSnapshot
+from agent_alfred.runtime.work import SubmitRequest, SubmitResult
+from agent_alfred.schema import PURPOSES
+
+# The one stage label the decision names explicitly (#30 补正一): a Run whose
+# reply exists but whose recording has not settled is still holding the only
+# admission lease, and the honest words for that are "saving".
+STAGE_SAVING = "正在保存"
+
+# What the coordinator state means to a person reading the busy card. Only
+# ``recording_pending`` is prescribed by the decision; the rest are the plain
+# reading of the phase, because a card that said nothing would invite the
+# reader to conclude the Run had died.
+_STAGE_LABELS = {
+    "accepted": "已接受",
+    "running": "运行中",
+    "recording_pending": STAGE_SAVING,
+    "recording_failed": "保存失败",
+    "idle": "空闲",
+}
+
+# The runs page's closed filter set and the page-size bounds are owned by
+# the read side that implements them; a second copy here would be the kind
+# of duplicate that drifts the moment one side gets a fourth filter.
+RUN_FILTERS = runs.RUN_FILTERS
+DEFAULT_PAGE_SIZE = min(runs.DEFAULT_RUN_PAGE_SIZE, runs.DEFAULT_MAINBAR_LIMIT)
+MAX_PAGE_SIZE = 100
+
+__all__ = [
+    "BusySummary",
+    "CreateSessionResult",
+    "DashboardApi",
+    "DashboardFacade",
+    "MutationGate",
+    "STAGE_SAVING",
+    "SubmitOutcome",
+    "busy_summary_from",
+    "safe_navigation",
+]
+
+
+class DashboardFacade(Protocol):
+    """The narrow slice of the Host the API is allowed to touch."""
+
+    def create_session(self) -> str: ...
+
+    def submit(self, request: SubmitRequest) -> SubmitResult: ...
+
+    def session_exists(self, session_id: str) -> bool: ...
+
+    def snapshot(self) -> RuntimeSnapshot: ...
+
+    def list_sessions(self, *, limit: int, cursor: str | None) -> SessionInboxPage: ...
+
+    def open_session(
+        self, session_id: str, *, page_size: int, cursor: str | None
+    ) -> SessionMessagesPage: ...
+
+    def list_runs(
+        self, *, filter: str, limit: int, cursor: str | None
+    ) -> Any: ...
+
+    def locate_run(self, run_id: str, *, limit: int) -> Any | None: ...
+
+    def mainbar_pairs(self, *, limit: int, cursor: str | None) -> Any: ...
+
+
+@dataclass(frozen=True)
+class SubmitOutcome:
+    """The HTTP answer to a submit. Exactly one of the four decided shapes."""
+
+    status: int
+    run_id: str | None = None
+    session_id: str | None = None
+    code: str | None = None
+    busy: "BusySummary | None" = None
+
+    def payload(self) -> dict[str, Any]:
+        body: dict[str, Any] = {}
+        if self.run_id is not None:
+            body["run_id"] = self.run_id
+        if self.session_id is not None:
+            body["session_id"] = self.session_id
+        if self.code is not None:
+            body["code"] = self.code
+        if self.busy is not None:
+            body["busy"] = self.busy.to_json()
+        return body
+
+
+@dataclass(frozen=True)
+class BusySummary:
+    """The one busy card, rendered from one shape whether the client asked
+    before it sent (prevention) or found out afterwards (409).
+
+    The field set is a whitelist, not a projection of the Run row: purpose,
+    Gateway, start time, the nullable current Step, an optional redacted and
+    length-limited prompt preview, and a same-origin navigation target. A
+    second copy of this card with different fields is how "busy" would become
+    two different states that look the same on screen.
+    """
+
+    purpose: str
+    gateway: str
+    started_at: str | None
+    current_step: int | None
+    prompt_preview: str | None
+    stage: str
+    run_id: str
+    filter: str
+
+    def to_json(self) -> dict[str, Any]:
+        # The whitelist is exactly the seven fields the decision names. The
+        # run id and the shelf are not two more fields -- they are parts of
+        # the one navigation target, which is where the client reads them.
+        return {
+            "purpose": self.purpose,
+            "gateway": self.gateway,
+            "started_at": self.started_at,
+            "current_step": self.current_step,
+            "prompt_preview": self.prompt_preview,
+            "stage": self.stage,
+            "navigation": {
+                "href": safe_navigation(self.run_id, self.filter),
+                "run_id": self.run_id,
+                "filter": self.filter,
+            },
+        }
+
+
+def safe_navigation(run_id: str, filter: str) -> str:
+    """A same-origin path, and never anything else.
+
+    A navigation target that could carry a host would let a value from the
+    database decide where the browser goes, so the only thing interpolated is
+    the run id and the only host in the result is none: the path is relative,
+    absolute-path form, with no scheme, no authority and no ``//`` that a
+    browser would read as one.
+    """
+    if filter not in RUN_FILTERS:
+        filter = "all"
+    path = "/runs/%s?filter=%s" % (quote(run_id, safe=""), quote(filter, safe=""))
+    assert path.startswith("/") and not path.startswith("//")
+    return path
+
+
+def busy_summary_from(snapshot: RuntimeSnapshot) -> BusySummary | None:
+    """Render the busy card from the authoritative snapshot.
+
+    The stage comes from the *coordinator* state, not from the Run's phase:
+    the two are different quantities and only the coordinator knows whether
+    the lease is still held. A Run that is finished but still pending reads
+    "saving", which is the whole point -- it is busy saving, not busy running.
+    """
+    from agent_alfred.runtime.runs import classify_purpose
+
+    active = snapshot.active_run
+    if active is None:
+        return None
+    shelf, _known = classify_purpose(active.purpose)
+    return BusySummary(
+        purpose=active.purpose,
+        gateway=active.gateway,
+        started_at=active.started_at,
+        current_step=active.current_step,
+        prompt_preview=active.prompt_preview,
+        stage=_STAGE_LABELS.get(snapshot.coordinator_state, active.phase),
+        run_id=active.run_id,
+        filter=shelf,
+    )
+
+
+@dataclass(frozen=True)
+class CreateSessionResult:
+    """A signed Session id, or the reason none was issued."""
+
+    session_id: str | None = None
+    code: str | None = None
+
+
+class MutationGate:
+    """The one door every entry-originated write goes through.
+
+    #23 §4: locking chat alone and letting every other write through does
+    not deliver serialisation -- the thing that is serial is the queue, not
+    the Run. So the gate sits above both writes, and a future endpoint that
+    changes memory, settings or the outside world has exactly one place to
+    go instead of a convention to remember.
+
+    It never queues. A gate that held a request until the current mutation
+    finished would be a queue with extra steps, and ADR-0016 is explicit
+    that a busy process answers at once. What it guards are two O(1)
+    non-blocking operations, so it is held for microseconds; what it buys is
+    that two writes can never interleave at all.
+    """
+
+    def __init__(self, facade: "DashboardFacade"):
+        self._facade = facade
+        self._lock = threading.Lock()
+
+    def submit(self, request: SubmitRequest) -> SubmitResult | None:
+        """None means the gate is busy. It never means "wait"."""
+        if not self._lock.acquire(blocking=False):
+            return None
+        try:
+            return self._facade.submit(request)
+        finally:
+            self._lock.release()
+
+    def create_session(self) -> str | None:
+        """None means the gate is busy. It never means "wait"."""
+        if not self._lock.acquire(blocking=False):
+            return None
+        try:
+            return self._facade.create_session()
+        finally:
+            self._lock.release()
+
+
+class DashboardApi:
+    """The API surface. Stateless: the Host owns every fact it reads."""
+
+    def __init__(
+        self, *, facade: DashboardFacade, gate: "MutationGate | None" = None
+    ):
+        self._facade = facade
+        # One gate per process, shared by every write route. Injected so a
+        # test can drive two writes at once without a socket.
+        self._gate = gate if gate is not None else MutationGate(facade)
+
+    # -- writes ------------------------------------------------------------
+
+    def create_session(self) -> CreateSessionResult:
+        # The id is minted by the server and never taken from the client: a
+        # Session is not a label the caller gets to choose, and letting it
+        # pick would let two Sessions collide into one.
+        session_id = self._gate.create_session()
+        if session_id is None:
+            # Refused, not queued: a write gate that made the caller wait
+            # would be the queue ADR-0016 forbids, wearing a different hat.
+            return CreateSessionResult(code="write_in_progress")
+        return CreateSessionResult(session_id=session_id)
+
+    def submit(self, body: dict[str, Any]) -> SubmitOutcome:
+        message = body.get("message")
+        if not isinstance(message, str) or not message.strip():
+            return SubmitOutcome(status=400, code="empty_message")
+        purpose = body.get("purpose", "chat")
+        if purpose not in PURPOSES:
+            return SubmitOutcome(status=400, code="unknown_purpose")
+        session_id = body.get("session_id")
+        if session_id is not None and not isinstance(session_id, str):
+            return SubmitOutcome(status=400, code="bad_session_id")
+        if session_id is not None and not self._facade.session_exists(session_id):
+            return SubmitOutcome(status=404, code="unknown_session")
+
+        result = self._gate.submit(
+            SubmitRequest(
+                message=message,
+                purpose=purpose,
+                session_id=session_id,
+                gateway="web",
+                entry_surface_id="mainbar",
+            )
+        )
+        if result is None:
+            return SubmitOutcome(status=503, code="write_in_progress")
+        return self._outcome(result)
+
+    def _outcome(self, result: SubmitResult) -> SubmitOutcome:
+        """Map the coordinator's answer onto the four decided HTTP shapes.
+
+        202 is reached only through ``kind == "accepted"``, which the
+        admission path sets after the lease was reserved, the accepted
+        transaction committed and the work item was handed to the single
+        execution thread. A failure to persist or to hand off returns
+        ``admission_failed`` and is reported as 500: pretending otherwise
+        would tell the browser a Run exists that nobody is running.
+        """
+        if result.kind == "accepted":
+            return SubmitOutcome(
+                status=202, run_id=result.run_id, session_id=result.session_id
+            )
+        snapshot = result.snapshot or self._facade.snapshot()
+        busy = busy_summary_from(snapshot)
+        if result.kind == "run_in_progress":
+            # Includes recording_pending: the Run still holds the lease until
+            # its recording settles, and the card says so ("saving") instead
+            # of showing a phase that has already ended.
+            return SubmitOutcome(status=409, code="run_in_progress", busy=busy)
+        if result.kind == "recording_unavailable":
+            # Only ever returned once the coordinator has actually reached
+            # recording_failed -- the state lands before the answer does.
+            return SubmitOutcome(
+                status=503, code="recording_unavailable", busy=busy
+            )
+        return SubmitOutcome(status=500, code="admission_failed", busy=busy)
+
+    # -- reads -------------------------------------------------------------
+
+    def session_inbox(self, params: dict[str, str]) -> tuple[int, Any]:
+        limit = _page_size(params, "limit")
+        return 200, _inbox_payload(
+            self._facade.list_sessions(limit=limit, cursor=params.get("cursor"))
+        )
+
+    def session_messages(
+        self, session_id: str, params: dict[str, str]
+    ) -> tuple[int, Any]:
+        page_size = _page_size(params, "page_size")
+        try:
+            page = self._facade.open_session(
+                session_id, page_size=page_size, cursor=params.get("cursor")
+            )
+        except SessionNotFound:
+            return 404, {"code": "unknown_session"}
+        return 200, _messages_payload(page)
+
+    def runs_page(self, params: dict[str, str]) -> tuple[int, Any]:
+        filter_name = params.get("filter", "all")
+        if filter_name not in RUN_FILTERS:
+            return 400, {"code": "unknown_filter"}
+        limit = _page_size(params, "limit")
+        return 200, _runs_payload(
+            self._facade.list_runs(
+                filter=filter_name, limit=limit, cursor=params.get("cursor")
+            )
+        )
+
+    def locate_run(self, run_id: str, params: dict[str, str]) -> tuple[int, Any]:
+        limit = _page_size(params, "limit")
+        page = self._facade.locate_run(run_id, limit=limit)
+        if page is None:
+            return 404, {"code": "unknown_run"}
+        return 200, _runs_payload(page)
+
+    def mainbar(self, params: dict[str, str]) -> tuple[int, Any]:
+        limit = _page_size(params, "limit")
+        return 200, _mainbar_payload(
+            self._facade.mainbar_pairs(limit=limit, cursor=params.get("cursor"))
+        )
+
+
+def _page_size(params: dict[str, str], key: str) -> int:
+    """A page size, clamped rather than trusted.
+
+    An unclamped limit is a denial of service with one query parameter, and
+    a non-numeric one is a client bug that must not become a 500.
+    """
+    raw = params.get(key)
+    if raw is None:
+        return DEFAULT_PAGE_SIZE
+    try:
+        value = int(raw)
+    except ValueError:
+        return DEFAULT_PAGE_SIZE
+    if value < 1:
+        return DEFAULT_PAGE_SIZE
+    return min(value, MAX_PAGE_SIZE)
+
+
+def _inbox_payload(page: SessionInboxPage) -> dict[str, Any]:
+    return {
+        "sessions": [
+            {
+                "session_id": summary.session_id,
+                "created_at": summary.created_at,
+                "activity_revision": summary.activity_revision,
+                "title": summary.title,
+            }
+            for summary in page.sessions
+        ],
+        "next_cursor": page.next_cursor,
+    }
+
+
+def _messages_payload(page: SessionMessagesPage) -> dict[str, Any]:
+    return {
+        "session_id": page.session_id,
+        "title": page.title,
+        "messages": [
+            {
+                "role": message.role,
+                "blocks": [
+                    _block_json(block) for block in message.blocks
+                ],
+                "source": message.source,
+                "created_at": message.created_at,
+                # Null for historic rows, and that is the point: a message
+                # with no Run is never dressed up as one that had one.
+                "run_id": message.run_id,
+            }
+            for message in page.messages
+        ],
+        "next_cursor": page.next_cursor,
+        "runs_pending": page.runs_pending,
+    }
+
+
+def _block_json(block) -> dict[str, Any]:
+    from agent_alfred.messages import (
+        TextBlock,
+        ThinkingBlock,
+        ToolCallBlock,
+        ToolResultBlock,
+    )
+
+    # MainBar and the session view render text only; every other block is
+    # reported as a type and a count, never as its contents (#30).
+    if isinstance(block, TextBlock):
+        return {"type": "text", "text": block.text}
+    if isinstance(block, ThinkingBlock):
+        return {"type": "thinking"}
+    if isinstance(block, ToolCallBlock):
+        return {"type": "tool_call"}
+    if isinstance(block, ToolResultBlock):
+        return {"type": "tool_result", "count": len(block.content)}
+    return {"type": type(block).__name__}
+
+
+def _runs_payload(page) -> dict[str, Any]:
+    return {
+        "filter": page.filter,
+        "runs": [_run_json(run) for run in page.runs],
+        # Deliberately outside ``runs``: the client pins it and folds it away
+        # by run_id. A non-terminal Run keeps taking new revisions, so paging
+        # over it would show it twice.
+        "non_terminal": (
+            None if page.non_terminal is None else _run_json(page.non_terminal)
+        ),
+        "next_cursor": page.next_cursor,
+    }
+
+
+def _run_json(run) -> dict[str, Any]:
+    return {
+        "run_id": run.run_id,
+        "purpose": run.purpose,
+        "filter": run.filter,
+        "purpose_known": run.purpose_known,
+        "session_id": run.session_id,
+        "gateway": run.gateway,
+        "entry_surface_id": run.entry_surface_id,
+        "prompt_preview": run.prompt_preview,
+        "phase": run.phase,
+        "outcome": run.outcome,
+        "accepted_at": run.accepted_at,
+        "started_at": run.started_at,
+        "finished_at": run.finished_at,
+        "activity_revision": run.activity_revision,
+    }
+
+
+def _mainbar_payload(page) -> dict[str, Any]:
+    return {
+        "pairs": [
+            {
+                "run_id": pair.run_id,
+                "activity_revision": pair.activity_revision,
+                "session_id": pair.session_id,
+                "created_at": pair.created_at,
+                "user": (
+                    None
+                    if pair.user_message is None
+                    else [_block_json(block) for block in pair.user_message.blocks]
+                ),
+                "assistant": (
+                    None
+                    if pair.assistant_message is None
+                    else [
+                        _block_json(block)
+                        for block in pair.assistant_message.blocks
+                    ]
+                ),
+            }
+            for pair in page.pairs
+        ],
+        "next_cursor": page.next_cursor,
+    }

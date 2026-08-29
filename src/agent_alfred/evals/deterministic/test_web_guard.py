@@ -1,0 +1,305 @@
+"""The four request-time defences, each refused on its own grounds.
+
+ADR-0014's point is that the layers are not interchangeable: binding
+loopback does not stop another origin's page, Host does not stop a
+same-origin-looking write, Origin does not stop a form POST, and CSRF does
+nothing for a read. Each test here removes exactly one layer's protection and
+asserts the layer that is supposed to catch it still does.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import pytest
+
+from agent_alfred.gateway.web.guard import (
+    ALLOWED_HOST_NAMES,
+    CSRF_HEADER,
+    JSON_CONTENT_TYPE,
+    MAX_BODY_BYTES,
+    RequestGuard,
+    normalize_host,
+    normalize_origin,
+)
+
+PORT = 7717
+TOKEN = "t" * 40
+
+
+@dataclass
+class _Headers:
+    """Case-insensitive enough for the guard: it must not depend on case."""
+
+    raw: dict[str, str]
+
+    def get(self, name: str, default=None):
+        for key, value in self.raw.items():
+            if key.lower() == name.lower():
+                return value
+        return default
+
+    def items(self):
+        return self.raw.items()
+
+
+def _guard() -> RequestGuard:
+    return RequestGuard(port=PORT, csrf_token=TOKEN)
+
+
+def _headers(**kwargs: str) -> _Headers:
+    return _Headers(dict(kwargs))
+
+
+def _read(**kwargs: str):
+    return _guard().check(method="GET", headers=_headers(**kwargs))
+
+
+def _write(**kwargs: str):
+    return _guard().check(method="POST", headers=_headers(**kwargs))
+
+
+# --- host normalization ----------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("127.0.0.1", "127.0.0.1"),
+        ("localhost", "localhost"),
+        ("LOCALHOST", "localhost"),
+        ("localhost:7717", "localhost"),
+        ("127.0.0.1:7717", "127.0.0.1"),
+        # A trailing dot is the same name to a resolver and to a browser.
+        ("localhost.", "localhost"),
+        ("  localhost  ", "localhost"),
+        ("[::1]", "[::1]"),
+        ("[::1]:7717", "[::1]"),
+    ],
+)
+def test_a_host_that_names_this_machine_normalizes(value: str, expected: str) -> None:
+    assert normalize_host(value) == expected
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "",
+        "   ",
+        # Userinfo: the classic "looks like localhost" trick.
+        "evil.com@127.0.0.1",
+        "127.0.0.1@evil.com",
+        "localhost:7717@evil.com",
+        # A path or a query is not a host.
+        "localhost/path",
+        "localhost?x=1",
+        "localhost\\path",
+        # Malformed ports and bare IPv6 without brackets.
+        "localhost:http",
+        "localhost:7717:9",
+        "::1",
+        "[::1",
+        ".",
+    ],
+)
+def test_a_host_that_does_not_name_this_machine_is_refused(value: str) -> None:
+    assert normalize_host(value) is None
+
+
+def test_the_allowed_names_are_exactly_the_two_we_bind() -> None:
+    # No "[::1]": we bind IPv4 loopback only, and listing a name that cannot
+    # reach the listener would only suggest it is supported.
+    assert ALLOWED_HOST_NAMES == frozenset({"127.0.0.1", "localhost"})
+
+
+# --- the Host layer --------------------------------------------------------
+
+
+def test_a_request_without_a_host_is_refused() -> None:
+    rejection = _read(origin=f"http://localhost:{PORT}")
+    assert rejection is not None
+    assert rejection.status == 400
+    assert rejection.code == "missing_host"
+
+
+@pytest.mark.parametrize("host", ["evil.com", "127.0.0.2", "localhost.evil.com"])
+def test_a_host_that_is_not_this_machine_is_refused(host: str) -> None:
+    rejection = _read(host=host)
+    assert rejection is not None
+    assert rejection.code == "host_not_allowed"
+
+
+def test_the_host_check_stops_dns_rebinding() -> None:
+    """The one thing binding loopback cannot do.
+
+    A rebound name resolves to 127.0.0.1 at connect time, so the socket
+    succeeds; the Host header is the only place the name the browser thinks
+    it is talking to still shows up.
+    """
+    rejection = _read(host="rebound.evil.com", origin=f"http://localhost:{PORT}")
+    assert rejection is not None
+    assert rejection.code == "host_not_allowed"
+
+
+# --- the Origin layer ------------------------------------------------------
+
+
+def test_the_whitelist_is_exactly_two_entries_on_the_bound_port() -> None:
+    assert _guard().allowed_origins == frozenset(
+        {f"http://127.0.0.1:{PORT}", f"http://localhost:{PORT}"}
+    )
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [
+        "http://127.0.0.1:7717",
+        "http://localhost:7717",
+        # One variation browsers really do emit for the same origin.
+        "http://localhost:7717/",
+    ],
+)
+def test_an_origin_from_this_dashboard_is_allowed(origin: str) -> None:
+    assert _read(host="localhost", origin=origin) is None
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [
+        "http://evil.com",
+        "https://localhost:7717",
+        "http://localhost:7718",
+        "http://[::1]:7717",
+        "null",
+        "http://localhost.evil.com:7717",
+    ],
+)
+def test_a_foreign_origin_is_refused(origin: str) -> None:
+    rejection = _read(host="localhost", origin=origin)
+    assert rejection is not None
+    assert rejection.status == 403
+    assert rejection.code == "origin_not_allowed"
+
+
+def test_a_read_without_an_origin_is_allowed() -> None:
+    """An EventSource on our own origin sends no Origin at all.
+
+    Refusing the missing header would break the stream the Dashboard exists
+    to provide; Host and the absent CORS header are what hold this case.
+    """
+    assert _read(host="localhost") is None
+
+
+def test_the_origin_check_is_exact_not_prefix_matched() -> None:
+    # Suffix matching here is how "http://localhost:7717.evil.com" would
+    # become an allowed origin.
+    assert normalize_origin("http://localhost:7717.evil.com") not in (
+        _guard().allowed_origins
+    )
+
+
+# --- the CSRF layer --------------------------------------------------------
+
+
+def _valid_write(**kwargs: str):
+    base = {
+        "host": "localhost",
+        CSRF_HEADER: TOKEN,
+        "content-type": JSON_CONTENT_TYPE,
+        "content-length": "17",
+    }
+    base.update(kwargs)
+    return base
+
+
+def test_a_write_with_the_process_token_is_allowed() -> None:
+    assert _write(**_valid_write()) is None
+
+
+def test_a_write_without_a_token_is_refused() -> None:
+    headers = _valid_write()
+    del headers[CSRF_HEADER]
+    rejection = _write(**headers)
+    assert rejection is not None
+    assert rejection.status == 403
+    assert rejection.code == "csrf_rejected"
+
+
+def test_a_write_with_the_wrong_token_is_refused() -> None:
+    rejection = _write(**_valid_write(**{CSRF_HEADER: TOKEN[:-1] + "x"}))
+    assert rejection is not None
+    assert rejection.code == "csrf_rejected"
+
+
+def test_a_read_is_never_asked_for_a_token() -> None:
+    """An EventSource cannot set request headers.
+
+    Writes are guarded by the token precisely because reads cannot be; if a
+    read needed one, the stream would be impossible.
+    """
+    assert _read(host="localhost") is None
+
+
+# --- the body layer --------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "content_type",
+    ["application/json", "application/json; charset=utf-8", "APPLICATION/JSON"],
+)
+def test_a_json_write_is_allowed(content_type: str) -> None:
+    assert _write(**_valid_write(**{"content-type": content_type})) is None
+
+
+@pytest.mark.parametrize(
+    "content_type",
+    [
+        "text/plain",
+        # Form posts are exactly the cross-origin write CSRF exists to stop:
+        # a browser will send them without a preflight.
+        "application/x-www-form-urlencoded",
+        "multipart/form-data",
+        "text/html",
+        "",
+    ],
+)
+def test_a_non_json_write_is_refused(content_type: str) -> None:
+    rejection = _write(**_valid_write(**{"content-type": content_type}))
+    assert rejection is not None
+    assert rejection.status == 415
+    assert rejection.code == "content_type_not_allowed"
+
+
+def test_a_write_without_a_content_length_is_refused_before_reading() -> None:
+    headers = _valid_write()
+    del headers["content-length"]
+    rejection = _write(**headers)
+    assert rejection is not None
+    assert rejection.status == 411
+    assert rejection.code == "length_required"
+
+
+def test_a_write_over_the_body_limit_is_refused_before_reading() -> None:
+    rejection = _write(**_valid_write(**{"content-length": str(MAX_BODY_BYTES + 1)}))
+    assert rejection is not None
+    assert rejection.status == 413
+    assert rejection.code == "body_too_large"
+
+
+def test_the_body_limit_is_the_limit_not_a_suggestion() -> None:
+    assert _write(**_valid_write(**{"content-length": str(MAX_BODY_BYTES)})) is None
+
+
+@pytest.mark.parametrize("length", ["-1", "lots", "1.5", ""])
+def test_a_content_length_that_is_not_a_byte_count_is_refused(length: str) -> None:
+    rejection = _write(**_valid_write(**{"content-length": length}))
+    assert rejection is not None
+    assert rejection.code == "bad_content_length"
+
+
+def test_headers_are_matched_without_regard_to_case() -> None:
+    # HTTP header names are case-insensitive; a guard that compared them
+    # literally would reject legitimate requests from some clients and,
+    # worse, accept a differently-cased look-alike from others.
+    mixed = {key.upper(): value for key, value in _valid_write().items()}
+    assert _guard().check(method="POST", headers=_Headers(mixed)) is None

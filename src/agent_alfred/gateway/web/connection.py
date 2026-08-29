@@ -1,0 +1,292 @@
+"""One SSE connection: its bounded queue, its writer thread, its socket.
+
+Backpressure is a *per-connection* property, so each connection owns a queue
+and a thread that does the writing. A background tab that stops consuming
+therefore fills its own queue and nobody else's -- with one shared queue a
+slow tab would starve the foreground one, and "drop transients, close on a
+replayable overflow" could not be made to punish only the slow one.
+
+Two rules shape everything here:
+
+- **Nothing that emits may do IO.** :meth:`ConnectionQueue.offer` is O(1) and
+  never touches the socket. A connection that must be closed is *marked* and
+  handed a sentinel; its own writer thread performs the close.
+- **The socket has exactly one owner.** :class:`SocketConnection` is it. The
+  HTTP handler thread hands the socket over and never closes it, so there is
+  no second close racing the writer's.
+"""
+
+from __future__ import annotations
+
+import queue
+import socket
+import threading
+from dataclasses import dataclass
+from typing import Literal, Protocol
+
+from agent_alfred.clock import Clock
+from agent_alfred.gateway.web import frames
+
+# The decided capacity table: frames *and* encoded bytes, counted together.
+DEFAULT_MAX_FRAMES = 512
+DEFAULT_MAX_BYTES = 8 * 1024 * 1024
+# 15 s: long enough to be free, short enough to notice a dead peer. The write
+# is what discovers a closed socket -- without it an idle connection thread
+# would sit on get() forever and leak.
+DEFAULT_HEARTBEAT_S = 15.0
+
+
+class SSEConnection(Protocol):
+    """The only IO point of a connection."""
+
+    def write(self, data: bytes) -> None: ...
+
+    def close(self) -> None: ...
+
+
+class FakeConnection:
+    """Records everything written. Drives the same code a socket would."""
+
+    def __init__(self) -> None:
+        self.writes: list[bytes] = []
+        self.closed = False
+
+    @property
+    def written(self) -> bytes:
+        return b"".join(self.writes)
+
+    def write(self, data: bytes) -> None:
+        self.writes.append(data)
+
+    def close(self) -> None:
+        self.closed = True
+
+
+class SocketConnection:
+    """Owns the socket: it writes, it flushes, it is the only closer.
+
+    Closing is idempotent and best-effort. A peer that already vanished makes
+    ``shutdown`` fail and that is not our problem -- the point of closing is
+    to release the descriptor, which happens either way.
+    """
+
+    def __init__(self, sock: socket.socket, wfile, *, lock=None):
+        self._sock = sock
+        self._wfile = wfile
+        self._lock = lock or threading.Lock()
+        self._closed = False
+
+    def write(self, data: bytes) -> None:
+        with self._lock:
+            self._wfile.write(data)
+            self._wfile.flush()
+
+    def close(self) -> None:
+        with self._lock:
+            if self._closed:
+                return
+            self._closed = True
+        try:
+            self._wfile.flush()
+        except Exception:  # noqa: BLE001 - a dead peer cannot block the close
+            pass
+        try:
+            self._sock.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+        finally:
+            self._sock.close()
+
+
+@dataclass(frozen=True)
+class CloseConnection:
+    """Sentinel: stop after this, optionally raising the client's backoff."""
+
+    retry_ms: int | None = None
+
+
+@dataclass(frozen=True)
+class StopWriter:
+    """Sentinel: the writer thread should return."""
+
+
+@dataclass(frozen=True)
+class OfferOutcome:
+    kind: Literal["accepted", "dropped", "overflowed"]
+    # Transients this connection missed since the last successful offer.
+    # Reported once, on recovery: the notice belongs after the frames that
+    # were dropped and before the ones that were not.
+    recovered_dropped: int = 0
+
+
+class ConnectionQueue:
+    """The per-connection bounded queue. Frames and encoded bytes, both counted.
+
+    The underlying queue is unbounded on purpose: the capacity that matters is
+    ours, counted in the two units the decision named, and a sentinel that
+    closes the connection must never be refused for want of room.
+    """
+
+    def __init__(
+        self,
+        *,
+        max_frames: int = DEFAULT_MAX_FRAMES,
+        max_bytes: int = DEFAULT_MAX_BYTES,
+    ):
+        if max_frames < 1:
+            raise ValueError("max_frames must be >= 1")
+        if max_bytes < 1:
+            raise ValueError("max_bytes must be >= 1")
+        self.max_frames = max_frames
+        self.max_bytes = max_bytes
+        self._items: queue.SimpleQueue = queue.SimpleQueue()
+        self._lock = threading.Lock()
+        self._frames = 0
+        self._bytes = 0
+        self._dropped = 0
+        self._closing = False
+
+    @property
+    def close_requested(self) -> bool:
+        with self._lock:
+            return self._closing
+
+    def offer(self, item: frames.PreparedFrames) -> OfferOutcome:
+        """Queue one logical event. O(1), non-blocking, no IO.
+
+        A transient event that does not fit is dropped and counted -- it is
+        presentation, and its audit value rides in the terminal snapshot.
+        Anything undroppable (a replayable event, a state patch) closes the
+        connection instead: a replayable event is already in the replay ring,
+        so reconnecting with the client's ``Last-Event-ID`` recovers it
+        exactly, and a lost state patch is corrected by the snapshot a
+        reconnect asks for. Dropping either would leave the client with a
+        hole it cannot see.
+        """
+        with self._lock:
+            if self._closing:
+                return OfferOutcome(kind="dropped")
+            fits = (
+                self._frames + len(item.frames) <= self.max_frames
+                and self._bytes + item.byte_size <= self.max_bytes
+            )
+            if fits:
+                self._items.put(item)
+                self._frames += len(item.frames)
+                self._bytes += item.byte_size
+                dropped, self._dropped = self._dropped, 0
+                return OfferOutcome(kind="accepted", recovered_dropped=dropped)
+            if item.replayable or item.must_deliver:
+                self._closing = True
+                self._items.put(
+                    CloseConnection(retry_ms=frames.BACKOFF_RETRY_MS)
+                )
+                return OfferOutcome(kind="overflowed")
+            self._dropped += 1
+            return OfferOutcome(kind="dropped")
+
+    def prime(self, item: frames.PreparedFrames) -> None:
+        """Queue the opening sequence, bypassing capacity.
+
+        Used only for the frames that tell a client where it is (retry,
+        re-seed, gap notice, snapshot). They are bounded by construction and
+        dropping one would leave the browser rendering a state it cannot
+        name, so they are not candidates for shedding under backpressure.
+        """
+        self._items.put(item)
+        with self._lock:
+            self._frames += len(item.frames)
+            self._bytes += item.byte_size
+
+    def request_close(self, *, retry_ms: int | None = None) -> None:
+        """Ask the writer thread to hang up. Never closes anything here."""
+        with self._lock:
+            if self._closing:
+                return
+            self._closing = True
+            self._items.put(CloseConnection(retry_ms=retry_ms))
+
+    def stop(self) -> None:
+        self._items.put(StopWriter())
+
+    def take(self, timeout: float):
+        """Take the next item, or raise ``queue.Empty`` after ``timeout``."""
+        item = self._items.get(timeout=timeout)
+        if isinstance(item, frames.PreparedFrames):
+            with self._lock:
+                self._frames -= len(item.frames)
+                self._bytes -= item.byte_size
+        return item
+
+
+class ConnectionSource(Protocol):
+    def take(self, timeout: float): ...
+
+    def stop(self) -> None: ...
+
+
+class ConnectionWriter:
+    """The connection's own thread: take, write, heartbeat, close.
+
+    The clock and the source are injected so a heartbeat can be tested
+    deterministically -- a test must never wait fifteen seconds to find out
+    whether a comment line was written.
+    """
+
+    def __init__(
+        self,
+        *,
+        connection: SSEConnection,
+        source: ConnectionSource,
+        clock: Clock,
+        heartbeat_s: float = DEFAULT_HEARTBEAT_S,
+    ):
+        self._connection = connection
+        self._source = source
+        self._clock = clock
+        self._heartbeat_s = heartbeat_s
+        self._last_write = clock.monotonic()
+        self.failure: BaseException | None = None
+
+    def stop(self) -> None:
+        """Ask the thread to return. Safe from any thread."""
+        self._source.stop()
+
+    def run(self) -> None:
+        """Block until told to stop, then close the connection exactly once."""
+        try:
+            while True:
+                try:
+                    item = self._source.take(self._heartbeat_s)
+                except queue.Empty:
+                    self._maybe_heartbeat()
+                    continue
+                if isinstance(item, StopWriter):
+                    return
+                if isinstance(item, CloseConnection):
+                    # The raised backoff is written before hanging up: a
+                    # degraded delivery that reconnected immediately would be
+                    # a reconnect storm rather than a backoff.
+                    if item.retry_ms is not None:
+                        self._write(frames.retry_frame(item.retry_ms).wire_bytes())
+                    return
+                self._write(item.wire_bytes())
+        except OSError as exc:
+            # The peer is gone. That is not a fault in this process and it is
+            # not news: the connection is closing either way. Recorded rather
+            # than swallowed, and never re-raised -- an unhandled exception
+            # here would only print a traceback for a browser that left.
+            self.failure = exc
+        finally:
+            self._connection.close()
+
+    def _maybe_heartbeat(self) -> None:
+        now = self._clock.monotonic()
+        if now - self._last_write < self._heartbeat_s:
+            # A timeout that returned early is not an interval.
+            return
+        self._write(frames.heartbeat_frame().wire_bytes())
+
+    def _write(self, data: bytes) -> None:
+        self._connection.write(data)
+        self._last_write = self._clock.monotonic()

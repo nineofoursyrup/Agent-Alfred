@@ -12,10 +12,11 @@ from dataclasses import replace
 
 from agent_alfred import schema
 from agent_alfred.clock import Clock, format_instant
-from agent_alfred.events import FanOutSink
+from agent_alfred.events import FanOutSink, Notice
 from agent_alfred.loop.assistant import Assistant, LoopResult
 from agent_alfred.model import ModelClientFactory
 from agent_alfred.redact import Redactor
+from agent_alfred.runtime import runs
 from agent_alfred.runtime import sessions as session_store
 from agent_alfred.runtime.admission import RunAdmission
 from agent_alfred.runtime.config import (
@@ -92,6 +93,7 @@ class RuntimeHost:
         after_recorded_snapshot: threading.Event | None = None,
         before_recording_failed: threading.Event | None = None,
         snapshot_provider: ConfigSnapshotProvider | None = None,
+        snapshot_listener: Callable[[RuntimeSnapshot], None] | None = None,
     ):
         self._conn = conn
         self._factory = factory
@@ -102,7 +104,7 @@ class RuntimeHost:
         self._redactor = redactor or Redactor(secrets)
         self._fanout.bind_redactor(self._redactor)
         self._assistant = Assistant(clock=clock, settings=settings)
-        self._states = RunStateStore(process_instance_id)
+        self._states = RunStateStore(process_instance_id, listener=snapshot_listener)
         self._lock = threading.Lock()
         # Admission, execution and recording decisions move under self._lock.
         # The lifecycle below moves under its own lock, and the two are only
@@ -560,6 +562,79 @@ class RuntimeHost:
                 title_max_chars=self._settings.prompt_preview_max_chars,
                 recording_failed_run_ids=recording_failed,
             )
+
+    def session_exists(self, session_id: str | None) -> bool:
+        """Whether a Session row exists. A question, not a projection.
+
+        The Dashboard asks this on every SSE connection to fill the snapshot's
+        "this connection's Session is still valid" field. It is deliberately
+        the cheapest possible read: the answer is a row count, and no title,
+        message or Run is derived from it.
+        """
+        if session_id is None:
+            return False
+        with self._db_lock:
+            row = self._conn.execute(
+                "SELECT 1 FROM sessions WHERE session_id = ?", (session_id,)
+            ).fetchone()
+        return row is not None
+
+    def list_runs(
+        self,
+        *,
+        filter: str = "all",
+        limit: int = 25,
+        cursor: str | None = None,
+    ) -> runs.RunPage:
+        """The runs page: terminal Runs paged, the live Run pinned."""
+        with self._db_lock:
+            return runs.list_runs(
+                self._conn,
+                filter=filter,
+                limit=limit,
+                cursor=cursor,
+                redactor=self._redactor,
+            )
+
+    def locate_run(self, run_id: str, *, limit: int = 25) -> runs.RunPage | None:
+        """The page a deep link to one Run should open on."""
+        with self._db_lock:
+            return runs.locate_run(
+                self._conn, run_id=run_id, limit=limit, redactor=self._redactor
+            )
+
+    def mainbar_pairs(
+        self,
+        *,
+        limit: int = runs.DEFAULT_MAINBAR_LIMIT,
+        cursor: str | None = None,
+    ) -> runs.MainBarPage:
+        """The MainBar's message pairs for recorded chat Runs."""
+        with self._db_lock:
+            return runs.mainbar_pairs(
+                self._conn,
+                limit=limit,
+                cursor=cursor,
+                redactor=self._redactor,
+            )
+
+    def note_sink_disabled(self, sink: str, stage: str) -> None:
+        """A transport reporting that it stopped working.
+
+        This is the one process-level fact a transport owns (#23 §9): the
+        dispatcher or the replay ring failing is not any single connection's
+        problem, so it is not a transport notice -- it is a domain notice,
+        like any other. It lands in the trace, it takes a seq, and every
+        browser is told, because a stream that silently stopped publishing
+        is worse than one that says so.
+        """
+        self._fanout.emit(
+            Notice(
+                level="error",
+                code="sink_disabled",
+                detail=(("sink", sink), ("stage", stage)),
+            )
+        )
 
     def submit(self, request: SubmitRequest) -> SubmitResult:
         return self._admission.submit(request)

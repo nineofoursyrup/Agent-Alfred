@@ -1,0 +1,224 @@
+"""The request-time defences: Host, Origin, CSRF, and body shape.
+
+ADR-0014 separates four layers, and each of them defends against something
+the others cannot see:
+
+- binding only the loopback address limits **who can connect**, not which
+  page can make the browser connect;
+- the **Host** check stops DNS rebinding, which is precisely an attack on the
+  assumption "they can only connect from localhost";
+- the **Origin** check stops a cross-origin page from *reading*, which is
+  what an ``EventSource`` or a ``fetch`` in someone else's tab would do;
+- the **CSRF token** stops a cross-origin page from *writing*, which is the
+  one thing the other three cannot prevent, because a simple POST needs no
+  permission from us to be sent.
+
+They are kept in one module because they are one decision seen from four
+sides, and because the temptation to "simplify" by dropping one layer is
+exactly how the whole set stops being a defence.
+
+The one header that must never appear is ``Access-Control-Allow-Origin``.
+A cross-origin ``EventSource`` gets no data precisely because that header is
+absent; adding it, even with ``*``, removes the Origin layer silently. This
+module never sets it and there is no code path that adds it.
+"""
+
+from __future__ import annotations
+
+import hmac
+from dataclasses import dataclass
+from typing import Mapping
+
+# A chat message larger than this is not a chat message. The limit is checked
+# from Content-Length *before* the body is read: reading first and rejecting
+# second would let any caller pin the memory with one request.
+MAX_BODY_BYTES = 1024 * 1024
+
+# Every method that changes state. A GET is never asked for a token, because
+# an EventSource cannot set request headers -- reads are held by Host and
+# Origin instead, and that is the whole reason those two layers exist.
+WRITE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+CSRF_HEADER = "x-agent-alfred-csrf"
+JSON_CONTENT_TYPE = "application/json"
+
+# The Host names that mean "this machine". Exactly two, because we bind IPv4
+# loopback only: a name that cannot reach the listener has no business being
+# in a whitelist, and listing it would only suggest it is supported.
+ALLOWED_HOST_NAMES = frozenset({"127.0.0.1", "localhost"})
+
+__all__ = [
+    "ALLOWED_HOST_NAMES",
+    "CSRF_HEADER",
+    "JSON_CONTENT_TYPE",
+    "MAX_BODY_BYTES",
+    "WRITE_METHODS",
+    "Rejection",
+    "RequestGuard",
+    "normalize_host",
+    "normalize_origin",
+]
+
+
+def normalize_host(value: str) -> str | None:
+    """Reduce a Host header to the bare name it names, or None if it lies.
+
+    Normalization is what makes the comparison mean anything. A browser
+    treats ``LOCALHOST:7717``, ``localhost.`` and ``localhost`` as the same
+    origin, so a check that compared raw strings would either reject
+    legitimate requests or accept a look-alike -- and a look-alike is all a
+    rebinding attack needs.
+
+    ``None`` means the value is not a host:port pair at all, which covers
+    userinfo (``evil.com@127.0.0.1``), paths, and malformed ports. Each of
+    those is a refusal rather than a best-effort parse.
+    """
+    text = value.strip().lower()
+    if not text:
+        return None
+    if "@" in text or "/" in text or "\\" in text or "?" in text:
+        return None
+    if text.startswith("["):
+        # An IPv6 literal: [::1] or [::1]:7717. No name inside the brackets
+        # is ever compared, because none of them is a loopback name we bind.
+        end = text.find("]")
+        if end < 0:
+            return None
+        host = text[: end + 1]
+        rest = text[end + 1 :]
+        if rest and not rest.startswith(":"):
+            return None
+        return host
+    if text.count(":") > 1:
+        # More than one colon and no brackets is not a host:port pair.
+        return None
+    host, _, port = text.partition(":")
+    if port and not port.isdigit():
+        return None
+    host = host.rstrip(".")
+    if not host:
+        return None
+    return host
+
+
+def normalize_origin(value: str) -> str | None:
+    """Normalize an Origin just enough to compare it exactly.
+
+    Only a trailing slash is removed, because that is the one variation
+    browsers emit for the same origin. Case, scheme, host and port are left
+    alone: normalizing those would be how ``http://127.0.0.1:7717`` and some
+    other address quietly became the same string.
+    """
+    text = value.strip()
+    if not text:
+        return None
+    return text.rstrip("/")
+
+
+@dataclass(frozen=True)
+class Rejection:
+    """Why a request is refused. ``code`` is the machine-readable reason."""
+
+    status: int
+    code: str
+    detail: str
+
+
+class RequestGuard:
+    """Decides whether one request may proceed. Pure: no IO, no state."""
+
+    def __init__(self, *, port: int, csrf_token: str):
+        self._port = port
+        self._csrf_token = csrf_token
+        # Exactly two entries: the port this instance actually bound. No
+        # "[::1]" -- we do not listen on IPv6, so an entry for it would only
+        # advertise a way in that does not exist.
+        self._origins = frozenset(
+            {
+                f"http://127.0.0.1:{port}",
+                f"http://localhost:{port}",
+            }
+        )
+
+    @property
+    def csrf_token(self) -> str:
+        return self._csrf_token
+
+    @property
+    def allowed_origins(self) -> frozenset[str]:
+        return self._origins
+
+    def check(self, *, method: str, headers: Mapping[str, str]) -> Rejection | None:
+        """None means allowed. The first failing layer names the refusal."""
+        host = _header(headers, "host")
+        if host is None:
+            return Rejection(
+                400, "missing_host", "a Host header is required on every request"
+            )
+        name = normalize_host(host)
+        if name is None or name not in ALLOWED_HOST_NAMES:
+            return Rejection(
+                400,
+                "host_not_allowed",
+                "the Host header does not name this machine",
+            )
+        origin = _header(headers, "origin")
+        if origin is not None and normalize_origin(origin) not in self._origins:
+            # 403 rather than 400: the request was well formed, it came from
+            # somewhere we do not answer. The body says nothing about what
+            # the whitelist contains, so a probe learns nothing.
+            return Rejection(
+                403, "origin_not_allowed", "the Origin is not this Dashboard"
+            )
+        if method.upper() in WRITE_METHODS:
+            return self._check_write(headers)
+        return None
+
+    def _check_write(self, headers: Mapping[str, str]) -> Rejection | None:
+        token = _header(headers, CSRF_HEADER)
+        if token is None or not hmac.compare_digest(token, self._csrf_token):
+            return Rejection(
+                403, "csrf_rejected", "a valid CSRF token is required to write"
+            )
+        content_type = (_header(headers, "content-type") or "").split(";")[0]
+        if content_type.strip().lower() != JSON_CONTENT_TYPE:
+            return Rejection(
+                415,
+                "content_type_not_allowed",
+                f"writes must be {JSON_CONTENT_TYPE}",
+            )
+        raw = _header(headers, "content-length")
+        if raw is None:
+            return Rejection(
+                411, "length_required", "a Content-Length is required to write"
+            )
+        text = raw.strip()
+        if not text.isdigit():
+            return Rejection(
+                400, "bad_content_length", "Content-Length is not a byte count"
+            )
+        if int(text) > MAX_BODY_BYTES:
+            return Rejection(
+                413,
+                "body_too_large",
+                f"the body may be at most {MAX_BODY_BYTES} bytes",
+            )
+        return None
+
+
+def _header(headers: Mapping[str, str], name: str) -> str | None:
+    """One header, case-insensitively.
+
+    Called with a mapping rather than ``email.message.Message`` so the guard
+    can be tested with a plain dict: the defence is the decision, not the
+    parsing of the wire.
+    """
+    value = headers.get(name)
+    if value is None:
+        value = headers.get(name.title())
+    if value is None:
+        target = name.lower()
+        for key, candidate in headers.items():
+            if key.lower() == target:
+                return candidate
+    return value

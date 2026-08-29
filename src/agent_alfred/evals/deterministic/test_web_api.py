@@ -1,0 +1,579 @@
+"""The HTTP contract of the Dashboard API, without a socket.
+
+The interesting assertions here are the ones about *when* each status is
+reachable: 202 only after the lease, the committed accepted row and the
+handoff have all happened; 409 while the lease is still held, including while
+the recording is pending; 503 only once ``recording_failed`` has landed. A
+failure to persist or to hand off is never allowed to look like an accepted
+Run -- a 202 for a Run nobody is running is worse than an error, because it
+is a promise the client will wait on.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+import pytest
+
+from agent_alfred.gateway.web.api import (
+    STAGE_SAVING,
+    DashboardApi,
+    MutationGate,
+    busy_summary_from,
+    safe_navigation,
+)
+from agent_alfred.runtime.sessions import (
+    SessionInboxPage,
+    SessionMessagesPage,
+    SessionNotFound,
+    SessionSummary,
+)
+from agent_alfred.runtime.snapshot import (
+    ActiveRunSummary,
+    RuntimeSnapshot,
+    UnrecordedTerminalProjection,
+)
+from agent_alfred.runtime.work import SubmitRequest, SubmitResult
+
+INSTANCE = "proc-api"
+
+
+def _snapshot(
+    *,
+    coordinator_state: str = "idle",
+    active_run: ActiveRunSummary | None = None,
+    projection: UnrecordedTerminalProjection | None = None,
+    revision: int = 0,
+) -> RuntimeSnapshot:
+    return RuntimeSnapshot(
+        process_instance_id=INSTANCE,
+        state_revision=revision,
+        coordinator_state=coordinator_state,  # type: ignore[arg-type]
+        active_run=active_run,
+        unrecorded_terminal_projection=projection,
+    )
+
+
+def _active(**kwargs: Any) -> ActiveRunSummary:
+    base: dict[str, Any] = {
+        "run_id": "r1",
+        "purpose": "chat",
+        "gateway": "web",
+        "phase": "running",
+        "session_id": "s1",
+        "prompt_preview": "hello",
+        "started_at": "2026-08-27T12:00:00Z",
+        "recording_state": None,
+        "current_step": 2,
+    }
+    base.update(kwargs)
+    return ActiveRunSummary(**base)
+
+
+@dataclass
+class _Facade:
+    """Records what it was asked and answers with whatever the test set."""
+
+    result: SubmitResult
+    state: RuntimeSnapshot
+    known_sessions: frozenset[str] = frozenset({"s1"})
+    created: list[str] | None = None
+    requests: list[SubmitRequest] | None = None
+
+    def __post_init__(self) -> None:
+        self.created = []
+        self.requests = []
+        self.run_queries: list[tuple[str, int, str | None]] = []
+
+    def create_session(self) -> str:
+        session_id = "new-session"
+        self.created.append(session_id)
+        return session_id
+
+    def submit(self, request: SubmitRequest) -> SubmitResult:
+        assert self.requests is not None
+        self.requests.append(request)
+        return self.result
+
+    def session_exists(self, session_id: str) -> bool:
+        return session_id in self.known_sessions
+
+    def snapshot(self) -> RuntimeSnapshot:
+        return self.state
+
+    def list_sessions(self, *, limit: int, cursor: str | None = None):
+        return SessionInboxPage(
+            sessions=(
+                SessionSummary("s1", "2026-08-27T12:00:00Z", 3, "title"),
+            ),
+            next_cursor=None,
+        )
+
+    def open_session(
+        self, session_id: str, *, page_size: int, cursor: str | None = None
+    ):
+        if session_id not in self.known_sessions:
+            raise SessionNotFound(session_id)
+        return SessionMessagesPage(
+            session_id=session_id,
+            title="title",
+            messages=(),
+            next_cursor=None,
+        )
+
+    def list_runs(self, *, filter: str, limit: int, cursor: str | None = None):
+        assert self.run_queries is not None
+        self.run_queries.append((filter, limit, cursor))
+        return _page(filter)
+
+    def locate_run(self, run_id: str, *, limit: int):
+        return None if run_id == "missing" else _page("chat")
+
+    def mainbar_pairs(self, *, limit: int, cursor: str | None = None):
+        return _pairs()
+
+
+def _page(filter_name: str):
+    from agent_alfred.runtime.runs import RunPage, RunSummary
+
+    return RunPage(
+        filter=filter_name,
+        runs=(
+            RunSummary(
+                run_id="r1",
+                purpose="chat",
+                filter=filter_name,
+                purpose_known=True,
+                session_id="s1",
+                gateway="web",
+                entry_surface_id=None,
+                prompt_preview="hi",
+                phase="finished",
+                outcome="completed",
+                accepted_at="2026-08-27T12:00:00Z",
+                started_at="2026-08-27T12:00:00Z",
+                finished_at="2026-08-27T12:00:01Z",
+                activity_revision=7,
+            ),
+        ),
+        non_terminal=None,
+        next_cursor=None,
+    )
+
+
+def _pairs():
+    from agent_alfred.messages import text_message
+    from agent_alfred.runtime.runs import MainBarPage, MainBarPair
+
+    return MainBarPage(
+        pairs=(
+            MainBarPair(
+                run_id="r1",
+                activity_revision=7,
+                session_id="s1",
+                created_at="2026-08-27T12:00:00Z",
+                user_message=text_message("user", "hello"),
+                assistant_message=text_message("assistant", "hi there"),
+            ),
+        ),
+        next_cursor=None,
+    )
+
+
+def _api(result: SubmitResult, snapshot: RuntimeSnapshot | None = None):
+    return DashboardApi(
+        facade=_Facade(
+            result=result,
+            state=snapshot if snapshot is not None else _snapshot(),
+        )
+    )
+
+
+def _accepted() -> SubmitResult:
+    return SubmitResult(kind="accepted", run_id="r1", session_id="s1")
+
+
+# --- the 202 ----------------------------------------------------------------
+
+
+def test_an_accepted_run_answers_202_with_its_run_id() -> None:
+    api = _api(_accepted())
+    outcome = api.submit({"message": "hello"})
+    assert outcome.status == 202
+    assert outcome.run_id == "r1"
+    assert outcome.session_id == "s1"
+    assert outcome.code is None
+
+
+def test_202_comes_only_from_the_coordinators_accepted_kind() -> None:
+    """The mapping is the contract.
+
+    ``accepted`` is set by admission only after the lease was reserved, the
+    accepted row committed and the work item handed to the single execution
+    thread, so "202" is a statement about all three -- not just about the
+    request having been understood.
+    """
+    for kind in ("run_in_progress", "recording_unavailable", "admission_failed"):
+        outcome = _api(SubmitResult(kind=kind)).submit({"message": "hello"})  # type: ignore[arg-type]
+        assert outcome.status != 202, f"{kind} must never answer 202"
+
+
+def test_a_failed_persist_or_handoff_never_looks_accepted() -> None:
+    # A 202 here would tell the browser to wait for a Run nobody is running.
+    outcome = _api(SubmitResult(kind="admission_failed")).submit({"message": "hi"})
+    assert outcome.status == 500
+    assert outcome.code == "admission_failed"
+    assert outcome.run_id is None
+
+
+# --- the 409 ----------------------------------------------------------------
+
+
+def test_a_second_run_while_one_is_in_flight_is_409() -> None:
+    snapshot = _snapshot(
+        coordinator_state="running", active_run=_active(phase="running")
+    )
+    outcome = _api(
+        SubmitResult(kind="run_in_progress", snapshot=snapshot)
+    ).submit({"message": "hi"})
+    assert outcome.status == 409
+    assert outcome.code == "run_in_progress"
+    assert outcome.busy is not None
+    assert outcome.busy.run_id == "r1"
+
+
+def test_recording_pending_is_409_and_says_it_is_saving() -> None:
+    """The #30 补正一 closure.
+
+    A Run whose reply exists but whose recording has not settled still holds
+    the only admission lease, so the second submit gets the existing 409 --
+    not a new status code -- and the card says what it is waiting for.
+    """
+    snapshot = _snapshot(
+        coordinator_state="recording_pending",
+        active_run=_active(phase="finished", outcome="completed"),
+        revision=5,
+    )
+    outcome = _api(
+        SubmitResult(kind="run_in_progress", snapshot=snapshot)
+    ).submit({"message": "hi"})
+    assert outcome.status == 409
+    assert outcome.code == "run_in_progress"
+    assert outcome.busy is not None
+    assert outcome.busy.stage == STAGE_SAVING
+
+
+def test_the_saving_stage_is_not_claimed_while_the_run_is_merely_running() -> None:
+    snapshot = _snapshot(coordinator_state="running", active_run=_active())
+    assert busy_summary_from(snapshot) is not None
+    assert busy_summary_from(snapshot).stage == "运行中"
+
+
+# --- the 503 ----------------------------------------------------------------
+
+
+def test_recording_unavailable_answers_503() -> None:
+    snapshot = _snapshot(
+        coordinator_state="recording_failed",
+        active_run=_active(phase="finished", recording_state="failed"),
+        revision=9,
+    )
+    outcome = _api(
+        SubmitResult(kind="recording_unavailable", snapshot=snapshot)
+    ).submit({"message": "hi"})
+    assert outcome.status == 503
+    assert outcome.code == "recording_unavailable"
+
+
+def test_503_is_only_ever_the_failed_states_answer() -> None:
+    """The state lands before the answer does.
+
+    ``recording_unavailable`` is produced by the coordinator only once it has
+    reached ``recording_failed``, so a client can never be told recording is
+    unavailable while it is still merely pending.
+    """
+    pending = _snapshot(
+        coordinator_state="recording_pending", active_run=_active(phase="finished")
+    )
+    assert (
+        _api(SubmitResult(kind="run_in_progress", snapshot=pending))
+        .submit({"message": "hi"})
+        .status
+        == 409
+    )
+
+
+# --- the shared busy card ---------------------------------------------------
+
+
+def test_known_busy_and_raced_409_render_one_and_the_same_card() -> None:
+    """One shape, one renderer.
+
+    Two cards that differ in a field would make "busy" two states that look
+    identical on screen, and the client would have to guess which one it got.
+    """
+    snapshot = _snapshot(coordinator_state="running", active_run=_active())
+    from_race = _api(
+        SubmitResult(kind="run_in_progress", snapshot=snapshot)
+    ).submit({"message": "hi"})
+    from_prevention = busy_summary_from(snapshot)
+    assert from_race.busy is not None
+    assert from_race.busy.to_json() == from_prevention.to_json()
+
+
+def test_the_busy_card_carries_only_the_whitelisted_fields() -> None:
+    snapshot = _snapshot(coordinator_state="running", active_run=_active())
+    card = busy_summary_from(snapshot)
+    assert card is not None
+    # Exactly the whitelist: purpose, Gateway, start time, the nullable
+    # current Step, an optional preview, the stage, and one navigation
+    # target. The run id and the shelf are parts of that target, not two
+    # more fields the client has to know about.
+    assert set(card.to_json()) == {
+        "purpose",
+        "gateway",
+        "started_at",
+        "current_step",
+        "prompt_preview",
+        "stage",
+        "navigation",
+    }
+    assert set(card.to_json()["navigation"]) == {"href", "run_id", "filter"}
+
+
+def test_there_is_no_busy_card_when_nothing_is_running() -> None:
+    assert busy_summary_from(_snapshot()) is None
+
+
+def test_the_navigation_target_is_always_a_same_origin_path() -> None:
+    assert safe_navigation("r1", "chat") == "/runs/r1?filter=chat"
+    # An id carrying path or host syntax is escaped, and an unknown filter
+    # falls back rather than being passed through.
+    assert safe_navigation("../evil", "chat") == "/runs/..%2Fevil?filter=chat"
+    assert safe_navigation("r1", "javascript:alert(1)") == "/runs/r1?filter=all"
+    for value in ("r1", "a/b", "x?y=1#z"):
+        assert safe_navigation(value, "all").startswith("/runs/")
+        assert not safe_navigation(value, "all").startswith("//")
+
+
+# --- request validation -----------------------------------------------------
+
+
+@pytest.mark.parametrize("message", ["", "   ", None, 42, ["hi"]])
+def test_a_message_that_is_not_text_is_refused(message: Any) -> None:
+    outcome = _api(_accepted()).submit({"message": message})
+    assert outcome.status == 400
+    assert outcome.code == "empty_message"
+
+
+def test_an_unknown_purpose_is_refused_rather_than_escaped_in() -> None:
+    outcome = _api(_accepted()).submit({"message": "hi", "purpose": "nonsense"})
+    assert outcome.status == 400
+    assert outcome.code == "unknown_purpose"
+
+
+def test_a_system_purpose_is_accepted_and_travels_through() -> None:
+    api = _api(_accepted())
+    assert api.submit({"message": "hi", "purpose": "inference_probe"}).status == 202
+    facade = api._facade
+    assert facade.requests is not None
+    assert facade.requests[0].purpose == "inference_probe"
+
+
+def test_an_unknown_session_is_refused_before_admission_is_asked() -> None:
+    api = _api(_accepted())
+    outcome = api.submit({"message": "hi", "session_id": "nope"})
+    assert outcome.status == 404
+    assert outcome.code == "unknown_session"
+    facade = api._facade
+    assert facade.requests == []
+
+
+def test_the_submit_is_addressed_to_the_web_gateway() -> None:
+    api = _api(_accepted())
+    api.submit({"message": "hi", "session_id": "s1"})
+    facade = api._facade
+    assert facade.requests is not None
+    assert facade.requests[0].gateway == "web"
+    assert facade.requests[0].entry_surface_id == "mainbar"
+
+
+# --- sessions ---------------------------------------------------------------
+
+
+def test_the_server_signs_the_session_id_and_the_client_cannot_pick_one() -> None:
+    import inspect
+
+    api = _api(_accepted())
+    result = api.create_session()
+    assert result.session_id
+    # Not a knob: a caller-supplied id would let two Sessions collide into
+    # one, so the signature takes nothing at all.
+    assert not inspect.signature(DashboardApi.create_session).parameters.keys() - {
+        "self"
+    }
+    assert not inspect.signature(
+        DashboardApi.session_inbox
+    ).parameters.keys() - {"self", "params"}
+
+
+# --- reads ------------------------------------------------------------------
+
+
+def test_the_inbox_payload_is_flat_and_carries_the_cursor() -> None:
+    status, payload = _api(_accepted()).session_inbox({})
+    assert status == 200
+    assert payload["sessions"][0]["session_id"] == "s1"
+    assert payload["next_cursor"] is None
+
+
+def test_an_unknown_session_reads_404() -> None:
+    status, payload = _api(_accepted()).session_messages("nope", {})
+    assert status == 404
+    assert payload["code"] == "unknown_session"
+
+
+@pytest.mark.parametrize("filter_name", ["chat", "system", "all"])
+def test_every_closed_filter_is_accepted(filter_name: str) -> None:
+    status, payload = _api(_accepted()).runs_page({"filter": filter_name})
+    assert status == 200
+    assert payload["filter"] == filter_name
+
+
+def test_an_unknown_filter_is_refused_not_guessed() -> None:
+    status, payload = _api(_accepted()).runs_page({"filter": "nonsense"})
+    assert status == 400
+    assert payload["code"] == "unknown_filter"
+
+
+def test_the_runs_payload_keeps_the_live_run_out_of_the_page() -> None:
+    _status, payload = _api(_accepted()).runs_page({"filter": "chat"})
+    assert payload["non_terminal"] is None
+    assert [run["run_id"] for run in payload["runs"]] == ["r1"]
+
+
+def test_a_deep_link_locates_a_run_and_a_missing_one_404s() -> None:
+    api = _api(_accepted())
+    assert api.locate_run("r1", {})[0] == 200
+    assert api.locate_run("missing", {}) == (404, {"code": "unknown_run"})
+
+
+@pytest.mark.parametrize("raw,expected", [("0", 25), ("-3", 25), ("abc", 25)])
+def test_an_unusable_page_size_falls_back_to_the_default(
+    raw: str, expected: int
+) -> None:
+    api = _api(_accepted())
+    api.runs_page({"limit": raw})
+    facade = api._facade
+    assert facade.run_queries[0][1] == expected
+
+
+@pytest.mark.parametrize("raw,expected", [("99999", 100), ("7", 7), ("1", 1)])
+def test_the_page_size_is_clamped_not_trusted(raw: str, expected: int) -> None:
+    # An unclamped limit is a denial of service behind one query parameter.
+    api = _api(_accepted())
+    api.runs_page({"limit": raw})
+    facade = api._facade
+    assert facade.run_queries[0][1] == expected
+
+
+def test_the_mainbar_returns_one_pair_per_run_with_both_sides() -> None:
+    _status, payload = _api(_accepted()).mainbar({})
+    pair = payload["pairs"][0]
+    assert pair["run_id"] == "r1"
+    assert pair["user"][0]["text"] == "hello"
+    assert pair["assistant"][0]["text"] == "hi there"
+
+
+# --- block rendering --------------------------------------------------------
+
+
+def test_only_text_is_rendered_and_other_blocks_are_counted() -> None:
+    from agent_alfred.gateway.web.api import _block_json
+    from agent_alfred.messages import (
+        TextBlock,
+        ThinkingBlock,
+        ToolCallBlock,
+        ToolResultBlock,
+    )
+
+    assert _block_json(TextBlock("hi")) == {"type": "text", "text": "hi"}
+    assert _block_json(ThinkingBlock("secret reasoning")) == {"type": "thinking"}
+    assert _block_json(ToolCallBlock("c1", "t", {})) == {"type": "tool_call"}
+    result = _block_json(ToolResultBlock("c1", (TextBlock("out"),)))
+    assert result == {"type": "tool_result", "count": 1}
+
+
+# --- the write gate --------------------------------------------------------
+
+
+def test_every_write_goes_through_one_gate() -> None:
+    """#23 §4: locking chat alone is not serialisation.
+
+    The queue is the serial thing, so both writes pass the same door -- and
+    a future endpoint that changes memory or settings has one place to go.
+    """
+    api = _api(_accepted())
+    assert isinstance(api._gate, MutationGate)
+    assert api._gate is api._gate
+
+
+def test_the_gate_never_queues_a_write() -> None:
+    """Refused, not held.
+
+    A gate that blocked until the current write finished would be the queue
+    ADR-0016 forbids, wearing a different hat. The proof is that a re-entrant
+    write from inside a write returns a refusal instead of deadlocking.
+    """
+    api = _api(_accepted())
+    gate = api._gate
+
+    class Reentrant:
+        """A facade whose submit tries to create a Session while it runs."""
+
+        def __init__(self, inner):
+            self._inner = inner
+            self.observed = None
+
+        def submit(self, request):
+            self.observed = gate.create_session()
+            return self._inner.submit(request)
+
+        def __getattr__(self, name):
+            return getattr(self._inner, name)
+
+    reentrant = Reentrant(api._facade)
+    gate._facade = reentrant
+    outcome = api.submit({"message": "hi"})
+    # The inner write was refused rather than waited for.
+    assert reentrant.observed is None
+    # And the outer one still completed: a refusal is not a failure cascade.
+    assert outcome.status == 202
+
+
+def test_a_refused_session_creation_says_so() -> None:
+    api = _api(_accepted())
+    held = MutationGate(api._facade)
+    assert held._lock.acquire(blocking=False)
+    try:
+        result = DashboardApi(facade=api._facade, gate=held).create_session()
+    finally:
+        held._lock.release()
+    assert result.session_id is None
+    assert result.code == "write_in_progress"
+
+
+def test_a_refused_submit_is_never_an_accepted_run() -> None:
+    api = _api(_accepted())
+    held = MutationGate(api._facade)
+    assert held._lock.acquire(blocking=False)
+    try:
+        outcome = DashboardApi(facade=api._facade, gate=held).submit(
+            {"message": "hi"}
+        )
+    finally:
+        held._lock.release()
+    assert outcome.status == 503
+    assert outcome.code == "write_in_progress"
+    assert outcome.run_id is None
