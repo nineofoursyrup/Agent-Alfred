@@ -53,6 +53,11 @@ DEFAULT_PORT = 7717
 LOCK_NAME = "dashboard.lock"
 DESCRIPTOR_NAME = "dashboard.json"
 
+# The seam every thread-making step takes: a target, in; a started thread,
+# out. Injected so both failures of the step -- cannot be created, cannot be
+# started -- are reachable from a test.
+SpawnThread = Callable[[Callable[[], None]], Any]
+
 __all__ = [
     "DEFAULT_HOST",
     "DEFAULT_PORT",
@@ -60,6 +65,7 @@ __all__ = [
     "EntryDescriptor",
     "PortUnavailable",
     "ProcessLock",
+    "SpawnThread",
     "StateDirLocked",
     "read_entry_descriptor",
     "write_entry_descriptor",
@@ -421,7 +427,7 @@ class DashboardService:
         self._serving = True
         self._server.serve_forever()
 
-    def start_serving(self, spawn: Any = None) -> Any:
+    def start_serving(self, spawn: SpawnThread | None = None) -> Any:
         """Handle requests on a daemon thread; return it.
 
         Daemon because a Dashboard thread must never keep the interpreter
@@ -431,7 +437,9 @@ class DashboardService:
         ``spawn`` is the seam for the two ways this step can fail: a thread
         that cannot be created, and one that cannot be started. Both are
         failures of the last start-up step like any other, so the caller has
-        to be able to reach them without crashing the interpreter.
+        to be able to reach them without crashing the interpreter. It is the
+        same shape :class:`~agent_alfred.gateway.web.broker.SSEBroker` takes,
+        for the same reason.
 
         ``_serving`` is set only once the thread is actually running. It is
         what makes :meth:`stop_serving` call ``shutdown()``, and calling
@@ -440,10 +448,8 @@ class DashboardService:
         """
         if self._server is None:
             raise RuntimeError("DashboardService.start() must precede serving")
-        factory = spawn if spawn is not None else _default_spawn
-        thread = factory(
-            target=self._server.serve_forever, name="dashboard-http", daemon=True
-        )
+        factory = spawn if spawn is not None else _spawn_thread
+        thread = factory(self._server.serve_forever)
         thread.start()
         self._serving = True
         return thread
@@ -501,9 +507,15 @@ class DashboardService:
         self.close()
 
 
-def _default_spawn(**kwargs: Any) -> Any:
-    """The only thing that makes a serving thread, when nothing is injected."""
-    return threading.Thread(**kwargs)
+def _spawn_thread(target: Callable[[], None]) -> Any:
+    """The only thing that makes a serving thread, when nothing is injected.
+
+    Daemon and named here rather than at the call site: a Dashboard thread
+    has one shape, and the name is what shows up in a stack dump.
+    """
+    return threading.Thread(
+        target=target, name="dashboard-http", daemon=True
+    )
 
 
 def _default_server_factory(address: tuple[str, int], handler: Any) -> Any:

@@ -93,12 +93,14 @@ class _FakeHost:
         self.close_calls = 0
         self.start_calls = 0
         self.worker_uses = 0
+        self.saw_timeouts: list[float | None] = []
 
     def start(self) -> None:
         self.start_calls += 1
 
     def close(self, timeout: float | None = None) -> bool:
         self.close_calls += 1
+        self.saw_timeouts.append(timeout)
         self._trace.append("host_close")
         # A worker is still inside its Run. It reaches for the database
         # *while* the shutdown is being negotiated, which is exactly the
@@ -173,6 +175,7 @@ class _Rig:
         host_results: tuple[bool, ...] = (True,),
         broker_results: tuple[bool, ...] = (True,),
         spawn: Any = None,
+        rollback_timeout: float | None = None,
     ):
         self.tmp_path = Path(tmp_path)
         self.trace: list[str] = []
@@ -197,6 +200,7 @@ class _Rig:
             write_descriptor=self._write_descriptor,
             lock=self.lock,
             spawn=spawn,
+            rollback_timeout=rollback_timeout,
         )
 
     def _server_factory(self, address, handler):
@@ -351,7 +355,7 @@ class _SpawnThatRefuses:
     def __init__(self):
         self.calls = 0
 
-    def __call__(self, **kwargs):
+    def __call__(self, target):
         self.calls += 1
         raise RuntimeError("cannot create the serving thread")
 
@@ -365,7 +369,7 @@ class _SpawnThatStartsBadly:
     def __init__(self):
         self.calls = 0
 
-    def __call__(self, **kwargs):
+    def __call__(self, target):
         self.calls += 1
         return _ThreadThatWillNotStart()
 
@@ -397,6 +401,21 @@ def test_a_serving_thread_that_cannot_start_rolls_everything_back(tmp_path) -> N
     assert rig.lock.acquired is False
     assert read_entry_descriptor(tmp_path) is None
     assert rig.conn.close_calls == 1
+
+
+def test_a_rollback_is_bounded_by_what_the_caller_can_afford(tmp_path) -> None:
+    """Two: a failed start has to come back and say so.
+
+    The rollback holds the lifecycle lock while it waits for the Host, so an
+    unbounded wait would turn "the Dashboard could not start" into a hang
+    that no caller can distinguish from a slow start. The bound is a
+    constructor fact, and the Host is asked with exactly it.
+    """
+    rig = _Rig(tmp_path, spawn=_SpawnThatRefuses(), rollback_timeout=0.25)
+    with pytest.raises(RuntimeError):
+        rig.runtime.start()
+    assert rig.host is not None
+    assert rig.host.saw_timeouts == [0.25]
 
 
 def test_a_rollback_that_cannot_stop_the_host_keeps_the_lock(tmp_path) -> None:

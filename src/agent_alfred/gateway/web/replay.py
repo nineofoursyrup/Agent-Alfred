@@ -46,7 +46,11 @@ Below all three sits :data:`~agent_alfred.gateway.web.frames.STARTUP_CHECKPOINT_
 the reserved boundary before the first domain event. It names no event, so
 it is never "issued" and never replayable -- but a clean ring accepts it,
 because a ring that has lost nothing can prove continuity from the very
-beginning.
+beginning. *Contradicts ADR-0013's closing line* ("the cursor is a complete
+event checkpoint this process once issued"), but not the property that line
+exists to protect: the ring still refuses every positive seq it never
+issued, and zero is below the event sequence entirely rather than an
+arbitrary number inside it. See the constant for the full argument.
 
 Conflating the replayable checkpoint with the unrecoverable boundary is how
 a forged cursor for an event that was too large to store would be answered
@@ -286,12 +290,14 @@ class ReplayRing:
         if seq < self._unrecoverable_floor:
             return "too_old"
         if seq == STARTUP_CHECKPOINT_SEQ:
-            # The reserved boundary before the first domain event. Valid
-            # exactly while the ring has lost nothing -- a floor of zero is
-            # a ring that can prove continuity from the beginning. Once
-            # anything is unrecoverable, the check above has already called
-            # it ``too_old``, which is the honest answer: this process
-            # cannot prove what happened between there and here.
+            # The reserved boundary before the first domain event (the one
+            # deliberate departure from ADR-0013's "an issued complete event
+            # checkpoint", argued on the constant). Valid exactly while the
+            # ring has lost nothing -- a floor of zero is a ring that can
+            # prove continuity from the beginning. Once anything is
+            # unrecoverable, the check above has already called it
+            # ``too_old``, which is the honest answer: this process cannot
+            # prove what happened between there and here.
             return "valid"
         if seq in self._issued:
             return "valid"

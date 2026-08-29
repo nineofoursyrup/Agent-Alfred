@@ -20,9 +20,13 @@ The wire shape in one place:
   connection, which is the one shape that never receives a ``replay_gap``.
   The re-seed is a **boundary this process once stood at**, not a promise
   that everything past it is still replayable; on an empty ring it is the
-  reserved :data:`STARTUP_CHECKPOINT_SEQ`, which costs no event seq.
+  reserved :data:`STARTUP_CHECKPOINT_SEQ`, which costs no event seq. The
+  full argument lives on that constant, and the ring's side of it in
+  :mod:`agent_alfred.gateway.web.replay`.
 - ``id:`` appears only at a replayable *and* complete boundary: the last
-  frame of a replayable logical event, and nowhere else.
+  frame of a replayable logical event, and nowhere else -- with the one
+  exception of the reserved :data:`STARTUP_CHECKPOINT_SEQ` re-seed below,
+  which is a boundary with no event under it.
 - A logical event that does not fit one frame is split into consecutive
   frames carrying ``event_id`` / ``chunk_index`` / ``chunk_count``; the
   client concatenates the ``payload`` fragments and only then parses. One
@@ -61,6 +65,20 @@ BACKOFF_RETRY_MS = 3000
 # frame, so a stream with no ``id:`` leaves the browser holding an empty
 # buffer, and an empty buffer sends no ``Last-Event-ID`` on the next
 # connection, which is indistinguishable from a client that never connected.
+# (The re-seed itself is ADR-0013's, not this constant's idea.)
+#
+# _Contradicts ADR-0013, but only in its last line, and deliberately._ The
+# ADR ends by concluding that "the cursor is therefore a complete event
+# checkpoint this process once issued, not an arbitrary number that happens
+# to fall inside the numeric range". Zero is not one of those: it is below
+# the event sequence entirely, it names no event, and the ring still refuses
+# every positive seq it never issued -- so the property the ADR was
+# protecting (a forged in-range cursor cannot be answered "valid") is
+# untouched. What the ADR did not settle is what a stream plants when the
+# ring is empty and no checkpoint exists yet, and answering "nothing" is
+# what empties the client's id buffer and makes its next reconnect
+# indistinguishable from a first connection -- the one shape that never
+# receives a ``replay_gap``. The reserved boundary is the smaller break.
 #
 # It is defined here, beside the ``id:`` line's shape, because that is where
 # both producers of the line live: :func:`reseed_frame` and
@@ -209,10 +227,14 @@ def reseed_frame(process_instance_id: str, seq: int) -> PreparedFrames:
     position is resumable or too old. Planting one that turns out to be too
     old is the correct answer, because the alternative -- planting nothing --
     erases the client's cursor and with it the only thing that can ever
-    produce a ``replay_gap``.
+    produce a ``replay_gap``. The ring's half of the vocabulary is in
+    :mod:`agent_alfred.gateway.web.replay`.
 
     ``STARTUP_CHECKPOINT_SEQ`` is the one seq allowed here that no event
-    ever owned; anything below it is not a boundary of any kind.
+    ever owned; anything below it is not a boundary of any kind. It is also
+    the one value for which the trailing-line rule is relaxed, because it is
+    a boundary with no event under it rather than an event boundary (see the
+    ADR-0013 note on the constant).
     """
     if seq < STARTUP_CHECKPOINT_SEQ:
         raise ValueError(

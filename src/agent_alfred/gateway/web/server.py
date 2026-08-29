@@ -67,6 +67,7 @@ from agent_alfred.gateway.web.lifecycle import (
     DashboardService,
     EntryDescriptor,
     ProcessLock,
+    SpawnThread,
 )
 from agent_alfred.runtime.host import RuntimeHost
 from agent_alfred.runtime.work import SubmitRequest, SubmitResult
@@ -163,7 +164,8 @@ class DashboardRuntime:
         write_descriptor: Callable[[Path, EntryDescriptor], Path] | None = None,
         lock: ProcessLock | None = None,
         pid: int | None = None,
-        spawn: Any = None,
+        spawn: SpawnThread | None = None,
+        rollback_timeout: float | None = None,
     ):
         self._state_dir = state_dir
         self._assemble = assemble
@@ -196,6 +198,13 @@ class DashboardRuntime:
         # that cannot be created, and one that cannot be started. Both are
         # failures like any other and both undo steps 1-7.
         self._spawn = spawn
+        # How long a *failed start* may spend undoing itself. ``None`` means
+        # the Host's and the stream's own shutdown defaults, which is the
+        # honest answer from a layer that does not know how long a Run
+        # takes; it is injectable because a caller that has to come back and
+        # report a refusal must be able to say how long it can afford to
+        # wait while the rollback holds the lifecycle lock.
+        self._rollback_timeout = rollback_timeout
         self._host: RuntimeHost | None = None
         self._broker: SSEBroker | None = None
         self._conn: sqlite3.Connection | None = None
@@ -308,7 +317,9 @@ class DashboardRuntime:
                 # ``closing`` still owning everything; one that ran to the
                 # end is simply ``failed``, with nothing left.
                 self._state = (
-                    "failed" if self._stop_all_locked(None) else "closing"
+                    "failed"
+                    if self._stop_all_locked(self._rollback_timeout)
+                    else "closing"
                 )
                 raise
             self._state = "running"
@@ -406,7 +417,12 @@ class DashboardRuntime:
 
         True means all of them ran. False means one of them refused, and
         everything the refusing step may still be using is still here --
-        including the database, the descriptor and the lock.
+        including the database, the descriptor and the lock. Call it again
+        with the same intent and it resumes from the step that refused.
+
+        ``timeout`` bounds *each* remaining step, not the whole close, and
+        ``None`` means "each component's own default" -- this layer does not
+        know how long a Run takes and does not pretend to.
         """
         service = self._service
         # 8. Stop accepting first: nothing new may arrive while the rest is
@@ -418,17 +434,18 @@ class DashboardRuntime:
         #    would take the stream away from the very worker we are waiting
         #    for.
         if not self._host_stopped and self._host is not None:
-            stopped = (
-                self._host.close()
-                if timeout is None
-                else self._host.close(timeout)
-            )
-            if not stopped:
+            if not self._host.close(timeout=timeout):
                 return False
             self._host_stopped = True
         # 6. The stream. A broker that has not drained still holds frames a
         #    client is owed, and those frames were built from this database.
         if not self._broker_stopped and self._broker is not None:
+            # Spelled with the default rather than passed through because the
+            # two defaults are not the same kind: ``RuntimeHost.close(None)``
+            # falls back to its own worker-join bound, while
+            # ``SSEBroker.close``'s default *is* a number and ``None`` would
+            # be a TypeError. "Ask with no argument" is the one spelling both
+            # read as "however long you need".
             drained = (
                 self._broker.close()
                 if timeout is None

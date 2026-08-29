@@ -435,11 +435,9 @@ class SSEBroker:
 
         The opening sequence is the decided order, always, in full:
         ``retry`` -> **re-seed** -> optional ``replay_gap`` -> ``state_patch``
-        / exact catch-up -> live frames. The re-seed is not optional and not
-        conditional on there being something to replay: a stream that opens
-        with data leaves the browser's id buffer empty, an empty buffer sends
-        no ``Last-Event-ID``, and a client with no cursor is one this process
-        can never tell it has a gap.
+        / exact catch-up -> live frames. The re-seed is unconditional; why is
+        argued once, at
+        :data:`~agent_alfred.gateway.web.frames.STARTUP_CHECKPOINT_SEQ`.
         """
         # Read before the lock: this is a database question, and the
         # critical section below is not allowed to do IO.
@@ -464,10 +462,8 @@ class SSEBroker:
             startup: list[PreparedFrames] = [
                 frames.retry_frame(frames.DEFAULT_RETRY_MS)
             ]
-            # Unconditionally, because a verdict always carries one: the
-            # boundary this process last stood at, or the reserved startup
-            # boundary when it has never issued any. Omitting it on an empty
-            # ring is what erases the browser's cursor.
+            # Unconditional: every verdict carries a boundary, and omitting
+            # it on an empty ring is what erases the browser's cursor.
             startup.append(frames.reseed_frame(self._instance, verdict.reseed_seq))
             if verdict.kind == "gap":
                 startup.append(
