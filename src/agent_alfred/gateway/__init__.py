@@ -1,1 +1,1 @@
-"""Gateway adapters (stub)."""
+"""External input/output Gateways."""

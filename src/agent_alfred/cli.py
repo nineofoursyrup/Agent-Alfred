@@ -1,5 +1,5 @@
-"""Command-line entry for Agent-Alfred."""
+"""Compatibility exports for the command-line Gateway."""
 
+from agent_alfred.gateway.cli import main, run_injected
 
-def main() -> None:
-    """CLI entry point. Stub: no model or network calls."""
+__all__ = ["main", "run_injected"]
