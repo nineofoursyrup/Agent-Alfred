@@ -11,18 +11,12 @@ section.
 The wire shape in one place:
 
 - ``retry:`` then the **re-seed** (a dataless ``id:`` frame) come first,
-  always, before any data -- including when there is no data yet. The SSE
-  dispatch algorithm copies the id buffer into the last-event-id string even
-  for a dataless frame, so without the re-seed the first id-less frame
-  silently erases the client's cursor, and a browser with an empty buffer
-  sends no ``Last-Event-ID`` on its next connection. A stream that never
-  plants an id therefore makes its own reconnect look like a first
-  connection, which is the one shape that never receives a ``replay_gap``.
-  The re-seed is a **boundary this process once stood at**, not a promise
-  that everything past it is still replayable; on an empty ring it is the
-  reserved :data:`STARTUP_CHECKPOINT_SEQ`, which costs no event seq. The
-  full argument lives on that constant, and the ring's side of it in
-  :mod:`agent_alfred.gateway.web.replay`.
+  always, before any data -- including when there is no data yet. The re-seed
+  is a **boundary this process once stood at**, not a promise that everything
+  past it is still replayable; on an empty ring it is the reserved
+  :data:`STARTUP_CHECKPOINT_SEQ`, which costs no event seq. Why it cannot be
+  conditional is argued once, on that constant, and the ring's half of the
+  vocabulary in :mod:`agent_alfred.gateway.web.replay`.
 - ``id:`` appears only at a replayable *and* complete boundary: the last
   frame of a replayable logical event, and nowhere else -- with the one
   exception of the reserved :data:`STARTUP_CHECKPOINT_SEQ` re-seed below,
@@ -59,13 +53,16 @@ BACKOFF_RETRY_MS = 3000
 #
 # It is the transport boundary *before* the first domain event, not an event
 # position: no event ever owns seq 0 and nothing consumes it, so planting it
-# costs the sequence nothing. It exists because a stream that opens on an
-# empty ring still has to put an ``id:`` line in front of its first data
-# frame -- the dispatch algorithm copies the id buffer even for a dataless
-# frame, so a stream with no ``id:`` leaves the browser holding an empty
-# buffer, and an empty buffer sends no ``Last-Event-ID`` on the next
-# connection, which is indistinguishable from a client that never connected.
-# (The re-seed itself is ADR-0013's, not this constant's idea.)
+# costs the sequence nothing.
+#
+# Why a stream has to plant *something* even when the ring is empty, and why
+# the only alternative -- planting nothing -- is not an answer: the SSE
+# dispatch algorithm copies the id buffer even for a dataless frame, so a
+# stream with no ``id:`` leaves the browser holding an empty buffer, an empty
+# buffer sends no ``Last-Event-ID`` on the next connection, and a client that
+# sends no cursor is indistinguishable from one that never connected -- the
+# one shape that never receives a ``replay_gap``. That is the argument in
+# full; the rest of the codebase points here rather than repeating it.
 #
 # _Contradicts ADR-0013 (重连只恢复已完成的可重放状态，不恢复暂态呈现), but
 # only in its closing line, and deliberately._ The ADR ends by concluding
@@ -74,16 +71,9 @@ BACKOFF_RETRY_MS = 3000
 # numeric range". Zero is not one of those: it is below the event sequence
 # entirely, it names no event, and the ring still refuses every positive seq
 # it never issued -- so the property the ADR was protecting (a forged
-# in-range cursor cannot be answered "valid") is untouched.
-#
-# What the ADR did not settle is what a stream plants when the ring is empty
-# and no checkpoint exists yet, and planting nothing is not an answer: it
-# empties the client's id buffer, and a browser with an empty buffer sends
-# no ``Last-Event-ID`` -- which is indistinguishable from a first
-# connection, and a first connection is the one shape that never receives a
-# ``replay_gap``. That is the argument, in full; the rest of the codebase
-# points here rather than repeating it. The reserved boundary is the smaller
-# break.
+# in-range cursor cannot be answered "valid") is untouched. What the ADR did
+# not settle is what a stream plants when the ring is empty and no checkpoint
+# exists yet. The reserved boundary is the smaller break.
 #
 # It is defined here, beside the ``id:`` line's shape, because that is where
 # both producers of the line live: :func:`reseed_frame` and
