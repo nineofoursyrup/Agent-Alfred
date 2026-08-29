@@ -49,7 +49,6 @@ from agent_alfred.gateway.web.lifecycle import (
 from agent_alfred.gateway.web.server import DashboardRuntime
 from agent_alfred.runtime.snapshot import RuntimeSnapshot
 
-
 # --- the runtime's tail: database, then entry, each refusable ---------------
 
 

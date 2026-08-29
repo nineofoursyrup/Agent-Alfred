@@ -55,7 +55,6 @@ from agent_alfred.gateway.web.replay import (
     classify_cursor,
 )
 from agent_alfred.gateway.web.server import DashboardRuntime, HostFacade
-from agent_alfred.gateway.web.state import apply_state_patch
 from agent_alfred.model import ScriptedModel, ScriptedModelFactory
 from agent_alfred.runtime.snapshot import ActiveRunSummary
 from agent_alfred.runtime.work import SubmitRequest
@@ -861,8 +860,9 @@ def test_the_client_merge_rules_still_hold() -> None:
     assert refused(_patch(revision=6, pending=True), current) == (
         "pending_over_terminal"
     )
-    # A repeat is idempotent: no movement, no error.
-    assert apply_state_patch(current, _patch(revision=5)) == current
+    # A repeated revision is refused, not idempotently folded in: each
+    # revision names exactly one published state.
+    assert refused(_patch(revision=5), current) == "revision_duplicate"
 
 
 # --- three and four: one process, one Host, one ordered start-up ----------

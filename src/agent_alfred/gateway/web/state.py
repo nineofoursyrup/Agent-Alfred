@@ -8,8 +8,9 @@ Two halves live here because they are one contract seen from two ends:
   and at most one unrecorded terminal projection. Historic Sessions,
   messages and finished Runs are not in it -- those are the paged read APIs.
 - the client merges patches by a closed set of rules: refuse another
-  process's patch, refuse a rewinding revision, and refuse a ``pending``
-  that would overwrite a settled ``recorded``/``failed``.
+  process's patch, refuse a rewinding revision, refuse a revision it has
+  already applied, and refuse a ``pending`` that would overwrite a settled
+  ``recorded``/``failed``.
 
 The merge rules are code here, not documentation on a wiki, precisely so
 they can be tested without a browser.
@@ -30,7 +31,10 @@ SNAPSHOT_TEXT_LIMIT = 2000
 
 RecordingState = Literal["pending", "recorded", "failed"] | None
 PatchRejection = Literal[
-    "instance_mismatch", "revision_regression", "pending_over_terminal"
+    "instance_mismatch",
+    "revision_duplicate",
+    "revision_regression",
+    "pending_over_terminal",
 ]
 
 
@@ -303,6 +307,15 @@ def apply_state_patch(
         raise StatePatchRejected("instance_mismatch")
     if patch.state_revision < current.state_revision:
         raise StatePatchRejected("revision_regression")
+    if patch.state_revision == current.state_revision:
+        # The same revision is the state the client already holds. The
+        # server publishes each revision exactly once, so a repeat is
+        # either a replay of something already folded in or something that
+        # never came from this process's snapshot sequence -- and the
+        # payload cannot tell the two apart. Refusing both shapes is what
+        # keeps a revision naming exactly one published state; the client
+        # keeps what it has.
+        raise StatePatchRejected("revision_duplicate")
     # "Reply finished but unsaved" is a fact the client must keep showing
     # until the database says otherwise. A pending patch that would replace
     # a settled state is therefore refused, not applied and then corrected.

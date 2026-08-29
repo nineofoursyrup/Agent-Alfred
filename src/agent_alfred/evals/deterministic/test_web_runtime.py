@@ -384,7 +384,10 @@ def _request(message: str, session_id: str | None):
 # --- the client's merge rules -----------------------------------------------
 
 
-def _patch(*, revision: int, instance: str = INSTANCE, pending: bool = False):
+def _patch(
+    *, revision: int, instance: str = INSTANCE, pending: bool = False,
+    run_id: str = "r1",
+):
     from agent_alfred.runtime.snapshot import (
         ActiveRunSummary,
         RuntimeSnapshot,
@@ -397,7 +400,7 @@ def _patch(*, revision: int, instance: str = INSTANCE, pending: bool = False):
         coordinator_state="recording_pending" if pending else "idle",
         active_run=(
             ActiveRunSummary(
-                run_id="r1",
+                run_id=run_id,
                 purpose="chat",
                 gateway="web",
                 phase="finished",
@@ -443,10 +446,21 @@ def test_a_pending_patch_cannot_overwrite_a_settled_state() -> None:
     )
 
 
-def test_a_repeated_patch_is_idempotent() -> None:
+def test_a_repeated_revision_is_refused_whatever_its_payload() -> None:
+    """A patch that does not move the revision is refused, not folded in.
+
+    The server publishes each state revision exactly once, so a repeat is
+    either a replay of something already held or something that never came
+    from this process's snapshot sequence -- and the payload cannot tell
+    the two apart. Refusing both shapes is what keeps ``state_revision``
+    naming exactly one published state; the current state survives the
+    refusal unchanged.
+    """
     current = _patch(revision=5)
-    again = _patch(revision=5)
-    assert apply_state_patch(current, again) == again
+    assert refused(_patch(revision=5), current) == "revision_duplicate"
+    assert refused(_patch(revision=5, run_id="r2"), current) == (
+        "revision_duplicate"
+    )
 
 
 def test_the_first_patch_is_always_accepted() -> None:
