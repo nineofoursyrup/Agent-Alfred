@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import FrozenInstanceError
 
 import pytest
 
@@ -237,3 +238,73 @@ def test_transport_notices_and_patches_are_never_replayable() -> None:
     assert frames.domain_event_frames(
         event_name="run.finished", payload={}, event_id="e", replayable=True
     ).replayable is True
+
+
+# --- the named cost of one logical item -------------------------------------
+
+
+def test_frame_cost_carries_two_named_dimensions() -> None:
+    cost = frames.FrameCost(frames=2, encoded_bytes=300)
+    assert cost.frames == 2
+    assert cost.encoded_bytes == 300
+
+
+def test_frame_cost_is_frozen() -> None:
+    cost = frames.FrameCost(frames=1, encoded_bytes=10)
+    with pytest.raises(FrozenInstanceError):
+        cost.frames = 5
+    with pytest.raises(FrozenInstanceError):
+        cost.encoded_bytes = 50
+
+
+def test_frame_cost_dimensions_cannot_be_swapped() -> None:
+    cost = frames.FrameCost(frames=2, encoded_bytes=300)
+    swapped = frames.FrameCost(frames=300, encoded_bytes=2)
+    assert cost != swapped
+    assert cost == frames.FrameCost(frames=2, encoded_bytes=300)
+
+
+def test_frame_cost_addition_sums_each_dimension() -> None:
+    assert (
+        frames.FrameCost(frames=1, encoded_bytes=10)
+        + frames.FrameCost(frames=2, encoded_bytes=20)
+    ) == frames.FrameCost(frames=3, encoded_bytes=30)
+
+
+def test_frame_cost_subtraction_removes_each_dimension() -> None:
+    assert (
+        frames.FrameCost(frames=3, encoded_bytes=30)
+        - frames.FrameCost(frames=1, encoded_bytes=10)
+    ) == frames.FrameCost(frames=2, encoded_bytes=20)
+
+
+def test_frame_cost_refuses_negative_counts() -> None:
+    with pytest.raises(ValueError):
+        frames.FrameCost(frames=-1, encoded_bytes=0)
+    with pytest.raises(ValueError):
+        frames.FrameCost(frames=0, encoded_bytes=-1)
+    # A subtraction that would take either dimension below zero is refused
+    # outright: a queue that released more than it held is a bug to surface,
+    # not a negative balance to carry.
+    with pytest.raises(ValueError):
+        frames.FrameCost(frames=1, encoded_bytes=10) - frames.FrameCost(
+            frames=2, encoded_bytes=0
+        )
+    with pytest.raises(ValueError):
+        frames.FrameCost(frames=1, encoded_bytes=10) - frames.FrameCost(
+            frames=0, encoded_bytes=20
+        )
+
+
+def test_ingress_cost_is_a_frame_cost_with_both_dimensions() -> None:
+    prepared = _domain(text="z" * 4096, max_frame_bytes=1024).with_checkpoint(
+        4, "inst"
+    )
+    cost = prepared.ingress_cost()
+    assert isinstance(cost, frames.FrameCost)
+    assert cost.frames == len(prepared.frames)
+    assert cost.encoded_bytes == prepared.byte_size
+    # The same holds for a logical event split into many physical frames.
+    chunked = _domain(text="y" * (900 * 1024), max_frame_bytes=64 * 1024)
+    assert chunked.ingress_cost().frames == len(chunked.frames) > 1
+    assert chunked.ingress_cost().encoded_bytes == chunked.byte_size

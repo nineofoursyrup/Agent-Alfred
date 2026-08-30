@@ -350,3 +350,53 @@ def test_a_ring_rejects_a_non_positive_capacity() -> None:
         replay.ReplayRing(max_frames=0)
     with pytest.raises(ValueError):
         replay.ReplayRing(max_bytes=0)
+
+
+# --- the named cost of the ring's accounting --------------------------------
+
+
+def test_the_ring_capacity_contract_holds_per_dimension() -> None:
+    capacity = frames.FrameCost(frames=2048, encoded_bytes=32 * 1024 * 1024)
+    ring = replay.ReplayRing()
+    assert ring.max_frames == capacity.frames
+    assert ring.max_bytes == capacity.encoded_bytes
+
+
+def test_the_ring_judges_each_dimension_of_the_cost_independently() -> None:
+    # The frame dimension binds while the bytes sit far under their budget.
+    frame_bound = replay.ReplayRing(max_frames=2, max_bytes=1 << 20)
+    for seq in (1, 2, 3):
+        frame_bound.append(_entry(seq))
+    assert len(frame_bound) == 2
+    # The byte dimension binds while the frame count sits far under its
+    # budget.
+    byte_bound = replay.ReplayRing(max_frames=100, max_bytes=100)
+    for seq in (1, 2, 3):
+        byte_bound.append(_entry(seq, size=40))
+    assert len(byte_bound) == 1
+    survivors = byte_bound.entries_after(2) or ()
+    assert byte_bound.current_cost == survivors[0].ingress_cost()
+
+
+def test_eviction_leaves_exactly_the_survivors_cost() -> None:
+    """Eviction subtracts in the unit it added: whole logical events."""
+    ring = replay.ReplayRing(max_frames=2, max_bytes=1 << 20)
+    for seq in (1, 2, 3):
+        ring.append(_entry(seq))
+    assert ring.current_cost == (
+        _entry(2).ingress_cost() + _entry(3).ingress_cost()
+    )
+
+
+def test_ring_accounting_returns_exactly_to_zero() -> None:
+    ring = replay.ReplayRing(max_frames=4, max_bytes=200)
+    first, second = _entry(1), _entry(2)
+    ring.append(first)
+    ring.append(second)
+    assert ring.current_cost == first.ingress_cost() + second.ingress_cost()
+    # The whole-count discard leaves nothing behind: not one frame, not one
+    # byte.
+    ring.append(_entry(3, size=200))
+    assert ring.current_cost == frames.FrameCost(frames=0, encoded_bytes=0)
+    assert ring.oldest_seq() is None
+    assert ring.replay_floor_seq() == 3

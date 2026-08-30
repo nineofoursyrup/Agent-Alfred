@@ -49,7 +49,11 @@ from agent_alfred.gateway.web.connection import (
     ConnectionWriter,
     SSEConnection,
 )
-from agent_alfred.gateway.web.frames import CurrentRunState, PreparedFrames
+from agent_alfred.gateway.web.frames import (
+    CurrentRunState,
+    FrameCost,
+    PreparedFrames,
+)
 from agent_alfred.gateway.web.progress import RunProgress, StepProjection
 from agent_alfred.gateway.web.replay import (
     CursorText,
@@ -127,9 +131,9 @@ class _BroadcastPatch:
 
     snapshot: RuntimeSnapshot
     step: StepProjection | None
-    cost: tuple[int, int]
+    cost: FrameCost
 
-    def ingress_cost(self) -> tuple[int, int]:
+    def ingress_cost(self) -> FrameCost:
         return self.cost
 
 
@@ -154,7 +158,7 @@ class _PublishedEvent:
     published_seq: int
     frames: PreparedFrames
 
-    def ingress_cost(self) -> tuple[int, int]:
+    def ingress_cost(self) -> FrameCost:
         return self.frames.ingress_cost()
 
 
@@ -166,7 +170,7 @@ class IngressItem(Protocol):
     which is how a patch would end up growing a queue without limit.
     """
 
-    def ingress_cost(self) -> tuple[int, int]: ...
+    def ingress_cost(self) -> FrameCost: ...
 
 
 def _patch_frames(
@@ -219,8 +223,23 @@ class _Ingress:
         self.max_bytes = max_bytes
         self._items: queue.SimpleQueue = queue.SimpleQueue()
         self._lock = threading.Lock()
-        self._frames = 0
-        self._bytes = 0
+        self._usage = FrameCost(frames=0, encoded_bytes=0)
+
+    @property
+    def current_cost(self) -> FrameCost:
+        """What the ingress is holding right now, in both counted units."""
+        with self._lock:
+            return self._usage
+
+    @property
+    def _frames(self) -> int:
+        """The frame count of :attr:`current_cost`, as a plain integer."""
+        return self._usage.frames
+
+    @property
+    def _bytes(self) -> int:
+        """The encoded-byte count of :attr:`current_cost`, as an integer."""
+        return self._usage.encoded_bytes
 
     def offer(self, item: IngressItem) -> bool:
         """Queue one item. Non-blocking, O(1), never partial.
@@ -228,16 +247,16 @@ class _Ingress:
         Domain events and state patches are the only two kinds of traffic
         here, and both are measured in frames *and* encoded bytes.
         """
-        frames_used, bytes_used = item.ingress_cost()
+        cost = item.ingress_cost()
         with self._lock:
+            projected = self._usage + cost
             if (
-                self._frames + frames_used > self.max_frames
-                or self._bytes + bytes_used > self.max_bytes
+                projected.frames > self.max_frames
+                or projected.encoded_bytes > self.max_bytes
             ):
                 return False
             self._items.put(item)
-            self._frames += frames_used
-            self._bytes += bytes_used
+            self._usage = projected
             return True
 
     def put_stop(self) -> None:
@@ -263,10 +282,9 @@ class _Ingress:
         item = self._items.get(timeout=timeout)
         if isinstance(item, (_IngressStop, _IngressKick)):
             return item
-        frames_used, bytes_used = item.ingress_cost()
+        cost = item.ingress_cost()
         with self._lock:
-            self._frames -= frames_used
-            self._bytes -= bytes_used
+            self._usage = self._usage - cost
         return item
 
 
@@ -358,7 +376,9 @@ class SSEBroker:
         # ring is a legal ring, so the default is chosen on None, not on falsy.
         self._ring = ring if ring is not None else ReplayRing()
         self._progress = progress if progress is not None else RunProgress()
-        self._connection_limits = (max_connection_frames, max_connection_bytes)
+        self._connection_limits = FrameCost(
+            frames=max_connection_frames, encoded_bytes=max_connection_bytes
+        )
         self._max_frame_bytes = max_frame_bytes
         self._heartbeat_s = heartbeat_s
         self._clock = clock or SystemClock()
@@ -707,11 +727,18 @@ class SSEBroker:
         # Read before the lock: this is a database question, and the
         # critical sections below are not allowed to do IO.
         session_valid = self._session_is_valid(session_id)
-        default_frames, default_bytes = self._connection_limits
         handle = ConnectionHandle(
             queue=ConnectionQueue(
-                max_frames=default_frames if max_frames is None else max_frames,
-                max_bytes=default_bytes if max_bytes is None else max_bytes,
+                max_frames=(
+                    self._connection_limits.frames
+                    if max_frames is None
+                    else max_frames
+                ),
+                max_bytes=(
+                    self._connection_limits.encoded_bytes
+                    if max_bytes is None
+                    else max_bytes
+                ),
             ),
             connection=connection,
             session_id=session_id,
@@ -936,7 +963,11 @@ class SSEBroker:
                 step = self._progress.projection()
                 epoch = self._state_epoch
             patch = _BroadcastPatch(
-                snapshot=snapshot, step=step, cost=(1, _patch_cost(snapshot, step))
+                snapshot=snapshot,
+                step=step,
+                cost=FrameCost(
+                    frames=1, encoded_bytes=_patch_cost(snapshot, step)
+                ),
             )
             with self._lock:
                 if self._stopping or self._closed or self._fatal is not None:

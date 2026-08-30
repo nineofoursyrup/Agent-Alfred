@@ -94,6 +94,48 @@ _DATA_PREFIX = b"data: "
 
 
 @dataclass(frozen=True)
+class FrameCost:
+    """What one logical item costs a queue that counts frames *and* bytes.
+
+    Named rather than a bare ``(int, int)`` pair so the two dimensions cannot
+    be swapped, half-updated, or drifted negative: every queue in the
+    Dashboard budgets both, and an item admitted on frames alone would be the
+    one that quietly breaks the byte promise.
+
+    Arithmetic is closed over this type and refuses to produce a negative
+    count -- a queue that released more than it held is a bug worth an
+    exception, not a negative balance to carry.
+    """
+
+    frames: int
+    encoded_bytes: int
+
+    def __post_init__(self) -> None:
+        if self.frames < 0:
+            raise ValueError(f"frames must be >= 0, got {self.frames}")
+        if self.encoded_bytes < 0:
+            raise ValueError(
+                f"encoded_bytes must be >= 0, got {self.encoded_bytes}"
+            )
+
+    def __add__(self, other: FrameCost) -> FrameCost:
+        if not isinstance(other, FrameCost):
+            return NotImplemented
+        return FrameCost(
+            frames=self.frames + other.frames,
+            encoded_bytes=self.encoded_bytes + other.encoded_bytes,
+        )
+
+    def __sub__(self, other: FrameCost) -> FrameCost:
+        if not isinstance(other, FrameCost):
+            return NotImplemented
+        return FrameCost(
+            frames=self.frames - other.frames,
+            encoded_bytes=self.encoded_bytes - other.encoded_bytes,
+        )
+
+
+@dataclass(frozen=True)
 class PreparedFrames:
     """One logical thing to write: the frames, and the cursor it advances.
 
@@ -118,7 +160,7 @@ class PreparedFrames:
     # for an atomic snapshot instead.
     must_deliver: bool = False
 
-    def ingress_cost(self) -> tuple[int, int]:
+    def ingress_cost(self) -> FrameCost:
         """What this thing costs a queue that counts frames *and* bytes.
 
         Named rather than derived at the call site so that a queue cannot
@@ -126,7 +168,7 @@ class PreparedFrames:
         budgets both, and an item that was admitted on frames alone would be
         the one that quietly breaks the byte promise.
         """
-        return len(self.frames), self.byte_size
+        return FrameCost(frames=len(self.frames), encoded_bytes=self.byte_size)
 
     def wire_frames(self) -> tuple[bytes, ...]:
         """The exact bytes, in order. Only the last frame carries the id.

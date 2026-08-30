@@ -152,8 +152,7 @@ class ConnectionQueue:
         self.max_bytes = max_bytes
         self._items: queue.SimpleQueue = queue.SimpleQueue()
         self._lock = threading.Lock()
-        self._frames = 0
-        self._bytes = 0
+        self._usage = frames.FrameCost(frames=0, encoded_bytes=0)
         self._dropped = 0
         self._closing = False
 
@@ -163,16 +162,20 @@ class ConnectionQueue:
             return self._closing
 
     @property
+    def current_cost(self) -> frames.FrameCost:
+        """What this queue is holding right now, in both counted units."""
+        with self._lock:
+            return self._usage
+
+    @property
     def current_frames(self) -> int:
         """The frames this queue is holding right now."""
-        with self._lock:
-            return self._frames
+        return self.current_cost.frames
 
     @property
     def current_bytes(self) -> int:
         """The encoded bytes this queue is holding right now."""
-        with self._lock:
-            return self._bytes
+        return self.current_cost.encoded_bytes
 
     def offer(self, item: frames.PreparedFrames) -> OfferOutcome:
         """Queue one logical event. O(1), non-blocking, no IO.
@@ -186,17 +189,17 @@ class ConnectionQueue:
         reconnect asks for. Dropping either would leave the client with a
         hole it cannot see.
         """
+        cost = item.ingress_cost()
         with self._lock:
             if self._closing:
                 return OfferOutcome(kind="dropped")
-            fits = (
-                self._frames + len(item.frames) <= self.max_frames
-                and self._bytes + item.byte_size <= self.max_bytes
-            )
-            if fits:
+            projected = self._usage + cost
+            if (
+                projected.frames <= self.max_frames
+                and projected.encoded_bytes <= self.max_bytes
+            ):
                 self._items.put(item)
-                self._frames += len(item.frames)
-                self._bytes += item.byte_size
+                self._usage = projected
                 dropped, self._dropped = self._dropped, 0
                 return OfferOutcome(kind="accepted", recovered_dropped=dropped)
             if item.replayable or item.must_deliver:
@@ -224,8 +227,7 @@ class ConnectionQueue:
         item = self._items.get(timeout=timeout)
         if isinstance(item, frames.PreparedFrames):
             with self._lock:
-                self._frames -= len(item.frames)
-                self._bytes -= item.byte_size
+                self._usage = self._usage - item.ingress_cost()
         return item
 
 

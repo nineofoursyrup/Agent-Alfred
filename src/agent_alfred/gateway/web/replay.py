@@ -66,6 +66,7 @@ from typing import Literal, NewType
 
 from agent_alfred.gateway.web.frames import (
     STARTUP_CHECKPOINT_SEQ,
+    FrameCost,
     PreparedFrames,
 )
 
@@ -177,8 +178,7 @@ class ReplayRing:
         self.max_bytes = max_bytes
         self._entries: list[PreparedFrames] = []
         self._issued: set[int] = set()
-        self._frames = 0
-        self._bytes = 0
+        self._usage = FrameCost(frames=0, encoded_bytes=0)
         # The unrecoverable boundary: the newest seq this ring can no longer
         # produce, whatever the reason. Monotonic.
         self._unrecoverable_floor = 0
@@ -203,6 +203,11 @@ class ReplayRing:
         self._emitted_any = False
 
     # -- reads ------------------------------------------------------------
+
+    @property
+    def current_cost(self) -> FrameCost:
+        """What the ring is holding right now, in both counted dimensions."""
+        return self._usage
 
     def replay_floor_seq(self) -> int:
         """The highest seq that is no longer replayable. Monotonic.
@@ -391,10 +396,11 @@ class ReplayRing:
             return AppendResult(accepted=False)
         self._high_water = entry.seq
         self._emitted_any = True
+        cost = entry.ingress_cost()
         if (
             not entry.frames
-            or len(entry.frames) > self.max_frames
-            or entry.byte_size > self.max_bytes
+            or cost.frames > self.max_frames
+            or cost.encoded_bytes > self.max_bytes
         ):
             self._clear()
             self._unrecoverable_floor = entry.seq
@@ -403,23 +409,22 @@ class ReplayRing:
         self._issued.add(entry.seq)
         self._last_issued = entry.seq
         self._reseed_boundary = entry.seq
-        self._frames += len(entry.frames)
-        self._bytes += entry.byte_size
+        self._usage = self._usage + cost
         evicted = self._evict_while_over_budget()
         return AppendResult(accepted=True, evicted=evicted)
 
     def _evict_while_over_budget(self) -> tuple[int, ...]:
         evicted: list[int] = []
         while self._entries and (
-            self._frames > self.max_frames or self._bytes > self.max_bytes
+            self._usage.frames > self.max_frames
+            or self._usage.encoded_bytes > self.max_bytes
         ):
             dropped = self._entries.pop(0)
             self._issued.discard(dropped.seq)
             # Whole logical events only: frames and bytes both come off in
             # the unit they went on, so the ring can never hold a fragment
             # and a client can never be handed one.
-            self._frames -= len(dropped.frames)
-            self._bytes -= dropped.byte_size
+            self._usage = self._usage - dropped.ingress_cost()
             # Both boundaries are monotonic: they name the newest fact this
             # ring can no longer produce, so they only ever move forward.
             if dropped.seq > self._unrecoverable_floor:
@@ -445,8 +450,7 @@ class ReplayRing:
         self._entries.clear()
         self._issued.clear()
         self._last_issued = None
-        self._frames = 0
-        self._bytes = 0
+        self._usage = FrameCost(frames=0, encoded_bytes=0)
 
 
 def classify_cursor(

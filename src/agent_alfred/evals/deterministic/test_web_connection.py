@@ -88,6 +88,46 @@ def test_capacity_defaults_match_the_decided_table() -> None:
     assert conn.max_bytes == 8 * 1024 * 1024
 
 
+# --- the named cost of the queue's accounting --------------------------------
+
+
+def test_the_queue_capacity_contract_holds_per_dimension() -> None:
+    capacity = frames.FrameCost(frames=512, encoded_bytes=8 * 1024 * 1024)
+    conn = ConnectionQueue()
+    assert conn.max_frames == capacity.frames
+    assert conn.max_bytes == capacity.encoded_bytes
+
+
+def test_a_queue_judges_each_dimension_of_the_cost_independently() -> None:
+    # The frame dimension binds while the bytes sit far under their budget.
+    frame_bound = ConnectionQueue(max_frames=2, max_bytes=1 << 20)
+    assert frame_bound.offer(_frames(1)).kind == "accepted"
+    assert frame_bound.offer(_frames(2)).kind == "accepted"
+    third = _frames(3)
+    projected = frame_bound.current_cost + third.ingress_cost()
+    assert projected.frames > 2 and projected.encoded_bytes < (1 << 20)
+    assert frame_bound.offer(third).kind == "dropped"
+    # The byte dimension binds while the frame count sits far under its
+    # budget.
+    byte_bound = ConnectionQueue(max_frames=100, max_bytes=64)
+    assert byte_bound.offer(_frames(1, size=40)).kind == "accepted"
+    second = _frames(2, size=40)
+    projected = byte_bound.current_cost + second.ingress_cost()
+    assert projected.encoded_bytes > 64 and projected.frames < 100
+    assert byte_bound.offer(second).kind == "dropped"
+
+
+def test_queue_accounting_returns_exactly_to_zero() -> None:
+    conn = ConnectionQueue(max_frames=4, max_bytes=1 << 20)
+    first, second = _frames(1), _frames(2)
+    assert conn.offer(first).kind == "accepted"
+    assert conn.offer(second).kind == "accepted"
+    assert conn.current_cost == first.ingress_cost() + second.ingress_cost()
+    conn.take(timeout=0)
+    conn.take(timeout=0)
+    assert conn.current_cost == frames.FrameCost(frames=0, encoded_bytes=0)
+
+
 def test_a_closed_queue_refuses_further_offers() -> None:
     conn = ConnectionQueue(max_frames=4, max_bytes=1 << 20)
     conn.request_close()

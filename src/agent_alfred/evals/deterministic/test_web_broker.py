@@ -873,6 +873,32 @@ def test_capacity_defaults_match_the_decided_table() -> None:
     assert broker._ring.max_bytes == 32 * 1024 * 1024
 
 
+# --- the named cost of the ingress's accounting ------------------------------
+
+
+def test_the_ingress_count_returns_exactly_to_zero() -> None:
+    harness = Harness()
+    harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    harness.emit(RunStarted(purpose="chat"), run_id="r2")
+    cost = harness.broker._ingress.current_cost
+    assert cost.frames == 2
+    assert cost.encoded_bytes > 0
+    _run_dispatcher(harness)
+    assert harness.broker._ingress.current_cost == frames.FrameCost(0, 0)
+
+
+def test_a_state_patch_pays_a_named_one_frame_cost() -> None:
+    harness = Harness()
+    snapshot = _snapshot(state_revision=1)
+    assert harness.broker.publish_state_patch(snapshot) is True
+    expected = broker_module._patch_cost(
+        snapshot, harness.broker._progress.projection()
+    )
+    assert harness.broker._ingress.current_cost == frames.FrameCost(
+        frames=1, encoded_bytes=expected
+    )
+
+
 def test_close_is_idempotent_and_leaves_no_thread_running() -> None:
     threads: list[threading.Thread] = []
 
