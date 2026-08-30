@@ -313,6 +313,14 @@ class DashboardApi:
         if purpose not in PURPOSES:
             return SubmitOutcome(status=400, code="unknown_purpose")
         session_id = body.get("session_id")
+        # A Web chat names its Session (#28). Absent -- the key missing or
+        # JSON null -- is refused here, at this boundary, before the gate:
+        # admission's own fallback for a Session-less chat exists for the
+        # non-Web origins, and letting a Web request reach it would create a
+        # Session behind the caller's back. ``is None`` is the test, never
+        # truthiness: a historic Session id may be the empty string.
+        if purpose == "chat" and session_id is None:
+            return SubmitOutcome(status=400, code="missing_session_id")
         if session_id is not None and not isinstance(session_id, str):
             return SubmitOutcome(status=400, code="bad_session_id")
         if session_id is not None and not self._facade.session_exists(session_id):

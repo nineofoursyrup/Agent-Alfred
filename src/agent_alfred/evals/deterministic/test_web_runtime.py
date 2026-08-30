@@ -307,8 +307,9 @@ def test_a_failed_persist_never_answers_202() -> None:
     host, _conn = _host(conn=wrapped)
     host.start()
     try:
+        session_id = host.create_session()
         flag["armed"] = True
-        outcome = _api(host).submit({"message": "hello"})
+        outcome = _api(host).submit({"message": "hello", "session_id": session_id})
         # A 202 here would promise a Run that was never accepted anywhere.
         assert outcome.status == 500
         assert outcome.code == "admission_failed"
@@ -325,7 +326,8 @@ def test_a_failed_handoff_never_answers_202() -> None:
     host, _conn = _host(publish_work=explode)
     host.start()
     try:
-        outcome = _api(host).submit({"message": "hello"})
+        session_id = host.create_session()
+        outcome = _api(host).submit({"message": "hello", "session_id": session_id})
         assert outcome.status == 500
         assert outcome.code == "admission_failed"
         # The Run was finalized interrupted and admission reopened rather

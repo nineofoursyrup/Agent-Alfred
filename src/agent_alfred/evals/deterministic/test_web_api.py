@@ -274,7 +274,7 @@ def _facade() -> _Facade:
 
 def test_an_accepted_run_answers_202_with_its_run_id() -> None:
     api = _api(_accepted())
-    outcome = api.submit({"message": "hello"})
+    outcome = api.submit({"message": "hello", "session_id": "s1"})
     assert outcome.status == 202
     assert outcome.run_id == "r1"
     assert outcome.session_id == "s1"
@@ -290,13 +290,17 @@ def test_202_comes_only_from_the_coordinators_accepted_kind() -> None:
     request having been understood.
     """
     for kind in ("run_in_progress", "recording_unavailable", "admission_failed"):
-        outcome = _api(SubmitResult(kind=kind)).submit({"message": "hello"})  # type: ignore[arg-type]
+        outcome = _api(SubmitResult(kind=kind)).submit(  # type: ignore[arg-type]
+            {"message": "hello", "session_id": "s1"}
+        )
         assert outcome.status != 202, f"{kind} must never answer 202"
 
 
 def test_a_failed_persist_or_handoff_never_looks_accepted() -> None:
     # A 202 here would tell the browser to wait for a Run nobody is running.
-    outcome = _api(SubmitResult(kind="admission_failed")).submit({"message": "hi"})
+    outcome = _api(SubmitResult(kind="admission_failed")).submit(
+        {"message": "hi", "session_id": "s1"}
+    )
     assert outcome.status == 500
     assert outcome.code == "admission_failed"
     assert outcome.run_id is None
@@ -311,7 +315,7 @@ def test_a_second_run_while_one_is_in_flight_is_409() -> None:
     )
     outcome = _api(
         SubmitResult(kind="run_in_progress", snapshot=snapshot)
-    ).submit({"message": "hi"})
+    ).submit({"message": "hi", "session_id": "s1"})
     assert outcome.status == 409
     assert outcome.code == "run_in_progress"
     assert outcome.busy is not None
@@ -332,7 +336,7 @@ def test_recording_pending_is_409_and_says_it_is_saving() -> None:
     )
     outcome = _api(
         SubmitResult(kind="run_in_progress", snapshot=snapshot)
-    ).submit({"message": "hi"})
+    ).submit({"message": "hi", "session_id": "s1"})
     assert outcome.status == 409
     assert outcome.code == "run_in_progress"
     assert outcome.busy is not None
@@ -356,7 +360,7 @@ def test_recording_unavailable_answers_503() -> None:
     )
     outcome = _api(
         SubmitResult(kind="recording_unavailable", snapshot=snapshot)
-    ).submit({"message": "hi"})
+    ).submit({"message": "hi", "session_id": "s1"})
     assert outcome.status == 503
     assert outcome.code == "recording_unavailable"
 
@@ -373,7 +377,7 @@ def test_503_is_only_ever_the_failed_states_answer() -> None:
     )
     assert (
         _api(SubmitResult(kind="run_in_progress", snapshot=pending))
-        .submit({"message": "hi"})
+        .submit({"message": "hi", "session_id": "s1"})
         .status
         == 409
     )
@@ -391,7 +395,7 @@ def test_known_busy_and_raced_409_render_one_and_the_same_card() -> None:
     snapshot = _snapshot(coordinator_state="running", active_run=_active())
     from_race = _api(
         SubmitResult(kind="run_in_progress", snapshot=snapshot)
-    ).submit({"message": "hi"})
+    ).submit({"message": "hi", "session_id": "s1"})
     from_prevention = busy_summary_from(snapshot)
     assert from_race.busy is not None
     assert from_race.busy.to_json() == from_prevention.to_json()
@@ -472,6 +476,99 @@ def test_the_submit_is_addressed_to_the_web_gateway() -> None:
     assert facade.requests is not None
     assert facade.requests[0].gateway == "web"
     assert facade.requests[0].entry_surface_id == "mainbar"
+
+
+# --- the explicit Session contract (#28) -------------------------------------
+
+
+def test_a_chat_without_a_session_is_refused_before_admission() -> None:
+    """A Web chat names its Session or it does not happen (#28).
+
+    The default purpose is ``chat``, and a chat with no ``session_id`` would
+    otherwise be quietly handed one at admission -- a Session created behind
+    the caller's back, exactly what "no global active Session" forbids. The
+    refusal is decided at this boundary, before the gate: no run id is
+    minted, no config is captured, no Session is created and no work item is
+    published, because none of that lives on this side of the facade.
+    """
+    api = _api(_accepted())
+    outcome = api.submit({"message": "hello"})
+    assert outcome.status == 400
+    assert outcome.code == "missing_session_id"
+    assert outcome.run_id is None
+    facade = api._facade
+    # Admission was never asked: no SubmitRequest crossed the gate, and no
+    # Session was created on the request's behalf.
+    assert facade.requests == []
+    assert facade.created == []
+
+
+def test_a_null_session_id_is_missing_not_present() -> None:
+    """A JSON ``null`` is not a Session: refusing it is the same decision."""
+    api = _api(_accepted())
+    outcome = api.submit({"message": "hello", "session_id": None})
+    assert outcome.status == 400
+    assert outcome.code == "missing_session_id"
+    assert outcome.run_id is None
+    facade = api._facade
+    assert facade.requests == []
+    assert facade.created == []
+
+
+def test_an_empty_session_id_is_a_value_not_an_absence() -> None:
+    """The missing test is ``is None``, never truthiness.
+
+    A historic Session id may be the empty string, so a chat addressed to
+    "" reaches admission addressed to exactly that id instead of being
+    misread as having named no Session at all.
+    """
+    facade = _Facade(
+        result=SubmitResult(kind="accepted", run_id="r1", session_id=""),
+        state=_snapshot(),
+        known_sessions=frozenset({"", "s1"}),
+    )
+    api = DashboardApi(facade=facade)
+    outcome = api.submit({"message": "hello", "session_id": ""})
+    assert outcome.status == 202
+    assert outcome.run_id == "r1"
+    assert outcome.session_id == ""
+    assert facade.requests is not None
+    assert facade.requests[0].session_id == ""
+
+
+def test_a_non_string_session_id_is_not_reported_as_missing() -> None:
+    """A wrong-typed id and an absent id are different client bugs, with
+    different codes: one is a bad value, the other is no value at all."""
+    api = _api(_accepted())
+    outcome = api.submit({"message": "hi", "session_id": 42})
+    assert outcome.status == 400
+    assert outcome.code == "bad_session_id"
+    assert outcome.code != "missing_session_id"
+    assert api._facade.requests == []
+
+
+def test_an_existing_session_still_submits_and_answers_202() -> None:
+    """The rule adds a requirement, not a refusal: a chat that names one of
+    the Sessions that exists keeps the whole accepted contract."""
+    api = _api(_accepted())
+    outcome = api.submit({"message": "hello", "session_id": "s1"})
+    assert outcome.status == 202
+    assert outcome.run_id == "r1"
+    assert outcome.session_id == "s1"
+    assert api._facade.requests is not None
+    assert len(api._facade.requests) == 1
+
+
+def test_a_system_run_still_needs_no_session() -> None:
+    """The explicit-Session rule is a Web chat rule. A system purpose keeps
+    its successful contract, carrying no Session to admission."""
+    api = _api(_accepted())
+    outcome = api.submit({"message": "hi", "purpose": "inference_probe"})
+    assert outcome.status == 202
+    facade = api._facade
+    assert facade.requests is not None
+    assert facade.requests[0].purpose == "inference_probe"
+    assert facade.requests[0].session_id is None
 
 
 # --- sessions ---------------------------------------------------------------
@@ -689,7 +786,7 @@ def test_the_gate_never_queues_a_write() -> None:
 
     reentrant = Reentrant(api._facade)
     gate._facade = reentrant
-    outcome = api.submit({"message": "hi"})
+    outcome = api.submit({"message": "hi", "session_id": "s1"})
     # The second write was refused rather than waited for, and told why.
     session_id, reason = reentrant.observed
     assert session_id is None
@@ -710,7 +807,7 @@ def test_a_refused_session_creation_says_so() -> None:
 def test_a_refused_submit_is_never_an_accepted_run() -> None:
     api = _api(_accepted())
     api._facade.mutating = True  # another write is inside the gate
-    outcome = api.submit({"message": "hi"})
+    outcome = api.submit({"message": "hi", "session_id": "s1"})
     # A conflict, not an unavailability: 409, and never a run id.
     assert outcome.status == 409
     assert outcome.code == "mutation_in_flight"

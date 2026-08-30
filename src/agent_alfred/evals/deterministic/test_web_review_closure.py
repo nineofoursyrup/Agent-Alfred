@@ -402,12 +402,13 @@ def test_a_run_is_refused_while_a_plain_mutation_is_in_flight() -> None:
                 return getattr(self._inner, name)
 
         api = DashboardApi(facade=SlowFacade())
+        session_id = inner.create_session()
         thread = threading.Thread(
             target=api.create_session, daemon=True
         )
         thread.start()
         assert entered.wait(5.0), "the write never entered"
-        outcome = api.submit({"message": "hi"})
+        outcome = api.submit({"message": "hi", "session_id": session_id})
         # A conflict, not a queue and not a 503: nothing is unavailable,
         # something is merely busy (ADR-0016).
         assert outcome.status == 409
@@ -428,7 +429,7 @@ def test_the_three_run_contracts_survive_the_gate() -> None:
         result, session_id = _start_run(host)
         assert result.kind == "accepted"
         api = _api(host)
-        second = api.submit({"message": "second"})
+        second = api.submit({"message": "second", "session_id": session_id})
         assert second.status == 409
         assert second.code == "run_in_progress"
         assert second.busy is not None
@@ -1278,7 +1279,7 @@ def test_the_cli_and_the_web_compete_for_one_coordinator(tmp_path) -> None:
         )
         assert cli_attempt.kind == "run_in_progress"
         # ... and the same in the other direction.
-        assert api.submit({"message": "again"}).status == 409
+        assert api.submit({"message": "again", "session_id": session_id}).status == 409
         gate.set()
         host.wait(web.run_id)
     finally:

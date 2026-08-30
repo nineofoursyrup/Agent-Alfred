@@ -53,6 +53,9 @@ class _Facade:
 
     def __init__(self) -> None:
         self.mutating = False
+        # Every Run the API asked this facade to admit, so a wire test can
+        # prove a refusal happened before anything was asked at all.
+        self.submitted: list[Any] = []
         # The Session ids the MainBar read was aimed at, so a wire test can
         # see the query parameter arrived verbatim.
         self.mainbar_sessions: list[str] = []
@@ -78,6 +81,7 @@ class _Facade:
         return "session-from-server"
 
     def submit(self, request: Any) -> Any:
+        self.submitted.append(request)
         from agent_alfred.runtime.work import SubmitResult
 
         return SubmitResult(
@@ -497,7 +501,10 @@ def test_a_write_without_the_process_token_is_refused(server) -> None:
 
 
 def test_a_write_with_the_token_is_accepted(server) -> None:
-    body = b'{"message":"hi"}'
+    # The chat names the Session the server signed for it (#28): the token
+    # proves the writer, the id proves the Session, and neither may be
+    # inferred on the client's behalf.
+    body = b'{"message":"hi","session_id":"session-from-server"}'
     raw = (
         f"POST /api/runs HTTP/1.1\r\n"
         f"Host: localhost:{server.port}\r\n"
@@ -508,6 +515,41 @@ def test_a_write_with_the_token_is_accepted(server) -> None:
     head, response = _request(server.port, raw)
     assert b"202" in head.split(b"\r\n")[0]
     assert b'"run_id":"run-on-wire"' in response
+
+
+def _post_runs(server, body: bytes) -> tuple[bytes, bytes]:
+    """A well-formed chat write: legal Host, token, content type, message."""
+    raw = (
+        f"POST /api/runs HTTP/1.1\r\n"
+        f"Host: localhost:{server.port}\r\n"
+        f"Content-Type: application/json\r\n"
+        f"{CSRF_HEADER}: {server.guard.csrf_token}\r\n"
+        f"Content-Length: {len(body)}\r\n\r\n"
+    ).encode() + body
+    return _request(server.port, raw)
+
+
+def test_a_chat_without_a_session_id_is_refused_on_the_wire(server) -> None:
+    """#28 on the wire: a Web chat names its Session, or it is refused.
+
+    The request is otherwise perfect -- right Host, right token, right
+    content type, a real message -- and the answer is still a real HTTP 400
+    with the one code, because no Session means no chat. Nothing behind the
+    API was asked: no SubmitRequest crossed the facade, so no run id was
+    minted and no config captured, let alone a Session invented.
+    """
+    head, body = _post_runs(server, b'{"message":"hi"}')
+    assert head.startswith(b"HTTP/1.1 400")
+    assert json.loads(body) == {"code": "missing_session_id"}
+    assert server.facade.submitted == []
+
+
+def test_a_null_session_id_on_the_wire_is_missing_not_present(server) -> None:
+    """A JSON ``null`` rides the same wire and gets the same refusal."""
+    head, body = _post_runs(server, b'{"message":"hi","session_id":null}')
+    assert head.startswith(b"HTTP/1.1 400")
+    assert json.loads(body) == {"code": "missing_session_id"}
+    assert server.facade.submitted == []
 
 
 def test_a_preflight_is_never_answered(server) -> None:
