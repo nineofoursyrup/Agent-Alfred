@@ -1876,6 +1876,67 @@ def test_a_reconnect_skips_preregistration_transients_too() -> None:
     assert b'"event":"block.delta"' not in wire
 
 
+# --- fan-out asks for Session truth only when a patch needs it --------------
+
+
+def test_a_domain_event_fan_out_never_queries_session_validity() -> None:
+    """A domain event has one wire view, independent of its Session.
+
+    Session validity is database-backed in production. Asking it here would
+    put one SQL query per connection on the sole dispatcher even though the
+    answer cannot change the domain event that any connection receives.
+    """
+    harness = Harness()
+    handle = harness.connect(session_id="s1")
+    _drain(handle)
+
+    def unexpected_query(_session_id: str | None) -> bool:
+        raise AssertionError("domain event fan-out queried Session validity")
+
+    harness.broker.bind_session_check(unexpected_query)
+    harness.emit(RunStarted(purpose="chat"))
+    harness.deliver()
+
+    wire = b"".join(item.wire_bytes() for item in _drain(handle))
+    assert b'"event":"run.started"' in wire
+
+
+def test_a_patch_fan_out_keeps_each_sessions_validity_view() -> None:
+    """A patch still carries the database-backed fact for its connection."""
+    harness = Harness()
+    valid = harness.connect(session_id="s1")
+    invalid = harness.connect(session_id="gone")
+    _drain(valid)
+    _drain(invalid)
+
+    harness.broker.publish_state_patch(_snapshot(state_revision=1))
+    harness.deliver()
+
+    assert _patch_payload(valid)["session_valid"] is True
+    assert _patch_payload(invalid)["session_valid"] is False
+
+
+def test_a_patch_queries_each_distinct_session_at_most_once() -> None:
+    """Tabs sharing one Session share its validity answer for this patch."""
+    harness = Harness()
+    first = harness.connect(session_id="s1")
+    second = harness.connect(session_id="s1")
+    other = harness.connect(session_id="gone")
+    for handle in (first, second, other):
+        _drain(handle)
+    queried: list[str | None] = []
+
+    def session_exists(session_id: str | None) -> bool:
+        queried.append(session_id)
+        return session_id == "s1"
+
+    harness.broker.bind_session_check(session_exists)
+    harness.broker.publish_state_patch(_snapshot(state_revision=1))
+    harness.deliver()
+
+    assert queried == ["s1", "gone"]
+
+
 # --- encoding never happens under the broker lock ---------------------------
 
 

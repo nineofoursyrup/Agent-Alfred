@@ -1174,20 +1174,24 @@ class SSEBroker:
         item its replay had already covered, or miss one its replay did not.
         The cost of holding the lock is bounded: an offer is O(1), copies
         nothing and does no IO. Everything that is not a bounded reference
-        hand-out -- the database question of whether each connection's
-        Session still exists, and the encoding of a patch per distinct
-        session-validity answer -- happens *before* the critical section
-        (ADR-0015: prepare outside, commit inside).
+        hand-out -- the database question of whether each distinct Session
+        represented by the connections still exists, and the encoding of a
+        patch per distinct session-validity answer -- happens *before* the
+        critical section (ADR-0015: prepare outside, commit inside).
         """
         with self._lock:
             handles = tuple(self._connections)
-        valid = tuple(
-            self._session_is_valid(handle.session_id) for handle in handles
-        )
         if isinstance(item, _BroadcastPatch):
+            validity_by_session: dict[str | None, bool] = {}
+            for handle in handles:
+                if handle.session_id not in validity_by_session:
+                    validity_by_session[handle.session_id] = (
+                        self._session_is_valid(handle.session_id)
+                    )
             offers: list[tuple[ConnectionHandle, PreparedFrames]] = []
             variants: dict[bool, PreparedFrames] = {}
-            for handle, session_valid in zip(handles, valid):
+            for handle in handles:
+                session_valid = validity_by_session[handle.session_id]
                 frame = variants.get(session_valid)
                 if frame is None:
                     frame = _patch_frames(
@@ -1201,7 +1205,7 @@ class SSEBroker:
             return
         with self._lock:
             dropped = self._ingress_dropped
-            for handle, session_valid in zip(handles, valid):
+            for handle in handles:
                 self._deliver_event(handle, item, dropped)
 
     def _deliver_event(
