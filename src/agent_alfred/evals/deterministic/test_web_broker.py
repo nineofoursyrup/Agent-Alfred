@@ -1986,6 +1986,9 @@ def _patches_received(handle) -> list[dict]:
     """Every state_patch frame this connection has been handed, in order."""
     patches = []
     for item in _drain(handle):
+        if not isinstance(item, PreparedFrames):
+            # A sweep's close sentinel is a mark, not a frame the wire saw.
+            continue
         wire = item.wire_bytes()
         if b"event: state_patch" in wire:
             patches.append(_decode_patch(wire))
@@ -2357,6 +2360,202 @@ def test_patch_overflow_never_walks_the_connections_from_the_publisher() -> None
     _run_dispatcher(harness)
     assert all(probe.close_requests == 1 for probe in probes)
     assert late.queue.close_requested is False
+
+
+# --- capture exhaustion keeps the authority and owes the reconnect -----------
+
+
+class _PerLapCost:
+    """The cost probe that parks the publisher once per capture lap.
+
+    Where :class:`_GatedCost` parks a single encode so the world can move
+    around it, this one parks *every* lap up to a budget, so a test can
+    lose the recapture race exactly ``_MAX_PATCH_CAPTURES`` times in a row
+    and walk the publisher into its exhaustion path for certain. Each lap
+    gets its own rendezvous: the probe raises that lap's ``arrived`` once
+    the publisher is parked mid-measurement -- outside the broker lock,
+    where the world can move -- and the test sets that lap's release after
+    committing its interleave. The scheduler decides nothing.
+    """
+
+    def __init__(self, real, laps: int) -> None:
+        self._real = real
+        self._arrived = [threading.Event() for _ in range(laps)]
+        self._releases = [threading.Event() for _ in range(laps)]
+        self._next = 0
+        self._aborted = False
+
+    def __call__(self, snapshot, step) -> int:
+        if self._aborted or self._next >= len(self._arrived):
+            return self._real(snapshot, step)
+        lap = self._next
+        self._next += 1
+        self._arrived[lap].set()
+        self._releases[lap].wait(5.0)  # anti-hang only; the test releases
+        return self._real(snapshot, step)
+
+    def wait_parked(self, lap: int) -> bool:
+        return self._arrived[lap].wait(5.0)
+
+    def release_lap(self, lap: int) -> None:
+        self._releases[lap].set()
+
+    def abort(self) -> None:
+        """Free a publisher a failing test would otherwise park forever."""
+        self._aborted = True
+        for release in self._releases:
+            release.set()
+
+
+def _park_a_publisher_every_lap(
+    harness, monkeypatch, snapshot
+) -> tuple[_PerLapCost, threading.Thread, list[bool]]:
+    """Start one publisher and hold it at every lap's cost measurement.
+
+    Like :func:`_park_a_publisher`, but the rendezvous repeats once per
+    capture lap: the test commits one real transition between each lap's
+    capture and its commit, so the bounded recapture is exhausted for
+    certain. The publisher's answer lands in the returned list.
+    """
+    gate = _PerLapCost(
+        broker_module._patch_cost, broker_module._MAX_PATCH_CAPTURES
+    )
+    monkeypatch.setattr(broker_module, "_patch_cost", gate)
+    answers: list[bool] = []
+
+    def publisher() -> None:
+        answers.append(harness.broker.publish_state_patch(snapshot))
+
+    thread = threading.Thread(target=publisher, daemon=True)
+    thread.start()
+    assert gate.wait_parked(0), "the publisher never reached its first encoding"
+    return gate, thread, answers
+
+
+def _opening_revision(wire: bytes) -> int | None:
+    """The state revision an opening stream's snapshot names, if any."""
+    match = re.search(rb'"state_revision":(\d+)', wire)
+    return None if match is None else int(match.group(1))
+
+
+def test_capture_exhaustion_still_moves_the_authority_and_disconnects(
+    monkeypatch,
+) -> None:
+    """Losing every recapture lap must not leave the authority behind.
+
+    A world that moves during every single encode lap -- here one real
+    ``StepStarted`` per lap, ``_MAX_PATCH_CAPTURES`` times -- exhausts the
+    bounded recapture, and the captured Step belongs to a world that is
+    already gone. A bare ``False`` that did nothing would leave the
+    broker's ``_latest`` behind the authoritative store's snapshot for
+    good: no patch, no disconnect, and every reconnect re-seeding the
+    stale revision. The exhaustion path must still adopt the snapshot as
+    the authority, raise the disconnect generation so the dispatcher asks
+    the pre-incident connections to come back for an atomic snapshot, and
+    answer False -- the patch genuinely never entered the ingress.
+    """
+    harness = Harness()
+    handle = harness.connect()
+    _drain(handle)
+    harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    requested = _snapshot(state_revision=5)
+    gate, thread, answers = _park_a_publisher_every_lap(
+        harness, monkeypatch, requested
+    )
+    try:
+        for lap in range(broker_module._MAX_PATCH_CAPTURES):
+            assert gate.wait_parked(lap), (
+                f"lap {lap} never reached its encoding"
+            )
+            # One real transition per lap, committed while the publisher
+            # sits parked mid-measurement, holding no broker lock.
+            harness.emit(StepStarted(step_index=lap), run_id="r1")
+            gate.release_lap(lap)
+    except BaseException:
+        gate.abort()
+        raise
+    thread.join(timeout=5.0)
+    # A connection registering after the exhaustion re-seeds from whatever
+    # the broker now holds -- and registers at the current generation.
+    late = harness.connect()
+    late_wire = b"".join(item.wire_bytes() for item in late.startup)
+    _run_dispatcher(harness)
+    # Observed before the first assert, so a red run reports the whole
+    # failure, not just its first casualty.
+    observed = {
+        "answer": answers,
+        "latest_revision": harness.broker._latest.state_revision,
+        "disconnect_generation": harness.broker._disconnect_generation,
+        "old_connection_close_requested": handle.queue.close_requested,
+        "late_connection_close_requested": late.queue.close_requested,
+        "late_opening_revision": _opening_revision(late_wire),
+        "patches_delivered": _patches_received(handle),
+    }
+    assert answers == [False], observed
+    assert observed["latest_revision"] == requested.state_revision, observed
+    assert observed["disconnect_generation"] == 1, observed
+    assert observed["old_connection_close_requested"] is True, observed
+    assert observed["late_connection_close_requested"] is False, observed
+    assert observed["late_opening_revision"] == requested.state_revision, (
+        observed
+    )
+    assert observed["patches_delivered"] == [], observed
+
+
+def test_exhausted_publisher_never_regresses_an_overtaken_snapshot(
+    monkeypatch,
+) -> None:
+    """Exhaustion adopts the snapshot only while it is still the newest.
+
+    The closing move of a fully lost recapture race must re-check the
+    authority it is about to move: if a newer absolute replacement was
+    published while the laps ran, its own patch is already in flight, and
+    adopting the older snapshot would walk ``_latest`` -- and every
+    reconnect -- backwards. The refusal then owes nobody a reconnect.
+    """
+    harness = Harness()
+    handle = harness.connect()
+    _drain(handle)
+    harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    requested = _snapshot(state_revision=5)
+    gate, thread, answers = _park_a_publisher_every_lap(
+        harness, monkeypatch, requested
+    )
+    newer = None
+    try:
+        last = broker_module._MAX_PATCH_CAPTURES - 1
+        for lap in range(broker_module._MAX_PATCH_CAPTURES):
+            assert gate.wait_parked(lap), (
+                f"lap {lap} never reached its encoding"
+            )
+            harness.emit(StepStarted(step_index=lap), run_id="r1")
+            if lap == last:
+                # The final lap loses to a newer *snapshot*, not only to an
+                # event: by the time the exhausted publisher reaches its
+                # closing move, the authority has already moved past it.
+                newer = _snapshot(state_revision=6)
+                assert harness.broker.publish_state_patch(newer), (
+                    "the newer publish must not wait behind the parked one"
+                )
+            gate.release_lap(lap)
+    except BaseException:
+        gate.abort()
+        raise
+    thread.join(timeout=5.0)
+    _run_dispatcher(harness)
+    assert answers == [False], "the exhausted publisher must still refuse"
+    assert harness.broker._latest is newer, "_latest moved backwards"
+    assert harness.broker._disconnect_generation == 0, (
+        "the overtaking patch was delivered; nobody owes a reconnect"
+    )
+    assert handle.queue.close_requested is False, (
+        "an overtaken refusal must not disconnect a connection that is "
+        "about to receive the newer patch"
+    )
+    patches = _patches_received(handle)
+    assert patches and patches[-1]["state_revision"] == 6, (
+        "the overtaking patch never reached the connection"
+    )
 
 
 # --- a trailing transient is published, but never a checkpoint --------------

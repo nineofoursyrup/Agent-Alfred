@@ -77,13 +77,15 @@ DEFAULT_HEARTBEAT_S = connection_module.DEFAULT_HEARTBEAT_S
 # bounded, honest "not fully drained" beats hanging on a socket whose peer
 # has stopped reading; the descriptors are released either way.
 _DRAIN_TIMEOUT_S = 2.0
-# How many capture laps one state patch may spend before it reports
-# honestly that it could not win. One lap is the common case; a second
+# How many capture laps one state patch may spend before it gives up on
+# the *patch*, never on the state. One lap is the common case; a second
 # recaptures a world that moved during one encoding. Beyond a bounded few,
 # the world is moving faster than a single encode and another lap would be
-# a spin, so the publish returns False -- the caller's authoritative state
-# store still holds the newest snapshot, and the next transition
-# republishes it.
+# a spin -- so the publish stops trying to win, and the exhausted call
+# closes explicitly instead: the authoritative snapshot still moves
+# forward and the disconnect generation rises, so every live connection is
+# asked to reconnect and re-seed from ``_latest`` rather than silently
+# keeping a state nothing will ever correct.
 _MAX_PATCH_CAPTURES = 4
 
 
@@ -928,7 +930,16 @@ class SSEBroker:
 
         The recapture is bounded: a world that outruns one encoding lap
         after lap is not one more lap can win, and an unbounded spin is a
-        publish path that can starve. Returns whether the patch was queued.
+        publish path that can starve. Exhaustion is not a silent loss,
+        though: the captured Step belongs to a world that is already gone,
+        so no patch is offered -- but the caller's authoritative store has
+        already moved to this snapshot, so
+        :meth:`_adopt_unpatchable_snapshot` moves ``_latest`` forward
+        under the lock, raises the disconnect generation, and lets the
+        dispatcher ask every connection from before that move to hang up
+        and re-seed atomically. The answer is still False -- it says the
+        patch never entered the ingress -- but the authority and the
+        reconnect debt have both moved with it.
         """
         for _ in range(_MAX_PATCH_CAPTURES):
             kick = False
@@ -982,6 +993,60 @@ class SSEBroker:
             # that as "queued" would tell the caller a state arrived that every
             # connection will in fact be disconnected for missing.
             return offered
+        # Every lap lost its race, so no patch exists that is safe to offer:
+        # the last captured Step describes a world that moved before the
+        # patch could commit. The authority does not stop here with it --
+        # the close below is what keeps the exhaustion bounded *and* honest.
+        return self._adopt_unpatchable_snapshot(snapshot)
+
+    def _adopt_unpatchable_snapshot(self, snapshot: RuntimeSnapshot) -> bool:
+        """The exhaustion close: move the authority, owe the reconnect.
+
+        Called when every capture lap lost its race. Offering the last
+        captured patch would reintroduce the stale-Step-after-newer-facts
+        race the recapture exists to prevent, and encoding another lap
+        inside the lock is the one thing this structure forbids -- so no
+        patch enters the ingress. What remains is the authority itself:
+        the caller's state store has already made this snapshot the truth,
+        so ``_latest`` must follow it -- never backwards -- and the
+        connections that were never told must be asked to reconnect,
+        because a missed patch is the one loss a client cannot detect: it
+        shows a lifetime state, not a missing event.
+
+        The whole move happens in one critical section, so a connection
+        registering after it both re-seeds from the new snapshot (a
+        connect that captured its opening stream earlier re-checks the
+        epoch at registration and recaptures) and belongs to the new
+        generation the dispatcher's sweep will spare. Asking the
+        connections to hang up stays the dispatcher's job, off this
+        thread; the kick is posted once the lock is left. The answer is
+        still False -- no patch was queued -- but it no longer means
+        "nothing happened".
+        """
+        kick = False
+        with self._lock:
+            if self._stopping or self._closed or self._fatal is not None:
+                return False
+            if snapshot.state_revision < self._latest.state_revision:
+                # Overtaken while the laps ran: a newer absolute
+                # replacement is already the authority and its own patch
+                # is in flight or delivered, so adopting this one would
+                # move ``_latest`` -- and every reconnect -- backwards.
+                return False
+            self._latest = snapshot
+            active = snapshot.active_run
+            self._progress.note_active_run(
+                None if active is None else active.run_id
+            )
+            # The epoch moves with the authority: an opening stream
+            # captured from the previous snapshot is re-checked against it
+            # at registration and recaptured, so no connection can open on
+            # a revision this call has just replaced.
+            self._state_epoch += 1
+            self._disconnect_generation += 1
+            kick = self._arm_kick_locked()
+        if kick:
+            self._ingress.put_kick()
         return False
 
     # -- internals ---------------------------------------------------------
