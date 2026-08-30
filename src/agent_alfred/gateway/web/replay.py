@@ -61,7 +61,8 @@ a forged cursor for an event that was too large to store would be answered
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Iterator
+from dataclasses import dataclass, field
 from typing import Literal, NewType
 
 from agent_alfred.gateway.web.frames import (
@@ -89,8 +90,15 @@ CursorText = NewType("CursorText", str)
 @dataclass(frozen=True)
 class AppendResult:
     accepted: bool
-    evicted: tuple[int, ...] = ()
     ring_cleared: bool = False
+    _retired: _RetiredPrefix | None = field(
+        default=None, repr=False, compare=False
+    )
+
+    def release_retired(self) -> None:
+        """Release displaced frame references after the publish lock."""
+        if self._retired is not None:
+            self._retired.release()
 
 
 @dataclass(frozen=True)
@@ -117,6 +125,176 @@ class CursorVerdict:
     # The seq the client asked to resume from, so the notice can name it.
     # Absent for a first connection, which is not a gap.
     requested_seq: int | None = None
+
+
+@dataclass
+class _EntryCell:
+    entry: PreparedFrames | None
+
+
+class _RetiredPrefix:
+    """A constant-size description of slots to release outside publication."""
+
+    def __init__(
+        self, owner: _IndexedEntries, start: int, count: int, through_seq: int
+    ):
+        self._owner = owner
+        self._start = start
+        self._count = count
+        self._through_seq = through_seq
+        self._released = False
+        self._overwritten: _EntryCell | None = None
+
+    def hold_overwritten(self, cell: _EntryCell) -> None:
+        """Keep a reused slot's old cell alive until outside publication."""
+        if self._overwritten is not None:
+            raise RuntimeError("retired prefix already holds an overwritten cell")
+        self._overwritten = cell
+
+    def release(self) -> None:
+        if self._released:
+            return
+        self._owner.release_retired(
+            self._start, self._count, self._through_seq
+        )
+        if self._overwritten is not None:
+            self._overwritten.entry = None
+        self._released = True
+
+
+class _IndexedEntries:
+    """A fixed-slot logical ring with cumulative cost indexes.
+
+    One accepted logical event consumes at least one physical frame, so a
+    replay ring can retain at most ``max_frames`` entries. The extra slot is
+    the just-appended event before its displaced prefix is retired.
+    """
+
+    def __init__(self, max_entries: int):
+        capacity = max_entries + 1
+        self._entries: list[_EntryCell | None] = [None] * capacity
+        self._frame_totals = [0] * capacity
+        self._byte_totals = [0] * capacity
+        self._head = 0
+        self._size = 0
+
+    def __bool__(self) -> bool:
+        return self._size > 0
+
+    def __len__(self) -> int:
+        return self._size
+
+    def __iter__(self) -> Iterator[PreparedFrames]:
+        for index in range(self._size):
+            yield self[index]
+
+    def __getitem__(self, index: int) -> PreparedFrames:
+        if index < 0:
+            index += self._size
+        if index < 0 or index >= self._size:
+            raise IndexError(index)
+        cell = self._entries[self._slot(index)]
+        assert cell is not None and cell.entry is not None
+        return cell.entry
+
+    def append(
+        self, entry: PreparedFrames, cumulative: FrameCost
+    ) -> _EntryCell | None:
+        if self._size >= len(self._entries):
+            raise RuntimeError("replay ring exceeded its physical frame bound")
+        slot = self._slot(self._size)
+        overwritten = self._entries[slot]
+        self._entries[slot] = _EntryCell(entry)
+        self._frame_totals[slot] = cumulative.frames
+        self._byte_totals[slot] = cumulative.encoded_bytes
+        self._size += 1
+        if overwritten is not None and overwritten.entry is not None:
+            return overwritten
+        return None
+
+    def cumulative_cost_at(self, index: int) -> FrameCost:
+        slot = self._slot(index)
+        return FrameCost(
+            frames=self._frame_totals[slot],
+            encoded_bytes=self._byte_totals[slot],
+        )
+
+    def prefix_through_cost(
+        self, target_frames: int, target_bytes: int, base: FrameCost
+    ) -> int:
+        """Number of leading entries needed to reach both target totals."""
+        return max(
+            self._lower_bound(self._frame_totals, target_frames)
+            if target_frames > base.frames
+            else 0,
+            self._lower_bound(self._byte_totals, target_bytes)
+            if target_bytes > base.encoded_bytes
+            else 0,
+        )
+
+    def contains_seq(self, seq: int) -> bool:
+        low = 0
+        high = self._size
+        while low < high:
+            middle = (low + high) // 2
+            if self[middle].seq < seq:
+                low = middle + 1
+            else:
+                high = middle
+        return low < self._size and self[low].seq == seq
+
+    def drop_prefix(self, count: int) -> _RetiredPrefix | None:
+        if count < 0 or count > self._size:
+            raise ValueError(f"invalid replay prefix length: {count}")
+        if count == 0:
+            return None
+        start = self._head
+        through_seq = self[count - 1].seq
+        self._head = self._slot(count)
+        self._size -= count
+        return _RetiredPrefix(self, start, count, through_seq)
+
+    def clear(self) -> _RetiredPrefix | None:
+        retired = self.drop_prefix(self._size)
+        self._head = 0
+        return retired
+
+    def release_retired(
+        self, start: int, count: int, through_seq: int
+    ) -> None:
+        """Clear old cells; a reused slot's newer cell is never touched.
+
+        Appends replace the whole cell rather than mutating it. If another
+        publisher reuses a retired physical slot before this cleanup runs,
+        its newer seq is above ``through_seq`` and remains live.
+        """
+        for offset in range(count):
+            cell = self._entries[(start + offset) % len(self._entries)]
+            if (
+                cell is not None
+                and cell.entry is not None
+                and cell.entry.seq is not None
+                and cell.entry.seq <= through_seq
+            ):
+                cell.entry = None
+
+    def _lower_bound(self, totals: list[int], target: int) -> int:
+        low = 0
+        high = self._size
+        while low < high:
+            middle = (low + high) // 2
+            if totals[self._slot(middle)] < target:
+                low = middle + 1
+            else:
+                high = middle
+        # The caller only asks while the newest cumulative total reaches the
+        # target, so ``low`` names an entry and the prefix includes it.
+        if low >= self._size:
+            raise RuntimeError("replay cumulative index is inconsistent")
+        return low + 1
+
+    def _slot(self, logical_index: int) -> int:
+        return (self._head + logical_index) % len(self._entries)
 
 
 def format_cursor(process_instance_id: str, seq: int) -> CursorText:
@@ -176,9 +354,13 @@ class ReplayRing:
             raise ValueError("max_bytes must be >= 1")
         self.max_frames = max_frames
         self.max_bytes = max_bytes
-        self._entries: list[PreparedFrames] = []
-        self._issued: set[int] = set()
+        self._entries = _IndexedEntries(max_frames)
         self._usage = FrameCost(frames=0, encoded_bytes=0)
+        # Monotonic totals make a displaced prefix discoverable by two
+        # bounded index searches. ``_retained_base`` is the cumulative cost
+        # immediately before the logical head.
+        self._cumulative_cost = FrameCost(frames=0, encoded_bytes=0)
+        self._retained_base = FrameCost(frames=0, encoded_bytes=0)
         # The unrecoverable boundary: the newest seq this ring can no longer
         # produce, whatever the reason. Monotonic.
         self._unrecoverable_floor = 0
@@ -337,7 +519,7 @@ class ReplayRing:
             # this process cannot prove what happened between there and
             # here.
             return "valid"
-        if seq in self._issued:
+        if self._entries.contains_seq(seq):
             return "valid"
         # The one edge that is usable with nothing under it: a checkpoint
         # this process issued and then dropped, whose whole tail is still
@@ -358,7 +540,11 @@ class ReplayRing:
         return self.observe_published(entry.seq, entry)
 
     def observe_published(
-        self, seq: int, entry: PreparedFrames | None
+        self,
+        seq: int,
+        entry: PreparedFrames | None,
+        *,
+        defer_retired_release: bool = False,
     ) -> AppendResult:
         """Record one published domain event, atomically.
 
@@ -402,39 +588,62 @@ class ReplayRing:
             or cost.frames > self.max_frames
             or cost.encoded_bytes > self.max_bytes
         ):
-            self._clear()
+            retired = self._clear()
             self._unrecoverable_floor = entry.seq
-            return AppendResult(accepted=False, evicted=(), ring_cleared=True)
-        self._entries.append(entry)
-        self._issued.add(entry.seq)
+            return self._finish_append(
+                AppendResult(
+                    accepted=False, ring_cleared=True, _retired=retired
+                ),
+                defer_retired_release,
+            )
+        self._cumulative_cost = self._cumulative_cost + cost
+        overwritten = self._entries.append(entry, self._cumulative_cost)
         self._last_issued = entry.seq
         self._reseed_boundary = entry.seq
         self._usage = self._usage + cost
-        evicted = self._evict_while_over_budget()
-        return AppendResult(accepted=True, evicted=evicted)
+        retired = self._evict_while_over_budget()
+        if overwritten is not None:
+            if retired is None:
+                raise RuntimeError("replay slot reused without retiring a prefix")
+            retired.hold_overwritten(overwritten)
+        return self._finish_append(
+            AppendResult(accepted=True, _retired=retired),
+            defer_retired_release,
+        )
 
-    def _evict_while_over_budget(self) -> tuple[int, ...]:
-        evicted: list[int] = []
-        while self._entries and (
-            self._usage.frames > self.max_frames
-            or self._usage.encoded_bytes > self.max_bytes
+    def _evict_while_over_budget(self) -> _RetiredPrefix | None:
+        if (
+            self._usage.frames <= self.max_frames
+            and self._usage.encoded_bytes <= self.max_bytes
         ):
-            dropped = self._entries.pop(0)
-            self._issued.discard(dropped.seq)
-            # Whole logical events only: frames and bytes both come off in
-            # the unit they went on, so the ring can never hold a fragment
-            # and a client can never be handed one.
-            self._usage = self._usage - dropped.ingress_cost()
-            # Both boundaries are monotonic: they name the newest fact this
-            # ring can no longer produce, so they only ever move forward.
-            if dropped.seq > self._unrecoverable_floor:
-                self._unrecoverable_floor = dropped.seq
-            if dropped.seq > self._evicted_floor:
-                self._evicted_floor = dropped.seq
-            evicted.append(dropped.seq)
-        return tuple(evicted)
+            return None
 
-    def _clear(self) -> None:
+        # Prefix totals are monotonic. Two binary searches find the shortest
+        # whole-event prefix satisfying both budgets, then one logical-head
+        # update retires it. This is O(log(max_frames)) in the configurable
+        # capacity (at the decided 2048-frame production cap, at most 12
+        # probes per dimension), not a claim of parameterized O(1). Crucially
+        # it is independent of the number of displaced entries: none is
+        # visited, moved, or released in the publish critical section.
+        drop_count = self._entries.prefix_through_cost(
+            self._cumulative_cost.frames - self.max_frames,
+            self._cumulative_cost.encoded_bytes - self.max_bytes,
+            self._retained_base,
+        )
+        dropped = self._entries[drop_count - 1]
+        self._retained_base = self._entries.cumulative_cost_at(drop_count - 1)
+        retired = self._entries.drop_prefix(drop_count)
+        self._usage = self._cumulative_cost - self._retained_base
+
+        # Both boundaries are monotonic: the last removed logical event is
+        # the newest fact this ring can no longer reproduce.
+        if dropped.seq > self._unrecoverable_floor:
+            self._unrecoverable_floor = dropped.seq
+        if dropped.seq > self._evicted_floor:
+            self._evicted_floor = dropped.seq
+        return retired
+
+    def _clear(self) -> _RetiredPrefix | None:
         """Drop everything the ring was holding. Only the unrecoverable
         path calls this.
 
@@ -447,10 +656,19 @@ class ReplayRing:
         client keeps a real boundary, this same ring calls it ``too_old``,
         and the gap is reported every time it comes back.
         """
-        self._entries.clear()
-        self._issued.clear()
+        retired = self._entries.clear()
         self._last_issued = None
         self._usage = FrameCost(frames=0, encoded_bytes=0)
+        self._retained_base = self._cumulative_cost
+        return retired
+
+    @staticmethod
+    def _finish_append(
+        result: AppendResult, defer_retired_release: bool
+    ) -> AppendResult:
+        if not defer_retired_release:
+            result.release_retired()
+        return result
 
 
 def classify_cursor(

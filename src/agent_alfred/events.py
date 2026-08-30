@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import threading
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, is_dataclass, replace
 from dataclasses import fields as dc_fields
 from decimal import Decimal
@@ -22,6 +22,7 @@ from agent_alfred.model import ModelError, ModelRef, Usage
 from agent_alfred.outcomes import RunOutcome
 
 TracePolicy = Literal["transient", "persist"]
+PostCommit = Callable[[], None]
 NoticeCode = Literal[
     "trace_incomplete",
     "sink_disabled",
@@ -308,7 +309,9 @@ class EventSink(Protocol):
 
     def prepare(self, event: UnsequencedEvent) -> object: ...
 
-    def commit(self, prepared: object, event: SequencedEvent) -> None: ...
+    def commit(
+        self, prepared: object, event: SequencedEvent
+    ) -> PostCommit | None: ...
 
     def flush(self, run_id: str) -> FlushResult:
         """Settle this sink. ``run_id`` scopes a durability-critical sink's
@@ -451,6 +454,7 @@ class FanOutSink:
         # they are published wherever they are discovered.
         newly_disabled: list[tuple[str, str]] = []
         fatal_notices: list[tuple[str, str]] = []
+        post_commits: list[PostCommit] = []
         run_id = unsequenced.envelope.run_id
         # What the event in flight already says about disabled sinks: a
         # process-fatal discovered while its own notice is being published
@@ -508,7 +512,7 @@ class FanOutSink:
                     )
                     continue
                 try:
-                    sink.commit(prep, sequenced)
+                    post_commit = sink.commit(prep, sequenced)
                 except Exception as exc:
                     stage_reported = self._note_sink_call_failed_locked(
                         run_id,
@@ -523,6 +527,16 @@ class FanOutSink:
                             exc, sink.name, stage_reported,
                             newly_disabled, fatal_notices,
                         )
+                else:
+                    if post_commit is not None:
+                        post_commits.append(post_commit)
+        # These callbacks are produced by constant-time commit bookkeeping
+        # for work that is safe only after the publication order has been
+        # linearized. They must run after the FanOut lock, or a callback that
+        # releases a large retired replay prefix would put that linear work
+        # straight back into the unique publish critical section.
+        for post_commit in post_commits:
+            post_commit()
         if notify_disabled:
             for name, stage in newly_disabled:
                 self._emit_notice(

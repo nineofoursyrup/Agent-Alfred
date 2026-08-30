@@ -470,7 +470,9 @@ class SSEBroker:
             max_frame_bytes=self._max_frame_bytes,
         )
 
-    def commit(self, prepared: object, event: SequencedEvent) -> None:
+    def commit(
+        self, prepared: object, event: SequencedEvent
+    ) -> Callable[[], None] | None:
         """Ring first, then ingress. Short, quantitative, never blocking.
 
         Every published domain event advances the ring's published high
@@ -478,6 +480,9 @@ class SSEBroker:
         step that appends nothing) -- one atomic
         :meth:`ReplayRing.observe_published` call, so no observer can see a
         published seq whose replayable entry is not there yet.
+        Eviction is the ring's bounded index update; commit consumes only
+        the admission verdict, never a per-entry account of the displaced
+        prefix.
 
         An overflow costs a generation bump and one kick: O(1) in
         connections. Walking the registry from in here would charge the
@@ -496,57 +501,72 @@ class SSEBroker:
         item: PreparedFrames = prepared  # type: ignore[assignment]
         kick = False
         ring_failure: BaseException | None = None
-        with self._lock:
-            if self._fatal is not None:
-                raise ProcessFatalSinkError(
-                    "the dispatcher is down; this sink cannot deliver"
-                ) from self._fatal
-            progress_module.observe(
-                event.payload, event.envelope.run_id, self._progress
-            )
-            self._state_epoch += 1
-            self._note_run_event(event)
-            try:
-                if event.replayable:
-                    # The ring is the only replay source for an active Run,
-                    # so it is updated under the same lock that decides a
-                    # connecting client's high-water mark: registration and
-                    # publication can never interleave into a duplicate or
-                    # a hole.
-                    #
-                    # The checkpoint is only attached once the ring has
-                    # accepted the event. An event too large for either
-                    # budget is still delivered live -- the client did see
-                    # it -- but it carries no ``id:``, because a cursor
-                    # naming a fact the ring cannot reproduce would be a
-                    # checkpoint this process cannot honour.
-                    checkpointed = item.with_checkpoint(event.seq, self._instance)
-                    if self._ring.observe_published(event.seq, checkpointed).accepted:
-                        item = checkpointed
-                else:
-                    # A transient consumes its seq and is delivered live
-                    # only: O(1) metadata on the ring, no entry, no
-                    # checkpoint.
-                    self._ring.observe_published(event.seq, None)
-            except Exception as exc:
-                # The ring failing is not one Run's problem (#23 §9). The
-                # event is not offered to an ingress whose dispatcher is
-                # about to be declared dead; the fatal state is published
-                # below, once this critical section has been left.
-                ring_failure = exc
-            else:
-                if not self._ingress.offer(_PublishedEvent(event.seq, item)):
-                    if item.replayable or item.must_deliver:
-                        # Ingress overflow costs liveness, never
-                        # recoverability: the fact is already in the ring,
-                        # so every live connection reconnects with its
-                        # cursor and gets it. The bump and the kick are the
-                        # whole cost here; the sweep happens on the
-                        # dispatcher.
-                        self._disconnect_generation += 1
-                        kick = self._arm_kick_locked()
+        ring_result = None
+        retired_release: Callable[[], None] | None = None
+        try:
+            with self._lock:
+                if self._fatal is not None:
+                    raise ProcessFatalSinkError(
+                        "the dispatcher is down; this sink cannot deliver"
+                    ) from self._fatal
+                progress_module.observe(
+                    event.payload, event.envelope.run_id, self._progress
+                )
+                self._state_epoch += 1
+                self._note_run_event(event)
+                try:
+                    if event.replayable:
+                        # The ring is the only replay source for an active Run,
+                        # so it is updated under the same lock that decides a
+                        # connecting client's high-water mark: registration and
+                        # publication can never interleave into a duplicate or
+                        # a hole.
+                        #
+                        # The checkpoint is only attached once the ring has
+                        # accepted the event. An event too large for either
+                        # budget is still delivered live -- the client did see
+                        # it -- but it carries no ``id:``, because a cursor
+                        # naming a fact the ring cannot reproduce would be a
+                        # checkpoint this process cannot honour.
+                        checkpointed = item.with_checkpoint(
+                            event.seq, self._instance
+                        )
+                        ring_result = self._ring.observe_published(
+                            event.seq,
+                            checkpointed,
+                            defer_retired_release=True,
+                        )
+                        if ring_result.accepted:
+                            item = checkpointed
                     else:
-                        self._ingress_dropped += 1
+                        # A transient consumes its seq and is delivered live
+                        # only: O(1) metadata on the ring, no entry, no
+                        # checkpoint.
+                        ring_result = self._ring.observe_published(
+                            event.seq, None, defer_retired_release=True
+                        )
+                except Exception as exc:
+                    # The ring failing is not one Run's problem (#23 §9). The
+                    # event is not offered to an ingress whose dispatcher is
+                    # about to be declared dead; the fatal state is published
+                    # below, once this critical section has been left.
+                    ring_failure = exc
+                else:
+                    if not self._ingress.offer(_PublishedEvent(event.seq, item)):
+                        if item.replayable or item.must_deliver:
+                            # Ingress overflow costs liveness, never
+                            # recoverability: the fact is already in the ring,
+                            # so every live connection reconnects with its
+                            # cursor and gets it. The bump and the kick are the
+                            # whole cost here; the sweep happens on the
+                            # dispatcher.
+                            self._disconnect_generation += 1
+                            kick = self._arm_kick_locked()
+                        else:
+                            self._ingress_dropped += 1
+        finally:
+            if ring_result is not None:
+                retired_release = ring_result.release_retired
         if ring_failure is not None:
             # The fatal handler is deliberately NOT called from here:
             # commit runs inside the FanOut's publish critical section, and
@@ -561,6 +581,11 @@ class SSEBroker:
             ) from ring_failure
         if kick:
             self._ingress.put_kick()
+        # FanOut invokes this immediately after leaving its unique publish
+        # lock. Logical retirement is already linearized; only Python
+        # reference release remains, and its cost may scale with the retired
+        # prefix so it cannot run in either publication critical section.
+        return retired_release
 
     def _arm_kick_locked(self) -> bool:
         """Decide whether this overflow must wake the dispatcher. Call holds

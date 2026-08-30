@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import weakref
+
 import pytest
 
 from agent_alfred.gateway.web import frames, replay
@@ -386,6 +388,62 @@ def test_eviction_leaves_exactly_the_survivors_cost() -> None:
     assert ring.current_cost == (
         _entry(2).ingress_cost() + _entry(3).ingress_cost()
     )
+
+
+def test_one_append_does_not_walk_the_evicted_prefix(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A legal large event cannot charge commit for every displaced event."""
+    ring = replay.ReplayRing(max_frames=64, max_bytes=1 << 20)
+    for seq in range(1, 65):
+        ring.append(_entry(seq))
+
+    cost_calls = 0
+    original_ingress_cost = frames.PreparedFrames.ingress_cost
+
+    def counted_ingress_cost(entry: frames.PreparedFrames) -> frames.FrameCost:
+        nonlocal cost_calls
+        cost_calls += 1
+        return original_ingress_cost(entry)
+
+    monkeypatch.setattr(frames.PreparedFrames, "ingress_cost", counted_ingress_cost)
+    large = frames.measured_frames(
+        seq=65,
+        frames=tuple(b"data: large" for _ in range(48)),
+        id_line=b"id: inst:65\n",
+        replayable=True,
+    )
+
+    result = ring.append(large)
+
+    assert result.accepted is True
+    assert cost_calls == 1
+    assert [entry.seq for entry in ring.entries_after(48) or ()] == list(
+        range(49, 66)
+    )
+
+
+def test_delayed_cleanup_never_releases_a_reused_live_slot() -> None:
+    """A later publisher may reuse a slot before an earlier cleanup runs."""
+    ring = replay.ReplayRing(max_frames=2, max_bytes=1 << 20)
+    first = _entry(1)
+    first_ref = weakref.ref(first)
+    ring.append(first)
+    ring.append(_entry(2))
+    del first
+
+    earlier = ring.observe_published(
+        3, _entry(3), defer_retired_release=True
+    )
+    later = ring.observe_published(4, _entry(4), defer_retired_release=True)
+    # Reusing seq 1's physical slot under the later publication does not
+    # decrement its final reference there: the later cleanup carries it out.
+    assert first_ref() is not None
+
+    later.release_retired()
+    assert first_ref() is None
+    earlier.release_retired()
+    assert [entry.seq for entry in ring.entries_after(2) or ()] == [3, 4]
 
 
 def test_ring_accounting_returns_exactly_to_zero() -> None:

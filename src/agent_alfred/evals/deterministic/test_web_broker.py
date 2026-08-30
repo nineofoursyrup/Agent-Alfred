@@ -7,6 +7,7 @@ import queue
 import re
 import threading
 import time
+import weakref
 from dataclasses import replace
 
 import pytest
@@ -264,6 +265,74 @@ def test_a_rolled_out_ring_answers_a_gap_not_a_silent_resume() -> None:
     assert b'"requested_seq":1' in notice.wire_bytes()
     # Nothing was replayed from a ring that no longer holds it.
     assert _ids(items) == []
+
+
+def test_commit_does_not_walk_a_large_evicted_replay_prefix(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ring = ReplayRing(max_frames=64, max_bytes=1 << 20)
+    retired_refs: list[weakref.ReferenceType[PreparedFrames]] = []
+    for seq in range(1, 65):
+        entry = frames.measured_frames(
+            seq=seq,
+            frames=(b"data: small",),
+            id_line=b"id: inst-test:%d\n" % seq,
+            replayable=True,
+        )
+        ring.append(entry)
+        if seq <= 48:
+            retired_refs.append(weakref.ref(entry))
+    del entry
+    harness = Harness(ring=ring)
+    payload = RunStarted(purpose="chat")
+    prepared = frames.measured_frames(
+        frames=tuple(b"data: large" for _ in range(48)), replayable=True
+    )
+    harness.fanout._seq = 65
+    monkeypatch.setattr(harness.broker, "prepare", lambda _event: prepared)
+    cost_calls = 0
+    original_ingress_cost = PreparedFrames.ingress_cost
+
+    def counted_ingress_cost(item: PreparedFrames) -> frames.FrameCost:
+        nonlocal cost_calls
+        cost_calls += 1
+        return original_ingress_cost(item)
+
+    monkeypatch.setattr(PreparedFrames, "ingress_cost", counted_ingress_cost)
+    original_release = ring._entries.release_retired
+    released_outside_publish_lock = False
+
+    def checked_release(start: int, count: int, through_seq: int) -> None:
+        nonlocal released_outside_publish_lock
+        acquired = harness.broker._lock.acquire(blocking=False)
+        assert acquired, "references were released under the broker lock"
+        fanout_acquired = harness.fanout._lock.acquire(blocking=False)
+        assert fanout_acquired, "references were released under the FanOut lock"
+        harness.fanout._lock.release()
+        harness.broker._lock.release()
+        released_outside_publish_lock = True
+        original_release(start, count, through_seq)
+
+    monkeypatch.setattr(ring._entries, "release_retired", checked_release)
+
+    harness.emit(payload, run_id="r65")
+
+    # One ring admission plus one ingress admission; none per displaced item.
+    assert cost_calls == 2
+    assert released_outside_publish_lock is True
+    assert all(reference() is None for reference in retired_refs)
+    retained_cells = [
+        cell.entry
+        for cell in ring._entries._entries
+        if cell is not None and cell.entry is not None
+    ]
+    assert frames.FrameCost(
+        frames=sum(len(entry.frames) for entry in retained_cells),
+        encoded_bytes=sum(entry.byte_size for entry in retained_cells),
+    ) == ring.current_cost
+    assert [entry.seq for entry in ring.entries_after(48) or ()] == list(
+        range(49, 66)
+    )
 
 
 def test_the_four_illegal_cursors_each_name_their_reason() -> None:
