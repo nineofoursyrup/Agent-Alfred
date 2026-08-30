@@ -102,17 +102,19 @@ def normalize_host(value: str) -> str | None:
 
 
 def normalize_origin(value: str) -> str | None:
-    """Normalize an Origin just enough to compare it exactly.
+    """Reduce an Origin to the value compared against the whitelist.
 
-    Only a trailing slash is removed, because that is the one variation
-    browsers emit for the same origin. Case, scheme, host and port are left
-    alone: normalizing those would be how ``http://127.0.0.1:7717`` and some
-    other address quietly became the same string.
+    Only the HTTP syntax's surrounding whitespace is removed -- optional
+    whitespace around a header's value is not part of it. Nothing else is
+    normalized: a trailing slash, a path, userinfo, a comma list or a
+    different case each name a *different* origin, and folding any of them
+    into a whitelist value is how one check comes to accept two origins
+    while believing it accepts one.
     """
     text = value.strip()
     if not text:
         return None
-    return text.rstrip("/")
+    return text
 
 
 @dataclass(frozen=True)

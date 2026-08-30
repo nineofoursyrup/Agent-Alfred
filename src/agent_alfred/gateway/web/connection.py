@@ -21,6 +21,7 @@ from __future__ import annotations
 import queue
 import socket
 import threading
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
@@ -151,6 +152,18 @@ class ConnectionQueue:
         with self._lock:
             return self._closing
 
+    @property
+    def current_frames(self) -> int:
+        """The frames this queue is holding right now."""
+        with self._lock:
+            return self._frames
+
+    @property
+    def current_bytes(self) -> int:
+        """The encoded bytes this queue is holding right now."""
+        with self._lock:
+            return self._bytes
+
     def offer(self, item: frames.PreparedFrames) -> OfferOutcome:
         """Queue one logical event. O(1), non-blocking, no IO.
 
@@ -185,19 +198,6 @@ class ConnectionQueue:
             self._dropped += 1
             return OfferOutcome(kind="dropped")
 
-    def prime(self, item: frames.PreparedFrames) -> None:
-        """Queue the opening sequence, bypassing capacity.
-
-        Used only for the frames that tell a client where it is (retry,
-        re-seed, gap notice, snapshot). They are bounded by construction and
-        dropping one would leave the browser rendering a state it cannot
-        name, so they are not candidates for shedding under backpressure.
-        """
-        self._items.put(item)
-        with self._lock:
-            self._frames += len(item.frames)
-            self._bytes += item.byte_size
-
     def request_close(self, *, retry_ms: int | None = None) -> None:
         """Ask the writer thread to hang up. Never closes anything here."""
         with self._lock:
@@ -226,11 +226,15 @@ class ConnectionSource(Protocol):
 
 
 class ConnectionWriter:
-    """The connection's own thread: take, write, heartbeat, close.
+    """The connection's own thread: open, take, write, heartbeat, close.
 
-    The clock and the source are injected so a heartbeat can be tested
-    deterministically -- a test must never wait fifteen seconds to find out
-    whether a comment line was written.
+    The opening stream -- retry, re-seed, any gap notice, the snapshot and
+    the exact replay tail -- is the writer's own: it writes that sequence
+    before touching the queue, so the queue's two budgets are spent on live
+    frames only and the tail can be larger than the queue without ever
+    being squeezed past them. The clock and the source are injected so a
+    heartbeat can be tested deterministically -- a test must never wait
+    fifteen seconds to find out whether a comment line was written.
     """
 
     def __init__(
@@ -240,11 +244,13 @@ class ConnectionWriter:
         source: ConnectionSource,
         clock: Clock,
         heartbeat_s: float = DEFAULT_HEARTBEAT_S,
+        startup: Sequence[frames.PreparedFrames] = (),
     ):
         self._connection = connection
         self._source = source
         self._clock = clock
         self._heartbeat_s = heartbeat_s
+        self._startup = tuple(startup)
         self._last_write = clock.monotonic()
         self.failure: BaseException | None = None
 
@@ -255,6 +261,11 @@ class ConnectionWriter:
     def run(self) -> None:
         """Block until told to stop, then close the connection exactly once."""
         try:
+            # The opening sequence first, always: it is what tells the
+            # client where it is, so it precedes anything the dispatcher
+            # may already have queued behind it.
+            for item in self._startup:
+                self._write(item.wire_bytes())
             while True:
                 try:
                     item = self._source.take(self._heartbeat_s)

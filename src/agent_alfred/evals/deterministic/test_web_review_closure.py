@@ -27,6 +27,7 @@ from agent_alfred.evals.deterministic.test_web_broker import (
     _cursor_for,
     _drain,
     _ids,
+    _run_dispatcher,
     _snapshot,
 )
 from agent_alfred.evals.deterministic.test_web_runtime import (
@@ -702,21 +703,30 @@ def test_a_chunked_event_is_replayed_whole_after_breaking_midway() -> None:
 
 
 def _primed_patches(handle) -> list[dict]:
-    """Every state patch already queued for a connection, decoded."""
+    """Every state patch already queued for a connection, decoded.
+
+    The opening stream travels on the handle -- a running writer would
+    write it before the queue -- so both sources are drained: startup
+    first, then whatever arrived after it.
+    """
     import json
 
     out: list[dict] = []
+    items = list(handle.startup)
+    handle.startup = ()
     while True:
         try:
-            item = handle.queue.take(timeout=0)
+            items.append(handle.queue.take(timeout=0))
         except Exception:  # noqa: BLE001 - queue.Empty, and nothing else
-            return out
+            break
+    for item in items:
         if not isinstance(item, PreparedFrames):
             continue
         for frame in item.frames:
             if b"event: state_patch" in frame:
                 raw = frame.split(b"data: ", 1)[1]
                 out.append(json.loads(raw.decode("utf-8")))
+    return out
 
 
 def _fill_ingress(harness, count: int) -> None:
@@ -753,7 +763,9 @@ def test_an_undeliverable_patch_still_moves_the_authoritative_snapshot() -> None
     assert harness.broker._ingress._frames == 2
     # The one live connection is told to hang up and come back for a
     # snapshot, rather than left showing a state it will never be corrected
-    # on.
+    # on. The publisher only raised the disconnect generation; the closing
+    # is the dispatcher's work, outside the publish path.
+    _run_dispatcher(harness)
     assert handle.queue.close_requested is True
 
 
@@ -777,6 +789,7 @@ def test_the_frame_budget_alone_can_refuse_a_patch() -> None:
     assert harness.broker._ingress._frames == 1
     assert harness.broker._ingress._bytes < harness.broker._ingress.max_bytes
     assert harness.broker.publish_state_patch(_snapshot(state_revision=3)) is False
+    _run_dispatcher(harness)
     assert handle.queue.close_requested is True
 
 
@@ -788,6 +801,7 @@ def test_the_byte_budget_alone_can_refuse_a_patch() -> None:
     _fill_ingress(harness, 1)
     assert harness.broker._ingress._frames == 0
     assert harness.broker.publish_state_patch(_snapshot(state_revision=3)) is False
+    _run_dispatcher(harness)
     assert handle.queue.close_requested is True
 
 

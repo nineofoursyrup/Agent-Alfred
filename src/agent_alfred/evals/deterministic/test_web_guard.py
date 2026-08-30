@@ -155,8 +155,8 @@ def test_the_whitelist_is_exactly_two_entries_on_the_bound_port() -> None:
     [
         "http://127.0.0.1:7717",
         "http://localhost:7717",
-        # One variation browsers really do emit for the same origin.
-        "http://localhost:7717/",
+        # HTTP syntax-level surrounding whitespace is not part of the value.
+        "  http://localhost:7717  ",
     ],
 )
 def test_an_origin_from_this_dashboard_is_allowed(origin: str) -> None:
@@ -172,6 +172,15 @@ def test_an_origin_from_this_dashboard_is_allowed(origin: str) -> None:
         "http://[::1]:7717",
         "null",
         "http://localhost.evil.com:7717",
+        # Nothing is normalized into a whitelist value: a trailing slash,
+        # several of them, a path, userinfo, a comma list and a differently
+        # cased spelling are all different origins, and each is refused.
+        "http://localhost:7717/",
+        "http://localhost:7717//",
+        "http://localhost:7717/path",
+        "http://x@localhost:7717",
+        "http://localhost:7717,http://127.0.0.1:7717",
+        "HTTP://LOCALHOST:7717",
     ],
 )
 def test_a_foreign_origin_is_refused(origin: str) -> None:

@@ -315,6 +315,7 @@ class DashboardService:
         self._write_descriptor_fn = write_descriptor or write_entry_descriptor
         self._server: Any = None
         self._serving = False
+        self._serving_thread: Any = None
         self._descriptor: EntryDescriptor | None = None
         # The release's own progress: which of its steps have actually
         # succeeded. They live beside the references they are about, so a
@@ -322,6 +323,7 @@ class DashboardService:
         # instead of re-running the whole list or skipping its remainder.
         self._server_shutdown_done = False
         self._server_closed = False
+        self._thread_confirmed = False
 
     # -- reads ------------------------------------------------------------
 
@@ -376,10 +378,22 @@ class DashboardService:
         # The one thing that has to precede the lock: the lock file lives in
         # the state directory, and a file cannot be locked inside a
         # directory that does not exist. Creating it takes no part in the
-        # arbitration -- it is idempotent, it is 0700, and it contains
-        # nothing a competing instance could misread. Every *decision*
-        # follows the lock.
+        # arbitration -- it is idempotent, and it contains nothing a
+        # competing instance could misread. Every *decision* follows the
+        # lock.
         self._state_dir.mkdir(mode=0o700, exist_ok=True)
+        # ... and the directory's mode is *enforced*, not merely requested:
+        # ``mkdir``'s mode only applies to a directory it creates, so a
+        # directory an earlier instance (or an untidy restore) left behind
+        # keeps whatever mode it had. The state directory is a managed path
+        # -- directory 0700 -- and this process will not take write
+        # authority over one that is wider than that. Enforcement happens
+        # before the lock: a directory this process cannot even write a
+        # lock file into must be fixed before the lock is asked for, and a
+        # chmod that fails aborts the start here -- no lock, no port, no
+        # descriptor, nothing to roll back. Only the directory itself is
+        # touched; user files under it are not this system's to rewrite.
+        os.chmod(self._state_dir, 0o700)
         self._lock.acquire()
         try:
             self._bind()
@@ -433,15 +447,13 @@ class DashboardService:
         self._descriptor = descriptor
         return descriptor
 
-    def serve_forever(self) -> None:
-        """Block handling requests. The caller owns the thread."""
-        if self._server is None:
-            raise RuntimeError("DashboardService.start() must precede serving")
-        self._serving = True
-        self._server.serve_forever()
-
     def start_serving(self, spawn: SpawnThread | None = None) -> Any:
         """Handle requests on a daemon thread; return it.
+
+        The one serving seam this lifecycle has: the bound server's own
+        ``serve_forever`` is the thread target, and the lifecycle object
+        holds both the server and the thread so the close can confirm the
+        thread's exit from outside it.
 
         Daemon because a Dashboard thread must never keep the interpreter
         alive past the process the user asked to exit -- there is no reply
@@ -450,9 +462,7 @@ class DashboardService:
         ``spawn`` is the seam for the two ways this step can fail: a thread
         that cannot be created, and one that cannot be started. Both are
         failures of the last start-up step like any other, so the caller has
-        to be able to reach them without crashing the interpreter. It is the
-        same shape :class:`~agent_alfred.gateway.web.broker.SSEBroker` takes,
-        for the same reason.
+        to be able to reach them without crashing the interpreter.
 
         ``_serving`` is set only after ``start()`` has returned, so a thread
         that could not be created or started leaves it False. It is what
@@ -466,6 +476,7 @@ class DashboardService:
         thread = make(self._server.serve_forever)
         thread.start()
         self._serving = True
+        self._serving_thread = thread
         return thread
 
     def stop_serving(self) -> None:
@@ -502,6 +513,13 @@ class DashboardService:
         only after the action behind it has returned, so a close that
         resumes never re-runs a step that succeeded and never skips one
         that did not.
+
+        The steps run in order and from outside the serving thread:
+        ``shutdown()`` asks the loop to stop and returns only once its loop
+        has observed the request, ``server_close()`` releases the listening
+        socket, and joining the thread is the confirmation that the last
+        serving loop is really gone -- "the port is no longer served" is a
+        fact about a thread, not about an intention.
         """
         server = self._server
         if server is None:
@@ -516,10 +534,21 @@ class DashboardService:
         if not self._server_closed:
             server.server_close()
             self._server_closed = True
-        # Reached only when the socket is confirmed closed; this is what
-        # makes "the port is free" a fact rather than an intention.
+        if not self._thread_confirmed:
+            # The thread only exists if ``start()`` returned, so joining it
+            # here is always legal; and since ``shutdown()`` returns only
+            # after the serving loop exited, this join is the thread's last
+            # step, not a wait for work to finish.
+            thread = self._serving_thread
+            if thread is not None:
+                thread.join()
+            self._thread_confirmed = True
+        # Reached only when the socket is confirmed closed and the thread is
+        # confirmed gone; this is what makes "the port is free" a fact
+        # rather than an intention.
         self._server = None
         self._serving = False
+        self._serving_thread = None
 
     def _forget_descriptor(self) -> None:
         if self._descriptor is None:

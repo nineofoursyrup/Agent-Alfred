@@ -17,9 +17,11 @@ another chance to collide.
 
 from __future__ import annotations
 
+import json
 import socket
 import time
 from typing import Any
+from urllib.parse import quote
 
 import pytest
 
@@ -645,3 +647,70 @@ def test_the_cursor_round_trips_through_a_real_socket(server) -> None:
     reseed, *again = _ids_from(_open_stream(server, f"{INSTANCE}:2", until_events=3))
     assert again == [3, 4, 5]
     assert [event.seq for event in events] == [1, 2, 3, 4, 5]
+
+
+# --- the historic-session reads: an opaque id on the query string ----------
+
+# ADR-0027: a historic ``session_id`` is an arbitrary TEXT value. It cannot
+# survive as a path segment, so the fixed endpoint carries it as one query
+# parameter, percent-decoded exactly once and then used verbatim.
+HISTORIC_IDS = [
+    "",
+    "/",
+    "/etc/passwd",
+    "a?b",
+    "a#b",
+    "100%",
+    "a b",
+    "café",
+    "a/b?c#d%20e",
+    "%2F",
+    "a%2Fb",
+]
+
+
+@pytest.mark.parametrize("session_id", HISTORIC_IDS)
+def test_a_historic_session_id_rides_the_query_parameter_verbatim(
+    server, session_id
+) -> None:
+    head, body = _request(
+        server.port,
+        _get(
+            server.port,
+            "/api/sessions/messages?session_id=" + quote(session_id, safe=""),
+        ),
+    )
+    assert head.startswith(b"HTTP/1.1 200")
+    assert json.loads(body)["session_id"] == session_id
+
+
+def test_a_missing_session_id_parameter_is_a_bad_request(server) -> None:
+    """Missing and empty are different facts: the value may legitimately be
+    the empty string, so only its absence is a bad request."""
+    head, body = _request(
+        server.port, _get(server.port, "/api/sessions/messages")
+    )
+    assert head.startswith(b"HTTP/1.1 400")
+    assert b"missing_session_id" in body
+
+
+def test_the_session_id_is_percent_decoded_exactly_once(server) -> None:
+    head, body = _request(
+        server.port,
+        _get(server.port, "/api/sessions/messages?session_id=a%252Fb"),
+    )
+    assert head.startswith(b"HTTP/1.1 200")
+    assert json.loads(body)["session_id"] == "a%2Fb"
+
+
+def test_the_old_path_segment_route_is_gone(server) -> None:
+    """A session id is not a path segment: the old shape must not answer.
+
+    Slicing the raw path both mangled ids containing ``/`` and left encoded
+    values undecoded; every historic session the inbox returns must open
+    through the one route, not through a parse of its own id.
+    """
+    head, _body = _request(
+        server.port, _get(server.port, "/api/sessions/abc/messages")
+    )
+    assert head.startswith(b"HTTP/1.1 404")

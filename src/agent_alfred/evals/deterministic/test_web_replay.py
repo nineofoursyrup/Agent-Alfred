@@ -201,6 +201,65 @@ def test_high_water_tracks_every_appended_event() -> None:
     assert ring.latest_complete_seq() == 5
 
 
+# --- the published high water ----------------------------------------------
+
+
+def test_a_published_transient_advances_only_the_published_high_water() -> None:
+    """A transient consumes a seq without minting a checkpoint.
+
+    The high water the classification answers with is the one the process
+    actually published -- transient included -- so a cursor naming the
+    transient's seq is refused as *published but never issued*
+    (``malformed``), not ``ahead`` (which would claim it was never sent).
+    The transient itself never enters the ring.
+    """
+    ring = replay.ReplayRing(max_frames=10, max_bytes=1 << 20)
+    ring.append(_entry(1))
+    ring.observe_published(2, None)
+    assert ring.published_high_water_seq() == 2
+    assert ring.high_water_seq() == 1
+    assert len(ring) == 1
+    assert ring.latest_complete_seq() == 1
+    assert ring.reseed_boundary_seq() == 1
+    # Published but never issued: malformed, not ahead.
+    assert ring.classify_seq(2) == "malformed"
+    # One past everything published: ahead, as before.
+    assert ring.classify_seq(3) == "ahead"
+    # The next replayable event lands on the transient's successor and is a
+    # checkpoint like any other.
+    ring.append(_entry(3))
+    assert ring.classify_seq(3) == "valid"
+    assert [entry.seq for entry in ring.entries_after(1) or ()] == [3]
+
+
+def test_published_high_water_is_monotonic_across_both_kinds() -> None:
+    ring = replay.ReplayRing(max_frames=10, max_bytes=1 << 20)
+    ring.observe_published(1, None)
+    with pytest.raises(ValueError):
+        ring.observe_published(1, None)
+    with pytest.raises(ValueError):
+        ring.observe_published(1, _entry(2))
+    # The one-call shape: advancing and appending are the same step, so no
+    # observer can see a published seq whose entry is not there yet.
+    result = ring.observe_published(2, _entry(2))
+    assert result.accepted is True
+    assert ring.published_high_water_seq() == 2
+    assert ring.classify_seq(2) == "valid"
+
+
+def test_append_is_observe_published_with_the_entry_given() -> None:
+    ring = replay.ReplayRing(max_frames=2, max_bytes=1 << 20)
+    for seq in (1, 2, 3):
+        ring.append(_entry(seq))
+    assert ring.published_high_water_seq() == 3
+    assert ring.high_water_seq() == 3
+    assert ring.classify_seq(3) == "valid"
+    # A seq at or below the published high water is refused, transient or
+    # not: publication is a linear order.
+    with pytest.raises(ValueError):
+        ring.observe_published(3, _entry(4))
+
+
 # --- the Last-Event-ID text ------------------------------------------------
 
 

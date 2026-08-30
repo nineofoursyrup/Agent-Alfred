@@ -192,6 +192,14 @@ class ReplayRing:
         # goes back.
         self._reseed_boundary: int | None = None
         self._high_water = 0
+        # The newest domain-event seq this process has **published**, whether
+        # or not the event was replayable. A transient consumes a seq and can
+        # be sitting in a client's screen when it reconnects, so "ahead"
+        # means "past everything published" -- not "past the newest
+        # replayable one". O(1) metadata only: no transient is stored, and
+        # the components below (issued checkpoints, replayable entries,
+        # floors, the re-seed boundary) stay independent of it.
+        self._published_high_water = 0
         self._emitted_any = False
 
     # -- reads ------------------------------------------------------------
@@ -212,8 +220,21 @@ class ReplayRing:
         seq -- not the newest seq the process published. A transient event
         consumes a seq and never reaches here, which is exactly why the
         arithmetic predecessor of a checkpoint is not itself a checkpoint.
+        For "newest published, transient included", see
+        :meth:`published_high_water_seq`.
         """
         return self._high_water
+
+    def published_high_water_seq(self) -> int:
+        """The newest domain-event seq this process has published.
+
+        Transients included: every published domain event advances this by
+        one O(1) metadata step, and nothing else -- no entry, no checkpoint,
+        no floor. It is the boundary the cursor classification's ``ahead``
+        answer is measured against, because a client holding a transient's
+        seq on screen must not be told the process never sent it.
+        """
+        return self._published_high_water
 
     def latest_complete_seq(self) -> int | None:
         """The newest checkpoint this ring can actually reproduce.
@@ -269,6 +290,20 @@ class ReplayRing:
     def classify_seq(self, seq: int) -> SeqVerdict:
         """Close a cursor's position into one of the four decided reasons.
 
+        The classification is ordered so that each answer is the strongest
+        one available:
+
+        1. past everything **published** (transients included) -> ``ahead``;
+        2. below the unrecoverable floor -> ``too_old``;
+        3. the reserved startup boundary, exactly while nothing has been
+           lost -> ``valid``;
+        4. an issued checkpoint -- or the one edge usable with nothing under
+           it, a checkpoint issued and then evicted whose whole tail is
+           still here -> ``valid``;
+        5. anything else is a positive seq that **was** published but never
+           issued as a checkpoint -- a transient's seq, or an event too
+           large to store -> ``malformed``.
+
         The two floors are not interchangeable. A seq that was issued and
         later evicted names a real boundary -- everything past it is still
         held, so resuming from it loses nothing. A seq the ring never stored
@@ -283,7 +318,7 @@ class ReplayRing:
         """
         if not isinstance(seq, int) or isinstance(seq, bool):
             return "malformed"
-        if seq > self._high_water:
+        if seq > self._published_high_water:
             return "ahead"
         if seq < self._unrecoverable_floor:
             return "too_old"
@@ -307,26 +342,53 @@ class ReplayRing:
             return "valid"
         return "malformed"
 
-    # -- writes -----------------------------------------------------------
+    # -- writes ------------------------------------------------------------
 
     def append(self, entry: PreparedFrames) -> AppendResult:
-        """Publish one logical event. Seq must be strictly increasing.
+        """Publish one replayable event. Seq must strictly increase.
 
-        An event the ring cannot carry at all -- one with no frames, more
+        The same step as :meth:`observe_published` with the entry given; see
+        there for the refused-entry and monotonicity rules.
+        """
+        return self.observe_published(entry.seq, entry)
+
+    def observe_published(
+        self, seq: int, entry: PreparedFrames | None
+    ) -> AppendResult:
+        """Record one published domain event, atomically.
+
+        Every published domain event goes through here exactly once: the
+        published high water advances to ``seq`` -- one O(1) metadata step,
+        transient or not -- and, when the event was replayable, ``entry``
+        (the same logical event with its checkpoint attached) is appended to
+        the ring **in the same step**. There is no state in between: an
+        observer never sees a published seq whose entry is missing, which is
+        exactly the middle state a "advance, then append" pair would expose.
+
+        An entry the ring cannot carry at all -- one with no frames, more
         physical frames than the whole frame budget, or more encoded bytes
         than the whole byte budget -- is refused whole: the ring is cleared
         and the unrecoverable boundary jumps past it, so no client is told
-        it can recover a fact this process does not hold.
+        it can recover a fact this process does not hold. The event still
+        counts as published -- it was, and a client that saw it must not read
+        as "ahead". What it does not get is a checkpoint: the caller is told
+        the append was refused precisely so it can withhold the ``id:`` line.
 
-        The event still counts towards the high-water mark -- it was
-        published, and a client that saw it must not read as "ahead". What
-        it does not get is a checkpoint: the caller is told the append was
-        refused precisely so it can withhold the ``id:`` line.
+        A transient passes ``entry=None``: the published high water moves
+        and nothing is stored -- no entry, no checkpoint, no floor.
         """
-        if entry.seq <= self._high_water:
+        if seq <= self._published_high_water:
             raise ValueError(
-                f"seq must increase: got {entry.seq} after {self._high_water}"
+                "seq must increase: got "
+                f"{seq} after {self._published_high_water}"
             )
+        if entry is not None and entry.seq != seq:
+            raise ValueError(
+                f"entry seq {entry.seq} does not match published seq {seq}"
+            )
+        self._published_high_water = seq
+        if entry is None:
+            return AppendResult(accepted=False)
         self._high_water = entry.seq
         self._emitted_any = True
         if (

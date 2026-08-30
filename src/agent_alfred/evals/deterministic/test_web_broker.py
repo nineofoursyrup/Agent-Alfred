@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import queue
+import re
 import threading
 import time
 
@@ -17,12 +18,18 @@ from agent_alfred.events import (
     FanOutSink,
     RunStarted,
     SequencedEvent,
+    UnsequencedEvent,
 )
 from agent_alfred.gateway.web import frames
-from agent_alfred.gateway.web.broker import SSEBroker, _IngressStop
+from agent_alfred.gateway.web.broker import (
+    SSEBroker,
+    _IngressKick,
+    _IngressStop,
+)
 from agent_alfred.gateway.web.connection import (
     CloseConnection,
     FakeConnection,
+    OfferOutcome,
     StopWriter,
 )
 from agent_alfred.gateway.web.frames import PreparedFrames
@@ -142,7 +149,15 @@ class _FakeThread:
 
 
 def _drain(handle) -> list:
-    items = []
+    """Everything this connection would receive now -- and consume it.
+
+    The opening stream travels on the handle -- the writer writes it before
+    touching the queue -- so a drain returns startup then queue items, and
+    marks the startup as written: a second drain returns only what arrived
+    since, exactly what a running writer would leave behind.
+    """
+    items = list(handle.startup)
+    handle.startup = ()
     while True:
         try:
             items.append(handle.queue.take(timeout=0))
@@ -353,13 +368,14 @@ def test_a_connection_that_never_consumes_does_not_block_the_run_or_others() -> 
 
 def test_dropped_transients_are_reported_once_the_connection_recovers() -> None:
     harness = Harness()
-    # A queue whose only room is the opening sequence: every transient after
-    # it is backpressure, and transients are what gives way.
+    # A queue with room for exactly two transient frames: the third is
+    # backpressure, and transients are what gives way.
     handle = harness.connect(max_frames=2)
     for _ in range(3):
         harness.emit(BlockDelta(text="x"), run_id="r1")
         harness.deliver()
-    # Drain past the opening frames until the queue has room again.
+    # Two were accepted, one was dropped. Drain past them until the queue
+    # has room again.
     _drain(handle)
     harness.emit(RunStarted(purpose="chat"), run_id="r1")
     harness.deliver()
@@ -373,7 +389,7 @@ def test_dropped_transients_are_reported_once_the_connection_recovers() -> None:
         None,
     )
     assert notice is not None
-    assert b'"count":3' in notice.wire_bytes()
+    assert b'"count":1' in notice.wire_bytes()
     # Reported once: the next delivery does not repeat the count.
     harness.emit(RunStarted(purpose="chat"), run_id="r1")
     harness.deliver()
@@ -407,6 +423,9 @@ def test_a_replayable_that_misses_the_ingress_closes_live_connections() -> None:
     # The fact survived in the ring, which is the whole point of ordering
     # ring-before-ingress.
     assert harness.broker._ring.high_water_seq() == event.seq
+    # The overflow raised the disconnect generation; the dispatcher does the
+    # closing, outside the publish path.
+    harness.deliver()
     assert handle.queue.close_requested is True
     # A reconnect with the cursor recovers it exactly.
     fresh = harness.connect(cursor=_cursor_for(event.seq - 1))
@@ -422,6 +441,100 @@ def test_a_transport_notice_owns_no_seq_and_never_enters_the_ring() -> None:
     notice = next(item for item in items if b"replay_gap" in item.wire_bytes())
     assert b"\nid: " not in notice.wire_bytes()
     assert harness.broker._ring.high_water_seq() == before
+
+
+# --- the opening stream is the writer's, never the queue's ------------------
+
+
+def test_a_replay_tail_over_the_connection_budget_still_arrives_whole() -> None:
+    """The opening sequence must not buy its way past the queue's budgets.
+
+    A reconnecting client's exact replay tail can be larger than the
+    connection's own frame budget; priming it into the queue made the queue
+    hold more than it was ever allowed to the moment it existed. Held by the
+    handle for the writer instead, the tail still arrives whole -- in order,
+    with no hole -- while the queue starts (and stays) within its budget.
+    """
+    harness = Harness(
+        ring=ReplayRing(max_frames=64, max_bytes=1 << 20),
+        connection_frames=8,
+        connection_bytes=1 << 20,
+    )
+    harness.emit_many(20)
+    handle = harness.connect(cursor=_cursor_for(0))
+    # The queue itself holds nothing: the opening stream belongs to the
+    # writer, and the queue's budget has not been spent before it began.
+    assert handle.queue.current_frames == 0
+    assert handle.queue.current_bytes == 0
+    # retry -> re-seed -> snapshot -> the exact tail, in order.
+    opening = handle.startup
+    assert opening[0].wire_bytes() == b"retry: 1000\n\n"
+    assert opening[1].wire_bytes() == b"id: inst-test:0\n\n"
+    assert any(
+        b"event: state_patch" in frame
+        for frame in opening[2].frames
+    )
+    assert _ids(opening) == list(range(1, 21))
+    # The tail is the ring's own frames, reused by reference -- not a
+    # second, re-encoded copy of them.
+    stored = harness.broker._ring.entries_after(0)
+    assert len(opening) == 3 + len(stored)
+    assert all(a is b for a, b in zip(opening[3:], stored))
+
+
+def test_the_queue_budget_holds_during_startup_and_live() -> None:
+    """A full ring behind it does not spend a small connection's budget.
+
+    With the tail outside the queue, the first eight live events fit and the
+    ninth -- a replayable that cannot fit -- closes the connection under the
+    existing overflow rule. Priming the tail into the queue would have
+    closed it on the very first live event instead.
+    """
+    harness = Harness(
+        ring=ReplayRing(max_frames=64, max_bytes=1 << 20),
+        connection_frames=8,
+        connection_bytes=1 << 20,
+    )
+    harness.emit_many(20)
+    handle = harness.connect(cursor=_cursor_for(0))
+    # The tail the opening stream carries makes the ingress backlog redundant
+    # for this connection: everything committed before it registered is
+    # skipped, so the dispatcher flushes it without the queue noticing.
+    _run_dispatcher(harness)
+    assert handle.queue.current_frames == 0
+    for i in range(8):
+        harness.emit(RunStarted(purpose="chat"), run_id=f"live{i}")
+        harness.deliver()
+    assert handle.queue.close_requested is False
+    # The ninth live replayable does not fit: the connection is closed, and
+    # a silent hole is never produced in its place.
+    harness.emit(RunStarted(purpose="chat"), run_id="live8")
+    harness.deliver()
+    assert handle.queue.close_requested is True
+
+
+def test_startup_then_live_has_no_hole_and_reconnect_recovers_exactly() -> None:
+    """Line order, integrity, budget and recovery, on a tail over budget."""
+    harness = Harness(
+        ring=ReplayRing(max_frames=64, max_bytes=1 << 20),
+        connection_frames=8,
+        connection_bytes=1 << 20,
+    )
+    harness.emit_many(20)
+    handle = harness.connect(cursor=_cursor_for(0))
+    # Flush the pre-registration backlog: the opening tail already covers
+    # it, so the dispatcher skips every one of those items.
+    _run_dispatcher(harness)
+    for i in range(9):
+        harness.emit(RunStarted(purpose="chat"), run_id=f"live{i}")
+        harness.deliver()
+    # What the client receives: the whole tail, then the live events that
+    # fit -- every seq exactly once, no gap between the two.
+    seen = _ids(_drain(handle))
+    assert seen == list(range(1, 29))
+    # Reconnecting from the last delivered cursor recovers exactly the rest.
+    fresh = harness.connect(cursor=_cursor_for(28))
+    assert _ids(list(fresh.startup)) == [29]
 
 
 # --- chunking and mid-event disconnection ----------------------------------
@@ -772,11 +885,13 @@ def test_a_patch_is_broadcast_after_the_authoritative_snapshot_moves() -> None:
 def test_an_undeliverable_patch_closes_the_connection() -> None:
     harness = Harness()
     handle = harness.connect()
-    # Fill the queue to the frame limit with the opening frames plus events.
+    # Fill the queue to the frame limit with events.
     for _ in range(600):
         harness.emit(RunStarted(purpose="chat"), run_id="r1")
         harness.deliver()
     harness.broker.publish_state_patch(_snapshot(state_revision=9))
+    # The refused patch raised the disconnect generation; the dispatcher
+    # closes the connection that predates it.
     harness.deliver()
     assert handle.queue.close_requested is True
     assert any(
@@ -807,13 +922,24 @@ def test_the_dispatcher_stops_on_the_sentinel() -> None:
 def test_only_the_stop_sentinel_may_bypass_the_budget() -> None:
     """``put_stop`` takes no argument, so nothing else can ride it."""
     harness = Harness(max_ingress_frames=1, max_ingress_bytes=1)
-    # A full ingress still accepts the sentinel: the dispatcher's own end
-    # cannot be refused for want of room.
+    # The event cannot fit a one-byte ingress, so the overflow queues the
+    # free kick -- and a full ingress still accepts the end sentinel: the
+    # dispatcher's own end cannot be refused for want of room.
     harness.emit_many(1)
     harness.broker._ingress.put_stop()
-    assert harness.broker._ingress.take(timeout=0.1) is not None
+    assert isinstance(harness.broker._ingress.take(timeout=0.1), _IngressKick)
+    assert isinstance(harness.broker._ingress.take(timeout=0.1), _IngressStop)
     with pytest.raises(TypeError):
         harness.broker._ingress.put_stop(_IngressStop())
+    # The kick wakes the dispatcher through its own free door -- also with
+    # no argument, so nothing can ride past the budgets on it either.
+    harness.broker._ingress.put_kick()
+    with pytest.raises(TypeError):
+        harness.broker._ingress.put_kick(_IngressKick())
+    # A kick is not an end: the dispatcher sweeps and keeps going.
+    assert harness.broker.deliver_next(timeout=0.1) is True
+    # ...and the stop sentinel still ends it.
+    assert harness.broker.deliver_next(timeout=0.1) is False
 
 
 def test_commit_is_quantitative_and_never_writes_io() -> None:
@@ -917,3 +1043,188 @@ def test_a_connection_registered_while_closing_is_stopped_at_once() -> None:
     # Told to stop as part of being registered, not left waiting for a
     # sentinel that is never coming.
     assert any(isinstance(item, StopWriter) for item in _drain(handle))
+
+
+# --- the publish path never touches a connection ----------------------------
+
+
+class _ProbingQueue:
+    """A queue stand-in that refuses to be touched while it is armed.
+
+    The publish path -- ``commit`` and ``publish_state_patch`` -- must cost
+    the same whether one connection exists or a thousand: any traversal of
+    the connection registry from the emitting thread, which is what closing
+    a connection from there requires, trips this stub instead of silently
+    charging the Run for the crowd.
+    """
+
+    def __init__(self) -> None:
+        self.armed = True
+        self.close_requests = 0
+
+    def request_close(self, retry_ms: int | None = None) -> None:
+        if self.armed:
+            raise AssertionError("a connection was touched from the publish path")
+        self.close_requests += 1
+
+    def offer(self, item):
+        del item
+        return OfferOutcome(kind="accepted")
+
+    def stop(self) -> None:
+        return None
+
+
+def _run_dispatcher(harness) -> None:
+    """Drive the dispatcher until the ingress is empty, kick included."""
+    while harness.broker.deliver_next(timeout=0.05):
+        pass
+
+
+def _commit_direct(harness, seq: int, run_id: str):
+    """One replayable event through ``commit`` alone, bypassing the fan-out.
+
+    The fan-out catches a sink's commit failure and disables the sink; the
+    behaviour under test is ``commit`` itself, so the event is committed by
+    hand and anything it raises reaches the test.
+    """
+    envelope = EventEnvelope(
+        ts=0.0,
+        run_id=run_id,
+        session_id=None,
+        step_index=None,
+        attempt_id=None,
+        node_id=None,
+    )
+    unsequenced = UnsequencedEvent(
+        envelope=envelope,
+        payload=RunStarted(purpose="chat"),
+        trace_policy="persist",
+        replayable=True,
+    )
+    prepared = harness.broker.prepare(unsequenced)
+    sequenced = SequencedEvent(
+        seq=seq,
+        process_instance_id=INSTANCE,
+        envelope=envelope,
+        payload=unsequenced.payload,
+        trace_policy="persist",
+        replayable=True,
+    )
+    harness.broker.commit(prepared, sequenced)
+    return sequenced
+
+
+def test_ingress_overflow_never_walks_the_connections_from_commit() -> None:
+    """commit stays O(1) in connections even when it must refuse liveness.
+
+    Six connections hold queues that throw the moment the publish path
+    touches them. Overflowing the ingress with an undroppable event from
+    the emitting thread must therefore return without touching any of them;
+    asking them to hang up is the dispatcher's work, outside the publish
+    critical section.
+    """
+    harness = Harness(max_ingress_frames=1, max_ingress_bytes=1 << 20)
+    probes: list[_ProbingQueue] = []
+    for _ in range(6):
+        handle = harness.connect()
+        handle.queue = _ProbingQueue()
+        probes.append(handle.queue)
+    # The ingress is occupied by a first event, so the next one overflows.
+    harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    overflow = _commit_direct(harness, seq=2, run_id="r2")
+    # Ring first: the fact is recoverable even though liveness was refused.
+    assert harness.broker._ring.high_water_seq() == overflow.seq
+    # commit returned without touching a single queue -- the O(1) claim.
+    assert all(probe.close_requests == 0 for probe in probes)
+    # The dispatcher closes every connection that was registered before the
+    # overflow, and no queue is touched until it runs.
+    for probe in probes:
+        probe.armed = False
+    _run_dispatcher(harness)
+    assert all(probe.close_requests == 1 for probe in probes)
+
+
+def test_a_connection_registered_after_the_overflow_is_not_closed() -> None:
+    """The generation answers "who was there when it happened".
+
+    A connection that registers after the overflow recovered its starting
+    state from the snapshot and the ring; closing it would punish the one
+    client that cannot be missing anything.
+    """
+    harness = Harness(max_ingress_frames=1, max_ingress_bytes=1 << 20)
+    handle = harness.connect()
+    harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    _commit_direct(harness, seq=2, run_id="r2")  # overflows the ingress
+    late = harness.connect(cursor=_cursor_for(0))
+    _run_dispatcher(harness)
+    assert handle.queue.close_requested is True
+    assert late.queue.close_requested is False
+
+
+def test_patch_overflow_never_walks_the_connections_from_the_publisher() -> None:
+    """The state-patch overflow rides the same mechanism, not a second path.
+
+    A refused patch moves the authoritative snapshot and raises the
+    generation; the publisher itself touches no queue, and the dispatcher
+    closes exactly the connections that predate the incident.
+    """
+    harness = Harness(max_ingress_frames=1, max_ingress_bytes=1 << 20)
+    probes: list[_ProbingQueue] = []
+    for _ in range(4):
+        handle = harness.connect()
+        handle.queue = _ProbingQueue()
+        probes.append(handle.queue)
+    harness.emit(RunStarted(purpose="chat"), run_id="r1")  # occupies ingress
+    accepted = harness.broker.publish_state_patch(_snapshot(state_revision=5))
+    assert accepted is False
+    # The authoritative snapshot moved anyway (a reconnect sees revision 5),
+    # and no connection was touched from the publishing thread.
+    assert harness.broker._latest.state_revision == 5
+    assert all(probe.close_requests == 0 for probe in probes)
+    # A connection registered after the refused patch already holds the new
+    # state, so the sweep must leave it alone.
+    late = harness.connect()
+    for probe in probes:
+        probe.armed = False
+    _run_dispatcher(harness)
+    assert all(probe.close_requests == 1 for probe in probes)
+    assert late.queue.close_requested is False
+
+
+# --- a trailing transient is published, but never a checkpoint --------------
+
+
+def _gap_reason(harness, cursor: str) -> str:
+    handle = harness.connect(cursor=cursor)
+    notice = _wire_containing(handle, b"replay_gap")
+    match = re.search(rb'"gap_reason":"([a-z_]+)"', notice)
+    assert match is not None
+    return match.group(1).decode()
+
+
+def test_a_trailing_transient_seq_is_malformed_not_ahead() -> None:
+    """A transient consumes a seq without minting a checkpoint.
+
+    The published high water knows the transient was published, so a cursor
+    naming it is refused as ``malformed`` (published, never issued) -- not
+    ``ahead``, which would claim this process never sent something the
+    client may well be holding. One seq past the published high water is
+    still ``ahead``, and the next real checkpoint is still ``valid``.
+    """
+    harness = Harness()
+    harness.emit(RunStarted(purpose="chat"), run_id="r1")  # seq 1, replayable
+    harness.emit(BlockDelta(text="x"), run_id="r1")  # seq 2, transient
+    assert _gap_reason(harness, _cursor_for(2)) == "malformed"
+    assert _gap_reason(harness, _cursor_for(3)) == "ahead"
+    # The next replayable event lands on the transient's successor and is a
+    # checkpoint like any other.
+    third = harness.emit(RunStarted(purpose="chat"), run_id="r2")
+    assert third.seq == 3
+    handle = harness.connect(cursor=_cursor_for(1))
+    assert _ids(_drain(handle)) == [3]
+    # Resuming *from* 3 has nothing to catch up, as any checkpoint.
+    handle = harness.connect(cursor=_cursor_for(3))
+    assert _ids(_drain(handle)) == []
+    # The transient never entered the ring and never got an id:.
+    assert len(harness.broker._ring) == 2

@@ -35,6 +35,10 @@ from agent_alfred.gateway.web.replay import CursorText
 EVENTS_PATH = "/api/events"
 ENTRY_PATH = "/api/entry"
 SESSIONS_PATH = "/api/sessions"
+# The one messages endpoint. A historic ``session_id`` is an arbitrary TEXT
+# value (ADR-0027): it cannot survive as a path segment, so it rides the
+# query string and is used verbatim -- see ``_route_get``.
+SESSION_MESSAGES_PATH = "/api/sessions/messages"
 RUNS_PATH = "/api/runs"
 MAINBAR_PATH = "/api/mainbar"
 
@@ -231,12 +235,18 @@ class DashboardHandler(BaseHTTPRequestHandler):
             status, payload = api.session_inbox(params)
             self._send(status, payload)
             return
-        if path.startswith(SESSIONS_PATH + "/") and path.endswith("/messages"):
-            session_id = path[len(SESSIONS_PATH) + 1 : -len("/messages")]
-            if not session_id:
-                self._send(404, {"code": "unknown_session"})
+        if path == SESSION_MESSAGES_PATH:
+            # A historic session_id is an opaque value (ADR-0027): it may
+            # contain "/", "?", "#", "%" or anything else, so it is carried
+            # as one query parameter -- ``parse_qs`` with
+            # ``keep_blank_values`` percent-decodes it exactly once -- and
+            # passed on verbatim. Absent and empty are different facts: the
+            # empty string is a value the database may legitimately hold, so
+            # only a missing parameter is a bad request.
+            if "session_id" not in params:
+                self._send(400, {"code": "missing_session_id"})
                 return
-            status, payload = api.session_messages(session_id, params)
+            status, payload = api.session_messages(params["session_id"], params)
             self._send(status, payload)
             return
         if path == RUNS_PATH:

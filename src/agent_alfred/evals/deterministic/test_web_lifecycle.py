@@ -240,11 +240,13 @@ def test_close_undoes_everything_and_is_idempotent(tmp_path) -> None:
     service = _service(tmp_path, port=_free_port())
     service.start()
     server = service.server
-    service.start_serving()
+    thread = service.start_serving()
     service.close()
     # The serving loop is stopped and the listening socket is closed.
     assert server.shut_down is True
     assert server.closed is True
+    # The serving thread's exit is confirmed, not assumed.
+    assert not thread.is_alive()
     assert service.lock_held is False
     assert service.descriptor is None
     assert read_entry_descriptor(tmp_path) is None
@@ -340,13 +342,108 @@ def test_the_state_directory_files_are_private(tmp_path) -> None:
         service.close()
 
 
+# --- the state directory's own mode ----------------------------------------
+
+
+def test_start_forces_0700_on_a_pre_existing_state_directory(tmp_path) -> None:
+    """mkdir(mode=0o700, exist_ok=True) never fixes an existing directory.
+
+    The state directory is a managed path: whoever created it -- an older
+    instance, a restore, a careless ``mkdir`` -- left a mode this process
+    must not trust. Confirming the directory therefore ends with an explicit
+    0700, and nothing user-owned inside it is touched.
+    """
+    user_file = tmp_path / "keepme"
+    user_file.write_text("user data", encoding="utf-8")
+    os.chmod(tmp_path, 0o755)
+    os.chmod(user_file, 0o644)
+    service = _service(tmp_path, port=_free_port())
+    try:
+        service.start()
+        assert stat.S_IMODE(os.stat(tmp_path).st_mode) == 0o700
+        # Only the managed directory itself: no recursion into user files.
+        assert stat.S_IMODE(os.stat(user_file).st_mode) == 0o644
+    finally:
+        service.close()
+
+
+def test_start_tightens_the_directory_even_under_a_hostile_umask(tmp_path) -> None:
+    """A mode granted through mkdir is a mode the umask may take away.
+
+    With the umask withholding every bit, a freshly created state directory
+    comes out 0000 -- and the explicit enforcement, which runs before the
+    process lock, is the only thing between it and a directory this process
+    cannot even write a lock file into.
+    """
+    state = tmp_path / "state"
+    previous = os.umask(0o777)
+    try:
+        state.mkdir()
+    finally:
+        os.umask(previous)
+    # Precondition: the umask really did strip the mode mkdir asked for.
+    assert stat.S_IMODE(os.stat(state).st_mode) == 0o000
+    service = _service(state, port=_free_port())
+    try:
+        service.start()
+        assert stat.S_IMODE(os.stat(state).st_mode) == 0o700
+    finally:
+        service.close()
+
+
+def test_a_bind_failure_still_tightens_a_pre_existing_directory(tmp_path) -> None:
+    """The mode is enforced before the lock, so even a refused bind leaves
+    the directory tighter than it found it -- and nothing else behind."""
+    os.chmod(tmp_path, 0o755)
+    port = _free_port()
+    squatter = socket.socket()
+    squatter.bind((DEFAULT_HOST, port))
+    squatter.listen(1)
+    service = DashboardService(
+        state_dir=tmp_path,
+        handler=_Handler,
+        instance_id="inst-lifecycle",
+        port=port,
+    )
+    try:
+        with pytest.raises(PortUnavailable):
+            service.start()
+    finally:
+        squatter.close()
+    assert stat.S_IMODE(os.stat(tmp_path).st_mode) == 0o700
+    # No lock, no socket, no descriptor.
+    assert service.lock_held is False
+    assert service.started is False
+    assert read_entry_descriptor(tmp_path) is None
+
+
+def test_a_chmod_failure_aborts_before_lock_or_bind(tmp_path, monkeypatch) -> None:
+    """Enforcement that cannot happen is a start that does not happen.
+
+    Refusing to run with a state directory whose mode could not be forced is
+    the honest answer; binding the port and writing an entry descriptor for
+    it would be claiming an entry this process has not secured.
+    """
+
+    def refuse(path, mode):
+        raise OSError("cannot chmod")
+
+    monkeypatch.setattr(
+        "agent_alfred.gateway.web.lifecycle.os.chmod", refuse
+    )
+    service = _service(tmp_path, port=_free_port())
+    with pytest.raises(OSError, match="cannot chmod"):
+        service.start()
+    assert service.lock_held is False
+    assert service.started is False
+    assert read_entry_descriptor(tmp_path) is None
+
+
 # --- serving --------------------------------------------------------------
 
 
 def test_serving_without_start_is_refused(tmp_path) -> None:
     service = _service(tmp_path, port=_free_port())
-    with pytest.raises(RuntimeError):
-        service.serve_forever()
     with pytest.raises(RuntimeError):
         service.start_serving()
 
@@ -364,6 +461,39 @@ def test_the_serving_thread_is_a_daemon(tmp_path) -> None:
         assert not thread.is_alive()
     finally:
         service.close()
+
+
+class _ServingThreadStandIn:
+    """A thread stand-in that records whether its exit was confirmed."""
+
+    def __init__(self) -> None:
+        self.joins = 0
+        self.daemon = True
+
+    def start(self) -> None:
+        return None
+
+    def join(self, timeout=None) -> None:
+        self.joins += 1
+
+    def is_alive(self) -> bool:
+        return self.joins == 0
+
+
+def test_close_confirms_the_serving_thread_has_exited(tmp_path) -> None:
+    """shutdown, server_close, thread exit -- in that order, from outside.
+
+    A close that never asks the serving thread whether it finished leaves
+    "is this port still served?" a guess; confirming the exit is a step of
+    the close like any other, taken from outside the serving thread.
+    """
+    service = _service(tmp_path, port=_free_port())
+    service.start()
+    thread = _ServingThreadStandIn()
+    service.start_serving(spawn=lambda target: thread)
+    service.close()
+    assert thread.joins == 1
+    assert thread.is_alive() is False
 
 
 def test_a_negative_port_is_refused_before_anything_else(tmp_path) -> None:
