@@ -37,6 +37,7 @@ from typing import Any, Protocol
 from agent_alfred.clock import Clock, SystemClock
 from agent_alfred.events import (
     BestEffortFlushResult,
+    ProcessFatalSinkError,
     SequencedEvent,
     UnsequencedEvent,
 )
@@ -437,7 +438,18 @@ class SSEBroker:
         ``seq`` is deliberately absent from the result: it does not exist
         yet, and there is nothing in the payload it needs to be written into
         because the checkpoint travels in the ``id:`` line.
+
+        A broker behind a dead dispatcher refuses here too: framing an event
+        nobody can deliver is work wasted, and the refusal is the typed
+        process-fatal error the FanOut needs. The check reads a flag that
+        only ever moves from ``None`` to set, so a refusal seen here is
+        stable without a lock, a refusal not yet seen is caught one step
+        later by ``commit``, and prepare stays lock-free (ADR-0015).
         """
+        if self._fatal is not None:
+            raise ProcessFatalSinkError(
+                "the dispatcher is down; this sink cannot deliver"
+            ) from self._fatal
         return frames.domain_event_frames(
             event_name=event.payload.name,
             payload={"envelope": event.envelope, "payload": event.payload},
@@ -462,15 +474,19 @@ class SSEBroker:
         predating the incident to hang up.
 
         Raising is the one honest answer behind a dead dispatcher: the
-        caller -- the FanOut -- then disables this sink and records
-        ``sink_disabled``, instead of the event vanishing into an ingress
-        nobody will ever drain.
+        caller -- the FanOut -- then disables this sink for every Run and
+        records ``sink_disabled`` exactly once, instead of the event
+        vanishing into an ingress nobody will ever drain. The same holds
+        for a ring that fails to record: the recovery source going down is
+        the dispatcher-dying class of failure, so the fatal state is
+        published before the typed refusal is raised.
         """
         item: PreparedFrames = prepared  # type: ignore[assignment]
         kick = False
+        ring_failure: BaseException | None = None
         with self._lock:
             if self._fatal is not None:
-                raise RuntimeError(
+                raise ProcessFatalSinkError(
                     "the dispatcher is down; this sink cannot deliver"
                 ) from self._fatal
             progress_module.observe(
@@ -478,35 +494,59 @@ class SSEBroker:
             )
             self._state_epoch += 1
             self._note_run_event(event)
-            if event.replayable:
-                # The ring is the only replay source for an active Run, so it
-                # is updated under the same lock that decides a connecting
-                # client's high-water mark: registration and publication can
-                # never interleave into a duplicate or a hole.
-                #
-                # The checkpoint is only attached once the ring has accepted
-                # the event. An event too large for either budget is still
-                # delivered live -- the client did see it -- but it carries
-                # no ``id:``, because a cursor naming a fact the ring cannot
-                # reproduce would be a checkpoint this process cannot honour.
-                checkpointed = item.with_checkpoint(event.seq, self._instance)
-                if self._ring.observe_published(event.seq, checkpointed).accepted:
-                    item = checkpointed
-            else:
-                # A transient consumes its seq and is delivered live only:
-                # O(1) metadata on the ring, no entry, no checkpoint.
-                self._ring.observe_published(event.seq, None)
-            if not self._ingress.offer(_PublishedEvent(event.seq, item)):
-                if item.replayable or item.must_deliver:
-                    # Ingress overflow costs liveness, never recoverability:
-                    # the fact is already in the ring, so every live
-                    # connection reconnects with its cursor and gets it.
-                    # The bump and the kick are the whole cost here; the
-                    # sweep happens on the dispatcher.
-                    self._disconnect_generation += 1
-                    kick = self._arm_kick_locked()
+            try:
+                if event.replayable:
+                    # The ring is the only replay source for an active Run,
+                    # so it is updated under the same lock that decides a
+                    # connecting client's high-water mark: registration and
+                    # publication can never interleave into a duplicate or
+                    # a hole.
+                    #
+                    # The checkpoint is only attached once the ring has
+                    # accepted the event. An event too large for either
+                    # budget is still delivered live -- the client did see
+                    # it -- but it carries no ``id:``, because a cursor
+                    # naming a fact the ring cannot reproduce would be a
+                    # checkpoint this process cannot honour.
+                    checkpointed = item.with_checkpoint(event.seq, self._instance)
+                    if self._ring.observe_published(event.seq, checkpointed).accepted:
+                        item = checkpointed
                 else:
-                    self._ingress_dropped += 1
+                    # A transient consumes its seq and is delivered live
+                    # only: O(1) metadata on the ring, no entry, no
+                    # checkpoint.
+                    self._ring.observe_published(event.seq, None)
+            except Exception as exc:
+                # The ring failing is not one Run's problem (#23 §9). The
+                # event is not offered to an ingress whose dispatcher is
+                # about to be declared dead; the fatal state is published
+                # below, once this critical section has been left.
+                ring_failure = exc
+            else:
+                if not self._ingress.offer(_PublishedEvent(event.seq, item)):
+                    if item.replayable or item.must_deliver:
+                        # Ingress overflow costs liveness, never
+                        # recoverability: the fact is already in the ring,
+                        # so every live connection reconnects with its
+                        # cursor and gets it. The bump and the kick are the
+                        # whole cost here; the sweep happens on the
+                        # dispatcher.
+                        self._disconnect_generation += 1
+                        kick = self._arm_kick_locked()
+                    else:
+                        self._ingress_dropped += 1
+        if ring_failure is not None:
+            # The fatal handler is deliberately NOT called from here:
+            # commit runs inside the FanOut's publish critical section, and
+            # a handler that publishes its own notice would re-enter that
+            # lock and deadlock. Publishing the fatal state is enough --
+            # the typed refusal below is what makes the FanOut move this
+            # sink to its process-wide disabled set and say
+            # ``sink_disabled`` exactly once, to every healthy sink.
+            self._publish_fatal(ring_failure)
+            raise ProcessFatalSinkError(
+                "the replay ring is down; this sink cannot deliver"
+            ) from ring_failure
         if kick:
             self._ingress.put_kick()
 
@@ -947,17 +987,18 @@ class SSEBroker:
             self._enter_fatal(exc)
             raise
 
-    def _enter_fatal(self, exc: BaseException) -> None:
-        """Publish the dispatcher's death and stop every existing stream.
+    def _publish_fatal(self, exc: BaseException) -> None:
+        """Publish the fatal state and stop every existing stream.
 
         The fatal state and ``_stopping`` land in one critical section, so
         no reader can see one without the other. Asking the connections to
         hang up happens *outside* that section -- a request-close is a mark
         and a sentinel, never IO, but the walk is proportional to the crowd
-        and the lock is the publish path's. A later ``commit`` raises on the
-        fatal state, which is what lets the FanOut disable this sink and
-        tell the other sinks why; ``connect`` and state patches refuse for
-        the same reason.
+        and the lock is the publish path's. A later ``commit`` raises the
+        typed process-fatal error on this state, which is what lets the
+        FanOut disable this sink for every Run and tell the other sinks why
+        exactly once; ``connect`` and state patches refuse for the same
+        reason.
         """
         with self._lock:
             self._fatal = exc
@@ -966,6 +1007,20 @@ class SSEBroker:
             handler = self._on_fatal
         for handle in handles:
             handle.queue.request_close()
+        return handler
+
+    def _enter_fatal(self, exc: BaseException) -> None:
+        """Publish the dispatcher's death and report it upward.
+
+        Only for a death discovered off the publish path (the dispatcher's
+        own thread): the fatal handler's notice is published through the
+        FanOut, and calling it from inside a sink's ``commit`` -- where the
+        FanOut's publish lock is held -- would deadlock on that lock. The
+        ring failure that surfaces inside ``commit`` publishes the same
+        fatal state through :meth:`_publish_fatal` and lets the FanOut's
+        process-fatal handling say ``sink_disabled`` instead.
+        """
+        handler = self._publish_fatal(exc)
         if handler is not None:
             handler(exc)
 

@@ -1513,6 +1513,203 @@ def test_a_fatal_commit_fails_instead_of_delivering_to_no_one(monkeypatch) -> No
             )
 
 
+def test_the_fatal_refusal_is_typed_as_process_fatal(monkeypatch) -> None:
+    """The refusal behind a dead dispatcher carries the process-fatal type.
+
+    A bare ``RuntimeError`` was enough to make the FanOut disable the sink
+    -- but only for the Run that happened to be publishing, which is how a
+    dead dispatcher got rediscovered and re-announced by every Run that
+    followed. The refusal the FanOut needs in order to disable the sink for
+    every Run and notify once must be recognizably the process-fatal class,
+    on both paths a publish can touch.
+    """
+    from agent_alfred.events import ProcessFatalSinkError
+
+    monkeypatch.setattr(
+        broker_module, "ConnectionQueue", _ExplodingConnectionQueue
+    )
+    harness = Harness()
+    harness.connect()
+    harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    with pytest.raises(RuntimeError):
+        harness.broker._dispatch_loop()  # noqa: SLF001 - the loop under test
+
+    payload = RunStarted(purpose="chat")
+    envelope = EventEnvelope(
+        ts=0.0,
+        run_id="r2",
+        session_id=None,
+        step_index=None,
+        attempt_id=None,
+        node_id=None,
+    )
+    unsequenced = UnsequencedEvent(
+        envelope=envelope,
+        payload=payload,
+        trace_policy="persist",
+        replayable=True,
+    )
+    # Prepare refuses too: framing an event nobody can deliver is work
+    # wasted, and the refusal is the same typed signal.
+    with pytest.raises(ProcessFatalSinkError):
+        harness.broker.prepare(unsequenced)
+    sequenced = SequencedEvent(
+        seq=99,
+        process_instance_id=INSTANCE,
+        envelope=envelope,
+        payload=payload,
+        trace_policy="persist",
+        replayable=True,
+    )
+    with pytest.raises(ProcessFatalSinkError):
+        harness.broker.commit(None, sequenced)
+
+
+def test_process_level_sink_disabled_notification_is_persistent_and_once(
+    monkeypatch,
+) -> None:
+    """The process-level ``sink_disabled`` notice is one envelope, ever.
+
+    A dispatcher that died in r1 used to be rediscovered by every later
+    Run: r2's first publish failed the fatal check, was booked as that
+    Run's sink failure, and published its own ``sink_disabled`` notice --
+    and so did r3, and r4. The notice a process-level fact owes is one
+    envelope, and the Runs after it must find the sink already gone instead
+    of re-announcing it.
+    """
+    monkeypatch.setattr(threading, "excepthook", lambda args: None)
+    monkeypatch.setattr(
+        broker_module, "ConnectionQueue", _ExplodingConnectionQueue
+    )
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=_snapshot(),
+        session_is_valid=lambda _sid: True,
+        spawn=_RealSpawn().spawn,
+    )
+    dead = threading.Event()
+    broker.bind_fatal_handler(lambda exc: dead.set())
+    broker.start()
+    handle = broker.connect(connection=FakeConnection())
+    capture = CapturingSink(name="capture")
+    fanout = FanOutSink([broker, capture], process_instance_id=INSTANCE)
+
+    def emit(run_id: str) -> None:
+        fanout.emit(
+            RunStarted(purpose="chat"),
+            EventEnvelope(
+                ts=0.0,
+                run_id=run_id,
+                session_id=None,
+                step_index=None,
+                attempt_id=None,
+                node_id=None,
+            ),
+        )
+
+    emit("r1")
+    assert dead.wait(5.0), "fatal handler never ran"
+    assert handle.finished.wait(5.0), "connection was never asked to close"
+    fanout.flush_barrier("r1")
+    emit("r2")
+    fanout.flush_barrier("r2")
+    emit("r3")
+
+    notices = [
+        event
+        for event in capture.events
+        if getattr(event.payload, "code", None) == "sink_disabled"
+    ]
+    assert len(notices) == 1, "one process, one process-level notice"
+    # The refusal persists: the broker stopped taking work and stays stopped
+    # across every Run that followed the death.
+    assert broker._stopping is True  # noqa: SLF001
+    refused = broker.connect(connection=FakeConnection())
+    assert refused.finished.is_set()
+    assert refused not in broker.connections
+    # The healthy sink lost nothing: every Run's event still reached it.
+    runs = [
+        event.envelope.run_id
+        for event in capture.events
+        if event.payload.name == "run.started"
+    ]
+    assert runs == ["r1", "r2", "r3"]
+
+
+class _BrokenRing(ReplayRing):
+    """A ring that cannot record anything.
+
+    The ring is the process's only replay source for an active Run; one
+    that raises is the dispatcher-dying class of failure, not one Run's
+    transient. Subclassing the real ring keeps every other ring behaviour
+    intact -- only the recording step is broken.
+    """
+
+    def observe_published(self, seq, entry):
+        del seq, entry
+        raise RuntimeError("ring is broken")
+
+
+def test_a_broken_ring_is_a_process_fatal_not_a_run_local_error() -> None:
+    """A ring failure inside commit escalates to the fatal state.
+
+    Before the typed signal, a ring exception was just another sink error:
+    the FanOut disabled the broker for the Run, the broker stayed up, kept
+    accepting connections and kept handing out cursors a ring that cannot
+    record could never honour -- and the next Run drew the same exception
+    and published the same notice again. The ring failing is the dispatcher
+    failing (#23 §9): the broker publishes the fatal state, refuses
+    everything that would pour work into a broken recovery source, and the
+    notice is said once.
+    """
+    harness = Harness(ring=_BrokenRing())
+    broker = harness.broker
+    capture = CapturingSink(name="capture")
+    fanout = FanOutSink([broker, capture], process_instance_id=INSTANCE)
+
+    def emit(run_id: str) -> None:
+        fanout.emit(
+            RunStarted(purpose="chat"),
+            EventEnvelope(
+                ts=0.0,
+                run_id=run_id,
+                session_id=None,
+                step_index=None,
+                attempt_id=None,
+                node_id=None,
+            ),
+        )
+
+    emit("r1")
+    # The broker published the fatal state instead of limping on.
+    assert broker._fatal is not None  # noqa: SLF001
+    assert broker._stopping is True  # noqa: SLF001
+    # New connections are refused, and so are state patches: both would
+    # describe a world whose recovery source is gone.
+    connection = FakeConnection()
+    refused = broker.connect(connection=connection)
+    assert refused.finished.is_set()
+    assert refused.thread is None
+    assert connection.closed is True
+    assert broker.publish_state_patch(_snapshot(state_revision=1)) is False
+    # Said once: the next Run must not rediscover the broken ring and
+    # publish the same notice again.
+    fanout.flush_barrier("r1")
+    emit("r2")
+    notices = [
+        event
+        for event in capture.events
+        if getattr(event.payload, "code", None) == "sink_disabled"
+    ]
+    assert len(notices) == 1
+    runs = [
+        event.envelope.run_id
+        for event in capture.events
+        if event.payload.name == "run.started"
+    ]
+    assert runs == ["r1", "r2"], "the healthy sink keeps receiving events"
+
+
 # --- overflow wakes the dispatcher once, not once per overflow --------------
 
 

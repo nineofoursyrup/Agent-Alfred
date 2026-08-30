@@ -12,7 +12,9 @@ from agent_alfred.clock import FakeClock
 from agent_alfred.events import (
     BestEffortFlushResult,
     CapturingSink,
+    EventEnvelope,
     FanOutSink,
+    RunStarted,
     SequencedEvent,
     UnsequencedEvent,
 )
@@ -179,3 +181,184 @@ def test_prepare_failure_does_not_abort_the_run_or_revisit_the_dead_sink() -> No
         assert codes <= {"sink_disabled", "trace_incomplete"}
     finally:
         host.close()
+
+
+# --- a process-level fatal outlives the Run that discovered it ---------------
+
+
+def _envelope(run_id: str) -> EventEnvelope:
+    return EventEnvelope(
+        ts=0.0,
+        run_id=run_id,
+        session_id=None,
+        step_index=None,
+        attempt_id=None,
+        node_id=None,
+    )
+
+
+class _ProcessFatalStubSink:
+    """Stands in for the SSE sink at the FanOut boundary.
+
+    A dispatcher or replay-ring fatal is not one Run's problem (#23 §9): the
+    real broker reports it with the typed process-fatal error, and what the
+    FanOut owes in return -- skip this sink for every Run, notify once -- is
+    the contract this stub drives out. The type is resolved at construction
+    so a missing signal fails the test loudly here, instead of masquerading
+    as an ordinary run-local error the FanOut would silently book.
+    """
+
+    def __init__(self, *, name: str = "sse"):
+        from agent_alfred.events import ProcessFatalSinkError
+
+        self.name = name
+        self.flush_at_run_end = False
+        self._fatal = ProcessFatalSinkError
+        self.prepare_calls = 0
+        self.commit_calls = 0
+
+    def prepare(self, event: UnsequencedEvent) -> object:
+        del event
+        self.prepare_calls += 1
+        return None
+
+    def commit(self, prepared: object, event: SequencedEvent) -> None:
+        del prepared, event
+        self.commit_calls += 1
+        raise self._fatal("the dispatcher is down; this sink cannot deliver")
+
+    def flush(self, run_id: str) -> BestEffortFlushResult:
+        del run_id
+        return BestEffortFlushResult(outcome="best_effort")
+
+    def close(self) -> None:
+        return None
+
+
+def test_sink_fatal_in_one_run_disables_it_for_the_next_run() -> None:
+    """A sink that went process-fatal in r1 is not re-called when r2 begins.
+
+    Keeping the disable in the per-Run bookkeeping meant every Run's flush
+    barrier cleared it: the next Run re-called a sink the process already
+    knew was dead, drew the same fatal again, and published the same notice
+    again. The typed process-fatal error moves the sink into a process-wide
+    set that no Run's end clears, so r2 never reaches it -- not even
+    prepare.
+    """
+    fatal = _ProcessFatalStubSink(name="sse")
+    capture = CapturingSink(name="capture")
+    fanout = FanOutSink([fatal, capture], process_instance_id="proc-fatal")
+
+    fanout.emit(RunStarted(purpose="chat"), _envelope("r1"))
+    assert (fatal.prepare_calls, fatal.commit_calls) == (1, 1)
+    # r1 is over: the per-Run bookkeeping is cleared, as every Run's end does.
+    fanout.flush_barrier("r1")
+
+    fanout.emit(RunStarted(purpose="chat"), _envelope("r2"))
+    assert (fatal.prepare_calls, fatal.commit_calls) == (1, 1), (
+        "a process-fatal sink is not called again -- not even prepare"
+    )
+    runs = [
+        event.envelope.run_id
+        for event in capture.events
+        if event.payload.name == "run.started"
+    ]
+    assert runs == ["r1", "r2"], "the healthy sink keeps receiving events"
+
+
+def test_healthy_sinks_still_receive_notification_and_events() -> None:
+    """One sink's process-fatal must not interrupt the others.
+
+    The fan-out still owes every healthy sink the process-level
+    ``sink_disabled`` notice -- exactly one envelope, ever -- and every
+    event published after the fatal, including the events of Runs that
+    begin afterwards. A dead fan-out that took its healthy sinks down with
+    it would trade one broken transport for several.
+    """
+    fatal = _ProcessFatalStubSink(name="sse")
+    capture = CapturingSink(name="capture")
+    fanout = FanOutSink([fatal, capture], process_instance_id="proc-fatal")
+
+    fanout.emit(RunStarted(purpose="chat"), _envelope("r1"))
+    fanout.flush_barrier("r1")
+    fanout.emit(RunStarted(purpose="chat"), _envelope("r2"))
+
+    notices = [
+        event
+        for event in capture.events
+        if getattr(event.payload, "code", None) == "sink_disabled"
+    ]
+    assert len(notices) == 1, "the process-level notice is published once"
+    runs = [
+        event.envelope.run_id
+        for event in capture.events
+        if event.payload.name == "run.started"
+    ]
+    assert runs == ["r1", "r2"], "the healthy sink keeps receiving events"
+    assert (fatal.prepare_calls, fatal.commit_calls) == (1, 1)
+
+
+class _RunLocalErrorSink:
+    """An ordinary transient failure -- the run-local class.
+
+    It raises a plain ``RuntimeError``, which is not the typed process-fatal
+    signal and must never be mistaken for one.
+    """
+
+    def __init__(self, *, name: str = "flaky"):
+        self.name = name
+        self.flush_at_run_end = False
+        self.prepare_calls = 0
+        self.commit_calls = 0
+
+    def prepare(self, event: UnsequencedEvent) -> object:
+        del event
+        self.prepare_calls += 1
+        return None
+
+    def commit(self, prepared: object, event: SequencedEvent) -> None:
+        del prepared, event
+        self.commit_calls += 1
+        raise RuntimeError("a transient commit failure")
+
+    def flush(self, run_id: str) -> BestEffortFlushResult:
+        del run_id
+        return BestEffortFlushResult(outcome="best_effort")
+
+    def close(self) -> None:
+        return None
+
+
+def test_run_local_sink_error_stays_run_local() -> None:
+    """An ordinary sink exception must not escalate to a process-wide ban.
+
+    The typed process-fatal error is the only ticket into the process-level
+    set. A transient exception stays what it always was: this Run skips the
+    sink and says so once, the next Run calls the sink again -- and says so
+    again, because for this class every Run genuinely discovers the failure
+    anew. Escalating every exception would take a whole process's sinks
+    down over one bad call.
+    """
+    flaky = _RunLocalErrorSink(name="flaky")
+    capture = CapturingSink(name="capture")
+    fanout = FanOutSink([flaky, capture], process_instance_id="proc-local")
+
+    fanout.emit(RunStarted(purpose="chat"), _envelope("r1"))
+    fanout.flush_barrier("r1")
+    fanout.emit(RunStarted(purpose="chat"), _envelope("r2"))
+
+    assert (flaky.prepare_calls, flaky.commit_calls) == (2, 2), (
+        "a run-local error does not outlive its Run"
+    )
+    notices = [
+        event
+        for event in capture.events
+        if getattr(event.payload, "code", None) == "sink_disabled"
+    ]
+    assert len(notices) == 2, "each Run that discovers it says so once"
+    runs = [
+        event.envelope.run_id
+        for event in capture.events
+        if event.payload.name == "run.started"
+    ]
+    assert runs == ["r1", "r2"]

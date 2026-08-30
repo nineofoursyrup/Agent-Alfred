@@ -222,6 +222,40 @@ def replayable_for(trace_policy: TracePolicy) -> bool:
     return trace_policy == "persist"
 
 
+def _notice_named_sinks(payload: EventPayload) -> frozenset[str]:
+    """The sinks a ``sink_disabled`` notice in flight already names.
+
+    A process-fatal discovered while such a notice is being published must
+    not publish its own -- the fact is already on its way to every healthy
+    sink, and a second envelope would say it twice. Any other notice in
+    flight (``trace_incomplete``, say) names nothing and covers nothing.
+    """
+    if not isinstance(payload, Notice) or payload.code != "sink_disabled":
+        return frozenset()
+    return frozenset(
+        value for key, value in payload.detail if key == "sink"
+    )
+
+
+def _book_failure(
+    exc: Exception,
+    sink_name: str,
+    stage_reported: str,
+    newly_disabled: list[tuple[str, str]],
+    fatal_notices: list[tuple[str, str]],
+) -> None:
+    """Route one owed notice to its list.
+
+    Run-local notices wait for a normal publish (the caller's
+    ``notify_disabled`` gate); process-fatal notices are published wherever
+    they are discovered, because their once-ever set bounds any chain.
+    """
+    if isinstance(exc, ProcessFatalSinkError):
+        fatal_notices.append((sink_name, stage_reported))
+    else:
+        newly_disabled.append((sink_name, stage_reported))
+
+
 def event_json_default(value: object) -> object:
     """The one ``json.dumps`` default every event consumer shares.
 
@@ -287,6 +321,22 @@ class EventSink(Protocol):
     def close(self) -> None: ...
 
 
+class ProcessFatalSinkError(RuntimeError):
+    """A sink reporting a failure the process cannot recover from.
+
+    An ordinary exception a sink raises is one Run's problem: the FanOut
+    disables the sink for that Run, says so once, and calls the sink again
+    when the next Run begins. This error is the other class (#23 §9) -- the
+    dispatcher or the replay ring dying is a process-level fact, and no Run
+    that follows can use this sink either. The FanOut answers it by moving
+    the sink into a process-wide disabled set that no Run's end clears and
+    publishing its ``sink_disabled`` notice exactly once. It subclasses
+    ``RuntimeError`` because every refusal contract around a dead
+    dispatcher was already phrased in those terms; what is new is that the
+    publisher can tell the two classes apart.
+    """
+
+
 class CapturingSink:
     """Records sequenced events. Tests inject this; it is not a production sink."""
 
@@ -329,6 +379,12 @@ class FanOutSink:
         self._lock = threading.Lock()
         self._seq = 1
         self._disabled: dict[str, set[str]] = {}
+        # The process-level complement to the per-Run ``_disabled``: a sink
+        # that reported the typed process-fatal error is out for every Run,
+        # so no Run's end may hand it back. Members entered exactly once,
+        # and the ``sink_disabled`` notice for a member is published exactly
+        # once in this process's life.
+        self._process_disabled: set[str] = set()
         self._persist_lost: dict[str, list[str]] = {}
         self._last_envelope: dict[str, EventEnvelope] = {}
         self._origin: EventEnvelope | None = None
@@ -387,23 +443,43 @@ class FanOutSink:
         self, unsequenced: UnsequencedEvent, *, notify_disabled: bool
     ) -> SequencedEvent:
         prepared: list[tuple[EventSink, object]] = []
+        # Run-local discoveries wait for a normal publish to be told about;
+        # emitting one from inside a notice's own publish would recurse
+        # forever, because a run-local sink fails on every event -- notices
+        # included. Process-fatal discoveries are different: the once-ever
+        # set and the in-flight check below bound any chain of notices, so
+        # they are published wherever they are discovered.
         newly_disabled: list[tuple[str, str]] = []
+        fatal_notices: list[tuple[str, str]] = []
         run_id = unsequenced.envelope.run_id
+        # What the event in flight already says about disabled sinks: a
+        # process-fatal discovered while its own notice is being published
+        # must not publish that notice a second time.
+        already_reported = _notice_named_sinks(unsequenced.payload)
         for sink in self._sinks:
             with self._lock:
-                if sink.name in self._disabled.get(run_id, set()):
+                if (
+                    sink.name in self._process_disabled
+                    or sink.name in self._disabled.get(run_id, set())
+                ):
                     continue
             try:
                 prep = sink.prepare(unsequenced)
-            except Exception:
+            except Exception as exc:
                 with self._lock:
-                    disabled = self._disabled.setdefault(run_id, set())
-                    first_failure = sink.name not in disabled
-                    self._note_sink_failure_locked(
-                        run_id, sink, "prepare", unsequenced.trace_policy
+                    stage_reported = self._note_sink_call_failed_locked(
+                        run_id,
+                        sink,
+                        "prepare",
+                        unsequenced.trace_policy,
+                        exc,
+                        already_reported,
                     )
-                if first_failure:
-                    newly_disabled.append((sink.name, "prepare"))
+                if stage_reported is not None:
+                    _book_failure(
+                        exc, sink.name, stage_reported,
+                        newly_disabled, fatal_notices,
+                    )
                 continue
             prepared.append((sink, prep))
         with self._lock:
@@ -418,6 +494,11 @@ class FanOutSink:
                 replayable=unsequenced.replayable,
             )
             for sink, prep in prepared:
+                if sink.name in self._process_disabled:
+                    # A concurrently published fatal already reported why
+                    # this sink is gone; skipping quietly is the contract,
+                    # not a new failure to book.
+                    continue
                 if sink.name in self._disabled.get(run_id, set()):
                     self._note_sink_failure_locked(
                         run_id,
@@ -428,14 +509,20 @@ class FanOutSink:
                     continue
                 try:
                     sink.commit(prep, sequenced)
-                except Exception:
-                    disabled = self._disabled.setdefault(run_id, set())
-                    first_failure = sink.name not in disabled
-                    self._note_sink_failure_locked(
-                        run_id, sink, "commit", unsequenced.trace_policy
+                except Exception as exc:
+                    stage_reported = self._note_sink_call_failed_locked(
+                        run_id,
+                        sink,
+                        "commit",
+                        unsequenced.trace_policy,
+                        exc,
+                        already_reported,
                     )
-                    if first_failure:
-                        newly_disabled.append((sink.name, "commit"))
+                    if stage_reported is not None:
+                        _book_failure(
+                            exc, sink.name, stage_reported,
+                            newly_disabled, fatal_notices,
+                        )
         if notify_disabled:
             for name, stage in newly_disabled:
                 self._emit_notice(
@@ -444,7 +531,48 @@ class FanOutSink:
                     level="error",
                     detail=(("sink", name), ("stage", stage)),
                 )
+        for name, stage in fatal_notices:
+            self._emit_notice(
+                unsequenced.envelope,
+                code="sink_disabled",
+                level="error",
+                detail=(("sink", name), ("stage", stage)),
+            )
         return sequenced
+
+    def _note_sink_call_failed_locked(
+        self,
+        run_id: str,
+        sink: EventSink,
+        stage: str,
+        trace_policy: TracePolicy,
+        exc: Exception,
+        already_reported: frozenset[str] = frozenset(),
+    ) -> str | None:
+        """Book one failed sink call; the stage to report a notice about,
+        or ``None`` when no notice is owed. Call holds the lock.
+
+        Two failure classes stay apart. An ordinary exception is run-local:
+        the sink is re-called next Run, and every Run that discovers the
+        failure publishes one notice of its own. The typed process-fatal
+        error is a different fact: the sink moves into the process-wide set
+        that no Run's end clears, and the notice is owed exactly once in
+        the process's life -- whether the discovery happens during a normal
+        publish or during a notice's own. Two guards keep that "once" true:
+        a sink the in-flight notice already names is covered by it, and a
+        sink discovered twice is covered by the set it just joined.
+        """
+        process_fatal = isinstance(exc, ProcessFatalSinkError)
+        if process_fatal:
+            first_process_failure = sink.name not in self._process_disabled
+            self._process_disabled.add(sink.name)
+            if not first_process_failure or sink.name in already_reported:
+                return None
+            return stage
+        disabled = self._disabled.setdefault(run_id, set())
+        first_failure = sink.name not in disabled
+        self._note_sink_failure_locked(run_id, sink, stage, trace_policy)
+        return stage if first_failure else None
 
     def _note_sink_failure_locked(
         self, run_id: str, sink: EventSink, stage: str, trace_policy: TracePolicy
