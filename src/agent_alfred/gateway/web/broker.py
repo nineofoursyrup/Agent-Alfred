@@ -72,6 +72,14 @@ DEFAULT_HEARTBEAT_S = connection_module.DEFAULT_HEARTBEAT_S
 # bounded, honest "not fully drained" beats hanging on a socket whose peer
 # has stopped reading; the descriptors are released either way.
 _DRAIN_TIMEOUT_S = 2.0
+# How many capture laps one state patch may spend before it reports
+# honestly that it could not win. One lap is the common case; a second
+# recaptures a world that moved during one encoding. Beyond a bounded few,
+# the world is moving faster than a single encode and another lap would be
+# a spin, so the publish returns False -- the caller's authoritative state
+# store still holds the newest snapshot, and the next transition
+# republishes it.
+_MAX_PATCH_CAPTURES = 4
 
 
 class _IngressStop:
@@ -830,6 +838,24 @@ class SSEBroker:
            while the patch is being refused -- sees the new revision;
         2. the patch is offered to the bounded ingress.
 
+        Both happen in one critical section, and that section is the *second*
+        of two, the way :meth:`connect` splits capture from registration. The
+        first one captures what the patch will say: the Step the progress
+        view projects, the epoch, and the ``_latest`` they belong to. The
+        cost measurement then runs outside the lock -- pure, bounded,
+        touching nothing shared -- and the commit critical section re-checks
+        the capture before anything moves. An event committed or another
+        patch published while it ran advances the epoch or moves
+        ``_latest``: the captured Step then describes a world that no longer
+        exists, and publishing it would put an old domain fact behind a
+        newer one in the one order connections read. The capture is
+        discarded and taken again from the current facts instead.
+
+        A snapshot the authoritative one has already overtaken is not
+        retried at all: patches are absolute replacements, so publishing it
+        would move ``_latest`` backwards, and the honest answer is False --
+        the caller's newer state is already the authority here.
+
         The offer happens in the *same* critical section that moves
         ``_latest``: if it fails, the disconnect generation rises in that
         same step, so a connection registering afterwards sees both the new
@@ -843,44 +869,59 @@ class SSEBroker:
         no queue: bumping a generation is O(1); finding the connections that
         predate the bump is the dispatcher's job.
 
-        Returns whether the patch was queued.
+        The recapture is bounded: a world that outruns one encoding lap
+        after lap is not one more lap can win, and an unbounded spin is a
+        publish path that can starve. Returns whether the patch was queued.
         """
-        # The progress view is driven under this broker's lock, so its
-        # projection is read under the same lock. The projection is bound to
-        # the snapshot's own active Run first: a frozen terminal summary
-        # shows only while its Run is still the authoritative active one,
-        # and the idle snapshot that releases the lease is what cleans it.
-        # The cost measurement that follows is pure and bounded and touches
-        # nothing shared, so it runs outside -- and the offer rides with the
-        # ``_latest`` move below.
-        with self._lock:
-            if self._stopping or self._closed:
-                return False
-            active = snapshot.active_run
-            self._progress.note_active_run(
-                None if active is None else active.run_id
+        for _ in range(_MAX_PATCH_CAPTURES):
+            kick = False
+            with self._lock:
+                if self._stopping or self._closed or self._fatal is not None:
+                    return False
+                latest = self._latest
+                if snapshot.state_revision < latest.state_revision:
+                    # An absolute replacement older than the authoritative
+                    # snapshot is a regression, not an update.
+                    return False
+                # The progress view is driven under this broker's lock, so
+                # its projection is read under the same lock. The projection
+                # is bound to the snapshot's own active Run first: a frozen
+                # terminal summary shows only while its Run is still the
+                # authoritative active one, and the idle snapshot that
+                # releases the lease is what cleans it.
+                active = snapshot.active_run
+                self._progress.note_active_run(
+                    None if active is None else active.run_id
+                )
+                step = self._progress.projection()
+                epoch = self._state_epoch
+            patch = _BroadcastPatch(
+                snapshot=snapshot, step=step, cost=(1, _patch_cost(snapshot, step))
             )
-            step = self._progress.projection()
-        patch = _BroadcastPatch(
-            snapshot=snapshot, step=step, cost=(1, _patch_cost(snapshot, step))
-        )
-        offered = False
-        kick = False
-        with self._lock:
-            self._latest = snapshot
-            self._state_epoch += 1
-            offered = self._ingress.offer(patch)
-            if not offered:
-                self._disconnect_generation += 1
-                kick = self._arm_kick_locked()
-        if kick:
-            self._ingress.put_kick()
-        # The answer is about the *patch* -- queued or refused -- not about
-        # whether this overflow had to arm the wake-up: a pending kick from
-        # an earlier overflow already covers this one's sweep, and reading
-        # that as "queued" would tell the caller a state arrived that every
-        # connection will in fact be disconnected for missing.
-        return offered
+            with self._lock:
+                if self._stopping or self._closed or self._fatal is not None:
+                    return False
+                if self._state_epoch != epoch or self._latest is not latest:
+                    # The world moved while the cost was being measured: the
+                    # captured Step is stale, and the decided invariant --
+                    # capture, encode, commit, one linearization point -- is
+                    # worth another lap, not a lie.
+                    continue
+                self._latest = snapshot
+                self._state_epoch += 1
+                offered = self._ingress.offer(patch)
+                if not offered:
+                    self._disconnect_generation += 1
+                    kick = self._arm_kick_locked()
+            if kick:
+                self._ingress.put_kick()
+            # The answer is about the *patch* -- queued or refused -- not about
+            # whether this overflow had to arm the wake-up: a pending kick from
+            # an earlier overflow already covers this one's sweep, and reading
+            # that as "queued" would tell the caller a state arrived that every
+            # connection will in fact be disconnected for missing.
+            return offered
+        return False
 
     # -- internals ---------------------------------------------------------
 

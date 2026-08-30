@@ -1732,6 +1732,194 @@ def test_patch_encoding_does_not_block_event_commits(monkeypatch) -> None:
     assert dispatcher_done.is_set()
 
 
+class _GatedCost:
+    """The publisher's lock-free cost probe, parked by the test.
+
+    It stands in at the exact point the publish path measures a patch's
+    ingress cost: the Step is already captured when it runs, so parking here
+    holds the whole capture-to-commit window open while the rest of the
+    world moves. The barrier is the rendezvous -- the parked publisher is
+    the first party, the test that has finished moving the world is the
+    second -- so the interleaving is decided by the test, not the scheduler.
+    """
+
+    def __init__(self, real, barrier: threading.Barrier) -> None:
+        self._real = real
+        self._barrier = barrier
+        self.parked = threading.Event()
+
+    def __call__(self, snapshot, step) -> int:
+        if self.parked.is_set():
+            # Only the first publish parks: the one the test started before
+            # moving the world. Any later cost measurement -- the test's own
+            # newer publish, or a recapture lap -- passes straight through.
+            return self._real(snapshot, step)
+        self.parked.set()
+        self._barrier.wait()
+        return self._real(snapshot, step)
+
+
+def _patches_received(handle) -> list[dict]:
+    """Every state_patch frame this connection has been handed, in order."""
+    patches = []
+    for item in _drain(handle):
+        wire = item.wire_bytes()
+        if b"event: state_patch" in wire:
+            patches.append(_decode_patch(wire))
+    return patches
+
+
+def _park_a_publisher(
+    harness, monkeypatch, stale_snapshot
+) -> tuple[threading.Barrier, threading.Thread, list[bool]]:
+    """Start one publisher and hold it mid-encode, after its capture.
+
+    Returns the gate's barrier, the publisher thread, and the list its
+    return answer lands in. The test moves the world while it is parked and
+    then joins the barrier as the second party; a failing test aborts the
+    barrier instead, so the parked thread can never outlive the test that
+    parked it.
+    """
+    barrier = threading.Barrier(2)
+    gate = _GatedCost(broker_module._patch_cost, barrier)
+    monkeypatch.setattr(broker_module, "_patch_cost", gate)
+    answers: list[bool] = []
+
+    def publisher() -> None:
+        answers.append(harness.broker.publish_state_patch(stale_snapshot))
+
+    thread = threading.Thread(target=publisher, daemon=True)
+    thread.start()
+    assert gate.parked.wait(5.0), "the publisher never reached its encoding"
+    return barrier, thread, answers
+
+
+def test_stale_step_never_publishes_after_newer_revision(monkeypatch) -> None:
+    """A patch encoded while the world moved must not ship the old Step.
+
+    The publisher captures its Step under the lock and measures the patch's
+    cost outside it. A progress-advancing domain event and a newer
+    authoritative snapshot both land inside that window; a publisher that
+    commits unconditionally on return would publish the captured-old Step
+    under the new revision, *after* the newer facts, and move ``_latest``
+    backwards past them. The captured facts must still hold at the
+    linearization point, and a snapshot the authority has already overtaken
+    must be refused -- patches are absolute replacements, so publishing one
+    is how an old domain fact ends up behind a newer one.
+    """
+    harness = Harness()
+    handle = harness.connect()
+    _drain(handle)
+    harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    harness.emit(StepStarted(step_index=0), run_id="r1")
+    active = ActiveRunSummary(
+        run_id="r1",
+        purpose="chat",
+        gateway="web",
+        phase="running",
+        session_id=None,
+        prompt_preview="hi",
+        started_at=None,
+        recording_state=None,
+    )
+    overtaken = _snapshot(
+        state_revision=1, coordinator_state="running", active_run=active
+    )
+    newer = _snapshot(
+        state_revision=2, coordinator_state="running", active_run=active
+    )
+    barrier, thread, answers = _park_a_publisher(harness, monkeypatch, overtaken)
+    try:
+        harness.emit(StepStarted(step_index=1), run_id="r1")
+        assert harness.broker.publish_state_patch(newer), (
+            "the newer publish must not wait behind the parked one"
+        )
+        barrier.wait(timeout=5.0)  # the interleave is done: release it
+    except BaseException:
+        barrier.abort()
+        raise
+    thread.join(timeout=5.0)
+    assert answers == [False], (
+        "a snapshot the authority had overtaken was published anyway"
+    )
+    assert harness.broker._latest is newer, "_latest moved backwards"
+    _run_dispatcher(harness)
+    patches = _patches_received(handle)
+    assert patches, "no state patch was published at all"
+    revisions = [patch["state_revision"] for patch in patches]
+    assert revisions == sorted(revisions), f"patch order regressed: {revisions}"
+    seen_newer = False
+    for patch in patches:
+        if patch["state_revision"] == newer.state_revision:
+            seen_newer = True
+        if seen_newer:
+            step = patch["step"]
+            assert step is not None and step["step_index"] == 1, (
+                f"a stale Step shipped after the newer facts: {patch}"
+            )
+    assert seen_newer
+
+
+def test_connection_never_regresses_to_stale_absolute_replacement(
+    monkeypatch,
+) -> None:
+    """Applying the patches a connection receives, in order, never goes back.
+
+    A patch is an absolute replacement (ADR-0025): whatever it carries
+    becomes the connection's whole view of the state. A stale Step published
+    after newer facts would walk the connection backwards -- the exact
+    outcome the revision exists to prevent -- so the patch stream a
+    connection reads must advance monotonically and end on the latest
+    authoritative facts, whatever the publisher's encoding window held.
+    """
+    harness = Harness()
+    handle = harness.connect()
+    _drain(handle)
+    harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    harness.emit(StepStarted(step_index=0), run_id="r1")
+    active = ActiveRunSummary(
+        run_id="r1",
+        purpose="chat",
+        gateway="web",
+        phase="running",
+        session_id=None,
+        prompt_preview="hi",
+        started_at=None,
+        recording_state=None,
+    )
+    overtaken = _snapshot(
+        state_revision=1, coordinator_state="running", active_run=active
+    )
+    newer = _snapshot(
+        state_revision=2, coordinator_state="running", active_run=active
+    )
+    barrier, thread, _answers = _park_a_publisher(
+        harness, monkeypatch, overtaken
+    )
+    try:
+        harness.emit(StepStarted(step_index=1), run_id="r1")
+        assert harness.broker.publish_state_patch(newer)
+        barrier.wait(timeout=5.0)
+    except BaseException:
+        barrier.abort()
+        raise
+    thread.join(timeout=5.0)
+    _run_dispatcher(harness)
+    patches = _patches_received(handle)
+    assert patches, "the connection saw no state patch"
+    revisions = [patch["state_revision"] for patch in patches]
+    assert revisions == sorted(revisions), (
+        f"absolute replacements walked the connection backwards: {revisions}"
+    )
+    final = patches[-1]
+    assert final["state_revision"] == harness.broker._latest.state_revision, (
+        "the connection was left on a state that is no longer authoritative"
+    )
+    assert final["step"] is not None and final["step"]["step_index"] == 1, (
+        f"the connection was left on a stale Step: {final}"
+    )
+
+
 def test_a_patch_is_encoded_once_per_session_validity(monkeypatch) -> None:
     """One state, one encoding per distinct answer -- not per connection.
 
