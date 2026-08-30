@@ -5,9 +5,12 @@ from __future__ import annotations
 import json
 import sqlite3
 
+import pytest
+
 from agent_alfred import schema
 from agent_alfred.clock import FakeClock
 from agent_alfred.events import (
+    BestEffortFlushResult,
     CapturingSink,
     FanOutSink,
     SequencedEvent,
@@ -50,6 +53,65 @@ class BoomPrepareSink:
 
     def close(self) -> None:
         return None
+
+
+class _CountingCloseSink:
+    """A sink that counts close() calls and refuses the first N of them."""
+
+    def __init__(self, *, name: str, close_failures: int = 0):
+        self.name = name
+        self.flush_at_run_end = False
+        self.close_calls = 0
+        self._close_failures = close_failures
+
+    def prepare(self, event: UnsequencedEvent) -> object:
+        del event
+        return None
+
+    def commit(self, prepared: object, event: SequencedEvent) -> None:
+        del prepared, event
+
+    def flush(self, run_id: str) -> BestEffortFlushResult:
+        del run_id
+        return BestEffortFlushResult(outcome="best_effort")
+
+    def close(self) -> None:
+        self.close_calls += 1
+        if self.close_calls <= self._close_failures:
+            raise RuntimeError(f"{self.name} close refused")
+
+
+def test_fanout_close_resumes_per_sink_without_reclosing_succeeded_sinks() -> None:
+    """A sink that failed to close is the only one the retry may ask again.
+
+    The old close() walked the whole list on every attempt: a sink that
+    raised left everything before it closed and everything after it open,
+    and the retry closed the already-succeeded sinks a second time on its
+    way back to the failure -- so the FanOut as a whole could report itself
+    finished with one sink that had never closed. Close progress is per
+    sink instead: a sink's bit moves only after its own close() has
+    returned, a retry asks only the sinks that never succeeded, the failing
+    sink's exception propagates unchanged, and the FanOut stays unfinished
+    until the last sink has confirmed.
+    """
+    good = _CountingCloseSink(name="good")
+    flaky = _CountingCloseSink(name="flaky", close_failures=1)
+    tail = _CountingCloseSink(name="tail")
+    fanout = FanOutSink([good, flaky, tail], process_instance_id="proc-close")
+
+    with pytest.raises(RuntimeError, match="flaky close refused"):
+        fanout.close()
+    assert good.close_calls == 1
+    assert flaky.close_calls == 1
+
+    fanout.close()
+    assert good.close_calls == 1, "a sink that closed is not closed again"
+    assert flaky.close_calls == 2, "the failed sink is the one retried"
+    assert tail.close_calls == 1, "the sink after the failure is still closed"
+
+    # Fully confirmed, a further close asks nobody.
+    fanout.close()
+    assert (good.close_calls, flaky.close_calls, tail.close_calls) == (1, 2, 1)
 
 
 def test_prepare_failure_does_not_abort_the_run_or_revisit_the_dead_sink() -> None:

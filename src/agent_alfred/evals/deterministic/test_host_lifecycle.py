@@ -10,6 +10,9 @@ Two contracts were not executable:
    retry, or a finalizer then kept emitting events and running durability
    barriers against a closed sink.
 
+A later closure adds a third contract: a sink whose ``close()`` raises must
+leave the close unfinished and retryable, not reported as done.
+
 Every test below fails against the pre-fix code for the reason named in its
 docstring; none of them sleeps through a real timeout.
 """
@@ -27,6 +30,7 @@ from agent_alfred import schema
 from agent_alfred.clock import FakeClock
 from agent_alfred.events import (
     BarrierFlushResult,
+    BestEffortFlushResult,
     CapturingSink,
     FanOutSink,
     FlushResult,
@@ -524,6 +528,95 @@ def test_close_before_start_still_closes_the_fanout_once() -> None:
     assert sink.closed == 1, "an unstarted Host closes its sinks exactly once"
     assert host.closed is True
     assert host.submit(SubmitRequest(message="hello")).kind == "admission_failed"
+
+
+# --- problem 4: a sink that refuses to close is an unfinished close ---------
+
+
+class _FlakyCloseSink:
+    """A sink whose close() refuses until released, counting every ask."""
+
+    name = "flaky-close"
+    flush_at_run_end = False
+
+    def __init__(self) -> None:
+        self.close_calls = 0
+        self.release = threading.Event()
+
+    def prepare(self, event: UnsequencedEvent) -> object:
+        del event
+        return None
+
+    def commit(self, prepared: object, event: SequencedEvent) -> None:
+        del prepared, event
+
+    def flush(self, run_id: str) -> FlushResult:
+        del run_id
+        return BestEffortFlushResult(outcome="best_effort")
+
+    def close(self) -> None:
+        self.close_calls += 1
+        if not self.release.is_set():
+            raise RuntimeError("sink close refused")
+
+
+class _SpyCloseConnection(sqlite3.Connection):
+    """A real connection that records whether its close was ever asked."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.close_calls = 0
+
+    def close(self) -> None:
+        self.close_calls += 1
+        super().close()
+
+
+def test_runtime_host_retries_fanout_close_before_reporting_closed() -> None:
+    """A sink whose close() raises is an unfinished close, not a finished one.
+
+    The old close() raised its ``_fanout_closed`` bit *before* calling the
+    FanOut, so a sink that raised on the first attempt left the bit set:
+    the next close() skipped the FanOut entirely, set ``_closed``, and
+    reported the Host closed -- while the failed sink had never been closed
+    by anyone, and never would be. The completion bits may only move behind
+    the FanOut's own success: the failing close propagates unchanged, the
+    Host keeps its closing semantics with everything it owns (its database
+    included) still held, and the retry closes exactly the sink that
+    failed -- only then do ``_fanout_closed`` and ``_closed`` advance. The
+    entry descriptor and the process lock are not the Host's to release;
+    that layer of the tail is proven at the Dashboard level.
+    """
+    sink = _FlakyCloseSink()
+    conn = sqlite3.connect(
+        ":memory:", check_same_thread=False, factory=_SpyCloseConnection
+    )
+    schema.migrate(conn)
+    host, _conn, _capture, _model = _host(["pong"], conn=conn, extra_sinks=[sink])
+    host.start()
+    try:
+        with pytest.raises(RuntimeError, match="sink close refused"):
+            host.close(timeout=CLOSE_GRACE_S)
+
+        assert sink.close_calls == 1
+        # Neither progress bit advanced, and the Host is still closing.
+        assert host._fanout_closed is False
+        assert host.closed is False
+        assert host._closing is True
+        # The database the Host owns was never given up.
+        assert conn.close_calls == 0
+
+        sink.release.set()
+        assert host.close(timeout=CLOSE_GRACE_S) is True
+        # The retry asked the failed sink again, and only a real success
+        # moved the completion bits.
+        assert sink.close_calls == 2
+        assert host._fanout_closed is True
+        assert host.closed is True
+        assert conn.close_calls == 0, "the Host never closes the database itself"
+    finally:
+        sink.release.set()
+        host.close()
 
 
 def test_keyboard_interrupt_produces_a_terminal_run_and_releases_the_lease() -> None:

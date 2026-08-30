@@ -332,6 +332,12 @@ class FanOutSink:
         self._persist_lost: dict[str, list[str]] = {}
         self._last_envelope: dict[str, EventEnvelope] = {}
         self._origin: EventEnvelope | None = None
+        # Close progress is per sink, and a sink's bit moves only after its
+        # own close() has returned. A close that raises must leave the
+        # FanOut unfinished: the caller may ask again, and the retry closes
+        # exactly the sinks that never succeeded -- never one that did.
+        self._close_lock = threading.Lock()
+        self._closed_sinks = [False] * len(self._sinks)
 
     @property
     def sinks(self) -> tuple[EventSink, ...]:
@@ -541,8 +547,23 @@ class FanOutSink:
         return incomplete, reason
 
     def close(self) -> None:
-        for sink in self._sinks:
-            sink.close()
+        """Close every sink, resumable per sink.
+
+        One sink raising is an unfinished close, not a finished one: its
+        exception propagates unchanged and the sinks after it are still
+        unclosed, so the FanOut as a whole stays unfinished. Asking again
+        resumes where the failure was -- the already-closed sinks are not
+        touched a second time.
+        """
+        # Attempts are serialized so two racing closers cannot both walk an
+        # unfinished sink; the FanOut's close is otherwise on its own lock,
+        # never on the publish lock a sink's emit path shares.
+        with self._close_lock:
+            for index, sink in enumerate(self._sinks):
+                if self._closed_sinks[index]:
+                    continue
+                sink.close()
+                self._closed_sinks[index] = True
 
 
 def _fail_closed_event(event: UnsequencedEvent) -> UnsequencedEvent:

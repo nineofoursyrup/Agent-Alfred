@@ -289,8 +289,14 @@ class RuntimeHost:
                 return False
         with self._lifecycle:
             if not self._fanout_closed:
-                self._fanout_closed = True
+                # The bit moves only behind a close() that returned: a sink
+                # that raises leaves the FanOut unfinished, this exception
+                # propagates, and the next close() asks it again. Setting
+                # the bit first would make that retry skip the FanOut
+                # entirely -- a Host reported closed with a sink nobody
+                # ever closed.
                 self._fanout.close()
+                self._fanout_closed = True
             self._closed = True
         return True
 
