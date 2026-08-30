@@ -1073,7 +1073,9 @@ class SSEBroker:
             self._enter_fatal(exc)
             raise
 
-    def _publish_fatal(self, exc: BaseException) -> None:
+    def _publish_fatal(
+        self, exc: BaseException
+    ) -> Callable[[BaseException], None] | None:
         """Publish the fatal state and stop every existing stream.
 
         The fatal state and ``_stopping`` land in one critical section, so
