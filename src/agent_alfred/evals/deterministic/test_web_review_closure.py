@@ -743,7 +743,7 @@ def test_an_undeliverable_patch_still_moves_the_authoritative_snapshot() -> None
     harness = Harness(max_ingress_frames=2, max_ingress_bytes=1 << 20)
     handle = harness.connect(session_id="s1")
     _fill_ingress(harness, 2)
-    assert harness.broker._ingress._frames == 2
+    assert harness.broker._ingress.current_cost.frames == 2
     snapshot = _snapshot(
         state_revision=7,
         coordinator_state="running",
@@ -760,7 +760,7 @@ def test_an_undeliverable_patch_still_moves_the_authoritative_snapshot() -> None
     # answered with the state the patch was trying to correct.
     assert harness.broker._latest.state_revision == 7
     # Nothing was silently dropped and nothing was queued behind the limit.
-    assert harness.broker._ingress._frames == 2
+    assert harness.broker._ingress.current_cost.frames == 2
     # The one live connection is told to hang up and come back for a
     # snapshot, rather than left showing a state it will never be corrected
     # on. The publisher only raised the disconnect generation; the closing
@@ -786,8 +786,11 @@ def test_the_frame_budget_alone_can_refuse_a_patch() -> None:
     harness = Harness(max_ingress_frames=1, max_ingress_bytes=1 << 20)
     handle = harness.connect(session_id="s1")
     _fill_ingress(harness, 1)
-    assert harness.broker._ingress._frames == 1
-    assert harness.broker._ingress._bytes < harness.broker._ingress.max_bytes
+    assert harness.broker._ingress.current_cost.frames == 1
+    assert (
+        harness.broker._ingress.current_cost.encoded_bytes
+        < harness.broker._ingress.max_bytes
+    )
     assert harness.broker.publish_state_patch(_snapshot(state_revision=3)) is False
     _run_dispatcher(harness)
     assert handle.queue.close_requested is True
@@ -799,7 +802,7 @@ def test_the_byte_budget_alone_can_refuse_a_patch() -> None:
     # One event already blows the byte budget, so the patch is refused on
     # bytes while the frame count is nowhere near its limit.
     _fill_ingress(harness, 1)
-    assert harness.broker._ingress._frames == 0
+    assert harness.broker._ingress.current_cost.frames == 0
     assert harness.broker.publish_state_patch(_snapshot(state_revision=3)) is False
     _run_dispatcher(harness)
     assert handle.queue.close_requested is True

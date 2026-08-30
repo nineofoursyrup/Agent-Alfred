@@ -231,16 +231,6 @@ class _Ingress:
         with self._lock:
             return self._usage
 
-    @property
-    def _frames(self) -> int:
-        """The frame count of :attr:`current_cost`, as a plain integer."""
-        return self._usage.frames
-
-    @property
-    def _bytes(self) -> int:
-        """The encoded-byte count of :attr:`current_cost`, as an integer."""
-        return self._usage.encoded_bytes
-
     def offer(self, item: IngressItem) -> bool:
         """Queue one item. Non-blocking, O(1), never partial.
 
