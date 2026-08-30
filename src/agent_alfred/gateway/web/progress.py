@@ -64,11 +64,36 @@ class RunProgress:
         self._truncated = False
 
     def note_run_finished(self, run_id: str) -> None:
-        if run_id == self._run_id:
-            self._run_id = None
-            self._step_index = None
-            self._attempts = []
-            self._truncated = False
+        """Freeze the projection instead of erasing it.
+
+        ``run.finished`` is published before the recording transaction
+        settles: the admission lease is still held (ADR-0026), the Run is
+        still the active one, and this view is the only in-process record of
+        what the Run produced. A same-process reconnect in that window reads
+        exactly it, so the last Step/Attempt summary must survive here. The
+        summary stops being shown -- and is cleared -- by
+        :meth:`note_active_run` when the authoritative snapshot moves past
+        the Run, or wholesale by the next ``run.started``; never by the
+        event that merely ends the model loop.
+        """
+        del run_id
+
+    def note_active_run(self, run_id: str | None) -> None:
+        """Bind the view to the authoritative active Run, or unbind it.
+
+        The frozen terminal summary belongs to exactly one Run. It may be
+        shown only while that Run is still the authoritative active one --
+        through ``recording_pending`` and the recorded snapshot -- and must
+        stop the moment the snapshot moves past it: the lease released
+        (recorded→idle) or a new Run admitted. Otherwise the old Run's
+        progress would masquerade as the new state's progress.
+        """
+        if self._run_id is None or run_id == self._run_id:
+            return
+        self._run_id = None
+        self._step_index = None
+        self._attempts = []
+        self._truncated = False
 
     def note_step_started(self, run_id: str, step_index: int) -> None:
         if not self._tracking(run_id):

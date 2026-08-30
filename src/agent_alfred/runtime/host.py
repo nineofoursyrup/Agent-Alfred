@@ -527,7 +527,14 @@ class RuntimeHost:
     def recording_enter_pending(
         self, projection: UnrecordedTerminalProjection
     ) -> None:
-        """running -> recording_pending. The lease is NOT released here."""
+        """running -> recording_pending. The lease is NOT released here.
+
+        The terminal outcome already exists -- it is the projection's -- so
+        the finished summary copies it: a ``finished`` phase with an empty
+        outcome would be a snapshot that cannot say what the Run concluded,
+        precisely in the window (ADR-0026) where this projection is the only
+        place the conclusion exists.
+        """
         with self._lock:
             self._coord = "recording_pending"
             if self._active_summary is not None:
@@ -535,6 +542,7 @@ class RuntimeHost:
                     self._active_summary,
                     phase="finished",
                     recording_state="pending",
+                    outcome=projection.outcome,
                 )
             self._states.replace(
                 coordinator_state="recording_pending",
@@ -545,7 +553,12 @@ class RuntimeHost:
     def recording_enter_failed(
         self, projection: UnrecordedTerminalProjection
     ) -> None:
-        """recording_pending -> recording_failed, keeping the same projection."""
+        """recording_pending -> recording_failed, keeping the same projection.
+
+        The same terminal outcome travels with it: the failure is a
+        recording_state badge, not a rewriting of what the Run concluded,
+        so the failed summary shows exactly what the pending one showed.
+        """
         if self._before_recording_failed is not None:
             self._before_recording_failed.wait()
         with self._lock:
@@ -553,7 +566,10 @@ class RuntimeHost:
             summary = self._active_summary
             if summary is not None:
                 summary = replace(
-                    summary, recording_state="failed", phase="finished"
+                    summary,
+                    recording_state="failed",
+                    phase="finished",
+                    outcome=projection.outcome,
                 )
                 self._active_summary = summary
             self._coord = "recording_failed"

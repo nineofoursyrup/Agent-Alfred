@@ -13,13 +13,16 @@ import pytest
 
 from agent_alfred.clock import FakeClock
 from agent_alfred.events import (
+    AttemptCommitted,
     BestEffortFlushResult,
     BlockDelta,
     CapturingSink,
     EventEnvelope,
     FanOutSink,
+    RunFinished,
     RunStarted,
     SequencedEvent,
+    StepStarted,
     UnsequencedEvent,
 )
 from agent_alfred.gateway.web import broker as broker_module
@@ -37,6 +40,11 @@ from agent_alfred.gateway.web.connection import (
     OfferOutcome,
 )
 from agent_alfred.gateway.web.frames import PreparedFrames
+from agent_alfred.gateway.web.progress import (
+    AttemptTerminal,
+    RunProgress,
+    StepProjection,
+)
 from agent_alfred.gateway.web.replay import CursorText, ReplayRing
 from agent_alfred.gateway.web.state import SNAPSHOT_TEXT_LIMIT
 from agent_alfred.runtime.snapshot import (
@@ -368,6 +376,148 @@ def test_session_validity_is_this_connections_own_fact() -> None:
     handle = harness.connect(session_id="gone")
     patch = _wire_containing(handle, b"event: state_patch")
     assert b'"session_valid":false' in patch
+
+
+# --- the terminal Step summary survives the settlement window ---------------
+
+
+def _terminal_stream(harness: Harness, run_id: str) -> None:
+    """One Step's real event vocabulary, through the broker's own commit."""
+    harness.emit(RunStarted(purpose="chat"), run_id=run_id)
+    harness.emit(StepStarted(step_index=2), run_id=run_id)
+    harness.emit(
+        AttemptCommitted(
+            attempt_id="a1", stop_reason="end_turn", duration_ms=5
+        ),
+        run_id=run_id,
+    )
+    harness.emit(RunFinished(outcome="completed"), run_id=run_id)
+
+
+def _recording_pending_snapshot(**kwargs) -> RuntimeSnapshot:
+    return _snapshot(
+        state_revision=1,
+        coordinator_state="recording_pending",
+        active_run=ActiveRunSummary(
+            run_id="r1",
+            purpose="chat",
+            gateway="web",
+            phase="finished",
+            session_id="s1",
+            prompt_preview="hi",
+            started_at=None,
+            recording_state="pending",
+            outcome="completed",
+        ),
+        unrecorded_terminal_projection=UnrecordedTerminalProjection(
+            run_id="r1",
+            purpose="chat",
+            outcome="completed",
+            reply_text="pong",
+            error=None,
+            recording_state="pending",
+            session_id="s1",
+            prompt_preview="hi",
+        ),
+        **kwargs,
+    )
+
+
+def test_run_finished_freezes_the_last_step_until_the_next_run_started() -> None:
+    """``run.finished`` freezes the view; it does not erase it.
+
+    The admission lease is held until the recording settles (ADR-0026), and
+    in that window this view is the only in-process record of what the Run
+    produced -- a same-process reconnect reads exactly it. The summary stops
+    when the state moves past the Run: the next ``run.started`` replaces it.
+    """
+    progress = RunProgress()
+    progress.note_run_started("r1")
+    progress.note_step_started("r1", 2)
+    progress.note_attempt_terminal(
+        "r1",
+        attempt_id="a1",
+        outcome="committed",
+        stop_reason="end_turn",
+        error_code=None,
+        duration_ms=5,
+    )
+    # run.finished: the reply exists, the recording transaction does not yet.
+    progress.note_run_finished("r1")
+    frozen = progress.projection()
+    assert frozen == StepProjection(
+        step_index=2,
+        attempts=(
+            AttemptTerminal(
+                attempt_id="a1",
+                outcome="committed",
+                stop_reason="end_turn",
+                error_code=None,
+                duration_ms=5,
+            ),
+        ),
+    )
+    # The next Run's run.started replaces the frozen summary, wholesale.
+    progress.note_run_started("r2")
+    assert progress.projection() is None
+    progress.note_step_started("r2", 0)
+    assert progress.projection() == StepProjection(step_index=0, attempts=())
+
+
+def test_the_startup_patch_keeps_the_frozen_summary_while_authoritative() -> None:
+    """Same-process reconnect during the settlement window.
+
+    The pending patch is authoritative, its active Run is the finished one,
+    so the opening stream must carry the frozen terminal summary -- the last
+    StepProjection and its Attempt terminals, exactly as the event stream
+    produced them. After recorded→idle (or a new active Run) the old Run's
+    summary is cleaned: it may not masquerade as the new state's progress.
+    """
+    harness = Harness()
+    _terminal_stream(harness, "r1")
+    harness.broker.publish_state_patch(_recording_pending_snapshot())
+    handle = harness.connect(session_id="s1")
+    step = _patch_payload(handle)["step"]
+    assert step == {
+        "step_index": 2,
+        "attempts": [
+            {
+                "attempt_id": "a1",
+                "outcome": "committed",
+                "stop_reason": "end_turn",
+                "error_code": None,
+                "duration_ms": 5,
+            }
+        ],
+        "attempts_truncated": False,
+    }
+
+    # The lease released: idle, and the old Run's summary goes with it.
+    harness.broker.publish_state_patch(_snapshot(state_revision=2))
+    idle = _patch_payload(harness.connect(session_id="s1"))
+    assert idle["active_run"] is None
+    assert idle["step"] is None
+
+    # A new Run admitted: the old Run's frozen summary must not show under it.
+    harness.broker.publish_state_patch(
+        _snapshot(
+            state_revision=3,
+            coordinator_state="running",
+            active_run=ActiveRunSummary(
+                run_id="r2",
+                purpose="chat",
+                gateway="web",
+                phase="running",
+                session_id="s1",
+                prompt_preview="next",
+                started_at=None,
+                recording_state=None,
+            ),
+        )
+    )
+    next_run = _patch_payload(harness.connect(session_id="s1"))
+    assert next_run["active_run"]["run_id"] == "r2"
+    assert next_run["step"] is None
 
 
 # --- backpressure ----------------------------------------------------------

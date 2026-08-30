@@ -698,6 +698,12 @@ class SSEBroker:
                         self._current_run_state_locked(),
                     )
                 latest = self._latest
+                # Same binding as publish_state_patch: the step summary is
+                # shown only while it belongs to the snapshot's active Run.
+                active = latest.active_run
+                self._progress.note_active_run(
+                    None if active is None else active.run_id
+                )
                 step = self._progress.projection()
             # Encoding outside the lock: pure, no IO, may be slow.
             startup: list[PreparedFrames] = [
@@ -840,12 +846,20 @@ class SSEBroker:
         Returns whether the patch was queued.
         """
         # The progress view is driven under this broker's lock, so its
-        # projection is read under the same lock. The cost measurement that
-        # follows is pure and bounded and touches nothing shared, so it runs
-        # outside -- and the offer rides with the ``_latest`` move below.
+        # projection is read under the same lock. The projection is bound to
+        # the snapshot's own active Run first: a frozen terminal summary
+        # shows only while its Run is still the authoritative active one,
+        # and the idle snapshot that releases the lease is what cleans it.
+        # The cost measurement that follows is pure and bounded and touches
+        # nothing shared, so it runs outside -- and the offer rides with the
+        # ``_latest`` move below.
         with self._lock:
             if self._stopping or self._closed:
                 return False
+            active = snapshot.active_run
+            self._progress.note_active_run(
+                None if active is None else active.run_id
+            )
             step = self._progress.projection()
         patch = _BroadcastPatch(
             snapshot=snapshot, step=step, cost=(1, _patch_cost(snapshot, step))

@@ -14,6 +14,7 @@ finalizer at the exact instant the contract is about.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import threading
 import time
@@ -27,6 +28,7 @@ from agent_alfred.gateway.web.api import (
     busy_summary_from,
 )
 from agent_alfred.gateway.web.broker import SSEBroker
+from agent_alfred.gateway.web.connection import FakeConnection
 from agent_alfred.gateway.web.server import HostFacade
 from agent_alfred.gateway.web.state import (
     StatePatchRejected,
@@ -329,6 +331,265 @@ def test_a_failed_handoff_never_answers_202() -> None:
         # than left dangling on a Run nobody will execute.
         _wait_until(lambda: host.snapshot().coordinator_state == "idle")
     finally:
+        host.close()
+
+
+# --- the terminal snapshot survives the settlement window -------------------
+
+
+def _unstarted(target):
+    """A spawn that never starts a writer, so the test reads the opening
+    stream directly off the handle."""
+
+    class _Unstarted:
+        def start(self):
+            return None
+
+        def is_alive(self):
+            return False
+
+        def join(self, timeout=None):
+            return None
+
+    return _Unstarted()
+
+
+def _startup_patch(handle) -> dict:
+    """The opening stream's state_patch document, exactly as it crossed."""
+    for item in handle.startup:
+        wire = item.wire_bytes()
+        if b"event: state_patch" in wire:
+            body = b"".join(
+                line[len(b"data: ") :]
+                for line in wire.split(b"\n")
+                if line.startswith(b"data: ")
+            )
+            return json.loads(body.decode("utf-8"))
+    raise AssertionError("no state_patch in the opening stream")
+
+
+def _wired_broker(**kwargs) -> SSEBroker:
+    """The broker assembled the way production wires it, minus threads."""
+    return SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=RuntimeSnapshot(INSTANCE, 0, "idle", None, None),
+        session_is_valid=lambda _session_id: True,
+        spawn=_unstarted,
+        **kwargs,
+    )
+
+
+def test_pending_snapshot_keeps_unrecorded_terminal_outcome() -> None:
+    """「回复完成 · 未保存」必须说得出结局。
+
+    ``run.finished`` 发布、收尾事务尚未落定时，Run 的业务结论只存在于
+    ``UnrecordedTerminalProjection`` 里。``active_run`` 进入 ``finished``
+    的那一刻必须从这份投影复制 outcome：``finished`` 配空结局违反
+    phase/outcome 两轴契约，而结算暂停期间权威快照恰好是唯一读数。
+    """
+    latch = _SelectiveLatch()
+    host, _conn = _host(before_recording_commit=latch)
+    host.start()
+    try:
+        # Armed up front: the finalizer pauses deterministically between
+        # run.finished and the recording commit, so recording_pending is a
+        # state the test observes, not a window it races for.
+        latch.arm()
+        submitted = host.submit(_request(message="hello", session_id=None))
+        assert submitted.kind == "accepted"
+        _wait_until(
+            lambda: host.snapshot().coordinator_state == "recording_pending"
+        )
+        snap = host.snapshot()
+        projection = snap.unrecorded_terminal_projection
+        assert projection is not None
+        assert projection.run_id == submitted.run_id
+        assert projection.outcome == "completed"
+        active = snap.active_run
+        assert active is not None
+        assert active.run_id == submitted.run_id
+        assert active.phase == "finished"
+        assert active.recording_state == "pending"
+        assert active.outcome == projection.outcome
+        assert active.outcome
+    finally:
+        latch.release()
+        if submitted.run_id:
+            host.wait(submitted.run_id)
+        host.close()
+
+
+def test_startup_patch_keeps_last_step_and_attempt_summary() -> None:
+    """同进程重连的启动补丁在结算暂停期间保留最后一个 Step 摘要。
+
+    补丁里的 step 字段必须与事件流一致：step_index 来自 ``step.started``，
+    attempts 来自 attempt 终态事件——不是伪造，也不因 ``run.finished``
+    而消失。
+    """
+    latch = _SelectiveLatch()
+    broker = _wired_broker()
+    probe = CapturingSink(name="probe", flush_at_run_end=True)
+    host, _conn = _host(
+        extra_sinks=[broker, probe],
+        snapshot_listener=broker.publish_state_patch,
+        before_recording_commit=latch,
+    )
+    host.start()
+    try:
+        # Armed up front: the finalizer pauses deterministically between
+        # run.finished and the recording commit.
+        latch.arm()
+        session_id = host.create_session()
+        submitted = host.submit(_request(message="hello", session_id=session_id))
+        assert submitted.kind == "accepted"
+        _wait_until(
+            lambda: host.snapshot().coordinator_state == "recording_pending"
+        )
+        handle = broker.connect(
+            connection=FakeConnection(), session_id=session_id
+        )
+        patch = _startup_patch(handle)
+        steps = [
+            event.payload
+            for event in probe.events
+            if event.payload.name == "step.started"
+            and event.envelope.run_id == submitted.run_id
+        ]
+        attempts = [
+            event.payload
+            for event in probe.events
+            if event.payload.name == "attempt.committed"
+            and event.envelope.run_id == submitted.run_id
+        ]
+        assert steps
+        step = patch["step"]
+        assert step is not None
+        assert step["step_index"] == steps[-1].step_index
+        # The scripted client bypasses the adapter seam that emits attempt
+        # events, so an empty attempt list is this stream's own truth: the
+        # patch repeats the stream, it invents nothing.
+        assert [(a["attempt_id"], a["outcome"]) for a in step["attempts"]] == [
+            (a.attempt_id, "committed") for a in attempts
+        ]
+        assert patch["active_run"]["phase"] == "finished"
+        assert patch["active_run"]["recording_state"] == "pending"
+        assert patch["active_run"]["outcome"] == "completed"
+        assert patch["unrecorded_terminal_projection"]["outcome"] == "completed"
+    finally:
+        latch.release()
+        if submitted.run_id:
+            host.wait(submitted.run_id)
+        broker.close(timeout=1.0)
+        host.close()
+
+
+def test_failed_snapshot_keeps_same_terminal_state() -> None:
+    """recording_failed 保留与 pending 相同的终态。
+
+    结算失败只改 recording_state 徽标，不改写结局、不擦掉最后的
+    Step 摘要——pending 窗口与 failed 窗口读到的是同一份终态。
+    """
+    flag = {"armed": False}
+    database = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(database)
+    wrapped = _FailFinalizeWhen(database, flag, "finished_at")
+    latch = _SelectiveLatch()
+    broker = _wired_broker()
+    host, _conn = _host(
+        conn=wrapped,
+        extra_sinks=[broker],
+        snapshot_listener=broker.publish_state_patch,
+        before_recording_commit=latch,
+    )
+    host.start()
+    try:
+        # Armed up front: the finalizer pauses deterministically between
+        # run.finished and the recording commit, so the pending window and
+        # then the failed window are both observed, not raced for.
+        latch.arm()
+        session_id = host.create_session()
+        submitted = host.submit(_request(message="hello", session_id=session_id))
+        assert submitted.kind == "accepted"
+        _wait_until(
+            lambda: host.snapshot().coordinator_state == "recording_pending"
+        )
+        pending = _startup_patch(
+            broker.connect(connection=FakeConnection(), session_id=session_id)
+        )
+        assert pending["active_run"]["phase"] == "finished"
+        assert pending["active_run"]["outcome"] == "completed"
+        pending_step = pending["step"]
+        assert pending_step is not None
+
+        flag["armed"] = True
+        latch.release()
+        host.wait(submitted.run_id)
+        _wait_until(
+            lambda: host.snapshot().coordinator_state == "recording_failed"
+        )
+        failed = _startup_patch(
+            broker.connect(connection=FakeConnection(), session_id=session_id)
+        )
+        assert failed["active_run"]["recording_state"] == "failed"
+        assert failed["active_run"]["phase"] == "finished"
+        assert failed["active_run"]["outcome"] == "completed"
+        assert failed["step"] == pending_step
+        snap = host.snapshot()
+        projection = snap.unrecorded_terminal_projection
+        assert projection is not None
+        assert projection.recording_state == "failed"
+        assert snap.active_run is not None
+        assert snap.active_run.outcome == projection.outcome
+        assert snap.active_run.outcome
+    finally:
+        latch.release()
+        broker.close(timeout=1.0)
+        host.close()
+
+
+def test_old_run_progress_stops_masquerading_after_recorded() -> None:
+    """recorded 权威快照发布并释放租约后，旧 Run 不再冒充活动进度。
+
+    租约仍被旧 Run 持有（recorded 快照已发布、idle 尚未发布）时，它仍是
+    活动 Run，终态 Step 摘要仍在；租约一释放，旧 Run 的进度必须随
+    recorded→idle 的既有清理路径一起消失——后续重连读到的是干净的
+    idle 快照，而不是旧 Run 的进度。
+    """
+    after_recorded = threading.Event()
+    broker = _wired_broker()
+    host, _conn = _host(
+        extra_sinks=[broker],
+        snapshot_listener=broker.publish_state_patch,
+        after_recorded_snapshot=after_recorded,
+    )
+    host.start()
+    try:
+        session_id = host.create_session()
+        submitted = host.submit(_request(message="hello", session_id=session_id))
+        assert submitted.kind == "accepted"
+        _wait_until(
+            lambda: host.snapshot().active_run is not None
+            and host.snapshot().active_run.recording_state == "recorded"
+        )
+        recorded = _startup_patch(
+            broker.connect(connection=FakeConnection(), session_id=session_id)
+        )
+        assert recorded["active_run"]["run_id"] == submitted.run_id
+        assert recorded["active_run"]["recording_state"] == "recorded"
+        assert recorded["step"] is not None
+
+        after_recorded.set()
+        _wait_until(lambda: host.snapshot().coordinator_state == "idle")
+        idle = _startup_patch(
+            broker.connect(connection=FakeConnection(), session_id=session_id)
+        )
+        assert idle["coordinator_state"] == "idle"
+        assert idle["active_run"] is None
+        assert idle["step"] is None
+        assert idle["unrecorded_terminal_projection"] is None
+    finally:
+        after_recorded.set()
+        broker.close(timeout=1.0)
         host.close()
 
 
