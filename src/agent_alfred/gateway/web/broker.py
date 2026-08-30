@@ -48,7 +48,7 @@ from agent_alfred.gateway.web.connection import (
     ConnectionWriter,
     SSEConnection,
 )
-from agent_alfred.gateway.web.frames import PreparedFrames
+from agent_alfred.gateway.web.frames import CurrentRunState, PreparedFrames
 from agent_alfred.gateway.web.progress import RunProgress, StepProjection
 from agent_alfred.gateway.web.replay import (
     CursorText,
@@ -122,6 +122,31 @@ class _BroadcastPatch:
 
     def ingress_cost(self) -> tuple[int, int]:
         return self.cost
+
+
+@dataclass(frozen=True)
+class _PublishedEvent:
+    """One published domain event on its way to the dispatcher.
+
+    Two identities, kept apart on purpose. ``published_seq`` is the
+    *internal publication order*: the seq the commit critical section
+    assigned, transient or not, and the number a connection's registration
+    boundary is measured against. ``frames`` is the wire content exactly as
+    prepared -- for a transient that means ``frames.seq`` is ``None`` and no
+    ``id:`` line exists, because a transient owns no SSE checkpoint and
+    must never appear to.
+
+    Conflating the two is how a preregistration transient resurrects
+    itself: a boundary taken from the replayable high water alone leaves
+    every in-flight delta outside it, and a checkpoint taken from the
+    internal seq would mint an ``id:`` the ring cannot honour.
+    """
+
+    published_seq: int
+    frames: PreparedFrames
+
+    def ingress_cost(self) -> tuple[int, int]:
+        return self.frames.ingress_cost()
 
 
 class IngressItem(Protocol):
@@ -266,10 +291,14 @@ class ConnectionHandle:
     # that happened before they existed.
     ingress_seen: int = 0
     # The high-water mark at registration: the upper bound of what this
-    # connection's replay already covered. Live items at or below it are
-    # skipped, because replay and live delivery can otherwise both carry the
-    # same event to the same client.
-    replay_through: int = 0
+    # connection's replay already covered, measured in *published* seqs --
+    # transients included. Live items at or below it are skipped, because
+    # replay and live delivery can otherwise both carry the same event to
+    # the same client; and a transient at or below it is skipped too,
+    # because a delta published before the connection registered is
+    # precisely the in-flight attempt ADR-0013 says a reconnect must not
+    # see again.
+    published_through: int = 0
     verdict: CursorVerdict | None = None
     registered_monotonic: float = 0.0
     # Set once this connection's writer has returned: it has stopped writing
@@ -335,12 +364,38 @@ class SSEBroker:
         self._dispatcher: threading.Thread | None = None
         self._on_fatal = on_fatal
         self._stopping = False
+        # The registration fence: how many connects hold the space between
+        # "the handle entered the registry" and "its writer thread exists".
+        # A close that ignored this count could answer True in that window
+        # -- and the writer would start afterwards, on a broker the caller
+        # has already been told is closed. It is observable so a test can
+        # pin the fence rather than guess at the window.
+        self._registrations = 0
+        # The dispatcher's death, if it has died: the original failure, kept
+        # beside ``_stopping`` so every path that would pour work into a
+        # dead fan-out -- commit, connect, state patches -- can refuse on a
+        # fact instead of pretending the stream still works. Published in
+        # the same critical section as ``_stopping``.
+        self._fatal: BaseException | None = None
         # The disconnect generation: bumped once per ingress overflow whose
         # item nobody received. Bumping is O(1) and is the whole publish-path
         # cost of an overflow; finding the connections that predate the bump
         # is the dispatcher's job, outside the publish critical section.
         self._disconnect_generation = 0
         self._swept_generation = 0
+        # Whether an unconsumed kick is already in the ingress. One pending
+        # kick is the whole wake-up contract: the generation it rides with
+        # says how far the sweep must go, so a second kick while the first
+        # is unread carries no information the first does not -- and the
+        # kicks are the one item that would otherwise grow with the
+        # overflow count behind a stalled dispatcher.
+        self._kick_pending = False
+        # Bumped once per publication (commit or state patch) under the
+        # lock that did the publishing. A connect that encodes its opening
+        # stream outside the lock re-checks this counter at registration:
+        # unchanged means the captured snapshot is still authoritative;
+        # changed means the world moved and the stream is re-captured.
+        self._state_epoch = 0
         # The close's own progress, kept apart from "closed": which of its
         # steps have already run. A close that runs out of time has executed
         # its steps but not finished its job, and the next call resumes --
@@ -397,13 +452,23 @@ class SSEBroker:
         emitting thread for the size of the crowd -- and trip over a wedged
         queue on the way -- so the dispatcher is what asks the connections
         predating the incident to hang up.
+
+        Raising is the one honest answer behind a dead dispatcher: the
+        caller -- the FanOut -- then disables this sink and records
+        ``sink_disabled``, instead of the event vanishing into an ingress
+        nobody will ever drain.
         """
         item: PreparedFrames = prepared  # type: ignore[assignment]
         kick = False
         with self._lock:
+            if self._fatal is not None:
+                raise RuntimeError(
+                    "the dispatcher is down; this sink cannot deliver"
+                ) from self._fatal
             progress_module.observe(
                 event.payload, event.envelope.run_id, self._progress
             )
+            self._state_epoch += 1
             self._note_run_event(event)
             if event.replayable:
                 # The ring is the only replay source for an active Run, so it
@@ -423,7 +488,7 @@ class SSEBroker:
                 # A transient consumes its seq and is delivered live only:
                 # O(1) metadata on the ring, no entry, no checkpoint.
                 self._ring.observe_published(event.seq, None)
-            if not self._ingress.offer(item):
+            if not self._ingress.offer(_PublishedEvent(event.seq, item)):
                 if item.replayable or item.must_deliver:
                     # Ingress overflow costs liveness, never recoverability:
                     # the fact is already in the ring, so every live
@@ -431,11 +496,27 @@ class SSEBroker:
                     # The bump and the kick are the whole cost here; the
                     # sweep happens on the dispatcher.
                     self._disconnect_generation += 1
-                    kick = True
+                    kick = self._arm_kick_locked()
                 else:
                     self._ingress_dropped += 1
         if kick:
             self._ingress.put_kick()
+
+    def _arm_kick_locked(self) -> bool:
+        """Decide whether this overflow must wake the dispatcher. Call holds
+        the lock.
+
+        True exactly once per pending kick: a kick already in the ingress
+        will deliver the newest generation when the dispatcher takes it, so
+        the overflow that found it pending bumps the generation and pays
+        nothing else. A broker that is stopping or whose dispatcher has
+        died arms nothing -- there is no sweep left to wake, and the item
+        would be one more unread sentinel behind the close.
+        """
+        if self._kick_pending or self._stopping or self._fatal is not None:
+            return False
+        self._kick_pending = True
+        return True
 
     def flush(self, run_id: str) -> BestEffortFlushResult:
         """SSE does not participate in the durability barrier.
@@ -501,10 +582,25 @@ class SSEBroker:
                 # reading. It stays a daemon thread so it cannot hold the
                 # interpreter open, but the descriptor is ours to release.
                 handle.connection.close()
+        # The completion report is a fact about the *current* registry, not
+        # the attempt's snapshot: a handle registered before this close set
+        # ``_stopping`` is in the snapshot, but its writer may have been
+        # installed (and exited, and unregistered itself) since. Everything
+        # that can still start a writer is checked as it is now -- registry
+        # empty, no registration in flight, dispatcher gone -- because a
+        # True handed out over any one of them releases the database and
+        # the process lock under a stream that is still starting or still
+        # writing. A registered handle whose thread is still ``None`` is a
+        # registration the writer has not reached; it counts as undrained
+        # rather than as a writer that already left.
+        with self._lock:
+            current = tuple(self._connections)
+            registrations = self._registrations
         drained = dispatcher is None or not dispatcher.is_alive()
+        drained = drained and registrations == 0
         drained = drained and all(
-            handle.thread is None or not handle.thread.is_alive()
-            for handle in handles
+            handle.thread is not None and not handle.thread.is_alive()
+            for handle in current
         )
         if drained:
             # Only a confirmed exit may publish "closed"; until then every
@@ -531,6 +627,22 @@ class SSEBroker:
         events are being emitted gets either a duplicate or a hole, with no
         way to tell which.
 
+        The one critical section is the *registration*; the encoding of the
+        opening stream happens outside it, the way ADR-0015 splits prepare
+        from commit. The critical section that captures what the stream
+        will say leaves behind an epoch; the registration critical section
+        re-checks it, and a changed epoch -- an event or a state patch that
+        moved the world while the frames were being built -- throws the
+        capture away and starts again. What the client finally receives
+        names the state that was authoritative when it registered, and no
+        commit ever waited for the encoding of a startup frame.
+
+        The broker still accepting connections is confirmed in the same
+        critical sections, *before* anything is registered: a connect that
+        arrives behind a closing broker is refused there, and the refusal's
+        only actions -- closing the socket and raising ``finished`` -- are
+        done outside the lock, where a close is allowed to touch IO.
+
         The opening sequence is the decided order, always, in full:
         ``retry`` -> **re-seed** -> optional ``replay_gap`` -> ``state_patch``
         / exact catch-up -> live frames. The re-seed is unconditional; why is
@@ -545,7 +657,7 @@ class SSEBroker:
         copied.
         """
         # Read before the lock: this is a database question, and the
-        # critical section below is not allowed to do IO.
+        # critical sections below are not allowed to do IO.
         session_valid = self._session_is_valid(session_id)
         default_frames, default_bytes = self._connection_limits
         handle = ConnectionHandle(
@@ -556,44 +668,92 @@ class SSEBroker:
             connection=connection,
             session_id=session_id,
         )
-        with self._lock:
-            verdict = classify_cursor(
-                cursor, self._ring, process_instance_id=self._instance
-            )
-            handle.verdict = verdict
-            handle.ingress_seen = self._ingress_dropped
-            handle.replay_through = self._ring.high_water_seq()
-            # Registered at the current disconnect generation: everything
-            # published so far is either in this opening stream or behind
-            # the high-water mark above, so a later sweep must not close it.
-            handle.generation = self._disconnect_generation
-            handle.registered_monotonic = self._clock.monotonic()
+        refused = False
+        while True:
+            with self._lock:
+                if self._stopping or self._closed:
+                    # A broker that is closing accepts nothing new: a writer
+                    # started now would never be told to stop by anyone but
+                    # us, and a caller that already holds a True close is
+                    # tearing down what this stream would read from.
+                    refused = True
+                    break
+                epoch = self._state_epoch
+                verdict = classify_cursor(
+                    cursor, self._ring, process_instance_id=self._instance
+                )
+                # The gap notice's facts, captured where they are coherent:
+                # the ring and the run state cannot move inside this critical
+                # section, so the notice is built from frozen values outside.
+                gap_args: (
+                    tuple[str, int | None, int | None, int, CurrentRunState]
+                    | None
+                ) = None
+                if verdict.kind == "gap":
+                    gap_args = (
+                        verdict.reason or "malformed",
+                        verdict.requested_seq,
+                        self._ring.oldest_seq(),
+                        self._ring.high_water_seq(),
+                        self._current_run_state_locked(),
+                    )
+                latest = self._latest
+                step = self._progress.projection()
+            # Encoding outside the lock: pure, no IO, may be slow.
             startup: list[PreparedFrames] = [
                 frames.retry_frame(frames.DEFAULT_RETRY_MS)
             ]
             # Unconditional: every verdict carries a boundary, and omitting
             # it on an empty ring is what erases the browser's cursor.
             startup.append(frames.reseed_frame(self._instance, verdict.reseed_seq))
-            if verdict.kind == "gap":
+            if gap_args is not None:
+                reason, requested_seq, oldest_seq, high_water, run_state = (
+                    gap_args
+                )
                 startup.append(
                     frames.replay_gap_notice(
-                        reason=verdict.reason or "malformed",
-                        requested_seq=verdict.requested_seq,
-                        oldest_seq=self._ring.oldest_seq(),
-                        high_water_seq=self._ring.high_water_seq(),
-                        current_run_state=self._current_run_state_locked(),
+                        reason=reason,
+                        requested_seq=requested_seq,
+                        oldest_seq=oldest_seq,
+                        high_water_seq=high_water,
+                        current_run_state=run_state,
                     )
                 )
-            snapshot = build_snapshot(
-                self._latest,
-                step=self._progress.projection(),
-                session_valid=session_valid,
+            startup.append(
+                _patch_frames(latest, step, session_valid)
             )
-            startup.append(frames.state_patch_frames(snapshot_payload(snapshot)))
-            for item in verdict.entries:
-                startup.append(item)
-            handle.startup = tuple(startup)
-            self._connections.append(handle)
+            startup.extend(verdict.entries)
+            built = tuple(startup)
+            with self._lock:
+                if self._stopping or self._closed:
+                    refused = True
+                    break
+                if self._state_epoch != epoch:
+                    # An event or a patch moved the world while the frames
+                    # were being built: the capture is stale and the decided
+                    # invariant -- snapshot, high-water, registration, one
+                    # critical section -- is worth another lap, not a lie.
+                    continue
+                handle.verdict = verdict
+                handle.ingress_seen = self._ingress_dropped
+                handle.published_through = self._ring.published_high_water_seq()
+                # Registered at the current disconnect generation: everything
+                # published so far is either in this opening stream or behind
+                # the published boundary above, so a later sweep must not
+                # close it.
+                handle.generation = self._disconnect_generation
+                handle.registered_monotonic = self._clock.monotonic()
+                handle.startup = built
+                self._connections.append(handle)
+                # The fence goes up with the registration and comes down only
+                # when the writer thread exists: in between, a close must see
+                # a registration it may not report around.
+                self._registrations += 1
+            break
+        if refused:
+            connection.close()
+            handle.finished.set()
+            return handle
         writer = ConnectionWriter(
             connection=connection,
             source=handle.queue,
@@ -601,14 +761,31 @@ class SSEBroker:
             heartbeat_s=self._heartbeat_s,
             startup=handle.startup,
         )
-        if self._stopping or self._closed:
-            # Registered into a broker that is already closing: nothing will
-            # ever tell this writer to stop, so it must be told now. Without
-            # this, the HTTP handler waiting on ``finished`` would block
-            # until the process exits.
-            handle.queue.stop()
-        handle.thread = self._spawn(lambda: self._run_writer(handle, writer))
+        try:
+            handle.thread = self._spawn(lambda: self._run_writer(handle, writer))
+        except BaseException:
+            # No writer exists and none ever will for this handle: it must
+            # leave the registry, or every later close would wait forever on
+            # a thread that was never created.
+            self.unregister(handle)
+            connection.close()
+            handle.finished.set()
+            raise
+        finally:
+            with self._lock:
+                self._registrations -= 1
         return handle
+
+    @property
+    def registrations_in_flight(self) -> int:
+        """Connects that have registered a handle but not installed a writer.
+
+        The fence a close waits on. While this is non-zero, ``close`` cannot
+        truthfully answer True: one of these connects may still start a
+        writer.
+        """
+        with self._lock:
+            return self._registrations
 
     def _run_writer(
         self, handle: ConnectionHandle, writer: ConnectionWriter
@@ -673,15 +850,23 @@ class SSEBroker:
         patch = _BroadcastPatch(
             snapshot=snapshot, step=step, cost=(1, _patch_cost(snapshot, step))
         )
+        offered = False
         kick = False
         with self._lock:
             self._latest = snapshot
-            if not self._ingress.offer(patch):
+            self._state_epoch += 1
+            offered = self._ingress.offer(patch)
+            if not offered:
                 self._disconnect_generation += 1
-                kick = True
+                kick = self._arm_kick_locked()
         if kick:
             self._ingress.put_kick()
-        return not kick
+        # The answer is about the *patch* -- queued or refused -- not about
+        # whether this overflow had to arm the wake-up: a pending kick from
+        # an earlier overflow already covers this one's sweep, and reading
+        # that as "queued" would tell the caller a state arrived that every
+        # connection will in fact be disconnected for missing.
+        return offered
 
     # -- internals ---------------------------------------------------------
 
@@ -704,12 +889,30 @@ class SSEBroker:
             while self.deliver_next():
                 pass
         except BaseException as exc:  # noqa: BLE001 - reported, then re-raised
-            with self._lock:
-                self._stopping = True
-                handler = self._on_fatal
-            if handler is not None:
-                handler(exc)
+            self._enter_fatal(exc)
             raise
+
+    def _enter_fatal(self, exc: BaseException) -> None:
+        """Publish the dispatcher's death and stop every existing stream.
+
+        The fatal state and ``_stopping`` land in one critical section, so
+        no reader can see one without the other. Asking the connections to
+        hang up happens *outside* that section -- a request-close is a mark
+        and a sentinel, never IO, but the walk is proportional to the crowd
+        and the lock is the publish path's. A later ``commit`` raises on the
+        fatal state, which is what lets the FanOut disable this sink and
+        tell the other sinks why; ``connect`` and state patches refuse for
+        the same reason.
+        """
+        with self._lock:
+            self._fatal = exc
+            self._stopping = True
+            handles = tuple(self._connections)
+            handler = self._on_fatal
+        for handle in handles:
+            handle.queue.request_close()
+        if handler is not None:
+            handler(exc)
 
     def deliver_next(self, timeout: float | None = None) -> bool:
         """Take one ingress item and hand it to every connection.
@@ -727,13 +930,19 @@ class SSEBroker:
             return False
         if isinstance(item, _IngressStop):
             return False
-        self._sweep_stale_generations()
         if isinstance(item, _IngressKick):
+            # Taking the kick is what re-arms the overflow path -- and the
+            # same critical section captures the newest generation as the
+            # sweep's target, so a generation raised after the kick was
+            # queued is still swept by *this* take, not left for a kick
+            # that will never come.
+            self._sweep_stale_generations(clear_kick=True)
             return True
+        self._sweep_stale_generations()
         self._fan_out(item)
         return True
 
-    def _sweep_stale_generations(self) -> None:
+    def _sweep_stale_generations(self, *, clear_kick: bool = False) -> None:
         """Close every connection registered before an unpaid overflow.
 
         Runs on the dispatcher, outside the publish critical section: the
@@ -748,6 +957,8 @@ class SSEBroker:
         """
         with self._lock:
             generation = self._disconnect_generation
+            if clear_kick:
+                self._kick_pending = False
             if generation == self._swept_generation:
                 return
             handles = tuple(self._connections)
@@ -764,39 +975,58 @@ class SSEBroker:
         then offer -- lets a connection register in between and be handed an
         item its replay had already covered, or miss one its replay did not.
         The cost of holding the lock is bounded: an offer is O(1), copies
-        nothing and does no IO. The one question that may read the database
-        (whether this connection's Session still exists) is answered for
-        every connection *before* the critical section, never inside it.
+        nothing and does no IO. Everything that is not a bounded reference
+        hand-out -- the database question of whether each connection's
+        Session still exists, and the encoding of a patch per distinct
+        session-validity answer -- happens *before* the critical section
+        (ADR-0015: prepare outside, commit inside).
         """
         with self._lock:
             handles = tuple(self._connections)
         valid = tuple(
             self._session_is_valid(handle.session_id) for handle in handles
         )
+        if isinstance(item, _BroadcastPatch):
+            offers: list[tuple[ConnectionHandle, PreparedFrames]] = []
+            variants: dict[bool, PreparedFrames] = {}
+            for handle, session_valid in zip(handles, valid):
+                frame = variants.get(session_valid)
+                if frame is None:
+                    frame = _patch_frames(
+                        item.snapshot, item.step, session_valid
+                    )
+                    variants[session_valid] = frame
+                offers.append((handle, frame))
+            with self._lock:
+                for handle, frame in offers:
+                    handle.queue.offer(frame)
+            return
         with self._lock:
             dropped = self._ingress_dropped
             for handle, session_valid in zip(handles, valid):
-                if isinstance(item, _BroadcastPatch):
-                    self._deliver_patch(handle, item, session_valid)
-                else:
-                    self._deliver_event(handle, item, dropped)
+                self._deliver_event(handle, item, dropped)
 
     def _deliver_event(
         self,
         handle: ConnectionHandle,
-        item: PreparedFrames,
+        item: _PublishedEvent,
         dropped: int,
     ) -> None:
         """Deliver one domain event plus any drop count owed this connection."""
         self._deliver_dropped_notice(handle, dropped)
-        if item.seq is not None and item.seq <= handle.replay_through:
-            # The replay this connection was primed with already carried it.
-            # The item was committed (and so entered the ring) before this
-            # connection registered, but it was still sitting in the ingress
-            # when registration happened; delivering it here too would be a
-            # duplicate with no way for the client to tell it from a new one.
+        if item.published_seq <= handle.published_through:
+            # The registration boundary already covers it. For a replayable
+            # event that means the replay primed into the opening stream
+            # carried it; for a transient it means the delta was published
+            # before this connection registered -- the half-finished
+            # attempt ADR-0013 says a reconnect discards. The event was
+            # committed (and so entered the ring, or moved the published
+            # high water) before registration, but it was still sitting in
+            # the ingress; delivering it here too would be a duplicate or a
+            # resurrection, with no way for the client to tell either from
+            # a new one.
             return
-        outcome = handle.queue.offer(item)
+        outcome = handle.queue.offer(item.frames)
         # A transient *this* connection had no room for is this connection's
         # own fact: the queue counts it and it is reported once the queue
         # recovers. The ingress-wide count above is a different fact -- it
@@ -818,19 +1048,6 @@ class SSEBroker:
         # the count for good.
         if handle.queue.offer(notice).kind == "accepted":
             handle.ingress_seen = dropped
-
-    def _deliver_patch(
-        self,
-        handle: ConnectionHandle,
-        patch: _BroadcastPatch,
-        session_valid: bool,
-    ) -> None:
-        # Undeliverable means the connection closes and the client comes
-        # back for an atomic snapshot; a patch that silently failed to
-        # arrive would leave a lifetime state nothing corrects.
-        handle.queue.offer(
-            _patch_frames(patch.snapshot, patch.step, session_valid)
-        )
 
     def _note_run_event(self, event: SequencedEvent) -> None:
         name = getattr(event.payload, "name", None)

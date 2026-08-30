@@ -162,8 +162,19 @@ class HostFacade:
     def locate_run(self, run_id: str, *, limit: int) -> Any | None:
         return self._host.locate_run(run_id, limit=limit)
 
-    def mainbar_pairs(self, *, limit: int, cursor: str | None = None) -> Any:
-        return self._host.mainbar_pairs(limit=limit, cursor=cursor)
+    def list_session_chat_runs(
+        self, *, session_id: str, limit: int, cursor: str | None = None
+    ) -> Any:
+        return self._host.list_session_chat_runs(
+            session_id=session_id, limit=limit, cursor=cursor
+        )
+
+    def mainbar_pairs(
+        self, *, session_id: str, limit: int, cursor: str | None = None
+    ) -> Any:
+        return self._host.mainbar_pairs(
+            session_id=session_id, limit=limit, cursor=cursor
+        )
 
 
 class DashboardRuntime:

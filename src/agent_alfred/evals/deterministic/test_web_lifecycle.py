@@ -653,3 +653,56 @@ def test_a_real_close_releases_the_socket_and_the_port(tmp_path) -> None:
 def test_the_default_port_is_the_decided_one() -> None:
     assert DEFAULT_PORT == 7717
     assert DEFAULT_HOST == "127.0.0.1"
+
+
+def test_a_descriptor_that_refuses_deletion_keeps_the_reference(
+    tmp_path, monkeypatch
+) -> None:
+    """A failed unlink forgets nothing.
+
+    The descriptor names a port this process is about to stop answering, so
+    "forget" may only ever forget a file that is really gone. An unlink that
+    loses to a permission error must leave the reference, the file and the
+    lock exactly where they were, so the next close() deletes the file for
+    real and only then drops the lock. Clearing the reference first would
+    make the first failure permanent: the retry would delete nothing and
+    release the lock on top of a stale descriptor.
+    """
+    service = _service(tmp_path, port=_free_port())
+    service.start()
+    attempts = {"count": 0}
+    real_unlink = Path.unlink
+
+    def refusing_unlink(self, missing_ok=False):
+        if self.name == DESCRIPTOR_NAME and attempts["count"] == 0:
+            attempts["count"] += 1
+            raise PermissionError(1, "Operation not permitted", str(self))
+        return real_unlink(self, missing_ok=missing_ok)
+
+    monkeypatch.setattr(Path, "unlink", refusing_unlink)
+    with pytest.raises(PermissionError):
+        service.close()
+    assert service.descriptor is not None
+    assert (tmp_path / DESCRIPTOR_NAME).exists()
+    assert service.lock_held is True
+
+    # The retry finishes the deletion and releases the lock.
+    monkeypatch.undo()
+    service.close()
+    assert service.descriptor is None
+    assert not (tmp_path / DESCRIPTOR_NAME).exists()
+    assert service.lock_held is False
+
+    # And a third close is still idempotent.
+    service.close()
+    assert service.lock_held is False
+
+
+def test_a_descriptor_already_gone_still_counts_as_forgotten(tmp_path) -> None:
+    """A missing file needs no deletion, and the tail goes on."""
+    service = _service(tmp_path, port=_free_port())
+    service.start()
+    (tmp_path / DESCRIPTOR_NAME).unlink()
+    service.close()
+    assert service.descriptor is None
+    assert service.lock_held is False

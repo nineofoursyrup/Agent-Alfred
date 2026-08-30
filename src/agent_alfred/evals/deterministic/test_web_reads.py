@@ -32,6 +32,7 @@ from agent_alfred.runtime.runs import (
     UnknownRunFilter,
     classify_purpose,
 )
+from agent_alfred.runtime.sessions import SessionNotFound
 from agent_alfred.settings import Settings
 
 _TS = "2026-08-27T12:00:00+00:00"
@@ -448,7 +449,7 @@ def test_mainbar_returns_one_pair_per_recorded_chat_run() -> None:
         session_id = host.create_session()
         first = _run(host, "first question", session_id)
         second = _run(host, "second question", session_id)
-        page = host.mainbar_pairs()
+        page = host.mainbar_pairs(session_id=session_id)
         assert [pair.run_id for pair in page.pairs] == [
             second.run_id,
             first.run_id,
@@ -471,17 +472,66 @@ def test_the_mainbar_default_is_the_most_recent_25() -> None:
         session_id = host.create_session()
         for index in range(30):
             _run(host, f"q{index:02d}", session_id)
-        page = host.mainbar_pairs()
+        page = host.mainbar_pairs(session_id=session_id)
         assert len(page.pairs) == 25
         assert page.next_cursor is not None
         # The newest first, and the cursor continues where it stopped.
-        continuing = host.mainbar_pairs(cursor=page.next_cursor)
+        continuing = host.mainbar_pairs(
+            session_id=session_id, cursor=page.next_cursor
+        )
         assert len(continuing.pairs) == 5
         assert continuing.next_cursor is None
         overlap = {p.run_id for p in page.pairs} & {
             p.run_id for p in continuing.pairs
         }
         assert overlap == set()
+    finally:
+        host.close()
+
+
+def test_the_mainbar_only_shows_the_requested_session() -> None:
+    """Each tab's MainBar is that tab's Session's only conversation.
+
+    ``mainbar_pairs`` answers a question about *one* Session; without the
+    filter in the SQL, every tab would see every Session's chat interleaved
+    -- and the cursor, which pins the page, would leak across Sessions too.
+    A cursor minted by Session A answers nothing for Session B.
+    """
+    host = _fresh_host(script=["pong"] * 4)
+    host.start()
+    try:
+        session_a = host.create_session()
+        session_b = host.create_session()
+        run_a1 = _run(host, "a-one", session_a).run_id
+        run_b = _run(host, "b-one", session_b).run_id
+        run_a2 = _run(host, "a-two", session_a).run_id
+
+        page_a = host.mainbar_pairs(session_id=session_a)
+        assert [pair.run_id for pair in page_a.pairs] == [run_a2, run_a1]
+        page_b = host.mainbar_pairs(session_id=session_b)
+        assert [pair.run_id for pair in page_b.pairs] == [run_b]
+
+        # The cursor is bound to its Session: no cross-Session paging.
+        first_page = host.mainbar_pairs(session_id=session_a, limit=1)
+        assert first_page.next_cursor is not None
+        with pytest.raises(MalformedCursor):
+            host.mainbar_pairs(
+                session_id=session_b, cursor=first_page.next_cursor
+            )
+        rest = host.mainbar_pairs(
+            session_id=session_a, cursor=first_page.next_cursor
+        )
+        assert [pair.run_id for pair in rest.pairs] == [run_a1]
+    finally:
+        host.close()
+
+
+def test_an_unknown_session_has_no_mainbar() -> None:
+    host = _fresh_host()
+    host.start()
+    try:
+        with pytest.raises(SessionNotFound):
+            host.mainbar_pairs(session_id="no-such-session")
     finally:
         host.close()
 
@@ -495,9 +545,13 @@ def test_a_run_that_was_never_recorded_has_no_pair() -> None:
     host = _fresh_host()
     host.start()
     try:
-        _insert_run(host, "r-unrecorded", phase="finished", outcome="completed")
-        _insert_run(host, "r-accepted", phase="accepted")
-        assert host.mainbar_pairs().pairs == ()
+        session_id = host.create_session()
+        _insert_run(
+            host, "r-unrecorded", phase="finished", outcome="completed",
+            session_id=session_id,
+        )
+        _insert_run(host, "r-accepted", phase="accepted", session_id=session_id)
+        assert host.mainbar_pairs(session_id=session_id).pairs == ()
     finally:
         host.close()
 
@@ -506,11 +560,12 @@ def test_a_system_run_never_reaches_the_mainbar() -> None:
     host = _fresh_host()
     host.start()
     try:
+        session_id = host.create_session()
         _insert_run(
             host, "r-probe", purpose="inference_probe", phase="finished",
-            outcome="completed",
+            outcome="completed", session_id=session_id,
         )
-        assert host.mainbar_pairs().pairs == ()
+        assert host.mainbar_pairs(session_id=session_id).pairs == ()
     finally:
         host.close()
 
@@ -525,7 +580,7 @@ def test_historic_messages_are_never_dressed_up_as_a_run() -> None:
     host = _historic_host({"s-historic": ["旧问题", "旧回答"]})
     host.start()
     try:
-        assert host.mainbar_pairs().pairs == ()
+        assert host.mainbar_pairs(session_id="s-historic").pairs == ()
         page = host.open_session("s-historic", page_size=10)
         assert [message_plain_text(m) for m in page.messages] == ["旧问题", "旧回答"]
         assert all(m.run_id is None for m in page.messages)
@@ -602,7 +657,7 @@ def test_message_bodies_go_through_the_central_redactor() -> None:
         shown = [message_plain_text(message) for message in page.messages]
         assert any("my key is" in text for text in shown)
         assert all("sk-top-secret-value" not in text for text in shown)
-        pairs = host.mainbar_pairs()
+        pairs = host.mainbar_pairs(session_id=session_id)
         user_texts = [
             message_plain_text(pair.user_message)
             for pair in pairs.pairs
@@ -615,5 +670,297 @@ def test_message_bodies_go_through_the_central_redactor() -> None:
             "sk-top-secret-value" not in (run.prompt_preview or "")
             for run in host.list_runs(filter="chat").runs
         )
+    finally:
+        host.close()
+
+
+# --- the one cursor codec ---------------------------------------------------
+
+
+def test_every_read_cursor_round_trips_through_the_shared_codec() -> None:
+    """Encode/decode is one canonical pair, not four private copies.
+
+    Four reads own cursor payloads (runs page, MainBar, inbox, session
+    messages) and the codec -- canonical JSON, URL-safe base64, the
+    malformed exception -- is the part every one of them needs verbatim.
+    A shared codec is the only shape that cannot drift one version or one
+    error word at a time.
+    """
+    from agent_alfred.runtime.cursor import decode_cursor, encode_cursor
+
+    payload = {"v": 1, "k": "runs", "ar": 7, "r": "r1"}
+    token = encode_cursor(payload)
+    assert token == "eyJ2IjoxLCJrIjoicnVucyIsImFyIjo3LCJyIjoicjEifQ=="
+    assert decode_cursor(token, version=1, kind="runs") == payload
+
+
+def test_the_shared_codec_refuses_undecodable_and_foreign_tokens() -> None:
+    from agent_alfred.runtime.cursor import MalformedCursor, decode_cursor
+
+    with pytest.raises(MalformedCursor):
+        decode_cursor("not-base64!!", version=1, kind="runs")
+    with pytest.raises(MalformedCursor):
+        # Valid base64, but not JSON.
+        decode_cursor("bm90LWpzb24=", version=1, kind="runs")
+    with pytest.raises(MalformedCursor):
+        decode_cursor(
+            "eyJ2IjoxLCJrIjoicnVucyIsImFyIjo3LCJyIjoicjEifQ==",
+            version=1,
+            kind="mainbar",  # wrong kind for this read
+        )
+    with pytest.raises(MalformedCursor):
+        decode_cursor(
+            "eyJ2IjoxLCJrIjoicnVucyIsImFyIjo3LCJyIjoicjEifQ==",
+            version=2,  # wrong version
+            kind="runs",
+        )
+
+
+def test_reads_reject_each_others_cursors_and_keep_the_old_wire_tokens() -> None:
+    """Cross-read tokens fail closed; existing tokens still decode.
+
+    The versions and kinds are the wire contract: a token minted by one
+    read is not a token another read may silently accept, and a refactor of
+    the codec must not retire a single token that is already in a browser.
+    """
+    from agent_alfred.runtime import runs as runs_module
+    from agent_alfred.runtime import sessions as sessions_module
+
+    host = _fresh_host()
+    host.start()
+    try:
+        session_a = host.create_session()
+        session_b = host.create_session()
+        run_a1 = _run(host, "hello", session_a).run_id
+        run_a2 = _run(host, "again", session_a).run_id
+        _run(host, "other", session_b)
+        runs_cursor = host.list_runs(filter="chat", limit=1).next_cursor
+        inbox_cursor = host.list_sessions(limit=1).next_cursor
+        messages_cursor = host.open_session(
+            session_a, page_size=1
+        ).next_cursor
+        assert runs_cursor is not None
+        assert inbox_cursor is not None
+        assert messages_cursor is not None
+
+        # Each read consumes its own cursor and returns its own remainder.
+        assert [
+            run.run_id for run in host.list_runs(
+                filter="chat", limit=10, cursor=runs_cursor
+            ).runs
+        ] == [run_a2, run_a1]
+        assert [
+            session.session_id
+            for session in host.list_sessions(
+                limit=10, cursor=inbox_cursor
+            ).sessions
+        ] == [session_a]
+        remainder = host.open_session(
+            session_a, page_size=10, cursor=messages_cursor
+        ).messages
+        assert [message.role for message in remainder] == [
+            "user",
+            "assistant",
+        ]
+        assert remainder[0].run_id == run_a2
+
+        # ...and rejects the others', in both directions.
+        with pytest.raises(MalformedCursor):
+            host.list_sessions(limit=10, cursor=runs_cursor)
+        with pytest.raises(MalformedCursor):
+            host.list_runs(filter="chat", limit=10, cursor=inbox_cursor)
+    finally:
+        host.close()
+
+    # Tokens produced by the pre-refactor codec decode unchanged: the
+    # canonical JSON and the base64 alphabet are the wire, not an
+    # implementation detail.
+    from agent_alfred.runtime.cursor import decode_cursor
+
+    assert decode_cursor(
+        "eyJ2IjoxLCJrIjoicnVucyIsImFyIjo3LCJyIjoicjEifQ==",
+        version=1,
+        kind="runs",
+    ) == {"v": 1, "k": "runs", "ar": 7, "r": "r1"}
+    assert decode_cursor(
+        "eyJ2IjoxLCJrIjoibWFpbmJhciIsImFyIjo3LCJyIjoicjEifQ==",
+        version=1,
+        kind="mainbar",
+    ) == {"v": 1, "k": "mainbar", "ar": 7, "r": "r1"}
+    assert decode_cursor(
+        "eyJ2IjoyLCJrIjoiaW5ib3giLCJhciI6M30=", version=2, kind="inbox"
+    ) == {"v": 2, "k": "inbox", "ar": 3}
+    assert decode_cursor(
+        "eyJ2IjoyLCJrIjoicnVucyIsInNlZyI6InJ1bnMiLCJzIjoiczEiLCJhciI6MSwiciI6InIxIn0=",
+        version=2,
+        kind="runs",
+    ) == {
+        "v": 2,
+        "k": "runs",
+        "seg": "runs",
+        "s": "s1",
+        "ar": 1,
+        "r": "r1",
+    }
+    assert decode_cursor(
+        "eyJ2IjoyLCJrIjoicnVucyIsInNlZyI6Imhpc3RvcmljIiwicyI6InMxIiwiaWQiOjV9",
+        version=2,
+        kind="runs",
+    ) == {"v": 2, "k": "runs", "seg": "historic", "s": "s1", "id": 5}
+    # The reads re-export the unified exception: the errors they raise are
+    # the shared one.
+    assert runs_module.MalformedCursor is MalformedCursor
+    assert sessions_module.MalformedCursor is MalformedCursor
+
+
+def test_a_session_messages_cursor_is_bound_to_its_session() -> None:
+    """A cursor minted by Session A answers nothing for Session B."""
+    host = _fresh_host()
+    host.start()
+    try:
+        session_a = host.create_session()
+        session_b = host.create_session()
+        _run(host, "hello", session_a)
+        _run(host, "hello", session_a)
+        _run(host, "hello", session_b)
+        page = host.open_session(session_a, page_size=1)
+        assert page.next_cursor is not None
+        with pytest.raises(MalformedCursor):
+            host.open_session(
+                session_b, page_size=10, cursor=page.next_cursor
+            )
+    finally:
+        host.close()
+
+
+# --- one Session's chat Runs -------------------------------------------------
+
+
+def test_a_sessions_chat_runs_page_independently_by_session() -> None:
+    """The Session group's run list answers one Session and no other.
+
+    The runs page pages the process's Runs globally and the inbox returns
+    Session summaries only; neither is a Session's own run list, and folding
+    either in the browser would show one tab another Session's Runs and page
+    them with a cursor that moves under both.
+    """
+    host = _fresh_host(script=["pong"] * 6)
+    host.start()
+    try:
+        session_a = host.create_session()
+        session_b = host.create_session()
+        _insert_run(host, "a-accepted", phase="accepted", session_id=session_a)
+        _insert_run(host, "a-running", phase="running", session_id=session_a)
+        a1 = _run(host, "a-one", session_a).run_id
+        b1 = _run(host, "b-one", session_b).run_id
+        a2 = _run(host, "a-two", session_a).run_id
+        b2 = _run(host, "b-two", session_b).run_id
+        a3 = _run(host, "a-three", session_a).run_id
+
+        page1 = host.list_session_chat_runs(session_id=session_a, limit=2)
+        assert [run.run_id for run in page1.runs] == [a3, a2]
+        assert page1.next_cursor is not None
+        # Replaying the same cursor returns the same page again.
+        page2 = host.list_session_chat_runs(
+            session_id=session_a, limit=2, cursor=page1.next_cursor
+        )
+        page2_again = host.list_session_chat_runs(
+            session_id=session_a, limit=2, cursor=page1.next_cursor
+        )
+        assert [run.run_id for run in page2.runs] == [
+            run.run_id for run in page2_again.runs
+        ]
+        # Walking the pages shows every Run exactly once, newest first -- no
+        # duplicate, no missing row, no Session B row in between.
+        seen = [run.run_id for run in page1.runs]
+        cursor = page1.next_cursor
+        while cursor is not None:
+            page = host.list_session_chat_runs(
+                session_id=session_a, limit=2, cursor=cursor
+            )
+            seen.extend(run.run_id for run in page.runs)
+            cursor = page.next_cursor
+        assert seen == [a3, a2, a1, "a-running", "a-accepted"]
+
+        # Session B's list is independent and holds only its own Runs.
+        page_b = host.list_session_chat_runs(session_id=session_b, limit=10)
+        assert [run.run_id for run in page_b.runs] == [b2, b1]
+        # A cursor minted by Session A answers nothing for Session B.
+        with pytest.raises(MalformedCursor):
+            host.list_session_chat_runs(
+                session_id=session_b, limit=10, cursor=page1.next_cursor
+            )
+    finally:
+        host.close()
+
+
+def test_a_sessions_chat_runs_group_takes_only_admitted_chat_runs() -> None:
+    """A Run's shelf is decided by the server, and this group is chat only.
+
+    Accepted, running and finished chat Runs are all admitted and all appear;
+    a system Run has its own shelf (the runs page) and never leaks in here.
+    """
+    host = _fresh_host()
+    host.start()
+    try:
+        session_id = host.create_session()
+        _insert_run(
+            host,
+            "r-probe",
+            purpose="inference_probe",
+            phase="finished",
+            outcome="completed",
+            session_id=session_id,
+        )
+        _insert_run(host, "r-accepted", phase="accepted", session_id=session_id)
+        _insert_run(host, "r-running", phase="running", session_id=session_id)
+        recorded = _run(host, "question", session_id).run_id
+        page = host.list_session_chat_runs(session_id=session_id, limit=10)
+        assert [run.run_id for run in page.runs] == [
+            recorded,
+            "r-running",
+            "r-accepted",
+        ]
+        assert [run.phase for run in page.runs] == [
+            "finished",
+            "running",
+            "accepted",
+        ]
+    finally:
+        host.close()
+
+
+def test_a_recorded_run_shows_its_final_reply_and_a_running_run_shows_none(
+) -> None:
+    """A summary is a database fact, never a placeholder.
+
+    A recorded Run's reply is the one final assistant message its finalize
+    transaction wrote; a Run that is still running has written none, so its
+    row carries no reply -- inventing "still working…" there would be the
+    read dressing up a state the database does not hold.
+    """
+    host = _fresh_host(script=["pong"])
+    host.start()
+    try:
+        session_id = host.create_session()
+        recorded = _run(host, "question", session_id).run_id
+        _insert_run(host, "r-running", phase="running", session_id=session_id)
+        page = host.list_session_chat_runs(session_id=session_id, limit=10)
+        by_id = {run.run_id: run for run in page.runs}
+        assert by_id[recorded].reply_preview == "pong"
+        assert by_id[recorded].reply_source == "cli"
+        assert by_id[recorded].finished_at is not None
+        assert by_id["r-running"].reply_preview is None
+        assert by_id["r-running"].reply_source is None
+    finally:
+        host.close()
+
+
+def test_an_unknown_session_has_no_chat_runs() -> None:
+    host = _fresh_host()
+    host.start()
+    try:
+        with pytest.raises(SessionNotFound):
+            host.list_session_chat_runs(session_id="no-such-session", limit=10)
     finally:
         host.close()

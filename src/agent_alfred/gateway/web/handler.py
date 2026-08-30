@@ -39,6 +39,7 @@ SESSIONS_PATH = "/api/sessions"
 # value (ADR-0027): it cannot survive as a path segment, so it rides the
 # query string and is used verbatim -- see ``_route_get``.
 SESSION_MESSAGES_PATH = "/api/sessions/messages"
+SESSION_RUNS_PATH = "/api/sessions/runs"
 RUNS_PATH = "/api/runs"
 MAINBAR_PATH = "/api/mainbar"
 
@@ -249,6 +250,15 @@ class DashboardHandler(BaseHTTPRequestHandler):
             status, payload = api.session_messages(params["session_id"], params)
             self._send(status, payload)
             return
+        if path == SESSION_RUNS_PATH:
+            # Same rule as the messages read: the Session rides the query
+            # string verbatim, and only its absence is a bad request.
+            if "session_id" not in params:
+                self._send(400, {"code": "missing_session_id"})
+                return
+            status, payload = api.session_runs(params)
+            self._send(status, payload)
+            return
         if path == RUNS_PATH:
             status, payload = api.runs_page(params)
             self._send(status, payload)
@@ -259,6 +269,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._send(status, payload)
             return
         if path == MAINBAR_PATH:
+            # Same rule as the messages read: the session_id rides the query
+            # string verbatim, and only its absence is a bad request.
+            if "session_id" not in params:
+                self._send(400, {"code": "missing_session_id"})
+                return
             status, payload = api.mainbar(params)
             self._send(status, payload)
             return

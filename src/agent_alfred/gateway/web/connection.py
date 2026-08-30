@@ -66,37 +66,47 @@ class FakeConnection:
 class SocketConnection:
     """Owns the socket: it writes, it flushes, it is the only closer.
 
+    Two locks, because two things must never wait on each other. The write
+    lock serialises blocking writes between writers; the close lock owns the
+    closed state and the shutdown. A writer wedged inside ``write``/``flush``
+    holds the write lock -- so the close path, whose whole job is to unblock
+    that writer, takes the *close* lock only: it marks the connection closed
+    atomically and then shuts the socket down, which is what makes the
+    blocked send fail instead of waiting for the writer to release a lock it
+    cannot release.
+
+    For the same reason close never flushes: a flush on a socket whose peer
+    stopped reading is exactly the block this close exists to break.
+
     Closing is idempotent and best-effort. A peer that already vanished makes
     ``shutdown`` fail and that is not our problem -- the point of closing is
-    to release the descriptor, which happens either way.
+    to release the descriptor, which happens either way, exactly once.
     """
 
     def __init__(self, sock: socket.socket, wfile, *, lock=None):
         self._sock = sock
         self._wfile = wfile
-        self._lock = lock or threading.Lock()
+        self._write_lock = lock or threading.Lock()
+        self._close_lock = threading.Lock()
         self._closed = False
 
     def write(self, data: bytes) -> None:
-        with self._lock:
+        with self._write_lock:
             self._wfile.write(data)
             self._wfile.flush()
 
     def close(self) -> None:
-        with self._lock:
+        with self._close_lock:
             if self._closed:
                 return
             self._closed = True
-        try:
-            self._wfile.flush()
-        except Exception:  # noqa: BLE001 - a dead peer cannot block the close
-            pass
+        # Past this point this thread owns the shutdown; nobody else can
+        # reach it, and a second close returns above.
         try:
             self._sock.shutdown(socket.SHUT_RDWR)
         except OSError:
             pass
-        finally:
-            self._sock.close()
+        self._sock.close()
 
 
 @dataclass(frozen=True)

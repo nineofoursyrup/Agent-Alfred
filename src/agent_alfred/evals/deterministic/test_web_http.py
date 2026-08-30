@@ -53,6 +53,11 @@ class _Facade:
 
     def __init__(self) -> None:
         self.mutating = False
+        # The Session ids the MainBar read was aimed at, so a wire test can
+        # see the query parameter arrived verbatim.
+        self.mainbar_sessions: list[str] = []
+        # The same record for the Session group's run list.
+        self.session_run_sessions: list[str] = []
 
     # The gate's authority, in the shape the Host provides it. No Run is
     # ever in flight behind this facade, so the only thing that can busy the
@@ -107,10 +112,19 @@ class _Facade:
     def locate_run(self, run_id: str, *, limit: int):
         return None
 
-    def mainbar_pairs(self, *, limit: int, cursor: str | None = None):
+    def mainbar_pairs(self, *, session_id: str, limit: int, cursor: str | None):
+        self.mainbar_sessions.append(session_id)
         from agent_alfred.runtime.runs import MainBarPage
 
         return MainBarPage(pairs=(), next_cursor=None)
+
+    def list_session_chat_runs(
+        self, *, session_id: str, limit: int, cursor: str | None
+    ):
+        self.session_run_sessions.append(session_id)
+        from agent_alfred.runtime.runs import SessionChatRunsPage
+
+        return SessionChatRunsPage(session_id=session_id, runs=(), next_cursor=None)
 
 
 def _free_port() -> int:
@@ -137,9 +151,10 @@ class _Server:
         self.broker.start()
         self.fanout = FanOutSink([self.broker], process_instance_id=INSTANCE)
         self.guard = RequestGuard(port=self.port, csrf_token="token-from-process")
+        self.facade = _Facade()
         context = HandlerContext(
             guard=self.guard,
-            api=DashboardApi(facade=_Facade()),
+            api=DashboardApi(facade=self.facade),
             broker=self.broker,
             instance_id=INSTANCE,
         )
@@ -714,3 +729,52 @@ def test_the_old_path_segment_route_is_gone(server) -> None:
         server.port, _get(server.port, "/api/sessions/abc/messages")
     )
     assert head.startswith(b"HTTP/1.1 404")
+
+
+@pytest.mark.parametrize("session_id", HISTORIC_IDS)
+def test_the_mainbar_takes_its_session_from_the_query_parameter(
+    server, session_id
+) -> None:
+    """Each tab's MainBar is that tab's Session's only conversation, and a
+    historic id is an opaque value: it rides the query string verbatim, the
+    same way the messages route carries it."""
+    head, body = _request(
+        server.port,
+        _get(server.port, "/api/mainbar?session_id=" + quote(session_id, safe="")),
+    )
+    assert head.startswith(b"HTTP/1.1 200")
+    assert server.facade.mainbar_sessions == [session_id]
+
+
+def test_a_mainbar_without_a_session_id_parameter_is_a_bad_request(
+    server,
+) -> None:
+    head, body = _request(server.port, _get(server.port, "/api/mainbar"))
+    assert head.startswith(b"HTTP/1.1 400")
+    assert b"missing_session_id" in body
+    assert server.facade.mainbar_sessions == []
+
+
+@pytest.mark.parametrize("session_id", HISTORIC_IDS)
+def test_the_session_run_list_takes_its_session_from_the_query_parameter(
+    server, session_id
+) -> None:
+    """The Session group's run list is a server-side page of one Session, and
+    a historic id rides the query string verbatim like everywhere else."""
+    head, body = _request(
+        server.port,
+        _get(
+            server.port,
+            "/api/sessions/runs?session_id=" + quote(session_id, safe=""),
+        ),
+    )
+    assert head.startswith(b"HTTP/1.1 200")
+    assert json.loads(body)["session_id"] == session_id
+    assert server.facade.session_run_sessions == [session_id]
+
+
+def test_a_session_run_list_without_a_session_id_is_a_bad_request(server) -> None:
+    head, body = _request(server.port, _get(server.port, "/api/sessions/runs"))
+    assert head.startswith(b"HTTP/1.1 400")
+    assert b"missing_session_id" in body
+    assert server.facade.session_run_sessions == []

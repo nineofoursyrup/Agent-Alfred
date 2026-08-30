@@ -40,6 +40,7 @@ from agent_alfred.evals.deterministic.test_web_review_closure_2 import (
 from agent_alfred.gateway.web.broker import SSEBroker
 from agent_alfred.gateway.web.connection import FakeConnection
 from agent_alfred.gateway.web.lifecycle import (
+    DESCRIPTOR_NAME,
     LOCK_NAME,
     ProcessLock,
     StateDirLocked,
@@ -257,3 +258,44 @@ def test_a_stream_that_is_still_draining_holds_the_runtime_shut(tmp_path) -> Non
     assert read_entry_descriptor(tmp_path) is None
     assert rig.lock.acquired is False
     assert rig.runtime.close() is True
+
+
+def test_a_descriptor_that_refuses_deletion_keeps_the_tail_pending(
+    tmp_path, monkeypatch
+) -> None:
+    """The entry is withdrawn only when the file is really gone.
+
+    A ``_forget_descriptor()`` that dropped its reference before ``unlink()``
+    succeeded turned the first failure into a permanent one: the next close
+    deleted nothing and released the lock on top of a descriptor that still
+    named this process -- and a browser still reading it would knock on a
+    dead port. The reference survives a failed unlink, so the retry deletes
+    the file for real, releases the lock exactly once, and only then is the
+    runtime ``closed``.
+    """
+    rig = _Rig3(tmp_path)
+    rig.runtime.start()
+    attempts = {"count": 0}
+    real_unlink = Path.unlink
+
+    def refusing_unlink(self, missing_ok=False):
+        if self.name == DESCRIPTOR_NAME and attempts["count"] == 0:
+            attempts["count"] += 1
+            raise PermissionError(1, "Operation not permitted", str(self))
+        return real_unlink(self, missing_ok=missing_ok)
+
+    monkeypatch.setattr(Path, "unlink", refusing_unlink)
+    with pytest.raises(PermissionError):
+        rig.runtime.close()
+
+    assert rig.runtime.state == "closing"
+    assert read_entry_descriptor(tmp_path) is not None
+    assert rig.lock_is_held() is True
+    assert rig.conn.close_calls == 1
+    monkeypatch.undo()
+
+    assert rig.runtime.close() is True
+    assert rig.runtime.state == "closed"
+    assert read_entry_descriptor(tmp_path) is None
+    assert rig.lock.acquired is False
+    assert rig.conn.close_calls == 1, "the resume does not close it twice"

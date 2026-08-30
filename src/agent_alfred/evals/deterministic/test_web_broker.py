@@ -7,6 +7,7 @@ import queue
 import re
 import threading
 import time
+from dataclasses import replace
 
 import pytest
 
@@ -14,23 +15,26 @@ from agent_alfred.clock import FakeClock
 from agent_alfred.events import (
     BestEffortFlushResult,
     BlockDelta,
+    CapturingSink,
     EventEnvelope,
     FanOutSink,
     RunStarted,
     SequencedEvent,
     UnsequencedEvent,
 )
+from agent_alfred.gateway.web import broker as broker_module
 from agent_alfred.gateway.web import frames
 from agent_alfred.gateway.web.broker import (
     SSEBroker,
     _IngressKick,
     _IngressStop,
+    _patch_frames,
 )
 from agent_alfred.gateway.web.connection import (
     CloseConnection,
+    ConnectionQueue,
     FakeConnection,
     OfferOutcome,
-    StopWriter,
 )
 from agent_alfred.gateway.web.frames import PreparedFrames
 from agent_alfred.gateway.web.replay import CursorText, ReplayRing
@@ -128,6 +132,29 @@ class _NoThreads:
     def spawn(self, target):
         self.targets.append(target)
         return _FakeThread(target)
+
+
+class _RealSpawn:
+    """Runs every spawned thread for real, like the production broker."""
+
+    def spawn(self, target):
+        thread = threading.Thread(target=target, daemon=True)
+        thread.start()
+        return thread
+
+
+class _GatedWriteConnection(FakeConnection):
+    """A connection whose first write parks until the test releases it."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.entered_write = threading.Event()
+        self.release = threading.Event()
+
+    def write(self, data: bytes) -> None:
+        self.entered_write.set()
+        self.release.wait()
+        super().write(data)
 
 
 class _FakeThread:
@@ -823,6 +850,120 @@ def test_close_reports_false_until_every_thread_has_really_exited() -> None:
     assert broker.close(timeout=0.05) is True
 
 
+class _GatedSpawn:
+    """Holds one spawned thread at the registration's last step.
+
+    The connect path registers a handle and then installs its writer; a
+    close that runs while the writer is not installed yet must refuse to
+    complete. The gate parks the spawn itself -- the step between "the
+    handle is in the registry" and "the writer thread exists".
+    """
+
+    def __init__(self) -> None:
+        self.entered = threading.Event()
+        self.release = threading.Event()
+        self.threads: list[threading.Thread] = []
+
+    def spawn(self, target):
+        self.entered.set()
+        self.release.wait()
+        thread = threading.Thread(target=target, daemon=True)
+        thread.start()
+        self.threads.append(thread)
+        return thread
+
+
+def test_close_cannot_complete_behind_an_in_flight_registration() -> None:
+    """A close must not answer True while a connection is mid-registration.
+
+    A handle that is registered but whose writer is not installed yet is a
+    writer this close has not seen. Answering True here sends the caller
+    off to close the database and release the process lock, and the writer
+    starts afterwards -- a live writer on a broker the caller believes is
+    closed. The registration must finish (or be revoked) before ``closed``
+    is published, and when the close does answer True there must be no
+    registered handle, no registration in flight, and no live thread.
+    """
+    gated = _GatedSpawn()
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=_snapshot(),
+        session_is_valid=lambda _sid: True,
+        spawn=gated.spawn,
+    )
+    connect_done = threading.Event()
+
+    def do_connect() -> None:
+        broker.connect(connection=FakeConnection())
+        connect_done.set()
+
+    connector = threading.Thread(target=do_connect, daemon=True)
+    connector.start()
+    try:
+        assert gated.entered.wait(2.0), "connect never reached the writer step"
+        # The handle is registered; the writer is not installed. This close
+        # must not claim completion.
+        assert broker.close(timeout=0.1) is False
+        assert broker.registrations_in_flight == 1
+        gated.release.set()
+        assert connect_done.wait(5.0), "connect never finished its registration"
+        assert broker.close(timeout=2.0) is True
+        # A True answer is a fact about the registry and the threads.
+        assert broker.connections == ()
+        assert broker.registrations_in_flight == 0
+    finally:
+        gated.release.set()
+        connector.join(timeout=5.0)
+
+
+def test_a_closing_broker_refuses_new_connections_without_a_writer() -> None:
+    """Once closing has begun, a connect registers nothing and starts none.
+
+    The refused connection is closed by the broker -- outside the broker
+    lock -- and its ``finished`` is observable, because the HTTP handler
+    holding the stream open waits on exactly that event. Nothing is written:
+    a startup sequence describes a stream the broker is taking away.
+    """
+    harness = Harness(spawn=_RealSpawn())
+    held = _GatedWriteConnection()
+    harness.broker.connect(connection=held)
+    assert held.entered_write.wait(2.0), "writer never reached its first write"
+    assert harness.broker.close(timeout=0.2) is False  # stopping, not closed
+    connection = FakeConnection()
+    refused = harness.broker.connect(connection=connection)
+    assert refused.finished.is_set()
+    assert refused.thread is None
+    assert refused not in harness.broker.connections
+    assert connection.written == b""
+    assert connection.closed is True
+    held.release.set()
+    assert harness.broker.close(timeout=2.0) is True
+
+
+def test_a_closed_broker_refuses_new_connections_idempotently() -> None:
+    """After close() has answered True, a connect gets the same refusal.
+
+    Idempotence is the point: the first refusal and the one after a fully
+    completed close are the same answer, for the same reason -- nothing may
+    register, nothing may write, and the caller is told by ``finished``
+    rather than left waiting on a stream that will never carry a frame.
+    """
+    harness = Harness(spawn=_RealSpawn())
+    harness.connect()
+    assert harness.broker.close(timeout=2.0) is True
+    connection = FakeConnection()
+    refused = harness.broker.connect(connection=connection)
+    assert refused.finished.is_set()
+    assert refused.thread is None
+    assert refused not in harness.broker.connections
+    assert connection.written == b""
+    assert connection.closed is True
+    # Asking again changes nothing.
+    again = harness.broker.connect(connection=FakeConnection())
+    assert again.finished.is_set()
+    assert harness.broker.connections == ()
+
+
 def test_one_connections_failure_does_not_touch_the_others() -> None:
     class Exploding(FakeConnection):
         def write(self, data: bytes) -> None:
@@ -1001,9 +1142,17 @@ def _clock() -> FakeClock:
 class _ExplodingQueue:
     """A connection queue that cannot take anything."""
 
+    def __init__(self) -> None:
+        self.close_requests = 0
+
     def offer(self, item):
         del item
         raise RuntimeError("dispatcher boom")
+
+    def request_close(self) -> None:
+        # The real queue marks itself and hands the writer a sentinel; the
+        # stub records the ask, which is the part the fatal path exercises.
+        self.close_requests += 1
 
 
 def test_a_dispatcher_that_dies_is_reported_not_swallowed() -> None:
@@ -1033,20 +1182,477 @@ def test_a_dispatcher_that_dies_is_reported_not_swallowed() -> None:
 def test_a_connection_registered_while_closing_is_stopped_at_once() -> None:
     """The HTTP handler waits on ``finished``.
 
-    A connection registered after ``close()`` would never be told to stop,
-    so its handler thread would block until the process exited -- one leaked
-    thread per reconnect after shutdown.
+    A connection registered after ``close()`` used to get a writer whose
+    opening stream was written before any stop could reach it. The refusal
+    is now earlier and stronger: no registry entry, no writer, no opening
+    stream -- the broker closes the connection itself and ``finished`` is
+    set, so the handler thread holding the stream open returns instead of
+    waiting on a sentinel that is never coming.
     """
     harness = Harness()
     harness.broker.close(timeout=0.1)
+    connection = FakeConnection()
+    handle = harness.broker.connect(connection=connection)
+    assert handle.finished.is_set()
+    assert handle.thread is None
+    assert connection.written == b""
+    assert connection.closed is True
+    assert handle not in harness.broker.connections
+
+
+# --- a dead dispatcher is a process fact, not one connection's --------------
+
+
+class _ExplodingConnectionQueue(ConnectionQueue):
+    """A per-connection queue whose offer fails every time, for real.
+
+    Unlike the plain ``_ExplodingQueue`` above, this one stands in for the
+    queue a *connect* builds, so its constructor takes the budgets the
+    broker passes -- and the dispatcher's fan-out dies on its first offer,
+    deterministically, with no timing.
+    """
+
+    def offer(self, item):
+        raise RuntimeError("fan-out is broken")
+
+
+def _capture_fanout(broker):
+    """A FanOut whose second sink records what the broker refuses to say."""
+    capture = CapturingSink(name="capture")
+    return capture, FanOutSink([broker, capture], process_instance_id=INSTANCE)
+
+
+def test_a_fatal_dispatcher_closes_connections_and_refuses_the_rest(
+    monkeypatch,
+) -> None:
+    """When the dispatcher dies, everything behind it stops honestly.
+
+    A dispatcher that dies mid-fan-out leaves every existing connection
+    open and every later publish pouring into an ingress nobody drains.
+    The death is a process-level fact: the existing connections are asked
+    to hang up, new connections are refused, later commits fail loudly (so
+    the FanOut can disable this sink and tell every other sink why), and
+    nothing accumulates behind a dead consumer.
+    """
+    # The re-raise after the fatal report is the dispatcher's own testimony;
+    # it is silenced here because the report, not the traceback, is what
+    # this test reads.
+    monkeypatch.setattr(threading, "excepthook", lambda args: None)
+    monkeypatch.setattr(
+        broker_module, "ConnectionQueue", _ExplodingConnectionQueue
+    )
+    fatal_calls: list[BaseException] = []
+    fatal_done = threading.Event()
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=_snapshot(),
+        session_is_valid=lambda _sid: True,
+        spawn=_RealSpawn().spawn,
+    )
+    broker.bind_fatal_handler(
+        lambda exc: (fatal_calls.append(exc), fatal_done.set())
+    )
+    broker.start()
+    capture, fanout = _capture_fanout(broker)
+    handle = broker.connect(connection=FakeConnection())
+
+    def emit(run_id: str) -> None:
+        fanout.emit(
+            RunStarted(purpose="chat"),
+            EventEnvelope(
+                ts=0.0,
+                run_id=run_id,
+                session_id=None,
+                step_index=None,
+                attempt_id=None,
+                node_id=None,
+            ),
+        )
+
+    emit("r1")
+    assert fatal_done.wait(5.0), "fatal handler never ran"
+    assert len(fatal_calls) == 1
+    assert isinstance(fatal_calls[0], RuntimeError)
+
+    # Every existing connection is asked to hang up, and its writer leaves.
+    assert handle.queue.close_requested is True
+    assert handle.finished.wait(5.0), "connection was never asked to close"
+
+    # No new connections behind a dead dispatcher.
+    connection = FakeConnection()
+    refused = broker.connect(connection=connection)
+    assert refused.finished.is_set()
+    assert refused.thread is None
+    assert refused not in broker.connections
+    assert connection.written == b""
+    assert connection.closed is True
+
+    # Later events neither accumulate nor pretend to succeed: the commit
+    # fails so the FanOut disables this sink, the ingress stays empty, and
+    # the failure is told to the other sinks exactly once -- which is the
+    # no-recursion property too, because publishing that notice must not
+    # kill the fan-out again.
+    stalled = broker._ingress._items.qsize()  # noqa: SLF001
+    assert stalled == 0  # the item that killed the fan-out was already taken
+    for _ in range(3):
+        emit("r1")
+    assert broker._ingress._items.qsize() == stalled  # noqa: SLF001
+    disabled = [
+        event
+        for event in capture.events
+        if getattr(event.payload, "code", None) == "sink_disabled"
+    ]
+    assert len(disabled) == 1
+
+
+def test_a_fatal_commit_fails_instead_of_delivering_to_no_one(monkeypatch) -> None:
+    """The sink says it cannot deliver; it does not silently swallow.
+
+    After the dispatcher has died, a direct commit must raise -- that is
+    what lets the FanOutSink disable this sink and record ``sink_disabled``
+    for the Run -- and the refusal is stable: it does not depend on which
+    thread asks or how many times.
+    """
+    monkeypatch.setattr(
+        broker_module, "ConnectionQueue", _ExplodingConnectionQueue
+    )
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=_snapshot(),
+        session_is_valid=lambda _sid: True,
+    )
+    broker.connect(connection=FakeConnection())
+    payload = RunStarted(purpose="chat")
+    envelope = EventEnvelope(
+        ts=0.0,
+        run_id="r1",
+        session_id=None,
+        step_index=None,
+        attempt_id=None,
+        node_id=None,
+    )
+    unsequenced = UnsequencedEvent(
+        envelope=envelope,
+        payload=payload,
+        trace_policy="persist",
+        replayable=True,
+    )
+    prepared = broker.prepare(unsequenced)
+    sequenced = SequencedEvent(
+        seq=1,
+        process_instance_id=INSTANCE,
+        envelope=envelope,
+        payload=payload,
+        trace_policy="persist",
+        replayable=True,
+    )
+    # Queue the item first, so the hand-driven dispatch loop has something
+    # to take: the failing fan-out is what publishes the fatal state,
+    # exactly as a live dispatcher's death would.
+    broker.commit(prepared, sequenced)
+    with pytest.raises(RuntimeError):
+        broker._dispatch_loop()  # noqa: SLF001
+    # The refusal is stable across repeats, so the later commits use their
+    # own seqs: what must fail is the fatal check, not the ring's
+    # monotonicity.
+    for later_seq in (2, 3):
+        with pytest.raises(RuntimeError):
+            broker.commit(
+                prepared,
+                replace(sequenced, seq=later_seq),
+            )
+
+
+# --- overflow wakes the dispatcher once, not once per overflow --------------
+
+
+def test_overflow_kicks_merge_and_stay_bounded() -> None:
+    """A pending kick is a bit, not a queue item per overflow.
+
+    Every must-deliver overflow that cannot fit the ingress raises the
+    disconnect generation and needs the dispatcher woken -- once. One
+    unwoken kick is a liveness bug; one kick *per* overflow is the one
+    item that grows without bound behind a stalled dispatcher, and it is
+    the control item that would delay the close's own stop sentinel.
+    The generation may grow without limit; the number of pending kicks
+    may not.
+    """
+    harness = Harness(max_ingress_frames=2)
+    broker = harness.broker
+    for _ in range(2):
+        harness.emit(RunStarted(purpose="chat"))
+    assert broker._ingress._items.qsize() == 2  # noqa: SLF001 - billed data
+    for _ in range(1000):
+        harness.emit(RunStarted(purpose="chat"))
+    assert broker._disconnect_generation == 1000
+    # Two billed data items and ONE pending kick, whatever the overflow
+    # count.
+    assert broker._ingress._items.qsize() == 3  # noqa: SLF001
+    # Consuming the kick re-arms it: the next overflow may produce the next
+    # kick, still one at a time.
+    for _ in range(2):
+        assert broker.deliver_next(timeout=0.2) is True  # the data
+    assert broker.deliver_next(timeout=0.2) is True  # the kick
+    for _ in range(2):
+        harness.emit(RunStarted(purpose="chat"))  # the two frames fit again
+    for _ in range(10):
+        harness.emit(RunStarted(purpose="chat"))  # overflows again
+    assert broker._disconnect_generation == 1010
+    assert broker._ingress._items.qsize() == 3  # noqa: SLF001 - 2 data + 1 kick
+    # And the close's stop sentinel is never stuck behind unbounded control
+    # items: the whole queue is bounded by billed data plus the two
+    # sentinels.
+    assert broker.close(timeout=1.0) is True
+    assert broker._ingress._items.qsize() <= 3  # noqa: SLF001
+
+
+
+def _deliver_ingress(harness) -> None:
+    """Drive the fan-out until the ingress is empty, like a dispatcher would.
+
+    Delivering exactly one item would leave the boundary question unasked:
+    the ingress can hold several events behind a registration, and every
+    one of them is measured against the connection's boundary.
+    """
+    while harness.broker.deliver_next(timeout=0.2):
+        pass
+
+
+# --- a transient's seq names its publication, not its delivery --------------
+
+
+def test_a_transient_published_before_a_connection_registers_is_not_delivered() -> (
+    None
+):
+    """Reconnect does not resurrect a half-finished attempt.
+
+    A transient published before a connection registers is exactly the
+    in-flight delta ADR-0013 says a reconnect must not receive: the client
+    dropped it on purpose and will be handed the attempt's terminal
+    snapshot instead. The registration boundary is the newest *published*
+    seq -- transients included -- so a preregistration transient is skipped
+    like any other event the replay already covers, while a transient
+    published after registration is delivered live, still without an
+    ``id:`` on the wire.
+    """
+    harness = Harness()
+    # The delta is in the ingress, but the dispatcher has not run: the
+    # registration below happens after the publication.
+    harness.emit(BlockDelta(attempt_id="a1", index=0, text="half an attempt"))
     handle = harness.connect()
-    # Told to stop as part of being registered, not left waiting for a
-    # sentinel that is never coming.
-    assert any(isinstance(item, StopWriter) for item in _drain(handle))
+    _deliver_ingress(harness)
+    wire = b"".join(item.wire_bytes() for item in _drain(handle))
+    assert b'"event":"block.delta"' not in wire
+    # A transient published after the registration is live delivery.
+    harness.emit(BlockDelta(attempt_id="a1", index=0, text="still going"))
+    _deliver_ingress(harness)
+    items = _drain(handle)
+    wire = b"".join(item.wire_bytes() for item in items)
+    assert b'"event":"block.delta"' in wire
+    # And a transient never carries a checkpoint: no ``id:``, then or now.
+    assert all(not item.id_line for item in items)
+
+
+def test_mixed_backlogs_respect_the_registration_boundary() -> None:
+    """First connection: backlog events are the snapshot's job, not live.
+
+    A first connection primed with the replay ring holds nothing, so every
+    backlog event -- replayable or transient -- is behind its published
+    boundary and none is delivered live. What arrives afterwards is
+    delivered, replayables with their checkpoints, transients without.
+    """
+    harness = Harness()
+    harness.emit(RunStarted(purpose="chat"))  # seq 1, replayable
+    harness.emit(RunStarted(purpose="chat"))  # seq 2, replayable
+    harness.emit(BlockDelta(attempt_id="a1"))  # seq 3, transient
+    handle = harness.connect()
+    _deliver_ingress(harness)
+    items = _drain(handle)
+    assert _ids(items) == []
+    wire = b"".join(item.wire_bytes() for item in items)
+    assert b'"event":"block.delta"' not in wire
+    harness.emit(BlockDelta(attempt_id="a1"))  # seq 4, transient
+    harness.emit(RunStarted(purpose="chat"))  # seq 5, replayable
+    _deliver_ingress(harness)
+    items = _drain(handle)
+    # Only the replayable event carries a checkpoint.
+    assert _ids(items) == [5]
+    wire = b"".join(item.wire_bytes() for item in items)
+    assert wire.count(b'"event":"block.delta"') == 1
+
+
+def test_a_reconnect_skips_preregistration_transients_too() -> None:
+    """The boundary is the same on a reconnect from a valid checkpoint.
+
+    The replay tail in the opening stream covers the replayable backlog;
+    the published boundary covers the transient sitting behind it in the
+    ingress. Delivering the ingress after the connection registered must
+    therefore produce neither a duplicate replayable nor a resurrected
+    delta.
+    """
+    harness = Harness()
+    harness.emit(RunStarted(purpose="chat"))  # seq 1
+    harness.emit(RunStarted(purpose="chat"))  # seq 2
+    harness.emit(BlockDelta(attempt_id="a1"))  # seq 3, still in ingress
+    handle = harness.connect(cursor=_cursor_for(1))
+    _deliver_ingress(harness)
+    items = _drain(handle)
+    # The replay tail, exactly once, and no preregistration transient.
+    assert _ids(items) == [2]
+    wire = b"".join(item.wire_bytes() for item in items)
+    assert b'"event":"block.delta"' not in wire
+
+
+# --- encoding never happens under the broker lock ---------------------------
+
+
+class _GatedEncoder:
+    """A patch encoder the test can park mid-JSON.
+
+    It stands in for the pure, lock-free encoding half of ADR-0015: slow is
+    legal, holding the broker lock while slow is not. Every call records
+    the ``session_valid`` answer it encoded for.
+    """
+
+    def __init__(self, real):
+        self._real = real
+        self.lock = threading.Lock()
+        self.encodings: list[bool] = []
+        self.entered = threading.Event()
+        self.release = threading.Event()
+
+    def __call__(self, snapshot, step, session_valid):
+        with self.lock:
+            self.encodings.append(session_valid)
+        self.entered.set()
+        self.release.wait()
+        return self._real(snapshot, step, session_valid)
+
+    def calls_for(self, session_valid: bool) -> int:
+        with self.lock:
+            return self.encodings.count(session_valid)
+
+
+def test_patch_encoding_does_not_block_event_commits(monkeypatch) -> None:
+    """A slow patch is the dispatcher's problem, not the publish path's.
+
+    The dispatcher holds the broker lock while it fans out; encoding a
+    patch *inside* that critical section therefore charges every event
+    commit for one connection's serialization -- and a Run's own commit
+    waits behind a browser tab's payload size. Encoding happens before the
+    fan-out critical section, so a commit issued while an encoder is
+    parked goes straight through.
+    """
+    encoder = _GatedEncoder(_patch_frames)
+    # Open while the connection registers -- its opening stream goes through
+    # the same encoder -- and cleared again so the patch fan-out below parks
+    # mid-encode.
+    encoder.release.set()
+    monkeypatch.setattr(broker_module, "_patch_frames", encoder)
+    harness = Harness(spawn=_RealSpawn())
+    handle = harness.connect()
+    _drain(handle)
+    harness.broker.publish_state_patch(_snapshot(state_revision=1))
+    encoder.release.clear()
+    dispatcher_done = threading.Event()
+
+    def drive() -> None:
+        harness.broker.deliver_next(timeout=2.0)
+        dispatcher_done.set()
+
+    dispatcher = threading.Thread(target=drive, daemon=True)
+    dispatcher.start()
+    try:
+        assert encoder.entered.wait(2.0), "patch encoding never started"
+        commit_done = threading.Event()
+
+        def commit() -> None:
+            harness.emit(RunStarted(purpose="chat"))
+            commit_done.set()
+
+        emitter = threading.Thread(target=commit, daemon=True)
+        emitter.start()
+        # The encoder is still parked; the commit must not be queued behind
+        # it.
+        assert commit_done.wait(5.0), "commit waited for the patch encoding"
+    finally:
+        encoder.release.set()
+        dispatcher.join(timeout=5.0)
+        dispatcher_done.wait(2.0)
+    assert dispatcher_done.is_set()
+
+
+def test_a_patch_is_encoded_once_per_session_validity(monkeypatch) -> None:
+    """One state, one encoding per distinct answer -- not per connection.
+
+    A patch is absolute: what two valid connections receive differs in
+    nothing, and what a valid and an invalid connection receive differs in
+    exactly one field. Encoding per connection would charge N-1 redundant
+    serializations -- with the broker lock held, under the old shape -- so
+    the fan-out encodes at most one frame per distinct session-validity
+    result and hands out references.
+    """
+    encoder = _GatedEncoder(_patch_frames)
+    # Released throughout: connect's opening stream goes through the same
+    # encoder now, and the counting -- not the parking -- is what this test
+    # pins.
+    encoder.release.set()
+    monkeypatch.setattr(broker_module, "_patch_frames", encoder)
+    harness = Harness()
+    harness.connect(session_id="s1")
+    harness.connect(session_id="s1")
+    harness.connect(session_id="not-s1")  # the invalid answer
+    encoder.encodings.clear()
+    harness.broker.publish_state_patch(_snapshot(state_revision=2))
+    _deliver_ingress(harness)
+    assert encoder.calls_for(True) == 1
+    assert encoder.calls_for(False) == 1
+
+
+def test_connect_encodes_its_startup_outside_the_lock(monkeypatch) -> None:
+    """The opening stream is encoded lock-free, and honestly re-captured.
+
+    A connect that encoded its startup patch inside the broker lock would
+    block every commit for the length of its serialization. Encoding runs
+    outside; the registration critical section then verifies the captured
+    snapshot is still current and, if events moved the world meanwhile,
+    recaptures and re-encodes -- so the stream the client finally gets
+    names the state that was authoritative *at registration*.
+    """
+    encoder = _GatedEncoder(_patch_frames)
+    monkeypatch.setattr(broker_module, "_patch_frames", encoder)
+    harness = Harness(spawn=_RealSpawn())
+    connect_done = threading.Event()
+    descriptor: list[bytes] = []
+
+    def do_connect() -> None:
+        handle = harness.broker.connect(connection=FakeConnection())
+        descriptor.append(
+            b"".join(item.wire_bytes() for item in handle.startup)
+        )
+        connect_done.set()
+
+    connector = threading.Thread(target=do_connect, daemon=True)
+    connector.start()
+    try:
+        assert encoder.entered.wait(2.0), "startup encoding never started"
+        # While the startup is parked mid-encoding, the world moves: the
+        # authoritative snapshot advances. A connect holding the lock here
+        # would deadlock the publish; a connect that merely encoded outside
+        # but registered the stale frame would ship revision 0.
+        assert harness.broker.publish_state_patch(
+            _snapshot(state_revision=1)
+        ), "publish waited for the startup encoding"
+    finally:
+        encoder.release.set()
+        assert connect_done.wait(5.0), "connect never finished"
+        connector.join(timeout=5.0)
+    wire = descriptor[0]
+    assert b'"state_revision":1' in wire
+    assert b'"state_revision":0' not in wire
 
 
 # --- the publish path never touches a connection ----------------------------
-
 
 class _ProbingQueue:
     """A queue stand-in that refuses to be touched while it is armed.

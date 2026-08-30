@@ -553,11 +553,16 @@ class DashboardService:
     def _forget_descriptor(self) -> None:
         if self._descriptor is None:
             return
-        self._descriptor = None
+        path = self._state_dir / DESCRIPTOR_NAME
         try:
-            (self._state_dir / DESCRIPTOR_NAME).unlink()
+            path.unlink()
         except FileNotFoundError:
             pass
+        # Only a file that is really gone is forgotten: a permission or
+        # filesystem error keeps the reference, so the next close() retries
+        # the deletion instead of releasing the lock on top of a descriptor
+        # that still names this process.
+        self._descriptor = None
 
     def __enter__(self) -> "DashboardService":
         self.start()

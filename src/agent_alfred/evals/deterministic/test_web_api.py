@@ -85,6 +85,11 @@ class _Facade:
         self.created = []
         self.requests = []
         self.run_queries: list[tuple[str, int, str | None]] = []
+        # (session_id, limit, cursor) of every MainBar read, so a test can
+        # see which Session the read was aimed at.
+        self.mainbar_queries: list[tuple[str, int, str | None]] = []
+        # The same record for the Session group's run list.
+        self.session_run_queries: list[tuple[str, int, str | None]] = []
         # The gate's authority, in the shape the Host provides it. This
         # facade stands in for a Host with no Run in flight, so the slot is
         # the only thing that can busy the gate -- which is what lets a test
@@ -151,8 +156,19 @@ class _Facade:
     def locate_run(self, run_id: str, *, limit: int):
         return None if run_id == "missing" else _page("chat")
 
-    def mainbar_pairs(self, *, limit: int, cursor: str | None = None):
+    def mainbar_pairs(self, *, session_id: str, limit: int, cursor: str | None):
+        if session_id not in self.known_sessions:
+            raise SessionNotFound(session_id)
+        self.mainbar_queries.append((session_id, limit, cursor))
         return _pairs()
+
+    def list_session_chat_runs(
+        self, *, session_id: str, limit: int, cursor: str | None
+    ):
+        if session_id not in self.known_sessions:
+            raise SessionNotFound(session_id)
+        self.session_run_queries.append((session_id, limit, cursor))
+        return _session_runs_page(session_id)
 
 
 def _page(filter_name: str):
@@ -202,6 +218,39 @@ def _pairs():
     )
 
 
+def _session_runs_page(session_id: str):
+    from agent_alfred.runtime.runs import SessionChatRun, SessionChatRunsPage
+
+    return SessionChatRunsPage(
+        session_id=session_id,
+        runs=(
+            SessionChatRun(
+                run_id="r1",
+                phase="finished",
+                outcome="completed",
+                accepted_at="2026-08-27T12:00:00Z",
+                started_at="2026-08-27T12:00:01Z",
+                finished_at="2026-08-27T12:00:02Z",
+                activity_revision=7,
+                reply_preview="hi there",
+                reply_source="web",
+            ),
+            SessionChatRun(
+                run_id="r2",
+                phase="running",
+                outcome=None,
+                accepted_at="2026-08-27T12:01:00Z",
+                started_at="2026-08-27T12:01:01Z",
+                finished_at=None,
+                activity_revision=8,
+                reply_preview=None,
+                reply_source=None,
+            ),
+        ),
+        next_cursor=None,
+    )
+
+
 def _api(result: SubmitResult, snapshot: RuntimeSnapshot | None = None):
     return DashboardApi(
         facade=_Facade(
@@ -213,6 +262,11 @@ def _api(result: SubmitResult, snapshot: RuntimeSnapshot | None = None):
 
 def _accepted() -> SubmitResult:
     return SubmitResult(kind="accepted", run_id="r1", session_id="s1")
+
+
+def _facade() -> _Facade:
+    """The facade alone, for read tests that need to see what was asked."""
+    return _Facade(result=_accepted(), state=_snapshot())
 
 
 # --- the 202 ----------------------------------------------------------------
@@ -499,12 +553,69 @@ def test_the_page_size_is_clamped_not_trusted(raw: str, expected: int) -> None:
     assert facade.run_queries[0][1] == expected
 
 
-def test_the_mainbar_returns_one_pair_per_run_with_both_sides() -> None:
-    _status, payload = _api(_accepted()).mainbar({})
+def test_the_mainbar_requires_a_session_id() -> None:
+    """The MainBar answers one Session; without the Session there is no
+    question to answer, and the request is refused before any read runs."""
+    facade = _facade()
+    status, payload = DashboardApi(facade=facade).mainbar({})
+    assert status == 400
+    assert payload == {"code": "missing_session_id"}
+    assert facade.mainbar_queries == []
+
+
+def test_the_mainbar_answers_an_unknown_session_with_404() -> None:
+    status, payload = DashboardApi(facade=_facade()).mainbar(
+        {"session_id": "nope"}
+    )
+    assert status == 404
+    assert payload == {"code": "unknown_session"}
+
+
+def test_the_mainbar_targets_the_requested_session() -> None:
+    facade = _facade()
+    _status, payload = DashboardApi(facade=facade).mainbar({"session_id": "s1"})
+    assert facade.mainbar_queries[0][0] == "s1"
     pair = payload["pairs"][0]
     assert pair["run_id"] == "r1"
     assert pair["user"][0]["text"] == "hello"
     assert pair["assistant"][0]["text"] == "hi there"
+
+
+# --- the Session group's run list -------------------------------------------
+
+
+def test_the_session_run_list_requires_a_session_id() -> None:
+    facade = _facade()
+    status, payload = DashboardApi(facade=facade).session_runs({})
+    assert status == 400
+    assert payload == {"code": "missing_session_id"}
+    assert facade.session_run_queries == []
+
+
+def test_the_session_run_list_answers_an_unknown_session_with_404() -> None:
+    status, payload = DashboardApi(facade=_facade()).session_runs(
+        {"session_id": "nope"}
+    )
+    assert status == 404
+    assert payload == {"code": "unknown_session"}
+
+
+def test_the_session_run_list_targets_one_session_and_shows_its_runs() -> None:
+    """One row per admitted Run, the running one among them, and no row
+    invents a reply the database has not written."""
+    facade = _facade()
+    _status, payload = DashboardApi(facade=facade).session_runs(
+        {"session_id": "s1", "limit": "1", "cursor": "some-cursor"}
+    )
+    assert facade.session_run_queries == [("s1", 1, "some-cursor")]
+    assert [run["run_id"] for run in payload["runs"]] == ["r1", "r2"]
+    assert [run["phase"] for run in payload["runs"]] == ["finished", "running"]
+    assert payload["runs"][0]["reply_preview"] == "hi there"
+    assert payload["runs"][0]["reply_source"] == "web"
+    # The running Run's row carries its state, and nothing it has not got.
+    assert payload["runs"][1]["reply_preview"] is None
+    assert payload["runs"][1]["reply_source"] is None
+    assert payload["runs"][1]["finished_at"] is None
 
 
 # --- block rendering --------------------------------------------------------

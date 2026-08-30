@@ -99,7 +99,13 @@ class DashboardFacade(Protocol):
 
     def locate_run(self, run_id: str, *, limit: int) -> Any | None: ...
 
-    def mainbar_pairs(self, *, limit: int, cursor: str | None) -> Any: ...
+    def list_session_chat_runs(
+        self, *, session_id: str, limit: int, cursor: str | None
+    ) -> Any: ...
+
+    def mainbar_pairs(
+        self, *, session_id: str, limit: int, cursor: str | None
+    ) -> Any: ...
 
 
 @dataclass(frozen=True)
@@ -401,11 +407,37 @@ class DashboardApi:
             return 404, {"code": "unknown_run"}
         return 200, _runs_payload(page)
 
-    def mainbar(self, params: dict[str, str]) -> tuple[int, Any]:
+    def session_runs(self, params: dict[str, str]) -> tuple[int, Any]:
+        # Same rule as the other Session-scoped reads: the Session is named
+        # by the query parameter, verbatim, and only its absence is a bad
+        # request -- the empty string is a value the database may hold.
+        session_id = params.get("session_id")
+        if session_id is None:
+            return 400, {"code": "missing_session_id"}
         limit = _page_size(params, "limit")
-        return 200, _mainbar_payload(
-            self._facade.mainbar_pairs(limit=limit, cursor=params.get("cursor"))
-        )
+        try:
+            page = self._facade.list_session_chat_runs(
+                session_id=session_id, limit=limit, cursor=params.get("cursor")
+            )
+        except SessionNotFound:
+            return 404, {"code": "unknown_session"}
+        return 200, _session_runs_payload(page)
+
+    def mainbar(self, params: dict[str, str]) -> tuple[int, Any]:
+        # The MainBar answers one Session, named by the query parameter like
+        # the messages read: absent and empty are different facts, and only
+        # a missing parameter is a bad request.
+        session_id = params.get("session_id")
+        if session_id is None:
+            return 400, {"code": "missing_session_id"}
+        limit = _page_size(params, "limit")
+        try:
+            page = self._facade.mainbar_pairs(
+                session_id=session_id, limit=limit, cursor=params.get("cursor")
+            )
+        except SessionNotFound:
+            return 404, {"code": "unknown_session"}
+        return 200, _mainbar_payload(page)
 
 
 def _page_size(params: dict[str, str], key: str) -> int:
@@ -541,6 +573,27 @@ def _mainbar_payload(page) -> dict[str, Any]:
                 ),
             }
             for pair in page.pairs
+        ],
+        "next_cursor": page.next_cursor,
+    }
+
+
+def _session_runs_payload(page) -> dict[str, Any]:
+    return {
+        "session_id": page.session_id,
+        "runs": [
+            {
+                "run_id": run.run_id,
+                "phase": run.phase,
+                "outcome": run.outcome,
+                "accepted_at": run.accepted_at,
+                "started_at": run.started_at,
+                "finished_at": run.finished_at,
+                "activity_revision": run.activity_revision,
+                "reply_preview": run.reply_preview,
+                "reply_source": run.reply_source,
+            }
+            for run in page.runs
         ],
         "next_cursor": page.next_cursor,
     }

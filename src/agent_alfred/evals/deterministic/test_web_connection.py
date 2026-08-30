@@ -3,18 +3,21 @@
 from __future__ import annotations
 
 import queue
+import socket
 import threading
 import time
 
 import pytest
 
 from agent_alfred.clock import FakeClock
+from agent_alfred.evals.deterministic.test_web_broker import Harness
 from agent_alfred.gateway.web import frames
 from agent_alfred.gateway.web.connection import (
     CloseConnection,
     ConnectionQueue,
     ConnectionWriter,
     FakeConnection,
+    SocketConnection,
     StopWriter,
 )
 
@@ -245,3 +248,166 @@ def test_fake_connection_records_and_is_idempotent_on_close() -> None:
     connection.close()
     assert connection.writes == [b"a", b"b"]
     assert connection.closed is True
+
+
+# --- the socket's one owner: closing must never wait for a wedged write -----
+
+
+class _SocketWFile:
+    """A wfile whose flush hands the bytes to a real socket.
+
+    ``flush`` is the blocking point: it sets ``entered_flush`` -- so a test
+    knows the writer is already inside the connection's write critical
+    section -- and then sends for real, which is what makes a pre-filled
+    send buffer block the writer exactly as a browser that stopped reading
+    would.
+    """
+
+    def __init__(self, sock: socket.socket) -> None:
+        self._sock = sock
+        self._pending = b""
+        self.entered_flush = threading.Event()
+
+    def write(self, data: bytes) -> None:
+        self._pending = data
+
+    def flush(self) -> None:
+        self.entered_flush.set()
+        self._sock.sendall(self._pending)
+
+
+def _fill_send_buffer(sock: socket.socket) -> None:
+    """Fill one end of a socketpair until sends refuse, then restore it.
+
+    After this returns, the *next* blocking send on ``sock`` blocks until the
+    peer reads or the socket is shut down -- a fact about the kernel, not
+    about thread scheduling, so the writer's block needs no sleep to be
+    deterministic.
+    """
+    sock.setblocking(False)
+    try:
+        while True:
+            sock.send(b"x" * 65536)
+    except BlockingIOError:
+        pass
+    finally:
+        sock.setblocking(True)
+
+
+def test_close_does_not_wait_for_the_write_lock_a_blocked_writer_holds() -> None:
+    """The close path must never queue behind the write it exists to break.
+
+    A writer wedged inside ``flush`` holds the write lock; a close that takes
+    that lock before shutting the socket down waits forever, and the bounded
+    close above it turns into an unbounded one. The shutdown is what unblocks
+    the writer -- so close marks itself closed first, shuts the socket down,
+    and the blocked write fails with ``OSError`` instead of the close
+    hanging.
+    """
+    sock, peer = socket.socketpair()
+    _fill_send_buffer(sock)
+    wfile = _SocketWFile(sock)
+    connection = SocketConnection(sock, wfile)
+    outcome: dict[str, BaseException | str] = {}
+
+    def writer() -> None:
+        try:
+            connection.write(b"x" * 65536)
+            outcome["write"] = "completed"
+        except OSError as exc:  # unblocked by the close's shutdown
+            outcome["write"] = exc
+
+    thread = threading.Thread(target=writer, daemon=True)
+    thread.start()
+    try:
+        assert wfile.entered_flush.wait(2.0)
+        close_done = threading.Event()
+
+        def do_close() -> None:
+            connection.close()
+            close_done.set()
+
+        closer = threading.Thread(target=do_close, daemon=True)
+        closer.start()
+        # The writer is holding the write lock and blocked in send; a close
+        # that waits for that lock never sets this event.
+        assert close_done.wait(2.0), "close waited for the wedged write's lock"
+        thread.join(timeout=2.0)
+        assert not thread.is_alive(), "shutdown did not unblock the writer"
+        # The unblocking is the shutdown itself: nobody ever read the peer.
+        assert isinstance(outcome["write"], OSError)
+        # Idempotent: the writer's own finally-close lands on an already
+        # closed connection and must be a no-op, not a second shutdown.
+        connection.close()
+        closer.join(timeout=2.0)
+        assert not closer.is_alive()
+    finally:
+        sock.close()
+        peer.close()
+
+
+class _RealThreads:
+    """Runs every spawned thread for real, like the production broker."""
+
+    def spawn(self, target):
+        thread = threading.Thread(target=target, daemon=True)
+        thread.start()
+        return thread
+
+
+def test_a_gated_flush_writer_does_not_wait_the_broker_close_open() -> None:
+    """A broker whose writer is wedged mid-flush still finishes closing.
+
+    The close call must return while the writer is still blocked -- False,
+    because a thread it owns has not exited -- and a later close, once the
+    writer is gone, reports True. The writer here is blocked the way a real
+    one is: holding the connection's write lock inside a flush nobody has
+    released, so any close that serialised behind that lock would hang.
+    """
+    harness = Harness(spawn=_RealThreads())
+    harness.broker.start()
+    sock, peer = socket.socketpair()
+    gate = threading.Event()
+    entered = threading.Event()
+
+    class GatedWFile:
+        def __init__(self) -> None:
+            self._pending = b""
+
+        def write(self, data: bytes) -> None:
+            self._pending = data
+
+        def flush(self) -> None:
+            entered.set()
+            gate.wait()
+            sock.sendall(self._pending)
+
+    connection = SocketConnection(sock, GatedWFile())
+    handle = harness.broker.connect(connection=connection)
+    close_result: list[bool] = []
+    close_done = threading.Event()
+
+    def do_close() -> None:
+        close_result.append(harness.broker.close(timeout=0.3))
+        close_done.set()
+
+    closer = threading.Thread(target=do_close, daemon=True)
+    closer.start()
+    try:
+        assert entered.wait(2.0), "writer never reached its first flush"
+        # The writer holds the write lock, blocked in flush. A close that
+        # queued behind that lock would never set this event.
+        assert close_done.wait(5.0), "broker.close waited for the wedged writer"
+        # The writer never confirmed its exit, so this close is an honest
+        # "not drained yet" -- ask again.
+        assert close_result == [False]
+        gate.set()
+        assert handle.finished.wait(5.0), "writer never exited after release"
+        assert harness.broker.close(timeout=2.0) is True
+        assert harness.broker.close(timeout=2.0) is True
+    finally:
+        gate.set()
+        closer.join(timeout=5.0)
+        harness.broker.close(timeout=2.0)
+        sock.close()
+        peer.close()

@@ -674,16 +674,36 @@ class RuntimeHost:
                 self._conn, run_id=run_id, limit=limit, redactor=self._redactor
             )
 
+    def list_session_chat_runs(
+        self,
+        *,
+        session_id: str,
+        limit: int,
+        cursor: str | None = None,
+    ) -> runs.SessionChatRunsPage:
+        """One Session's admitted chat Runs, keyset paged."""
+        with self._db_lock:
+            return runs.list_session_chat_runs(
+                self._conn,
+                session_id=session_id,
+                limit=limit,
+                cursor=cursor,
+                redactor=self._redactor,
+                reply_max_chars=self._settings.prompt_preview_max_chars,
+            )
+
     def mainbar_pairs(
         self,
         *,
+        session_id: str,
         limit: int = runs.DEFAULT_MAINBAR_LIMIT,
         cursor: str | None = None,
     ) -> runs.MainBarPage:
-        """The MainBar's message pairs for recorded chat Runs."""
+        """The MainBar's message pairs for one Session's recorded chat Runs."""
         with self._db_lock:
             return runs.mainbar_pairs(
                 self._conn,
+                session_id=session_id,
                 limit=limit,
                 cursor=cursor,
                 redactor=self._redactor,

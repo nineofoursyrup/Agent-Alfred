@@ -30,7 +30,6 @@ the same page again, and replaying it against another Session fails closed.
 from __future__ import annotations
 
 import json
-from base64 import urlsafe_b64decode, urlsafe_b64encode
 from dataclasses import dataclass
 from typing import Any
 
@@ -41,6 +40,15 @@ from agent_alfred.messages import (
     message_plain_text,
 )
 from agent_alfred.redact import Redactor
+from agent_alfred.runtime.cursor import (
+    MalformedCursor,
+)
+from agent_alfred.runtime.cursor import (
+    decode_cursor as _decode_cursor_shared,
+)
+from agent_alfred.runtime.cursor import (
+    encode_cursor as _encode_cursor_shared,
+)
 
 _CURSOR_VERSION = 2
 _INBOX_KIND = "inbox"
@@ -55,8 +63,8 @@ class SessionNotFound(ValueError):
     """The requested Session does not exist."""
 
 
-class MalformedCursor(ValueError):
-    """The cursor cannot be decoded or does not fit this read."""
+# ``MalformedCursor`` is the shared codec's exception, re-exported under this
+# module's name so a caller keeps one name for one failure.
 
 
 @dataclass(frozen=True)
@@ -100,26 +108,18 @@ class SessionMessagesPage:
 
 
 # --- cursor codec -----------------------------------------------------------
+#
+# The envelope -- canonical JSON, URL-safe base64, the malformed exception --
+# is the shared codec's (``runtime.cursor``); this read owns only its
+# version, its segment kinds, and its Session binding.
 
 
 def _encode_cursor(payload: dict[str, Any]) -> str:
-    raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
-    return urlsafe_b64encode(raw.encode("utf-8")).decode("ascii")
+    return _encode_cursor_shared(payload)
 
 
 def _decode_cursor(cursor: str, kind: str) -> dict[str, Any]:
-    try:
-        raw = urlsafe_b64decode(cursor.encode("ascii")).decode("utf-8")
-        payload = json.loads(raw)
-    except Exception:
-        raise MalformedCursor("cursor is not a readable token") from None
-    if (
-        not isinstance(payload, dict)
-        or payload.get("v") != _CURSOR_VERSION
-        or payload.get("k") != kind
-    ):
-        raise MalformedCursor("cursor does not fit this read")
-    return payload
+    return _decode_cursor_shared(cursor, version=_CURSOR_VERSION, kind=kind)
 
 
 # --- inbox ------------------------------------------------------------------

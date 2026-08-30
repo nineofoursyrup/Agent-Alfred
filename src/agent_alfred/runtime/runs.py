@@ -25,16 +25,26 @@ consulted -- all three can be ahead of a database that never committed.
 from __future__ import annotations
 
 import json
-from base64 import urlsafe_b64decode, urlsafe_b64encode
 from dataclasses import dataclass, replace
 from typing import Any
 
-from agent_alfred.messages import Message, blocks_from_jsonable
+from agent_alfred.messages import Message, blocks_from_jsonable, message_plain_text
 from agent_alfred.redact import Redactor
+from agent_alfred.runtime.cursor import (
+    MalformedCursor,
+)
+from agent_alfred.runtime.cursor import (
+    decode_cursor as _decode_cursor,
+)
+from agent_alfred.runtime.cursor import (
+    encode_cursor as _encode_cursor,
+)
+from agent_alfred.runtime.sessions import SessionNotFound
 
 _CURSOR_VERSION = 1
 _RUNS_KIND = "runs"
 _MAINBAR_KIND = "mainbar"
+_SESSION_RUNS_KIND = "session_runs"
 
 # The runs page's filter is closed to three values (#30): a Run is either a
 # conversation, a system run, or it is included because the filter is "all".
@@ -53,8 +63,8 @@ class UnknownRunFilter(ValueError):
     """The requested filter is not one of the three closed values."""
 
 
-class MalformedCursor(ValueError):
-    """The cursor cannot be decoded or does not fit this read."""
+# ``MalformedCursor`` is the shared codec's exception, re-exported under this
+# module's name so a caller keeps one name for one failure.
 
 
 @dataclass(frozen=True)
@@ -123,6 +133,33 @@ class MainBarPage:
     next_cursor: str | None
 
 
+@dataclass(frozen=True)
+class SessionChatRun:
+    """One admitted chat Run, as a Session's own group shows it.
+
+    The row is what the database holds about the Run -- its phase, its times,
+    and, only for a Run whose recording committed, the one final reply. A Run
+    still running has no reply yet and its row says so by carrying none.
+    """
+
+    run_id: str
+    phase: str
+    outcome: str | None
+    accepted_at: str
+    started_at: str | None
+    finished_at: str | None
+    activity_revision: int
+    reply_preview: str | None
+    reply_source: str | None
+
+
+@dataclass(frozen=True)
+class SessionChatRunsPage:
+    session_id: str
+    runs: tuple[SessionChatRun, ...]
+    next_cursor: str | None
+
+
 def classify_purpose(purpose: str) -> tuple[str, bool]:
     """Which shelf a purpose belongs to, and whether we recognise it.
 
@@ -139,26 +176,14 @@ def classify_purpose(purpose: str) -> tuple[str, bool]:
 
 
 # --- cursor codec -----------------------------------------------------------
+#
+# The envelope -- canonical JSON, URL-safe base64, the malformed exception --
+# is the shared codec's (``runtime.cursor``); this read owns only its
+# version, its kinds, and its position fields.
 
 
-def _encode_cursor(payload: dict[str, Any]) -> str:
-    raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
-    return urlsafe_b64encode(raw.encode("utf-8")).decode("ascii")
-
-
-def _decode_cursor(cursor: str, kind: str) -> dict[str, Any]:
-    try:
-        raw = urlsafe_b64decode(cursor.encode("ascii")).decode("utf-8")
-        payload = json.loads(raw)
-    except Exception:
-        raise MalformedCursor("cursor is not a readable token") from None
-    if (
-        not isinstance(payload, dict)
-        or payload.get("v") != _CURSOR_VERSION
-        or payload.get("k") != kind
-    ):
-        raise MalformedCursor("cursor does not belong to this read") from None
-    return payload
+def _decode_read_cursor(cursor: str, kind: str) -> dict[str, Any]:
+    return _decode_cursor(cursor, version=_CURSOR_VERSION, kind=kind)
 
 
 def _position(payload: dict[str, Any]) -> tuple[int, str] | None:
@@ -179,8 +204,12 @@ def _runs_cursor(position: tuple[int, str] | None) -> str:
     return _encode_cursor(payload)
 
 
-def _mainbar_cursor(position: tuple[int, str] | None) -> str:
-    payload: dict[str, Any] = {"v": _CURSOR_VERSION, "k": _MAINBAR_KIND}
+def _mainbar_cursor(session_id: str, position: tuple[int, str] | None) -> str:
+    payload: dict[str, Any] = {
+        "v": _CURSOR_VERSION,
+        "k": _MAINBAR_KIND,
+        "s": session_id,
+    }
     if position is not None:
         payload["ar"] = position[0]
         payload["r"] = position[1]
@@ -241,7 +270,7 @@ def list_runs(
         raise ValueError("limit must be >= 1")
     position: tuple[int, str] | None = None
     if cursor is not None:
-        position = _position(_decode_cursor(cursor, _RUNS_KIND))
+        position = _position(_decode_read_cursor(cursor, _RUNS_KIND))
 
     if filter == CHAT_FILTER:
         purpose_clause = "AND purpose = 'chat'"
@@ -388,23 +417,38 @@ def locate_run(
 def mainbar_pairs(
     conn,
     *,
+    session_id: str,
     limit: int = DEFAULT_MAINBAR_LIMIT,
     cursor: str | None = None,
     redactor: Redactor | None = None,
 ) -> MainBarPage:
-    """The unique message pair of each recorded chat Run, newest first."""
+    """The unique message pair of each recorded chat Run of one Session.
+
+    Each tab's MainBar is that tab's Session's only conversation, so the
+    Session is part of the question, not a post-filter: the SQL carries it,
+    and the cursor names it, so a page minted by Session A answers nothing
+    for Session B.
+    """
     if limit < 1:
         raise ValueError("limit must be >= 1")
+    exists = conn.execute(
+        "SELECT 1 FROM sessions WHERE session_id = ?", (session_id,)
+    ).fetchone()
+    if exists is None:
+        raise SessionNotFound(f"no such session: {session_id!r}")
     position: tuple[int, str] | None = None
     if cursor is not None:
-        position = _position(_decode_cursor(cursor, _MAINBAR_KIND))
+        payload = _decode_read_cursor(cursor, _MAINBAR_KIND)
+        if payload.get("s") != session_id:
+            raise MalformedCursor("cursor belongs to a different session")
+        position = _position(payload)
     beyond = (
         "AND (runs.activity_revision < ?"
         " OR (runs.activity_revision = ? AND runs.run_id < ?))\n"
         if position is not None
         else ""
     )
-    params: tuple[Any, ...] = (_TERMINAL_PHASE,)
+    params: tuple[Any, ...] = (_TERMINAL_PHASE, session_id)
     if position is not None:
         params += (position[0], position[0], position[1])
     params += (limit + 1,)
@@ -415,6 +459,7 @@ def mainbar_pairs(
         "SELECT runs.run_id, runs.session_id, runs.activity_revision\n"
         "  FROM runs\n"
         "  WHERE runs.phase = ? AND runs.purpose = 'chat'\n"
+        "    AND runs.session_id = ?\n"
         "    AND EXISTS (SELECT 1 FROM agent_log\n"
         "                WHERE agent_log.run_id = runs.run_id)\n"
         f"  {beyond}"
@@ -435,7 +480,9 @@ def mainbar_pairs(
         for run_id, session_id, revision in rows
     )
     next_cursor = (
-        _mainbar_cursor((rows[-1][2], rows[-1][0])) if has_more and rows else None
+        _mainbar_cursor(session_id, (rows[-1][2], rows[-1][0]))
+        if has_more and rows
+        else None
     )
     return MainBarPage(pairs=pairs, next_cursor=next_cursor)
 
@@ -471,3 +518,134 @@ def _message(
     if redactor is not None:
         parsed = redactor.redact_jsonable(parsed)
     return Message(role=role, blocks=tuple(blocks_from_jsonable(parsed)))
+
+
+# --- one Session's chat Runs -------------------------------------------------
+
+DEFAULT_REPLY_PREVIEW_CHARS = 240
+
+
+def list_session_chat_runs(
+    conn,
+    *,
+    session_id: str,
+    limit: int,
+    cursor: str | None = None,
+    redactor: Redactor | None = None,
+    reply_max_chars: int = DEFAULT_REPLY_PREVIEW_CHARS,
+) -> SessionChatRunsPage:
+    """One Session's admitted chat Runs, newest activity first, keyset paged.
+
+    The inbox returns Session summaries and the messages read returns message
+    bodies; this is the group between them -- one row per Run the Session has
+    been admitted, whether or not it has recorded yet, so a running Run is a
+    row too instead of a hole in the group. Recorded is still only ever the
+    database's own fact (ADR-0024), decided by the same finalize transaction
+    that the MainBar reads; a reply is shown only when that fact holds.
+    """
+    if limit < 1:
+        raise ValueError("limit must be >= 1")
+    if reply_max_chars < 1:
+        raise ValueError("reply_max_chars must be >= 1")
+    exists = conn.execute(
+        "SELECT 1 FROM sessions WHERE session_id = ?", (session_id,)
+    ).fetchone()
+    if exists is None:
+        raise SessionNotFound(f"no such session: {session_id!r}")
+    position: tuple[int, str] | None = None
+    if cursor is not None:
+        payload = _decode_read_cursor(cursor, _SESSION_RUNS_KIND)
+        if payload.get("s") != session_id:
+            raise MalformedCursor("cursor belongs to a different session")
+        position = _position(payload)
+    beyond = (
+        "AND (runs.activity_revision < ?"
+        " OR (runs.activity_revision = ? AND runs.run_id < ?))\n"
+        if position is not None
+        else ""
+    )
+    params: tuple[Any, ...] = (session_id,)
+    if position is not None:
+        params += (position[0], position[0], position[1])
+    params += (limit + 1,)
+    rows = conn.execute(
+        "SELECT runs.run_id, runs.phase, runs.outcome, runs.accepted_at,\n"
+        "       runs.started_at, runs.finished_at, runs.activity_revision\n"
+        "  FROM runs\n"
+        "  WHERE runs.session_id = ? AND runs.purpose = 'chat'\n"
+        f"  {beyond}"
+        "  ORDER BY runs.activity_revision DESC, runs.run_id DESC LIMIT ?",
+        params,
+    ).fetchall()
+    has_more = len(rows) > limit
+    rows = rows[:limit]
+    entries = tuple(
+        SessionChatRun(
+            run_id=run_id,
+            phase=phase,
+            outcome=outcome,
+            accepted_at=accepted_at,
+            started_at=started_at,
+            finished_at=finished_at,
+            activity_revision=revision,
+            **_final_reply(conn, run_id, redactor, reply_max_chars),
+        )
+        for (
+            run_id,
+            phase,
+            outcome,
+            accepted_at,
+            started_at,
+            finished_at,
+            revision,
+        ) in rows
+    )
+    next_cursor = (
+        _session_runs_cursor(session_id, (rows[-1][6], rows[-1][0]))
+        if has_more and rows
+        else None
+    )
+    return SessionChatRunsPage(
+        session_id=session_id, runs=entries, next_cursor=next_cursor
+    )
+
+
+def _session_runs_cursor(session_id: str, position: tuple[int, str] | None) -> str:
+    payload: dict[str, Any] = {
+        "v": _CURSOR_VERSION,
+        "k": _SESSION_RUNS_KIND,
+        "s": session_id,
+    }
+    if position is not None:
+        payload["ar"] = position[0]
+        payload["r"] = position[1]
+    return _encode_cursor(payload)
+
+
+def _final_reply(
+    conn, run_id: str, redactor: Redactor | None, max_chars: int
+) -> dict[str, Any]:
+    """The one final reply of a recorded Run, as ``reply_*`` fields.
+
+    The finalize transaction wrote the phase and the messages together, so
+    the last assistant row is the reply and nothing else may stand in for it
+    -- a running Run has no rows and gets no summary. Redacted before it is
+    previewed (ADR-0003), truncated after, so a marker is never cut.
+    """
+    row = conn.execute(
+        "SELECT content, source FROM agent_log"
+        " WHERE run_id = ? AND role = 'assistant'"
+        " ORDER BY id DESC LIMIT 1",
+        (run_id,),
+    ).fetchone()
+    if row is None:
+        return {"reply_preview": None, "reply_source": None}
+    parsed = json.loads(row[0])
+    if redactor is not None:
+        parsed = redactor.redact_jsonable(parsed)
+    text = message_plain_text(
+        Message(role="assistant", blocks=tuple(blocks_from_jsonable(parsed)))
+    )
+    if len(text) > max_chars:
+        text = text[: max_chars - 1] + "…"
+    return {"reply_preview": text if text else None, "reply_source": row[1]}
