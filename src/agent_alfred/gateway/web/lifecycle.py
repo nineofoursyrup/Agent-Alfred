@@ -365,13 +365,19 @@ class DashboardService:
     # -- lifecycle --------------------------------------------------------
 
     def start(self) -> EntryDescriptor:
-        """Lock, then bind, then describe. Anything less is fully undone.
+        """Lock, then bind, then describe. Anything less is undone.
 
         This is the first third of start-up and deliberately nothing more:
         the database, the Host and the stream all belong to later steps that
         may fail for their own reasons, and running any of them before the
         lock is held would let a second instance migrate the database or
         write Run state before being told it may not.
+
+        The undo is the close: the same confirmed order -- socket, descriptor
+        fact, lock -- and the same progress bits. A step of the undo that
+        itself refuses leaves the rest exactly where a later ``close()``
+        resumes it, and the start failure still reaches the caller as the
+        exception it was, with the refused undo step as its cause.
         """
         if self._server is not None:
             return self._descriptor or self._write_descriptor()
@@ -402,9 +408,21 @@ class DashboardService:
             raise
         try:
             return self._write_descriptor()
-        except BaseException:
-            self._release_server()
-            self._lock.release()
+        except BaseException as exc:
+            # The undo is steps of its own, and the socket goes before the
+            # lock: ``close()`` runs the same confirmed order and keeps the
+            # progress bits, so a step that refuses here leaves the rest
+            # exactly where a later close() picks it up.
+            try:
+                self.close()
+            except BaseException as rollback_exc:
+                # The undo itself refused: the socket and the lock are still
+                # this service's, each at the last step that actually
+                # succeeded. The caller is waiting to learn why the start
+                # failed, so the start failure is the one that propagates --
+                # the refused undo step rides with it as its cause, never in
+                # front of it.
+                raise exc from rollback_exc
             raise
 
     def _bind(self) -> None:

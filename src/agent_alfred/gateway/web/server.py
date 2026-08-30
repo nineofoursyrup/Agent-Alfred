@@ -259,11 +259,12 @@ class DashboardRuntime:
         # nothing here to release.
         self._db_closed = False
         self._entry_released = False
-        # Whether steps 1-3 ever completed, i.e. whether this process owns
-        # the socket, the descriptor and the lock. Without it a start that
-        # was refused at the lock would go on to release a lock it never
-        # held -- and "released a lock it never held" is only harmless
-        # because ``ProcessLock`` happens to be idempotent.
+        # Whether steps 1-3 ever completed -- or were taken and are still
+        # held by a start whose own undo refused -- i.e. whether this
+        # process owns the socket, the descriptor and the lock. Without it a
+        # start that was refused at the lock would go on to release a lock
+        # it never held -- and "released a lock it never held" is only
+        # harmless because ``ProcessLock`` happens to be idempotent.
         self._entry_owned = False
 
     # -- reads ------------------------------------------------------------
@@ -349,6 +350,16 @@ class DashboardRuntime:
             try:
                 descriptor = self._start_locked()
             except BaseException:
+                # A start that failed inside the service may still own what
+                # it took: the service's own undo can refuse, and then the
+                # socket and the lock are still held even though this loop
+                # never got to mark the entry below. The lock is taken
+                # before the socket exists and let go last, so ``lock_held``
+                # is the one fact that says the entry was taken; a start
+                # refused *at* the lock holds nothing, and must leave the
+                # winner's descriptor alone.
+                if self._service.lock_held:
+                    self._entry_owned = True
                 # One rollback, run once, for all eight steps. A rollback
                 # that cannot stop the Host has not finished, so it stays in
                 # ``closing`` still owning everything; one that ran to the
