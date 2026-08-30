@@ -13,6 +13,7 @@ Two things can only be checked here:
 from __future__ import annotations
 
 import io
+import json
 import socket
 import sqlite3
 import threading
@@ -236,5 +237,56 @@ def test_a_dead_dispatcher_is_published_as_sink_disabled(tmp_path) -> None:
         # The broker stopped taking work instead of limping on behind a
         # dispatcher that no longer exists.
         assert dashboard.broker._stopping is True  # noqa: SLF001
+    finally:
+        dashboard.close()
+
+
+def test_the_assembled_dashboard_serves_the_real_host_over_http(tmp_path) -> None:
+    """The production assembly answers from the Host it was built on.
+
+    The API is constructed on the Host itself at the assembly point, so the
+    one round trip worth proving across the real socket is that a write the
+    wire accepted exists in the database the Host owns -- and that a read
+    the wire serves answers from the same store.
+    """
+    from agent_alfred.gateway.web.guard import CSRF_HEADER
+
+    dashboard = build_dashboard(
+        state_dir=tmp_path,
+        factory=_factory(),
+        clock=FakeClock(),
+        port=_free_port(),
+        open_database=_database,
+    )
+    try:
+        dashboard.start()
+        port = dashboard.port
+
+        def request(path: str, *, data: bytes | None = None) -> tuple[int, bytes]:
+            from urllib.request import Request, urlopen
+
+            headers = {"Content-Type": "application/json"}
+            if data is not None:
+                headers[CSRF_HEADER] = dashboard.csrf_token
+            call = Request(
+                f"http://127.0.0.1:{port}{path}",
+                data=data,
+                headers=headers,
+                method="POST" if data is not None else "GET",
+            )
+            with urlopen(call, timeout=3.0) as response:
+                return response.status, response.read()
+
+        status, body = request("/api/sessions", data=b"{}")
+        assert status == 201
+        session_id = json.loads(body)["session_id"]
+        assert session_id
+        # The write the wire accepted is a row in the Host's database.
+        assert dashboard.host.session_exists(session_id) is True
+
+        # And the served read answers from that same store.
+        status, body = request(f"/api/sessions/messages?session_id={session_id}")
+        assert status == 200
+        assert json.loads(body)["session_id"] == session_id
     finally:
         dashboard.close()

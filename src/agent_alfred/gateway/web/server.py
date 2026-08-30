@@ -70,7 +70,6 @@ from agent_alfred.gateway.web.lifecycle import (
     SpawnThread,
 )
 from agent_alfred.runtime.host import RuntimeHost
-from agent_alfred.runtime.work import SubmitRequest, SubmitResult
 
 # What :class:`DashboardRuntime` needs from the outside to build a Host and a
 # broker around one connection. Injected by the assembly layer, which is the
@@ -106,75 +105,6 @@ DashboardState = Literal[
 # descriptor and the lock, and lets the caller ask again -- not a longer
 # wait.
 ROLLBACK_STEP_TIMEOUT_S = 2.0
-
-
-class HostFacade:
-    """The Dashboard's view of the Host: the read side plus one write gate.
-
-    It adds no state and makes no decisions. Every write goes through
-    ``submit``, which is the same gate the CLI uses -- that is what makes
-    "at most one Run at a time" true of the process rather than of a
-    particular surface.
-    """
-
-    def __init__(self, host: RuntimeHost):
-        self._host = host
-
-    def create_session(self) -> str:
-        return self._host.create_session()
-
-    def submit(self, request: SubmitRequest) -> SubmitResult:
-        return self._host.submit(request)
-
-    # The mutation gate asks the Host, not a lock of its own: the question
-    # "is anything being written right now" has to include the Run whose
-    # lease spans the whole Run.
-    def try_begin_mutation(self) -> str | None:
-        return self._host.try_begin_mutation()
-
-    def end_mutation(self) -> None:
-        self._host.end_mutation()
-
-    def mutation_in_flight(self) -> bool:
-        return self._host.mutation_in_flight()
-
-    def session_exists(self, session_id: str) -> bool:
-        return self._host.session_exists(session_id)
-
-    def snapshot(self) -> Any:
-        return self._host.snapshot()
-
-    def list_sessions(self, *, limit: int, cursor: str | None = None) -> Any:
-        return self._host.list_sessions(limit=limit, cursor=cursor)
-
-    def open_session(
-        self, session_id: str, *, page_size: int, cursor: str | None = None
-    ) -> Any:
-        return self._host.open_session(
-            session_id, page_size=page_size, cursor=cursor
-        )
-
-    def list_runs(
-        self, *, filter: str, limit: int, cursor: str | None = None
-    ) -> Any:
-        return self._host.list_runs(filter=filter, limit=limit, cursor=cursor)
-
-    def locate_run(self, run_id: str, *, limit: int) -> Any | None:
-        return self._host.locate_run(run_id, limit=limit)
-
-    def list_session_chat_runs(
-        self, *, session_id: str, limit: int, cursor: str | None = None
-    ) -> Any:
-        return self._host.list_session_chat_runs(
-            session_id=session_id, limit=limit, cursor=cursor
-        )
-
-    def mainbar_pairs(
-        self, *, session_id: str, limit: int, cursor: str | None = None
-    ) -> Any:
-        return self._host.mainbar_pairs(
-            session_id=session_id, limit=limit, cursor=cursor
-        )
 
 
 class DashboardRuntime:
@@ -411,7 +341,11 @@ class DashboardRuntime:
         service.attach_context(
             HandlerContext(
                 guard=RequestGuard(port=service.port, csrf_token=self._csrf_token),
-                api=DashboardApi(facade=HostFacade(host)),
+                # The Host satisfies the DashboardFacade protocol itself, so
+                # the API is built on it directly: every member it needs --
+                # the reads, the snapshot and the mutation gate's authority --
+                # is answered by the one object that owns the facts.
+                api=DashboardApi(facade=host),
                 broker=broker,
                 instance_id=self._instance_id,
             )

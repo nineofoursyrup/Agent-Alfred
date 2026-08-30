@@ -55,7 +55,7 @@ from agent_alfred.gateway.web.replay import (
     ReplayRing,
     classify_cursor,
 )
-from agent_alfred.gateway.web.server import DashboardRuntime, HostFacade
+from agent_alfred.gateway.web.server import DashboardRuntime
 from agent_alfred.model import ScriptedModel, ScriptedModelFactory
 from agent_alfred.runtime.snapshot import ActiveRunSummary
 from agent_alfred.runtime.work import SubmitRequest
@@ -338,7 +338,7 @@ def test_two_mutations_arriving_together_admit_exactly_one() -> None:
         entered = threading.Event()
         release = threading.Event()
         calls: list[int] = []
-        inner = HostFacade(host)
+        inner = host
 
         class SlowFacade:
             def __init__(self) -> None:
@@ -387,7 +387,7 @@ def test_a_run_is_refused_while_a_plain_mutation_is_in_flight() -> None:
     try:
         entered = threading.Event()
         release = threading.Event()
-        inner = HostFacade(host)
+        inner = host
 
         class SlowFacade:
             def __init__(self) -> None:
@@ -1258,7 +1258,7 @@ def test_the_cli_and_the_web_compete_for_one_coordinator(tmp_path) -> None:
     runtime.start()
     try:
         host = runtime.host
-        api = DashboardApi(facade=HostFacade(host))
+        api = DashboardApi(facade=host)
         session_id = host.create_session()
         web = host.submit(
             SubmitRequest(

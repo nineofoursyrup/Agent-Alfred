@@ -29,7 +29,6 @@ from agent_alfred.gateway.web.api import (
 )
 from agent_alfred.gateway.web.broker import SSEBroker
 from agent_alfred.gateway.web.connection import FakeConnection
-from agent_alfred.gateway.web.server import HostFacade
 from agent_alfred.gateway.web.state import (
     StatePatchRejected,
     apply_state_patch,
@@ -134,7 +133,9 @@ def _host(
 
 
 def _api(host: RuntimeHost) -> DashboardApi:
-    return DashboardApi(facade=HostFacade(host))
+    # The Host satisfies the DashboardFacade protocol itself: the API is
+    # driven by direct injection, with no object between them.
+    return DashboardApi(facade=host)
 
 
 # --- the 202 ----------------------------------------------------------------
@@ -939,5 +940,179 @@ def test_a_handoff_failure_retracts_the_lease_and_the_busy_card() -> None:
         again = host.submit(SubmitRequest(message="again", gateway="web"))
         assert again.kind == "accepted"
         host.wait(again.run_id)
+    finally:
+        host.close()
+
+
+# --- the real Host is the facade: DashboardApi on direct injection ----------
+#
+# The ``DashboardFacade`` protocol is the API's capability boundary and the
+# Fake seam. The real ``RuntimeHost`` satisfies it structurally, so the
+# assembly hands the Host to the API itself, with no object between them.
+# These characterisations pin the behaviour that direct injection relies on:
+# every member the protocol names, answered by the real Host.
+
+
+def test_a_directly_injected_host_creates_a_usable_session() -> None:
+    host, _conn = _host()
+    host.start()
+    try:
+        api = DashboardApi(facade=host)
+        result = api.create_session()
+        assert result.status == 201
+        assert result.code is None
+        assert result.session_id is not None
+        # The signed id opens as a real Session, and a fresh one has no
+        # messages yet.
+        status, payload = api.session_messages(result.session_id, {})
+        assert status == 200
+        assert payload["session_id"] == result.session_id
+        assert payload["messages"] == []
+        # The gate the create went through is closed again behind it.
+        assert host.mutation_in_flight() is False
+    finally:
+        host.close()
+
+
+def test_a_directly_injected_host_answers_the_decided_write_contracts() -> None:
+    """400 and 404, decided by the API, enforced against the real Host."""
+    host, _conn = _host()
+    host.start()
+    try:
+        api = DashboardApi(facade=host)
+        empty = api.submit({"message": "   "})
+        assert (empty.status, empty.code) == (400, "empty_message")
+        unknown_purpose = api.submit({"message": "hi", "purpose": "nonsense"})
+        assert (unknown_purpose.status, unknown_purpose.code) == (
+            400,
+            "unknown_purpose",
+        )
+        # A Session the Host does not know is a 404, and no Run was
+        # admitted behind the refusal.
+        refused = api.submit({"message": "hi", "session_id": "nope"})
+        assert (refused.status, refused.code) == (404, "unknown_session")
+        assert host.snapshot().coordinator_state == "idle"
+    finally:
+        host.close()
+
+
+def test_a_directly_injected_host_reads_sessions_runs_and_the_mainbar() -> None:
+    """One Run, read back through every read route the API serves."""
+    host, _conn = _host(["pong"])
+    host.start()
+    try:
+        api = DashboardApi(facade=host)
+        session_id = api.create_session().session_id
+        outcome = api.submit({"message": "hello", "session_id": session_id})
+        assert outcome.status == 202
+        host.wait(outcome.run_id)
+
+        # The inbox serves the Session; the title is the earliest chat
+        # Run's prompt preview.
+        status, inbox = api.session_inbox({})
+        assert status == 200
+        assert [row["session_id"] for row in inbox["sessions"]] == [session_id]
+        assert inbox["sessions"][0]["title"] == "hello"
+
+        # The runs page and the deep link serve the recorded Run.
+        status, runs_page = api.runs_page({"filter": "chat"})
+        assert status == 200
+        assert [run["run_id"] for run in runs_page["runs"]] == [outcome.run_id]
+        assert runs_page["non_terminal"] is None
+        status, located = api.locate_run(outcome.run_id, {})
+        assert status == 200
+        assert located["runs"][0]["run_id"] == outcome.run_id
+
+        # The Session group's run list carries the reply the Run recorded.
+        status, session_runs = api.session_runs({"session_id": session_id})
+        assert status == 200
+        row = session_runs["runs"][0]
+        assert row["run_id"] == outcome.run_id
+        assert row["reply_preview"] == "pong"
+        assert row["reply_source"] == "web"
+
+        # The MainBar is the same conversation, user and assistant.
+        status, mainbar = api.mainbar({"session_id": session_id})
+        assert status == 200
+        pair = mainbar["pairs"][0]
+        assert pair["run_id"] == outcome.run_id
+        assert pair["user"][0] == {"type": "text", "text": "hello"}
+        assert pair["assistant"][0] == {"type": "text", "text": "pong"}
+    finally:
+        host.close()
+
+
+def test_the_mutation_gate_authority_is_the_real_hosts() -> None:
+    """``try_begin_mutation`` / ``end_mutation`` / ``mutation_in_flight``.
+
+    The three answers the write gate asks for, from the object the gate
+    asks: opening is a reservation and never a wait, a second open is
+    refused in the gate's own vocabulary, and closing reopens.
+    """
+    host, _conn = _host()
+    host.start()
+    try:
+        api = DashboardApi(facade=host)
+        assert host.mutation_in_flight() is False
+        assert host.try_begin_mutation() is None
+        assert host.mutation_in_flight() is True
+        # A second write is refused, not queued -- and the refusal holds
+        # nothing of its own.
+        assert host.try_begin_mutation() == "mutation_in_flight"
+        host.end_mutation()
+        assert host.mutation_in_flight() is False
+        # The reopened gate lets the next write straight through.
+        assert api.create_session().status == 201
+    finally:
+        host.close()
+
+
+def test_the_gate_spans_the_whole_lease_on_the_real_host() -> None:
+    """A Run holding its lease refuses a plain write until recording settles.
+
+    The gate's judgement is the Host's, taken under the lock that decides
+    admission: from ``accepted`` to the end of the lease, ``try_begin_mutation``
+    answers ``mutation_in_flight`` -- and that answer is a refusal, not a
+    reservation of its own.
+    """
+    gate = threading.Event()
+    host, _conn = _host(["pong"], gate=gate)
+    host.start()
+    try:
+        api = DashboardApi(facade=host)
+        session_id = api.create_session().session_id
+        outcome = api.submit({"message": "first", "session_id": session_id})
+        assert outcome.status == 202
+        _wait_until(lambda: host.snapshot().coordinator_state == "running")
+        # The lease is held, so the gate's authority refuses a write...
+        assert host.try_begin_mutation() == "mutation_in_flight"
+        # ...and the refusal left no hold behind: the Run owns the gate.
+        assert host.mutation_in_flight() is False
+        gate.set()
+        host.wait(outcome.run_id)
+        # The lease is back, so the gate opens again for the next write.
+        assert host.try_begin_mutation() is None
+        host.end_mutation()
+    finally:
+        gate.set()
+        host.close()
+
+
+def test_the_read_contracts_hold_on_the_real_host() -> None:
+    """404 and 400 on the read side, against the real store."""
+    host, _conn = _host()
+    host.start()
+    try:
+        api = DashboardApi(facade=host)
+        unknown = (404, {"code": "unknown_session"})
+        assert api.session_messages("nope", {}) == unknown
+        assert api.mainbar({"session_id": "nope"}) == unknown
+        assert api.session_runs({"session_id": "nope"}) == unknown
+        assert api.locate_run("nope", {}) == (404, {"code": "unknown_run"})
+        # Missing and empty are different facts; only absence is a bad
+        # request, refused before any read runs.
+        missing = (400, {"code": "missing_session_id"})
+        assert api.mainbar({}) == missing
+        assert api.session_runs({}) == missing
     finally:
         host.close()
