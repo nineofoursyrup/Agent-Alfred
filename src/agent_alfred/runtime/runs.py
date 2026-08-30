@@ -329,9 +329,6 @@ def _redact_summary(
     """
     if summary is None or redactor is None or summary.prompt_preview is None:
         return summary
-    # prompt_preview was redacted when the Run was accepted; re-redacting on
-    # read is defence in depth under ADR-0003 and idempotent, because a
-    # remembered secret was already replaced by a marker.
     return replace(summary, prompt_preview=redactor.redact_text(
         summary.prompt_preview
     ))
