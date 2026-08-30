@@ -195,12 +195,10 @@ def busy_summary_from(snapshot: RuntimeSnapshot) -> BusySummary | None:
     the lease is still held. A Run that is finished but still pending reads
     "saving", which is the whole point -- it is busy saving, not busy running.
     """
-    from agent_alfred.runtime.runs import classify_purpose
-
     active = snapshot.active_run
     if active is None:
         return None
-    shelf, _known = classify_purpose(active.purpose)
+    shelf, _known = runs.classify_purpose(active.purpose)
     return BusySummary(
         purpose=active.purpose,
         gateway=active.gateway,
