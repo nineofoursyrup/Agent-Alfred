@@ -62,6 +62,7 @@ class _FakeHost:
         self.process_instance_id = "inst-steps"
         self.started = False
         self.closed = False
+        self.mutating = False
 
     def start(self) -> None:
         self._log.append("host.start")
@@ -73,7 +74,21 @@ class _FakeHost:
         return True
 
     def create_session(self) -> str:
+        assert self.mutating
+        self._log.append("session.create")
         return "session-steps"
+
+    def try_begin_mutation(self) -> str | None:
+        self._log.append("mutation.begin")
+        if self.mutating:
+            return "mutation_in_flight"
+        self.mutating = True
+        return None
+
+    def end_mutation(self) -> None:
+        assert self.mutating
+        self._log.append("mutation.end")
+        self.mutating = False
 
 
 class _FakeBroker:
@@ -301,3 +316,6 @@ def test_the_cli_and_serve_paths_share_one_start_up_order(
     # opened the database and built the Host.
     assert serve_log[:3] == ["lock", "bind", "describe"]
     assert cli_log[:3] == ["lock", "bind", "describe"]
+    assert cli_log.index("mutation.begin") < cli_log.index("session.create")
+    assert cli_log.index("session.create") < cli_log.index("mutation.end")
+    assert cli_log.index("mutation.end") < cli_log.index("host.close")
