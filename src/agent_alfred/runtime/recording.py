@@ -34,6 +34,7 @@ from agent_alfred.runtime.work import WorkItem
 from agent_alfred.settings import CONTROLLED_FAILURE_TEXT
 
 _REASON_LIMIT = 500
+_REDACTION_FAILURE_TEXT = "<redaction failed; text withheld>"
 
 
 class RecordingCoordinator(Protocol):
@@ -164,11 +165,16 @@ class RunRecorder:
             run_id=item.run_id,
             purpose=item.request.purpose,
             outcome=outcome,
-            reply_text=None if reply is None else message_plain_text(reply),
-            error=error,
+            reply_text=_redact_projection_text(
+                None if reply is None else message_plain_text(reply),
+                self._redactor,
+            ),
+            error=_redact_projection_text(error, self._redactor),
             recording_state="pending",
             session_id=item.session_id,
-            prompt_preview=item.prompt_preview,
+            prompt_preview=_redact_projection_text(
+                item.prompt_preview, self._redactor
+            ),
         )
         self._coordinator.recording_enter_pending(projection)
         self._coordinator.publish_run_result(
@@ -286,6 +292,24 @@ def _finalize_reason(
         except Exception:
             text = "trace_incomplete"
     return text
+
+
+def _redact_projection_text(
+    text: str | None, redactor: Redactor
+) -> str | None:
+    """Redact browser-visible terminal text before the wire bounds it.
+
+    The Host injects the same central Redactor used by FanOut. Repeating it
+    here is intentionally idempotent for text that was already redacted. A
+    failure withholds only the affected text field with a fixed, secret-free
+    marker; it must neither expose the original nor abort Run settlement.
+    """
+    if text is None:
+        return None
+    try:
+        return redactor.redact_text(text)
+    except Exception:
+        return _REDACTION_FAILURE_TEXT
 
 
 def _insert_log_message(

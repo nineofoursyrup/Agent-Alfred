@@ -19,6 +19,9 @@ import sqlite3
 import threading
 
 from agent_alfred import schema
+from agent_alfred.evals.deterministic._web_broker_test_helpers import (
+    drain_connection,
+)
 from agent_alfred.evals.deterministic._web_runtime_test_helpers import (
     ArmableCaptureFailure,
     FailFinalizeWhen,
@@ -40,14 +43,18 @@ from agent_alfred.gateway.web.api import (
 from agent_alfred.gateway.web.broker import SSEBroker
 from agent_alfred.gateway.web.connection import FakeConnection
 from agent_alfred.gateway.web.state import (
+    SNAPSHOT_TEXT_LIMIT,
     apply_state_patch,
     build_snapshot,
     snapshot_from_payload,
     snapshot_payload,
 )
+from agent_alfred.messages import message_plain_text
+from agent_alfred.redact import Redactor
 from agent_alfred.runtime.snapshot import RuntimeSnapshot
 
 INSTANCE = "proc-runtime"
+_REDACTION_CANARY = "sk-terminal-projection-secret"
 
 # --- the 202 ----------------------------------------------------------------
 
@@ -458,6 +465,22 @@ def _startup_patch(handle) -> dict:
     raise AssertionError("no state_patch in the opening stream")
 
 
+def _state_patches(handle) -> list[dict]:
+    """Every live state patch this already-connected browser received."""
+    patches = []
+    for item in drain_connection(handle):
+        wire = item.wire_bytes()
+        if b"event: state_patch" not in wire:
+            continue
+        body = b"".join(
+            line[len(b"data: ") :]
+            for line in wire.split(b"\n")
+            if line.startswith(b"data: ")
+        )
+        patches.append(json.loads(body.decode("utf-8")))
+    return patches
+
+
 def _wired_broker(**kwargs) -> SSEBroker:
     """The broker assembled the way production wires it, minus threads."""
     return SSEBroker(
@@ -467,6 +490,131 @@ def _wired_broker(**kwargs) -> SSEBroker:
         spawn=_unstarted,
         **kwargs,
     )
+
+
+def test_unrecorded_terminal_reply_is_redacted_before_bounding_on_all_patches(
+) -> None:
+    """The pending and failed browser views never contain reply secrets.
+
+    The canary straddles the wire preview limit: bounding first would leave a
+    raw secret prefix that a later value matcher can no longer recognise.
+    Both the already-open stream and a reconnect read the real broker output.
+    """
+    prefix = "x" * (SNAPSHOT_TEXT_LIMIT - 5)
+    raw_reply = f"{prefix}{_REDACTION_CANARY} and ***"
+    flag = {"armed": False}
+    database = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(database)
+    wrapped = FailFinalizeWhen(database, flag, "finished_at")
+    latch = SelectiveLatch()
+    broker = _wired_broker()
+    host, _conn = build_runtime_host(
+        [raw_reply],
+        conn=wrapped,
+        extra_sinks=[broker],
+        snapshot_listener=broker.publish_state_patch,
+        before_recording_commit=latch,
+        redactor=Redactor((_REDACTION_CANARY,)),
+    )
+    host.start()
+    submitted = None
+    try:
+        session_id = host.create_session()
+        live = broker.connect(
+            connection=FakeConnection(), session_id=session_id
+        )
+        drain_connection(live)
+        latch.arm()
+        submitted = host.submit(_request(message="hello", session_id=session_id))
+        assert submitted.kind == "accepted"
+        assert latch.entered.wait(5.0), "finalizer did not reach recording_pending"
+        assert host.snapshot().coordinator_state == "recording_pending"
+
+        while broker.deliver_next(timeout=0):
+            pass
+        pending_live = next(
+            patch
+            for patch in reversed(_state_patches(live))
+            if patch["coordinator_state"] == "recording_pending"
+        )
+        pending_reconnect = _startup_patch(
+            broker.connect(connection=FakeConnection(), session_id=session_id)
+        )
+        # Redaction shortens the canary before the 2,000-character bound is
+        # applied; the pre-existing marker remains harmless on a second pass.
+        expected = f"{prefix}*** …"
+        assert pending_live["unrecorded_terminal_projection"]["reply_preview"] == (
+            expected
+        )
+        assert pending_reconnect["unrecorded_terminal_projection"][
+            "reply_preview"
+        ] == expected
+
+        flag["armed"] = True
+        latch.release()
+        result = host.wait(submitted.run_id)
+        assert host.snapshot().coordinator_state == "recording_failed"
+        failed = _startup_patch(
+            broker.connect(connection=FakeConnection(), session_id=session_id)
+        )
+        assert failed["unrecorded_terminal_projection"]["reply_preview"] == expected
+        assert message_plain_text(result.reply) == raw_reply
+    finally:
+        latch.release()
+        broker.close(timeout=1.0)
+        host.close()
+
+
+class _ReplyExplodingRedactor(Redactor):
+    """Fail only once the model reply reaches the central redaction seam."""
+
+    def redact_text(self, text: str) -> str:
+        if _REDACTION_CANARY in text:
+            raise RuntimeError("redaction unavailable")
+        return super().redact_text(text)
+
+
+def test_terminal_projection_redaction_failure_withholds_reply_and_settles() -> None:
+    raw_reply = f"reply contains {_REDACTION_CANARY}"
+    latch = SelectiveLatch()
+    broker = _wired_broker()
+    host, _conn = build_runtime_host(
+        [raw_reply],
+        extra_sinks=[broker],
+        snapshot_listener=broker.publish_state_patch,
+        before_recording_commit=latch,
+        redactor=_ReplyExplodingRedactor((_REDACTION_CANARY,)),
+    )
+    host.start()
+    submitted = None
+    try:
+        session_id = host.create_session()
+        latch.arm()
+        submitted = host.submit(_request(message="hello", session_id=session_id))
+        assert submitted.kind == "accepted"
+        assert latch.entered.wait(5.0), "finalizer did not reach recording_pending"
+        assert host.snapshot().coordinator_state == "recording_pending"
+        pending = _startup_patch(
+            broker.connect(connection=FakeConnection(), session_id=session_id)
+        )
+        assert pending["unrecorded_terminal_projection"]["reply_preview"] == (
+            "<redaction failed; text withheld>"
+        )
+
+        latch.release()
+        result = host.wait(submitted.run_id)
+        assert host.snapshot().coordinator_state == "recording_failed"
+        failed = _startup_patch(
+            broker.connect(connection=FakeConnection(), session_id=session_id)
+        )
+        assert failed["unrecorded_terminal_projection"]["reply_preview"] == (
+            "<redaction failed; text withheld>"
+        )
+        assert message_plain_text(result.reply) == raw_reply
+    finally:
+        latch.release()
+        broker.close(timeout=1.0)
+        host.close()
 
 
 def test_pending_snapshot_keeps_unrecorded_terminal_outcome() -> None:

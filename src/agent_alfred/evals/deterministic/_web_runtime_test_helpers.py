@@ -26,6 +26,7 @@ class SelectiveLatch:
     def __init__(self):
         self._gate = threading.Event()
         self._gate.set()
+        self.entered = threading.Event()
 
     def arm(self) -> None:
         self._gate.clear()
@@ -34,6 +35,7 @@ class SelectiveLatch:
         self._gate.set()
 
     def wait(self, timeout=None):
+        self.entered.set()
         return self._gate.wait(timeout)
 
 
@@ -142,6 +144,7 @@ def build_runtime_host(
     extra_sinks=None,
     snapshot_listener=None,
     snapshot_provider=None,
+    redactor=None,
 ):
     database = conn
     if database is None:
@@ -162,6 +165,7 @@ def build_runtime_host(
         before_recording_failed=before_recording_failed,
         snapshot_listener=snapshot_listener,
         snapshot_provider=snapshot_provider,
+        redactor=redactor,
     )
     return host, database
 
