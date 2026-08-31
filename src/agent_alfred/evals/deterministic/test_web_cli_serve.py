@@ -6,6 +6,8 @@ import io
 import socket
 import threading
 
+import pytest
+
 from agent_alfred.clock import FakeClock
 from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
     free_loopback_port,
@@ -325,6 +327,21 @@ class _CloseProgressRuntime:
         return closed
 
 
+class _StartupRollbackErrorRuntime:
+    """A refused start whose first rollback step itself raises."""
+
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    def start(self) -> None:
+        self.calls.append("start")
+        raise RuntimeError("bind refused")
+
+    def close(self) -> bool:
+        self.calls.append("close")
+        raise RuntimeError("secret rollback payload")
+
+
 class _InterruptingWaiter(threading.Event):
     def __init__(self) -> None:
         super().__init__()
@@ -503,6 +520,127 @@ def test_start_failure_advances_retryable_rollback_until_it_finishes(
     assert runtime.close_retried.is_set()
     assert runtime.close_calls == 3
     assert runtime.owns_runtime is False
+
+
+def test_main_reports_start_failure_when_rollback_close_raises(
+    tmp_path, capsys
+) -> None:
+    """A rollback error cannot replace the default CLI's startup reason."""
+    from agent_alfred.gateway import cli as cli_module
+
+    runtime = _StartupRollbackErrorRuntime()
+
+    assert (
+        cli_module.main(
+            ["--state-dir", str(tmp_path), "-m", "hi"],
+            build=lambda **kwargs: runtime,
+        )
+        == 1
+    )
+    captured = capsys.readouterr()
+    assert captured.out.splitlines() == [
+        "dashboard unavailable: bind refused",
+        "dashboard shutdown incomplete after close error; "
+        "runtime resources remain owned",
+    ]
+    assert "secret rollback payload" not in captured.out
+    assert captured.err == ""
+    assert runtime.calls == ["start", "close"]
+
+
+def test_serve_reports_start_failure_when_rollback_close_raises(
+    tmp_path, capsys
+) -> None:
+    """The serve seam writes both safe reports to its requested stream."""
+    from agent_alfred.gateway import cli as cli_module
+
+    runtime = _StartupRollbackErrorRuntime()
+    out = io.StringIO()
+
+    assert (
+        cli_module.serve_dashboard(
+            state_dir=tmp_path,
+            settings=Settings(),
+            out=out,
+            stop=threading.Event(),
+            build=lambda **kwargs: runtime,
+        )
+        == 1
+    )
+    printed = out.getvalue()
+    assert printed.splitlines() == [
+        "dashboard unavailable: bind refused",
+        "dashboard shutdown incomplete after close error; "
+        "runtime resources remain owned",
+    ]
+    assert "secret rollback payload" not in printed
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == ""
+    assert runtime.calls == ["start", "close"]
+
+
+@pytest.mark.parametrize(
+    "control",
+    [KeyboardInterrupt(), SystemExit("stop")],
+    ids=["KeyboardInterrupt", "SystemExit"],
+)
+def test_start_process_control_exceptions_keep_unwinding(
+    tmp_path, control: BaseException
+) -> None:
+    """Process control is not converted into dashboard unavailability."""
+    from agent_alfred.gateway import cli as cli_module
+
+    class Runtime:
+        def start(self) -> None:
+            raise control
+
+        @staticmethod
+        def close() -> bool:
+            raise AssertionError("control flow was swallowed")
+
+    with pytest.raises(type(control)) as caught:
+        cli_module.serve_dashboard(
+            state_dir=tmp_path,
+            settings=Settings(),
+            out=io.StringIO(),
+            stop=threading.Event(),
+            build=lambda **kwargs: Runtime(),
+        )
+    assert caught.value is control
+
+
+@pytest.mark.parametrize(
+    "control",
+    [KeyboardInterrupt(), SystemExit("stop")],
+    ids=["KeyboardInterrupt", "SystemExit"],
+)
+def test_rollback_process_control_exceptions_keep_unwinding(
+    tmp_path, control: BaseException
+) -> None:
+    """The safe rollback report handles errors, not process control."""
+    from agent_alfred.gateway import cli as cli_module
+
+    class Runtime:
+        @staticmethod
+        def start() -> None:
+            raise RuntimeError("bind refused")
+
+        @staticmethod
+        def close() -> bool:
+            raise control
+
+    out = io.StringIO()
+    with pytest.raises(type(control)) as caught:
+        cli_module.serve_dashboard(
+            state_dir=tmp_path,
+            settings=Settings(),
+            out=out,
+            stop=threading.Event(),
+            build=lambda **kwargs: Runtime(),
+        )
+    assert caught.value is control
+    assert out.getvalue() == "dashboard unavailable: bind refused\n"
 
 
 def test_permanently_incomplete_close_is_an_explicit_cli_failure(tmp_path) -> None:

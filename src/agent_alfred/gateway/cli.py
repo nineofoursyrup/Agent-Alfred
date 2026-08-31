@@ -279,10 +279,10 @@ def _start_or_report(runtime: Any, out: TextIO) -> int | None:
     """
     try:
         runtime.start()
-    except BaseException as exc:  # noqa: BLE001 - reported, then closed
-        _close_runtime(runtime, out)
+    except Exception as exc:
         out.write(f"dashboard unavailable: {exc}\n")
         out.flush()
+        _close_runtime(runtime, out)
         return 1
     return None
 
@@ -295,9 +295,20 @@ def _close_runtime(runtime: Any, out: TextIO) -> bool:
     resources needed by a worker or stream and the same owner must ask again.
     A fixed attempt budget avoids an unbounded shutdown loop; exhausting it
     leaves ownership untouched and gives the CLI an explicit failure status.
+    An ordinary close error has the same ownership meaning, but its detail is
+    not safe user output; process-control exceptions continue to unwind.
     """
     for _attempt in range(_CLOSE_PROGRESS_ATTEMPTS):
-        if runtime.close():
+        try:
+            close_complete = runtime.close()
+        except Exception:
+            out.write(
+                "dashboard shutdown incomplete after close error; "
+                "runtime resources remain owned\n"
+            )
+            out.flush()
+            return False
+        if close_complete:
             return True
     out.write(
         "dashboard shutdown incomplete after "
