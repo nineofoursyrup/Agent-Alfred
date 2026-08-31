@@ -47,18 +47,21 @@ class ExecutionCoordinator(Protocol):
         self, started_at: str
     ) -> ActiveRunSummary | None: ...
 
-    def execution_note_step_started(
-        self, run_id: str, step_index: int
-    ) -> None: ...
+    def execution_publish_step_started(
+        self,
+        fanout: FanOutSink,
+        payload: StepStarted,
+        envelope: EventEnvelope | None,
+    ) -> SequencedEvent: ...
 
 
 class _ExecutionEvents:
-    """Publish execution events, then project published Steps into the Host.
+    """Publish Steps through the Host-owned visibility boundary.
 
     The FanOut remains the publication authority for domain events.  Only
-    after it returns a sequenced ``step.started`` does the Host advance its
-    bounded active-Run snapshot, so HTTP can never claim a Step that was not
-    published.  All other events pass through unchanged.
+    ``step.started`` advances the bounded active-Run snapshot at the same
+    visibility boundary as its FanOut commit. All other events pass through
+    unchanged.
     """
 
     def __init__(
@@ -70,12 +73,11 @@ class _ExecutionEvents:
     def emit(
         self, payload: EventPayload, envelope: EventEnvelope | None = None
     ) -> SequencedEvent:
-        published = self._fanout.emit(payload, envelope)
-        if isinstance(published.payload, StepStarted):
-            self._coordinator.execution_note_step_started(
-                published.envelope.run_id, published.payload.step_index
+        if isinstance(payload, StepStarted):
+            return self._coordinator.execution_publish_step_started(
+                self._fanout, payload, envelope
             )
-        return published
+        return self._fanout.emit(payload, envelope)
 
     def bind_origin(self, envelope: EventEnvelope | None) -> None:
         self._fanout.bind_origin(envelope)

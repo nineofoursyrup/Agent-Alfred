@@ -8,7 +8,7 @@ import time
 
 from agent_alfred import schema
 from agent_alfred.clock import FakeClock
-from agent_alfred.events import CapturingSink, FanOutSink
+from agent_alfred.events import CapturingSink, FanOutSink, PostCommit
 from agent_alfred.gateway.web.api import (
     DashboardApi,
 )
@@ -87,6 +87,25 @@ class StepStartedLatch(CapturingSink):
         super().commit(prepared, event)
         if event.payload.name == "step.started":
             self.published.set()
+
+
+class StepStartedPostCommitLatch(CapturingSink):
+    """Pause after ``step.started`` is committed by the real FanOut."""
+
+    def __init__(self):
+        super().__init__(name="step-post-commit-latch", flush_at_run_end=True)
+        self.committed = threading.Event()
+        self._release = threading.Event()
+
+    def commit(self, prepared, event):
+        super().commit(prepared, event)
+        if event.payload.name != "step.started":
+            return None
+        self.committed.set()
+        return PostCommit(self._release.wait)
+
+    def release(self) -> None:
+        self._release.set()
 
 
 def wait_until(predicate, timeout: float = 5.0) -> None:

@@ -12,7 +12,13 @@ from dataclasses import replace
 
 from agent_alfred import schema
 from agent_alfred.clock import Clock, format_instant
-from agent_alfred.events import FanOutSink, Notice
+from agent_alfred.events import (
+    EventEnvelope,
+    FanOutSink,
+    Notice,
+    SequencedEvent,
+    StepStarted,
+)
 from agent_alfred.loop.assistant import Assistant, LoopResult
 from agent_alfred.model import ModelClientFactory
 from agent_alfred.redact import Redactor
@@ -109,6 +115,7 @@ class RuntimeHost:
         self._assistant = Assistant(clock=clock, settings=settings)
         self._states = RunStateStore(process_instance_id, listener=snapshot_listener)
         self._lock = threading.Lock()
+        self._fanout.bind_projection_boundary(self._lock)
         # Admission, execution and recording decisions move under self._lock.
         # The lifecycle below moves under its own lock, and the two are only
         # ever taken in this order (never the reverse), because a lifecycle
@@ -203,7 +210,8 @@ class RuntimeHost:
         return self._start_error
 
     def snapshot(self) -> RuntimeSnapshot:
-        return self._states.get()
+        with self._lock:
+            return self._states.get()
 
     def start(self) -> None:
         """Bring the Host up exactly once.
@@ -538,20 +546,35 @@ class RuntimeHost:
             self._states.replace(coordinator_state="running", active_run=summary)
         return summary
 
-    def execution_note_step_started(self, run_id: str, step_index: int) -> None:
-        """Project one already-published Step into the active Run snapshot."""
-        with self._lock:
+    def execution_publish_step_started(
+        self,
+        fanout: FanOutSink,
+        payload: StepStarted,
+        envelope: EventEnvelope | None,
+    ) -> SequencedEvent:
+        """Commit a Step and expose its projection as one observable fact."""
+
+        def project(published: SequencedEvent) -> None:
             summary = self._active_summary
             if (
                 self._coord != "running"
                 or summary is None
-                or summary.run_id != run_id
+                or summary.run_id != published.envelope.run_id
             ):
                 return
-            self._active_summary = replace(summary, current_step=step_index)
+            self._active_summary = replace(
+                summary, current_step=published.payload.step_index
+            )
             self._states.replace(
                 coordinator_state="running", active_run=self._active_summary
             )
+
+        return fanout.emit_linearized(
+            payload,
+            envelope,
+            boundary=self._lock,
+            after_commit=project,
+        )
 
     # -- recording-settlement transitions -----------------------------------
 

@@ -30,6 +30,7 @@ import queue
 import threading
 import time
 from collections.abc import Callable
+from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -379,6 +380,7 @@ class SSEBroker:
             max_frames=max_ingress_frames, max_bytes=max_ingress_bytes
         )
         self._lock = threading.Lock()
+        self._projection_boundary: AbstractContextManager[object] | None = None
         self._connections: list[ConnectionHandle] = []
         self._ingress_dropped = 0
         self._run_start_seq: dict[str, int] = {}
@@ -440,6 +442,18 @@ class SSEBroker:
         """
         with self._lock:
             self._session_is_valid = check
+
+    def bind_projection_boundary(
+        self, boundary: AbstractContextManager[object]
+    ) -> None:
+        """Keep opening snapshots outside a Step publication boundary.
+
+        Connection capture and registration take this outer boundary before
+        the broker lock. Event publication uses the same order, so neither
+        side reverses locks; startup encoding remains outside both.
+        """
+        with self._lock:
+            self._projection_boundary = boundary
 
     # -- EventSink ---------------------------------------------------------
 
@@ -777,7 +791,12 @@ class SSEBroker:
         )
         refused = False
         while True:
-            with self._lock:
+            boundary = (
+                nullcontext()
+                if self._projection_boundary is None
+                else self._projection_boundary
+            )
+            with boundary, self._lock:
                 if self._stopping or self._closed:
                     # A broker that is closing accepts nothing new: a writer
                     # started now would never be told to stop by anyone but
@@ -839,7 +858,12 @@ class SSEBroker:
             )
             startup.extend(verdict.entries)
             built = tuple(startup)
-            with self._lock:
+            boundary = (
+                nullcontext()
+                if self._projection_boundary is None
+                else self._projection_boundary
+            )
+            with boundary, self._lock:
                 if self._stopping or self._closed:
                     refused = True
                     break

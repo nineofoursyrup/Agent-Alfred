@@ -24,6 +24,7 @@ from agent_alfred.evals.deterministic._web_runtime_test_helpers import (
     FailFinalizeWhen,
     SelectiveLatch,
     StepStartedLatch,
+    StepStartedPostCommitLatch,
     build_runtime_host,
     dashboard_api,
     refused,
@@ -136,6 +137,50 @@ def test_published_step_is_the_same_fact_in_http_busy_and_sse_snapshot() -> None
 
         assert step_started.published.wait(5.0), "step.started was not published"
         assert authoritative_step.wait(5.0), "Host Step snapshot did not advance"
+        patch = _startup_patch(
+            broker.connect(connection=FakeConnection(), session_id=session_id)
+        )
+        assert patch["active_run"]["current_step"] == 0
+        assert patch["step"]["step_index"] == 0
+
+        second = api.submit({"message": "second", "session_id": session_id})
+        assert second.status == 409
+        assert second.busy is not None
+        assert second.busy.current_step == 0
+        assert second.busy.current_step == patch["step"]["step_index"]
+    finally:
+        gate.set()
+        if first.run_id:
+            host.wait(first.run_id)
+        broker.close(timeout=1.0)
+        host.close()
+
+
+def test_committed_step_is_already_authoritative_for_http_and_sse() -> None:
+    """The FanOut commit and public Step projection are one boundary.
+
+    A post-commit action pauses the worker after every real sink has accepted
+    ``step.started`` but before ``emit`` returns.  HTTP and a newly connected
+    SSE client must already observe that same committed Step at this instant.
+    """
+    gate = threading.Event()
+    step_started = StepStartedPostCommitLatch()
+    broker = _wired_broker()
+    host, _conn = build_runtime_host(
+        ["pong"],
+        gate=gate,
+        extra_sinks=[broker, step_started],
+        snapshot_listener=broker.publish_state_patch,
+    )
+    host.start()
+    first = None
+    try:
+        session_id = host.create_session()
+        api = dashboard_api(host)
+        first = api.submit({"message": "first", "session_id": session_id})
+        assert first.status == 202
+        assert step_started.committed.wait(5.0), "step.started was not committed"
+
         second = api.submit({"message": "second", "session_id": session_id})
         assert second.status == 409
         assert second.busy is not None
@@ -146,10 +191,10 @@ def test_published_step_is_the_same_fact_in_http_busy_and_sse_snapshot() -> None
         )
         assert patch["active_run"]["current_step"] == 0
         assert patch["step"]["step_index"] == 0
-        assert second.busy.current_step == patch["step"]["step_index"]
     finally:
+        step_started.release()
         gate.set()
-        if first.run_id:
+        if first is not None and first.run_id:
             host.wait(first.run_id)
         broker.close(timeout=1.0)
         host.close()

@@ -5,6 +5,7 @@ from __future__ import annotations
 import threading
 import uuid
 from collections.abc import Callable, Sequence
+from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass, is_dataclass, replace
 from dataclasses import fields as dc_fields
 from decimal import Decimal
@@ -428,11 +429,52 @@ class FanOutSink:
     def bind_redactor(self, redactor: Any | None) -> None:
         self._redactor = redactor
 
+    def bind_projection_boundary(
+        self, boundary: AbstractContextManager[object]
+    ) -> None:
+        """Share a peer projection's read boundary with interested sinks."""
+        for sink in self._sinks:
+            bind = getattr(sink, "bind_projection_boundary", None)
+            if bind is not None:
+                bind(boundary)
+
     def bind_origin(self, envelope: EventEnvelope | None) -> None:
         self._origin = envelope
 
     def emit(
         self, payload: EventPayload, envelope: EventEnvelope | None = None
+    ) -> SequencedEvent:
+        return self._emit(payload, envelope)
+
+    def emit_linearized(
+        self,
+        payload: EventPayload,
+        envelope: EventEnvelope | None,
+        *,
+        boundary: AbstractContextManager[object],
+        after_commit: Callable[[SequencedEvent], None],
+    ) -> SequencedEvent:
+        """Publish and advance a peer projection under one read boundary.
+
+        Sink preparation happens before ``boundary``.  Sink commits keep
+        their existing short FanOut critical section; ``after_commit`` runs
+        only after that lock is released, while readers sharing ``boundary``
+        are still excluded.  Post-commit work remains outside both locks.
+        """
+        return self._emit(
+            payload,
+            envelope,
+            boundary=boundary,
+            after_commit=after_commit,
+        )
+
+    def _emit(
+        self,
+        payload: EventPayload,
+        envelope: EventEnvelope | None,
+        *,
+        boundary: AbstractContextManager[object] | None = None,
+        after_commit: Callable[[SequencedEvent], None] | None = None,
     ) -> SequencedEvent:
         if envelope is None:
             envelope = self._bound_envelope(payload)
@@ -450,7 +492,12 @@ class FanOutSink:
                 unsequenced = self._redactor.redact(unsequenced)
             except Exception:
                 unsequenced = _fail_closed_event(unsequenced)
-        return self._publish(unsequenced, notify_disabled=True)
+        return self._publish(
+            unsequenced,
+            notify_disabled=True,
+            boundary=boundary,
+            after_commit=after_commit,
+        )
 
     def _bound_envelope(self, payload: EventPayload) -> EventEnvelope:
         origin = self._origin
@@ -467,7 +514,12 @@ class FanOutSink:
         return replace(origin, attempt_id=attempt_id)
 
     def _publish(
-        self, unsequenced: UnsequencedEvent, *, notify_disabled: bool
+        self,
+        unsequenced: UnsequencedEvent,
+        *,
+        notify_disabled: bool,
+        boundary: AbstractContextManager[object] | None = None,
+        after_commit: Callable[[SequencedEvent], None] | None = None,
     ) -> SequencedEvent:
         prepared: list[tuple[EventSink, object]] = []
         # Run-local discoveries wait for a normal publish to be told about;
@@ -510,51 +562,62 @@ class FanOutSink:
                     )
                 continue
             prepared.append((sink, prep))
-        with self._lock:
-            seq = self._seq
-            self._seq += 1
-            sequenced = SequencedEvent(
-                seq=seq,
-                process_instance_id=self._process_instance_id,
-                event_id=unsequenced.event_id,
-                envelope=unsequenced.envelope,
-                payload=unsequenced.payload,
-                trace_policy=unsequenced.trace_policy,
-                replayable=unsequenced.replayable,
-            )
-            for sink, prep in prepared:
-                if sink.name in self._process_disabled:
-                    # A concurrently published fatal already reported why
-                    # this sink is gone; skipping quietly is the contract,
-                    # not a new failure to book.
-                    continue
-                if sink.name in self._disabled.get(run_id, set()):
-                    self._note_sink_failure_locked(
-                        run_id,
-                        sink,
-                        "commit_skipped",
-                        unsequenced.trace_policy,
-                    )
-                    continue
-                try:
-                    post_commit = sink.commit(prep, sequenced)
-                except Exception as exc:
-                    stage_reported = self._note_sink_call_failed_locked(
-                        run_id,
-                        sink,
-                        "commit",
-                        unsequenced.trace_policy,
-                        exc,
-                        already_reported,
-                    )
-                    if stage_reported is not None:
-                        _book_failure(
-                            exc, sink.name, stage_reported,
-                            newly_disabled, fatal_notices,
+        boundary_context = nullcontext() if boundary is None else boundary
+        linearize_error: Exception | None = None
+        with boundary_context:
+            with self._lock:
+                seq = self._seq
+                self._seq += 1
+                sequenced = SequencedEvent(
+                    seq=seq,
+                    process_instance_id=self._process_instance_id,
+                    event_id=unsequenced.event_id,
+                    envelope=unsequenced.envelope,
+                    payload=unsequenced.payload,
+                    trace_policy=unsequenced.trace_policy,
+                    replayable=unsequenced.replayable,
+                )
+                for sink, prep in prepared:
+                    if sink.name in self._process_disabled:
+                        # A concurrently published fatal already reported why
+                        # this sink is gone; skipping quietly is the contract,
+                        # not a new failure to book.
+                        continue
+                    if sink.name in self._disabled.get(run_id, set()):
+                        self._note_sink_failure_locked(
+                            run_id,
+                            sink,
+                            "commit_skipped",
+                            unsequenced.trace_policy,
                         )
-                else:
-                    if post_commit is not None:
-                        post_commits.append((sink, post_commit))
+                        continue
+                    try:
+                        post_commit = sink.commit(prep, sequenced)
+                    except Exception as exc:
+                        stage_reported = self._note_sink_call_failed_locked(
+                            run_id,
+                            sink,
+                            "commit",
+                            unsequenced.trace_policy,
+                            exc,
+                            already_reported,
+                        )
+                        if stage_reported is not None:
+                            _book_failure(
+                                exc, sink.name, stage_reported,
+                                newly_disabled, fatal_notices,
+                            )
+                    else:
+                        if post_commit is not None:
+                            post_commits.append((sink, post_commit))
+            if after_commit is not None:
+                try:
+                    after_commit(sequenced)
+                except Exception as exc:
+                    # Publication is already irrevocable.  Preserve the old
+                    # propagation semantics, but first discharge every
+                    # post-commit action owed by that committed event.
+                    linearize_error = exc
         # These callbacks are produced by constant-time commit bookkeeping
         # for work that is safe only after the publication order has been
         # linearized. They must run after the FanOut lock, or a callback that
@@ -606,6 +669,8 @@ class FanOutSink:
                 level="error",
                 detail=(("sink", name), ("stage", stage)),
             )
+        if linearize_error is not None:
+            raise linearize_error
         return sequenced
 
     def _note_sink_call_failed_locked(
