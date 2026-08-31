@@ -63,6 +63,7 @@ from agent_alfred.gateway.web.replay import (
     classify_cursor,
 )
 from agent_alfred.gateway.web.state import build_snapshot, snapshot_payload
+from agent_alfred.runtime.recording import RecordingUnavailable
 from agent_alfred.runtime.snapshot import RuntimeSnapshot
 
 # The decided capacity table. Constructor defaults, not user knobs.
@@ -88,6 +89,14 @@ _DRAIN_TIMEOUT_S = 2.0
 _MAX_PATCH_CAPTURES = 4
 
 SessionValidity = Literal["valid", "invalid", "unavailable"]
+
+
+@dataclass(frozen=True)
+class StreamAdmissionProof:
+    """The one Session fact established before an HTTP stream is opened."""
+
+    session_id: str | None
+    session_valid: bool
 
 
 def _normalize_session_validity(value: bool | SessionValidity) -> SessionValidity:
@@ -501,6 +510,16 @@ class SSEBroker:
         with self._lock:
             self._session_is_valid = check
 
+    def preflight_session(self, session_id: str | None) -> StreamAdmissionProof:
+        """Establish one immutable Session fact before response ownership moves."""
+        validity = _normalize_session_validity(self._session_is_valid(session_id))
+        if validity == "unavailable":
+            raise RecordingUnavailable("recording store is unavailable")
+        return StreamAdmissionProof(
+            session_id=session_id,
+            session_valid=validity == "valid",
+        )
+
     def bind_projection_boundary(
         self, boundary: AbstractContextManager[object]
     ) -> None:
@@ -791,10 +810,18 @@ class SSEBroker:
         session_id: str | None = None,
         max_frames: int | None = None,
         max_bytes: int | None = None,
+        admission: StreamAdmissionProof | None = None,
     ) -> ConnectionHandle:
         """Build and register a stream, retaining ownership until its writer exists."""
         acquisition = _ConnectStartup(connection=connection)
         try:
+            proof = (
+                self.preflight_session(session_id)
+                if admission is None
+                else admission
+            )
+            if proof.session_id != session_id:
+                raise ValueError("stream admission proof does not match session_id")
             return self._connect_before_writer(
                 connection=connection,
                 cursor=cursor,
@@ -802,6 +829,7 @@ class SSEBroker:
                 max_frames=max_frames,
                 max_bytes=max_bytes,
                 acquisition=acquisition,
+                admission=proof,
             )
         except BaseException:
             try:
@@ -822,6 +850,7 @@ class SSEBroker:
         max_frames: int | None,
         max_bytes: int | None,
         acquisition: _ConnectStartup,
+        admission: StreamAdmissionProof,
     ) -> ConnectionHandle:
         """Register one connection and build its opening stream.
 
@@ -862,9 +891,6 @@ class SSEBroker:
         frames, shared by reference -- nothing is re-encoded and nothing is
         copied.
         """
-        # Read before the lock: this is a database question, and the
-        # critical sections below are not allowed to do IO.
-        validity = _normalize_session_validity(self._session_is_valid(session_id))
         handle = ConnectionHandle(
             queue=ConnectionQueue(
                 max_frames=(
@@ -880,36 +906,13 @@ class SSEBroker:
             ),
             connection=connection,
             session_id=session_id,
-            session_valid=(
-                True
-                if validity == "valid"
-                else False if validity == "invalid" else None
-            ),
+            session_valid=admission.session_valid,
         )
         acquisition.handle = handle
-        if validity == "unavailable":
-            # The HTTP handler has already sent 200 by the time ownership
-            # reaches the broker. A silent close would therefore erase the
-            # failure. Give this connection one bounded, cursor-free notice
-            # and close it; no snapshot is fabricated from an unknown fact.
-            handle.startup = (
-                frames.retry_frame(frames.DEFAULT_RETRY_MS),
-                frames.recording_unavailable_notice(),
-            )
-            handle.queue.stop()
-            unavailable_refused = False
-            with self._lock:
-                if self._stopping or self._closed:
-                    unavailable_refused = True
-                else:
-                    self._connections.append(handle)
-                    self._registrations += 1
-                    acquisition.registration_open = True
-            if unavailable_refused:
-                acquisition.abort(self)
-                return handle
+        if type(admission.session_valid) is not bool:
+            raise TypeError("stream admission proof must carry a boolean verdict")
         else:
-            session_valid = validity == "valid"
+            session_valid = admission.session_valid
             refused = False
             for _ in range(_MAX_PATCH_CAPTURES):
                 boundary = (

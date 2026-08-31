@@ -497,21 +497,30 @@ def test_a_transport_notice_never_advances_the_cursor(server) -> None:
             assert b"id: " not in frame
 
 
-def test_an_unverifiable_session_gets_an_observable_sse_refusal(server) -> None:
-    """A 200 stream never turns recording unavailability into a silent EOF."""
+def test_an_unverifiable_session_is_refused_before_stream_ownership(
+    server, monkeypatch
+) -> None:
+    spawned_writers = []
+    real_spawn = server.broker._spawn
+    monkeypatch.setattr(
+        server.broker,
+        "_spawn",
+        lambda target: spawned_writers.append(target) or real_spawn(target),
+    )
     server.broker.bind_session_check(lambda _session_id: "unavailable")
 
-    head, body = _raw_stream(
-        server,
-        "",
-        lambda data: b'"code":"recording_unavailable"' in data,
-        path="/api/events?session_id=never-committed",
+    head, body = _request(
+        server.port,
+        _get(server.port, "/api/events?session_id=never-committed"),
     )
 
-    assert head.startswith(b"HTTP/1.1 200")
-    assert b"event: transport_notice\n" in body
-    assert b'"code":"recording_unavailable"' in body
-    assert b"event: state_patch" not in body
+    assert head.startswith(b"HTTP/1.1 503")
+    assert _headers_of(head)["content-type"] == "application/json; charset=utf-8"
+    _assert_no_cross_origin_permission(head)
+    assert json.loads(body) == {"code": "recording_unavailable"}
+    assert spawned_writers == []
+    assert server.broker.connections == ()
+    assert server.broker.registrations_in_flight == 0
 
 
 # --- the defences, on the wire ----------------------------------------------

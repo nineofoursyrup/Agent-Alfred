@@ -10,6 +10,7 @@ import threading
 import time
 import weakref
 from dataclasses import replace
+from typing import get_args
 
 import pytest
 
@@ -71,6 +72,41 @@ from agent_alfred.runtime.snapshot import (
 INSTANCE = "inst-test"
 
 # --- connect and reconnect -------------------------------------------------
+
+
+def test_transport_notice_code_is_the_decided_two_value_closed_set() -> None:
+    assert set(get_args(frames.TransportNoticeCode)) == {
+        "replay_gap",
+        "deltas_dropped",
+    }
+
+
+def test_a_preflight_proof_is_the_only_session_fact_used_to_open_the_stream() -> None:
+    answers = iter(("valid", "unavailable"))
+    queries: list[str | None] = []
+
+    def validity(session_id: str | None):
+        queries.append(session_id)
+        return next(answers)
+
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=validity,
+    )
+    proof = broker.preflight_session("s1")
+
+    handle = broker.connect(
+        connection=FakeConnection(),
+        session_id="s1",
+        admission=proof,
+    )
+
+    assert queries == ["s1"]
+    assert handle.session_valid is True
+    assert handle.startup[0].wire_bytes() == b"retry: 1000\n\n"
+    assert handle.startup[1].wire_bytes().startswith(b"id: inst-test:")
+    assert b"event: state_patch" in handle.startup[2].wire_bytes()
 
 
 def test_connect_closes_the_connection_when_session_validation_raises() -> None:
@@ -1062,10 +1098,7 @@ class _GatedSpawn:
 
 
 @pytest.mark.parametrize("failure", [RuntimeError("spawn failed"), KeyboardInterrupt()])
-@pytest.mark.parametrize("session_validity", ["valid", "unavailable"])
-def test_failed_writer_handoff_revokes_the_whole_registration(
-    failure, session_validity
-) -> None:
+def test_failed_writer_handoff_revokes_the_whole_registration(failure) -> None:
     """A failed spawn propagates unchanged and leaves no pre-writer owner."""
     target_ref = None
 
@@ -1077,7 +1110,7 @@ def test_failed_writer_handoff_revokes_the_whole_registration(
     broker = SSEBroker(
         process_instance_id=INSTANCE,
         snapshot=runtime_snapshot(),
-        session_is_valid=lambda _sid: session_validity,
+        session_is_valid=lambda _sid: "valid",
         spawn=fail_spawn,
     )
     connection = FakeConnection()

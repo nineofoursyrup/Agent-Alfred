@@ -32,6 +32,7 @@ from agent_alfred.gateway.web.guard import (
     RequestGuard,
 )
 from agent_alfred.gateway.web.replay import CursorText
+from agent_alfred.runtime.recording import RecordingUnavailable
 
 EVENTS_PATH = "/api/events"
 ENTRY_PATH = "/api/entry"
@@ -308,6 +309,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
         the peer -- which is the only way a stream ends.
         """
         context = self._context
+        session_id = self._params().get("session_id")
+        try:
+            admission = context.broker.preflight_session(session_id)
+        except RecordingUnavailable:
+            self._send(503, {"code": "recording_unavailable"})
+            return
         self.send_response(200)
         for name, value in BASE_HEADERS:
             self.send_header(name, value)
@@ -316,11 +323,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
         self.end_headers()
         connection = SocketConnection(self.connection, self.wfile)
         cursor = self.headers.get("last-event-id")
-        session_id = self._params().get("session_id")
         handle = context.broker.connect(
             connection=connection,
             cursor=CursorText(cursor) if cursor else None,
             session_id=session_id,
+            admission=admission,
         )
         # The writer closes the socket; this thread must not touch it again,
         # so it only waits for the writer to say it is done.

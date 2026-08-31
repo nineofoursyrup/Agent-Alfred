@@ -284,6 +284,7 @@ def test_finalizer_rollback_failure_keeps_the_sse_terminal_projection_recoverabl
         assert accepted.status == 202
         assert accepted.run_id is not None
         assert latch.entered.wait(5.0), "finalizer did not reach its commit boundary"
+        reconnect_proof = broker.preflight_session(session_id)
 
         conn.fail_next_commit = True
         conn.fail_next_rollback = True
@@ -304,7 +305,9 @@ def test_finalizer_rollback_failure_keeps_the_sse_terminal_projection_recoverabl
         ] == expected
 
         reconnect = broker.connect(
-            connection=FakeConnection(), session_id=session_id
+            connection=FakeConnection(),
+            session_id=session_id,
+            admission=reconnect_proof,
         )
         startup_wire = [item.wire_bytes() for item in reconnect.startup]
         assert startup_wire[0] == b"retry: 1000\n\n"
@@ -327,12 +330,10 @@ def test_finalizer_rollback_failure_keeps_the_sse_terminal_projection_recoverabl
         )
         assert conn.execute_calls == calls_before_transport
 
-        unverifiable = broker.connect(
-            connection=FakeConnection(), session_id="never-committed"
-        )
-        refusal = b"".join(item.wire_bytes() for item in unverifiable.startup)
-        assert b'"code":"recording_unavailable"' in refusal
-        assert b"event: state_patch" not in refusal
+        with pytest.raises(
+            RecordingUnavailable, match="recording store is unavailable"
+        ):
+            broker.preflight_session("never-committed")
 
         calls_before_reads = conn.execute_calls
         _assert_poisoned_database_reads_fail_closed(
