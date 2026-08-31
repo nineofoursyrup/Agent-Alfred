@@ -161,13 +161,7 @@ class PreparedFrames:
     must_deliver: bool = False
 
     def ingress_cost(self) -> FrameCost:
-        """What this thing costs a queue that counts frames *and* bytes.
-
-        Named rather than derived at the call site so that a queue cannot
-        accidentally count one of the two: every queue in the Dashboard
-        budgets both, and an item that was admitted on frames alone would be
-        the one that quietly breaks the byte promise.
-        """
+        """Compute this prepared item's cost from its frame count and byte size."""
         return FrameCost(frames=len(self.frames), encoded_bytes=self.byte_size)
 
     def wire_frames(self) -> tuple[bytes, ...]:
