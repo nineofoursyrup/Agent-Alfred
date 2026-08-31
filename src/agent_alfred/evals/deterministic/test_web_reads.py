@@ -25,6 +25,8 @@ from agent_alfred.events import CapturingSink, FanOutSink
 from agent_alfred.messages import message_plain_text
 from agent_alfred.model import ScriptedModel, ScriptedModelFactory
 from agent_alfred.redact import Redactor
+from agent_alfred.runtime import runs as runs_store
+from agent_alfred.runtime import sessions as session_store
 from agent_alfred.runtime.host import RuntimeHost, SubmitRequest
 from agent_alfred.runtime.runs import (
     DEFAULT_MAINBAR_LIMIT,
@@ -36,6 +38,12 @@ from agent_alfred.runtime.sessions import SessionNotFound
 from agent_alfred.settings import Settings
 
 _TS = "2026-08-27T12:00:00+00:00"
+_REDACTION_CANARY = "sk-top-secret-value"
+
+
+def _assert_redaction_canary_absent(value) -> None:
+    if _REDACTION_CANARY in repr(value):
+        pytest.fail("browser read leaked the redaction canary", pytrace=False)
 
 
 def _v3_database() -> sqlite3.Connection:
@@ -144,7 +152,12 @@ def _seed_historic(
     conn.commit()
 
 
-def _historic_host(turns_by_session: dict[str, list[str]], script=None) -> RuntimeHost:
+def _historic_host(
+    turns_by_session: dict[str, list[str]],
+    script=None,
+    *,
+    redactor: Redactor | None = None,
+) -> RuntimeHost:
     """A Host over a real v2 database seeded with historic rows.
 
     The migration to v3 runs when the Host is built, which is the order the
@@ -155,7 +168,7 @@ def _historic_host(turns_by_session: dict[str, list[str]], script=None) -> Runti
     for session_id, turns in turns_by_session.items():
         _seed_historic(conn, session_id, turns)
     schema.migrate(conn)
-    return _host_over(conn, script)
+    return _host_over(conn, script, redactor=redactor)
 
 
 # --- purpose classification -------------------------------------------------
@@ -637,6 +650,42 @@ def test_a_session_with_both_old_and_new_pages_across_both_segments() -> None:
 # --- redaction on the way out ----------------------------------------------
 
 
+@pytest.mark.parametrize(
+    "read,kwargs",
+    [
+        (session_store.list_sessions, {"limit": 1}),
+        (
+            session_store.open_session,
+            {"session_id": "s-redactor-required", "page_size": 1},
+        ),
+        (runs_store.list_runs, {}),
+        (runs_store.locate_run, {"run_id": "missing"}),
+        (
+            runs_store.mainbar_pairs,
+            {"session_id": "s-redactor-required"},
+        ),
+        (
+            runs_store.list_session_chat_runs,
+            {"session_id": "s-redactor-required", "limit": 1},
+        ),
+    ],
+)
+def test_browser_read_stores_require_the_central_redactor(read, kwargs) -> None:
+    """A new browser read cannot silently opt out of the last secret gate."""
+    conn = _v3_database()
+    host = _host_over(conn)
+    try:
+        session_id = host.create_session()
+        kwargs = {
+            key: session_id if value == "s-redactor-required" else value
+            for key, value in kwargs.items()
+        }
+        with pytest.raises(TypeError):
+            read(conn, **kwargs)
+    finally:
+        host.close()
+
+
 def test_message_bodies_go_through_the_central_redactor() -> None:
     """The user message is stored verbatim; this read is the last gate.
 
@@ -647,29 +696,101 @@ def test_message_bodies_go_through_the_central_redactor() -> None:
     doing their own redaction is how one of them ends up leaking.
     """
     host = _host_over(
-        _v3_database(), ["pong"], redactor=Redactor(("sk-top-secret-value",))
+        _v3_database(),
+        [f"reply contains {_REDACTION_CANARY}"],
+        redactor=Redactor((_REDACTION_CANARY,)),
     )
     host.start()
     try:
         session_id = host.create_session()
-        _run(host, "my key is sk-top-secret-value", session_id)
+        outcome = _run(host, f"my key is {_REDACTION_CANARY}", session_id)
         page = host.open_session(session_id, page_size=10)
         shown = [message_plain_text(message) for message in page.messages]
         assert any("my key is" in text for text in shown)
-        assert all("sk-top-secret-value" not in text for text in shown)
         pairs = host.mainbar_pairs(session_id=session_id)
-        user_texts = [
-            message_plain_text(pair.user_message)
-            for pair in pairs.pairs
-            if pair.user_message is not None
-        ]
-        assert all("sk-top-secret-value" not in text for text in user_texts)
-        # The preview was redacted at admission and again on the way out; a
-        # redaction pass is idempotent, so it still says nothing.
-        assert all(
-            "sk-top-secret-value" not in (run.prompt_preview or "")
-            for run in host.list_runs(filter="chat").runs
+        runs_page = host.list_runs(filter="chat")
+        located = host.locate_run(outcome.run_id)
+        chat_runs = host.list_session_chat_runs(
+            session_id=session_id, limit=10
         )
+        inbox = host.list_sessions(limit=10)
+        # One assertion helper deliberately owns the failure text: should a
+        # regression occur, pytest must not print the canary it caught.
+        _assert_redaction_canary_absent(
+            (shown, pairs, runs_page, located, chat_runs, inbox)
+        )
+    finally:
+        host.close()
+
+
+def test_historic_messages_go_through_the_central_redactor() -> None:
+    host = _historic_host(
+        {"s-historic-secret": [f"historic {_REDACTION_CANARY}"]},
+        redactor=Redactor((_REDACTION_CANARY,)),
+    )
+    try:
+        inbox = host.list_sessions(limit=10)
+        page = host.open_session("s-historic-secret", page_size=10)
+        _assert_redaction_canary_absent((inbox, page))
+    finally:
+        host.close()
+
+
+class _ExplodingRedactor(Redactor):
+    def __init__(self) -> None:
+        super().__init__(())
+
+    def redact_text(self, text: str) -> str:
+        raise RuntimeError("redaction unavailable")
+
+    def redact_jsonable(self, value):
+        raise RuntimeError("redaction unavailable")
+
+
+def test_redactor_failure_never_returns_browser_visible_raw_content() -> None:
+    conn = _v3_database()
+    host = _host_over(conn, redactor=_ExplodingRedactor())
+    try:
+        session_id = host.create_session()
+        _insert_run(
+            host,
+            "r-redactor-failure",
+            phase="finished",
+            outcome="completed",
+            session_id=session_id,
+        )
+        content = json.dumps(
+            [{"type": "text", "text": f"stored {_REDACTION_CANARY}"}]
+        )
+        with host._db_lock:  # noqa: SLF001 - seeding is setup, not assertion
+            host._conn.execute(  # noqa: SLF001
+                "UPDATE runs SET prompt_preview = ? WHERE run_id = ?",
+                (f"preview {_REDACTION_CANARY}", "r-redactor-failure"),
+            )
+            for role in ("user", "assistant"):
+                host._conn.execute(  # noqa: SLF001
+                    """INSERT INTO agent_log (
+                         session_id, run_id, role, content, source, telemetry,
+                         created_at
+                       ) VALUES (?, ?, ?, ?, 'web', NULL, ?)""",
+                    (session_id, "r-redactor-failure", role, content, _TS),
+                )
+            host._conn.commit()  # noqa: SLF001
+
+        reads = (
+            lambda: host.list_sessions(limit=10),
+            lambda: host.open_session(session_id, page_size=10),
+            lambda: host.list_runs(filter="chat"),
+            lambda: host.locate_run("r-redactor-failure"),
+            lambda: host.mainbar_pairs(session_id=session_id),
+            lambda: host.list_session_chat_runs(
+                session_id=session_id, limit=10
+            ),
+        )
+        for read in reads:
+            with pytest.raises(RuntimeError) as raised:
+                read()
+            _assert_redaction_canary_absent(str(raised.value))
     finally:
         host.close()
 

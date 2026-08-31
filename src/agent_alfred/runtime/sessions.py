@@ -129,8 +129,8 @@ def list_sessions(
     conn,
     *,
     limit: int,
+    redactor: Redactor,
     cursor: str | None = None,
-    redactor: Redactor | None = None,
     title_max_chars: int = 240,
 ) -> SessionInboxPage:
     """The Session inbox: newest persistent activity first, keyset paged."""
@@ -176,7 +176,7 @@ def _session_title(
     conn,
     session_id: str,
     created_at: str,
-    redactor: Redactor | None,
+    redactor: Redactor,
     limit: int,
 ) -> str:
     """The #30 title contract: the earliest approved chat Run's prompt_preview
@@ -198,8 +198,7 @@ def _session_title(
             # re-redacting on read is deliberate defense in depth under the
             # ADR-0003 central-redaction rule, and idempotent: a remembered
             # secret is replaced by "***", which no later pass can re-match.
-            if redactor is not None:
-                text = redactor.redact_text(text)
+            text = redactor.redact_text(text)
             return _limit_text(text, limit)
         return f"新会话 · {created_at}"
     try:
@@ -215,8 +214,7 @@ def _session_title(
             if text:
                 # Same read-side re-redaction: historic rows predate the
                 # central rule and are the one place a raw value can survive.
-                if redactor is not None:
-                    text = redactor.redact_text(text)
+                text = redactor.redact_text(text)
                 return _limit_text(text, limit)
     except Exception:
         pass
@@ -239,8 +237,8 @@ def open_session(
     *,
     session_id: str,
     page_size: int,
+    redactor: Redactor,
     cursor: str | None = None,
-    redactor: Redactor | None = None,
     title_max_chars: int = 240,
     recording_failed_run_ids: frozenset[str] = frozenset(),
 ) -> SessionMessagesPage:
@@ -417,7 +415,7 @@ def _historic_tail(
     historic_position: int | None,
     messages: list[SessionMessage],
     remaining: int,
-    redactor: Redactor | None = None,
+    redactor: Redactor,
 ) -> str | None:
     """Fill the page from segment two and decide whether more of it remains.
 
@@ -461,7 +459,7 @@ def _page(
     session_id: str,
     messages: list[SessionMessage],
     next_cursor: str | None,
-    redactor: Redactor | None,
+    redactor: Redactor,
     title_max_chars: int,
     *,
     runs_pending: bool = False,
@@ -522,7 +520,7 @@ def _page_run_keys(
 
 
 def _run_messages(
-    conn, run_id: str, redactor: Redactor | None = None
+    conn, run_id: str, redactor: Redactor
 ) -> list[SessionMessage]:
     rows = conn.execute(
         """SELECT role, content, source, telemetry, created_at, run_id
@@ -542,7 +540,7 @@ def _run_messages(
     ]
 
 
-def _redacted_json(content: str, redactor: Redactor | None) -> Any:
+def _redacted_json(content: str, redactor: Redactor) -> Any:
     """The stored blocks, through the central redactor before they are shown.
 
     The user message is written into the session record verbatim -- only the
@@ -553,8 +551,6 @@ def _redacted_json(content: str, redactor: Redactor | None) -> Any:
     point: the same pass handles text, thinking and tool results.
     """
     parsed = json.loads(content)
-    if redactor is None:
-        return parsed
     return redactor.redact_jsonable(parsed)
 
 
@@ -572,7 +568,7 @@ def _page_historic(conn, session_id: str, after_id: int | None, count: int):
     ).fetchall()
 
 
-def _historic_message(row, redactor: Redactor | None = None) -> SessionMessage:
+def _historic_message(row, redactor: Redactor) -> SessionMessage:
     row_id, role, content, source, telemetry, created_at, run_id = row
     del row_id
     return SessionMessage(

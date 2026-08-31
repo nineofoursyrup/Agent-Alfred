@@ -258,10 +258,10 @@ def _non_terminal_run(conn, purpose_clause: str) -> RunSummary | None:
 def list_runs(
     conn,
     *,
+    redactor: Redactor,
     filter: str = ALL_FILTER,
     limit: int = DEFAULT_RUN_PAGE_SIZE,
     cursor: str | None = None,
-    redactor: Redactor | None = None,
 ) -> RunPage:
     """The runs page: terminal Runs newest first, plus the pinned live Run."""
     if filter not in RUN_FILTERS:
@@ -319,7 +319,7 @@ def list_runs(
 
 
 def _redact_summary(
-    summary: RunSummary | None, redactor: Redactor | None
+    summary: RunSummary | None, redactor: Redactor
 ) -> RunSummary | None:
     """Re-redact the preview on the way out.
 
@@ -327,7 +327,7 @@ def _redact_summary(
     defence in depth under ADR-0003, and it is idempotent -- a remembered
     secret is already a marker, which no later pass can re-match.
     """
-    if summary is None or redactor is None or summary.prompt_preview is None:
+    if summary is None or summary.prompt_preview is None:
         return summary
     return replace(summary, prompt_preview=redactor.redact_text(
         summary.prompt_preview
@@ -338,8 +338,8 @@ def locate_run(
     conn,
     *,
     run_id: str,
+    redactor: Redactor,
     limit: int = DEFAULT_RUN_PAGE_SIZE,
-    redactor: Redactor | None = None,
 ) -> RunPage | None:
     """The page a deep link should open on for one Run.
 
@@ -358,7 +358,10 @@ def locate_run(
         # It is the pinned Run, not a page row: it has no stable position to
         # page to.
         return RunPage(
-            filter=summary.filter, runs=(), non_terminal=summary, next_cursor=None
+            filter=summary.filter,
+            runs=(),
+            non_terminal=_redact_summary(summary, redactor),
+            next_cursor=None,
         )
     if summary.filter == CHAT_FILTER:
         purpose_clause = "AND purpose = 'chat'"
@@ -414,9 +417,9 @@ def mainbar_pairs(
     conn,
     *,
     session_id: str,
+    redactor: Redactor,
     limit: int = DEFAULT_MAINBAR_LIMIT,
     cursor: str | None = None,
-    redactor: Redactor | None = None,
 ) -> MainBarPage:
     """The unique message pair of each recorded chat Run of one Session.
 
@@ -499,7 +502,7 @@ def _created_at(conn, run_id: str) -> str | None:
 
 
 def _message(
-    conn, run_id: str, role: str, redactor: Redactor | None
+    conn, run_id: str, role: str, redactor: Redactor
 ) -> Message | None:
     row = conn.execute(
         "SELECT content FROM agent_log WHERE run_id = ? AND role = ?",
@@ -511,8 +514,7 @@ def _message(
     # user message was stored verbatim, so this read is the last chance to
     # stop a secret reaching a surface (ADR-0003).
     parsed = json.loads(row[0])
-    if redactor is not None:
-        parsed = redactor.redact_jsonable(parsed)
+    parsed = redactor.redact_jsonable(parsed)
     return Message(role=role, blocks=tuple(blocks_from_jsonable(parsed)))
 
 
@@ -526,8 +528,8 @@ def list_session_chat_runs(
     *,
     session_id: str,
     limit: int,
+    redactor: Redactor,
     cursor: str | None = None,
-    redactor: Redactor | None = None,
     reply_max_chars: int = DEFAULT_REPLY_PREVIEW_CHARS,
 ) -> SessionChatRunsPage:
     """One Session's admitted chat Runs, newest activity first, keyset paged.
@@ -619,7 +621,7 @@ def _session_runs_cursor(session_id: str, position: tuple[int, str] | None) -> s
 
 
 def _final_reply(
-    conn, run_id: str, redactor: Redactor | None, max_chars: int
+    conn, run_id: str, redactor: Redactor, max_chars: int
 ) -> dict[str, Any]:
     """The one final reply of a recorded Run, as ``reply_*`` fields.
 
@@ -637,8 +639,7 @@ def _final_reply(
     if row is None:
         return {"reply_preview": None, "reply_source": None}
     parsed = json.loads(row[0])
-    if redactor is not None:
-        parsed = redactor.redact_jsonable(parsed)
+    parsed = redactor.redact_jsonable(parsed)
     text = message_plain_text(
         Message(role="assistant", blocks=tuple(blocks_from_jsonable(parsed)))
     )
