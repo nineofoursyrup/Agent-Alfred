@@ -33,20 +33,45 @@ from agent_alfred.gateway.web.guard import CSRF_HEADER, RequestGuard
 from agent_alfred.gateway.web.handler import DashboardHandler, HandlerContext
 from agent_alfred.gateway.web.lifecycle import DEFAULT_HOST, DashboardService
 from agent_alfred.gateway.web.replay import ReplayRing
-from agent_alfred.runtime.snapshot import RuntimeSnapshot
+from agent_alfred.runtime.snapshot import (
+    ActiveRunSummary,
+    CoordinatorState,
+    RuntimeSnapshot,
+)
+from agent_alfred.runtime.work import SubmitResult
 
 INSTANCE = "inst-http"
 _TIMEOUT = 3.0
 
 
-def _snapshot() -> RuntimeSnapshot:
+def _snapshot(
+    *,
+    coordinator_state: CoordinatorState = "idle",
+    active_run: ActiveRunSummary | None = None,
+) -> RuntimeSnapshot:
     return RuntimeSnapshot(
         process_instance_id=INSTANCE,
         state_revision=0,
-        coordinator_state="idle",
-        active_run=None,
+        coordinator_state=coordinator_state,
+        active_run=active_run,
         unrecorded_terminal_projection=None,
     )
+
+
+def _active(**kwargs: Any) -> ActiveRunSummary:
+    values: dict[str, Any] = {
+        "run_id": "run-already-active",
+        "purpose": "chat",
+        "gateway": "web",
+        "phase": "running",
+        "session_id": "session-from-server",
+        "prompt_preview": "earlier prompt",
+        "started_at": "2026-08-31T08:00:00Z",
+        "recording_state": None,
+        "current_step": 3,
+    }
+    values.update(kwargs)
+    return ActiveRunSummary(**values)
 
 
 class _Facade:
@@ -54,6 +79,12 @@ class _Facade:
 
     def __init__(self) -> None:
         self.mutating = False
+        self.state = _snapshot()
+        self.submit_result = SubmitResult(
+            kind="accepted",
+            run_id="run-on-wire",
+            session_id="session-from-server",
+        )
         # Every Run the API asked this facade to admit, so a wire test can
         # prove a refusal happened before anything was asked at all.
         self.submitted: list[Any] = []
@@ -83,17 +114,13 @@ class _Facade:
 
     def submit(self, request: Any) -> Any:
         self.submitted.append(request)
-        from agent_alfred.runtime.work import SubmitResult
-
-        return SubmitResult(
-            kind="accepted", run_id="run-on-wire", session_id="session-from-server"
-        )
+        return self.submit_result
 
     def session_exists(self, session_id: str) -> bool:
         return True
 
     def snapshot(self) -> RuntimeSnapshot:
-        return _snapshot()
+        return self.state
 
     def list_sessions(self, *, limit: int, cursor: str | None = None):
         from agent_alfred.runtime.sessions import SessionInboxPage
@@ -227,6 +254,13 @@ def _headers_of(head: bytes) -> dict[str, str]:
         if name:
             out[name.strip().decode().lower()] = value.strip().decode()
     return out
+
+
+def _assert_no_cross_origin_permission(head: bytes) -> None:
+    headers = _headers_of(head)
+    assert "access-control-allow-origin" not in headers
+    assert "access-control-allow-credentials" not in headers
+    assert "access-control-allow-headers" not in headers
 
 
 def _read_body(sock: socket.socket, head: bytes, already: bytes = b"") -> bytes:
@@ -516,6 +550,100 @@ def test_a_write_with_the_token_is_accepted(server) -> None:
     head, response = _request(server.port, raw)
     assert b"202" in head.split(b"\r\n")[0]
     assert b'"run_id":"run-on-wire"' in response
+    _assert_no_cross_origin_permission(head)
+
+
+def test_a_running_run_is_a_real_http_409(server) -> None:
+    snapshot = _snapshot(coordinator_state="running", active_run=_active())
+    server.facade.submit_result = SubmitResult(
+        kind="run_in_progress", snapshot=snapshot
+    )
+
+    head, body = _post_runs(
+        server, b'{"message":"hi","session_id":"session-from-server"}'
+    )
+
+    assert head.startswith(b"HTTP/1.1 409")
+    assert json.loads(body)["code"] == "run_in_progress"
+    _assert_no_cross_origin_permission(head)
+
+
+def test_recording_pending_is_a_real_http_409_with_saving_stage(server) -> None:
+    snapshot = _snapshot(
+        coordinator_state="recording_pending",
+        active_run=_active(
+            phase="finished", outcome="completed", recording_state="pending"
+        ),
+    )
+    server.facade.submit_result = SubmitResult(
+        kind="run_in_progress", snapshot=snapshot
+    )
+
+    head, body = _post_runs(
+        server, b'{"message":"hi","session_id":"session-from-server"}'
+    )
+
+    assert head.startswith(b"HTTP/1.1 409")
+    payload = json.loads(body)
+    assert payload["code"] == "run_in_progress"
+    assert payload["busy"]["stage"] == "正在保存"
+    _assert_no_cross_origin_permission(head)
+
+
+def test_recording_failed_is_a_real_http_503(server) -> None:
+    snapshot = _snapshot(
+        coordinator_state="recording_failed",
+        active_run=_active(
+            phase="finished", outcome="completed", recording_state="failed"
+        ),
+    )
+    server.facade.submit_result = SubmitResult(
+        kind="recording_unavailable", snapshot=snapshot
+    )
+
+    head, body = _post_runs(
+        server, b'{"message":"hi","session_id":"session-from-server"}'
+    )
+
+    assert head.startswith(b"HTTP/1.1 503")
+    assert json.loads(body)["code"] == "recording_unavailable"
+    _assert_no_cross_origin_permission(head)
+
+
+def test_known_and_raced_busy_are_the_same_json_on_a_real_socket(server) -> None:
+    snapshot = _snapshot(coordinator_state="running", active_run=_active())
+    request = b'{"message":"hi","session_id":"session-from-server"}'
+
+    # Admission captured the raced-busy snapshot in its refusal.
+    server.facade.submit_result = SubmitResult(
+        kind="run_in_progress", snapshot=snapshot
+    )
+    raced_head, raced_body = _post_runs(server, request)
+
+    # A known-busy refusal reads the same authoritative facade snapshot.
+    server.facade.state = snapshot
+    server.facade.submit_result = SubmitResult(kind="run_in_progress")
+    known_head, known_body = _post_runs(server, request)
+
+    raced = json.loads(raced_body)
+    known = json.loads(known_body)
+    assert raced_head.startswith(b"HTTP/1.1 409")
+    assert known_head.startswith(b"HTTP/1.1 409")
+    assert raced["busy"] == known["busy"] == {
+        "purpose": "chat",
+        "gateway": "web",
+        "started_at": "2026-08-31T08:00:00Z",
+        "current_step": 3,
+        "prompt_preview": "earlier prompt",
+        "stage": "运行中",
+        "navigation": {
+            "href": "/runs/run-already-active?filter=chat",
+            "run_id": "run-already-active",
+            "filter": "chat",
+        },
+    }
+    _assert_no_cross_origin_permission(raced_head)
+    _assert_no_cross_origin_permission(known_head)
 
 
 def test_the_handler_consumes_the_length_already_validated_by_the_guard(server) -> None:
