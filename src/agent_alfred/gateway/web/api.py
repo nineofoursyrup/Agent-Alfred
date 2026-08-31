@@ -298,11 +298,11 @@ class DashboardApi:
         # pick would let two Sessions collide into one.
         session_id, reason = self._gate.create_session()
         if session_id is None:
-            # Refused, not queued -- and 409, not 503: a write gate that made
-            # the caller wait would be the queue ADR-0016 forbids, and
-            # reporting a conflict as an unavailability would say the
-            # process cannot do something it is merely busy doing.
-            return CreateSessionResult(status=409, code=reason)
+            # A held gate is a short-lived conflict; a recording-failed Host
+            # has closed admission and is genuinely unavailable (ADR-0026).
+            # Preserve the authority's code and distinguish those two facts.
+            status = 503 if reason == "recording_unavailable" else 409
+            return CreateSessionResult(status=status, code=reason)
         return CreateSessionResult(status=201, session_id=session_id)
 
     def submit(self, body: dict[str, Any]) -> SubmitOutcome:

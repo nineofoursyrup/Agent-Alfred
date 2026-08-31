@@ -143,7 +143,7 @@ def test_a_session_write_is_refused_after_recording_failed() -> None:
         created = api.create_session()
         assert created.session_id is None
         assert created.code == "recording_unavailable"
-        assert created.status == 409
+        assert created.status == 503
     finally:
         host.close()
 

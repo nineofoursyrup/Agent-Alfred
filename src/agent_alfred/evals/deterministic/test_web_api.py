@@ -80,6 +80,7 @@ class _Facade:
     known_sessions: frozenset[str] = frozenset({"s1"})
     created: list[str] | None = None
     requests: list[SubmitRequest] | None = None
+    mutation_refusal: str | None = None
 
     def __post_init__(self) -> None:
         self.created = []
@@ -99,6 +100,8 @@ class _Facade:
         self.ended = 0
 
     def try_begin_mutation(self) -> str | None:
+        if self.mutation_refusal is not None:
+            return self.mutation_refusal
         if self.mutating:
             return "mutation_in_flight"
         self.mutating = True
@@ -795,13 +798,24 @@ def test_the_gate_never_queues_a_write() -> None:
     assert outcome.status == 202
 
 
-def test_a_refused_session_creation_says_so() -> None:
+@pytest.mark.parametrize(
+    ("reason", "status"),
+    (
+        ("mutation_in_flight", 409),
+        ("run_in_progress", 409),
+        ("recording_unavailable", 503),
+    ),
+)
+def test_a_refused_session_creation_preserves_the_authoritative_reason(
+    reason: str, status: int
+) -> None:
     api = _api(_accepted())
-    api._facade.mutating = True  # another write is inside the gate
+    api._facade.mutation_refusal = reason
     result = api.create_session()
     assert result.session_id is None
-    assert result.status == 409
-    assert result.code == "mutation_in_flight"
+    assert result.status == status
+    assert result.code == reason
+    assert api._facade.created == []
 
 
 def test_a_refused_submit_is_never_an_accepted_run() -> None:

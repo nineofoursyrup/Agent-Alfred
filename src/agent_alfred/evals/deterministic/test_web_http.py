@@ -79,6 +79,8 @@ class _Facade:
 
     def __init__(self) -> None:
         self.mutating = False
+        self.mutation_refusal: str | None = None
+        self.created_sessions: list[str] = []
         self.state = _snapshot()
         self.submit_result = SubmitResult(
             kind="accepted",
@@ -98,6 +100,8 @@ class _Facade:
     # ever in flight behind this facade, so the only thing that can busy the
     # gate here is another write -- which these tests never start.
     def try_begin_mutation(self) -> str | None:
+        if self.mutation_refusal is not None:
+            return self.mutation_refusal
         if self.mutating:
             return "mutation_in_flight"
         self.mutating = True
@@ -110,6 +114,7 @@ class _Facade:
         return self.mutating
 
     def create_session(self) -> str:
+        self.created_sessions.append("session-from-server")
         return "session-from-server"
 
     def submit(self, request: Any) -> Any:
@@ -836,6 +841,24 @@ def test_creating_a_session_returns_a_server_signed_id(server) -> None:
     head, body = _request(server.port, raw)
     assert b"201" in head.split(b"\r\n")[0]
     assert b'"session_id":"session-from-server"' in body
+
+
+def test_recording_unavailable_refuses_session_creation_on_the_wire(server) -> None:
+    server.facade.mutation_refusal = "recording_unavailable"
+    raw = (
+        f"POST /api/sessions HTTP/1.1\r\n"
+        f"Host: localhost:{server.port}\r\n"
+        f"Content-Type: application/json\r\n"
+        f"{CSRF_HEADER}: {server.guard.csrf_token}\r\n"
+        f"Content-Length: 2\r\n\r\n{{}}"
+    ).encode()
+
+    head, body = _request(server.port, raw)
+
+    assert head.startswith(b"HTTP/1.1 503")
+    assert json.loads(body)["code"] == "recording_unavailable"
+    _assert_no_cross_origin_permission(head)
+    assert server.facade.created_sessions == []
 
 
 def test_an_unknown_path_is_a_json_404(server) -> None:

@@ -279,10 +279,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
         if path == SESSIONS_PATH:
             result = context.api.create_session()
             if result.session_id is None:
-                # The write gate is busy. Refused rather than queued, so the
-                # browser knows to try again instead of waiting on a
-                # connection that will never answer. The status is the
-                # gate's -- 409, not 503: the process is busy, not broken.
+                # Refused rather than queued. The API distinguishes a held
+                # gate (409) from recording-closed admission (503).
                 self._send(result.status, {"code": result.code})
                 return
             self._send(result.status, {"session_id": result.session_id})
