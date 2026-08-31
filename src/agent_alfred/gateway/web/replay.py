@@ -696,12 +696,12 @@ def classify_cursor(
             kind="gap", reseed_seq=reseed, reason=reason, requested_seq=seq
         )
     assert seq is not None  # parse_cursor returns both or neither
-    if ring.classify_seq(seq) != "valid":
-        verdict = ring.classify_seq(seq)
+    verdict = ring.classify_seq(seq)
+    if verdict != "valid":
         return CursorVerdict(
             kind="gap",
             reseed_seq=reseed,
-            reason=verdict if verdict != "valid" else "malformed",
+            reason=verdict,
             requested_seq=seq,
         )
     entries = ring.entries_after(seq)
