@@ -31,6 +31,31 @@ def _session_rows(conn) -> list[str]:
     return [row[0] for row in conn.execute("SELECT session_id FROM sessions")]
 
 
+class _BlockingCommit:
+    """Connection boundary that can hold a real Host write at commit."""
+
+    def __init__(self, inner: sqlite3.Connection):
+        self._inner = inner
+        self._armed = False
+        self.entered = threading.Event()
+        self._release = threading.Event()
+
+    def arm(self) -> None:
+        self._armed = True
+
+    def release(self) -> None:
+        self._release.set()
+
+    def commit(self):
+        if self._armed:
+            self.entered.set()
+            assert self._release.wait(5.0), "the test never released commit"
+        return self._inner.commit()
+
+    def __getattr__(self, name):
+        return getattr(self._inner, name)
+
+
 def _start_run(host, *, message="hi"):
     session_id = host.create_session()
     result = host.submit(
@@ -38,6 +63,65 @@ def _start_run(host, *, message="hi"):
     )
     assert result.kind == "accepted"
     return result, session_id
+
+
+def test_a_run_does_not_queue_behind_session_validation_during_a_write() -> None:
+    database = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(database)
+    blocked = _BlockingCommit(database)
+    host, _conn = build_runtime_host(["unused"], conn=blocked)
+    host.start()
+    api = dashboard_api(host)
+    existing_session = api.create_session().session_id
+    before_runs = database.execute("SELECT COUNT(*) FROM runs").fetchone()
+    before_sessions = _session_rows(database)
+    created: dict = {}
+    submitted: dict = {}
+    submit_returned = threading.Event()
+
+    def create_session() -> None:
+        created["value"] = api.create_session()
+
+    def submit() -> None:
+        submitted["value"] = api.submit(
+            {"message": "must not queue", "session_id": existing_session}
+        )
+        submit_returned.set()
+
+    creator = threading.Thread(target=create_session, daemon=True)
+    submitter = threading.Thread(target=submit, daemon=True)
+    try:
+        blocked.arm()
+        creator.start()
+        assert blocked.entered.wait(5.0), "the Session write never reached commit"
+        submitter.start()
+        if not submit_returned.wait(1.0):
+            blocked.release()
+            creator.join(5.0)
+            submitter.join(5.0)
+            queued = submitted.get("value")
+            raise AssertionError(
+                "submit queued behind Session validation; after commit it returned "
+                f"{getattr(queued, 'status', None)}"
+            )
+
+        outcome = submitted["value"]
+        assert (outcome.status, outcome.code) == (409, "mutation_in_flight")
+        assert outcome.run_id is None
+        blocked.release()
+        creator.join(5.0)
+        submitter.join(5.0)
+        assert not creator.is_alive()
+        assert not submitter.is_alive()
+        assert created["value"].status == 201
+        assert database.execute("SELECT COUNT(*) FROM runs").fetchone() == before_runs
+        assert len(_session_rows(database)) == len(before_sessions) + 1
+        assert host.snapshot().coordinator_state == "idle"
+    finally:
+        blocked.release()
+        creator.join(5.0)
+        submitter.join(5.0)
+        host.close()
 
 
 def test_a_session_write_while_a_run_is_running_is_refused_at_once() -> None:

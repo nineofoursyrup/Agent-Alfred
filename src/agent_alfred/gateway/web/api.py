@@ -27,7 +27,11 @@ from agent_alfred.runtime.sessions import (
     SessionNotFound,
 )
 from agent_alfred.runtime.snapshot import RuntimeSnapshot
-from agent_alfred.runtime.work import SubmitRequest, SubmitResult
+from agent_alfred.runtime.work import (
+    AdmissionObservationKind,
+    SubmitRequest,
+    SubmitResult,
+)
 from agent_alfred.schema import PURPOSES
 
 # The one stage label the decision names explicitly (#30 补正一): a Run whose
@@ -82,6 +86,10 @@ class DashboardFacade(Protocol):
     def end_mutation(self) -> None: ...
 
     def mutation_in_flight(self) -> bool: ...
+
+    def admission_observe(
+        self,
+    ) -> tuple[AdmissionObservationKind, RuntimeSnapshot]: ...
 
     def session_exists(self, session_id: str) -> bool: ...
 
@@ -262,6 +270,19 @@ class MutationGate:
             return None
         return self._facade.submit(request)
 
+    def preflight_submit(self) -> SubmitResult | None:
+        """Return an immediate refusal before a submit can reach slow I/O.
+
+        This observation neither reserves admission nor owns a second busy
+        state. An admissible caller must still pass through ``submit()``,
+        whose Host-side reserve repeats the authoritative check and closes
+        the race between this observation and the lease decision.
+        """
+        kind, snapshot = self._facade.admission_observe()
+        if kind == "admissible":
+            return None
+        return SubmitResult(kind=kind, snapshot=snapshot)
+
     def create_session(self) -> tuple[str | None, str | None]:
         """``(session id, refusal code)`` -- exactly one of the two is set.
 
@@ -323,6 +344,9 @@ class DashboardApi:
             return SubmitOutcome(status=400, code="missing_session_id")
         if session_id is not None and not isinstance(session_id, str):
             return SubmitOutcome(status=400, code="bad_session_id")
+        refusal = self._gate.preflight_submit()
+        if refusal is not None:
+            return self._outcome(refusal)
         if session_id is not None and not self._facade.session_exists(session_id):
             return SubmitOutcome(status=404, code="unknown_session")
 

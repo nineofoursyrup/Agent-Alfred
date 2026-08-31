@@ -113,6 +113,13 @@ class _Facade:
     def mutation_in_flight(self) -> bool:
         return self.mutating
 
+    def admission_observe(self):
+        if self.mutating:
+            return "mutation_in_flight", self.state
+        if self.submit_result.kind == "accepted":
+            return "admissible", self.state
+        return self.submit_result.kind, self.submit_result.snapshot or self.state
+
     def create_session(self) -> str:
         self.created_sessions.append("session-from-server")
         return "session-from-server"
