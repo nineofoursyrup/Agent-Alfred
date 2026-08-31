@@ -18,6 +18,8 @@ import json
 import sqlite3
 import threading
 
+import pytest
+
 from agent_alfred import schema
 from agent_alfred.evals.deterministic._web_broker_test_helpers import (
     drain_connection,
@@ -25,6 +27,7 @@ from agent_alfred.evals.deterministic._web_broker_test_helpers import (
 from agent_alfred.evals.deterministic._web_runtime_test_helpers import (
     ArmableCaptureFailure,
     FailFinalizeWhen,
+    FailNextSessionCommit,
     SelectiveLatch,
     StepStartedLatch,
     StepStartedPostCommitLatch,
@@ -57,6 +60,87 @@ INSTANCE = "proc-runtime"
 _REDACTION_CANARY = "sk-terminal-projection-secret"
 
 # --- the 202 ----------------------------------------------------------------
+
+
+def test_failed_session_commit_rolls_back_before_a_later_create_can_commit() -> None:
+    inner = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(inner)
+    conn = FailNextSessionCommit(inner)
+    host, _database = build_runtime_host(conn=conn)
+    host.start()
+    try:
+        conn.fail_next_commit = True
+
+        with pytest.raises(
+            sqlite3.OperationalError, match="injected Session commit failure"
+        ):
+            host.create_session()
+
+        failed_session_id = conn.failed_session_id
+        assert failed_session_id is not None
+        assert (
+            inner.in_transaction,
+            inner.execute("SELECT COUNT(*) FROM sessions").fetchone()[0],
+        ) == (False, 0)
+
+        created_session_id = host.create_session()
+
+        assert created_session_id != failed_session_id
+        assert inner.execute(
+            "SELECT session_id FROM sessions ORDER BY session_id"
+        ).fetchall() == [(created_session_id,)]
+    finally:
+        host.close()
+
+
+def test_session_commit_failure_propagates_after_the_mutation_gate_reopens() -> None:
+    inner = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(inner)
+    conn = FailNextSessionCommit(inner)
+    host, _database = build_runtime_host(conn=conn)
+    host.start()
+    try:
+        api = DashboardApi(facade=host)
+        conn.fail_next_commit = True
+
+        with pytest.raises(
+            sqlite3.OperationalError, match="injected Session commit failure"
+        ):
+            api.create_session()
+
+        assert host.mutation_in_flight() is False
+        created = api.create_session()
+        assert created.status == 201
+        assert created.session_id is not None
+        assert inner.execute(
+            "SELECT session_id FROM sessions ORDER BY session_id"
+        ).fetchall() == [(created.session_id,)]
+    finally:
+        host.close()
+
+
+def test_session_rollback_failure_still_releases_the_mutation_gate() -> None:
+    inner = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(inner)
+    conn = FailNextSessionCommit(inner)
+    host, _database = build_runtime_host(conn=conn)
+    host.start()
+    try:
+        api = DashboardApi(facade=host)
+        conn.fail_next_commit = True
+        conn.fail_next_rollback = True
+
+        with pytest.raises(
+            sqlite3.OperationalError, match="injected Session rollback failure"
+        ) as raised:
+            api.create_session()
+
+        assert isinstance(raised.value.__context__, sqlite3.OperationalError)
+        assert str(raised.value.__context__) == "injected Session commit failure"
+        assert host.mutation_in_flight() is False
+    finally:
+        inner.rollback()
+        host.close()
 
 
 def test_a_real_submit_answers_202_with_its_run_id() -> None:

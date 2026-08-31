@@ -25,6 +25,9 @@ from agent_alfred.clock import FakeClock
 from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
     free_loopback_port,
 )
+from agent_alfred.evals.deterministic._web_runtime_test_helpers import (
+    FailNextSessionCommit,
+)
 from agent_alfred.events import event_json_default
 from agent_alfred.gateway.cli import serve_dashboard
 from agent_alfred.gateway.web.broker import SSEBroker
@@ -334,5 +337,65 @@ def test_the_assembled_dashboard_serves_the_real_host_over_http(tmp_path) -> Non
         status, body = request(f"/api/sessions/messages?session_id={session_id}")
         assert status == 200
         assert json.loads(body)["session_id"] == session_id
+    finally:
+        dashboard.close()
+
+
+def test_session_commit_failure_is_500_and_the_next_http_write_is_clean(
+    tmp_path,
+) -> None:
+    from urllib.error import HTTPError
+    from urllib.request import Request, urlopen
+
+    from agent_alfred.gateway.web.guard import CSRF_HEADER
+
+    connection: list[FailNextSessionCommit] = []
+
+    def failing_database(directory: Path) -> FailNextSessionCommit:
+        wrapped = FailNextSessionCommit(_database(directory))
+        connection.append(wrapped)
+        return wrapped
+
+    dashboard = build_dashboard(
+        state_dir=tmp_path,
+        factory=_factory(),
+        clock=FakeClock(),
+        port=free_loopback_port(),
+        open_database=failing_database,
+    )
+    try:
+        dashboard.start()
+        conn = connection[0]
+
+        def request() -> tuple[int, dict]:
+            call = Request(
+                f"http://127.0.0.1:{dashboard.port}/api/sessions",
+                data=b"{}",
+                headers={
+                    "Content-Type": "application/json",
+                    CSRF_HEADER: dashboard.csrf_token,
+                },
+                method="POST",
+            )
+            try:
+                with urlopen(call, timeout=3.0) as response:
+                    return response.status, json.loads(response.read())
+            except HTTPError as exc:
+                return exc.code, json.loads(exc.read())
+
+        conn.fail_next_commit = True
+        status, body = request()
+
+        assert (status, body) == (500, {"code": "internal_error"})
+        assert dashboard.host.mutation_in_flight() is False
+
+        status, body = request()
+
+        assert status == 201
+        created_session_id = body["session_id"]
+        assert conn.execute(
+            "SELECT session_id FROM sessions ORDER BY session_id"
+        ).fetchall() == [(created_session_id,)]
+        assert conn.failed_session_id != created_session_id
     finally:
         dashboard.close()

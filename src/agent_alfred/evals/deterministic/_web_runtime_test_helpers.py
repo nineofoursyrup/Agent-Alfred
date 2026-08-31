@@ -20,6 +20,39 @@ from agent_alfred.settings import Settings
 INSTANCE = "proc-runtime"
 
 
+class FailNextSessionCommit:
+    """Real SQLite connection whose next Session commit fails once."""
+
+    def __init__(self, inner: sqlite3.Connection):
+        self._inner = inner
+        self.fail_next_commit = False
+        self.fail_next_rollback = False
+        self.failed_session_id: str | None = None
+
+    def execute(self, sql, parameters=()):
+        if self.fail_next_commit and "INSERT INTO sessions" in sql:
+            self.failed_session_id = parameters[0]
+        return self._inner.execute(sql, parameters)
+
+    def commit(self):
+        if self.fail_next_commit:
+            self.fail_next_commit = False
+            raise sqlite3.OperationalError("injected Session commit failure")
+        return self._inner.commit()
+
+    def rollback(self):
+        if self.fail_next_rollback:
+            self.fail_next_rollback = False
+            raise sqlite3.OperationalError("injected Session rollback failure")
+        return self._inner.rollback()
+
+    def close(self):
+        return self._inner.close()
+
+    def __getattr__(self, name):
+        return getattr(self._inner, name)
+
+
 class SelectiveLatch:
     """A ``before_``/``after_`` hook that waits only while armed."""
 

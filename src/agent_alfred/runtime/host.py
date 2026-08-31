@@ -327,11 +327,11 @@ class RuntimeHost:
     def create_session(self) -> str:
         session_id = uuid.uuid4().hex
         now = format_instant(self._clock.wall_utc())
-        with self._db_lock:
+        with self._store.transaction() as conn:
             schema.insert_session(
-                self._conn, session_id=session_id, created_at=now
+                conn, session_id=session_id, created_at=now
             )
-            self._conn.commit()
+            conn.commit()
         return session_id
 
     # -- the mutation gate's authority -------------------------------------
