@@ -908,131 +908,122 @@ class SSEBroker:
             if unavailable_refused:
                 acquisition.abort(self)
                 return handle
-            writer = ConnectionWriter(
-                connection=connection,
-                source=handle.queue,
-                clock=self._clock,
-                heartbeat_s=self._heartbeat_s,
-                startup=handle.startup,
-            )
-            handle.thread = self._spawn(lambda: self._run_writer(handle, writer))
-            with self._lock:
-                self._registrations -= 1
-                acquisition.registration_open = False
-            return handle
-        session_valid = validity == "valid"
-        refused = False
-        for _ in range(_MAX_PATCH_CAPTURES):
-            boundary = (
-                nullcontext()
-                if self._projection_boundary is None
-                else self._projection_boundary
-            )
-            with boundary, self._lock:
-                if self._stopping or self._closed:
-                    # A broker that is closing accepts nothing new: a writer
-                    # started now would never be told to stop by anyone but
-                    # us, and a caller that already holds a True close is
-                    # tearing down what this stream would read from.
-                    refused = True
-                    break
-                epoch = self._state_epoch
-                verdict = classify_cursor(
-                    cursor, self._ring, process_instance_id=self._instance
-                )
-                # The gap notice's facts, captured where they are coherent:
-                # the ring and the run state cannot move inside this critical
-                # section, so the notice is built from frozen values outside.
-                gap_args: (
-                    tuple[str, int | None, int | None, int, CurrentRunState]
-                    | None
-                ) = None
-                if verdict.kind == "gap":
-                    gap_args = (
-                        verdict.reason or "malformed",
-                        verdict.requested_seq,
-                        self._ring.oldest_seq(),
-                        self._ring.published_high_water_seq(),
-                        self._current_run_state_locked(),
-                    )
-                latest = self._latest
-                # Same binding as publish_state_patch: the step summary is
-                # shown only while it belongs to the snapshot's active Run.
-                active = latest.active_run
-                self._progress.note_active_run(
-                    None if active is None else active.run_id
-                )
-                step = self._progress.projection(
-                    None if active is None else active.current_step
-                )
-            # Encoding outside the lock: pure, no IO, may be slow.
-            startup: list[PreparedFrames] = [
-                frames.retry_frame(frames.DEFAULT_RETRY_MS)
-            ]
-            # Unconditional: every verdict carries a boundary, and omitting
-            # it on an empty ring is what erases the browser's cursor.
-            startup.append(frames.reseed_frame(self._instance, verdict.reseed_seq))
-            if gap_args is not None:
-                reason, requested_seq, oldest_seq, high_water, run_state = (
-                    gap_args
-                )
-                startup.append(
-                    frames.replay_gap_notice(
-                        reason=reason,
-                        requested_seq=requested_seq,
-                        oldest_seq=oldest_seq,
-                        high_water_seq=high_water,
-                        current_run_state=run_state,
-                    )
-                )
-            startup.append(
-                _patch_frames(latest, step, session_valid)
-            )
-            startup.extend(verdict.entries)
-            built = tuple(startup)
-            boundary = (
-                nullcontext()
-                if self._projection_boundary is None
-                else self._projection_boundary
-            )
-            with boundary, self._lock:
-                if self._stopping or self._closed:
-                    refused = True
-                    break
-                if self._state_epoch != epoch:
-                    # An event or a patch moved the world while the frames
-                    # were being built: the capture is stale and the decided
-                    # invariant -- snapshot, high-water, registration, one
-                    # critical section -- is worth another lap, not a lie.
-                    continue
-                handle.verdict = verdict
-                handle.ingress_seen = self._ingress_dropped
-                handle.published_through = self._ring.published_high_water_seq()
-                # Registered at the current disconnect generation: everything
-                # published so far is either in this opening stream or behind
-                # the published boundary above, so a later sweep must not
-                # close it.
-                handle.generation = self._disconnect_generation
-                handle.registered_monotonic = self._clock.monotonic()
-                handle.startup = built
-                self._connections.append(handle)
-                # The fence goes up with the registration and comes down only
-                # when the writer thread exists: in between, a close must see
-                # a registration it may not report around.
-                self._registrations += 1
-                acquisition.registration_open = True
-            break
         else:
-            # The world moved during every bounded encoding lap. Registering
-            # the final capture would ship a stale absolute replacement, and
-            # trying forever would strand the HTTP handler while rebuilding
-            # snapshots and replay. Refuse this connection in the same
-            # observable shape as a closing broker; a reconnect gets a fresh
-            # atomic capture without poisoning the broker for other clients.
-            refused = True
-        if refused:
-            acquisition.abort(self)
-            return handle
+            session_valid = validity == "valid"
+            refused = False
+            for _ in range(_MAX_PATCH_CAPTURES):
+                boundary = (
+                    nullcontext()
+                    if self._projection_boundary is None
+                    else self._projection_boundary
+                )
+                with boundary, self._lock:
+                    if self._stopping or self._closed:
+                        # A broker that is closing accepts nothing new: a writer
+                        # started now would never be told to stop by anyone but
+                        # us, and a caller that already holds a True close is
+                        # tearing down what this stream would read from.
+                        refused = True
+                        break
+                    epoch = self._state_epoch
+                    verdict = classify_cursor(
+                        cursor, self._ring, process_instance_id=self._instance
+                    )
+                    # The gap notice's facts, captured where they are coherent:
+                    # the ring and the run state cannot move inside this critical
+                    # section, so the notice is built from frozen values outside.
+                    gap_args: (
+                        tuple[str, int | None, int | None, int, CurrentRunState]
+                        | None
+                    ) = None
+                    if verdict.kind == "gap":
+                        gap_args = (
+                            verdict.reason or "malformed",
+                            verdict.requested_seq,
+                            self._ring.oldest_seq(),
+                            self._ring.published_high_water_seq(),
+                            self._current_run_state_locked(),
+                        )
+                    latest = self._latest
+                    # Same binding as publish_state_patch: the step summary is
+                    # shown only while it belongs to the snapshot's active Run.
+                    active = latest.active_run
+                    self._progress.note_active_run(
+                        None if active is None else active.run_id
+                    )
+                    step = self._progress.projection(
+                        None if active is None else active.current_step
+                    )
+                # Encoding outside the lock: pure, no IO, may be slow.
+                startup: list[PreparedFrames] = [
+                    frames.retry_frame(frames.DEFAULT_RETRY_MS)
+                ]
+                # Unconditional: every verdict carries a boundary, and omitting
+                # it on an empty ring is what erases the browser's cursor.
+                startup.append(
+                    frames.reseed_frame(self._instance, verdict.reseed_seq)
+                )
+                if gap_args is not None:
+                    reason, requested_seq, oldest_seq, high_water, run_state = (
+                        gap_args
+                    )
+                    startup.append(
+                        frames.replay_gap_notice(
+                            reason=reason,
+                            requested_seq=requested_seq,
+                            oldest_seq=oldest_seq,
+                            high_water_seq=high_water,
+                            current_run_state=run_state,
+                        )
+                    )
+                startup.append(_patch_frames(latest, step, session_valid))
+                startup.extend(verdict.entries)
+                built = tuple(startup)
+                boundary = (
+                    nullcontext()
+                    if self._projection_boundary is None
+                    else self._projection_boundary
+                )
+                with boundary, self._lock:
+                    if self._stopping or self._closed:
+                        refused = True
+                        break
+                    if self._state_epoch != epoch:
+                        # An event or a patch moved the world while the frames
+                        # were being built: the capture is stale and the decided
+                        # invariant -- snapshot, high-water, registration, one
+                        # critical section -- is worth another lap, not a lie.
+                        continue
+                    handle.verdict = verdict
+                    handle.ingress_seen = self._ingress_dropped
+                    handle.published_through = (
+                        self._ring.published_high_water_seq()
+                    )
+                    # Registered at the current disconnect generation: everything
+                    # published so far is either in this opening stream or behind
+                    # the published boundary above, so a later sweep must not
+                    # close it.
+                    handle.generation = self._disconnect_generation
+                    handle.registered_monotonic = self._clock.monotonic()
+                    handle.startup = built
+                    self._connections.append(handle)
+                    # The fence goes up with the registration and comes down only
+                    # when the writer thread exists: in between, a close must see
+                    # a registration it may not report around.
+                    self._registrations += 1
+                    acquisition.registration_open = True
+                break
+            else:
+                # The world moved during every bounded encoding lap. Registering
+                # the final capture would ship a stale absolute replacement, and
+                # trying forever would strand the HTTP handler while rebuilding
+                # snapshots and replay. Refuse this connection in the same
+                # observable shape as a closing broker; a reconnect gets a fresh
+                # atomic capture without poisoning the broker for other clients.
+                refused = True
+            if refused:
+                acquisition.abort(self)
+                return handle
         writer = ConnectionWriter(
             connection=connection,
             source=handle.queue,

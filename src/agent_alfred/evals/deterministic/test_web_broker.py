@@ -1062,7 +1062,10 @@ class _GatedSpawn:
 
 
 @pytest.mark.parametrize("failure", [RuntimeError("spawn failed"), KeyboardInterrupt()])
-def test_failed_writer_handoff_revokes_the_whole_registration(failure) -> None:
+@pytest.mark.parametrize("session_validity", ["valid", "unavailable"])
+def test_failed_writer_handoff_revokes_the_whole_registration(
+    failure, session_validity
+) -> None:
     """A failed spawn propagates unchanged and leaves no pre-writer owner."""
     target_ref = None
 
@@ -1074,7 +1077,7 @@ def test_failed_writer_handoff_revokes_the_whole_registration(failure) -> None:
     broker = SSEBroker(
         process_instance_id=INSTANCE,
         snapshot=runtime_snapshot(),
-        session_is_valid=lambda _sid: True,
+        session_is_valid=lambda _sid: session_validity,
         spawn=fail_spawn,
     )
     connection = FakeConnection()
