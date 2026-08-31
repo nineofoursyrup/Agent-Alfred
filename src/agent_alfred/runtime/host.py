@@ -33,6 +33,8 @@ from agent_alfred.runtime.snapshot import (
     UnrecordedTerminalProjection,
 )
 from agent_alfred.runtime.work import (
+    AdmissionObservationKind,
+    AdmissionRefusalKind,
     ReserveKind,
     SubmitKind,
     SubmitRequest,
@@ -67,7 +69,8 @@ class RuntimeHost:
     - recorder: ``recording_enter_pending`` / ``recording_enter_failed`` /
       ``recording_publish_recorded_then_release`` / ``publish_run_result`` /
       ``notify_run_done`` plus a :class:`RecordingStore`;
-    - admission: ``admission_reserve`` (lease and busy card together) /
+    - admission: ``admission_observe`` (side-effect-free preflight) /
+      ``admission_reserve`` (lease and busy card together) /
       ``admission_release`` / ``admission_close_idle`` /
       ``admission_fail_recording`` / ``publish_work_item``;
     - execution: ``execution_mark_running``.
@@ -366,6 +369,42 @@ class RuntimeHost:
 
     # -- admission lease transitions (the only writer of these states) -----
 
+    def admission_observe(
+        self,
+    ) -> tuple[AdmissionObservationKind, RuntimeSnapshot]:
+        """Read the current admission result and its snapshot atomically.
+
+        This preflight never takes a lease. It only avoids doing configuration
+        I/O when the coordinator can already give an authoritative refusal;
+        an idle caller must still return through :meth:`admission_reserve`.
+        """
+        with self._lock:
+            snapshot = self._states.get()
+            refusal = self._admission_refusal_locked()
+            if refusal is not None:
+                return refusal, snapshot
+            return "admissible", snapshot
+
+    def _admission_refusal_locked(self) -> AdmissionRefusalKind | None:
+        """Return the current refusal while the caller holds ``_lock``."""
+        if self._executor.stopped_by is not None:
+            return "admission_failed"
+        with self._lifecycle:
+            unstartable = (
+                self._start_error is not None
+                or self._closing
+                or self._closed
+            )
+        if unstartable:
+            return "admission_failed"
+        if self._coord == "recording_failed":
+            return "recording_unavailable"
+        if self._coord != "idle":
+            return "run_in_progress"
+        if self._mutating:
+            return "mutation_in_flight"
+        return None
+
     def admission_reserve(
         self, run_id: str, summary: ActiveRunSummary
     ) -> tuple[ReserveKind, RuntimeSnapshot]:
@@ -393,32 +432,9 @@ class RuntimeHost:
         # reverse; no path takes _lifecycle and then _lock.
         with self._lock:
             snap = self._states.get()
-            if self._executor.stopped_by is not None:
-                # The execution thread unwound. Admitting a Run would accept
-                # work nobody is left to execute, so it is refused instead of
-                # left hanging in a queue with no reader.
-                return "admission_failed", snap
-            with self._lifecycle:
-                unstartable = (
-                    self._start_error is not None
-                    or self._closing
-                    or self._closed
-                )
-            if unstartable:
-                # Closing, closed, or never up: every one of them means this
-                # Host cannot promise the Run will run.
-                return "admission_failed", snap
-            if self._coord == "recording_failed":
-                return "recording_unavailable", snap
-            if self._coord != "idle":
-                return "run_in_progress", snap
-            if self._mutating:
-                # The other direction of the same gate: a plain write is
-                # already inside, and this Run must not be admitted behind
-                # it. Checked under this lock so a write that slips in
-                # between the gate's question and the reserve is caught
-                # here rather than interleaved.
-                return "mutation_in_flight", snap
+            refusal = self._admission_refusal_locked()
+            if refusal is not None:
+                return refusal, snap
             self._coord = "accepted"
             self._pending_handoff.add(run_id)
             self._done[run_id] = threading.Event()

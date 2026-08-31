@@ -3,9 +3,9 @@
 Admission touches the Host only through two narrow seams, the same shape the
 RunRecorder already uses:
 
-- an :class:`AdmissionCoordinator` -- the atomic lease transitions, the work
-  handoff, and result publication. The 409/503 orderings live on the other
-  side of this seam and cannot be bypassed from here;
+- an :class:`AdmissionCoordinator` -- the same-lock admission observation,
+  atomic lease transitions, work handoff, and result publication. The 409/503
+  orderings live on the other side of this seam and cannot be bypassed here;
 - the Host-owned :class:`~agent_alfred.runtime.recording.RecordingStore` --
   the write connection under its lock, with the caller owning every
   transaction.
@@ -33,6 +33,7 @@ from agent_alfred.runtime.snapshot import (
     UnrecordedTerminalProjection,
 )
 from agent_alfred.runtime.work import (
+    AdmissionObservationKind,
     ReserveKind,
     SubmitRequest,
     SubmitResult,
@@ -43,6 +44,16 @@ from agent_alfred.settings import Settings
 
 class AdmissionCoordinator(Protocol):
     """The lease transitions, handoff, and publication admission may drive."""
+
+    def admission_observe(
+        self,
+    ) -> tuple[AdmissionObservationKind, RuntimeSnapshot]:
+        """Observe an immediate refusal, or permission to prepare a Run.
+
+        This has no side effects. An admissible observation is not a lease;
+        admission must still call :meth:`admission_reserve` after preparing
+        the Run so a concurrent winner cannot slip through the capture window.
+        """
 
     def admission_reserve(
         self, run_id: str, summary: ActiveRunSummary
@@ -89,6 +100,10 @@ class RunAdmission:
         self._coordinator = coordinator
 
     def submit(self, request: SubmitRequest) -> SubmitResult:
+        observed, snapshot = self._coordinator.admission_observe()
+        if observed != "admissible":
+            return SubmitResult(kind=observed, snapshot=snapshot)
+
         # Everything the lease's busy card needs is minted before the
         # reserve: run id, timestamp, the server-side session id, the
         # redacted preview and the summary itself. None of it is a decision

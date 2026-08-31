@@ -96,6 +96,7 @@ def _host(
     before_recording_commit: threading.Event | None = None,
     after_recorded_snapshot: threading.Event | None = None,
     before_recording_failed: threading.Event | None = None,
+    snapshot_provider=None,
 ) -> tuple[RuntimeHost, sqlite3.Connection, CapturingSink]:
     if conn is None:
         conn = sqlite3.connect(":memory:", check_same_thread=False)
@@ -116,6 +117,7 @@ def _host(
         before_recording_commit=before_recording_commit,
         after_recorded_snapshot=after_recorded_snapshot,
         before_recording_failed=before_recording_failed,
+        snapshot_provider=snapshot_provider,
     )
     return host, conn, capture
 
@@ -517,6 +519,7 @@ def test_admission_and_execution_only_use_narrow_seams() -> None:
         assert "host" not in inspect.signature(cls.__init__).parameters, cls
     # The narrow seams exist and are the documented transitions.
     for method in (
+        "admission_observe",
         "admission_reserve",
         "admission_release",
         "admission_close_idle",
@@ -546,6 +549,15 @@ class _FakeAdmissionCoordinator:
         self.done: dict[str, threading.Event] = {}
         self.fail_publish = False
         self.reserved_summaries: dict[str, object] = {}
+        self.observe_calls = 0
+
+    def admission_observe(self):
+        self.observe_calls += 1
+        if self.state == "recording_failed":
+            return "recording_unavailable", _fake_runtime_snapshot()
+        if self.state != "idle":
+            return "run_in_progress", _fake_runtime_snapshot()
+        return "admissible", _fake_runtime_snapshot()
 
     def admission_reserve(self, run_id, summary):
         if self.state == "recording_failed":
@@ -595,7 +607,9 @@ class _BoomFactory:
         raise RuntimeError("no client")
 
 
-def _fake_admission(conn, *, factory=None, coordinator=None):
+def _fake_admission(
+    conn, *, factory=None, coordinator=None, snapshot_provider=None
+):
     if factory is None:
         factory = ScriptedModelFactory(ScriptedModel(["pong"]))
     if coordinator is None:
@@ -605,10 +619,168 @@ def _fake_admission(conn, *, factory=None, coordinator=None):
         settings=Settings(),
         redactor=Redactor(()),
         factory=factory,
-        snapshot_provider=SettingsBackedSnapshotProvider(Settings()),
+        snapshot_provider=snapshot_provider
+        or SettingsBackedSnapshotProvider(Settings()),
         database=RecordingStore(conn, threading.Lock()),
         coordinator=coordinator,
     )
+
+
+class _ControlledSnapshotProvider:
+    def __init__(self, *, fail: bool = False, block: bool = False):
+        self._delegate = SettingsBackedSnapshotProvider(Settings())
+        self._fail = fail
+        self._block = block
+        self.entered = threading.Event()
+        self.release = threading.Event()
+        self.calls = 0
+
+    def capture(self, *, stream: bool = False):
+        self.calls += 1
+        self.entered.set()
+        if self._block:
+            self.release.wait()
+        if self._fail:
+            raise RuntimeError("injected capture failure")
+        return self._delegate.capture(stream=stream)
+
+
+def test_known_busy_admission_returns_without_waiting_for_capture() -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    coordinator = _FakeAdmissionCoordinator()
+    coordinator.state = "accepted"
+    provider = _ControlledSnapshotProvider(block=True)
+    admission = _fake_admission(
+        conn, coordinator=coordinator, snapshot_provider=provider
+    )
+    done = threading.Event()
+    outcomes: list = []
+
+    def submit() -> None:
+        outcomes.append(admission.submit(SubmitRequest(message="second")))
+        done.set()
+
+    worker = threading.Thread(target=submit)
+    worker.start()
+    try:
+        assert done.wait(0.5), "known-busy admission waited for configuration"
+        assert outcomes[0].kind == "run_in_progress"
+        assert provider.calls == 0
+    finally:
+        provider.release.set()
+        worker.join(2.0)
+
+
+def test_known_busy_admission_outranks_capture_failure() -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    coordinator = _FakeAdmissionCoordinator()
+    coordinator.state = "running"
+    provider = _ControlledSnapshotProvider(fail=True)
+    admission = _fake_admission(
+        conn, coordinator=coordinator, snapshot_provider=provider
+    )
+
+    result = admission.submit(SubmitRequest(message="second"))
+
+    assert result.kind == "run_in_progress"
+    assert provider.calls == 0
+
+
+def test_recording_failed_admission_outranks_capture_failure() -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    coordinator = _FakeAdmissionCoordinator()
+    coordinator.state = "recording_failed"
+    provider = _ControlledSnapshotProvider(fail=True)
+    admission = _fake_admission(
+        conn, coordinator=coordinator, snapshot_provider=provider
+    )
+
+    result = admission.submit(SubmitRequest(message="second"))
+
+    assert result.kind == "recording_unavailable"
+    assert provider.calls == 0
+
+
+def test_admission_reserves_again_after_capture_closes_the_idle_race() -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    coordinator = _FakeAdmissionCoordinator()
+
+    class _RacingProvider(_ControlledSnapshotProvider):
+        def capture(self, *, stream: bool = False):
+            captured = super().capture(stream=stream)
+            coordinator.state = "running"
+            return captured
+
+    provider = _RacingProvider()
+    admission = _fake_admission(
+        conn, coordinator=coordinator, snapshot_provider=provider
+    )
+
+    result = admission.submit(SubmitRequest(message="loser"))
+
+    assert result.kind == "run_in_progress"
+    assert provider.calls == 1
+    assert coordinator.observe_calls == 1
+    assert conn.execute("SELECT COUNT(*) FROM runs").fetchone() == (0,)
+
+
+def test_run_winning_during_another_capture_is_not_queued() -> None:
+    class _FirstCaptureBlocks:
+        def __init__(self):
+            self._delegate = SettingsBackedSnapshotProvider(Settings())
+            self._lock = threading.Lock()
+            self.calls = 0
+            self.first_entered = threading.Event()
+            self.release_first = threading.Event()
+
+        def capture(self, *, stream: bool = False):
+            with self._lock:
+                self.calls += 1
+                call = self.calls
+            if call == 1:
+                self.first_entered.set()
+                self.release_first.wait()
+            return self._delegate.capture(stream=stream)
+
+    provider = _FirstCaptureBlocks()
+    published: list[WorkItem] = []
+    host, conn, _capture = _host(
+        snapshot_provider=provider,
+        publish_work=published.append,
+    )
+    outcomes: list = []
+    host.start()
+
+    def submit_loser() -> None:
+        outcomes.append(host.submit(SubmitRequest(message="loser")))
+
+    loser = threading.Thread(target=submit_loser)
+    loser.start()
+    try:
+        assert provider.first_entered.wait(2.0)
+        winner = host.submit(SubmitRequest(message="winner"))
+        assert winner.kind == "accepted"
+        provider.release_first.set()
+        loser.join(2.0)
+
+        assert not loser.is_alive()
+        assert len(outcomes) == 1
+        assert outcomes[0].kind == "run_in_progress"
+        assert outcomes[0].snapshot is not None
+        assert outcomes[0].snapshot.active_run is not None
+        assert outcomes[0].snapshot.active_run.run_id == winner.run_id
+        assert provider.calls == 2
+        assert len(published) == 1
+        assert published[0].run_id == winner.run_id
+        assert conn.execute("SELECT COUNT(*) FROM runs").fetchone() == (1,)
+    finally:
+        provider.release_first.set()
+        loser.join(2.0)
+        host.close()
 
 
 def test_admission_submits_through_the_narrow_seams_without_a_host() -> None:

@@ -8,8 +8,7 @@ from typing import Literal
 from agent_alfred.model import ClientSnapshot, ModelClient
 from agent_alfred.runtime.snapshot import RuntimeSnapshot
 
-SubmitKind = Literal[
-    "accepted",
+AdmissionRefusalKind = Literal[
     "run_in_progress",
     "recording_unavailable",
     # A mutation from another door is already in flight. It is a conflict,
@@ -20,10 +19,17 @@ SubmitKind = Literal[
     "admission_failed",
 ]
 
+SubmitKind = Literal["accepted"] | AdmissionRefusalKind
+
 # What admission_reserve answers before the handoff: the SubmitKind
 # vocabulary plus the internal "reserved" outcome that never escapes into a
 # SubmitResult.
-ReserveKind = SubmitKind | Literal["reserved"]
+ReserveKind = AdmissionRefusalKind | Literal["reserved"]
+
+# What the read-only admission preflight answers. ``admissible`` is only an
+# observation: callers must still use admission_reserve() after any work done
+# outside the coordinator lock.
+AdmissionObservationKind = AdmissionRefusalKind | Literal["admissible"]
 
 
 @dataclass(frozen=True)

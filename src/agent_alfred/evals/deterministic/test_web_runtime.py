@@ -37,6 +37,7 @@ from agent_alfred.gateway.web.state import (
     snapshot_payload,
 )
 from agent_alfred.model import ScriptedModel, ScriptedModelFactory
+from agent_alfred.runtime.config import SettingsBackedSnapshotProvider
 from agent_alfred.runtime.host import RuntimeHost
 from agent_alfred.runtime.snapshot import RuntimeSnapshot
 from agent_alfred.settings import Settings
@@ -87,6 +88,19 @@ class _FailFinalizeWhen:
         return getattr(self._inner, name)
 
 
+class _ArmableCaptureFailure:
+    def __init__(self):
+        self._delegate = SettingsBackedSnapshotProvider(Settings())
+        self.fail = False
+        self.calls = 0
+
+    def capture(self, *, stream: bool = False):
+        self.calls += 1
+        if self.fail:
+            raise RuntimeError("injected capture failure")
+        return self._delegate.capture(stream=stream)
+
+
 def _wait_until(predicate, timeout: float = 5.0) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -107,6 +121,7 @@ def _host(
     publish_work=None,
     extra_sinks=None,
     snapshot_listener=None,
+    snapshot_provider=None,
 ):
     database = conn
     if database is None:
@@ -128,6 +143,7 @@ def _host(
         after_recorded_snapshot=after_recorded_snapshot,
         before_recording_failed=before_recording_failed,
         snapshot_listener=snapshot_listener,
+        snapshot_provider=snapshot_provider,
     )
     return host, database
 
@@ -180,6 +196,34 @@ def test_a_second_submit_while_one_runs_is_409_with_the_busy_card() -> None:
         host.wait(first.run_id)
     finally:
         gate.set()
+        host.close()
+
+
+def test_busy_web_submit_keeps_authoritative_409_when_capture_would_fail() -> None:
+    gate = threading.Event()
+    provider = _ArmableCaptureFailure()
+    host, _conn = _host(["pong"], gate=gate, snapshot_provider=provider)
+    host.start()
+    try:
+        session_id = host.create_session()
+        api = _api(host)
+        first = api.submit({"message": "first", "session_id": session_id})
+        assert first.status == 202
+        _wait_until(lambda: host.snapshot().coordinator_state == "running")
+        provider.fail = True
+
+        second = api.submit({"message": "second", "session_id": session_id})
+
+        assert second.status == 409
+        assert second.code == "run_in_progress"
+        assert second.busy is not None
+        assert second.busy.run_id == first.run_id
+        assert second.busy.stage == "运行中"
+        assert provider.calls == 1
+    finally:
+        gate.set()
+        if first.run_id:
+            host.wait(first.run_id)
         host.close()
 
 
@@ -291,6 +335,45 @@ def test_recording_failed_answers_503_and_only_then() -> None:
         assert failed.code == "recording_unavailable"
         assert failed.busy is not None
         assert failed.busy.stage == "保存失败"
+    finally:
+        latch.release()
+        host.close()
+
+
+def test_recording_failed_web_submit_keeps_503_when_capture_would_fail() -> None:
+    flag = {"armed": False}
+    database = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(database)
+    wrapped = _FailFinalizeWhen(database, flag, "finished_at")
+    provider = _ArmableCaptureFailure()
+    latch = _SelectiveLatch()
+    latch.arm()
+    host, _conn = _host(
+        conn=wrapped,
+        snapshot_provider=provider,
+        before_recording_commit=latch,
+    )
+    host.start()
+    try:
+        session_id = host.create_session()
+        api = _api(host)
+        first = api.submit({"message": "first", "session_id": session_id})
+        assert first.status == 202
+        _wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
+        flag["armed"] = True
+        latch.release()
+        host.wait(first.run_id)
+        assert host.snapshot().coordinator_state == "recording_failed"
+        provider.fail = True
+
+        second = api.submit({"message": "second", "session_id": session_id})
+
+        assert second.status == 503
+        assert second.code == "recording_unavailable"
+        assert second.busy is not None
+        assert second.busy.run_id == first.run_id
+        assert second.busy.stage == "保存失败"
+        assert provider.calls == 1
     finally:
         latch.release()
         host.close()
