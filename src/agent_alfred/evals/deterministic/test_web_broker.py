@@ -36,6 +36,7 @@ from agent_alfred.events import (
     SequencedEvent,
     StepStarted,
     UnsequencedEvent,
+    event_json_default,
 )
 from agent_alfred.gateway.web import broker as broker_module
 from agent_alfred.gateway.web import frames
@@ -186,6 +187,49 @@ def test_commit_does_not_walk_a_large_evicted_replay_prefix(
         == ring.current_cost
     )
     assert [entry.seq for entry in ring.entries_after(48) or ()] == list(range(49, 66))
+
+
+def test_retirement_cleanup_failure_is_fatal_after_publish(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    secret = "retirement-secret-must-not-be-published"
+    ring = ReplayRing(max_frames=1, max_bytes=1 << 20)
+    harness = Harness(ring=ring)
+    capture = CapturingSink(name="capture")
+    fanout = FanOutSink(
+        [harness.broker, capture], process_instance_id=INSTANCE
+    )
+    def fail_release(start: int, count: int, through_seq: int) -> None:
+        del start, count, through_seq
+        raise RuntimeError(secret)
+
+    monkeypatch.setattr(
+        ring._entries, "release_retired", fail_release
+    )
+    envelope = EventEnvelope(0.0, "r1", None, None, None, None)
+
+    first = fanout.emit(RunStarted(purpose="chat"), envelope)
+    committed = fanout.emit(RunStarted(purpose="chat"), envelope)
+    fanout.emit(
+        RunStarted(purpose="chat"),
+        replace(envelope, run_id="r2"),
+    )
+
+    assert (first.seq, committed.seq) == (1, 2)
+    assert any(event.seq == committed.seq for event in capture.events)
+    assert harness.broker._fatal is not None  # noqa: SLF001
+    assert harness.broker._stopping is True  # noqa: SLF001
+    notices = [
+        event
+        for event in capture.events
+        if getattr(event.payload, "code", None) == "sink_disabled"
+    ]
+    assert len(notices) == 1, "process fatal is notified once across Runs"
+    assert dict(notices[0].payload.detail) == {
+        "sink": harness.broker.name,
+        "stage": "post_commit",
+    }
+    assert secret not in json.dumps(capture.events, default=event_json_default)
 
 
 def test_the_four_illegal_cursors_each_name_their_reason() -> None:

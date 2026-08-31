@@ -36,6 +36,7 @@ from typing import Any, Protocol
 from agent_alfred.clock import Clock, SystemClock
 from agent_alfred.events import (
     BestEffortFlushResult,
+    PostCommit,
     ProcessFatalSinkError,
     SequencedEvent,
     UnsequencedEvent,
@@ -471,7 +472,7 @@ class SSEBroker:
 
     def commit(
         self, prepared: object, event: SequencedEvent
-    ) -> Callable[[], None] | None:
+    ) -> PostCommit | None:
         """Ring first, then ingress. Short, quantitative, never blocking.
 
         Every published domain event advances the ring's published high
@@ -584,7 +585,22 @@ class SSEBroker:
         # lock. Logical retirement is already linearized; only Python
         # reference release remains, and its cost may scale with the retired
         # prefix so it cannot run in either publication critical section.
-        return retired_release
+        if retired_release is None:
+            return None
+
+        def release_retired() -> None:
+            try:
+                retired_release()
+            except Exception as exc:
+                # Logical publication is already complete. Preserve the
+                # original cause only in the broker's in-memory fatal latch;
+                # FanOut receives the fixed process-fatal policy carried by
+                # PostCommit and emits machine-safe context after every
+                # sibling cleanup has had its turn.
+                self._publish_fatal(exc)
+                raise
+
+        return PostCommit(release_retired, failure_scope="process_fatal")
 
     def _arm_kick_locked(self) -> bool:
         """Decide whether this overflow must wake the dispatcher. Call holds

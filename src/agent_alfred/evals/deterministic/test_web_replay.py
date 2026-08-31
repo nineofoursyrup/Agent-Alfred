@@ -446,6 +446,34 @@ def test_delayed_cleanup_never_releases_a_reused_live_slot() -> None:
     assert [entry.seq for entry in ring.entries_after(2) or ()] == [3, 4]
 
 
+def test_failed_retirement_release_is_retryable_then_idempotent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ring = replay.ReplayRing(max_frames=1, max_bytes=1 << 20)
+    ring.append(_entry(1))
+    result = ring.observe_published(
+        2, _entry(2), defer_retired_release=True
+    )
+    original_release = ring._entries.release_retired
+    attempts = 0
+
+    def fail_once(start: int, count: int, through_seq: int) -> None:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise RuntimeError("release failed")
+        original_release(start, count, through_seq)
+
+    monkeypatch.setattr(ring._entries, "release_retired", fail_once)
+
+    with pytest.raises(RuntimeError, match="release failed"):
+        result.release_retired()
+    result.release_retired()
+    result.release_retired()
+
+    assert attempts == 2
+
+
 def test_ring_accounting_returns_exactly_to_zero() -> None:
     ring = replay.ReplayRing(max_frames=4, max_bytes=200)
     first, second = _entry(1), _entry(2)

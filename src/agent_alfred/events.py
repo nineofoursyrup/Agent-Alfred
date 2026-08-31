@@ -23,7 +23,7 @@ from agent_alfred.model import ModelError, ModelRef, Usage
 from agent_alfred.outcomes import RunOutcome
 
 TracePolicy = Literal["transient", "persist"]
-PostCommit = Callable[[], None]
+PostCommitFailureScope = Literal["run_local", "process_fatal"]
 NoticeCode = Literal[
     "trace_incomplete",
     "sink_disabled",
@@ -58,6 +58,19 @@ class BestEffortFlushResult:
 
 
 FlushResult = BarrierFlushResult | BestEffortFlushResult
+
+
+@dataclass(frozen=True)
+class PostCommit:
+    """Work owed after publication, with its failure boundary preserved.
+
+    The owning sink is attached by :class:`FanOutSink` when ``commit``
+    returns this value. ``failure_scope`` states whether the sink may be
+    used by a later Run or is proven dead process-wide.
+    """
+
+    action: Callable[[], None]
+    failure_scope: PostCommitFailureScope = "run_local"
 
 
 @dataclass(frozen=True)
@@ -465,7 +478,7 @@ class FanOutSink:
         # they are published wherever they are discovered.
         newly_disabled: list[tuple[str, str]] = []
         fatal_notices: list[tuple[str, str]] = []
-        post_commits: list[PostCommit] = []
+        post_commits: list[tuple[EventSink, PostCommit]] = []
         run_id = unsequenced.envelope.run_id
         # What the event in flight already says about disabled sinks: a
         # process-fatal discovered while its own notice is being published
@@ -541,14 +554,43 @@ class FanOutSink:
                         )
                 else:
                     if post_commit is not None:
-                        post_commits.append(post_commit)
+                        post_commits.append((sink, post_commit))
         # These callbacks are produced by constant-time commit bookkeeping
         # for work that is safe only after the publication order has been
         # linearized. They must run after the FanOut lock, or a callback that
         # releases a large retired replay prefix would put that linear work
         # straight back into the unique publish critical section.
-        for post_commit in post_commits:
-            post_commit()
+        for sink, post_commit in post_commits:
+            try:
+                post_commit.action()
+            except Exception as exc:
+                failure: Exception = exc
+                if (
+                    post_commit.failure_scope == "process_fatal"
+                    and not isinstance(exc, ProcessFatalSinkError)
+                ):
+                    failure = ProcessFatalSinkError(
+                        "a process-fatal post-commit action failed"
+                    )
+                    failure.__cause__ = exc
+                with self._lock:
+                    stage_reported = self._note_sink_call_failed_locked(
+                        run_id,
+                        sink,
+                        "post_commit",
+                        unsequenced.trace_policy,
+                        failure,
+                        already_reported,
+                        event_committed=True,
+                    )
+                if stage_reported is not None:
+                    _book_failure(
+                        failure,
+                        sink.name,
+                        stage_reported,
+                        newly_disabled,
+                        fatal_notices,
+                    )
         if notify_disabled:
             for name, stage in newly_disabled:
                 self._emit_notice(
@@ -574,6 +616,8 @@ class FanOutSink:
         trace_policy: TracePolicy,
         exc: Exception,
         already_reported: frozenset[str] = frozenset(),
+        *,
+        event_committed: bool = False,
     ) -> str | None:
         """Book one failed sink call; the stage to report a notice about,
         or ``None`` when no notice is owed. Call holds the lock.
@@ -597,17 +641,29 @@ class FanOutSink:
             return stage
         disabled = self._disabled.setdefault(run_id, set())
         first_failure = sink.name not in disabled
-        self._note_sink_failure_locked(run_id, sink, stage, trace_policy)
+        self._note_sink_failure_locked(
+            run_id,
+            sink,
+            stage,
+            trace_policy,
+            event_committed=event_committed,
+        )
         return stage if first_failure else None
 
     def _note_sink_failure_locked(
-        self, run_id: str, sink: EventSink, stage: str, trace_policy: TracePolicy
+        self,
+        run_id: str,
+        sink: EventSink,
+        stage: str,
+        trace_policy: TracePolicy,
+        *,
+        event_committed: bool = False,
     ) -> None:
         self._disabled.setdefault(run_id, set()).add(sink.name)
         reasons = self._persist_lost.setdefault(run_id, [])
         if sink.flush_at_run_end:
             reasons.append(f"{sink.name} {stage} failed")
-        if trace_policy == "persist":
+        if trace_policy == "persist" and not event_committed:
             reasons.append(f"{sink.name} dropped persist")
 
     def _emit_notice(

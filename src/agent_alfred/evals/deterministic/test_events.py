@@ -14,14 +14,17 @@ from agent_alfred.events import (
     CapturingSink,
     EventEnvelope,
     FanOutSink,
+    PostCommit,
     RunStarted,
     SequencedEvent,
     UnsequencedEvent,
+    event_json_default,
 )
 from agent_alfred.messages import message_plain_text
 from agent_alfred.model import ScriptedModel, ScriptedModelFactory
 from agent_alfred.runtime.host import RuntimeHost, SubmitRequest
 from agent_alfred.settings import Settings
+from agent_alfred.trace import RunBundleTraceSink
 
 SECRET = "supersecret-key-value"
 
@@ -153,6 +156,77 @@ def test_each_logical_event_gets_one_distinct_identity_before_prepare() -> None:
         "event-a",
         "event-b",
     ]
+
+
+def test_post_commit_failure_cannot_reverse_publish_or_skip_later_cleanup(
+    tmp_path,
+) -> None:
+    cleanup_secret = "post-commit-secret-must-not-survive"
+    calls: list[str] = []
+
+    class CleanupSink(CapturingSink):
+        def __init__(self, *, name: str, fails: bool = False):
+            super().__init__(name=name)
+            self.fails = fails
+            self.commit_calls = 0
+
+        def commit(
+            self, prepared: object, event: SequencedEvent
+        ) -> PostCommit:
+            super().commit(prepared, event)
+            self.commit_calls += 1
+
+            def cleanup() -> None:
+                calls.append(self.name)
+                if self.fails:
+                    raise RuntimeError(cleanup_secret)
+
+            return PostCommit(cleanup)
+
+    broken = CleanupSink(name="broken", fails=True)
+    released = CleanupSink(name="released")
+    capture = CapturingSink(name="capture")
+    trace = RunBundleTraceSink(
+        root=tmp_path / "traces",
+        clock=FakeClock(),
+        process_instance_id="proc-post-commit",
+    )
+    fanout = FanOutSink(
+        [broken, released, trace, capture],
+        process_instance_id="proc-post-commit",
+    )
+    envelope = EventEnvelope(0.0, "r1", None, None, None, None)
+
+    published = fanout.emit(RunStarted(purpose="chat"), envelope)
+    fanout.emit(RunStarted(purpose="chat"), envelope)
+
+    assert published.seq == 1
+    assert calls[:2] == ["broken", "released"], (
+        "one cleanup failure must not strand later callbacks"
+    )
+    assert broken.commit_calls == 1, "the failed sink is disabled for the Run"
+    notices = [
+        event
+        for event in capture.events
+        if getattr(event.payload, "code", None) == "sink_disabled"
+    ]
+    assert len(notices) == 1
+    assert dict(notices[0].payload.detail) == {
+        "sink": "broken",
+        "stage": "post_commit",
+    }
+    document = json.dumps(capture.events, default=event_json_default)
+    assert cleanup_secret not in document
+    incomplete, reason = fanout.flush_barrier("r1")
+    assert (incomplete, reason) == (False, None)
+    fanout.close()
+    trace_documents = [
+        path.read_text(encoding="utf-8")
+        for path in (tmp_path / "traces").rglob("*")
+        if path.is_file()
+    ]
+    assert trace_documents
+    assert all(cleanup_secret not in document for document in trace_documents)
 
 
 def test_prepare_failure_does_not_abort_the_run_or_revisit_the_dead_sink() -> None:
