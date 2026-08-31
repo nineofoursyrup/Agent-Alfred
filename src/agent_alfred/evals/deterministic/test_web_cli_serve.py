@@ -145,6 +145,71 @@ def test_the_cli_and_the_web_compete_for_one_coordinator(tmp_path) -> None:
         runtime.close()
 
 
+def test_cli_initial_session_is_refused_while_a_web_run_owns_the_gate(
+    tmp_path,
+) -> None:
+    """CLI Session creation uses the same non-queueing gate as the Web.
+
+    The Dashboard is already serving when the foreground CLI creates its
+    initial Session.  A model barrier keeps a Web Run's lease across that
+    boundary: the CLI must return without a second Session write, rather
+    than bypassing or waiting for the Run.
+    """
+    from agent_alfred.gateway import cli as cli_module
+
+    run_gate = threading.Event()
+    run_admitted = threading.Event()
+
+    class HeldRunRuntime(_CapturingRuntime):
+        def __init__(self, inner):
+            super().__init__(inner)
+            self.session_count_before_close: int | None = None
+
+        def start(self):
+            descriptor = super().start()
+            api = DashboardApi(facade=self.host)
+            session_id = api.create_session().session_id
+            assert session_id is not None
+            outcome = api.submit(
+                {"message": "from the web", "session_id": session_id}
+            )
+            assert outcome.status == 202
+            run_admitted.set()
+            return descriptor
+
+        def close(self, *args, **kwargs):
+            assert run_admitted.is_set()
+            self.session_count_before_close = len(
+                self.host.list_sessions(limit=10, cursor=None).sessions
+            )
+            run_gate.set()
+            return super().close(*args, **kwargs)
+
+    out = io.StringIO()
+    runtime = HeldRunRuntime(
+        build_dashboard(
+            state_dir=tmp_path,
+            settings=Settings(),
+            factory=ScriptedModelFactory(
+                ScriptedModel(["pong"], gate=run_gate)
+            ),
+            port=free_loopback_port(),
+            trace_root=tmp_path / "traces",
+            open_database=file_database,
+        )
+    )
+    args = type("Args", (), {"message": "hi"})()
+
+    assert (
+        cli_module._chat_in_the_foreground(
+            runtime, args, Settings(), out=out
+        )
+        == 1
+    )
+    assert runtime.session_count_before_close == 1
+    assert "Session was not created" in out.getvalue()
+
+
 def test_the_cli_releases_the_socket_the_descriptor_and_the_lock(tmp_path) -> None:
     """Exiting the CLI leaves the state directory free.
 
@@ -217,9 +282,21 @@ class _CloseProgressRuntime:
     descriptor = EntryDescriptor("close-progress", 123, 17717)
 
     class _Host:
+        def __init__(self) -> None:
+            self.mutating = False
+
         @staticmethod
         def create_session() -> str:
             return "cli-session"
+
+        def try_begin_mutation(self) -> str | None:
+            if self.mutating:
+                return "mutation_in_flight"
+            self.mutating = True
+            return None
+
+        def end_mutation(self) -> None:
+            self.mutating = False
 
     def __init__(
         self,
@@ -256,6 +333,54 @@ class _InterruptingWaiter(threading.Event):
     def wait(self, timeout: float | None = None) -> bool:
         self.wait_calls.append(timeout)
         raise KeyboardInterrupt
+
+
+def test_cli_maps_session_gate_unavailability_to_safe_failures() -> None:
+    """Closed admission is non-zero and never exposes exception detail."""
+    from agent_alfred.gateway import cli as cli_module
+
+    class RefusingHost:
+        def __init__(self, code: str) -> None:
+            self.code = code
+
+        def try_begin_mutation(self) -> str:
+            return self.code
+
+        @staticmethod
+        def create_session() -> str:
+            raise RuntimeError("secret database detail")
+
+    class RefusingRuntime:
+        descriptor = EntryDescriptor("refused-session", 123, 17717)
+
+        def __init__(self, code: str) -> None:
+            self.host = RefusingHost(code)
+            self.closed = False
+
+        def start(self) -> None:
+            return None
+
+        def close(self) -> bool:
+            self.closed = True
+            return True
+
+    expected = {
+        "recording_unavailable": "Recording unavailable; Session was not created.",
+        "admission_failed": "Admission failed; Session was not created.",
+    }
+    args = type("Args", (), {"message": "hi"})()
+    for code, message in expected.items():
+        runtime = RefusingRuntime(code)
+        out = io.StringIO()
+        assert (
+            cli_module._chat_in_the_foreground(
+                runtime, args, Settings(), out=out
+            )
+            == 1
+        )
+        assert runtime.closed is True
+        assert message in out.getvalue()
+        assert "secret database detail" not in out.getvalue()
 
 
 def test_serve_waits_directly_on_the_callers_stop_event(tmp_path) -> None:

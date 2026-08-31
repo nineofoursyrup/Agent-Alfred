@@ -19,6 +19,7 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any, TextIO
 
+from agent_alfred.gateway.web.api import DashboardApi
 from agent_alfred.gateway.web.lifecycle import (
     DEFAULT_HOST,
     DEFAULT_PORT,
@@ -337,13 +338,19 @@ def _chat_in_the_foreground(
     _announce(runtime.descriptor, out)
     result = 1
     try:
-        session_id = host.create_session()
-        if args.message is not None:
+        created = DashboardApi(facade=host).create_session()
+        if created.session_id is None:
+            _print_session_creation_failure(created.code, out)
+        elif args.message is not None:
             result = _one_shot(
-                host, args.message, session_id, out, stream=settings.stream
+                host,
+                args.message,
+                created.session_id,
+                out,
+                stream=settings.stream,
             )
         else:
-            result = _repl(host, session_id, stream=settings.stream)
+            result = _repl(host, created.session_id, stream=settings.stream)
     finally:
         close_complete = _close_runtime(runtime, out)
     return result if close_complete else 1
@@ -457,6 +464,22 @@ def _print_submit_failure(kind: str, out: TextIO) -> None:
         out.write("Recording unavailable; refusing new Runs.\n")
     else:
         out.write(f"Admission failed ({kind}).\n")
+
+
+def _print_session_creation_failure(code: str | None, out: TextIO) -> None:
+    """Report an authoritative refusal without echoing exception detail."""
+    if code in ("mutation_in_flight", "run_in_progress"):
+        out.write(
+            "Busy: another mutation or Run is in progress; "
+            "Session was not created.\n"
+        )
+    elif code == "recording_unavailable":
+        out.write("Recording unavailable; Session was not created.\n")
+    elif code == "admission_failed":
+        out.write("Admission failed; Session was not created.\n")
+    else:
+        out.write("Session unavailable; Session was not created.\n")
+    out.flush()
 
 
 def _print_result(
