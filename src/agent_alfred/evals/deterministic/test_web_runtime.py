@@ -54,10 +54,69 @@ from agent_alfred.gateway.web.state import (
 )
 from agent_alfred.messages import message_plain_text
 from agent_alfred.redact import Redactor
+from agent_alfred.runtime.recording import RecordingUnavailable
 from agent_alfred.runtime.snapshot import RuntimeSnapshot
 
 INSTANCE = "proc-runtime"
 _REDACTION_CANARY = "sk-terminal-projection-secret"
+
+
+def _assert_poisoned_reads_fail_closed(
+    *,
+    api: DashboardApi,
+    host,
+    conn: FailNextSessionCommit,
+    session_id: str,
+    run_id: str,
+) -> None:
+    """Every browser read sees one unavailable answer and executes no SQL."""
+    calls_before_reads = conn.execute_calls
+    unavailable = (503, {"code": "recording_unavailable"})
+
+    assert api.session_inbox({}) == unavailable
+    assert api.session_messages(session_id, {}) == unavailable
+    assert api.runs_page({}) == unavailable
+    assert api.locate_run(run_id, {}) == unavailable
+    assert api.session_runs({"session_id": session_id}) == unavailable
+    assert api.mainbar({"session_id": session_id}) == unavailable
+    with pytest.raises(RecordingUnavailable, match="recording store is unavailable"):
+        host.session_exists(session_id)
+
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=host.snapshot(),
+        session_is_valid=host.session_exists,
+    )
+    connection = FakeConnection()
+    try:
+        with pytest.raises(
+            RecordingUnavailable, match="recording store is unavailable"
+        ):
+            broker.connect(connection=connection, session_id=session_id)
+        assert connection.closed is True
+        assert connection.writes == []
+        assert broker.connections == ()
+    finally:
+        broker.close(timeout=1.0)
+
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=host.snapshot(),
+        session_is_valid=host.session_exists,
+    )
+    connection_without_session = FakeConnection()
+    try:
+        with pytest.raises(
+            RecordingUnavailable, match="recording store is unavailable"
+        ):
+            broker.connect(connection=connection_without_session, session_id=None)
+        assert connection_without_session.closed is True
+        assert connection_without_session.writes == []
+        assert broker.connections == ()
+    finally:
+        broker.close(timeout=1.0)
+
+    assert conn.execute_calls == calls_before_reads
 
 # --- the 202 ----------------------------------------------------------------
 
@@ -146,6 +205,13 @@ def test_session_rollback_failure_still_releases_the_mutation_gate() -> None:
 
         assert (created.status, created.code) == (503, "recording_unavailable")
         assert (conn.execute_calls, conn.commit_calls) == calls_before_refusal
+        _assert_poisoned_reads_fail_closed(
+            api=api,
+            host=host,
+            conn=conn,
+            session_id=failed_session_id,
+            run_id="ghost-run",
+        )
         assert inner.in_transaction is True
         inner.rollback()
         assert inner.execute(
@@ -203,6 +269,13 @@ def test_run_admission_rollback_failure_poison_closes_every_write_door() -> None
             "recording_unavailable",
         )
         assert (conn.execute_calls, conn.commit_calls) == calls_before_refusal
+        _assert_poisoned_reads_fail_closed(
+            api=api,
+            host=host,
+            conn=conn,
+            session_id=session_id,
+            run_id=failed_run_id,
+        )
         assert host._pending_handoff == set()
         assert host._queue.empty()
         assert inner.in_transaction is True
@@ -211,6 +284,44 @@ def test_run_admission_rollback_failure_poison_closes_every_write_door() -> None
             "SELECT phase FROM runs WHERE run_id = ?", (failed_run_id,)
         ).fetchone() is None
     finally:
+        if inner.in_transaction:
+            inner.rollback()
+        host.close()
+
+
+def test_finalizer_rollback_failure_hides_the_dirty_terminal_run_and_messages() -> None:
+    inner = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(inner)
+    conn = FailNextSessionCommit(inner)
+    latch = SelectiveLatch()
+    latch.arm()
+    host, _database = build_runtime_host(
+        ["ghost reply"], conn=conn, before_recording_commit=latch
+    )
+    host.start()
+    try:
+        api = dashboard_api(host)
+        session_id = host.create_session()
+        accepted = api.submit({"message": "ghost prompt", "session_id": session_id})
+        assert accepted.status == 202
+        assert accepted.run_id is not None
+        assert latch.entered.wait(5.0), "finalizer did not reach its commit boundary"
+
+        conn.fail_next_commit = True
+        conn.fail_next_rollback = True
+        latch.release()
+        wait_until(lambda: host.snapshot().coordinator_state == "recording_failed")
+
+        _assert_poisoned_reads_fail_closed(
+            api=api,
+            host=host,
+            conn=conn,
+            session_id=session_id,
+            run_id=accepted.run_id,
+        )
+        assert inner.in_transaction is True
+    finally:
+        latch.release()
         if inner.in_transaction:
             inner.rollback()
         host.close()

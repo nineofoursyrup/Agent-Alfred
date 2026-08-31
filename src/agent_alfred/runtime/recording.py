@@ -37,6 +37,10 @@ _REASON_LIMIT = 500
 _REDACTION_FAILURE_TEXT = "<redaction failed; text withheld>"
 
 
+class RecordingUnavailable(RuntimeError):
+    """The Store cannot authoritatively answer reads or accept writes."""
+
+
 class RecordingCoordinator(Protocol):
     """The atomic coordinator transitions the recorder may trigger."""
 
@@ -74,7 +78,7 @@ class RecordingStore:
 
     def _require_available(self) -> None:
         if not self.available:
-            raise RuntimeError("recording store is unavailable")
+            raise RecordingUnavailable("recording store is unavailable")
 
     @contextmanager
     def transaction(self):

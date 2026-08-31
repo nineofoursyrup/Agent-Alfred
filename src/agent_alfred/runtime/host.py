@@ -681,9 +681,9 @@ class RuntimeHost:
         limit: int,
         cursor: str | None = None,
     ) -> session_store.SessionInboxPage:
-        with self._db_lock:
+        with self._store.reading() as conn:
             return session_store.list_sessions(
-                self._conn,
+                conn,
                 limit=limit,
                 cursor=cursor,
                 redactor=self._redactor,
@@ -706,9 +706,9 @@ class RuntimeHost:
             and projection.recording_state == "failed"
         ):
             recording_failed = frozenset({projection.run_id})
-        with self._db_lock:
+        with self._store.reading() as conn:
             return session_store.open_session(
-                self._conn,
+                conn,
                 session_id=session_id,
                 page_size=page_size,
                 cursor=cursor,
@@ -725,10 +725,10 @@ class RuntimeHost:
         the cheapest possible read: the answer is a row count, and no title,
         message or Run is derived from it.
         """
-        if session_id is None:
-            return False
-        with self._db_lock:
-            row = self._conn.execute(
+        with self._store.reading() as conn:
+            if session_id is None:
+                return False
+            row = conn.execute(
                 "SELECT 1 FROM sessions WHERE session_id = ?", (session_id,)
             ).fetchone()
         return row is not None
@@ -741,9 +741,9 @@ class RuntimeHost:
         cursor: str | None = None,
     ) -> runs.RunPage:
         """The runs page: terminal Runs paged, the live Run pinned."""
-        with self._db_lock:
+        with self._store.reading() as conn:
             return runs.list_runs(
-                self._conn,
+                conn,
                 filter=filter,
                 limit=limit,
                 cursor=cursor,
@@ -752,9 +752,9 @@ class RuntimeHost:
 
     def locate_run(self, run_id: str, *, limit: int = 25) -> runs.RunPage | None:
         """The page a deep link to one Run should open on."""
-        with self._db_lock:
+        with self._store.reading() as conn:
             return runs.locate_run(
-                self._conn, run_id=run_id, limit=limit, redactor=self._redactor
+                conn, run_id=run_id, limit=limit, redactor=self._redactor
             )
 
     def list_session_chat_runs(
@@ -765,9 +765,9 @@ class RuntimeHost:
         cursor: str | None = None,
     ) -> runs.SessionChatRunsPage:
         """One Session's admitted chat Runs, keyset paged."""
-        with self._db_lock:
+        with self._store.reading() as conn:
             return runs.list_session_chat_runs(
-                self._conn,
+                conn,
                 session_id=session_id,
                 limit=limit,
                 cursor=cursor,
@@ -783,9 +783,9 @@ class RuntimeHost:
         cursor: str | None = None,
     ) -> runs.MainBarPage:
         """The MainBar's message pairs for one Session's recorded chat Runs."""
-        with self._db_lock:
+        with self._store.reading() as conn:
             return runs.mainbar_pairs(
-                self._conn,
+                conn,
                 session_id=session_id,
                 limit=limit,
                 cursor=cursor,
