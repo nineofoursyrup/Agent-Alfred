@@ -104,6 +104,8 @@ class RunAdmission:
         if observed != "admissible":
             return SubmitResult(kind=observed, snapshot=snapshot)
 
+        creates_session = request.purpose == "chat" and request.session_id is None
+
         # Everything the lease's busy card needs is minted before the
         # reserve: run id, timestamp, the server-side session id, the
         # redacted preview and the summary itself. None of it is a decision
@@ -113,7 +115,7 @@ class RunAdmission:
         run_id = uuid.uuid4().hex
         accepted_at = format_instant(self._clock.wall_utc())
         session_id = request.session_id
-        if request.purpose == "chat" and session_id is None:
+        if creates_session:
             session_id = uuid.uuid4().hex
         # The capture has to precede the preview it feeds: the key it
         # carries enters the shared redactor first, so the preview this
@@ -151,7 +153,7 @@ class RunAdmission:
 
         try:
             with self._database.transaction() as conn:
-                if request.purpose == "chat" and request.session_id is None:
+                if creates_session:
                     schema.insert_session(
                         conn, session_id=session_id, created_at=accepted_at
                     )
