@@ -122,4 +122,3 @@ class _FakeServer:
 
     def server_close(self) -> None:
         return None
-
