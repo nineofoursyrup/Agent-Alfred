@@ -78,15 +78,13 @@ DEFAULT_HEARTBEAT_S = connection_module.DEFAULT_HEARTBEAT_S
 # bounded, honest "not fully drained" beats hanging on a socket whose peer
 # has stopped reading; the descriptors are released either way.
 _DRAIN_TIMEOUT_S = 2.0
-# How many capture laps one state patch may spend before it gives up on
-# the *patch*, never on the state. One lap is the common case; a second
-# recaptures a world that moved during one encoding. Beyond a bounded few,
-# the world is moving faster than a single encode and another lap would be
-# a spin -- so the publish stops trying to win, and the exhausted call
-# closes explicitly instead: the authoritative snapshot still moves
-# forward and the disconnect generation rises, so every live connection is
-# asked to reconnect and re-seed from ``_latest`` rather than silently
-# keeping a state nothing will ever correct.
+# How many capture laps a state patch may spend before it gives up. One lap
+# is the common case; a second recaptures a world that moved during one
+# encoding. Beyond a bounded few, the world is moving faster than a single
+# encode and another lap would be a spin. A publish then preserves the state
+# and closes existing connections explicitly; a connect closes only its new
+# socket and asks the browser to try again. Neither path may ship the stale
+# patch it just lost the race to register.
 _MAX_PATCH_CAPTURES = 4
 
 
@@ -747,9 +745,12 @@ class SSEBroker:
         will say leaves behind an epoch; the registration critical section
         re-checks it, and a changed epoch -- an event or a state patch that
         moved the world while the frames were being built -- throws the
-        capture away and starts again. What the client finally receives
-        names the state that was authoritative when it registered, and no
-        commit ever waited for the encoding of a startup frame.
+        capture away and starts again, up to the same fixed capture budget
+        as state-patch publication. Exhaustion explicitly refuses this one
+        socket so the browser reconnects instead of receiving a stale patch
+        or waiting forever. What the client finally receives names the state
+        that was authoritative when it registered, and no commit ever waited
+        for the encoding of a startup frame.
 
         The broker still accepting connections is confirmed in the same
         critical sections, *before* anything is registered: a connect that
@@ -790,7 +791,7 @@ class SSEBroker:
             session_id=session_id,
         )
         refused = False
-        while True:
+        for _ in range(_MAX_PATCH_CAPTURES):
             boundary = (
                 nullcontext()
                 if self._projection_boundary is None
@@ -889,6 +890,14 @@ class SSEBroker:
                 # a registration it may not report around.
                 self._registrations += 1
             break
+        else:
+            # The world moved during every bounded encoding lap. Registering
+            # the final capture would ship a stale absolute replacement, and
+            # trying forever would strand the HTTP handler while rebuilding
+            # snapshots and replay. Refuse this connection in the same
+            # observable shape as a closing broker; a reconnect gets a fresh
+            # atomic capture without poisoning the broker for other clients.
+            refused = True
         if refused:
             connection.close()
             handle.finished.set()

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import gc
 import json
+import queue
 import re
 import threading
 import time
@@ -2208,6 +2210,97 @@ def test_connect_encodes_its_startup_outside_the_lock(monkeypatch) -> None:
     wire = descriptor[0]
     assert b'"state_revision":1' in wire
     assert b'"state_revision":0' not in wire
+
+
+def test_connect_refuses_after_bounded_startup_recaptures(monkeypatch) -> None:
+    """A perpetually moving world cannot make connect spin forever.
+
+    Every opening-patch encoding below advances one real authoritative state
+    patch before registration can re-check its epoch. The old unbounded loop
+    reaches a fifth encoding and has to be stopped externally; the bounded
+    path instead returns the ordinary explicit refusal after exactly the
+    shared capture budget, without ever registering or starting a writer.
+    """
+    harness = Harness()
+    connection = FakeConnection()
+    real_encoder = broker_module._patch_frames
+    runaway = threading.Event()
+    release_runaway = threading.Event()
+    connect_done = threading.Event()
+    signals: queue.Queue[str] = queue.Queue()
+    captures = 0
+    answers = []
+    errors: list[BaseException] = []
+
+    def advancing_encoder(snapshot, step, session_valid):
+        nonlocal captures
+        captures += 1
+        if captures > broker_module._MAX_PATCH_CAPTURES:
+            runaway.set()
+            signals.put("runaway")
+            release_runaway.wait(5.0)  # anti-hang only; cleanup releases it
+        encoded = real_encoder(snapshot, step, session_valid)
+        harness.broker.publish_state_patch(
+            runtime_snapshot(state_revision=captures)
+        )
+        return encoded
+
+    monkeypatch.setattr(broker_module, "_patch_frames", advancing_encoder)
+
+    def connect() -> None:
+        try:
+            answers.append(harness.broker.connect(connection=connection))
+        except BaseException as exc:  # preserve the worker's testimony
+            errors.append(exc)
+        finally:
+            connect_done.set()
+            signals.put("done")
+
+    connector = threading.Thread(target=connect, daemon=True)
+    connector.start()
+    # Fixed code returns promptly. Old code deterministically announces that
+    # it crossed the budget and parks, proving the pre-fix non-return without
+    # leaving an infinite daemon consuming snapshots in the test process.
+    signal = signals.get(timeout=5.0)
+    bounded = signal == "done"
+    if not bounded:
+        assert runaway.is_set(), "connect neither returned nor crossed its budget"
+    try:
+        assert bounded, "connect exceeded the fixed startup capture budget"
+    finally:
+        if not bounded:
+            # The old implementation needs an external close to escape its
+            # unbounded loop. Close first, then release the parked encoder so
+            # its next registration check observes the refusal.
+            assert harness.broker.close(timeout=0.2) is True
+            release_runaway.set()
+        connector.join(timeout=5.0)
+
+    assert not connector.is_alive()
+    assert errors == []
+    assert captures == broker_module._MAX_PATCH_CAPTURES
+    assert len(answers) == 1
+    refused = answers[0]
+    assert refused.finished.is_set()
+    assert refused.thread is None
+    assert refused.startup == ()
+    assert refused not in harness.broker.connections
+    assert harness.broker.registrations_in_flight == 0
+    assert harness.spawn.targets == []
+    assert connection.written == b""
+    assert connection.closed is True
+    assert refused.queue.current_cost == frames.FrameCost(
+        frames=0, encoded_bytes=0
+    )
+    assert refused.queue.close_requested is False
+
+    # The rejected handle and its queue are not retained by the broker or a
+    # never-started writer target after the caller releases its own answer.
+    refused_ref = weakref.ref(refused)
+    answers.clear()
+    del refused
+    gc.collect()
+    assert refused_ref() is None
 
 
 # --- the publish path never touches a connection ----------------------------
