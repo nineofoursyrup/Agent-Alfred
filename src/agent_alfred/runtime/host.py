@@ -359,7 +359,7 @@ class RuntimeHost:
           still hold it) or another write is inside it.
         """
         with self._lock:
-            if self._coord == "recording_failed":
+            if self._coord == "recording_failed" or not self._store.available:
                 return "recording_unavailable"
             if self._mutating or self._coord != "idle":
                 return "mutation_in_flight"
@@ -405,7 +405,7 @@ class RuntimeHost:
             )
         if unstartable:
             return "admission_failed"
-        if self._coord == "recording_failed":
+        if self._coord == "recording_failed" or not self._store.available:
             return "recording_unavailable"
         if self._coord != "idle":
             return "run_in_progress"

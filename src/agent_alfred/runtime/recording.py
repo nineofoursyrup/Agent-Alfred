@@ -61,20 +61,43 @@ class RecordingStore:
     def __init__(self, conn: sqlite3.Connection, db_lock: threading.Lock):
         self._conn = conn
         self._db_lock = db_lock
+        # A rollback failure leaves an open transaction whose contents can
+        # neither be trusted nor safely hidden from later work on this same
+        # connection. This fact is permanent for this Store instance; only a
+        # reliably reconstructed connection can establish a new authority.
+        self._poisoned = threading.Event()
+
+    @property
+    def available(self) -> bool:
+        """Whether this connection remains authoritative in this process."""
+        return not self._poisoned.is_set()
+
+    def _require_available(self) -> None:
+        if not self.available:
+            raise RuntimeError("recording store is unavailable")
 
     @contextmanager
     def transaction(self):
         with self._db_lock:
+            self._require_available()
             try:
                 yield self._conn
             finally:
                 if self._conn.in_transaction:
-                    self._conn.rollback()
+                    try:
+                        self._conn.rollback()
+                    except BaseException:
+                        # Publish poison before releasing _db_lock. The
+                        # rollback error remains primary; Python chains the
+                        # original body/commit error as its context.
+                        self._poisoned.set()
+                        raise
 
     @contextmanager
     def reading(self):
         """Read access under the write lock; no transaction is owned."""
         with self._db_lock:
+            self._require_available()
             yield self._conn
 
 

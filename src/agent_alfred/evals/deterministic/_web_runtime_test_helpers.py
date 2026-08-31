@@ -28,13 +28,20 @@ class FailNextSessionCommit:
         self.fail_next_commit = False
         self.fail_next_rollback = False
         self.failed_session_id: str | None = None
+        self.execute_calls = 0
+        self.commit_calls = 0
+        self.failed_run_id: str | None = None
 
     def execute(self, sql, parameters=()):
+        self.execute_calls += 1
         if self.fail_next_commit and "INSERT INTO sessions" in sql:
             self.failed_session_id = parameters[0]
+        if self.fail_next_commit and "INSERT INTO runs" in sql:
+            self.failed_run_id = parameters[0]
         return self._inner.execute(sql, parameters)
 
     def commit(self):
+        self.commit_calls += 1
         if self.fail_next_commit:
             self.fail_next_commit = False
             raise sqlite3.OperationalError("injected Session commit failure")

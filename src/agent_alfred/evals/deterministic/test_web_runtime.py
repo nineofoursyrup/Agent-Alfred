@@ -138,8 +138,81 @@ def test_session_rollback_failure_still_releases_the_mutation_gate() -> None:
         assert isinstance(raised.value.__context__, sqlite3.OperationalError)
         assert str(raised.value.__context__) == "injected Session commit failure"
         assert host.mutation_in_flight() is False
-    finally:
+        failed_session_id = conn.failed_session_id
+        assert failed_session_id is not None
+        calls_before_refusal = (conn.execute_calls, conn.commit_calls)
+
+        created = api.create_session()
+
+        assert (created.status, created.code) == (503, "recording_unavailable")
+        assert (conn.execute_calls, conn.commit_calls) == calls_before_refusal
+        assert inner.in_transaction is True
         inner.rollback()
+        assert inner.execute(
+            "SELECT session_id FROM sessions WHERE session_id = ?",
+            (failed_session_id,),
+        ).fetchone() is None
+        still_refused = api.create_session()
+        assert (still_refused.status, still_refused.code) == (
+            503,
+            "recording_unavailable",
+        )
+        assert (conn.execute_calls, conn.commit_calls) == calls_before_refusal
+    finally:
+        if inner.in_transaction:
+            inner.rollback()
+        host.close()
+
+
+def test_run_admission_rollback_failure_poison_closes_every_write_door() -> None:
+    inner = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(inner)
+    conn = FailNextSessionCommit(inner)
+    host, _database = build_runtime_host(conn=conn)
+    host.start()
+    try:
+        api = dashboard_api(host)
+        session_id = host.create_session()
+        conn.fail_next_commit = True
+        conn.fail_next_rollback = True
+
+        failed = api.submit({"message": "ghost", "session_id": session_id})
+
+        assert (failed.status, failed.code) == (500, "admission_failed")
+        failed_run_id = conn.failed_run_id
+        assert failed_run_id is not None
+        assert host.snapshot().coordinator_state == "idle"
+        assert host.snapshot().active_run is None
+        assert host._pending_handoff == set()
+        assert host._done == {}
+        assert host._results == {}
+        assert host._queue.empty()
+        calls_before_refusal = (conn.execute_calls, conn.commit_calls)
+
+        refused_submit = api.submit(
+            {"message": "must not run", "session_id": session_id}
+        )
+        refused_session = api.create_session()
+
+        assert (refused_submit.status, refused_submit.code) == (
+            503,
+            "recording_unavailable",
+        )
+        assert (refused_session.status, refused_session.code) == (
+            503,
+            "recording_unavailable",
+        )
+        assert (conn.execute_calls, conn.commit_calls) == calls_before_refusal
+        assert host._pending_handoff == set()
+        assert host._queue.empty()
+        assert inner.in_transaction is True
+        inner.rollback()
+        assert inner.execute(
+            "SELECT phase FROM runs WHERE run_id = ?", (failed_run_id,)
+        ).fetchone() is None
+    finally:
+        if inner.in_transaction:
+            inner.rollback()
         host.close()
 
 
