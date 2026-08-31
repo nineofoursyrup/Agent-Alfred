@@ -45,6 +45,7 @@ from agent_alfred.gateway.web.lifecycle import (
     DEFAULT_HOST,
     LOCK_NAME,
     DashboardService,
+    EntryDescriptor,
     PortUnavailable,
     ProcessLock,
     StateDirLocked,
@@ -1336,6 +1337,79 @@ def test_serve_never_enters_the_repl(tmp_path, monkeypatch) -> None:
         )
         == 0
     )
+
+
+class _ServeWaitRuntime:
+    descriptor = EntryDescriptor("serve-wait", 123, 17717)
+
+    def __init__(self) -> None:
+        self.close_calls = 0
+
+    def start(self) -> None:
+        return None
+
+    def close(self) -> None:
+        self.close_calls += 1
+
+
+class _InterruptingWaiter(threading.Event):
+    def __init__(self) -> None:
+        super().__init__()
+        self.wait_calls: list[float | None] = []
+
+    def wait(self, timeout: float | None = None) -> bool:
+        self.wait_calls.append(timeout)
+        raise KeyboardInterrupt
+
+
+def test_serve_waits_directly_on_the_callers_stop_event(tmp_path) -> None:
+    """An idle Dashboard sleeps until its caller asks it to stop."""
+    from agent_alfred.gateway import cli as cli_module
+
+    runtime = _ServeWaitRuntime()
+    stop = _InterruptingWaiter()
+
+    assert (
+        cli_module.serve_dashboard(
+            state_dir=tmp_path,
+            settings=Settings(),
+            out=io.StringIO(),
+            stop=stop,
+            build=lambda **kwargs: runtime,
+        )
+        == 0
+    )
+    assert stop.wait_calls == [None]
+    assert runtime.close_calls == 1
+
+
+def test_serve_without_a_stop_event_uses_one_permanent_waiter(
+    tmp_path, monkeypatch
+) -> None:
+    """Ctrl-C interrupts one indefinite wait; no hourly timers are created."""
+    from agent_alfred.gateway import cli as cli_module
+
+    runtime = _ServeWaitRuntime()
+    waiters: list[_InterruptingWaiter] = []
+
+    def event_factory() -> _InterruptingWaiter:
+        waiter = _InterruptingWaiter()
+        waiters.append(waiter)
+        return waiter
+
+    monkeypatch.setattr(cli_module.threading, "Event", event_factory)
+    assert (
+        cli_module.serve_dashboard(
+            state_dir=tmp_path,
+            settings=Settings(),
+            out=io.StringIO(),
+            build=lambda **kwargs: runtime,
+        )
+        == 0
+    )
+    assert len(waiters) == 1
+    assert waiters[0].wait_calls == [None]
+    assert runtime.close_calls == 1
 
 
 def test_the_serve_flag_runs_the_serve_path(tmp_path, monkeypatch) -> None:

@@ -216,8 +216,6 @@ def main(
         parser.error(str(exc))  # exits with status 2
         raise AssertionError("unreachable") from None
 
-    from pathlib import Path
-
     directory = Path(args.state_dir) if args.state_dir else None
     port = DEFAULT_PORT if args.port is None else args.port
     if args.serve:
@@ -357,12 +355,8 @@ def serve_dashboard(
         return failure
     _announce(runtime.descriptor, stream)
     try:
-        if stop is None:
-            while True:
-                threading.Event().wait(3600)
-        else:
-            while not stop.is_set():
-                stop.wait(0.05)
+        waiter = stop if stop is not None else threading.Event()
+        waiter.wait()
     except KeyboardInterrupt:
         pass
     finally:
