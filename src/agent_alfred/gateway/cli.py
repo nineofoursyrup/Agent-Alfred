@@ -42,6 +42,13 @@ from agent_alfred.settings import (
     Settings,
 )
 
+# Every Dashboard component already gives one close attempt a bounded wait:
+# RuntimeHost uses its worker-join bound and SSEBroker uses its drain bound.
+# The CLI must nevertheless ask again when that honest attempt says progress
+# is incomplete. Three attempts let the resumable state machine advance
+# without turning a permanently refusing component into an unbounded loop.
+_CLOSE_PROGRESS_ATTEMPTS = 3
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -264,19 +271,39 @@ def _build_runtime(
 def _start_or_report(runtime: Any, out: TextIO) -> int | None:
     """Start the Dashboard, or say why it did not come up.
 
-    Both surfaces answer a refused start the same way: name the reason and
-    return a failure, having left nothing behind. A silent fallback to "chat
-    without a Dashboard" would hide a held lock or a taken port -- and those
-    are precisely the two situations the user has to hear about.
+    Both surfaces answer a refused start the same way: name the reason,
+    advance its retryable rollback, and return a failure. A silent fallback
+    to "chat without a Dashboard" would hide a held lock or a taken port --
+    and those are precisely the two situations the user has to hear about.
     """
     try:
         runtime.start()
     except BaseException as exc:  # noqa: BLE001 - reported, then closed
-        runtime.close()
+        _close_runtime(runtime, out)
         out.write(f"dashboard unavailable: {exc}\n")
         out.flush()
         return 1
     return None
+
+
+def _close_runtime(runtime: Any, out: TextIO) -> bool:
+    """Advance resumable close progress without claiming endless success.
+
+    One ``close()`` is already a bounded wait at the runtime boundary. False
+    is not failure and not completion: it means the runtime still owns the
+    resources needed by a worker or stream and the same owner must ask again.
+    A fixed attempt budget avoids an unbounded shutdown loop; exhausting it
+    leaves ownership untouched and gives the CLI an explicit failure status.
+    """
+    for _attempt in range(_CLOSE_PROGRESS_ATTEMPTS):
+        if runtime.close():
+            return True
+    out.write(
+        "dashboard shutdown incomplete after "
+        f"{_CLOSE_PROGRESS_ATTEMPTS} attempts; runtime resources remain owned\n"
+    )
+    out.flush()
+    return False
 
 
 def _announce(descriptor: EntryDescriptor, out: TextIO) -> None:
@@ -308,15 +335,18 @@ def _chat_in_the_foreground(
         return failure
     host = runtime.host
     _announce(runtime.descriptor, out)
+    result = 1
     try:
         session_id = host.create_session()
         if args.message is not None:
-            return _one_shot(
+            result = _one_shot(
                 host, args.message, session_id, out, stream=settings.stream
             )
-        return _repl(host, session_id, stream=settings.stream)
+        else:
+            result = _repl(host, session_id, stream=settings.stream)
     finally:
-        runtime.close()
+        close_complete = _close_runtime(runtime, out)
+    return result if close_complete else 1
 
 
 def serve_dashboard(
@@ -360,8 +390,8 @@ def serve_dashboard(
     except KeyboardInterrupt:
         pass
     finally:
-        runtime.close()
-    return 0
+        close_complete = _close_runtime(runtime, stream)
+    return 0 if close_complete else 1
 
 
 def _one_shot(

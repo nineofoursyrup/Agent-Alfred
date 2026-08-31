@@ -206,8 +206,46 @@ class _ServeWaitRuntime:
     def start(self) -> None:
         return None
 
-    def close(self) -> None:
+    def close(self) -> bool:
         self.close_calls += 1
+        return True
+
+
+class _CloseProgressRuntime:
+    """A CLI-owned runtime whose close makes scripted, observable progress."""
+
+    descriptor = EntryDescriptor("close-progress", 123, 17717)
+
+    class _Host:
+        @staticmethod
+        def create_session() -> str:
+            return "cli-session"
+
+    def __init__(
+        self,
+        close_results: list[bool],
+        *,
+        start_error: BaseException | None = None,
+    ) -> None:
+        self.host = self._Host()
+        self._close_results = iter(close_results)
+        self._start_error = start_error
+        self.close_calls = 0
+        self.close_retried = threading.Event()
+        self.owns_runtime = True
+
+    def start(self) -> None:
+        if self._start_error is not None:
+            raise self._start_error
+
+    def close(self) -> bool:
+        self.close_calls += 1
+        if self.close_calls >= 2:
+            self.close_retried.set()
+        closed = next(self._close_results)
+        if closed:
+            self.owns_runtime = False
+        return closed
 
 
 class _InterruptingWaiter(threading.Event):
@@ -268,6 +306,102 @@ def test_serve_without_a_stop_event_uses_one_permanent_waiter(
     assert len(waiters) == 1
     assert waiters[0].wait_calls == [None]
     assert runtime.close_calls == 1
+
+
+def test_repl_exit_advances_retryable_close_until_it_finishes(
+    tmp_path, monkeypatch
+) -> None:
+    """A normal CLI exit does not drop two honest "not closed yet" answers."""
+    from agent_alfred.gateway import cli as cli_module
+
+    runtime = _CloseProgressRuntime([False, False, True])
+    monkeypatch.setattr(
+        "builtins.input", lambda *args, **kwargs: (_ for _ in ()).throw(EOFError)
+    )
+
+    assert (
+        cli_module.main(
+            ["--state-dir", str(tmp_path)],
+            build=lambda **kwargs: runtime,
+        )
+        == 0
+    )
+    assert runtime.close_retried.is_set()
+    assert runtime.close_calls == 3
+    assert runtime.owns_runtime is False
+
+
+def test_serve_interrupt_advances_retryable_close_until_it_finishes(tmp_path) -> None:
+    """Ctrl-C remains a successful stop only after close confirms completion."""
+    from agent_alfred.gateway import cli as cli_module
+
+    runtime = _CloseProgressRuntime([False, False, True])
+    stop = _InterruptingWaiter()
+
+    assert (
+        cli_module.serve_dashboard(
+            state_dir=tmp_path,
+            settings=Settings(),
+            out=io.StringIO(),
+            stop=stop,
+            build=lambda **kwargs: runtime,
+        )
+        == 0
+    )
+    assert runtime.close_retried.is_set()
+    assert runtime.close_calls == 3
+    assert runtime.owns_runtime is False
+
+
+def test_start_failure_advances_retryable_rollback_until_it_finishes(
+    tmp_path,
+) -> None:
+    """A refused start is reported only after its resumable undo is driven."""
+    from agent_alfred.gateway import cli as cli_module
+
+    runtime = _CloseProgressRuntime(
+        [False, False, True], start_error=RuntimeError("bind refused")
+    )
+    out = io.StringIO()
+
+    assert (
+        cli_module.serve_dashboard(
+            state_dir=tmp_path,
+            settings=Settings(),
+            out=out,
+            stop=threading.Event(),
+            build=lambda **kwargs: runtime,
+        )
+        == 1
+    )
+    assert "dashboard unavailable: bind refused" in out.getvalue()
+    assert runtime.close_retried.is_set()
+    assert runtime.close_calls == 3
+    assert runtime.owns_runtime is False
+
+
+def test_permanently_incomplete_close_is_an_explicit_cli_failure(tmp_path) -> None:
+    """A bounded retry budget never turns retained ownership into success."""
+    from agent_alfred.gateway import cli as cli_module
+
+    runtime = _CloseProgressRuntime([False, False, False])
+    stop = threading.Event()
+    stop.set()
+    out = io.StringIO()
+
+    assert (
+        cli_module.serve_dashboard(
+            state_dir=tmp_path,
+            settings=Settings(),
+            out=out,
+            stop=stop,
+            build=lambda **kwargs: runtime,
+        )
+        == 1
+    )
+    assert runtime.close_calls == 3
+    assert runtime.owns_runtime is True
+    assert "dashboard shutdown incomplete" in out.getvalue()
 
 
 def test_the_serve_flag_runs_the_serve_path(tmp_path, monkeypatch) -> None:
