@@ -192,6 +192,40 @@ def test_the_writer_writes_every_event_it_takes() -> None:
     assert connection.closed is True
 
 
+@pytest.mark.parametrize("phase", ["startup", "live"])
+def test_the_writer_preserves_physical_frame_boundaries(phase: str) -> None:
+    """A chunked logical event is written as its complete physical records."""
+    prepared = frames.domain_event_frames(
+        event_name="run.started",
+        payload={"text": "x" * 2850},
+        event_id="event-1",
+        replayable=True,
+        max_frame_bytes=512,
+    ).with_checkpoint(1, "inst-test")
+    expected = prepared.wire_frames()
+    assert len(expected) == 9
+    assert len(prepared.wire_bytes()) == 3912
+
+    connection = FakeConnection()
+    source = ConnectionQueue(max_frames=9, max_bytes=1 << 20)
+    startup = (prepared,) if phase == "startup" else ()
+    if phase == "live":
+        assert source.offer(prepared).kind == "accepted"
+    source.stop()
+
+    ConnectionWriter(
+        connection=connection,
+        source=source,
+        clock=FakeClock(),
+        startup=startup,
+    ).run()
+
+    assert connection.writes == list(expected)
+    assert all(len(write) <= 512 for write in connection.writes)
+    assert connection.written == prepared.wire_bytes()
+    assert connection.closed is True
+
+
 def test_a_heartbeat_is_written_only_when_the_interval_has_elapsed() -> None:
     connection = FakeConnection()
     clock = FakeClock(monotonic_value=0.0)

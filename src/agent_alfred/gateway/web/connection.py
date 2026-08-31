@@ -277,7 +277,7 @@ class ConnectionWriter:
             # client where it is, so it precedes anything the dispatcher
             # may already have queued behind it.
             for item in self._startup:
-                self._write(item.wire_bytes())
+                self._write_frames(item)
             while True:
                 try:
                     item = self._source.take(self._heartbeat_s)
@@ -291,9 +291,9 @@ class ConnectionWriter:
                     # degraded delivery that reconnected immediately would be
                     # a reconnect storm rather than a backoff.
                     if item.retry_ms is not None:
-                        self._write(frames.retry_frame(item.retry_ms).wire_bytes())
+                        self._write_frames(frames.retry_frame(item.retry_ms))
                     return
-                self._write(item.wire_bytes())
+                self._write_frames(item)
         except OSError as exc:
             # The peer is gone. That is not a fault in this process and it is
             # not news: the connection is closing either way. Recorded rather
@@ -308,7 +308,11 @@ class ConnectionWriter:
         if now - self._last_write < self._heartbeat_s:
             # A timeout that returned early is not an interval.
             return
-        self._write(frames.heartbeat_frame().wire_bytes())
+        self._write_frames(frames.heartbeat_frame())
+
+    def _write_frames(self, item: frames.PreparedFrames) -> None:
+        for wire_frame in item.wire_frames():
+            self._write(wire_frame)
 
     def _write(self, data: bytes) -> None:
         self._connection.write(data)
