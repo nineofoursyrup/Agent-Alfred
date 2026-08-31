@@ -135,9 +135,9 @@ def _insert_run(
 
 
 def _seed_historic(
-    conn: sqlite3.Connection, session_id: str, turns: list[str]
+    conn: sqlite3.Connection, session_id: str, legacy_messages: list[str]
 ) -> None:
-    for index, text in enumerate(turns):
+    for index, text in enumerate(legacy_messages):
         conn.execute(
             """INSERT INTO agent_log (
                  session_id, role, content, source, telemetry, created_at
@@ -153,20 +153,20 @@ def _seed_historic(
 
 
 def _historic_host(
-    turns_by_session: dict[str, list[str]],
+    messages_by_session: dict[str, list[str]],
     script=None,
     *,
     redactor: Redactor | None = None,
 ) -> RuntimeHost:
-    """A Host over a real v2 database seeded with historic rows.
+    """A Host over a real v2 database seeded with historic Message rows.
 
     The migration to v3 runs when the Host is built, which is the order the
     real upgrade happens in: the rows predate the Session table, and the
     backfill is what makes them visible at all.
     """
     conn = _v2_database()
-    for session_id, turns in turns_by_session.items():
-        _seed_historic(conn, session_id, turns)
+    for session_id, legacy_messages in messages_by_session.items():
+        _seed_historic(conn, session_id, legacy_messages)
     schema.migrate(conn)
     return _host_over(conn, script, redactor=redactor)
 
