@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from agent_alfred.gateway.web.progress import AttemptTerminal, StepProjection
+from agent_alfred.outcomes import RunOutcome, parse_run_outcome
 from agent_alfred.runtime.snapshot import RuntimeSnapshot
 
 # The unrecorded reply is the one thing in the snapshot that could be long.
@@ -52,7 +53,7 @@ class ActiveRunView:
     purpose: str
     gateway: str
     phase: str
-    outcome: str | None
+    outcome: RunOutcome | None
     session_id: str | None
     prompt_preview: str | None
     started_at: str | None
@@ -64,7 +65,7 @@ class ActiveRunView:
 class UnrecordedTerminalView:
     run_id: str
     purpose: str
-    outcome: str
+    outcome: RunOutcome
     reply_preview: str | None
     error: str | None
     recording_state: Literal["pending", "failed"]
@@ -179,7 +180,10 @@ def snapshot_from_payload(payload: dict[str, Any]) -> RunStateSnapshot:
                 purpose=active["purpose"],
                 gateway=active["gateway"],
                 phase=active["phase"],
-                outcome=active.get("outcome"),
+                outcome=parse_run_outcome(
+                    active.get("outcome"),
+                    allow_none=active["phase"] != "finished",
+                ),
                 session_id=active.get("session_id"),
                 prompt_preview=active.get("prompt_preview"),
                 started_at=active.get("started_at"),
@@ -206,7 +210,7 @@ def snapshot_from_payload(payload: dict[str, Any]) -> RunStateSnapshot:
             else UnrecordedTerminalView(
                 run_id=projection["run_id"],
                 purpose=projection["purpose"],
-                outcome=projection["outcome"],
+                outcome=parse_run_outcome(projection.get("outcome")),
                 reply_preview=projection.get("reply_preview"),
                 error=projection.get("error"),
                 recording_state=projection["recording_state"],

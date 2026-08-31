@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from dataclasses import replace as _dc_replace
 from typing import Literal
 
+from agent_alfred.outcomes import RunOutcome
+
 RecordingState = Literal["pending", "recorded", "failed"]
 CoordinatorState = Literal[
     "idle", "accepted", "running", "recording_pending", "recording_failed"
@@ -29,14 +31,14 @@ class ActiveRunSummary:
     current_step: int | None = None
     # The active Run's business conclusion, once it has one. Null while the
     # Run is not terminal, exactly like the phase/outcome axes require.
-    outcome: str | None = None
+    outcome: RunOutcome | None = None
 
 
 @dataclass(frozen=True)
 class UnrecordedTerminalProjection:
     run_id: str
     purpose: str
-    outcome: str
+    outcome: RunOutcome
     reply_text: str | None
     error: str | None
     recording_state: Literal["pending", "failed"]
