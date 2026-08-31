@@ -73,6 +73,76 @@ INSTANCE = "inst-test"
 # --- connect and reconnect -------------------------------------------------
 
 
+def test_connect_closes_the_connection_when_session_validation_raises() -> None:
+    """A handed-off HTTP socket cannot escape a failed Session lookup."""
+    failure = RuntimeError("injected Session lookup failure")
+
+    def fail_session_lookup(_session_id: str | None) -> bool:
+        raise failure
+
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=fail_session_lookup,
+    )
+    connection = FakeConnection()
+
+    with pytest.raises(RuntimeError) as raised:
+        broker.connect(connection=connection, session_id="s1")
+
+    assert raised.value is failure
+    assert connection.closed is True
+    assert broker.connections == ()
+    assert broker.registrations_in_flight == 0
+
+
+def test_connect_cleans_the_unowned_handle_when_startup_encoding_raises(
+    monkeypatch,
+) -> None:
+    """Startup frames and the socket die together when encoding cannot finish."""
+    failure = ValueError("injected startup encoding failure")
+    created = []
+    real_handle = broker_module.ConnectionHandle
+
+    def capture_handle(**kwargs):
+        handle = real_handle(**kwargs)
+        created.append(handle)
+        return handle
+
+    def fail_patch_encoding(*_args, **_kwargs):
+        raise failure
+
+    monkeypatch.setattr(broker_module, "ConnectionHandle", capture_handle)
+    monkeypatch.setattr(broker_module, "_patch_frames", fail_patch_encoding)
+    harness = Harness()
+    connection = FakeConnection()
+
+    with pytest.raises(ValueError) as raised:
+        harness.connect(connection=connection, cursor=cursor_for(0))
+
+    assert raised.value is failure
+    assert len(created) == 1
+    handle = created[0]
+    assert connection.closed is True
+    assert handle.finished.is_set()
+    assert handle.thread is None
+    assert handle.startup == ()
+    assert handle.queue.current_cost == frames.FrameCost(
+        frames=0, encoded_bytes=0
+    )
+    assert harness.broker.connections == ()
+    assert harness.broker.registrations_in_flight == 0
+    assert harness.spawn.targets == []
+
+    handle_ref = weakref.ref(handle)
+    created.clear()
+    del handle
+    del raised
+    failure.__traceback__ = None
+    gc.collect()
+    assert handle_ref() is None
+
+
 def test_the_first_connection_gets_retry_a_reseed_and_the_snapshot() -> None:
     harness = Harness()
     harness.emit_many(3)
@@ -989,6 +1059,38 @@ class _GatedSpawn:
         thread.start()
         self.threads.append(thread)
         return thread
+
+
+@pytest.mark.parametrize("failure", [RuntimeError("spawn failed"), KeyboardInterrupt()])
+def test_failed_writer_handoff_revokes_the_whole_registration(failure) -> None:
+    """A failed spawn propagates unchanged and leaves no pre-writer owner."""
+    target_ref = None
+
+    def fail_spawn(target):
+        nonlocal target_ref
+        target_ref = weakref.ref(target)
+        raise failure
+
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _sid: True,
+        spawn=fail_spawn,
+    )
+    connection = FakeConnection()
+
+    with pytest.raises(type(failure)) as raised:
+        broker.connect(connection=connection)
+
+    assert raised.value is failure
+    assert connection.closed is True
+    assert broker.connections == ()
+    assert broker.registrations_in_flight == 0
+    assert target_ref is not None
+    del raised
+    failure.__traceback__ = None
+    gc.collect()
+    assert target_ref() is None
 
 
 def test_close_cannot_complete_behind_an_in_flight_registration() -> None:

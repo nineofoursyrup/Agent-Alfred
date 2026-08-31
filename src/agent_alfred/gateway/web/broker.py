@@ -326,6 +326,47 @@ class ConnectionHandle:
     extra: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass
+class _ConnectStartup:
+    """Resources owned by ``connect`` until a writer is successfully spawned."""
+
+    connection: SSEConnection
+    handle: ConnectionHandle | None = None
+    registration_open: bool = False
+
+    def abort(self, broker: SSEBroker) -> None:
+        """Revoke a startup that never handed ownership to a writer."""
+        handle = self.handle
+        registration_open = False
+        if handle is not None:
+            with broker._lock:
+                if self.registration_open:
+                    # A dispatcher may already have captured this registered
+                    # handle. Mark its queue first so such a stale bounded
+                    # offer is refused instead of retaining a frame after the
+                    # startup owner drains the queue below.
+                    handle.queue.request_close()
+                if handle in broker._connections:
+                    broker._connections.remove(handle)
+                registration_open = self.registration_open
+        try:
+            if handle is not None:
+                handle.startup = ()
+                while True:
+                    try:
+                        handle.queue.take(timeout=0)
+                    except queue.Empty:
+                        break
+            self.connection.close()
+        finally:
+            if handle is not None:
+                handle.finished.set()
+            if registration_open:
+                with broker._lock:
+                    broker._registrations -= 1
+                    self.registration_open = False
+
+
 class SSEBroker:
     """The Dashboard's EventSink.
 
@@ -732,6 +773,37 @@ class SSEBroker:
         max_frames: int | None = None,
         max_bytes: int | None = None,
     ) -> ConnectionHandle:
+        """Build and register a stream, retaining ownership until its writer exists."""
+        acquisition = _ConnectStartup(connection=connection)
+        try:
+            return self._connect_before_writer(
+                connection=connection,
+                cursor=cursor,
+                session_id=session_id,
+                max_frames=max_frames,
+                max_bytes=max_bytes,
+                acquisition=acquisition,
+            )
+        except BaseException:
+            try:
+                acquisition.abort(self)
+            except Exception:
+                # The acquisition failure is the caller-visible fact. Socket
+                # closure is best-effort, while process-control exceptions
+                # from cleanup still keep their normal propagation semantics.
+                pass
+            raise
+
+    def _connect_before_writer(
+        self,
+        *,
+        connection: SSEConnection,
+        cursor: CursorText | None,
+        session_id: str | None,
+        max_frames: int | None,
+        max_bytes: int | None,
+        acquisition: _ConnectStartup,
+    ) -> ConnectionHandle:
         """Register one connection and build its opening stream.
 
         The snapshot, the high-water mark and the registration all happen in
@@ -790,6 +862,7 @@ class SSEBroker:
             connection=connection,
             session_id=session_id,
         )
+        acquisition.handle = handle
         refused = False
         for _ in range(_MAX_PATCH_CAPTURES):
             boundary = (
@@ -889,6 +962,7 @@ class SSEBroker:
                 # when the writer thread exists: in between, a close must see
                 # a registration it may not report around.
                 self._registrations += 1
+                acquisition.registration_open = True
             break
         else:
             # The world moved during every bounded encoding lap. Registering
@@ -899,8 +973,7 @@ class SSEBroker:
             # atomic capture without poisoning the broker for other clients.
             refused = True
         if refused:
-            connection.close()
-            handle.finished.set()
+            acquisition.abort(self)
             return handle
         writer = ConnectionWriter(
             connection=connection,
@@ -909,19 +982,10 @@ class SSEBroker:
             heartbeat_s=self._heartbeat_s,
             startup=handle.startup,
         )
-        try:
-            handle.thread = self._spawn(lambda: self._run_writer(handle, writer))
-        except BaseException:
-            # No writer exists and none ever will for this handle: it must
-            # leave the registry, or every later close would wait forever on
-            # a thread that was never created.
-            self.unregister(handle)
-            connection.close()
-            handle.finished.set()
-            raise
-        finally:
-            with self._lock:
-                self._registrations -= 1
+        handle.thread = self._spawn(lambda: self._run_writer(handle, writer))
+        with self._lock:
+            self._registrations -= 1
+            acquisition.registration_open = False
         return handle
 
     @property
