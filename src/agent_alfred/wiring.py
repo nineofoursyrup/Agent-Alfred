@@ -8,8 +8,8 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
-from agent_alfred import schema
 from agent_alfred.clock import Clock, SystemClock
+from agent_alfred.database import open_database
 from agent_alfred.events import BarrierFlushResult, EventSink, FanOutSink
 from agent_alfred.gateway.web.broker import SSEBroker
 from agent_alfred.gateway.web.lifecycle import (
@@ -82,20 +82,6 @@ class OpenCodeGoFactory:
             clock=self._clock,
             sleeper=SystemSleeper(),
         )
-
-
-def open_database(state_dir: Path) -> sqlite3.Connection:
-    state_dir.mkdir(mode=0o700, exist_ok=True)
-    state_dir.chmod(0o700)
-    path = state_dir / "db.sqlite3"
-    conn = sqlite3.connect(str(path), check_same_thread=False)
-    try:
-        path.chmod(0o600)
-        schema.migrate(conn)
-    except Exception:
-        conn.close()
-        raise
-    return conn
 
 
 def _secrets_from_env(settings: Settings) -> tuple[str, ...]:

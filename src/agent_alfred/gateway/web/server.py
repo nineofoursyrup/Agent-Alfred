@@ -58,6 +58,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal
 
+from agent_alfred.database import open_database
 from agent_alfred.gateway.web.api import DashboardApi
 from agent_alfred.gateway.web.broker import SSEBroker
 from agent_alfred.gateway.web.guard import RequestGuard
@@ -403,8 +404,6 @@ class DashboardRuntime:
     def _open_conn(self) -> sqlite3.Connection:
         if self._open_database is not None:
             return self._open_database(self._state_dir)
-        from agent_alfred.wiring import open_database
-
         return open_database(self._state_dir)
 
     def _stop_all_locked(self, timeout: float | None) -> bool:
