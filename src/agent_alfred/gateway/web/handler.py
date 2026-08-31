@@ -27,7 +27,8 @@ from urllib.parse import parse_qs, urlsplit
 from agent_alfred.gateway.web.api import DashboardApi
 from agent_alfred.gateway.web.connection import SocketConnection
 from agent_alfred.gateway.web.guard import (
-    MAX_BODY_BYTES,
+    AuthorizedRequest,
+    Rejection,
     RequestGuard,
 )
 from agent_alfred.gateway.web.replay import CursorText
@@ -148,13 +149,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             if values
         }
 
-    def _read_body(self) -> tuple[dict[str, Any] | None, str | None]:
-        raw = self.headers.get("content-length")
-        if raw is None:
-            return None, "missing_content_length"
-        length = int(raw)
-        if length > MAX_BODY_BYTES:
-            return None, "body_too_large"
+    def _read_body(self, length: int) -> tuple[dict[str, Any] | None, str | None]:
         body = self.rfile.read(length)
         try:
             payload = json.loads(body.decode("utf-8"))
@@ -193,9 +188,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     def _handle(self, method: str) -> None:
         context = self._context
-        rejection = context.guard.check(method=method, headers=self.headers)
-        if rejection is not None:
-            self._reject(rejection)
+        authorization = context.guard.authorize(method=method, headers=self.headers)
+        if isinstance(authorization, Rejection):
+            self._reject(authorization)
             return
         if method == "OPTIONS":
             self._send(405, {"code": "no_preflight"})
@@ -208,7 +203,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             if method == "GET":
                 self._route_get(path)
             else:
-                self._route_write(path)
+                self._route_write(path, authorization)
         except Exception:  # noqa: BLE001 - see below
             # An unhandled error in one request must not take the process
             # down or leak a traceback into a browser. 500 is the honest
@@ -279,7 +274,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return
         self._send(404, {"code": "not_found"})
 
-    def _route_write(self, path: str) -> None:
+    def _route_write(self, path: str, authorization: AuthorizedRequest) -> None:
         context = self._context
         if path == SESSIONS_PATH:
             result = context.api.create_session()
@@ -293,7 +288,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._send(result.status, {"session_id": result.session_id})
             return
         if path == RUNS_PATH:
-            body, error = self._read_body()
+            assert authorization.body_length is not None
+            body, error = self._read_body(authorization.body_length)
             if error is not None:
                 self._send(400, {"code": error})
                 return

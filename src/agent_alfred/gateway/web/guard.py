@@ -53,6 +53,7 @@ __all__ = [
     "JSON_CONTENT_TYPE",
     "MAX_BODY_BYTES",
     "WRITE_METHODS",
+    "AuthorizedRequest",
     "Rejection",
     "RequestGuard",
     "normalize_host",
@@ -126,6 +127,13 @@ class Rejection:
     detail: str
 
 
+@dataclass(frozen=True)
+class AuthorizedRequest:
+    """Values the guard validated for the request that may proceed."""
+
+    body_length: int | None
+
+
 class RequestGuard:
     """Decides whether one request may proceed. Pure: no IO, no state."""
 
@@ -152,6 +160,13 @@ class RequestGuard:
 
     def check(self, *, method: str, headers: Mapping[str, str]) -> Rejection | None:
         """None means allowed. The first failing layer names the refusal."""
+        result = self.authorize(method=method, headers=headers)
+        return result if isinstance(result, Rejection) else None
+
+    def authorize(
+        self, *, method: str, headers: Mapping[str, str]
+    ) -> AuthorizedRequest | Rejection:
+        """Validate once and return the values downstream request IO may use."""
         host = _header(headers, "host")
         if host is None:
             return Rejection(
@@ -174,9 +189,11 @@ class RequestGuard:
             )
         if method.upper() in WRITE_METHODS:
             return self._check_write(headers)
-        return None
+        return AuthorizedRequest(body_length=None)
 
-    def _check_write(self, headers: Mapping[str, str]) -> Rejection | None:
+    def _check_write(
+        self, headers: Mapping[str, str]
+    ) -> AuthorizedRequest | Rejection:
         token = _header(headers, CSRF_HEADER)
         if token is None or not hmac.compare_digest(token, self._csrf_token):
             return Rejection(
@@ -199,13 +216,14 @@ class RequestGuard:
             return Rejection(
                 400, "bad_content_length", "Content-Length is not a byte count"
             )
-        if int(text) > MAX_BODY_BYTES:
+        length = int(text)
+        if length > MAX_BODY_BYTES:
             return Rejection(
                 413,
                 "body_too_large",
                 f"the body may be at most {MAX_BODY_BYTES} bytes",
             )
-        return None
+        return AuthorizedRequest(body_length=length)
 
 
 def _header(headers: Mapping[str, str], name: str) -> str | None:

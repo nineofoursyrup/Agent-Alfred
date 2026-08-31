@@ -18,6 +18,7 @@ from agent_alfred.gateway.web.guard import (
     CSRF_HEADER,
     JSON_CONTENT_TYPE,
     MAX_BODY_BYTES,
+    AuthorizedRequest,
     RequestGuard,
     normalize_host,
     normalize_origin,
@@ -225,6 +226,11 @@ def test_a_write_with_the_process_token_is_allowed() -> None:
     assert _write(**_valid_write()) is None
 
 
+def test_an_authorized_write_carries_its_validated_body_length() -> None:
+    result = _guard().authorize(method="POST", headers=_headers(**_valid_write()))
+    assert result == AuthorizedRequest(body_length=17)
+
+
 def test_a_write_without_a_token_is_refused() -> None:
     headers = _valid_write()
     del headers[CSRF_HEADER]
@@ -303,6 +309,7 @@ def test_the_body_limit_is_the_limit_not_a_suggestion() -> None:
 def test_a_content_length_that_is_not_a_byte_count_is_refused(length: str) -> None:
     rejection = _write(**_valid_write(**{"content-length": length}))
     assert rejection is not None
+    assert rejection.status == 400
     assert rejection.code == "bad_content_length"
 
 

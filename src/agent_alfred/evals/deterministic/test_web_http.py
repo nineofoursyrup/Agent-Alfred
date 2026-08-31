@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import socket
 import time
+from io import BytesIO
 from typing import Any
 from urllib.parse import quote
 
@@ -517,6 +518,53 @@ def test_a_write_with_the_token_is_accepted(server) -> None:
     assert b'"run_id":"run-on-wire"' in response
 
 
+def test_the_handler_consumes_the_length_already_validated_by_the_guard(server) -> None:
+    """The body reader has no second, disagreeing Content-Length decision."""
+
+    body = b'{"message":"hi","session_id":"session-from-server"}'
+
+    class _ChangingHeaders:
+        def __init__(self) -> None:
+            self._length_reads = 0
+            self._values = {
+                "host": f"localhost:{server.port}",
+                "content-type": "application/json",
+                CSRF_HEADER: server.guard.csrf_token,
+            }
+
+        def get(self, name: str, default=None):
+            if name.lower() == "content-length":
+                self._length_reads += 1
+                if self._length_reads == 1:
+                    return str(len(body))
+                return "not-a-byte-count"
+            for key, value in self._values.items():
+                if key.lower() == name.lower():
+                    return value
+            return default
+
+        def items(self):
+            return self._values.items()
+
+    handler = DashboardHandler.__new__(DashboardHandler)
+    handler.server = server.service.server
+    handler.headers = _ChangingHeaders()
+    handler.path = "/api/runs"
+    handler.rfile = BytesIO(body + b"trailing")
+    responses: list[tuple[int, Any]] = []
+
+    def record_response(status: int, payload: Any = None, **_kwargs: Any) -> None:
+        responses.append((status, payload))
+
+    handler._send = record_response
+    handler._handle("POST")
+
+    assert responses == [
+        (202, {"run_id": "run-on-wire", "session_id": "session-from-server"})
+    ]
+    assert handler.rfile.read() == b"trailing"
+
+
 def _post_runs(server, body: bytes) -> tuple[bytes, bytes]:
     """A well-formed chat write: legal Host, token, content type, message."""
     raw = (
@@ -597,6 +645,37 @@ def test_an_oversized_write_is_refused_before_its_body_is_read(server) -> None:
     head, body = _request(server.port, raw)
     assert b"413" in head.split(b"\r\n")[0]
     assert b"body_too_large" in body
+
+
+def test_a_write_without_content_length_is_411_on_the_wire(server) -> None:
+    raw = (
+        f"POST /api/runs HTTP/1.1\r\n"
+        f"Host: localhost:{server.port}\r\n"
+        f"Content-Type: application/json\r\n"
+        f"{CSRF_HEADER}: {server.guard.csrf_token}\r\n\r\n"
+    ).encode()
+    head, body = _request(server.port, raw)
+    assert head.startswith(b"HTTP/1.1 411")
+    assert json.loads(body) == {
+        "code": "length_required",
+        "detail": "a Content-Length is required to write",
+    }
+
+
+def test_a_non_numeric_content_length_is_400_on_the_wire(server) -> None:
+    raw = (
+        f"POST /api/runs HTTP/1.1\r\n"
+        f"Host: localhost:{server.port}\r\n"
+        f"Content-Type: application/json\r\n"
+        f"{CSRF_HEADER}: {server.guard.csrf_token}\r\n"
+        f"Content-Length: lots\r\n\r\n"
+    ).encode()
+    head, body = _request(server.port, raw)
+    assert head.startswith(b"HTTP/1.1 400")
+    assert json.loads(body) == {
+        "code": "bad_content_length",
+        "detail": "Content-Length is not a byte count",
+    }
 
 
 def test_every_response_carries_the_hardening_headers(server) -> None:
