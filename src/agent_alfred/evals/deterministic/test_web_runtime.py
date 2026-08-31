@@ -154,7 +154,7 @@ def test_a_real_submit_answers_202_with_its_run_id() -> None:
         assert outcome.status == 202
         assert outcome.run_id
         assert outcome.session_id == session_id
-        host.wait(outcome.run_id)
+        wait_until(lambda: host.snapshot().coordinator_state == "idle")
     finally:
         host.close()
 
@@ -171,6 +171,8 @@ def test_a_second_submit_while_one_runs_is_409_with_the_busy_card() -> None:
         api = dashboard_api(host)
         first = api.submit({"message": "first", "session_id": session_id})
         assert first.status == 202
+        assert host._done == {}
+        assert host._results == {}
         # The model is inside its round trip, so the Run is genuinely running.
         wait_until(lambda: host.snapshot().coordinator_state == "running")
         second = api.submit({"message": "second", "session_id": session_id})
@@ -181,7 +183,7 @@ def test_a_second_submit_while_one_runs_is_409_with_the_busy_card() -> None:
         assert second.busy.stage == "运行中"
         assert second.busy.gateway == "web"
         gate.set()
-        host.wait(first.run_id)
+        wait_until(lambda: host.snapshot().coordinator_state == "idle")
     finally:
         gate.set()
         host.close()
@@ -242,7 +244,7 @@ def test_published_step_is_the_same_fact_in_http_busy_and_sse_snapshot() -> None
     finally:
         gate.set()
         if first.run_id:
-            host.wait(first.run_id)
+            wait_until(lambda: host.snapshot().coordinator_state == "idle")
         broker.close(timeout=1.0)
         host.close()
 
@@ -286,7 +288,7 @@ def test_committed_step_is_already_authoritative_for_http_and_sse() -> None:
         step_started.release()
         gate.set()
         if first is not None and first.run_id:
-            host.wait(first.run_id)
+            wait_until(lambda: host.snapshot().coordinator_state == "idle")
         broker.close(timeout=1.0)
         host.close()
 
@@ -315,7 +317,7 @@ def test_busy_web_submit_keeps_authoritative_409_when_capture_would_fail() -> No
     finally:
         gate.set()
         if first.run_id:
-            host.wait(first.run_id)
+            wait_until(lambda: host.snapshot().coordinator_state == "idle")
         host.close()
 
 
@@ -334,7 +336,7 @@ def test_recording_pending_is_409_and_the_card_says_saving() -> None:
         api = dashboard_api(host)
         first = api.submit({"message": "first", "session_id": session_id})
         assert first.status == 202
-        host.wait(first.run_id)
+        wait_until(lambda: host.snapshot().coordinator_state == "idle")
 
         latch.arm()
         second = api.submit({"message": "second", "session_id": session_id})
@@ -384,7 +386,7 @@ def test_the_recorded_snapshot_is_authoritative_before_the_lease_opens() -> None
     finally:
         latch.release()
         if first.run_id:
-            host.wait(first.run_id, timeout=10.0)
+            wait_until(lambda: host.snapshot().coordinator_state == "idle")
         host.close()
 
 
@@ -407,7 +409,8 @@ def test_recording_failed_answers_503_and_only_then() -> None:
         session_id = host.create_session()
         api = dashboard_api(host)
         first = api.submit({"message": "a-q", "session_id": session_id})
-        host.wait(first.run_id)
+        assert first.status == 202
+        wait_until(lambda: host.snapshot().coordinator_state == "idle")
 
         latch.arm()
         second = api.submit({"message": "b-q", "session_id": session_id})
@@ -418,7 +421,6 @@ def test_recording_failed_answers_503_and_only_then() -> None:
 
         flag["armed"] = True
         latch.release()
-        host.wait(second.run_id)
         wait_until(lambda: host.snapshot().coordinator_state == "recording_failed")
         # Only now, and from here on.
         failed = api.submit({"message": "d-q", "session_id": session_id})
@@ -453,9 +455,10 @@ def test_recording_failed_web_submit_keeps_503_when_capture_would_fail() -> None
         wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
         flag["armed"] = True
         latch.release()
-        host.wait(first.run_id)
-        assert host.snapshot().coordinator_state == "recording_failed"
+        wait_until(lambda: host.snapshot().coordinator_state == "recording_failed")
         provider.fail = True
+        assert host._done == {}
+        assert host._results == {}
 
         second = api.submit({"message": "second", "session_id": session_id})
 
@@ -826,12 +829,13 @@ def test_a_new_run_is_accepted_without_inheriting_the_previous_step() -> None:
         snapshot_listener=observe,
     )
     host.start()
+    second = None
     try:
         session_id = host.create_session()
         api = dashboard_api(host)
         first = api.submit({"message": "first", "session_id": session_id})
         assert first.status == 202
-        host.wait(first.run_id)
+        wait_until(lambda: host.snapshot().coordinator_state == "idle")
 
         gate.clear()
         step_started.published.clear()
@@ -856,8 +860,8 @@ def test_a_new_run_is_accepted_without_inheriting_the_previous_step() -> None:
         assert current.active_run.current_step == 0
     finally:
         gate.set()
-        if second.run_id:
-            host.wait(second.run_id)
+        if second is not None and second.run_id:
+            wait_until(lambda: host.snapshot().coordinator_state == "idle")
         host.close()
 
 
@@ -1271,6 +1275,36 @@ def test_a_handoff_failure_retracts_the_lease_and_the_busy_card() -> None:
 # every member the protocol names, answered by the real Host.
 
 
+def test_dashboard_runs_do_not_retain_unconsumed_in_memory_results() -> None:
+    """A 202 is observed through durable reads, never an in-memory waiter."""
+    run_count = 25
+    host, conn = build_runtime_host(["pong"] * run_count)
+    host.start()
+    try:
+        api = DashboardApi(facade=host)
+        session_id = api.create_session().session_id
+
+        for index in range(run_count):
+            outcome = api.submit(
+                {"message": f"message-{index}", "session_id": session_id}
+            )
+            assert outcome.status == 202
+            wait_until(lambda: host.snapshot().coordinator_state == "idle")
+
+        assert conn.execute(
+            "SELECT COUNT(*) FROM runs WHERE phase = 'finished'"
+        ).fetchone() == (run_count,)
+        status, messages = api.session_messages(
+            session_id, {"page_size": run_count * 2}
+        )
+        assert status == 200
+        assert len(messages["messages"]) == run_count * 2
+        assert host._done == {}
+        assert host._results == {}
+    finally:
+        host.close()
+
+
 def test_a_directly_injected_host_creates_a_usable_session() -> None:
     host, _conn = build_runtime_host()
     host.start()
@@ -1323,7 +1357,7 @@ def test_a_directly_injected_host_reads_sessions_runs_and_the_mainbar() -> None:
         session_id = api.create_session().session_id
         outcome = api.submit({"message": "hello", "session_id": session_id})
         assert outcome.status == 202
-        host.wait(outcome.run_id)
+        wait_until(lambda: host.snapshot().coordinator_state == "idle")
 
         # The inbox serves the Session; the title is the earliest chat
         # Run's prompt preview.
@@ -1407,7 +1441,7 @@ def test_the_gate_spans_the_whole_lease_on_the_real_host() -> None:
         # ...and the refusal left no hold behind: the Run owns the gate.
         assert host.mutation_in_flight() is False
         gate.set()
-        host.wait(outcome.run_id)
+        wait_until(lambda: host.snapshot().coordinator_state == "idle")
         # The lease is back, so the gate opens again for the next write.
         assert host.try_begin_mutation() is None
         host.end_mutation()

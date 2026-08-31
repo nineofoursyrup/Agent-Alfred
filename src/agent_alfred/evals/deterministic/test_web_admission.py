@@ -214,7 +214,6 @@ def test_a_session_write_is_refused_after_recording_failed() -> None:
         wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
         flag["armed"] = True
         latch.release()
-        host.wait(first.run_id)
         wait_until(lambda: host.snapshot().coordinator_state == "recording_failed")
         # A Run is still refused as a Run would be, and a plain write is
         # refused too: the lease never came back.

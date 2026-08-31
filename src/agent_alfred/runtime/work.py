@@ -40,6 +40,10 @@ class SubmitRequest:
     gateway: str = "cli"
     entry_surface_id: str | None = None
     stream: bool = False
+    # Synchronous callers consume the complete LoopResult through Host.wait().
+    # Asynchronous callers observe the durable Run and session read models and
+    # must opt out so private reply/attempt/usage payloads are never retained.
+    wait_for_result: bool = True
 
 
 @dataclass(frozen=True)

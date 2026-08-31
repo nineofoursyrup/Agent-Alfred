@@ -357,6 +357,7 @@ class DashboardApi:
                 session_id=session_id,
                 gateway="web",
                 entry_surface_id="mainbar",
+                wait_for_result=False,
             )
         )
         if result is None:

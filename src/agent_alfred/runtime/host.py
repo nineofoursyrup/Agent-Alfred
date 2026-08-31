@@ -414,7 +414,11 @@ class RuntimeHost:
         return None
 
     def admission_reserve(
-        self, run_id: str, summary: ActiveRunSummary
+        self,
+        run_id: str,
+        summary: ActiveRunSummary,
+        *,
+        wait_for_result: bool,
     ) -> tuple[ReserveKind, RuntimeSnapshot]:
         """Atomically decide 409/503/reserve -- and, on reserve, publish
         the busy card in the same critical section.
@@ -445,7 +449,8 @@ class RuntimeHost:
                 return refusal, snap
             self._coord = "accepted"
             self._pending_handoff.add(run_id)
-            self._done[run_id] = threading.Event()
+            if wait_for_result:
+                self._done[run_id] = threading.Event()
             # The safe busy card and the authoritative snapshot move under
             # the same lock that takes the lease, so no refused submit can
             # observe the one without the other.
@@ -658,13 +663,15 @@ class RuntimeHost:
     def publish_run_result(self, run_id: str, result: LoopResult) -> None:
         # Only a run whose done event exists has a waiter; anything else
         # would leak an unreadable result entry.
-        if run_id in self._done:
-            self._results[run_id] = result
+        with self._lock:
+            if run_id in self._done:
+                self._results[run_id] = result
 
     def notify_run_done(self, run_id: str) -> None:
-        event = self._done.get(run_id)
-        if event is not None:
-            event.set()
+        with self._lock:
+            event = self._done.get(run_id)
+            if event is not None:
+                event.set()
 
     # -- public session read side (ADR-0027); callers never write SQL --
 
@@ -807,9 +814,16 @@ class RuntimeHost:
         return self._admission.submit(request)
 
     def wait(self, run_id: str, timeout: float = 60.0) -> LoopResult:
-        event = self._done.get(run_id)
+        with self._lock:
+            event = self._done.get(run_id)
         if event is None:
             raise KeyError(run_id)
         if not event.wait(timeout):
             raise TimeoutError(f"timed out waiting for run {run_id}")
-        return self._results[run_id]
+        with self._lock:
+            try:
+                return self._results.pop(run_id)
+            finally:
+                # Result and waiter are one single-consumer slot. Even two
+                # concurrent waits cannot leave the signalled Event behind.
+                self._done.pop(run_id, None)

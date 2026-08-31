@@ -56,7 +56,11 @@ class AdmissionCoordinator(Protocol):
         """
 
     def admission_reserve(
-        self, run_id: str, summary: ActiveRunSummary
+        self,
+        run_id: str,
+        summary: ActiveRunSummary,
+        *,
+        wait_for_result: bool,
     ) -> tuple[ReserveKind, RuntimeSnapshot]:
         """Reserve the lease and publish the busy card, or say why neither
         happened. The two answers are one atomic step: a refused submit
@@ -138,7 +142,11 @@ class RunAdmission:
             started_at=None,
             recording_state=None,
         )
-        kind, snapshot = self._coordinator.admission_reserve(run_id, summary)
+        kind, snapshot = self._coordinator.admission_reserve(
+            run_id,
+            summary,
+            wait_for_result=request.wait_for_result,
+        )
         if kind != "reserved":
             # Refused before the lease: the snapshot that came back already
             # carries whoever holds it, so the caller renders the same busy

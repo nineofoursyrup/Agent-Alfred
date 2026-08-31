@@ -209,6 +209,27 @@ def test_scripted_chat_run_records_one_message_pair_and_run_telemetry() -> None:
         host.close()
 
 
+def test_wait_consumes_the_complete_result_and_waiter_exactly_once() -> None:
+    host, _conn, _capture = _host(["pong"])
+    host.start()
+    try:
+        submitted = host.submit(SubmitRequest(message="ping"))
+        assert submitted.run_id is not None
+        _wait_until(lambda: host.snapshot().coordinator_state == "idle")
+
+        result = host.wait(submitted.run_id)
+
+        assert result.outcome == "completed"
+        assert message_plain_text(result.reply) == "pong"
+        assert len(result.model_results) == 1
+        assert host._done == {}
+        assert host._results == {}
+        with pytest.raises(KeyError, match=submitted.run_id):
+            host.wait(submitted.run_id)
+    finally:
+        host.close()
+
+
 def test_second_submit_while_busy_is_409_and_does_not_insert_a_run() -> None:
     hold = threading.Event()
     published: list[object] = []
@@ -559,13 +580,14 @@ class _FakeAdmissionCoordinator:
             return "run_in_progress", _fake_runtime_snapshot()
         return "admissible", _fake_runtime_snapshot()
 
-    def admission_reserve(self, run_id, summary):
+    def admission_reserve(self, run_id, summary, *, wait_for_result):
         if self.state == "recording_failed":
             return "recording_unavailable", _fake_runtime_snapshot()
         if self.state != "idle":
             return "run_in_progress", _fake_runtime_snapshot()
         self.state = "accepted"
-        self.done[run_id] = threading.Event()
+        if wait_for_result:
+            self.done[run_id] = threading.Event()
         self.reserved_summaries[run_id] = summary
         self.calls.append(("reserve", run_id))
         return "reserved", _fake_runtime_snapshot()

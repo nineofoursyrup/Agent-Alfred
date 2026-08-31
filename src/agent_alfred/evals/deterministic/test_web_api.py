@@ -567,6 +567,7 @@ def test_an_existing_session_still_submits_and_answers_202() -> None:
     assert outcome.session_id == "s1"
     assert api._facade.requests is not None
     assert len(api._facade.requests) == 1
+    assert api._facade.requests[0].wait_for_result is False
 
 
 def test_a_system_run_still_needs_no_session() -> None:
