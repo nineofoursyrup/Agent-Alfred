@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from typing import Protocol
 
 from agent_alfred.clock import Clock
 from agent_alfred.events import (
     EventEnvelope,
-    FanOutSink,
+    EventPayload,
+    SequencedEvent,
     StepFinished,
     StepStarted,
 )
@@ -37,6 +39,16 @@ class LoopResult:
     model_results: tuple[ModelResult, ...] = field(default_factory=tuple)
 
 
+class AssistantEvents(Protocol):
+    """The event seam the loop actually uses."""
+
+    def emit(
+        self, payload: EventPayload, envelope: EventEnvelope | None = None
+    ) -> SequencedEvent: ...
+
+    def bind_origin(self, envelope: EventEnvelope | None) -> None: ...
+
+
 class Assistant:
     def __init__(self, *, clock: Clock, settings: Settings):
         self._clock = clock
@@ -52,7 +64,7 @@ class Assistant:
         model: ModelRef,
         run_id: str,
         session_id: str | None,
-        events: FanOutSink | None = None,
+        events: AssistantEvents | None = None,
         source: str = "cli",
         overall_deadline_s: float | None = None,
     ) -> LoopResult:
@@ -113,7 +125,7 @@ class Assistant:
                 messages=tuple(transcript),
                 max_tokens=self._settings.max_tokens,
             )
-            bind = getattr(events, "bind_origin", None) if events is not None else None
+            bind = events.bind_origin if events is not None else None
             if bind is not None:
                 bind(envelope)
             try:

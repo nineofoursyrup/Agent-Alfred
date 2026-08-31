@@ -795,7 +795,9 @@ class SSEBroker:
                 self._progress.note_active_run(
                     None if active is None else active.run_id
                 )
-                step = self._progress.projection()
+                step = self._progress.projection(
+                    None if active is None else active.current_step
+                )
             # Encoding outside the lock: pure, no IO, may be slow.
             startup: list[PreparedFrames] = [
                 frames.retry_frame(frames.DEFAULT_RETRY_MS)
@@ -985,7 +987,9 @@ class SSEBroker:
                 self._progress.note_active_run(
                     None if active is None else active.run_id
                 )
-                step = self._progress.projection()
+                step = self._progress.projection(
+                    None if active is None else active.current_step
+                )
                 epoch = self._state_epoch
             patch = _BroadcastPatch(
                 snapshot=snapshot,

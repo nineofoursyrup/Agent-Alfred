@@ -1,9 +1,13 @@
-"""The active Run's current Step, and the terminal summary of its Attempts.
+"""The terminal Attempt summary for the Host-owned current Step.
 
 The atomic snapshot has to stay bounded (#30), so this is a *summary*: which
 Step we are on and what became of each Attempt inside it. It carries no
 streaming deltas -- those only ever travel as domain events, never copied
 into a patch.
+
+The Step index itself comes from ``RuntimeSnapshot.active_run.current_step``.
+This module only retains bounded Attempt terminals and combines them with
+that authoritative index when the broker renders a snapshot.
 
 It is deliberately not thread-safe. The broker drives it inside the same
 critical section that decides the connection's snapshot, so the progress a
@@ -46,20 +50,18 @@ class StepProjection:
 
 
 class RunProgress:
-    """Tracks the current Step of the active Run from the domain events."""
+    """Tracks bounded Attempt terminals for the authoritative current Step."""
 
     def __init__(self, max_attempts: int = DEFAULT_MAX_ATTEMPTS):
         if max_attempts < 1:
             raise ValueError("max_attempts must be >= 1")
         self._max_attempts = max_attempts
         self._run_id: str | None = None
-        self._step_index: int | None = None
         self._attempts: list[AttemptTerminal] = []
         self._truncated = False
 
     def note_run_started(self, run_id: str) -> None:
         self._run_id = run_id
-        self._step_index = None
         self._attempts = []
         self._truncated = False
 
@@ -91,14 +93,12 @@ class RunProgress:
         if self._run_id is None or run_id == self._run_id:
             return
         self._run_id = None
-        self._step_index = None
         self._attempts = []
         self._truncated = False
 
-    def note_step_started(self, run_id: str, step_index: int) -> None:
+    def note_step_started(self, run_id: str) -> None:
         if not self._tracking(run_id):
             return
-        self._step_index = step_index
         self._attempts = []
         self._truncated = False
 
@@ -130,11 +130,12 @@ class RunProgress:
     def _tracking(self, run_id: str) -> bool:
         return self._run_id is not None and self._run_id == run_id
 
-    def projection(self) -> StepProjection | None:
-        if self._run_id is None or self._step_index is None:
+    def projection(self, step_index: int | None) -> StepProjection | None:
+        """Combine Attempt terminals with the Host-owned Step fact."""
+        if self._run_id is None or step_index is None:
             return None
         return StepProjection(
-            step_index=self._step_index,
+            step_index=step_index,
             attempts=tuple(self._attempts),
             attempts_truncated=self._truncated,
         )
@@ -150,7 +151,7 @@ def observe(payload: Any, run_id: str, progress: RunProgress) -> None:
     if name == "run.started":
         progress.note_run_started(run_id)
     elif name == "step.started":
-        progress.note_step_started(run_id, int(getattr(payload, "step_index", 0)))
+        progress.note_step_started(run_id)
     elif name == "attempt.committed":
         progress.note_attempt_terminal(
             run_id,

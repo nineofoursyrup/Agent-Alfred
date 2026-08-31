@@ -476,6 +476,7 @@ def _recording_pending_snapshot(**kwargs) -> RuntimeSnapshot:
             prompt_preview="hi",
             started_at=None,
             recording_state="pending",
+            current_step=2,
             outcome="completed",
         ),
         unrecorded_terminal_projection=UnrecordedTerminalProjection(
@@ -502,7 +503,7 @@ def test_run_finished_freezes_the_last_step_until_the_next_run_started() -> None
     """
     progress = RunProgress()
     progress.note_run_started("r1")
-    progress.note_step_started("r1", 2)
+    progress.note_step_started("r1")
     progress.note_attempt_terminal(
         "r1",
         attempt_id="a1",
@@ -513,7 +514,7 @@ def test_run_finished_freezes_the_last_step_until_the_next_run_started() -> None
     )
     # run.finished: the reply exists, the recording transaction does not yet.
     progress.note_run_finished("r1")
-    frozen = progress.projection()
+    frozen = progress.projection(2)
     assert frozen == StepProjection(
         step_index=2,
         attempts=(
@@ -528,9 +529,9 @@ def test_run_finished_freezes_the_last_step_until_the_next_run_started() -> None
     )
     # The next Run's run.started replaces the frozen summary, wholesale.
     progress.note_run_started("r2")
-    assert progress.projection() is None
-    progress.note_step_started("r2", 0)
-    assert progress.projection() == StepProjection(step_index=0, attempts=())
+    assert progress.projection(None) is None
+    progress.note_step_started("r2")
+    assert progress.projection(0) == StepProjection(step_index=0, attempts=())
 
 
 def test_the_startup_patch_keeps_the_frozen_summary_while_authoritative() -> None:
@@ -985,7 +986,7 @@ def test_a_state_patch_pays_a_named_one_frame_cost() -> None:
     snapshot = _snapshot(state_revision=1)
     assert harness.broker.publish_state_patch(snapshot) is True
     expected = broker_module._patch_cost(
-        snapshot, harness.broker._progress.projection()
+        snapshot, harness.broker._progress.projection(None)
     )
     assert harness.broker._ingress.current_cost == frames.FrameCost(
         frames=1, encoded_bytes=expected
@@ -2205,12 +2206,15 @@ def test_stale_step_never_publishes_after_newer_revision(monkeypatch) -> None:
         prompt_preview="hi",
         started_at=None,
         recording_state=None,
+        current_step=0,
     )
     overtaken = _snapshot(
         state_revision=1, coordinator_state="running", active_run=active
     )
     newer = _snapshot(
-        state_revision=2, coordinator_state="running", active_run=active
+        state_revision=2,
+        coordinator_state="running",
+        active_run=replace(active, current_step=1),
     )
     barrier, thread, answers = _park_a_publisher(harness, monkeypatch, overtaken)
     try:
@@ -2270,12 +2274,15 @@ def test_connection_never_regresses_to_stale_absolute_replacement(
         prompt_preview="hi",
         started_at=None,
         recording_state=None,
+        current_step=0,
     )
     overtaken = _snapshot(
         state_revision=1, coordinator_state="running", active_run=active
     )
     newer = _snapshot(
-        state_revision=2, coordinator_state="running", active_run=active
+        state_revision=2,
+        coordinator_state="running",
+        active_run=replace(active, current_step=1),
     )
     barrier, thread, _answers = _park_a_publisher(
         harness, monkeypatch, overtaken

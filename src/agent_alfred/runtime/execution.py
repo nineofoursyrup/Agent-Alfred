@@ -16,8 +16,15 @@ from typing import Protocol
 
 from agent_alfred import schema
 from agent_alfred.clock import Clock, format_instant
-from agent_alfred.events import EventEnvelope, FanOutSink, RunStarted
-from agent_alfred.loop.assistant import Assistant
+from agent_alfred.events import (
+    EventEnvelope,
+    EventPayload,
+    FanOutSink,
+    RunStarted,
+    SequencedEvent,
+    StepStarted,
+)
+from agent_alfred.loop.assistant import Assistant, AssistantEvents
 from agent_alfred.loop.budget import RunBudget
 from agent_alfred.messages import (
     Message,
@@ -39,6 +46,39 @@ class ExecutionCoordinator(Protocol):
     def execution_mark_running(
         self, started_at: str
     ) -> ActiveRunSummary | None: ...
+
+    def execution_note_step_started(
+        self, run_id: str, step_index: int
+    ) -> None: ...
+
+
+class _ExecutionEvents:
+    """Publish execution events, then project published Steps into the Host.
+
+    The FanOut remains the publication authority for domain events.  Only
+    after it returns a sequenced ``step.started`` does the Host advance its
+    bounded active-Run snapshot, so HTTP can never claim a Step that was not
+    published.  All other events pass through unchanged.
+    """
+
+    def __init__(
+        self, fanout: FanOutSink, coordinator: ExecutionCoordinator
+    ) -> None:
+        self._fanout = fanout
+        self._coordinator = coordinator
+
+    def emit(
+        self, payload: EventPayload, envelope: EventEnvelope | None = None
+    ) -> SequencedEvent:
+        published = self._fanout.emit(payload, envelope)
+        if isinstance(published.payload, StepStarted):
+            self._coordinator.execution_note_step_started(
+                published.envelope.run_id, published.payload.step_index
+            )
+        return published
+
+    def bind_origin(self, envelope: EventEnvelope | None) -> None:
+        self._fanout.bind_origin(envelope)
 
 
 # Process-control exceptions that keep unwinding after the Run is settled.
@@ -76,7 +116,7 @@ class _AttemptLedger:
         self,
         request: ModelRequest,
         *,
-        events: FanOutSink | None = None,
+        events: AssistantEvents | None = None,
         deadline: float | None = None,
     ) -> ModelResult:
         result = self._client.respond(request, events=events, deadline=deadline)
@@ -107,6 +147,7 @@ class RunExecutor:
         self._recorder = recorder
         self._coordinator = coordinator
         self._work_queue = work_queue
+        self._events: AssistantEvents = _ExecutionEvents(fanout, coordinator)
         self._stopped_by: BaseException | None = None
 
     @property
@@ -190,7 +231,7 @@ class RunExecutor:
                 ),
                 run_id=item.run_id,
                 session_id=item.session_id,
-                events=self._fanout,
+                events=self._events,
                 source=item.request.gateway,
                 overall_deadline_s=item.snapshot.overall_deadline_s,
             )

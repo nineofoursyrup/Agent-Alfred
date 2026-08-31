@@ -538,6 +538,21 @@ class RuntimeHost:
             self._states.replace(coordinator_state="running", active_run=summary)
         return summary
 
+    def execution_note_step_started(self, run_id: str, step_index: int) -> None:
+        """Project one already-published Step into the active Run snapshot."""
+        with self._lock:
+            summary = self._active_summary
+            if (
+                self._coord != "running"
+                or summary is None
+                or summary.run_id != run_id
+            ):
+                return
+            self._active_summary = replace(summary, current_step=step_index)
+            self._states.replace(
+                coordinator_state="running", active_run=self._active_summary
+            )
+
     # -- recording-settlement transitions -----------------------------------
 
     def recording_enter_pending(

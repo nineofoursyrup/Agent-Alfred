@@ -101,6 +101,19 @@ class _ArmableCaptureFailure:
         return self._delegate.capture(stream=stream)
 
 
+class _StepStartedLatch(CapturingSink):
+    """Observe the real published Step without polling or sleeping."""
+
+    def __init__(self):
+        super().__init__(name="step-latch", flush_at_run_end=True)
+        self.published = threading.Event()
+
+    def commit(self, prepared, event):
+        super().commit(prepared, event)
+        if event.payload.name == "step.started":
+            self.published.set()
+
+
 def _wait_until(predicate, timeout: float = 5.0) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -199,6 +212,68 @@ def test_a_second_submit_while_one_runs_is_409_with_the_busy_card() -> None:
         host.close()
 
 
+def test_published_step_is_the_same_fact_in_http_busy_and_sse_snapshot() -> None:
+    """A real published Step drives both public progress views.
+
+    The model is held inside the round trip after ``step.started`` has crossed
+    the real FanOut.  A second HTTP submit must therefore report that Step in
+    its 409 busy card, and a same-moment SSE opening snapshot must name the
+    identical Step -- from the Host's authoritative active Run.
+    """
+    gate = threading.Event()
+    step_started = _StepStartedLatch()
+    broker = _wired_broker()
+    seen: list[RuntimeSnapshot] = []
+    authoritative_step = threading.Event()
+
+    def publish(snapshot: RuntimeSnapshot) -> None:
+        seen.append(snapshot)
+        broker.publish_state_patch(snapshot)
+        active = snapshot.active_run
+        if active is not None and active.current_step == 0:
+            authoritative_step.set()
+
+    host, _conn = _host(
+        ["pong"],
+        gate=gate,
+        extra_sinks=[broker, step_started],
+        snapshot_listener=publish,
+    )
+    host.start()
+    try:
+        session_id = host.create_session()
+        api = _api(host)
+        first = api.submit({"message": "first", "session_id": session_id})
+        assert first.status == 202
+        accepted = next(
+            snapshot
+            for snapshot in seen
+            if snapshot.coordinator_state == "accepted"
+        )
+        assert accepted.active_run is not None
+        assert accepted.active_run.current_step is None
+
+        assert step_started.published.wait(5.0), "step.started was not published"
+        assert authoritative_step.wait(5.0), "Host Step snapshot did not advance"
+        second = api.submit({"message": "second", "session_id": session_id})
+        assert second.status == 409
+        assert second.busy is not None
+        assert second.busy.current_step == 0
+
+        patch = _startup_patch(
+            broker.connect(connection=FakeConnection(), session_id=session_id)
+        )
+        assert patch["active_run"]["current_step"] == 0
+        assert patch["step"]["step_index"] == 0
+        assert second.busy.current_step == patch["step"]["step_index"]
+    finally:
+        gate.set()
+        if first.run_id:
+            host.wait(first.run_id)
+        broker.close(timeout=1.0)
+        host.close()
+
+
 def test_busy_web_submit_keeps_authoritative_409_when_capture_would_fail() -> None:
     gate = threading.Event()
     provider = _ArmableCaptureFailure()
@@ -253,6 +328,7 @@ def test_recording_pending_is_409_and_the_card_says_saving() -> None:
         assert third.status == 409
         assert third.busy is not None
         assert third.busy.stage == STAGE_SAVING
+        assert third.busy.current_step == 0
         # The Run the card names is the one still saving, not the one asked for.
         assert third.busy.run_id == second.run_id
     finally:
@@ -560,12 +636,74 @@ def test_startup_patch_keeps_last_step_and_attempt_summary() -> None:
         assert patch["active_run"]["phase"] == "finished"
         assert patch["active_run"]["recording_state"] == "pending"
         assert patch["active_run"]["outcome"] == "completed"
+        assert patch["active_run"]["current_step"] == steps[-1].step_index
+        assert host.snapshot().active_run.current_step == steps[-1].step_index
         assert patch["unrecorded_terminal_projection"]["outcome"] == "completed"
     finally:
         latch.release()
         if submitted.run_id:
             host.wait(submitted.run_id)
         broker.close(timeout=1.0)
+        host.close()
+
+
+def test_a_new_run_is_accepted_without_inheriting_the_previous_step() -> None:
+    """The next lease starts with no Step, then moves from its own event."""
+    gate = threading.Event()
+    gate.set()
+    step_started = _StepStartedLatch()
+    seen: list[RuntimeSnapshot] = []
+    second_authoritative_step = threading.Event()
+
+    def observe(snapshot: RuntimeSnapshot) -> None:
+        seen.append(snapshot)
+        active = snapshot.active_run
+        if (
+            active is not None
+            and active.prompt_preview == "second"
+            and active.current_step == 0
+        ):
+            second_authoritative_step.set()
+
+    host, _conn = _host(
+        ["first reply", "second reply"],
+        gate=gate,
+        extra_sinks=[step_started],
+        snapshot_listener=observe,
+    )
+    host.start()
+    try:
+        session_id = host.create_session()
+        api = _api(host)
+        first = api.submit({"message": "first", "session_id": session_id})
+        assert first.status == 202
+        host.wait(first.run_id)
+
+        gate.clear()
+        step_started.published.clear()
+        second = api.submit({"message": "second", "session_id": session_id})
+        assert second.status == 202
+        accepted = next(
+            snapshot
+            for snapshot in seen
+            if snapshot.coordinator_state == "accepted"
+            and snapshot.active_run is not None
+            and snapshot.active_run.run_id == second.run_id
+        )
+        assert accepted.active_run.current_step is None
+
+        assert step_started.published.wait(5.0), "new step.started was not published"
+        assert second_authoritative_step.wait(5.0), (
+            "new Run's Host Step snapshot did not advance"
+        )
+        current = host.snapshot()
+        assert current.active_run is not None
+        assert current.active_run.run_id == second.run_id
+        assert current.active_run.current_step == 0
+    finally:
+        gate.set()
+        if second.run_id:
+            host.wait(second.run_id)
         host.close()
 
 
