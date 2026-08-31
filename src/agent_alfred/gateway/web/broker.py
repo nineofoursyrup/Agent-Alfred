@@ -786,7 +786,7 @@ class SSEBroker:
                         verdict.reason or "malformed",
                         verdict.requested_seq,
                         self._ring.oldest_seq(),
-                        self._ring.high_water_seq(),
+                        self._ring.published_high_water_seq(),
                         self._current_run_state_locked(),
                     )
                 latest = self._latest

@@ -2691,12 +2691,10 @@ def test_exhausted_publisher_never_regresses_an_overtaken_snapshot(
 # --- a trailing transient is published, but never a checkpoint --------------
 
 
-def _gap_reason(harness, cursor: str) -> str:
+def _gap_payload(harness, cursor: str) -> dict:
     handle = harness.connect(cursor=cursor)
     notice = _wire_containing(handle, b"replay_gap")
-    match = re.search(rb'"gap_reason":"([a-z_]+)"', notice)
-    assert match is not None
-    return match.group(1).decode()
+    return _decode_patch(notice)
 
 
 def test_a_trailing_transient_seq_is_malformed_not_ahead() -> None:
@@ -2711,8 +2709,22 @@ def test_a_trailing_transient_seq_is_malformed_not_ahead() -> None:
     harness = Harness()
     harness.emit(RunStarted(purpose="chat"), run_id="r1")  # seq 1, replayable
     harness.emit(BlockDelta(text="x"), run_id="r1")  # seq 2, transient
-    assert _gap_reason(harness, _cursor_for(2)) == "malformed"
-    assert _gap_reason(harness, _cursor_for(3)) == "ahead"
+    assert _gap_payload(harness, _cursor_for(2)) == {
+        "code": "replay_gap",
+        "gap_reason": "malformed",
+        "requested_seq": 2,
+        "oldest_seq": 1,
+        "high_water_seq": 2,
+        "current_run_state": "absent",
+    }
+    assert _gap_payload(harness, _cursor_for(3)) == {
+        "code": "replay_gap",
+        "gap_reason": "ahead",
+        "requested_seq": 3,
+        "oldest_seq": 1,
+        "high_water_seq": 2,
+        "current_run_state": "absent",
+    }
     # The next replayable event lands on the transient's successor and is a
     # checkpoint like any other.
     third = harness.emit(RunStarted(purpose="chat"), run_id="r2")
