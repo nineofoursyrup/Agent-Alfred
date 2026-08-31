@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, replace
-from typing import Any
+from typing import Any, NamedTuple
 
 from agent_alfred.messages import Message, blocks_from_jsonable, message_plain_text
 from agent_alfred.redact import Redactor
@@ -223,25 +223,40 @@ _COLUMNS = """run_id, purpose, session_id, gateway, entry_surface_id,
               finished_at, activity_revision"""
 
 
-def _row_to_summary(row) -> RunSummary:
-    purpose = row[1]
+class _RunRow(NamedTuple):
+    run_id: str
+    purpose: str
+    session_id: str | None
+    gateway: str
+    entry_surface_id: str | None
+    prompt_preview: str | None
+    phase: str
+    outcome: str | None
+    accepted_at: str
+    started_at: str | None
+    finished_at: str | None
+    activity_revision: int
+
+
+def _row_to_summary(raw_row) -> RunSummary:
+    row = _RunRow(*raw_row)
+    purpose = row.purpose
     shelf, known = classify_purpose(purpose)
-    preview = row[5]
     return RunSummary(
-        run_id=row[0],
+        run_id=row.run_id,
         purpose=purpose,
         filter=shelf,
         purpose_known=known,
-        session_id=row[2],
-        gateway=row[3],
-        entry_surface_id=row[4],
-        prompt_preview=preview,
-        phase=row[6],
-        outcome=row[7],
-        accepted_at=row[8],
-        started_at=row[9],
-        finished_at=row[10],
-        activity_revision=row[11],
+        session_id=row.session_id,
+        gateway=row.gateway,
+        entry_surface_id=row.entry_surface_id,
+        prompt_preview=row.prompt_preview,
+        phase=row.phase,
+        outcome=row.outcome,
+        accepted_at=row.accepted_at,
+        started_at=row.started_at,
+        finished_at=row.finished_at,
+        activity_revision=row.activity_revision,
     )
 
 
@@ -301,12 +316,14 @@ def list_runs(
         params,
     ).fetchall()
     has_more = len(rows) > limit
-    rows = rows[:limit]
+    rows = [_RunRow(*row) for row in rows[:limit]]
     summaries = tuple(
         _redact_summary(_row_to_summary(row), redactor) for row in rows
     )
     next_cursor = (
-        _runs_cursor((rows[-1][11], rows[-1][0])) if has_more and rows else None
+        _runs_cursor((rows[-1].activity_revision, rows[-1].run_id))
+        if has_more and rows
+        else None
     )
     return RunPage(
         filter=filter,
@@ -413,6 +430,12 @@ def locate_run(
 # --- the MainBar pairs ------------------------------------------------------
 
 
+class _MainBarRunRow(NamedTuple):
+    run_id: str
+    session_id: str | None
+    activity_revision: int
+
+
 def mainbar_pairs(
     conn,
     *,
@@ -466,20 +489,22 @@ def mainbar_pairs(
         params,
     ).fetchall()
     has_more = len(rows) > limit
-    rows = rows[:limit]
+    rows = [_MainBarRunRow(*row) for row in rows[:limit]]
     pairs = tuple(
         MainBarPair(
-            run_id=run_id,
-            activity_revision=revision,
-            session_id=session_id,
-            created_at=_created_at(conn, run_id),
-            user_message=_message(conn, run_id, "user", redactor),
-            assistant_message=_message(conn, run_id, "assistant", redactor),
+            run_id=row.run_id,
+            activity_revision=row.activity_revision,
+            session_id=row.session_id,
+            created_at=_created_at(conn, row.run_id),
+            user_message=_message(conn, row.run_id, "user", redactor),
+            assistant_message=_message(conn, row.run_id, "assistant", redactor),
         )
-        for run_id, session_id, revision in rows
+        for row in rows
     )
     next_cursor = (
-        _mainbar_cursor(session_id, (rows[-1][2], rows[-1][0]))
+        _mainbar_cursor(
+            session_id, (rows[-1].activity_revision, rows[-1].run_id)
+        )
         if has_more and rows
         else None
     )
@@ -521,6 +546,16 @@ def _message(
 # --- one Session's chat Runs -------------------------------------------------
 
 DEFAULT_REPLY_PREVIEW_CHARS = 240
+
+
+class _SessionChatRunRow(NamedTuple):
+    run_id: str
+    phase: str
+    outcome: str | None
+    accepted_at: str
+    started_at: str | None
+    finished_at: str | None
+    activity_revision: int
 
 
 def list_session_chat_runs(
@@ -576,30 +611,24 @@ def list_session_chat_runs(
         params,
     ).fetchall()
     has_more = len(rows) > limit
-    rows = rows[:limit]
+    rows = [_SessionChatRunRow(*row) for row in rows[:limit]]
     entries = tuple(
         SessionChatRun(
-            run_id=run_id,
-            phase=phase,
-            outcome=outcome,
-            accepted_at=accepted_at,
-            started_at=started_at,
-            finished_at=finished_at,
-            activity_revision=revision,
-            **_final_reply(conn, run_id, redactor, reply_max_chars),
+            run_id=row.run_id,
+            phase=row.phase,
+            outcome=row.outcome,
+            accepted_at=row.accepted_at,
+            started_at=row.started_at,
+            finished_at=row.finished_at,
+            activity_revision=row.activity_revision,
+            **_final_reply(conn, row.run_id, redactor, reply_max_chars),
         )
-        for (
-            run_id,
-            phase,
-            outcome,
-            accepted_at,
-            started_at,
-            finished_at,
-            revision,
-        ) in rows
+        for row in rows
     )
     next_cursor = (
-        _session_runs_cursor(session_id, (rows[-1][6], rows[-1][0]))
+        _session_runs_cursor(
+            session_id, (rows[-1].activity_revision, rows[-1].run_id)
+        )
         if has_more and rows
         else None
     )
