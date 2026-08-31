@@ -17,11 +17,20 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
-import time
 
 from agent_alfred import schema
-from agent_alfred.clock import FakeClock
-from agent_alfred.events import CapturingSink, FanOutSink
+from agent_alfred.evals.deterministic._web_runtime_test_helpers import (
+    ArmableCaptureFailure,
+    FailFinalizeWhen,
+    SelectiveLatch,
+    StepStartedLatch,
+    build_runtime_host,
+    dashboard_api,
+    refused,
+    snapshot_patch,
+    wait_until,
+)
+from agent_alfred.events import CapturingSink
 from agent_alfred.gateway.web.api import (
     STAGE_SAVING,
     DashboardApi,
@@ -30,152 +39,26 @@ from agent_alfred.gateway.web.api import (
 from agent_alfred.gateway.web.broker import SSEBroker
 from agent_alfred.gateway.web.connection import FakeConnection
 from agent_alfred.gateway.web.state import (
-    StatePatchRejected,
     apply_state_patch,
     build_snapshot,
     snapshot_from_payload,
     snapshot_payload,
 )
-from agent_alfred.model import ScriptedModel, ScriptedModelFactory
-from agent_alfred.runtime.config import SettingsBackedSnapshotProvider
-from agent_alfred.runtime.host import RuntimeHost
 from agent_alfred.runtime.snapshot import RuntimeSnapshot
-from agent_alfred.settings import Settings
 
 INSTANCE = "proc-runtime"
-
-
-class _SelectiveLatch:
-    """A ``before_``/``after_`` hook that waits only while armed."""
-
-    def __init__(self):
-        self._gate = threading.Event()
-        self._gate.set()
-
-    def arm(self) -> None:
-        self._gate.clear()
-
-    def release(self) -> None:
-        self._gate.set()
-
-    def wait(self, timeout=None):
-        return self._gate.wait(timeout)
-
-
-class _FailFinalizeWhen:
-    """Connection wrapper that fails one statement while armed."""
-
-    def __init__(self, inner: sqlite3.Connection, flag: dict, needle: str):
-        self._inner = inner
-        self._flag = flag
-        self._needle = needle
-
-    def execute(self, sql, parameters=()):
-        if self._flag["armed"] and self._needle in sql:
-            raise sqlite3.OperationalError("injected failure")
-        return self._inner.execute(sql, parameters)
-
-    def commit(self):
-        return self._inner.commit()
-
-    def rollback(self):
-        return self._inner.rollback()
-
-    def close(self):
-        return self._inner.close()
-
-    def __getattr__(self, name):
-        return getattr(self._inner, name)
-
-
-class _ArmableCaptureFailure:
-    def __init__(self):
-        self._delegate = SettingsBackedSnapshotProvider(Settings())
-        self.fail = False
-        self.calls = 0
-
-    def capture(self, *, stream: bool = False):
-        self.calls += 1
-        if self.fail:
-            raise RuntimeError("injected capture failure")
-        return self._delegate.capture(stream=stream)
-
-
-class _StepStartedLatch(CapturingSink):
-    """Observe the real published Step without polling or sleeping."""
-
-    def __init__(self):
-        super().__init__(name="step-latch", flush_at_run_end=True)
-        self.published = threading.Event()
-
-    def commit(self, prepared, event):
-        super().commit(prepared, event)
-        if event.payload.name == "step.started":
-            self.published.set()
-
-
-def _wait_until(predicate, timeout: float = 5.0) -> None:
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        if predicate():
-            return
-        time.sleep(0.01)
-    raise AssertionError("condition not met before timeout")
-
-
-def _host(
-    script: list | None = None,
-    *,
-    conn=None,
-    gate: threading.Event | None = None,
-    before_recording_commit=None,
-    after_recorded_snapshot=None,
-    before_recording_failed=None,
-    publish_work=None,
-    extra_sinks=None,
-    snapshot_listener=None,
-    snapshot_provider=None,
-):
-    database = conn
-    if database is None:
-        database = sqlite3.connect(":memory:", check_same_thread=False)
-        schema.migrate(database)
-    capture = CapturingSink(name="capture", flush_at_run_end=True)
-    sinks = [capture, *(extra_sinks or ())]
-    host = RuntimeHost(
-        conn=database,
-        factory=ScriptedModelFactory(
-            ScriptedModel(script or ["pong"], gate=gate)
-        ),
-        settings=Settings(),
-        clock=FakeClock(),
-        fanout=FanOutSink(sinks, process_instance_id=INSTANCE),
-        process_instance_id=INSTANCE,
-        publish_work=publish_work,
-        before_recording_commit=before_recording_commit,
-        after_recorded_snapshot=after_recorded_snapshot,
-        before_recording_failed=before_recording_failed,
-        snapshot_listener=snapshot_listener,
-        snapshot_provider=snapshot_provider,
-    )
-    return host, database
-
-
-def _api(host: RuntimeHost) -> DashboardApi:
-    # The Host satisfies the DashboardFacade protocol itself: the API is
-    # driven by direct injection, with no object between them.
-    return DashboardApi(facade=host)
-
 
 # --- the 202 ----------------------------------------------------------------
 
 
 def test_a_real_submit_answers_202_with_its_run_id() -> None:
-    host, _conn = _host()
+    host, _conn = build_runtime_host()
     host.start()
     try:
         session_id = host.create_session()
-        outcome = _api(host).submit({"message": "hello", "session_id": session_id})
+        outcome = dashboard_api(host).submit(
+            {"message": "hello", "session_id": session_id}
+        )
         assert outcome.status == 202
         assert outcome.run_id
         assert outcome.session_id == session_id
@@ -189,15 +72,15 @@ def test_a_real_submit_answers_202_with_its_run_id() -> None:
 
 def test_a_second_submit_while_one_runs_is_409_with_the_busy_card() -> None:
     gate = threading.Event()
-    host, _conn = _host(["pong", "pong"], gate=gate)
+    host, _conn = build_runtime_host(["pong", "pong"], gate=gate)
     host.start()
     try:
         session_id = host.create_session()
-        api = _api(host)
+        api = dashboard_api(host)
         first = api.submit({"message": "first", "session_id": session_id})
         assert first.status == 202
         # The model is inside its round trip, so the Run is genuinely running.
-        _wait_until(lambda: host.snapshot().coordinator_state == "running")
+        wait_until(lambda: host.snapshot().coordinator_state == "running")
         second = api.submit({"message": "second", "session_id": session_id})
         assert second.status == 409
         assert second.code == "run_in_progress"
@@ -221,7 +104,7 @@ def test_published_step_is_the_same_fact_in_http_busy_and_sse_snapshot() -> None
     identical Step -- from the Host's authoritative active Run.
     """
     gate = threading.Event()
-    step_started = _StepStartedLatch()
+    step_started = StepStartedLatch()
     broker = _wired_broker()
     seen: list[RuntimeSnapshot] = []
     authoritative_step = threading.Event()
@@ -233,7 +116,7 @@ def test_published_step_is_the_same_fact_in_http_busy_and_sse_snapshot() -> None
         if active is not None and active.current_step == 0:
             authoritative_step.set()
 
-    host, _conn = _host(
+    host, _conn = build_runtime_host(
         ["pong"],
         gate=gate,
         extra_sinks=[broker, step_started],
@@ -242,13 +125,11 @@ def test_published_step_is_the_same_fact_in_http_busy_and_sse_snapshot() -> None
     host.start()
     try:
         session_id = host.create_session()
-        api = _api(host)
+        api = dashboard_api(host)
         first = api.submit({"message": "first", "session_id": session_id})
         assert first.status == 202
         accepted = next(
-            snapshot
-            for snapshot in seen
-            if snapshot.coordinator_state == "accepted"
+            snapshot for snapshot in seen if snapshot.coordinator_state == "accepted"
         )
         assert accepted.active_run is not None
         assert accepted.active_run.current_step is None
@@ -276,15 +157,15 @@ def test_published_step_is_the_same_fact_in_http_busy_and_sse_snapshot() -> None
 
 def test_busy_web_submit_keeps_authoritative_409_when_capture_would_fail() -> None:
     gate = threading.Event()
-    provider = _ArmableCaptureFailure()
-    host, _conn = _host(["pong"], gate=gate, snapshot_provider=provider)
+    provider = ArmableCaptureFailure()
+    host, _conn = build_runtime_host(["pong"], gate=gate, snapshot_provider=provider)
     host.start()
     try:
         session_id = host.create_session()
-        api = _api(host)
+        api = dashboard_api(host)
         first = api.submit({"message": "first", "session_id": session_id})
         assert first.status == 202
-        _wait_until(lambda: host.snapshot().coordinator_state == "running")
+        wait_until(lambda: host.snapshot().coordinator_state == "running")
         provider.fail = True
 
         second = api.submit({"message": "second", "session_id": session_id})
@@ -309,12 +190,12 @@ def test_recording_pending_is_409_and_the_card_says_saving() -> None:
     transaction has not committed: the lease is still held, so the answer is
     the existing 409, and the card says what it is waiting for.
     """
-    latch = _SelectiveLatch()
-    host, _conn = _host(before_recording_commit=latch)
+    latch = SelectiveLatch()
+    host, _conn = build_runtime_host(before_recording_commit=latch)
     host.start()
     try:
         session_id = host.create_session()
-        api = _api(host)
+        api = dashboard_api(host)
         first = api.submit({"message": "first", "session_id": session_id})
         assert first.status == 202
         host.wait(first.run_id)
@@ -322,7 +203,7 @@ def test_recording_pending_is_409_and_the_card_says_saving() -> None:
         latch.arm()
         second = api.submit({"message": "second", "session_id": session_id})
         assert second.status == 202
-        _wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
+        wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
 
         third = api.submit({"message": "third", "session_id": session_id})
         assert third.status == 409
@@ -342,28 +223,28 @@ def test_the_recorded_snapshot_is_authoritative_before_the_lease_opens() -> None
     A 202 that arrived while the snapshot still described the old terminal
     state would let the next Run be admitted into a state nobody published.
     """
-    latch = _SelectiveLatch()
-    host, _conn = _host(["pong", "pong"], after_recorded_snapshot=latch)
+    latch = SelectiveLatch()
+    host, _conn = build_runtime_host(["pong", "pong"], after_recorded_snapshot=latch)
     host.start()
     try:
         session_id = host.create_session()
-        api = _api(host)
+        api = dashboard_api(host)
         latch.arm()
         first = api.submit({"message": "first", "session_id": session_id})
         assert first.status == 202
         # Paused after the recorded snapshot was published and before the
         # lease was let go -- the exact window the ordering is about.
-        _wait_until(
-            lambda: host.snapshot().coordinator_state == "recording_pending"
-            and host.snapshot().active_run is not None
-            and host.snapshot().active_run.recording_state == "recorded"
+        wait_until(
+            lambda: (
+                host.snapshot().coordinator_state == "recording_pending"
+                and host.snapshot().active_run is not None
+                and host.snapshot().active_run.recording_state == "recorded"
+            )
         )
         # The lease is still held, so the next submit does not get in; and it
         # is refused against a snapshot that already says "recorded", not one
         # still describing the previous terminal state.
-        assert (
-            api.submit({"message": "second", "session_id": session_id}).status == 409
-        )
+        assert api.submit({"message": "second", "session_id": session_id}).status == 409
     finally:
         latch.release()
         if first.run_id:
@@ -378,9 +259,9 @@ def test_recording_failed_answers_503_and_only_then() -> None:
     flag = {"armed": False}
     database = sqlite3.connect(":memory:", check_same_thread=False)
     schema.migrate(database)
-    wrapped = _FailFinalizeWhen(database, flag, "finished_at")
-    latch = _SelectiveLatch()
-    host, _conn = _host(
+    wrapped = FailFinalizeWhen(database, flag, "finished_at")
+    latch = SelectiveLatch()
+    host, _conn = build_runtime_host(
         ["a-reply", "unused"],
         conn=wrapped,
         before_recording_commit=latch,
@@ -388,23 +269,21 @@ def test_recording_failed_answers_503_and_only_then() -> None:
     host.start()
     try:
         session_id = host.create_session()
-        api = _api(host)
+        api = dashboard_api(host)
         first = api.submit({"message": "a-q", "session_id": session_id})
         host.wait(first.run_id)
 
         latch.arm()
         second = api.submit({"message": "b-q", "session_id": session_id})
         assert second.status == 202
-        _wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
+        wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
         # Still pending, so still a 409 -- the 503 is not available yet.
-        assert (
-            api.submit({"message": "c-q", "session_id": session_id}).status == 409
-        )
+        assert api.submit({"message": "c-q", "session_id": session_id}).status == 409
 
         flag["armed"] = True
         latch.release()
         host.wait(second.run_id)
-        _wait_until(lambda: host.snapshot().coordinator_state == "recording_failed")
+        wait_until(lambda: host.snapshot().coordinator_state == "recording_failed")
         # Only now, and from here on.
         failed = api.submit({"message": "d-q", "session_id": session_id})
         assert failed.status == 503
@@ -420,11 +299,11 @@ def test_recording_failed_web_submit_keeps_503_when_capture_would_fail() -> None
     flag = {"armed": False}
     database = sqlite3.connect(":memory:", check_same_thread=False)
     schema.migrate(database)
-    wrapped = _FailFinalizeWhen(database, flag, "finished_at")
-    provider = _ArmableCaptureFailure()
-    latch = _SelectiveLatch()
+    wrapped = FailFinalizeWhen(database, flag, "finished_at")
+    provider = ArmableCaptureFailure()
+    latch = SelectiveLatch()
     latch.arm()
-    host, _conn = _host(
+    host, _conn = build_runtime_host(
         conn=wrapped,
         snapshot_provider=provider,
         before_recording_commit=latch,
@@ -432,10 +311,10 @@ def test_recording_failed_web_submit_keeps_503_when_capture_would_fail() -> None
     host.start()
     try:
         session_id = host.create_session()
-        api = _api(host)
+        api = dashboard_api(host)
         first = api.submit({"message": "first", "session_id": session_id})
         assert first.status == 202
-        _wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
+        wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
         flag["armed"] = True
         latch.release()
         host.wait(first.run_id)
@@ -462,13 +341,15 @@ def test_a_failed_persist_never_answers_202() -> None:
     flag = {"armed": False}
     database = sqlite3.connect(":memory:", check_same_thread=False)
     schema.migrate(database)
-    wrapped = _FailFinalizeWhen(database, flag, "INSERT INTO runs")
-    host, _conn = _host(conn=wrapped)
+    wrapped = FailFinalizeWhen(database, flag, "INSERT INTO runs")
+    host, _conn = build_runtime_host(conn=wrapped)
     host.start()
     try:
         session_id = host.create_session()
         flag["armed"] = True
-        outcome = _api(host).submit({"message": "hello", "session_id": session_id})
+        outcome = dashboard_api(host).submit(
+            {"message": "hello", "session_id": session_id}
+        )
         # A 202 here would promise a Run that was never accepted anywhere.
         assert outcome.status == 500
         assert outcome.code == "admission_failed"
@@ -482,16 +363,18 @@ def test_a_failed_handoff_never_answers_202() -> None:
     def explode(item):
         raise RuntimeError("handoff refused")
 
-    host, _conn = _host(publish_work=explode)
+    host, _conn = build_runtime_host(publish_work=explode)
     host.start()
     try:
         session_id = host.create_session()
-        outcome = _api(host).submit({"message": "hello", "session_id": session_id})
+        outcome = dashboard_api(host).submit(
+            {"message": "hello", "session_id": session_id}
+        )
         assert outcome.status == 500
         assert outcome.code == "admission_failed"
         # The Run was finalized interrupted and admission reopened rather
         # than left dangling on a Run nobody will execute.
-        _wait_until(lambda: host.snapshot().coordinator_state == "idle")
+        wait_until(lambda: host.snapshot().coordinator_state == "idle")
     finally:
         host.close()
 
@@ -549,8 +432,8 @@ def test_pending_snapshot_keeps_unrecorded_terminal_outcome() -> None:
     的那一刻必须从这份投影复制 outcome：``finished`` 配空结局违反
     phase/outcome 两轴契约，而结算暂停期间权威快照恰好是唯一读数。
     """
-    latch = _SelectiveLatch()
-    host, _conn = _host(before_recording_commit=latch)
+    latch = SelectiveLatch()
+    host, _conn = build_runtime_host(before_recording_commit=latch)
     host.start()
     try:
         # Armed up front: the finalizer pauses deterministically between
@@ -559,9 +442,7 @@ def test_pending_snapshot_keeps_unrecorded_terminal_outcome() -> None:
         latch.arm()
         submitted = host.submit(_request(message="hello", session_id=None))
         assert submitted.kind == "accepted"
-        _wait_until(
-            lambda: host.snapshot().coordinator_state == "recording_pending"
-        )
+        wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
         snap = host.snapshot()
         projection = snap.unrecorded_terminal_projection
         assert projection is not None
@@ -588,10 +469,10 @@ def test_startup_patch_keeps_last_step_and_attempt_summary() -> None:
     attempts 来自 attempt 终态事件——不是伪造，也不因 ``run.finished``
     而消失。
     """
-    latch = _SelectiveLatch()
+    latch = SelectiveLatch()
     broker = _wired_broker()
     probe = CapturingSink(name="probe", flush_at_run_end=True)
-    host, _conn = _host(
+    host, _conn = build_runtime_host(
         extra_sinks=[broker, probe],
         snapshot_listener=broker.publish_state_patch,
         before_recording_commit=latch,
@@ -604,12 +485,8 @@ def test_startup_patch_keeps_last_step_and_attempt_summary() -> None:
         session_id = host.create_session()
         submitted = host.submit(_request(message="hello", session_id=session_id))
         assert submitted.kind == "accepted"
-        _wait_until(
-            lambda: host.snapshot().coordinator_state == "recording_pending"
-        )
-        handle = broker.connect(
-            connection=FakeConnection(), session_id=session_id
-        )
+        wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
+        handle = broker.connect(connection=FakeConnection(), session_id=session_id)
         patch = _startup_patch(handle)
         steps = [
             event.payload
@@ -651,7 +528,7 @@ def test_a_new_run_is_accepted_without_inheriting_the_previous_step() -> None:
     """The next lease starts with no Step, then moves from its own event."""
     gate = threading.Event()
     gate.set()
-    step_started = _StepStartedLatch()
+    step_started = StepStartedLatch()
     seen: list[RuntimeSnapshot] = []
     second_authoritative_step = threading.Event()
 
@@ -665,7 +542,7 @@ def test_a_new_run_is_accepted_without_inheriting_the_previous_step() -> None:
         ):
             second_authoritative_step.set()
 
-    host, _conn = _host(
+    host, _conn = build_runtime_host(
         ["first reply", "second reply"],
         gate=gate,
         extra_sinks=[step_started],
@@ -674,7 +551,7 @@ def test_a_new_run_is_accepted_without_inheriting_the_previous_step() -> None:
     host.start()
     try:
         session_id = host.create_session()
-        api = _api(host)
+        api = dashboard_api(host)
         first = api.submit({"message": "first", "session_id": session_id})
         assert first.status == 202
         host.wait(first.run_id)
@@ -716,10 +593,10 @@ def test_failed_snapshot_keeps_same_terminal_state() -> None:
     flag = {"armed": False}
     database = sqlite3.connect(":memory:", check_same_thread=False)
     schema.migrate(database)
-    wrapped = _FailFinalizeWhen(database, flag, "finished_at")
-    latch = _SelectiveLatch()
+    wrapped = FailFinalizeWhen(database, flag, "finished_at")
+    latch = SelectiveLatch()
     broker = _wired_broker()
-    host, _conn = _host(
+    host, _conn = build_runtime_host(
         conn=wrapped,
         extra_sinks=[broker],
         snapshot_listener=broker.publish_state_patch,
@@ -734,9 +611,7 @@ def test_failed_snapshot_keeps_same_terminal_state() -> None:
         session_id = host.create_session()
         submitted = host.submit(_request(message="hello", session_id=session_id))
         assert submitted.kind == "accepted"
-        _wait_until(
-            lambda: host.snapshot().coordinator_state == "recording_pending"
-        )
+        wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
         pending = _startup_patch(
             broker.connect(connection=FakeConnection(), session_id=session_id)
         )
@@ -748,9 +623,7 @@ def test_failed_snapshot_keeps_same_terminal_state() -> None:
         flag["armed"] = True
         latch.release()
         host.wait(submitted.run_id)
-        _wait_until(
-            lambda: host.snapshot().coordinator_state == "recording_failed"
-        )
+        wait_until(lambda: host.snapshot().coordinator_state == "recording_failed")
         failed = _startup_patch(
             broker.connect(connection=FakeConnection(), session_id=session_id)
         )
@@ -781,7 +654,7 @@ def test_old_run_progress_stops_masquerading_after_recorded() -> None:
     """
     after_recorded = threading.Event()
     broker = _wired_broker()
-    host, _conn = _host(
+    host, _conn = build_runtime_host(
         extra_sinks=[broker],
         snapshot_listener=broker.publish_state_patch,
         after_recorded_snapshot=after_recorded,
@@ -791,9 +664,11 @@ def test_old_run_progress_stops_masquerading_after_recorded() -> None:
         session_id = host.create_session()
         submitted = host.submit(_request(message="hello", session_id=session_id))
         assert submitted.kind == "accepted"
-        _wait_until(
-            lambda: host.snapshot().active_run is not None
-            and host.snapshot().active_run.recording_state == "recorded"
+        wait_until(
+            lambda: (
+                host.snapshot().active_run is not None
+                and host.snapshot().active_run.recording_state == "recorded"
+            )
         )
         recorded = _startup_patch(
             broker.connect(connection=FakeConnection(), session_id=session_id)
@@ -803,7 +678,7 @@ def test_old_run_progress_stops_masquerading_after_recorded() -> None:
         assert recorded["step"] is not None
 
         after_recorded.set()
-        _wait_until(lambda: host.snapshot().coordinator_state == "idle")
+        wait_until(lambda: host.snapshot().coordinator_state == "idle")
         idle = _startup_patch(
             broker.connect(connection=FakeConnection(), session_id=session_id)
         )
@@ -822,13 +697,11 @@ def test_old_run_progress_stops_masquerading_after_recorded() -> None:
 
 def test_the_broker_hears_every_authoritative_transition() -> None:
     seen: list = []
-    host, _conn = _host(snapshot_listener=seen.append)
+    host, _conn = build_runtime_host(snapshot_listener=seen.append)
     host.start()
     try:
         session_id = host.create_session()
-        result = host.submit(
-            _request(message="hello", session_id=session_id)
-        )
+        result = host.submit(_request(message="hello", session_id=session_id))
         host.wait(result.run_id)
         # Several transitions, each one after the state it describes moved.
         assert len(seen) >= 3
@@ -840,16 +713,14 @@ def test_the_broker_hears_every_authoritative_transition() -> None:
 
 
 def test_a_patch_is_an_absolute_replacement_carrying_its_own_revision() -> None:
-    host, _conn = _host()
+    host, _conn = build_runtime_host()
     host.start()
     try:
         session_id = host.create_session()
         result = host.submit(_request(message="hello", session_id=session_id))
         host.wait(result.run_id)
         latest = host.snapshot()
-        wire = snapshot_payload(
-            build_snapshot(latest, step=None, session_valid=True)
-        )
+        wire = snapshot_payload(build_snapshot(latest, step=None, session_valid=True))
         rebuilt = snapshot_from_payload(wire)
         # The revision and the instance travel with the patch, not with an
         # event seq: a patch owns no seq at all.
@@ -869,64 +740,21 @@ def _request(message: str, session_id: str | None):
 # --- the client's merge rules -----------------------------------------------
 
 
-def _patch(
-    *, revision: int, instance: str = INSTANCE, pending: bool = False,
-    run_id: str = "r1",
-):
-    from agent_alfred.runtime.snapshot import (
-        ActiveRunSummary,
-        RuntimeSnapshot,
-        UnrecordedTerminalProjection,
-    )
-
-    return RuntimeSnapshot(
-        process_instance_id=instance,
-        state_revision=revision,
-        coordinator_state="recording_pending" if pending else "idle",
-        active_run=(
-            ActiveRunSummary(
-                run_id=run_id,
-                purpose="chat",
-                gateway="web",
-                phase="finished",
-                session_id="s1",
-                prompt_preview="hi",
-                started_at=None,
-                recording_state="pending" if pending else "recorded",
-            )
-        ),
-        unrecorded_terminal_projection=(
-            UnrecordedTerminalProjection(
-                run_id="r1",
-                purpose="chat",
-                outcome="completed",
-                reply_text="reply",
-                error=None,
-                recording_state="pending" if pending else "failed",
-                session_id="s1",
-                prompt_preview="hi",
-            )
-            if pending
-            else None
-        ),
-    )
-
-
 def test_a_patch_from_another_process_is_refused() -> None:
-    current = _patch(revision=1)
-    assert refused(_patch(revision=2, instance="other-process"), current) == (
+    current = snapshot_patch(revision=1)
+    assert refused(snapshot_patch(revision=2, instance="other-process"), current) == (
         "instance_mismatch"
     )
 
 
 def test_a_rewinding_patch_is_refused() -> None:
-    current = _patch(revision=5)
-    assert refused(_patch(revision=4), current) == "revision_regression"
+    current = snapshot_patch(revision=5)
+    assert refused(snapshot_patch(revision=4), current) == "revision_regression"
 
 
 def test_a_pending_patch_cannot_overwrite_a_settled_state() -> None:
-    current = _patch(revision=5)
-    assert refused(_patch(revision=6, pending=True), current) == (
+    current = snapshot_patch(revision=5)
+    assert refused(snapshot_patch(revision=6, pending=True), current) == (
         "pending_over_terminal"
     )
 
@@ -941,23 +769,15 @@ def test_a_repeated_revision_is_refused_whatever_its_payload() -> None:
     naming exactly one published state; the current state survives the
     refusal unchanged.
     """
-    current = _patch(revision=5)
-    assert refused(_patch(revision=5), current) == "revision_duplicate"
-    assert refused(_patch(revision=5, run_id="r2"), current) == (
+    current = snapshot_patch(revision=5)
+    assert refused(snapshot_patch(revision=5), current) == "revision_duplicate"
+    assert refused(snapshot_patch(revision=5, run_id="r2"), current) == (
         "revision_duplicate"
     )
 
 
 def test_the_first_patch_is_always_accepted() -> None:
-    assert apply_state_patch(None, _patch(revision=0)) is not None
-
-
-def refused(patch, current) -> str:
-    try:
-        apply_state_patch(current, patch)
-    except StatePatchRejected as exc:
-        return exc.reason
-    raise AssertionError("the patch should have been refused")
+    assert apply_state_patch(None, snapshot_patch(revision=0)) is not None
 
 
 # --- three revisions, never mixed -------------------------------------------
@@ -975,7 +795,7 @@ def test_the_three_revisions_are_orthogonal() -> None:
         snapshot=RuntimeSnapshot(INSTANCE, 0, "idle", None, None),
         session_is_valid=lambda _sid: True,
     )
-    host, _conn = _host(extra_sinks=[broker])
+    host, _conn = build_runtime_host(extra_sinks=[broker])
     host.start()
     try:
         session_id = host.create_session()
@@ -1005,7 +825,7 @@ def test_the_three_revisions_are_orthogonal() -> None:
 
 
 def test_the_busy_card_is_rendered_from_the_authoritative_snapshot() -> None:
-    host, _conn = _host()
+    host, _conn = build_runtime_host()
     host.start()
     try:
         session_id = host.create_session()
@@ -1035,7 +855,7 @@ def test_a_submit_holding_the_lease_publishes_the_busy_card_with_it() -> None:
 
     reserved = threading.Event()
     proceed = threading.Event()
-    host, conn = _host(["pong"])
+    host, conn = build_runtime_host(["pong"])
     store = host._admission._database  # noqa: SLF001 - the real store, gated
 
     class _GatedStore:
@@ -1066,9 +886,7 @@ def test_a_submit_holding_the_lease_publishes_the_busy_card_with_it() -> None:
 
     def submit(name: str, message: str) -> None:
         try:
-            outcomes[name] = host.submit(
-                SubmitRequest(message=message, gateway="web")
-            )
+            outcomes[name] = host.submit(SubmitRequest(message=message, gateway="web"))
         except BaseException as exc:  # noqa: BLE001 - collected, not swallowed
             errors.append((name, exc))
 
@@ -1146,7 +964,7 @@ def test_a_handoff_failure_retracts_the_lease_and_the_busy_card() -> None:
             raise RuntimeError("queue gone")
         host._queue.put_nowait(item)
 
-    host, conn = _host(["pong"], publish_work=explode)
+    host, conn = build_runtime_host(["pong"], publish_work=explode)
     host.start()
     try:
         result = host.submit(SubmitRequest(message="hello", gateway="web"))
@@ -1177,7 +995,7 @@ def test_a_handoff_failure_retracts_the_lease_and_the_busy_card() -> None:
 
 
 def test_a_directly_injected_host_creates_a_usable_session() -> None:
-    host, _conn = _host()
+    host, _conn = build_runtime_host()
     host.start()
     try:
         api = DashboardApi(facade=host)
@@ -1199,7 +1017,7 @@ def test_a_directly_injected_host_creates_a_usable_session() -> None:
 
 def test_a_directly_injected_host_answers_the_decided_write_contracts() -> None:
     """400 and 404, decided by the API, enforced against the real Host."""
-    host, _conn = _host()
+    host, _conn = build_runtime_host()
     host.start()
     try:
         api = DashboardApi(facade=host)
@@ -1221,7 +1039,7 @@ def test_a_directly_injected_host_answers_the_decided_write_contracts() -> None:
 
 def test_a_directly_injected_host_reads_sessions_runs_and_the_mainbar() -> None:
     """One Run, read back through every read route the API serves."""
-    host, _conn = _host(["pong"])
+    host, _conn = build_runtime_host(["pong"])
     host.start()
     try:
         api = DashboardApi(facade=host)
@@ -1272,7 +1090,7 @@ def test_the_mutation_gate_authority_is_the_real_hosts() -> None:
     asks: opening is a reservation and never a wait, a second open is
     refused in the gate's own vocabulary, and closing reopens.
     """
-    host, _conn = _host()
+    host, _conn = build_runtime_host()
     host.start()
     try:
         api = DashboardApi(facade=host)
@@ -1299,14 +1117,14 @@ def test_the_gate_spans_the_whole_lease_on_the_real_host() -> None:
     reservation of its own.
     """
     gate = threading.Event()
-    host, _conn = _host(["pong"], gate=gate)
+    host, _conn = build_runtime_host(["pong"], gate=gate)
     host.start()
     try:
         api = DashboardApi(facade=host)
         session_id = api.create_session().session_id
         outcome = api.submit({"message": "first", "session_id": session_id})
         assert outcome.status == 202
-        _wait_until(lambda: host.snapshot().coordinator_state == "running")
+        wait_until(lambda: host.snapshot().coordinator_state == "running")
         # The lease is held, so the gate's authority refuses a write...
         assert host.try_begin_mutation() == "mutation_in_flight"
         # ...and the refusal left no hold behind: the Run owns the gate.
@@ -1323,7 +1141,7 @@ def test_the_gate_spans_the_whole_lease_on_the_real_host() -> None:
 
 def test_the_read_contracts_hold_on_the_real_host() -> None:
     """404 and 400 on the read side, against the real store."""
-    host, _conn = _host()
+    host, _conn = build_runtime_host()
     host.start()
     try:
         api = DashboardApi(facade=host)

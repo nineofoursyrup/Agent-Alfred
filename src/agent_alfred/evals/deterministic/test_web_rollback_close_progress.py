@@ -1,4 +1,4 @@
-"""Issue #28 review closure: what a failed start still owns.
+"""Dashboard rollback ownership while socket closure is incomplete.
 
 ``DashboardService.start()`` composes directory -> process lock -> socket ->
 descriptor write, and a failure in the later steps runs an undo of its own.
@@ -25,9 +25,9 @@ from __future__ import annotations
 
 import pytest
 
-from agent_alfred.evals.deterministic.test_web_review_closure_2 import (
-    _RecordingServer,
-    _Rig,
+from agent_alfred.evals.deterministic._web_close_test_helpers import (
+    DashboardCloseRig,
+    RecordingServer,
 )
 from agent_alfred.gateway.web.lifecycle import (
     LOCK_NAME,
@@ -41,7 +41,7 @@ class _DescriptorWriteRefused(RuntimeError):
     """The one failure the start is asked to report."""
 
 
-class _RefusingCloseServer(_RecordingServer):
+class _RefusingCloseServer(RecordingServer):
     """A bound socket whose ``server_close()`` refuses the first N times.
 
     Every ask is counted and traced, so the confirmation order -- socket
@@ -63,8 +63,8 @@ class _RefusingCloseServer(_RecordingServer):
         self.closed = True
 
 
-class _StartFailureRig(_Rig):
-    """The closure-2 rig, with the start's own composition made refusable.
+class _StartFailureRig(DashboardCloseRig):
+    """A close-progress rig with refusable startup rollback seams.
 
     The descriptor write always refuses: the start fails at step 3, after
     the lock and the socket were taken, so every test here is about what

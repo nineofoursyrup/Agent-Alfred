@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import queue
 import re
 import threading
 import time
@@ -13,6 +12,18 @@ from dataclasses import replace
 import pytest
 
 from agent_alfred.clock import FakeClock
+from agent_alfred.evals.deterministic._web_broker_test_helpers import (
+    GatedThreads,
+    GatedWriteConnection,
+    Harness,
+    RealThreadSpawner,
+    cursor_for,
+    drain_connection,
+    drain_dispatcher,
+    replay_ids,
+    runtime_snapshot,
+    user_message_with,
+)
 from agent_alfred.events import (
     AttemptCommitted,
     BestEffortFlushResult,
@@ -46,7 +57,7 @@ from agent_alfred.gateway.web.progress import (
     RunProgress,
     StepProjection,
 )
-from agent_alfred.gateway.web.replay import CursorText, ReplayRing
+from agent_alfred.gateway.web.replay import ReplayRing
 from agent_alfred.gateway.web.state import SNAPSHOT_TEXT_LIMIT
 from agent_alfred.runtime.snapshot import (
     ActiveRunSummary,
@@ -56,163 +67,6 @@ from agent_alfred.runtime.snapshot import (
 
 INSTANCE = "inst-test"
 
-
-def _snapshot(**kwargs) -> RuntimeSnapshot:
-    base = {
-        "process_instance_id": INSTANCE,
-        "state_revision": 0,
-        "coordinator_state": "idle",
-        "active_run": None,
-        "unrecorded_terminal_projection": None,
-    }
-    base.update(kwargs)
-    return RuntimeSnapshot(**base)
-
-
-class Harness:
-    """A broker fed by a real FanOutSink, with threads under test control."""
-
-    def __init__(
-        self,
-        *,
-        ring=None,
-        max_ingress_frames=4096,
-        max_ingress_bytes=32 * 1024 * 1024,
-        connection_frames=512,
-        connection_bytes=8 * 1024 * 1024,
-        max_frame_bytes=frames.MAX_FRAME_BYTES,
-        spawn=None,
-    ):
-        self.spawn = spawn if spawn is not None else _NoThreads()
-        self.connection_frames = connection_frames
-        self.connection_bytes = connection_bytes
-        self.broker = SSEBroker(
-            process_instance_id=INSTANCE,
-            snapshot=_snapshot(),
-            session_is_valid=lambda session_id: session_id in (None, "s1"),
-            ring=ring if ring is not None else ReplayRing(),
-            max_ingress_frames=max_ingress_frames,
-            max_ingress_bytes=max_ingress_bytes,
-            max_connection_frames=connection_frames,
-            max_connection_bytes=connection_bytes,
-            max_frame_bytes=max_frame_bytes,
-            spawn=self.spawn.spawn,
-        )
-        self.fanout = FanOutSink([self.broker], process_instance_id=INSTANCE)
-        self.seq = 0
-
-    def emit(self, payload, *, run_id="r1", session_id=None):
-        envelope = EventEnvelope(
-            ts=float(self.seq),
-            run_id=run_id,
-            session_id=session_id,
-            step_index=None,
-            attempt_id=None,
-            node_id=None,
-        )
-        self.seq += 1
-        return self.fanout.emit(payload, envelope)
-
-    def emit_many(self, count, *, start=0):
-        return [
-            self.emit(RunStarted(purpose="chat"), run_id=f"r{start + i}")
-            for i in range(count)
-        ]
-
-    def connect(self, *, cursor=None, session_id=None, connection=None, **limits):
-        return self.broker.connect(
-            connection=connection or FakeConnection(),
-            cursor=None if cursor is None else CursorText(cursor),
-            session_id=session_id,
-            **limits,
-        )
-
-    def deliver(self, count=1) -> None:
-        for _ in range(count):
-            assert self.broker.deliver_next(timeout=0.2), "nothing to deliver"
-
-
-class _NoThreads:
-    """Keeps every writer unstarted so a test drives the fan-out by hand."""
-
-    def __init__(self):
-        self.targets: list = []
-
-    def spawn(self, target):
-        self.targets.append(target)
-        return _FakeThread(target)
-
-
-class _RealSpawn:
-    """Runs every spawned thread for real, like the production broker."""
-
-    def spawn(self, target):
-        thread = threading.Thread(target=target, daemon=True)
-        thread.start()
-        return thread
-
-
-class _GatedWriteConnection(FakeConnection):
-    """A connection whose first write parks until the test releases it."""
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.entered_write = threading.Event()
-        self.release = threading.Event()
-
-    def write(self, data: bytes) -> None:
-        self.entered_write.set()
-        self.release.wait()
-        super().write(data)
-
-
-class _FakeThread:
-    def __init__(self, target):
-        self._target = target
-        self._alive = False
-
-    def start(self):
-        self._alive = True
-
-    def is_alive(self):
-        return self._alive
-
-    def join(self, timeout=None):
-        self._alive = False
-
-    def run(self):
-        return self._target()
-
-
-def _drain(handle) -> list:
-    """Everything this connection would receive now -- and consume it.
-
-    The opening stream travels on the handle -- the writer writes it before
-    touching the queue -- so a drain returns startup then queue items, and
-    marks the startup as written: a second drain returns only what arrived
-    since, exactly what a running writer would leave behind.
-    """
-    items = list(handle.startup)
-    handle.startup = ()
-    while True:
-        try:
-            items.append(handle.queue.take(timeout=0))
-        except queue.Empty:
-            return items
-
-
-def _ids(items) -> list[int]:
-    out = []
-    for item in items:
-        if isinstance(item, PreparedFrames) and item.id_line:
-            out.append(int(item.id_line.split(b":")[-1].strip()))
-    return out
-
-
-def _cursor_for(seq: int) -> str:
-    return f"{INSTANCE}:{seq}"
-
-
 # --- connect and reconnect -------------------------------------------------
 
 
@@ -220,7 +74,7 @@ def test_the_first_connection_gets_retry_a_reseed_and_the_snapshot() -> None:
     harness = Harness()
     harness.emit_many(3)
     handle = harness.connect()
-    items = _drain(handle)
+    items = drain_connection(handle)
     assert items[0].wire_bytes() == b"retry: 1000\n\n"
     assert items[1].wire_bytes() == b"id: inst-test:3\n\n"
     # No gap: a first connection is not a degradation.
@@ -231,9 +85,9 @@ def test_the_first_connection_gets_retry_a_reseed_and_the_snapshot() -> None:
 def test_reconnect_replays_exactly_the_missing_tail() -> None:
     harness = Harness()
     harness.emit_many(5)
-    handle = harness.connect(cursor=_cursor_for(2))
-    items = _drain(handle)
-    assert _ids(items) == [3, 4, 5]
+    handle = harness.connect(cursor=cursor_for(2))
+    items = drain_connection(handle)
+    assert replay_ids(items) == [3, 4, 5]
     # Re-seeded at the cursor so an id-less frame cannot erase it.
     assert items[1].wire_bytes() == b"id: inst-test:2\n\n"
     assert not any(b"replay_gap" in item.wire_bytes() for item in items)
@@ -247,8 +101,8 @@ def test_reconnect_never_duplicates_and_never_leaves_a_hole() -> None:
     # across different cursors would ask for the union of three overlapping
     # tails, which is not a property any connection is promised.
     for cursor_seq in (1, 3, 5):
-        handle = harness.connect(cursor=_cursor_for(cursor_seq))
-        ids = _ids(_drain(handle))
+        handle = harness.connect(cursor=cursor_for(cursor_seq))
+        ids = replay_ids(drain_connection(handle))
         assert ids == list(range(cursor_seq + 1, 7))
         assert len(set(ids)) == len(ids), f"duplicates from {cursor_seq}: {ids}"
 
@@ -256,15 +110,13 @@ def test_reconnect_never_duplicates_and_never_leaves_a_hole() -> None:
 def test_a_rolled_out_ring_answers_a_gap_not_a_silent_resume() -> None:
     harness = Harness(ring=ReplayRing(max_frames=2, max_bytes=1 << 20))
     harness.emit_many(5)
-    handle = harness.connect(cursor=_cursor_for(1))
-    items = _drain(handle)
-    notice = next(
-        item for item in items if b"replay_gap" in item.wire_bytes()
-    )
+    handle = harness.connect(cursor=cursor_for(1))
+    items = drain_connection(handle)
+    notice = next(item for item in items if b"replay_gap" in item.wire_bytes())
     assert b'"gap_reason":"too_old"' in notice.wire_bytes()
     assert b'"requested_seq":1' in notice.wire_bytes()
     # Nothing was replayed from a ring that no longer holds it.
-    assert _ids(items) == []
+    assert replay_ids(items) == []
 
 
 def test_commit_does_not_walk_a_large_evicted_replay_prefix(
@@ -326,13 +178,14 @@ def test_commit_does_not_walk_a_large_evicted_replay_prefix(
         for cell in ring._entries._entries
         if cell is not None and cell.entry is not None
     ]
-    assert frames.FrameCost(
-        frames=sum(len(entry.frames) for entry in retained_cells),
-        encoded_bytes=sum(entry.byte_size for entry in retained_cells),
-    ) == ring.current_cost
-    assert [entry.seq for entry in ring.entries_after(48) or ()] == list(
-        range(49, 66)
+    assert (
+        frames.FrameCost(
+            frames=sum(len(entry.frames) for entry in retained_cells),
+            encoded_bytes=sum(entry.byte_size for entry in retained_cells),
+        )
+        == ring.current_cost
     )
+    assert [entry.seq for entry in ring.entries_after(48) or ()] == list(range(49, 66))
 
 
 def test_the_four_illegal_cursors_each_name_their_reason() -> None:
@@ -341,15 +194,13 @@ def test_the_four_illegal_cursors_each_name_their_reason() -> None:
     cases = {
         "garbage": "malformed",
         "other-process:2": "instance_mismatch",
-        _cursor_for(1): "too_old",
-        _cursor_for(99): "ahead",
+        cursor_for(1): "too_old",
+        cursor_for(99): "ahead",
     }
     for cursor, reason in cases.items():
         handle = harness.connect(cursor=cursor)
-        items = _drain(handle)
-        notice = next(
-            item for item in items if b"replay_gap" in item.wire_bytes()
-        )
+        items = drain_connection(handle)
+        notice = next(item for item in items if b"replay_gap" in item.wire_bytes())
         assert f'"gap_reason":"{reason}"' in notice.wire_bytes().decode()
 
 
@@ -361,7 +212,7 @@ def test_the_gap_notice_distinguishes_no_run_from_unrecoverable_run() -> None:
     handle = harness.connect(cursor="garbage")
     assert b'"current_run_state":"absent"' in _wire_containing(handle, b"replay_gap")
 
-    active = _snapshot(
+    active = runtime_snapshot(
         state_revision=2,
         coordinator_state="running",
         active_run=ActiveRunSummary(
@@ -383,7 +234,7 @@ def test_the_gap_notice_distinguishes_no_run_from_unrecoverable_run() -> None:
 
 
 def _wire_containing(handle, needle: bytes) -> bytes:
-    for item in _drain(handle):
+    for item in drain_connection(handle):
         if needle in item.wire_bytes():
             return item.wire_bytes()
     raise AssertionError(f"no frame containing {needle!r}")
@@ -407,7 +258,7 @@ def test_the_snapshot_names_the_unrecorded_terminal_projection_bounded() -> None
     harness = Harness()
     harness.emit(RunStarted(purpose="chat"), run_id="r1")
     harness.broker.publish_state_patch(
-        _snapshot(
+        runtime_snapshot(
             state_revision=4,
             coordinator_state="recording_pending",
             unrecorded_terminal_projection=UnrecordedTerminalProjection(
@@ -455,16 +306,14 @@ def _terminal_stream(harness: Harness, run_id: str) -> None:
     harness.emit(RunStarted(purpose="chat"), run_id=run_id)
     harness.emit(StepStarted(step_index=2), run_id=run_id)
     harness.emit(
-        AttemptCommitted(
-            attempt_id="a1", stop_reason="end_turn", duration_ms=5
-        ),
+        AttemptCommitted(attempt_id="a1", stop_reason="end_turn", duration_ms=5),
         run_id=run_id,
     )
     harness.emit(RunFinished(outcome="completed"), run_id=run_id)
 
 
 def _recording_pending_snapshot(**kwargs) -> RuntimeSnapshot:
-    return _snapshot(
+    return runtime_snapshot(
         state_revision=1,
         coordinator_state="recording_pending",
         active_run=ActiveRunSummary(
@@ -563,14 +412,14 @@ def test_the_startup_patch_keeps_the_frozen_summary_while_authoritative() -> Non
     }
 
     # The lease released: idle, and the old Run's summary goes with it.
-    harness.broker.publish_state_patch(_snapshot(state_revision=2))
+    harness.broker.publish_state_patch(runtime_snapshot(state_revision=2))
     idle = _patch_payload(harness.connect(session_id="s1"))
     assert idle["active_run"] is None
     assert idle["step"] is None
 
     # A new Run admitted: the old Run's frozen summary must not show under it.
     harness.broker.publish_state_patch(
-        _snapshot(
+        runtime_snapshot(
             state_revision=3,
             coordinator_state="running",
             active_run=ActiveRunSummary(
@@ -607,7 +456,7 @@ def test_a_connection_that_never_consumes_does_not_block_the_run_or_others() -> 
     elapsed = time.monotonic() - started
     # Emitting is O(1) in connections: a wedged tab costs it nothing.
     assert elapsed < 2.0
-    other_ids = _ids(_drain(other))
+    other_ids = replay_ids(drain_connection(other))
     assert other_ids == list(range(1, 81))
     # The slow one was closed rather than allowed to stall the process.
     assert slow.queue.close_requested is True
@@ -623,16 +472,12 @@ def test_dropped_transients_are_reported_once_the_connection_recovers() -> None:
         harness.deliver()
     # Two were accepted, one was dropped. Drain past them until the queue
     # has room again.
-    _drain(handle)
+    drain_connection(handle)
     harness.emit(RunStarted(purpose="chat"), run_id="r1")
     harness.deliver()
-    items = _drain(handle)
+    items = drain_connection(handle)
     notice = next(
-        (
-            item
-            for item in items
-            if b"deltas_dropped" in item.wire_bytes()
-        ),
+        (item for item in items if b"deltas_dropped" in item.wire_bytes()),
         None,
     )
     assert notice is not None
@@ -641,7 +486,7 @@ def test_dropped_transients_are_reported_once_the_connection_recovers() -> None:
     harness.emit(RunStarted(purpose="chat"), run_id="r1")
     harness.deliver()
     assert not any(
-        b"deltas_dropped" in item.wire_bytes() for item in _drain(handle)
+        b"deltas_dropped" in item.wire_bytes() for item in drain_connection(handle)
     )
 
 
@@ -658,7 +503,9 @@ def test_a_transient_missed_by_the_ingress_costs_liveness_only() -> None:
     harness.deliver()
     harness.emit(RunStarted(purpose="chat"), run_id="r1")
     harness.deliver()
-    assert any(b"deltas_dropped" in item.wire_bytes() for item in _drain(handle))
+    assert any(
+        b"deltas_dropped" in item.wire_bytes() for item in drain_connection(handle)
+    )
 
 
 def test_a_replayable_that_misses_the_ingress_closes_live_connections() -> None:
@@ -675,8 +522,8 @@ def test_a_replayable_that_misses_the_ingress_closes_live_connections() -> None:
     harness.deliver()
     assert handle.queue.close_requested is True
     # A reconnect with the cursor recovers it exactly.
-    fresh = harness.connect(cursor=_cursor_for(event.seq - 1))
-    assert _ids(_drain(fresh)) == [event.seq]
+    fresh = harness.connect(cursor=cursor_for(event.seq - 1))
+    assert replay_ids(drain_connection(fresh)) == [event.seq]
 
 
 def test_a_transport_notice_owns_no_seq_and_never_enters_the_ring() -> None:
@@ -684,7 +531,7 @@ def test_a_transport_notice_owns_no_seq_and_never_enters_the_ring() -> None:
     harness.emit_many(2)
     before = harness.broker._ring.high_water_seq()
     handle = harness.connect(cursor="garbage")
-    items = _drain(handle)
+    items = drain_connection(handle)
     notice = next(item for item in items if b"replay_gap" in item.wire_bytes())
     assert b"\nid: " not in notice.wire_bytes()
     assert harness.broker._ring.high_water_seq() == before
@@ -708,7 +555,7 @@ def test_a_replay_tail_over_the_connection_budget_still_arrives_whole() -> None:
         connection_bytes=1 << 20,
     )
     harness.emit_many(20)
-    handle = harness.connect(cursor=_cursor_for(0))
+    handle = harness.connect(cursor=cursor_for(0))
     # The queue itself holds nothing: the opening stream belongs to the
     # writer, and the queue's budget has not been spent before it began.
     assert handle.queue.current_frames == 0
@@ -717,11 +564,8 @@ def test_a_replay_tail_over_the_connection_budget_still_arrives_whole() -> None:
     opening = handle.startup
     assert opening[0].wire_bytes() == b"retry: 1000\n\n"
     assert opening[1].wire_bytes() == b"id: inst-test:0\n\n"
-    assert any(
-        b"event: state_patch" in frame
-        for frame in opening[2].frames
-    )
-    assert _ids(opening) == list(range(1, 21))
+    assert any(b"event: state_patch" in frame for frame in opening[2].frames)
+    assert replay_ids(opening) == list(range(1, 21))
     # The tail is the ring's own frames, reused by reference -- not a
     # second, re-encoded copy of them.
     stored = harness.broker._ring.entries_after(0)
@@ -743,11 +587,11 @@ def test_the_queue_budget_holds_during_startup_and_live() -> None:
         connection_bytes=1 << 20,
     )
     harness.emit_many(20)
-    handle = harness.connect(cursor=_cursor_for(0))
+    handle = harness.connect(cursor=cursor_for(0))
     # The tail the opening stream carries makes the ingress backlog redundant
     # for this connection: everything committed before it registered is
     # skipped, so the dispatcher flushes it without the queue noticing.
-    _run_dispatcher(harness)
+    drain_dispatcher(harness)
     assert handle.queue.current_frames == 0
     for i in range(8):
         harness.emit(RunStarted(purpose="chat"), run_id=f"live{i}")
@@ -768,20 +612,20 @@ def test_startup_then_live_has_no_hole_and_reconnect_recovers_exactly() -> None:
         connection_bytes=1 << 20,
     )
     harness.emit_many(20)
-    handle = harness.connect(cursor=_cursor_for(0))
+    handle = harness.connect(cursor=cursor_for(0))
     # Flush the pre-registration backlog: the opening tail already covers
     # it, so the dispatcher skips every one of those items.
-    _run_dispatcher(harness)
+    drain_dispatcher(harness)
     for i in range(9):
         harness.emit(RunStarted(purpose="chat"), run_id=f"live{i}")
         harness.deliver()
     # What the client receives: the whole tail, then the live events that
     # fit -- every seq exactly once, no gap between the two.
-    seen = _ids(_drain(handle))
+    seen = replay_ids(drain_connection(handle))
     assert seen == list(range(1, 29))
     # Reconnecting from the last delivered cursor recovers exactly the rest.
-    fresh = harness.connect(cursor=_cursor_for(28))
-    assert _ids(list(fresh.startup)) == [29]
+    fresh = harness.connect(cursor=cursor_for(28))
+    assert replay_ids(list(fresh.startup)) == [29]
 
 
 # --- chunking and mid-event disconnection ----------------------------------
@@ -789,9 +633,7 @@ def test_startup_then_live_has_no_hole_and_reconnect_recovers_exactly() -> None:
 
 def test_prepare_is_deterministic_for_one_immutable_logical_event() -> None:
     harness = Harness(max_frame_bytes=16 * 1024)
-    unsequenced = _unsequenced_chunky(
-        "é" * (200 * 1024), event_id="logical-event-1"
-    )
+    unsequenced = _unsequenced_chunky("é" * (200 * 1024), event_id="logical-event-1")
 
     first = harness.broker.prepare(unsequenced)
     second = harness.broker.prepare(unsequenced)
@@ -799,9 +641,9 @@ def test_prepare_is_deterministic_for_one_immutable_logical_event() -> None:
     assert first == second
     assert first.wire_bytes() == second.wire_bytes()
     assert len(first.frames) > 1
-    assert {
-        _chunk_meta(frame)["event_id"] for frame in first.frames
-    } == {"logical-event-1"}
+    assert {_chunk_meta(frame)["event_id"] for frame in first.frames} == {
+        "logical-event-1"
+    }
 
 
 def test_a_chunked_event_is_replayed_whole_from_its_first_frame() -> None:
@@ -812,7 +654,7 @@ def test_a_chunked_event_is_replayed_whole_from_its_first_frame() -> None:
     # from that this process actually issued.
     first = harness.emit(RunStarted(purpose="chat"), run_id="r1")
     event = harness.emit(
-        RunStarted(purpose="chat", user_message=_user_message_with(big)),
+        RunStarted(purpose="chat", user_message=user_message_with(big)),
         run_id="chunky",
     )
     # Preparing an event of the same size really does chunk it: this is the
@@ -830,17 +672,11 @@ def test_a_chunked_event_is_replayed_whole_from_its_first_frame() -> None:
     assert all(b"\nid: " not in frame for frame in wire[:-1])
     assert wire[-1].endswith(b"id: %s:%d\n\n" % (INSTANCE.encode(), event.seq))
     # Reconnecting from before the event re-sends every chunk, not a tail.
-    handle = harness.connect(cursor=_cursor_for(first.seq))
-    replayed = [item for item in _drain(handle) if item.id_line]
+    handle = harness.connect(cursor=cursor_for(first.seq))
+    replayed = [item for item in drain_connection(handle) if item.id_line]
     assert len(replayed) == 1
     assert replayed[0].seq == event.seq
     assert replayed[0].frames == stored[0].frames
-
-
-def _user_message_with(text: str):
-    from agent_alfred.messages import text_message
-
-    return text_message("user", text)
 
 
 def _unsequenced_chunky(text: str, *, event_id: str = "chunky-event"):
@@ -861,7 +697,7 @@ def _unsequenced_chunky(text: str, *, event_id: str = "chunky-event"):
             attempt_id=None,
             node_id=None,
         ),
-        payload=RunStarted(purpose="chat", user_message=_user_message_with(text)),
+        payload=RunStarted(purpose="chat", user_message=user_message_with(text)),
         trace_policy="persist",
         replayable=True,
     )
@@ -879,15 +715,16 @@ def _chunk_meta(frame: bytes) -> dict:
 def test_snapshots_and_live_events_never_duplicate_or_gap_under_concurrency() -> None:
     broker = SSEBroker(
         process_instance_id=INSTANCE,
-        snapshot=_snapshot(),
+        snapshot=runtime_snapshot(),
         session_is_valid=lambda _sid: True,
     )
     fanout = FanOutSink([broker], process_instance_id=INSTANCE)
     broker.start()
     connections: list[tuple[object, FakeConnection]] = []
     try:
-        connections.append((broker.connect(connection=FakeConnection()),
-                            _conn_of(broker, 0)))
+        connections.append(
+            (broker.connect(connection=FakeConnection()), _conn_of(broker, 0))
+        )
         stop = threading.Event()
 
         def emit_forever() -> None:
@@ -958,9 +795,7 @@ def test_flush_cannot_claim_to_have_flushed() -> None:
 
 
 def test_capacity_defaults_match_the_decided_table() -> None:
-    broker = SSEBroker(
-        process_instance_id=INSTANCE, snapshot=_snapshot()
-    )
+    broker = SSEBroker(process_instance_id=INSTANCE, snapshot=runtime_snapshot())
     assert broker._ingress.max_frames == 4096
     assert broker._ingress.max_bytes == 32 * 1024 * 1024
     assert broker._ring.max_frames == 2048
@@ -977,13 +812,13 @@ def test_the_ingress_count_returns_exactly_to_zero() -> None:
     cost = harness.broker._ingress.current_cost
     assert cost.frames == 2
     assert cost.encoded_bytes > 0
-    _run_dispatcher(harness)
+    drain_dispatcher(harness)
     assert harness.broker._ingress.current_cost == frames.FrameCost(0, 0)
 
 
 def test_a_state_patch_pays_a_named_one_frame_cost() -> None:
     harness = Harness()
-    snapshot = _snapshot(state_revision=1)
+    snapshot = runtime_snapshot(state_revision=1)
     assert harness.broker.publish_state_patch(snapshot) is True
     expected = broker_module._patch_cost(
         snapshot, harness.broker._progress.projection(None)
@@ -1004,7 +839,7 @@ def test_close_is_idempotent_and_leaves_no_thread_running() -> None:
 
     broker = SSEBroker(
         process_instance_id=INSTANCE,
-        snapshot=_snapshot(),
+        snapshot=runtime_snapshot(),
         session_is_valid=lambda _sid: True,
         spawn=spawn,
     )
@@ -1026,13 +861,13 @@ def test_a_wedged_connection_does_not_hold_close_open() -> None:
 
     broker = SSEBroker(
         process_instance_id=INSTANCE,
-        snapshot=_snapshot(),
+        snapshot=runtime_snapshot(),
         session_is_valid=lambda _sid: True,
     )
     broker.start()
     connection = Stuck()
     broker.connect(connection=connection)
-    broker.publish_state_patch(_snapshot(state_revision=1))
+    broker.publish_state_patch(runtime_snapshot(state_revision=1))
     started = time.monotonic()
     assert broker.close(timeout=0.3) is False
     # Bounded, and the descriptor is released rather than left behind.
@@ -1041,39 +876,6 @@ def test_a_wedged_connection_does_not_hold_close_open() -> None:
 
 
 # --- close() is a completion report, not an intention -----------------------
-
-
-class _GatedThreads:
-    """Thread stand-ins a test can hold at the starting line.
-
-    Every spawned thread runs its real target only when the gate named for
-    that target opens, so a test decides exactly which part of the broker
-    is still alive -- without a sleep and without guessing at scheduling.
-    The dispatcher's target is the bound method ``_dispatch_loop``; each
-    writer's target is the ``<lambda>`` that wraps ``_run_writer``.
-    """
-
-    def __init__(self):
-        self.gates: dict[str, threading.Event] = {}
-        self.by_name: dict[str, threading.Thread] = {}
-        self._lock = threading.Lock()
-
-    def spawn(self, target):
-        name = getattr(target, "__name__", "<lambda>")
-        with self._lock:
-            gate = self.gates.setdefault(name, threading.Event())
-
-        def run():
-            gate.wait()
-            target()
-
-        thread = threading.Thread(target=run, daemon=True)
-        thread.start()
-        self.by_name.setdefault(name, thread)
-        return thread
-
-    def open(self, name: str) -> None:
-        self.gates[name].set()
 
 
 def test_close_reports_false_until_every_thread_has_really_exited() -> None:
@@ -1086,10 +888,10 @@ def test_close_reports_false_until_every_thread_has_really_exited() -> None:
     the database those frames were built from and the process lock the
     stream lives under.
     """
-    gates = _GatedThreads()
+    gates = GatedThreads()
     broker = SSEBroker(
         process_instance_id=INSTANCE,
-        snapshot=_snapshot(),
+        snapshot=runtime_snapshot(),
         session_is_valid=lambda _sid: True,
         spawn=gates.spawn,
     )
@@ -1157,7 +959,7 @@ def test_close_cannot_complete_behind_an_in_flight_registration() -> None:
     gated = _GatedSpawn()
     broker = SSEBroker(
         process_instance_id=INSTANCE,
-        snapshot=_snapshot(),
+        snapshot=runtime_snapshot(),
         session_is_valid=lambda _sid: True,
         spawn=gated.spawn,
     )
@@ -1194,8 +996,8 @@ def test_a_closing_broker_refuses_new_connections_without_a_writer() -> None:
     holding the stream open waits on exactly that event. Nothing is written:
     a startup sequence describes a stream the broker is taking away.
     """
-    harness = Harness(spawn=_RealSpawn())
-    held = _GatedWriteConnection()
+    harness = Harness(spawn=RealThreadSpawner())
+    held = GatedWriteConnection()
     harness.broker.connect(connection=held)
     assert held.entered_write.wait(2.0), "writer never reached its first write"
     assert harness.broker.close(timeout=0.2) is False  # stopping, not closed
@@ -1218,7 +1020,7 @@ def test_a_closed_broker_refuses_new_connections_idempotently() -> None:
     register, nothing may write, and the caller is told by ``finished``
     rather than left waiting on a stream that will never carry a frame.
     """
-    harness = Harness(spawn=_RealSpawn())
+    harness = Harness(spawn=RealThreadSpawner())
     harness.connect()
     assert harness.broker.close(timeout=2.0) is True
     connection = FakeConnection()
@@ -1251,7 +1053,7 @@ def test_one_connections_failure_does_not_touch_the_others() -> None:
 
     broker = SSEBroker(
         process_instance_id=INSTANCE,
-        snapshot=_snapshot(),
+        snapshot=runtime_snapshot(),
         session_is_valid=lambda _sid: True,
         spawn=spawn,
     )
@@ -1283,8 +1085,8 @@ def test_one_connections_failure_does_not_touch_the_others() -> None:
 def test_a_patch_is_broadcast_after_the_authoritative_snapshot_moves() -> None:
     harness = Harness()
     handle = harness.connect()
-    _drain(handle)
-    harness.broker.publish_state_patch(_snapshot(state_revision=7))
+    drain_connection(handle)
+    harness.broker.publish_state_patch(runtime_snapshot(state_revision=7))
     harness.deliver()
     patch = _wire_containing(handle, b"event: state_patch")
     assert b'"state_revision":7' in patch
@@ -1300,14 +1102,12 @@ def test_an_undeliverable_patch_closes_the_connection() -> None:
     for _ in range(600):
         harness.emit(RunStarted(purpose="chat"), run_id="r1")
         harness.deliver()
-    harness.broker.publish_state_patch(_snapshot(state_revision=9))
+    harness.broker.publish_state_patch(runtime_snapshot(state_revision=9))
     # The refused patch raised the disconnect generation; the dispatcher
     # closes the connection that predates it.
     harness.deliver()
     assert handle.queue.close_requested is True
-    assert any(
-        isinstance(item, CloseConnection) for item in _drain(handle)
-    )
+    assert any(isinstance(item, CloseConnection) for item in drain_connection(handle))
 
 
 def test_a_broker_without_a_session_source_refuses_to_guess() -> None:
@@ -1317,7 +1117,7 @@ def test_a_broker_without_a_session_source_refuses_to_guess() -> None:
     which it has no source. Answering "valid" there would publish a snapshot
     claiming a Session exists when nothing has been consulted.
     """
-    broker = SSEBroker(process_instance_id=INSTANCE, snapshot=_snapshot())
+    broker = SSEBroker(process_instance_id=INSTANCE, snapshot=runtime_snapshot())
     with pytest.raises(RuntimeError):
         broker.connect(connection=FakeConnection())
     broker.bind_session_check(lambda session_id: session_id is None)
@@ -1394,12 +1194,14 @@ def test_sequenced_events_pass_through_unchanged() -> None:
     # Zero is the reserved boundary before the first event, not an event
     # position: on a ring that has lost nothing it is a real starting point,
     # and resuming from it replays everything.
-    handle = harness.connect(cursor=_cursor_for(0))
-    assert _ids(_drain(handle)) == [first.seq, second.seq]
-    assert not any(b"replay_gap" in item.wire_bytes() for item in _drain(handle))
+    handle = harness.connect(cursor=cursor_for(0))
+    assert replay_ids(drain_connection(handle)) == [first.seq, second.seq]
+    assert not any(
+        b"replay_gap" in item.wire_bytes() for item in drain_connection(handle)
+    )
     # A checkpoint this process did issue replays exactly its own tail.
-    handle = harness.connect(cursor=_cursor_for(first.seq))
-    assert _ids(_drain(handle)) == [second.seq]
+    handle = harness.connect(cursor=cursor_for(first.seq))
+    assert replay_ids(drain_connection(handle)) == [second.seq]
 
 
 def _clock() -> FakeClock:
@@ -1508,20 +1310,16 @@ def test_a_fatal_dispatcher_closes_connections_and_refuses_the_rest(
     # it is silenced here because the report, not the traceback, is what
     # this test reads.
     monkeypatch.setattr(threading, "excepthook", lambda args: None)
-    monkeypatch.setattr(
-        broker_module, "ConnectionQueue", _ExplodingConnectionQueue
-    )
+    monkeypatch.setattr(broker_module, "ConnectionQueue", _ExplodingConnectionQueue)
     fatal_calls: list[BaseException] = []
     fatal_done = threading.Event()
     broker = SSEBroker(
         process_instance_id=INSTANCE,
-        snapshot=_snapshot(),
+        snapshot=runtime_snapshot(),
         session_is_valid=lambda _sid: True,
-        spawn=_RealSpawn().spawn,
+        spawn=RealThreadSpawner().spawn,
     )
-    broker.bind_fatal_handler(
-        lambda exc: (fatal_calls.append(exc), fatal_done.set())
-    )
+    broker.bind_fatal_handler(lambda exc: (fatal_calls.append(exc), fatal_done.set()))
     broker.start()
     capture, fanout = _capture_fanout(broker)
     handle = broker.connect(connection=FakeConnection())
@@ -1583,12 +1381,10 @@ def test_a_fatal_commit_fails_instead_of_delivering_to_no_one(monkeypatch) -> No
     for the Run -- and the refusal is stable: it does not depend on which
     thread asks or how many times.
     """
-    monkeypatch.setattr(
-        broker_module, "ConnectionQueue", _ExplodingConnectionQueue
-    )
+    monkeypatch.setattr(broker_module, "ConnectionQueue", _ExplodingConnectionQueue)
     broker = SSEBroker(
         process_instance_id=INSTANCE,
-        snapshot=_snapshot(),
+        snapshot=runtime_snapshot(),
         session_is_valid=lambda _sid: True,
     )
     broker.connect(connection=FakeConnection())
@@ -1647,9 +1443,7 @@ def test_the_fatal_refusal_is_typed_as_process_fatal(monkeypatch) -> None:
     """
     from agent_alfred.events import ProcessFatalSinkError
 
-    monkeypatch.setattr(
-        broker_module, "ConnectionQueue", _ExplodingConnectionQueue
-    )
+    monkeypatch.setattr(broker_module, "ConnectionQueue", _ExplodingConnectionQueue)
     harness = Harness()
     harness.connect()
     harness.emit(RunStarted(purpose="chat"), run_id="r1")
@@ -1702,14 +1496,12 @@ def test_process_level_sink_disabled_notification_is_persistent_and_once(
     of re-announcing it.
     """
     monkeypatch.setattr(threading, "excepthook", lambda args: None)
-    monkeypatch.setattr(
-        broker_module, "ConnectionQueue", _ExplodingConnectionQueue
-    )
+    monkeypatch.setattr(broker_module, "ConnectionQueue", _ExplodingConnectionQueue)
     broker = SSEBroker(
         process_instance_id=INSTANCE,
-        snapshot=_snapshot(),
+        snapshot=runtime_snapshot(),
         session_is_valid=lambda _sid: True,
-        spawn=_RealSpawn().spawn,
+        spawn=RealThreadSpawner().spawn,
     )
     dead = threading.Event()
     broker.bind_fatal_handler(lambda exc: dead.set())
@@ -1815,7 +1607,7 @@ def test_a_broken_ring_is_a_process_fatal_not_a_run_local_error() -> None:
     assert refused.finished.is_set()
     assert refused.thread is None
     assert connection.closed is True
-    assert broker.publish_state_patch(_snapshot(state_revision=1)) is False
+    assert broker.publish_state_patch(runtime_snapshot(state_revision=1)) is False
     # Said once: the next Run must not rediscover the broken ring and
     # publish the same notice again.
     fanout.flush_barrier("r1")
@@ -1877,7 +1669,6 @@ def test_overflow_kicks_merge_and_stay_bounded() -> None:
     assert broker._ingress._items.qsize() <= 3  # noqa: SLF001
 
 
-
 def _deliver_ingress(harness) -> None:
     """Drive the fan-out until the ingress is empty, like a dispatcher would.
 
@@ -1892,9 +1683,7 @@ def _deliver_ingress(harness) -> None:
 # --- a transient's seq names its publication, not its delivery --------------
 
 
-def test_a_transient_published_before_a_connection_registers_is_not_delivered() -> (
-    None
-):
+def test_a_transient_published_before_a_connection_registers_is_not_delivered() -> None:
     """Reconnect does not resurrect a half-finished attempt.
 
     A transient published before a connection registers is exactly the
@@ -1912,12 +1701,12 @@ def test_a_transient_published_before_a_connection_registers_is_not_delivered() 
     harness.emit(BlockDelta(attempt_id="a1", index=0, text="half an attempt"))
     handle = harness.connect()
     _deliver_ingress(harness)
-    wire = b"".join(item.wire_bytes() for item in _drain(handle))
+    wire = b"".join(item.wire_bytes() for item in drain_connection(handle))
     assert b'"event":"block.delta"' not in wire
     # A transient published after the registration is live delivery.
     harness.emit(BlockDelta(attempt_id="a1", index=0, text="still going"))
     _deliver_ingress(harness)
-    items = _drain(handle)
+    items = drain_connection(handle)
     wire = b"".join(item.wire_bytes() for item in items)
     assert b'"event":"block.delta"' in wire
     # And a transient never carries a checkpoint: no ``id:``, then or now.
@@ -1938,16 +1727,16 @@ def test_mixed_backlogs_respect_the_registration_boundary() -> None:
     harness.emit(BlockDelta(attempt_id="a1"))  # seq 3, transient
     handle = harness.connect()
     _deliver_ingress(harness)
-    items = _drain(handle)
-    assert _ids(items) == []
+    items = drain_connection(handle)
+    assert replay_ids(items) == []
     wire = b"".join(item.wire_bytes() for item in items)
     assert b'"event":"block.delta"' not in wire
     harness.emit(BlockDelta(attempt_id="a1"))  # seq 4, transient
     harness.emit(RunStarted(purpose="chat"))  # seq 5, replayable
     _deliver_ingress(harness)
-    items = _drain(handle)
+    items = drain_connection(handle)
     # Only the replayable event carries a checkpoint.
-    assert _ids(items) == [5]
+    assert replay_ids(items) == [5]
     wire = b"".join(item.wire_bytes() for item in items)
     assert wire.count(b'"event":"block.delta"') == 1
 
@@ -1965,11 +1754,11 @@ def test_a_reconnect_skips_preregistration_transients_too() -> None:
     harness.emit(RunStarted(purpose="chat"))  # seq 1
     harness.emit(RunStarted(purpose="chat"))  # seq 2
     harness.emit(BlockDelta(attempt_id="a1"))  # seq 3, still in ingress
-    handle = harness.connect(cursor=_cursor_for(1))
+    handle = harness.connect(cursor=cursor_for(1))
     _deliver_ingress(harness)
-    items = _drain(handle)
+    items = drain_connection(handle)
     # The replay tail, exactly once, and no preregistration transient.
-    assert _ids(items) == [2]
+    assert replay_ids(items) == [2]
     wire = b"".join(item.wire_bytes() for item in items)
     assert b'"event":"block.delta"' not in wire
 
@@ -1986,7 +1775,7 @@ def test_a_domain_event_fan_out_never_queries_session_validity() -> None:
     """
     harness = Harness()
     handle = harness.connect(session_id="s1")
-    _drain(handle)
+    drain_connection(handle)
 
     def unexpected_query(_session_id: str | None) -> bool:
         raise AssertionError("domain event fan-out queried Session validity")
@@ -1995,7 +1784,7 @@ def test_a_domain_event_fan_out_never_queries_session_validity() -> None:
     harness.emit(RunStarted(purpose="chat"))
     harness.deliver()
 
-    wire = b"".join(item.wire_bytes() for item in _drain(handle))
+    wire = b"".join(item.wire_bytes() for item in drain_connection(handle))
     assert b'"event":"run.started"' in wire
 
 
@@ -2004,10 +1793,10 @@ def test_a_patch_fan_out_keeps_each_sessions_validity_view() -> None:
     harness = Harness()
     valid = harness.connect(session_id="s1")
     invalid = harness.connect(session_id="gone")
-    _drain(valid)
-    _drain(invalid)
+    drain_connection(valid)
+    drain_connection(invalid)
 
-    harness.broker.publish_state_patch(_snapshot(state_revision=1))
+    harness.broker.publish_state_patch(runtime_snapshot(state_revision=1))
     harness.deliver()
 
     assert _patch_payload(valid)["session_valid"] is True
@@ -2021,7 +1810,7 @@ def test_a_patch_queries_each_distinct_session_at_most_once() -> None:
     second = harness.connect(session_id="s1")
     other = harness.connect(session_id="gone")
     for handle in (first, second, other):
-        _drain(handle)
+        drain_connection(handle)
     queried: list[str | None] = []
 
     def session_exists(session_id: str | None) -> bool:
@@ -2029,7 +1818,7 @@ def test_a_patch_queries_each_distinct_session_at_most_once() -> None:
         return session_id == "s1"
 
     harness.broker.bind_session_check(session_exists)
-    harness.broker.publish_state_patch(_snapshot(state_revision=1))
+    harness.broker.publish_state_patch(runtime_snapshot(state_revision=1))
     harness.deliver()
 
     assert queried == ["s1", "gone"]
@@ -2081,10 +1870,10 @@ def test_patch_encoding_does_not_block_event_commits(monkeypatch) -> None:
     # mid-encode.
     encoder.release.set()
     monkeypatch.setattr(broker_module, "_patch_frames", encoder)
-    harness = Harness(spawn=_RealSpawn())
+    harness = Harness(spawn=RealThreadSpawner())
     handle = harness.connect()
-    _drain(handle)
-    harness.broker.publish_state_patch(_snapshot(state_revision=1))
+    drain_connection(handle)
+    harness.broker.publish_state_patch(runtime_snapshot(state_revision=1))
     encoder.release.clear()
     dispatcher_done = threading.Event()
 
@@ -2144,7 +1933,7 @@ class _GatedCost:
 def _patches_received(handle) -> list[dict]:
     """Every state_patch frame this connection has been handed, in order."""
     patches = []
-    for item in _drain(handle):
+    for item in drain_connection(handle):
         if not isinstance(item, PreparedFrames):
             # A sweep's close sentinel is a mark, not a frame the wire saw.
             continue
@@ -2194,7 +1983,7 @@ def test_stale_step_never_publishes_after_newer_revision(monkeypatch) -> None:
     """
     harness = Harness()
     handle = harness.connect()
-    _drain(handle)
+    drain_connection(handle)
     harness.emit(RunStarted(purpose="chat"), run_id="r1")
     harness.emit(StepStarted(step_index=0), run_id="r1")
     active = ActiveRunSummary(
@@ -2208,10 +1997,10 @@ def test_stale_step_never_publishes_after_newer_revision(monkeypatch) -> None:
         recording_state=None,
         current_step=0,
     )
-    overtaken = _snapshot(
+    overtaken = runtime_snapshot(
         state_revision=1, coordinator_state="running", active_run=active
     )
-    newer = _snapshot(
+    newer = runtime_snapshot(
         state_revision=2,
         coordinator_state="running",
         active_run=replace(active, current_step=1),
@@ -2231,7 +2020,7 @@ def test_stale_step_never_publishes_after_newer_revision(monkeypatch) -> None:
         "a snapshot the authority had overtaken was published anyway"
     )
     assert harness.broker._latest is newer, "_latest moved backwards"
-    _run_dispatcher(harness)
+    drain_dispatcher(harness)
     patches = _patches_received(handle)
     assert patches, "no state patch was published at all"
     revisions = [patch["state_revision"] for patch in patches]
@@ -2262,7 +2051,7 @@ def test_connection_never_regresses_to_stale_absolute_replacement(
     """
     harness = Harness()
     handle = harness.connect()
-    _drain(handle)
+    drain_connection(handle)
     harness.emit(RunStarted(purpose="chat"), run_id="r1")
     harness.emit(StepStarted(step_index=0), run_id="r1")
     active = ActiveRunSummary(
@@ -2276,17 +2065,15 @@ def test_connection_never_regresses_to_stale_absolute_replacement(
         recording_state=None,
         current_step=0,
     )
-    overtaken = _snapshot(
+    overtaken = runtime_snapshot(
         state_revision=1, coordinator_state="running", active_run=active
     )
-    newer = _snapshot(
+    newer = runtime_snapshot(
         state_revision=2,
         coordinator_state="running",
         active_run=replace(active, current_step=1),
     )
-    barrier, thread, _answers = _park_a_publisher(
-        harness, monkeypatch, overtaken
-    )
+    barrier, thread, _answers = _park_a_publisher(harness, monkeypatch, overtaken)
     try:
         harness.emit(StepStarted(step_index=1), run_id="r1")
         assert harness.broker.publish_state_patch(newer)
@@ -2295,7 +2082,7 @@ def test_connection_never_regresses_to_stale_absolute_replacement(
         barrier.abort()
         raise
     thread.join(timeout=5.0)
-    _run_dispatcher(harness)
+    drain_dispatcher(harness)
     patches = _patches_received(handle)
     assert patches, "the connection saw no state patch"
     revisions = [patch["state_revision"] for patch in patches]
@@ -2332,7 +2119,7 @@ def test_a_patch_is_encoded_once_per_session_validity(monkeypatch) -> None:
     harness.connect(session_id="s1")
     harness.connect(session_id="not-s1")  # the invalid answer
     encoder.encodings.clear()
-    harness.broker.publish_state_patch(_snapshot(state_revision=2))
+    harness.broker.publish_state_patch(runtime_snapshot(state_revision=2))
     _deliver_ingress(harness)
     assert encoder.calls_for(True) == 1
     assert encoder.calls_for(False) == 1
@@ -2350,15 +2137,13 @@ def test_connect_encodes_its_startup_outside_the_lock(monkeypatch) -> None:
     """
     encoder = _GatedEncoder(_patch_frames)
     monkeypatch.setattr(broker_module, "_patch_frames", encoder)
-    harness = Harness(spawn=_RealSpawn())
+    harness = Harness(spawn=RealThreadSpawner())
     connect_done = threading.Event()
     descriptor: list[bytes] = []
 
     def do_connect() -> None:
         handle = harness.broker.connect(connection=FakeConnection())
-        descriptor.append(
-            b"".join(item.wire_bytes() for item in handle.startup)
-        )
+        descriptor.append(b"".join(item.wire_bytes() for item in handle.startup))
         connect_done.set()
 
     connector = threading.Thread(target=do_connect, daemon=True)
@@ -2369,9 +2154,9 @@ def test_connect_encodes_its_startup_outside_the_lock(monkeypatch) -> None:
         # authoritative snapshot advances. A connect holding the lock here
         # would deadlock the publish; a connect that merely encoded outside
         # but registered the stale frame would ship revision 0.
-        assert harness.broker.publish_state_patch(
-            _snapshot(state_revision=1)
-        ), "publish waited for the startup encoding"
+        assert harness.broker.publish_state_patch(runtime_snapshot(state_revision=1)), (
+            "publish waited for the startup encoding"
+        )
     finally:
         encoder.release.set()
         assert connect_done.wait(5.0), "connect never finished"
@@ -2382,6 +2167,7 @@ def test_connect_encodes_its_startup_outside_the_lock(monkeypatch) -> None:
 
 
 # --- the publish path never touches a connection ----------------------------
+
 
 class _ProbingQueue:
     """A queue stand-in that refuses to be touched while it is armed.
@@ -2408,12 +2194,6 @@ class _ProbingQueue:
 
     def stop(self) -> None:
         return None
-
-
-def _run_dispatcher(harness) -> None:
-    """Drive the dispatcher until the ingress is empty, kick included."""
-    while harness.broker.deliver_next(timeout=0.05):
-        pass
 
 
 def _commit_direct(harness, seq: int, run_id: str):
@@ -2478,7 +2258,7 @@ def test_ingress_overflow_never_walks_the_connections_from_commit() -> None:
     # overflow, and no queue is touched until it runs.
     for probe in probes:
         probe.armed = False
-    _run_dispatcher(harness)
+    drain_dispatcher(harness)
     assert all(probe.close_requests == 1 for probe in probes)
 
 
@@ -2493,8 +2273,8 @@ def test_a_connection_registered_after_the_overflow_is_not_closed() -> None:
     handle = harness.connect()
     harness.emit(RunStarted(purpose="chat"), run_id="r1")
     _commit_direct(harness, seq=2, run_id="r2")  # overflows the ingress
-    late = harness.connect(cursor=_cursor_for(0))
-    _run_dispatcher(harness)
+    late = harness.connect(cursor=cursor_for(0))
+    drain_dispatcher(harness)
     assert handle.queue.close_requested is True
     assert late.queue.close_requested is False
 
@@ -2513,7 +2293,7 @@ def test_patch_overflow_never_walks_the_connections_from_the_publisher() -> None
         handle.queue = _ProbingQueue()
         probes.append(handle.queue)
     harness.emit(RunStarted(purpose="chat"), run_id="r1")  # occupies ingress
-    accepted = harness.broker.publish_state_patch(_snapshot(state_revision=5))
+    accepted = harness.broker.publish_state_patch(runtime_snapshot(state_revision=5))
     assert accepted is False
     # The authoritative snapshot moved anyway (a reconnect sees revision 5),
     # and no connection was touched from the publishing thread.
@@ -2524,7 +2304,7 @@ def test_patch_overflow_never_walks_the_connections_from_the_publisher() -> None
     late = harness.connect()
     for probe in probes:
         probe.armed = False
-    _run_dispatcher(harness)
+    drain_dispatcher(harness)
     assert all(probe.close_requests == 1 for probe in probes)
     assert late.queue.close_requested is False
 
@@ -2584,9 +2364,7 @@ def _park_a_publisher_every_lap(
     capture and its commit, so the bounded recapture is exhausted for
     certain. The publisher's answer lands in the returned list.
     """
-    gate = _PerLapCost(
-        broker_module._patch_cost, broker_module._MAX_PATCH_CAPTURES
-    )
+    gate = _PerLapCost(broker_module._patch_cost, broker_module._MAX_PATCH_CAPTURES)
     monkeypatch.setattr(broker_module, "_patch_cost", gate)
     answers: list[bool] = []
 
@@ -2623,17 +2401,13 @@ def test_capture_exhaustion_still_moves_the_authority_and_disconnects(
     """
     harness = Harness()
     handle = harness.connect()
-    _drain(handle)
+    drain_connection(handle)
     harness.emit(RunStarted(purpose="chat"), run_id="r1")
-    requested = _snapshot(state_revision=5)
-    gate, thread, answers = _park_a_publisher_every_lap(
-        harness, monkeypatch, requested
-    )
+    requested = runtime_snapshot(state_revision=5)
+    gate, thread, answers = _park_a_publisher_every_lap(harness, monkeypatch, requested)
     try:
         for lap in range(broker_module._MAX_PATCH_CAPTURES):
-            assert gate.wait_parked(lap), (
-                f"lap {lap} never reached its encoding"
-            )
+            assert gate.wait_parked(lap), f"lap {lap} never reached its encoding"
             # One real transition per lap, committed while the publisher
             # sits parked mid-measurement, holding no broker lock.
             harness.emit(StepStarted(step_index=lap), run_id="r1")
@@ -2646,7 +2420,7 @@ def test_capture_exhaustion_still_moves_the_authority_and_disconnects(
     # the broker now holds -- and registers at the current generation.
     late = harness.connect()
     late_wire = b"".join(item.wire_bytes() for item in late.startup)
-    _run_dispatcher(harness)
+    drain_dispatcher(harness)
     # Observed before the first assert, so a red run reports the whole
     # failure, not just its first casualty.
     observed = {
@@ -2663,9 +2437,7 @@ def test_capture_exhaustion_still_moves_the_authority_and_disconnects(
     assert observed["disconnect_generation"] == 1, observed
     assert observed["old_connection_close_requested"] is True, observed
     assert observed["late_connection_close_requested"] is False, observed
-    assert observed["late_opening_revision"] == requested.state_revision, (
-        observed
-    )
+    assert observed["late_opening_revision"] == requested.state_revision, observed
     assert observed["patches_delivered"] == [], observed
 
 
@@ -2682,25 +2454,21 @@ def test_exhausted_publisher_never_regresses_an_overtaken_snapshot(
     """
     harness = Harness()
     handle = harness.connect()
-    _drain(handle)
+    drain_connection(handle)
     harness.emit(RunStarted(purpose="chat"), run_id="r1")
-    requested = _snapshot(state_revision=5)
-    gate, thread, answers = _park_a_publisher_every_lap(
-        harness, monkeypatch, requested
-    )
+    requested = runtime_snapshot(state_revision=5)
+    gate, thread, answers = _park_a_publisher_every_lap(harness, monkeypatch, requested)
     newer = None
     try:
         last = broker_module._MAX_PATCH_CAPTURES - 1
         for lap in range(broker_module._MAX_PATCH_CAPTURES):
-            assert gate.wait_parked(lap), (
-                f"lap {lap} never reached its encoding"
-            )
+            assert gate.wait_parked(lap), f"lap {lap} never reached its encoding"
             harness.emit(StepStarted(step_index=lap), run_id="r1")
             if lap == last:
                 # The final lap loses to a newer *snapshot*, not only to an
                 # event: by the time the exhausted publisher reaches its
                 # closing move, the authority has already moved past it.
-                newer = _snapshot(state_revision=6)
+                newer = runtime_snapshot(state_revision=6)
                 assert harness.broker.publish_state_patch(newer), (
                     "the newer publish must not wait behind the parked one"
                 )
@@ -2709,7 +2477,7 @@ def test_exhausted_publisher_never_regresses_an_overtaken_snapshot(
         gate.abort()
         raise
     thread.join(timeout=5.0)
-    _run_dispatcher(harness)
+    drain_dispatcher(harness)
     assert answers == [False], "the exhausted publisher must still refuse"
     assert harness.broker._latest is newer, "_latest moved backwards"
     assert harness.broker._disconnect_generation == 0, (
@@ -2746,7 +2514,7 @@ def test_a_trailing_transient_seq_is_malformed_not_ahead() -> None:
     harness = Harness()
     harness.emit(RunStarted(purpose="chat"), run_id="r1")  # seq 1, replayable
     harness.emit(BlockDelta(text="x"), run_id="r1")  # seq 2, transient
-    assert _gap_payload(harness, _cursor_for(2)) == {
+    assert _gap_payload(harness, cursor_for(2)) == {
         "code": "replay_gap",
         "gap_reason": "malformed",
         "requested_seq": 2,
@@ -2754,7 +2522,7 @@ def test_a_trailing_transient_seq_is_malformed_not_ahead() -> None:
         "high_water_seq": 2,
         "current_run_state": "absent",
     }
-    assert _gap_payload(harness, _cursor_for(3)) == {
+    assert _gap_payload(harness, cursor_for(3)) == {
         "code": "replay_gap",
         "gap_reason": "ahead",
         "requested_seq": 3,
@@ -2766,10 +2534,10 @@ def test_a_trailing_transient_seq_is_malformed_not_ahead() -> None:
     # checkpoint like any other.
     third = harness.emit(RunStarted(purpose="chat"), run_id="r2")
     assert third.seq == 3
-    handle = harness.connect(cursor=_cursor_for(1))
-    assert _ids(_drain(handle)) == [3]
+    handle = harness.connect(cursor=cursor_for(1))
+    assert replay_ids(drain_connection(handle)) == [3]
     # Resuming *from* 3 has nothing to catch up, as any checkpoint.
-    handle = harness.connect(cursor=_cursor_for(3))
-    assert _ids(_drain(handle)) == []
+    handle = harness.connect(cursor=cursor_for(3))
+    assert replay_ids(drain_connection(handle)) == []
     # The transient never entered the ring and never got an id:.
     assert len(harness.broker._ring) == 2

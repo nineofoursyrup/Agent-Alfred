@@ -39,13 +39,13 @@ import pytest
 
 from agent_alfred import schema
 from agent_alfred.clock import FakeClock
-from agent_alfred.evals.deterministic.test_web_broker import _GatedThreads
-from agent_alfred.evals.deterministic.test_web_review_closure_2 import (
-    _FakeConnection,
-    _FakeHost,
-    _RecordingLock,
-    _RecordingServer,
-    _Rig,
+from agent_alfred.evals.deterministic._web_broker_test_helpers import GatedThreads
+from agent_alfred.evals.deterministic._web_close_test_helpers import (
+    CloseTrackingConnection,
+    CloseTrackingHost,
+    DashboardCloseRig,
+    RecordingProcessLock,
+    RecordingServer,
 )
 from agent_alfred.events import (
     BestEffortFlushResult,
@@ -71,7 +71,7 @@ from agent_alfred.settings import Settings
 # --- the runtime's tail: database, then entry, each refusable ---------------
 
 
-class _FailingCloseConnection(_FakeConnection):
+class _FailingCloseConnection(CloseTrackingConnection):
     """A database whose close() refuses the first N times."""
 
     def __init__(self, trace: list[str], failures: int):
@@ -85,7 +85,7 @@ class _FailingCloseConnection(_FakeConnection):
         super().close()
 
 
-class _StickyReleaseLock(_RecordingLock):
+class _StickyReleaseLock(RecordingProcessLock):
     """A process lock whose release refuses the first N times."""
 
     def __init__(self, path: Path, trace: list[str], failures: int):
@@ -100,8 +100,8 @@ class _StickyReleaseLock(_RecordingLock):
         super().release()
 
 
-class _Rig3(_Rig):
-    """The closure-2 rig, with the tail's own steps made refusable."""
+class RefusableTailRig(DashboardCloseRig):
+    """A dashboard close rig whose tail steps can refuse completion."""
 
     def __init__(self, tmp_path, *, conn_close_failures=0, lock_release_failures=0):
         self._conn_close_failures = conn_close_failures
@@ -129,7 +129,7 @@ def test_a_database_that_will_not_close_keeps_the_tail_pending(tmp_path) -> None
     ``closing``, and the next close resumes at the database instead of
     skipping the rest of the tail on the strength of a flag set in advance.
     """
-    rig = _Rig3(tmp_path, conn_close_failures=1)
+    rig = RefusableTailRig(tmp_path, conn_close_failures=1)
     rig.runtime.start()
     with pytest.raises(RuntimeError, match="database busy"):
         rig.runtime.close()
@@ -157,7 +157,7 @@ def test_a_lock_release_that_fails_leaves_the_runtime_closing(tmp_path) -> None:
     must release the lock without closing the database a second time or
     touching the descriptor again.
     """
-    rig = _Rig3(tmp_path, lock_release_failures=1)
+    rig = RefusableTailRig(tmp_path, lock_release_failures=1)
     rig.runtime.start()
     with pytest.raises(RuntimeError, match="lock release refused"):
         rig.runtime.close()
@@ -181,7 +181,7 @@ def test_a_lock_release_that_fails_leaves_the_runtime_closing(tmp_path) -> None:
 class _RealBrokerRig:
     """A runtime whose stream is a real SSEBroker with gated threads.
 
-    Everything else is the closure-2 rig's shape: a fake Host that stops
+    Everything else follows the shared close rig: a fake Host that stops
     when asked, a fake database, a real flock. The broker is the real one,
     so its ``close()`` answer is about its own threads -- which this rig's
     gates hold at the starting line for exactly as long as the test says.
@@ -190,18 +190,18 @@ class _RealBrokerRig:
     def __init__(self, tmp_path):
         self.tmp_path = Path(tmp_path)
         self.trace: list[str] = []
-        self.gates = _GatedThreads()
-        self.conn = _FakeConnection(self.trace)
-        self.lock = _RecordingLock(self.tmp_path / LOCK_NAME, self.trace)
-        self.host: _FakeHost | None = None
+        self.gates = GatedThreads()
+        self.conn = CloseTrackingConnection(self.trace)
+        self.lock = RecordingProcessLock(self.tmp_path / LOCK_NAME, self.trace)
+        self.host: CloseTrackingHost | None = None
         self.broker: SSEBroker | None = None
         self.runtime = DashboardRuntime(
             state_dir=self.tmp_path,
             assemble=self._assemble,
             port=7717,
-            instance_id="inst-closure-3",
+            instance_id="inst-close-progress",
             open_database=self._open_database,
-            server_factory=_RecordingServer,
+            server_factory=RecordingServer,
             write_descriptor=lambda d, e: write_entry_descriptor(d, e),
             lock=self.lock,
         )
@@ -211,7 +211,7 @@ class _RealBrokerRig:
         return self.conn
 
     def _assemble(self, conn, instance_id):
-        self.host = _FakeHost(conn, (True,), self.trace)
+        self.host = CloseTrackingHost(conn, (True,), self.trace)
         self.broker = SSEBroker(
             process_instance_id=instance_id,
             snapshot=RuntimeSnapshot(
@@ -291,7 +291,7 @@ def test_a_descriptor_that_refuses_deletion_keeps_the_tail_pending(
     the file for real, releases the lock exactly once, and only then is the
     runtime ``closed``.
     """
-    rig = _Rig3(tmp_path)
+    rig = RefusableTailRig(tmp_path)
     rig.runtime.start()
     attempts = {"count": 0}
     real_unlink = Path.unlink
@@ -376,7 +376,7 @@ class _RealHostFanOutRig:
     def __init__(self, tmp_path):
         self.tmp_path = Path(tmp_path)
         self.trace: list[str] = []
-        self.lock = _RecordingLock(self.tmp_path / LOCK_NAME, self.trace)
+        self.lock = RecordingProcessLock(self.tmp_path / LOCK_NAME, self.trace)
         self.sink = _FlakyCloseSink()
         self.conn: _SpyCloseConnection | None = None
         self.host: RuntimeHost | None = None
@@ -385,7 +385,7 @@ class _RealHostFanOutRig:
             state_dir=self.tmp_path,
             assemble=self._assemble,
             port=7717,
-            instance_id="inst-closure-3",
+            instance_id="inst-close-progress",
             open_database=self._open_database,
             server_factory=self._server_factory,
             write_descriptor=self._write_descriptor,
@@ -394,7 +394,7 @@ class _RealHostFanOutRig:
 
     def _server_factory(self, address, handler):
         self.trace.append("bind")
-        return _RecordingServer(address, handler)
+        return RecordingServer(address, handler)
 
     def _write_descriptor(self, directory, descriptor):
         self.trace.append("write_descriptor")

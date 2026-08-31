@@ -18,6 +18,9 @@ from pathlib import Path
 
 import pytest
 
+from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
+    free_loopback_port,
+)
 from agent_alfred.gateway.web.lifecycle import (
     DEFAULT_HOST,
     DEFAULT_PORT,
@@ -40,21 +43,6 @@ class _Handler(BaseHTTPRequestHandler):
 
     def log_message(self, *args: object) -> None:
         """Silence the default stderr log; it is not part of any assertion."""
-
-
-def _free_port() -> int:
-    """A loopback port nobody is listening on, released immediately.
-
-    The window between closing the probe and binding it for real is not
-    zero, but a collision here fails the test loudly rather than passing it
-    silently, which is the only property that matters.
-    """
-    probe = socket.socket()
-    try:
-        probe.bind((DEFAULT_HOST, 0))
-        return int(probe.getsockname()[1])
-    finally:
-        probe.close()
 
 
 class _RecordingServer:
@@ -152,7 +140,7 @@ def test_the_lock_file_records_the_owning_pid(tmp_path) -> None:
 
 
 def test_start_locks_then_binds_then_describes(tmp_path) -> None:
-    service = _service(tmp_path, port=_free_port())
+    service = _service(tmp_path, port=free_loopback_port())
     descriptor = service.start()
     assert service.lock_held is True
     assert service.started is True
@@ -163,7 +151,7 @@ def test_start_locks_then_binds_then_describes(tmp_path) -> None:
 
 
 def test_the_descriptor_names_instance_pid_and_port(tmp_path) -> None:
-    service = _service(tmp_path, port=_free_port(), pid=4242)
+    service = _service(tmp_path, port=free_loopback_port(), pid=4242)
     descriptor = service.start()
     assert descriptor.instance_id == "inst-lifecycle"
     assert descriptor.pid == 4242
@@ -180,7 +168,7 @@ def test_the_descriptor_names_instance_pid_and_port(tmp_path) -> None:
 def test_a_busy_port_fails_and_leaves_nothing_behind(tmp_path) -> None:
     """A real bind against a real squatter: only a socket can prove the
     port conflict reaches the caller instead of being worked around."""
-    port = _free_port()
+    port = free_loopback_port()
     squatter = socket.socket()
     squatter.bind((DEFAULT_HOST, port))
     squatter.listen(1)
@@ -217,7 +205,7 @@ def test_a_descriptor_failure_also_rolls_the_bind_and_the_lock_back(
     monkeypatch.setattr(
         "agent_alfred.gateway.web.lifecycle.write_entry_descriptor", explode
     )
-    service = _service(tmp_path, port=_free_port())
+    service = _service(tmp_path, port=free_loopback_port())
     with pytest.raises(OSError):
         service.start()
     assert service.started is False
@@ -228,7 +216,7 @@ def test_a_descriptor_failure_also_rolls_the_bind_and_the_lock_back(
 
 
 def test_start_is_idempotent_and_returns_the_same_entry(tmp_path) -> None:
-    service = _service(tmp_path, port=_free_port())
+    service = _service(tmp_path, port=free_loopback_port())
     first = service.start()
     second = service.start()
     assert first == second
@@ -237,7 +225,7 @@ def test_start_is_idempotent_and_returns_the_same_entry(tmp_path) -> None:
 
 
 def test_close_undoes_everything_and_is_idempotent(tmp_path) -> None:
-    service = _service(tmp_path, port=_free_port())
+    service = _service(tmp_path, port=free_loopback_port())
     service.start()
     server = service.server
     thread = service.start_serving()
@@ -260,7 +248,7 @@ def test_close_without_serving_does_not_wait_on_a_loop(tmp_path) -> None:
     A start that never served has no loop, so asking it to shut down would
     block until one appeared -- turning a failed start into a hung process.
     """
-    service = _service(tmp_path, port=_free_port())
+    service = _service(tmp_path, port=free_loopback_port())
     service.start()
     server = service.server
     service.close()
@@ -270,10 +258,10 @@ def test_close_without_serving_does_not_wait_on_a_loop(tmp_path) -> None:
 
 
 def test_close_releases_the_lock_for_a_real_second_instance(tmp_path) -> None:
-    first = _service(tmp_path, port=_free_port())
+    first = _service(tmp_path, port=free_loopback_port())
     first.start()
     first.close()
-    second = _service(tmp_path, port=_free_port())
+    second = _service(tmp_path, port=free_loopback_port())
     try:
         second.start()
         assert second.lock_held is True
@@ -286,7 +274,7 @@ def test_a_stale_descriptor_is_replaced_not_merged(tmp_path) -> None:
         json.dumps({"instance_id": "old", "pid": 7, "port": 9}),
         encoding="utf-8",
     )
-    service = _service(tmp_path, port=_free_port())
+    service = _service(tmp_path, port=free_loopback_port())
     try:
         descriptor = service.start()
         assert read_entry_descriptor(tmp_path) == descriptor
@@ -332,7 +320,7 @@ def test_a_failed_descriptor_write_leaves_the_previous_one_intact(
 
 
 def test_the_state_directory_files_are_private(tmp_path) -> None:
-    service = _service(tmp_path, port=_free_port())
+    service = _service(tmp_path, port=free_loopback_port())
     try:
         service.start()
         for name in (LOCK_NAME, DESCRIPTOR_NAME):
@@ -357,7 +345,7 @@ def test_start_forces_0700_on_a_pre_existing_state_directory(tmp_path) -> None:
     user_file.write_text("user data", encoding="utf-8")
     os.chmod(tmp_path, 0o755)
     os.chmod(user_file, 0o644)
-    service = _service(tmp_path, port=_free_port())
+    service = _service(tmp_path, port=free_loopback_port())
     try:
         service.start()
         assert stat.S_IMODE(os.stat(tmp_path).st_mode) == 0o700
@@ -383,7 +371,7 @@ def test_start_tightens_the_directory_even_under_a_hostile_umask(tmp_path) -> No
         os.umask(previous)
     # Precondition: the umask really did strip the mode mkdir asked for.
     assert stat.S_IMODE(os.stat(state).st_mode) == 0o000
-    service = _service(state, port=_free_port())
+    service = _service(state, port=free_loopback_port())
     try:
         service.start()
         assert stat.S_IMODE(os.stat(state).st_mode) == 0o700
@@ -395,7 +383,7 @@ def test_a_bind_failure_still_tightens_a_pre_existing_directory(tmp_path) -> Non
     """The mode is enforced before the lock, so even a refused bind leaves
     the directory tighter than it found it -- and nothing else behind."""
     os.chmod(tmp_path, 0o755)
-    port = _free_port()
+    port = free_loopback_port()
     squatter = socket.socket()
     squatter.bind((DEFAULT_HOST, port))
     squatter.listen(1)
@@ -431,7 +419,7 @@ def test_a_chmod_failure_aborts_before_lock_or_bind(tmp_path, monkeypatch) -> No
     monkeypatch.setattr(
         "agent_alfred.gateway.web.lifecycle.os.chmod", refuse
     )
-    service = _service(tmp_path, port=_free_port())
+    service = _service(tmp_path, port=free_loopback_port())
     with pytest.raises(OSError, match="cannot chmod"):
         service.start()
     assert service.lock_held is False
@@ -443,13 +431,13 @@ def test_a_chmod_failure_aborts_before_lock_or_bind(tmp_path, monkeypatch) -> No
 
 
 def test_serving_without_start_is_refused(tmp_path) -> None:
-    service = _service(tmp_path, port=_free_port())
+    service = _service(tmp_path, port=free_loopback_port())
     with pytest.raises(RuntimeError):
         service.start_serving()
 
 
 def test_the_serving_thread_is_a_daemon(tmp_path) -> None:
-    service = _service(tmp_path, port=_free_port())
+    service = _service(tmp_path, port=free_loopback_port())
     service.start()
     try:
         thread = service.start_serving()
@@ -487,7 +475,7 @@ def test_close_confirms_the_serving_thread_has_exited(tmp_path) -> None:
     "is this port still served?" a guess; confirming the exit is a step of
     the close like any other, taken from outside the serving thread.
     """
-    service = _service(tmp_path, port=_free_port())
+    service = _service(tmp_path, port=free_loopback_port())
     service.start()
     thread = _ServingThreadStandIn()
     service.start_serving(spawn=lambda target: thread)
@@ -539,7 +527,7 @@ def _refusing_service(tmp_path, **failures) -> DashboardService:
         state_dir=tmp_path,
         handler=_Handler,
         instance_id="inst-lifecycle",
-        port=_free_port(),
+        port=free_loopback_port(),
         server_factory=factory,
     )
 
@@ -610,7 +598,7 @@ def test_the_real_server_binds_only_the_loopback_address(tmp_path) -> None:
     that the address is the one the threat model assumes and that nothing
     picked a different port behind our back.
     """
-    port = _free_port()
+    port = free_loopback_port()
     service = DashboardService(
         state_dir=tmp_path,
         handler=_Handler,
@@ -631,7 +619,7 @@ def test_the_real_server_binds_only_the_loopback_address(tmp_path) -> None:
 
 
 def test_a_real_close_releases_the_socket_and_the_port(tmp_path) -> None:
-    port = _free_port()
+    port = free_loopback_port()
     service = DashboardService(
         state_dir=tmp_path,
         handler=_Handler,
@@ -668,7 +656,7 @@ def test_a_descriptor_that_refuses_deletion_keeps_the_reference(
     make the first failure permanent: the retry would delete nothing and
     release the lock on top of a stale descriptor.
     """
-    service = _service(tmp_path, port=_free_port())
+    service = _service(tmp_path, port=free_loopback_port())
     service.start()
     attempts = {"count": 0}
     real_unlink = Path.unlink
@@ -700,7 +688,7 @@ def test_a_descriptor_that_refuses_deletion_keeps_the_reference(
 
 def test_a_descriptor_already_gone_still_counts_as_forgotten(tmp_path) -> None:
     """A missing file needs no deletion, and the tail goes on."""
-    service = _service(tmp_path, port=_free_port())
+    service = _service(tmp_path, port=free_loopback_port())
     service.start()
     (tmp_path / DESCRIPTOR_NAME).unlink()
     service.close()

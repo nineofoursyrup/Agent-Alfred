@@ -22,7 +22,9 @@ from pathlib import Path
 import pytest
 
 from agent_alfred.clock import FakeClock
-from agent_alfred.evals.deterministic.test_web_lifecycle import _free_port
+from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
+    free_loopback_port,
+)
 from agent_alfred.events import event_json_default
 from agent_alfred.gateway.cli import serve_dashboard
 from agent_alfred.gateway.web.broker import SSEBroker
@@ -67,7 +69,7 @@ def test_build_dashboard_gives_the_host_and_the_broker_one_identity(tmp_path) ->
         state_dir=tmp_path,
         factory=_factory(),
         clock=FakeClock(),
-        port=_free_port(),
+        port=free_loopback_port(),
         open_database=_database,
     )
     try:
@@ -91,7 +93,7 @@ def test_the_broker_sees_events_and_patches_from_the_real_host(tmp_path) -> None
         state_dir=tmp_path,
         factory=_factory(),
         clock=FakeClock(),
-        port=_free_port(),
+        port=free_loopback_port(),
         open_database=_database,
     )
     try:
@@ -133,7 +135,7 @@ def test_a_second_instance_on_the_same_state_dir_is_refused(tmp_path) -> None:
             serve_dashboard(
                 state_dir=tmp_path,
                 settings=Settings(),
-                port=_free_port(),
+                port=free_loopback_port(),
                 out=io.StringIO(),
                 stop=stop,
             )
@@ -148,7 +150,7 @@ def test_a_second_instance_on_the_same_state_dir_is_refused(tmp_path) -> None:
         second = serve_dashboard(
             state_dir=tmp_path,
             settings=Settings(),
-            port=_free_port(),
+            port=free_loopback_port(),
             out=errors,
         )
         assert second == 1
@@ -165,7 +167,7 @@ def test_a_second_instance_on_the_same_state_dir_is_refused(tmp_path) -> None:
 
 def test_a_busy_port_fails_the_serve_path_without_leaving_a_host(tmp_path) -> None:
     squatter = socket.socket()
-    port = _free_port()
+    port = free_loopback_port()
     squatter.bind(("127.0.0.1", port))
     squatter.listen(1)
     errors = io.StringIO()
@@ -221,7 +223,7 @@ def test_a_dead_dispatcher_reports_only_machine_safe_context(
         state_dir=tmp_path,
         factory=_factory(),
         clock=FakeClock(),
-        port=_free_port(),
+        port=free_loopback_port(),
         extra_sinks=[capture],
         trace_root=trace_root,
         open_database=_database,
@@ -299,7 +301,7 @@ def test_the_assembled_dashboard_serves_the_real_host_over_http(tmp_path) -> Non
         state_dir=tmp_path,
         factory=_factory(),
         clock=FakeClock(),
-        port=_free_port(),
+        port=free_loopback_port(),
         open_database=_database,
     )
     try:

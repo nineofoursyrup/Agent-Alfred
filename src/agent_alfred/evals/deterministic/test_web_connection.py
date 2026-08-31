@@ -10,7 +10,7 @@ import time
 import pytest
 
 from agent_alfred.clock import FakeClock
-from agent_alfred.evals.deterministic.test_web_broker import Harness
+from agent_alfred.evals.deterministic._web_broker_test_helpers import Harness
 from agent_alfred.gateway.web import frames
 from agent_alfred.gateway.web.connection import (
     CloseConnection,
