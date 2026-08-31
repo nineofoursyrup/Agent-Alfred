@@ -786,6 +786,23 @@ def test_startup_then_live_has_no_hole_and_reconnect_recovers_exactly() -> None:
 # --- chunking and mid-event disconnection ----------------------------------
 
 
+def test_prepare_is_deterministic_for_one_immutable_logical_event() -> None:
+    harness = Harness(max_frame_bytes=16 * 1024)
+    unsequenced = _unsequenced_chunky(
+        "é" * (200 * 1024), event_id="logical-event-1"
+    )
+
+    first = harness.broker.prepare(unsequenced)
+    second = harness.broker.prepare(unsequenced)
+
+    assert first == second
+    assert first.wire_bytes() == second.wire_bytes()
+    assert len(first.frames) > 1
+    assert {
+        _chunk_meta(frame)["event_id"] for frame in first.frames
+    } == {"logical-event-1"}
+
+
 def test_a_chunked_event_is_replayed_whole_from_its_first_frame() -> None:
     # 16 KiB frames: a 400 KiB UTF-8 body cannot be one physical frame.
     harness = Harness(max_frame_bytes=16 * 1024)
@@ -825,7 +842,7 @@ def _user_message_with(text: str):
     return text_message("user", text)
 
 
-def _unsequenced_chunky(text: str):
+def _unsequenced_chunky(text: str, *, event_id: str = "chunky-event"):
     """The same logical event the test just published, unsequenced.
 
     Prepared independently of the emit so the frames under test are the ones
@@ -834,6 +851,7 @@ def _unsequenced_chunky(text: str):
     from agent_alfred.events import UnsequencedEvent
 
     return UnsequencedEvent(
+        event_id=event_id,
         envelope=EventEnvelope(
             ts=0.0,
             run_id="chunky",
@@ -846,6 +864,12 @@ def _unsequenced_chunky(text: str):
         trace_policy="persist",
         replayable=True,
     )
+
+
+def _chunk_meta(frame: bytes) -> dict:
+    raw = frame.split(b"data: ", 1)[1].decode("utf-8")
+    head, _separator, _payload = raw.partition('"payload":')
+    return json.loads(head.rstrip().rstrip(",") + "}")
 
 
 # --- the concurrency race --------------------------------------------------
@@ -1577,6 +1601,7 @@ def test_a_fatal_commit_fails_instead_of_delivering_to_no_one(monkeypatch) -> No
         node_id=None,
     )
     unsequenced = UnsequencedEvent(
+        event_id="fatal-event",
         envelope=envelope,
         payload=payload,
         trace_policy="persist",
@@ -1586,6 +1611,7 @@ def test_a_fatal_commit_fails_instead_of_delivering_to_no_one(monkeypatch) -> No
     sequenced = SequencedEvent(
         seq=1,
         process_instance_id=INSTANCE,
+        event_id=unsequenced.event_id,
         envelope=envelope,
         payload=payload,
         trace_policy="persist",
@@ -1639,6 +1665,7 @@ def test_the_fatal_refusal_is_typed_as_process_fatal(monkeypatch) -> None:
         node_id=None,
     )
     unsequenced = UnsequencedEvent(
+        event_id="fatal-refusal-event",
         envelope=envelope,
         payload=payload,
         trace_policy="persist",
@@ -1651,6 +1678,7 @@ def test_the_fatal_refusal_is_typed_as_process_fatal(monkeypatch) -> None:
     sequenced = SequencedEvent(
         seq=99,
         process_instance_id=INSTANCE,
+        event_id=unsequenced.event_id,
         envelope=envelope,
         payload=payload,
         trace_policy="persist",
@@ -2397,6 +2425,7 @@ def _commit_direct(harness, seq: int, run_id: str):
         node_id=None,
     )
     unsequenced = UnsequencedEvent(
+        event_id=f"direct-{seq}",
         envelope=envelope,
         payload=RunStarted(purpose="chat"),
         trace_policy="persist",
@@ -2406,6 +2435,7 @@ def _commit_direct(harness, seq: int, run_id: str):
     sequenced = SequencedEvent(
         seq=seq,
         process_instance_id=INSTANCE,
+        event_id=unsequenced.event_id,
         envelope=envelope,
         payload=unsequenced.payload,
         trace_policy="persist",

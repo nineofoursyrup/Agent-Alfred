@@ -116,6 +116,45 @@ def test_fanout_close_resumes_per_sink_without_reclosing_succeeded_sinks() -> No
     assert (good.close_calls, flaky.close_calls, tail.close_calls) == (1, 2, 1)
 
 
+def test_each_logical_event_gets_one_distinct_identity_before_prepare() -> None:
+    prepared_ids: list[tuple[str, str]] = []
+
+    class IdentitySink(CapturingSink):
+        def prepare(self, event: UnsequencedEvent) -> object:
+            prepared_ids.append((self.name, event.event_id))
+            return None
+
+    minted = iter(("event-a", "event-b"))
+    first_sink = IdentitySink(name="first")
+    second_sink = IdentitySink(name="second")
+    fanout = FanOutSink(
+        [first_sink, second_sink],
+        process_instance_id="proc-events",
+        event_id_factory=lambda: next(minted),
+    )
+    envelope = EventEnvelope(0.0, "r1", None, None, None, None)
+    payload = RunStarted(purpose="chat")
+
+    first = fanout.emit(payload, envelope)
+    second = fanout.emit(payload, envelope)
+
+    assert (first.event_id, second.event_id) == ("event-a", "event-b")
+    assert prepared_ids == [
+        ("first", "event-a"),
+        ("second", "event-a"),
+        ("first", "event-b"),
+        ("second", "event-b"),
+    ]
+    assert [event.event_id for event in first_sink.events] == [
+        "event-a",
+        "event-b",
+    ]
+    assert [event.event_id for event in second_sink.events] == [
+        "event-a",
+        "event-b",
+    ]
+
+
 def test_prepare_failure_does_not_abort_the_run_or_revisit_the_dead_sink() -> None:
     conn = sqlite3.connect(":memory:", check_same_thread=False)
     schema.migrate(conn)

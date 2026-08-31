@@ -337,6 +337,7 @@ def _emit_one(sink: RunBundleTraceSink, run_id: str, text: str = "hello") -> Non
     envelope = EventEnvelope(0.0, run_id, None, None, None, None)
     prepared = sink.prepare(
         UnsequencedEvent(
+            event_id="event-1",
             envelope=envelope,
             payload=RunStarted(purpose="chat", user_message=None),
             trace_policy="persist",
@@ -348,6 +349,7 @@ def _emit_one(sink: RunBundleTraceSink, run_id: str, text: str = "hello") -> Non
         SequencedEvent(
             seq=1,
             process_instance_id="proc-trace",
+            event_id="event-1",
             envelope=envelope,
             payload=RunStarted(purpose="chat", user_message=None),
             trace_policy="persist",
@@ -417,6 +419,7 @@ def _commit(
     envelope = EventEnvelope(0.0, run_id, None, 0, None, None)
     prepared = sink.prepare(
         UnsequencedEvent(
+            event_id=f"event-{seq}",
             envelope=envelope,
             payload=payload,
             trace_policy=trace_policy,
@@ -428,6 +431,7 @@ def _commit(
         SequencedEvent(
             seq=seq,
             process_instance_id="proc-policy",
+            event_id=f"event-{seq}",
             envelope=envelope,
             payload=payload,
             trace_policy=trace_policy,

@@ -29,7 +29,6 @@ from __future__ import annotations
 import queue
 import threading
 import time
-import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
@@ -465,7 +464,7 @@ class SSEBroker:
         return frames.domain_event_frames(
             event_name=event.payload.name,
             payload={"envelope": event.envelope, "payload": event.payload},
-            event_id=uuid.uuid4().hex,
+            event_id=event.event_id,
             replayable=event.replayable,
             max_frame_bytes=self._max_frame_bytes,
         )

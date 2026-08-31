@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import FrozenInstanceError
 
@@ -58,6 +59,19 @@ def test_a_small_event_is_one_frame_carrying_the_checkpoint() -> None:
     assert wire.startswith(b"event: domain_event\ndata: ")
     assert wire.endswith(b"\nid: inst:9\n\n")
     assert wire.count(b"id: inst:9") == 1
+
+
+def test_small_event_wire_digest_and_checkpoint_bytes_are_stable() -> None:
+    wire = _domain().with_checkpoint(9, "inst").wire_bytes()
+    assert wire == (
+        b"event: domain_event\n"
+        b'data: {"event":"block.delta","event_id":"eid-1",'
+        b'"chunk_index":0,"chunk_count":1,"payload":{"text":"hello"}}\n'
+        b"id: inst:9\n\n"
+    )
+    assert hashlib.sha256(wire).hexdigest() == (
+        "074b30013f402c34de364d5247cb89e14760053ab730096c27ba2f75b6c39aed"
+    )
 
 
 def test_only_the_last_frame_carries_the_id() -> None:

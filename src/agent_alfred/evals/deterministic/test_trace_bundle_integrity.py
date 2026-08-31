@@ -69,6 +69,7 @@ def _commit(
     envelope = EventEnvelope(0.0, run_id, None, 0, None, None)
     prepared = sink.prepare(
         UnsequencedEvent(
+            event_id=f"event-{seq}",
             envelope=envelope,
             payload=payload,
             trace_policy="persist",
@@ -80,6 +81,7 @@ def _commit(
         SequencedEvent(
             seq=seq,
             process_instance_id="proc-bundle",
+            event_id=f"event-{seq}",
             envelope=envelope,
             payload=payload,
             trace_policy="persist",

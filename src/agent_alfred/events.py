@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+import uuid
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, is_dataclass, replace
 from dataclasses import fields as dc_fields
@@ -202,6 +203,7 @@ EventPayload = (
 
 @dataclass(frozen=True)
 class UnsequencedEvent:
+    event_id: str
     envelope: EventEnvelope
     payload: EventPayload
     trace_policy: TracePolicy
@@ -212,6 +214,7 @@ class UnsequencedEvent:
 class SequencedEvent:
     seq: int
     process_instance_id: str
+    event_id: str
     envelope: EventEnvelope
     payload: EventPayload
     trace_policy: TracePolicy
@@ -366,6 +369,11 @@ class CapturingSink:
         return None
 
 
+def _new_event_id() -> str:
+    """Mint one logical event identity before any sink prepares it."""
+    return uuid.uuid4().hex
+
+
 class FanOutSink:
     """Assigns seq in a short critical section after lock-free prepare."""
 
@@ -375,10 +383,12 @@ class FanOutSink:
         *,
         process_instance_id: str,
         redactor: Any | None = None,
+        event_id_factory: Callable[[], str] | None = None,
     ):
         self._sinks = list(sinks)
         self._process_instance_id = process_instance_id
         self._redactor = redactor
+        self._event_id_factory = event_id_factory or _new_event_id
         self._lock = threading.Lock()
         self._seq = 1
         self._disabled: dict[str, set[str]] = {}
@@ -416,6 +426,7 @@ class FanOutSink:
         self._last_envelope[envelope.run_id] = envelope
         trace_policy: TracePolicy = payload.trace_policy
         unsequenced = UnsequencedEvent(
+            event_id=self._event_id_factory(),
             envelope=envelope,
             payload=payload,
             trace_policy=trace_policy,
@@ -492,6 +503,7 @@ class FanOutSink:
             sequenced = SequencedEvent(
                 seq=seq,
                 process_instance_id=self._process_instance_id,
+                event_id=unsequenced.event_id,
                 envelope=unsequenced.envelope,
                 payload=unsequenced.payload,
                 trace_policy=unsequenced.trace_policy,
@@ -608,6 +620,7 @@ class FanOutSink:
     ) -> None:
         notice = Notice(level=level, code=code, detail=detail)
         unsequenced = UnsequencedEvent(
+            event_id=self._event_id_factory(),
             envelope=envelope,
             payload=notice,
             trace_policy="persist",
