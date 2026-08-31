@@ -61,7 +61,7 @@ INSTANCE = "proc-runtime"
 _REDACTION_CANARY = "sk-terminal-projection-secret"
 
 
-def _assert_poisoned_reads_fail_closed(
+def _assert_poisoned_database_reads_fail_closed(
     *,
     api: DashboardApi,
     host,
@@ -81,40 +81,6 @@ def _assert_poisoned_reads_fail_closed(
     assert api.mainbar({"session_id": session_id}) == unavailable
     with pytest.raises(RecordingUnavailable, match="recording store is unavailable"):
         host.session_exists(session_id)
-
-    broker = SSEBroker(
-        process_instance_id=INSTANCE,
-        snapshot=host.snapshot(),
-        session_is_valid=host.session_exists,
-    )
-    connection = FakeConnection()
-    try:
-        with pytest.raises(
-            RecordingUnavailable, match="recording store is unavailable"
-        ):
-            broker.connect(connection=connection, session_id=session_id)
-        assert connection.closed is True
-        assert connection.writes == []
-        assert broker.connections == ()
-    finally:
-        broker.close(timeout=1.0)
-
-    broker = SSEBroker(
-        process_instance_id=INSTANCE,
-        snapshot=host.snapshot(),
-        session_is_valid=host.session_exists,
-    )
-    connection_without_session = FakeConnection()
-    try:
-        with pytest.raises(
-            RecordingUnavailable, match="recording store is unavailable"
-        ):
-            broker.connect(connection=connection_without_session, session_id=None)
-        assert connection_without_session.closed is True
-        assert connection_without_session.writes == []
-        assert broker.connections == ()
-    finally:
-        broker.close(timeout=1.0)
 
     assert conn.execute_calls == calls_before_reads
 
@@ -205,7 +171,7 @@ def test_session_rollback_failure_still_releases_the_mutation_gate() -> None:
 
         assert (created.status, created.code) == (503, "recording_unavailable")
         assert (conn.execute_calls, conn.commit_calls) == calls_before_refusal
-        _assert_poisoned_reads_fail_closed(
+        _assert_poisoned_database_reads_fail_closed(
             api=api,
             host=host,
             conn=conn,
@@ -269,7 +235,7 @@ def test_run_admission_rollback_failure_poison_closes_every_write_door() -> None
             "recording_unavailable",
         )
         assert (conn.execute_calls, conn.commit_calls) == calls_before_refusal
-        _assert_poisoned_reads_fail_closed(
+        _assert_poisoned_database_reads_fail_closed(
             api=api,
             host=host,
             conn=conn,
@@ -289,19 +255,31 @@ def test_run_admission_rollback_failure_poison_closes_every_write_door() -> None
         host.close()
 
 
-def test_finalizer_rollback_failure_hides_the_dirty_terminal_run_and_messages() -> None:
+def test_finalizer_rollback_failure_keeps_the_sse_terminal_projection_recoverable(
+) -> None:
     inner = sqlite3.connect(":memory:", check_same_thread=False)
     schema.migrate(inner)
     conn = FailNextSessionCommit(inner)
     latch = SelectiveLatch()
     latch.arm()
+    prefix = "x" * (SNAPSHOT_TEXT_LIMIT - 5)
+    raw_reply = f"{prefix}{_REDACTION_CANARY} and raw tail"
+    broker = _wired_broker()
     host, _database = build_runtime_host(
-        ["ghost reply"], conn=conn, before_recording_commit=latch
+        [raw_reply],
+        conn=conn,
+        before_recording_commit=latch,
+        extra_sinks=[broker],
+        snapshot_listener=broker.publish_state_patch,
+        redactor=Redactor((_REDACTION_CANARY,)),
     )
+    broker.bind_session_check(host.transport_session_validity)
     host.start()
     try:
         api = dashboard_api(host)
         session_id = host.create_session()
+        live = broker.connect(connection=FakeConnection(), session_id=session_id)
+        drain_connection(live)
         accepted = api.submit({"message": "ghost prompt", "session_id": session_id})
         assert accepted.status == 202
         assert accepted.run_id is not None
@@ -311,19 +289,68 @@ def test_finalizer_rollback_failure_hides_the_dirty_terminal_run_and_messages() 
         conn.fail_next_rollback = True
         latch.release()
         wait_until(lambda: host.snapshot().coordinator_state == "recording_failed")
+        while broker.deliver_next(timeout=0):
+            pass
 
-        _assert_poisoned_reads_fail_closed(
+        expected = f"{prefix}*** …"
+        failed_live = next(
+            patch
+            for patch in reversed(_state_patches(live))
+            if patch["coordinator_state"] == "recording_failed"
+        )
+        assert failed_live["session_valid"] is True
+        assert failed_live["unrecorded_terminal_projection"][
+            "reply_preview"
+        ] == expected
+
+        reconnect = broker.connect(
+            connection=FakeConnection(), session_id=session_id
+        )
+        startup_wire = [item.wire_bytes() for item in reconnect.startup]
+        assert startup_wire[0] == b"retry: 1000\n\n"
+        assert startup_wire[1].startswith(b"id: proc-runtime:")
+        assert b"event: state_patch" in startup_wire[2]
+        failed_reconnect = _startup_patch(reconnect)
+        assert failed_reconnect["session_valid"] is True
+        assert failed_reconnect["unrecorded_terminal_projection"][
+            "reply_preview"
+        ] == expected
+        assert _REDACTION_CANARY not in json.dumps(failed_reconnect)
+        assert "raw tail" not in json.dumps(failed_reconnect)
+
+        calls_before_transport = conn.execute_calls
+        assert host.transport_session_validity(session_id) == "valid"
+        assert host.transport_session_validity(None) == "invalid"
+        assert (
+            host.transport_session_validity("never-committed")
+            == "unavailable"
+        )
+        assert conn.execute_calls == calls_before_transport
+
+        unverifiable = broker.connect(
+            connection=FakeConnection(), session_id="never-committed"
+        )
+        refusal = b"".join(item.wire_bytes() for item in unverifiable.startup)
+        assert b'"code":"recording_unavailable"' in refusal
+        assert b"event: state_patch" not in refusal
+
+        calls_before_reads = conn.execute_calls
+        _assert_poisoned_database_reads_fail_closed(
             api=api,
             host=host,
             conn=conn,
             session_id=session_id,
             run_id=accepted.run_id,
         )
+        assert conn.execute_calls == calls_before_reads
+        refused = api.submit({"message": "again", "session_id": session_id})
+        assert (refused.status, refused.code) == (503, "recording_unavailable")
         assert inner.in_transaction is True
     finally:
         latch.release()
         if inner.in_transaction:
             inner.rollback()
+        broker.close(timeout=1.0)
         host.close()
 
 

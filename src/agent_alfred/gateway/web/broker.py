@@ -32,7 +32,7 @@ import time
 from collections.abc import Callable
 from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 from agent_alfred.clock import Clock, SystemClock
 from agent_alfred.events import (
@@ -86,6 +86,19 @@ _DRAIN_TIMEOUT_S = 2.0
 # socket and asks the browser to try again. Neither path may ship the stale
 # patch it just lost the race to register.
 _MAX_PATCH_CAPTURES = 4
+
+SessionValidity = Literal["valid", "invalid", "unavailable"]
+
+
+def _normalize_session_validity(value: bool | SessionValidity) -> SessionValidity:
+    """Keep old boolean injectors honest while the Host supplies all three states."""
+    if value is True or value == "valid":
+        return "valid"
+    if value is False or value == "invalid":
+        return "invalid"
+    if value == "unavailable":
+        return "unavailable"
+    raise TypeError(f"unknown Session validity result: {value!r}")
 
 
 class _IngressStop:
@@ -286,6 +299,10 @@ class ConnectionHandle:
     queue: ConnectionQueue
     connection: SSEConnection
     session_id: str | None = None
+    # Last fact established by the Host. When storage later becomes
+    # unavailable, an existing stream keeps this fact instead of querying a
+    # poisoned connection or inventing a different answer.
+    session_valid: bool | None = None
     thread: threading.Thread | None = None
     # The broker-level disconnect generation this connection registered
     # under. A generation bump marks an ingress overflow whose undroppable
@@ -384,7 +401,7 @@ class SSEBroker:
         *,
         process_instance_id: str,
         snapshot: RuntimeSnapshot,
-        session_is_valid: Callable[[str | None], bool] | None = None,
+        session_is_valid: Callable[[str | None], bool | SessionValidity] | None = None,
         ring: ReplayRing | None = None,
         progress: RunProgress | None = None,
         max_ingress_frames: int = MAX_INGRESS_FRAMES,
@@ -467,7 +484,9 @@ class SSEBroker:
         self._queues_stopped = False
         self._closed = False
 
-    def bind_session_check(self, check: Callable[[str | None], bool]) -> None:
+    def bind_session_check(
+        self, check: Callable[[str | None], bool | SessionValidity]
+    ) -> None:
         """Aim the "does this Session exist?" question at the Host.
 
         The broker is built before the Host -- the Host's authoritative state
@@ -845,7 +864,7 @@ class SSEBroker:
         """
         # Read before the lock: this is a database question, and the
         # critical sections below are not allowed to do IO.
-        session_valid = self._session_is_valid(session_id)
+        validity = _normalize_session_validity(self._session_is_valid(session_id))
         handle = ConnectionHandle(
             queue=ConnectionQueue(
                 max_frames=(
@@ -861,8 +880,47 @@ class SSEBroker:
             ),
             connection=connection,
             session_id=session_id,
+            session_valid=(
+                True
+                if validity == "valid"
+                else False if validity == "invalid" else None
+            ),
         )
         acquisition.handle = handle
+        if validity == "unavailable":
+            # The HTTP handler has already sent 200 by the time ownership
+            # reaches the broker. A silent close would therefore erase the
+            # failure. Give this connection one bounded, cursor-free notice
+            # and close it; no snapshot is fabricated from an unknown fact.
+            handle.startup = (
+                frames.retry_frame(frames.DEFAULT_RETRY_MS),
+                frames.recording_unavailable_notice(),
+            )
+            handle.queue.stop()
+            unavailable_refused = False
+            with self._lock:
+                if self._stopping or self._closed:
+                    unavailable_refused = True
+                else:
+                    self._connections.append(handle)
+                    self._registrations += 1
+                    acquisition.registration_open = True
+            if unavailable_refused:
+                acquisition.abort(self)
+                return handle
+            writer = ConnectionWriter(
+                connection=connection,
+                source=handle.queue,
+                clock=self._clock,
+                heartbeat_s=self._heartbeat_s,
+                startup=handle.startup,
+            )
+            handle.thread = self._spawn(lambda: self._run_writer(handle, writer))
+            with self._lock:
+                self._registrations -= 1
+                acquisition.registration_open = False
+            return handle
+        session_valid = validity == "valid"
         refused = False
         for _ in range(_MAX_PATCH_CAPTURES):
             boundary = (
@@ -1323,16 +1381,29 @@ class SSEBroker:
         with self._lock:
             handles = tuple(self._connections)
         if isinstance(item, _BroadcastPatch):
-            validity_by_session: dict[str | None, bool] = {}
+            validity_by_session: dict[str | None, SessionValidity] = {}
             for handle in handles:
                 if handle.session_id not in validity_by_session:
                     validity_by_session[handle.session_id] = (
-                        self._session_is_valid(handle.session_id)
+                        _normalize_session_validity(
+                            self._session_is_valid(handle.session_id)
+                        )
                     )
             offers: list[tuple[ConnectionHandle, PreparedFrames]] = []
             variants: dict[bool, PreparedFrames] = {}
             for handle in handles:
-                session_valid = validity_by_session[handle.session_id]
+                validity = validity_by_session[handle.session_id]
+                if validity == "unavailable":
+                    # Every registered handle was validated when it joined.
+                    # Keep that established fact while storage is unavailable;
+                    # a handle without one is closed rather than guessed.
+                    if handle.session_valid is None:
+                        handle.queue.request_close()
+                        continue
+                    session_valid = handle.session_valid
+                else:
+                    session_valid = validity == "valid"
+                    handle.session_valid = session_valid
                 frame = variants.get(session_valid)
                 if frame is None:
                     frame = _patch_frames(

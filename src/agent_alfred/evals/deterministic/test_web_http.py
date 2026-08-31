@@ -352,7 +352,9 @@ def _get(port: int, path: str, extra: str = "", host: str | None = None) -> byte
 # --- the stream -------------------------------------------------------------
 
 
-def _raw_stream(server, extra: str, predicate) -> tuple[bytes, bytes]:
+def _raw_stream(
+    server, extra: str, predicate, *, path: str = "/api/events"
+) -> tuple[bytes, bytes]:
     """Open the stream, read until ``predicate`` is satisfied, return all of it.
 
     The whole response is kept -- head and body -- because a single recv
@@ -361,7 +363,7 @@ def _raw_stream(server, extra: str, predicate) -> tuple[bytes, bytes]:
     """
     sock = _connect(server.port)
     try:
-        sock.sendall(_get(server.port, "/api/events", extra))
+        sock.sendall(_get(server.port, path, extra))
         buffer = _read_until(sock, lambda raw: predicate(_split_head(raw)[1]))
         return _split_head(buffer)
     finally:
@@ -493,6 +495,23 @@ def test_a_transport_notice_never_advances_the_cursor(server) -> None:
     for frame in body.split(b"\n\n"):
         if b"transport_notice" in frame:
             assert b"id: " not in frame
+
+
+def test_an_unverifiable_session_gets_an_observable_sse_refusal(server) -> None:
+    """A 200 stream never turns recording unavailability into a silent EOF."""
+    server.broker.bind_session_check(lambda _session_id: "unavailable")
+
+    head, body = _raw_stream(
+        server,
+        "",
+        lambda data: b'"code":"recording_unavailable"' in data,
+        path="/api/events?session_id=never-committed",
+    )
+
+    assert head.startswith(b"HTTP/1.1 200")
+    assert b"event: transport_notice\n" in body
+    assert b'"code":"recording_unavailable"' in body
+    assert b"event: state_patch" not in body
 
 
 # --- the defences, on the wire ----------------------------------------------

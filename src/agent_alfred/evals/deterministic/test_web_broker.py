@@ -1972,6 +1972,23 @@ def test_a_patch_queries_each_distinct_session_at_most_once() -> None:
     assert queried == ["s1", "gone"]
 
 
+def test_a_patch_keeps_each_connections_last_proven_validity_when_unavailable(
+) -> None:
+    """Storage loss cannot rewrite or erase a fact established at connect."""
+    answer = {"value": "valid"}
+    harness = Harness()
+    harness.broker.bind_session_check(lambda _session_id: answer["value"])
+    handle = harness.connect(session_id="s1")
+    drain_connection(handle)
+
+    answer["value"] = "unavailable"
+    harness.broker.publish_state_patch(runtime_snapshot(state_revision=1))
+    harness.deliver()
+
+    assert _patch_payload(handle)["session_valid"] is True
+    assert handle in harness.broker.connections
+
+
 # --- encoding never happens under the broker lock ---------------------------
 
 

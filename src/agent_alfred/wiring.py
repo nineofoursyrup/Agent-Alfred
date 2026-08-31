@@ -244,7 +244,7 @@ def build_dashboard(
             process_instance_id=instance,
             snapshot_listener=broker.publish_state_patch,
         )
-        broker.bind_session_check(host.session_exists)
+        broker.bind_session_check(host.transport_session_validity)
 
         def note_dispatcher_fatal(exc: BaseException) -> None:
             """Publish only the fixed, machine-safe dispatcher diagnosis.

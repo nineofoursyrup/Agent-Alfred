@@ -78,7 +78,9 @@ DOMAIN_EVENT = "domain_event"
 TRANSPORT_NOTICE = "transport_notice"
 STATE_PATCH = "state_patch"
 
-TransportNoticeCode = Literal["replay_gap", "deltas_dropped"]
+TransportNoticeCode = Literal[
+    "replay_gap", "deltas_dropped", "recording_unavailable"
+]
 CurrentRunState = Literal["recoverable", "unrecoverable", "absent"]
 
 # Room reserved in every chunk's budget for the id line that commit appends.
@@ -469,6 +471,13 @@ def deltas_dropped_notice(count: int) -> PreparedFrames:
     """Transient frames this connection missed. Not a fact about the Run."""
     return _single_payload_frame(
         TRANSPORT_NOTICE, {"code": "deltas_dropped", "count": count}
+    )
+
+
+def recording_unavailable_notice() -> PreparedFrames:
+    """This connection's Session cannot be proven without unsafe storage IO."""
+    return _single_payload_frame(
+        TRANSPORT_NOTICE, {"code": "recording_unavailable"}
     )
 
 

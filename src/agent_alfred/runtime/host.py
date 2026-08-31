@@ -9,6 +9,7 @@ import time
 import uuid
 from collections.abc import Callable
 from dataclasses import replace
+from typing import Literal
 
 from agent_alfred import schema
 from agent_alfred.clock import Clock, format_instant
@@ -30,7 +31,11 @@ from agent_alfred.runtime.config import (
     SettingsBackedSnapshotProvider,
 )
 from agent_alfred.runtime.execution import RunExecutor
-from agent_alfred.runtime.recording import RecordingStore, RunRecorder
+from agent_alfred.runtime.recording import (
+    RecordingStore,
+    RecordingUnavailable,
+    RunRecorder,
+)
 from agent_alfred.runtime.snapshot import (
     ActiveRunSummary,
     CoordinatorState,
@@ -720,10 +725,10 @@ class RuntimeHost:
     def session_exists(self, session_id: str | None) -> bool:
         """Whether a Session row exists. A question, not a projection.
 
-        The Dashboard asks this on every SSE connection to fill the snapshot's
-        "this connection's Session is still valid" field. It is deliberately
-        the cheapest possible read: the answer is a row count, and no title,
-        message or Run is derived from it.
+        The Dashboard API asks this before admitting work for a named Session.
+        It is deliberately the cheapest possible read: the answer is a row
+        count, and no title, message or Run is derived from it. SSE uses the
+        closed transport-only result below so storage loss stays observable.
         """
         with self._store.reading() as conn:
             if session_id is None:
@@ -732,6 +737,34 @@ class RuntimeHost:
                 "SELECT 1 FROM sessions WHERE session_id = ?", (session_id,)
             ).fetchone()
         return row is not None
+
+    def transport_session_validity(
+        self, session_id: str | None
+    ) -> Literal["valid", "invalid", "unavailable"]:
+        """Bounded Session truth for SSE startup and lifecycle patches.
+
+        Ordinary reads remain fail-closed through ``session_exists``. This
+        transport-only question may use the current Run's already-admitted
+        Session when the Store is poisoned, because that Session committed
+        before the Run could enter memory. No other Session is guessed.
+        """
+        if session_id is None:
+            return "invalid"
+        if self._store.available:
+            try:
+                return "valid" if self.session_exists(session_id) else "invalid"
+            except RecordingUnavailable:
+                # Poison may land between the cheap availability check and
+                # the guarded read. Continue from memory without retrying.
+                pass
+        snapshot = self._states.get()
+        active = snapshot.active_run
+        projection = snapshot.unrecorded_terminal_projection
+        if active is not None and active.session_id == session_id:
+            return "valid"
+        if projection is not None and projection.session_id == session_id:
+            return "valid"
+        return "unavailable"
 
     def list_runs(
         self,
