@@ -23,7 +23,9 @@ import pytest
 
 from agent_alfred.clock import FakeClock
 from agent_alfred.evals.deterministic.test_web_lifecycle import _free_port
+from agent_alfred.events import event_json_default
 from agent_alfred.gateway.cli import serve_dashboard
+from agent_alfred.gateway.web.broker import SSEBroker
 from agent_alfred.gateway.web.lifecycle import (
     DESCRIPTOR_NAME,
     read_entry_descriptor,
@@ -187,7 +189,9 @@ def test_a_busy_port_fails_the_serve_path_without_leaving_a_host(tmp_path) -> No
     # here is the point, so it is not promoted to a test failure.
     "ignore::pytest.PytestUnhandledThreadExceptionWarning"
 )
-def test_a_dead_dispatcher_is_published_as_sink_disabled(tmp_path) -> None:
+def test_a_dead_dispatcher_reports_only_machine_safe_context(
+    tmp_path, monkeypatch
+) -> None:
     """#23 §9: the dispatcher dying is a process-level fact.
 
     It is not a transport notice -- those describe one connection. This one
@@ -197,13 +201,29 @@ def test_a_dead_dispatcher_is_published_as_sink_disabled(tmp_path) -> None:
     from agent_alfred.events import CapturingSink
     from agent_alfred.gateway.web.connection import FakeConnection
 
-    capture = CapturingSink(name="capture", flush_at_run_end=True)
+    fatal_secret = "credential-" + "never-persist-this"
+    monkeypatch.setattr(threading, "excepthook", lambda args: None)
+    monkeypatch.setattr(SSEBroker, "name", "dashboard-stream")
+    dispatch_notice_seen = threading.Event()
+
+    class DispatchNoticeCapture(CapturingSink):
+        def commit(self, prepared, event) -> None:
+            super().commit(prepared, event)
+            if (
+                getattr(event.payload, "code", None) == "sink_disabled"
+                and dict(event.payload.detail).get("stage") == "dispatch"
+            ):
+                dispatch_notice_seen.set()
+
+    capture = DispatchNoticeCapture(name="capture", flush_at_run_end=True)
+    trace_root = tmp_path / "traces"
     dashboard = build_dashboard(
         state_dir=tmp_path,
         factory=_factory(),
         clock=FakeClock(),
         port=_free_port(),
         extra_sinks=[capture],
+        trace_root=trace_root,
         open_database=_database,
     )
     try:
@@ -212,7 +232,7 @@ def test_a_dead_dispatcher_is_published_as_sink_disabled(tmp_path) -> None:
 
         class Exploding:
             def offer(self, item):
-                raise RuntimeError("dispatcher boom")
+                raise RuntimeError(fatal_secret)
 
             def request_close(self, **kwargs):
                 return None
@@ -222,18 +242,42 @@ def test_a_dead_dispatcher_is_published_as_sink_disabled(tmp_path) -> None:
 
         handle = dashboard.broker.connect(connection=FakeConnection())
         handle.queue = Exploding()
-        host.submit(
+        submitted = host.submit(
             SubmitRequest(message="hello", session_id=host.create_session())
         )
+        assert submitted.kind == "accepted"
 
-        def seen() -> bool:
-            return any(
-                getattr(event.payload, "name", None) == "notice"
-                and event.payload.code == "sink_disabled"
-                for event in capture.events
-            )
+        assert dispatch_notice_seen.wait(5.0), (
+            "dispatcher notice was not published"
+        )
+        host.wait(submitted.run_id)
 
-        _wait_until(seen)
+        event_document = json.dumps(capture.events, default=event_json_default)
+        trace_documents = [
+            path.read_text(encoding="utf-8")
+            for path in trace_root.rglob("*")
+            if path.is_file()
+        ]
+        assert trace_documents, "the Run must have produced a real trace bundle"
+        for document in [event_document, *trace_documents]:
+            if fatal_secret in document:
+                raise AssertionError(
+                    "fatal exception text leaked into a domain event or trace"
+                )
+
+        dispatcher_notices = [
+            event
+            for event in capture.events
+            if getattr(event.payload, "code", None) == "sink_disabled"
+            and dict(event.payload.detail).get("stage") == "dispatch"
+        ]
+        assert len(dispatcher_notices) == 1, (
+            "one dispatcher death publishes one dispatcher notice"
+        )
+        assert dict(dispatcher_notices[0].payload.detail) == {
+            "sink": "dashboard-stream",
+            "stage": "dispatch",
+        }
         # The broker stopped taking work instead of limping on behind a
         # dispatcher that no longer exists.
         assert dashboard.broker._stopping is True  # noqa: SLF001

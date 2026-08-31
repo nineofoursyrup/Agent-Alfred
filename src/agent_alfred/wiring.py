@@ -245,12 +245,23 @@ def build_dashboard(
             snapshot_listener=broker.publish_state_patch,
         )
         broker.bind_session_check(host.session_exists)
+
+        def note_dispatcher_fatal(exc: BaseException) -> None:
+            """Publish only the fixed, machine-safe dispatcher diagnosis.
+
+            The broker keeps the original exception in its in-memory fatal
+            latch for local causal diagnosis. Its message may contain user
+            or credential text, so this domain-event boundary deliberately
+            drops the callback reference instead of copying it into an event
+            or trace.
+            """
+            del exc
+            host.note_sink_disabled(broker.name, "dispatch")
+
         # A dead dispatcher is the one failure the broker cannot fix on its
         # own, so it is reported where a process-level fact belongs: into
         # the trace, through the same notice every other sink failure uses.
-        broker.bind_fatal_handler(
-            lambda exc: host.note_sink_disabled("sse", "dispatch")
-        )
+        broker.bind_fatal_handler(note_dispatcher_fatal)
         return host, broker
 
     return DashboardRuntime(
