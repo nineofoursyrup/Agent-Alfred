@@ -518,11 +518,20 @@ class _CustomBaseException(BaseException):
 
 def _finished_run(conn: sqlite3.Connection, outcome: str = "interrupted") -> str:
     _accepted_run(conn, "run-done")
-    revision = schema.allocate_activity_revision(conn)
     schema.update_run_phase(
         conn,
         run_id="run-done",
         from_phase="accepted",
+        to_phase="running",
+        activity_revision=schema.allocate_activity_revision(conn),
+        started_at=TS,
+        session_id="sess-1",
+    )
+    revision = schema.allocate_activity_revision(conn)
+    schema.update_run_phase(
+        conn,
+        run_id="run-done",
+        from_phase="running",
         to_phase="finished",
         activity_revision=revision,
         outcome=outcome,
@@ -663,12 +672,12 @@ def test_the_legal_path_accepted_running_finished_still_works() -> None:
         session_id="sess-1",
     )
     conn.commit()
-    assert _row(conn, "run-ok")[:2] == ("finished", "completed")
+    assert _row(conn, "run-ok")[:3] == ("finished", "completed", TS)
 
 
-def test_accepted_to_finished_interrupted_still_works() -> None:
-    """Both callers that skip ``running`` -- the failed handoff and the
-    startup recovery -- use this edge."""
+@pytest.mark.parametrize("outcome", ["failed", "interrupted"])
+def test_accepted_to_finished_failure_outcomes_still_work(outcome: str) -> None:
+    """Pre-running execution failure, failed handoff, and recovery use this edge."""
     conn = _database()
     _accepted_run(conn, "run-never")
     schema.update_run_phase(
@@ -677,15 +686,120 @@ def test_accepted_to_finished_interrupted_still_works() -> None:
         from_phase="accepted",
         to_phase="finished",
         activity_revision=schema.allocate_activity_revision(conn),
-        outcome="interrupted",
+        outcome=outcome,
         finished_at=TS,
         session_id="sess-1",
     )
     conn.commit()
     row = _row(conn, "run-never")
     assert row[0] == "finished"
-    assert row[1] == "interrupted"
+    assert row[1] == outcome
     assert row[2] is None, "a Run that never started has no started_at"
+
+
+@pytest.mark.parametrize("outcome", ["completed", "max_steps"])
+def test_an_unstarted_run_cannot_finish_with_an_execution_outcome(
+    outcome: str,
+) -> None:
+    conn = _database()
+    _accepted_run(conn, "run-unstarted")
+    before = _row(conn, "run-unstarted")
+    clock_before = conn.execute("SELECT next_revision FROM activity_clock").fetchone()
+    session_before = conn.execute(
+        "SELECT activity_revision FROM sessions WHERE session_id = 'sess-1'"
+    ).fetchone()
+
+    with pytest.raises(schema.RunPhaseError, match="unstarted"):
+        with conn:
+            revision = schema.allocate_activity_revision(conn)
+            schema.update_run_phase(
+                conn,
+                run_id="run-unstarted",
+                from_phase="accepted",
+                to_phase="finished",
+                activity_revision=revision,
+                outcome=outcome,
+                finished_at=TS,
+                session_id="sess-1",
+            )
+
+    assert _row(conn, "run-unstarted") == before
+    assert before[:4] == ("accepted", None, None, None)
+    assert conn.execute("SELECT next_revision FROM activity_clock").fetchone() == (
+        clock_before
+    )
+    assert conn.execute(
+        "SELECT activity_revision FROM sessions WHERE session_id = 'sess-1'"
+    ).fetchone() == session_before
+
+
+@pytest.mark.parametrize(
+    "outcome", ["completed", "max_steps", "failed", "interrupted"]
+)
+def test_a_running_run_accepts_every_terminal_outcome(outcome: str) -> None:
+    conn = _database()
+    _accepted_run(conn, "run-started")
+    schema.update_run_phase(
+        conn,
+        run_id="run-started",
+        from_phase="accepted",
+        to_phase="running",
+        activity_revision=schema.allocate_activity_revision(conn),
+        started_at=TS,
+        session_id="sess-1",
+    )
+    schema.update_run_phase(
+        conn,
+        run_id="run-started",
+        from_phase="running",
+        to_phase="finished",
+        activity_revision=schema.allocate_activity_revision(conn),
+        outcome=outcome,
+        finished_at=TS,
+        session_id="sess-1",
+    )
+
+    assert _row(conn, "run-started")[:4] == ("finished", outcome, TS, TS)
+
+
+def test_execution_failure_before_running_finalizes_the_accepted_run_failed() -> None:
+    class _FailRunningUpdate:
+        def __init__(self, inner: sqlite3.Connection):
+            self._inner = inner
+            self._failed = False
+
+        def execute(self, sql, parameters=()):
+            if not self._failed and "started_at = ?" in sql:
+                self._failed = True
+                raise sqlite3.OperationalError("injected pre-running failure")
+            return self._inner.execute(sql, parameters)
+
+        def commit(self):
+            return self._inner.commit()
+
+        def rollback(self):
+            return self._inner.rollback()
+
+        def __getattr__(self, name):
+            return getattr(self._inner, name)
+
+    inner = _database()
+    _accepted_run(inner)
+    conn = _FailRunningUpdate(inner)
+    coordinator = _RecordingCoordinator()
+    recorder = _real_recorder(conn, coordinator)
+    executor, _sink = _executor(
+        conn,
+        assistant=_RaisingAssistant(AssertionError("must not execute")),
+        recorder=recorder,
+    )
+
+    executor.execute(_work_item())
+
+    row = _row(inner, "run-term")
+    assert row[:3] == ("finished", "failed", None)
+    assert row[3] is not None
+    assert coordinator.states == ["recording_pending", "recorded"]
 
 
 def test_running_to_accepted_is_rejected() -> None:

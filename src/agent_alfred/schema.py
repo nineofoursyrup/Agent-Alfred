@@ -8,7 +8,7 @@ from collections.abc import Callable, Iterable
 from datetime import datetime
 from typing import NamedTuple
 
-from agent_alfred.outcomes import RUN_OUTCOMES
+from agent_alfred.outcomes import RUN_OUTCOMES, parse_run_outcome
 from agent_alfred.run_phases import RUN_PHASES as PHASES
 
 BUSY_TIMEOUT_MS = 5000
@@ -1274,10 +1274,20 @@ def _check_transition(*, from_phase: str, to_phase: str, outcome: str | None) ->
             f"allowed from {from_phase!r}: {allowed}"
         )
     if to_phase == "finished":
-        if outcome not in OUTCOMES:
+        try:
+            terminal_outcome = parse_run_outcome(outcome)
+        except ValueError as exc:
             raise RunPhaseError(
                 f"phase 'finished' requires an outcome in "
                 f"{', '.join(OUTCOMES)}, got {outcome!r}"
+            ) from exc
+        if from_phase == "accepted" and terminal_outcome in (
+            "completed",
+            "max_steps",
+        ):
+            raise RunPhaseError(
+                f"an unstarted run cannot finish with execution outcome "
+                f"{terminal_outcome!r}"
             )
     elif outcome is not None:
         raise RunPhaseError(

@@ -558,11 +558,20 @@ def test_system_run_can_store_telemetry_without_a_session_or_message() -> None:
         gateway="web",
         accepted_at=_TS,
     )
-    finished_rev = schema.allocate_activity_revision(conn)
+    running_rev = schema.allocate_activity_revision(conn)
     schema.update_run_phase(
         conn,
         run_id="probe-1",
         from_phase="accepted",
+        to_phase="running",
+        activity_revision=running_rev,
+        started_at=_TS,
+    )
+    finished_rev = schema.allocate_activity_revision(conn)
+    schema.update_run_phase(
+        conn,
+        run_id="probe-1",
+        from_phase="running",
         to_phase="finished",
         activity_revision=finished_rev,
         outcome="completed",
@@ -578,6 +587,6 @@ def test_system_run_can_store_telemetry_without_a_session_or_message() -> None:
     assert row[2] == "finished"
     assert row[3] == "completed"
     assert json.loads(row[4]) == {"attempts": [{"attempt_id": "a1"}]}
-    assert row[5] == finished_rev != rev
+    assert row[5] == finished_rev != running_rev != rev
     assert conn.execute("SELECT COUNT(*) FROM agent_log").fetchone() == (0,)
     conn.close()

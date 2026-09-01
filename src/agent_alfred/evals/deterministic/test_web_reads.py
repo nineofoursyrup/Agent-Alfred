@@ -834,11 +834,21 @@ def test_mainbar_terminal_and_non_chat_runs_do_not_block_historic() -> None:
 def _record_seeded_mainbar_run(host: RuntimeHost, run_id: str, reply: str) -> None:
     with host._db_lock:  # noqa: SLF001 - deterministic setup transaction
         conn = host._conn  # noqa: SLF001
-        revision = schema.allocate_activity_revision(conn)
+        running_revision = schema.allocate_activity_revision(conn)
         schema.update_run_phase(
             conn,
             run_id=run_id,
             from_phase="accepted",
+            to_phase="running",
+            activity_revision=running_revision,
+            started_at=_TS,
+            session_id="s-mainbar-many",
+        )
+        revision = schema.allocate_activity_revision(conn)
+        schema.update_run_phase(
+            conn,
+            run_id=run_id,
+            from_phase="running",
             to_phase="finished",
             activity_revision=revision,
             outcome="completed",
