@@ -35,6 +35,7 @@ import fcntl
 import json
 import os
 import threading
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -74,6 +75,59 @@ MAX_PORT = 65_535
 # are: the broker wants a running thread, while a start-up step has to be
 # able to tell the two failures apart and therefore does the starting.
 SpawnThread = Callable[[Callable[[], None]], Any]
+
+
+class _BackgroundCloseStep:
+    """Run one blocking close action once, while its owner waits boundedly.
+
+    The worker is deliberately non-daemon and remains referenced until its
+    exit is joined. A timed-out caller therefore leaves one in-flight action
+    for the next close to resume waiting on; it never starts a duplicate.
+    Once a failed action has exited, its exception is re-raised on the owner
+    thread and a later close may retry that action from a fresh worker.
+    """
+
+    def __init__(self, name: str):
+        self._name = name
+        self._thread: threading.Thread | None = None
+        self._finished = threading.Event()
+        self._error: BaseException | None = None
+
+    def complete(self, action: Callable[[], None], timeout: float | None) -> bool:
+        deadline = (
+            None if timeout is None else time.monotonic() + max(0.0, timeout)
+        )
+        if self._thread is None:
+            self._finished.clear()
+            self._error = None
+
+            def run() -> None:
+                try:
+                    action()
+                except BaseException as exc:  # noqa: BLE001 - owner re-raises
+                    self._error = exc
+                finally:
+                    self._finished.set()
+
+            self._thread = threading.Thread(target=run, name=self._name)
+            self._thread.start()
+        if not self._finished.wait(self._remaining(deadline)):
+            return False
+        thread = self._thread
+        assert thread is not None
+        thread.join(self._remaining(deadline))
+        if thread.is_alive():
+            return False
+        error = self._error
+        self._thread = None
+        if error is not None:
+            raise error
+        return True
+
+    @staticmethod
+    def _remaining(deadline: float | None) -> float | None:
+        return None if deadline is None else max(0.0, deadline - time.monotonic())
+
 
 __all__ = [
     "DEFAULT_HOST",
@@ -371,7 +425,9 @@ class DashboardService:
         # close that resumes after a refusal picks up at the refused step
         # instead of re-running the whole list or skipping its remainder.
         self._server_shutdown_done = False
+        self._server_shutdown = _BackgroundCloseStep("dashboard-http-shutdown")
         self._server_closed = False
+        self._server_close = _BackgroundCloseStep("dashboard-http-server-close")
         self._thread_confirmed = False
 
     # -- reads ------------------------------------------------------------
@@ -546,8 +602,13 @@ class DashboardService:
         self._serving_thread = thread
         return thread
 
-    def stop_serving(self) -> None:
+    def stop_serving(self, timeout: float | None = None) -> bool:
         """Close the listening socket and stop accepting. Idempotent.
+
+        ``False`` means one of shutdown, socket close or serving-thread
+        confirmation is still in flight. Each unfinished sub-step gets its
+        own ``timeout`` bound, and a later call resumes that same step without
+        restarting an action already in flight or one already confirmed.
 
         Separate from :meth:`close` because the rest of the process has to
         be wound down *before* the descriptor is deleted and the lock
@@ -555,7 +616,7 @@ class DashboardService:
         is still finishing a Run would be two processes with one state
         directory, which is the exact thing the lock exists to prevent.
         """
-        self._release_server()
+        return self._release_server(timeout)
 
     def close(self) -> None:
         """Undo the lifecycle from the outside in. Idempotent.
@@ -569,7 +630,7 @@ class DashboardService:
 
     # -- internals --------------------------------------------------------
 
-    def _release_server(self) -> None:
+    def _release_server(self, timeout: float | None = None) -> bool:
         """Stop the serving loop and close the listening socket. Resumable.
 
         The server reference survives every failed attempt: ``shutdown()``
@@ -587,19 +648,26 @@ class DashboardService:
         socket, and joining the thread is the confirmation that the last
         serving loop is really gone -- "the port is no longer served" is a
         fact about a thread, not about an intention.
+
+        The stdlib requires ``shutdown()`` to run outside the serving thread.
+        Shutdown and socket close therefore use retained non-daemon worker
+        threads; the owner waits on their completion events with the current
+        sub-step's remaining deadline and always joins them before advancing.
         """
         server = self._server
         if server is None:
-            return
+            return True
         if self._serving and not self._server_shutdown_done:
             # Only ever called once a serving loop was asked for.
             # ``shutdown()`` waits for that loop to observe the request, so
             # calling it on a server that never served would wait forever --
             # which is how a failed start would turn into a hung process.
-            server.shutdown()
+            if not self._server_shutdown.complete(server.shutdown, timeout):
+                return False
             self._server_shutdown_done = True
         if not self._server_closed:
-            server.server_close()
+            if not self._server_close.complete(server.server_close, timeout):
+                return False
             self._server_closed = True
         if not self._thread_confirmed:
             # The thread only exists if ``start()`` returned, so joining it
@@ -608,7 +676,19 @@ class DashboardService:
             # step, not a wait for work to finish.
             thread = self._serving_thread
             if thread is not None:
-                thread.join()
+                deadline = (
+                    None
+                    if timeout is None
+                    else time.monotonic() + max(0.0, timeout)
+                )
+                remaining = (
+                    None
+                    if deadline is None
+                    else max(0.0, deadline - time.monotonic())
+                )
+                thread.join(remaining)
+                if thread.is_alive():
+                    return False
             self._thread_confirmed = True
         # Reached only when the socket is confirmed closed and the thread is
         # confirmed gone; this is what makes "the port is free" a fact
@@ -616,6 +696,7 @@ class DashboardService:
         self._server = None
         self._serving = False
         self._serving_thread = None
+        return True
 
     def _forget_descriptor(self) -> None:
         if self._descriptor is None:

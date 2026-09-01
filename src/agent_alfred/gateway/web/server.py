@@ -421,7 +421,8 @@ class DashboardRuntime:
         service = self._service
         # 8. Stop accepting first: nothing new may arrive while the rest is
         #    being wound down.
-        service.stop_serving()
+        if not service.stop_serving(timeout=timeout):
+            return False
         # 7. The Host before the stream it emits into. A worker that is still
         #    inside its Run owns the database, so a refused stop ends here:
         #    tearing the Broker down under a Host that is still publishing
