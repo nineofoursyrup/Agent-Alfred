@@ -404,6 +404,11 @@ class DashboardApi:
             return SubmitOutcome(
                 status=202, run_id=result.run_id, session_id=result.session_id
             )
+        if result.kind == "handoff_failed":
+            # The committed Run is unreachable, including through a busy-card
+            # navigation target. Return before consulting a failed-recording
+            # snapshot, which still carries that Run for local recovery.
+            return SubmitOutcome(status=503, code="admission_failed")
         snapshot = result.snapshot or self._facade.snapshot()
         busy = busy_summary_from(snapshot)
         if result.kind == "run_in_progress":
@@ -417,12 +422,6 @@ class DashboardApi:
             return SubmitOutcome(
                 status=503, code="recording_unavailable", busy=busy
             )
-        if result.kind == "handoff_failed":
-            # Keep the established public admission error code while
-            # distinguishing the committed-then-handoff failure internally.
-            # ``recording_unavailable`` remains exclusive to the closed
-            # recording gate.
-            return SubmitOutcome(status=503, code="admission_failed", busy=busy)
         if result.kind == "mutation_in_flight":
             # The same conflict the gate reports, reached through admission
             # because the write arrived between the gate's question and the

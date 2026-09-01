@@ -336,12 +336,39 @@ def test_a_failed_persist_never_looks_accepted() -> None:
 
 
 def test_a_failed_handoff_answers_503_without_exposing_its_run_id() -> None:
-    outcome = _api(SubmitResult(kind="handoff_failed", run_id="r1")).submit(
+    projection = UnrecordedTerminalProjection(
+        run_id="committed-but-unreachable",
+        purpose="chat",
+        outcome="interrupted",
+        reply_text=None,
+        error="handoff_failed",
+        recording_state="failed",
+        session_id="s1",
+        prompt_preview="hi",
+    )
+    snapshot = _snapshot(
+        coordinator_state="recording_failed",
+        active_run=_active(
+            run_id=projection.run_id,
+            phase="finished",
+            outcome="interrupted",
+            recording_state="failed",
+        ),
+        projection=projection,
+    )
+    outcome = _api(
+        SubmitResult(
+            kind="handoff_failed",
+            run_id=projection.run_id,
+            snapshot=snapshot,
+        )
+    ).submit(
         {"message": "hi", "session_id": "s1"}
     )
     assert outcome.status == 503
     assert outcome.code == "admission_failed"
     assert outcome.run_id is None
+    assert outcome.payload() == {"code": "admission_failed"}
 
 
 # --- the 409 ----------------------------------------------------------------
@@ -403,6 +430,11 @@ def test_recording_unavailable_answers_503() -> None:
     ).submit({"message": "hi", "session_id": "s1"})
     assert outcome.status == 503
     assert outcome.code == "recording_unavailable"
+    assert outcome.payload()["busy"]["navigation"] == {
+        "href": "/runs/r1?filter=chat",
+        "run_id": "r1",
+        "filter": "chat",
+    }
 
 
 def test_503_is_only_ever_the_failed_states_answer() -> None:

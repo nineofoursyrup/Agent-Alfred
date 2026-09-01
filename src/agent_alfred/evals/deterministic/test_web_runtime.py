@@ -765,6 +765,9 @@ def test_a_failed_handoff_and_interrupted_finalize_still_answers_503(
         assert outcome.status == 503
         assert outcome.code == "admission_failed"
         assert outcome.run_id is None
+        payload = outcome.payload()
+        assert payload == {"code": "admission_failed"}
+        assert "busy" not in payload
         # The interrupted update could not commit, so recovery still has the
         # accepted row plus the in-process failed-recording projection.
         assert conn.execute(
@@ -788,6 +791,7 @@ def test_a_failed_handoff_and_interrupted_finalize_still_answers_503(
         ) == ("interrupted", "failed", None, "handoff_failed")
         assert snapshot.active_run.run_id == projection.run_id
         assert snapshot.active_run.session_id == projection.session_id == session_id
+        assert snapshot.active_run.run_id not in repr(payload)
     finally:
         host.close()
 

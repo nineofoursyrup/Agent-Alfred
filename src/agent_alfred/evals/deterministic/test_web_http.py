@@ -882,8 +882,19 @@ def test_recording_failed_is_a_real_http_503(server) -> None:
 
 
 def test_handoff_failed_is_a_real_http_503_without_a_run_id(server) -> None:
+    snapshot = _snapshot(
+        coordinator_state="recording_failed",
+        active_run=_active(
+            run_id="committed-but-unreachable",
+            phase="finished",
+            outcome="interrupted",
+            recording_state="failed",
+        ),
+    )
     server.facade.submit_result = SubmitResult(
-        kind="handoff_failed", run_id="committed-but-unreachable"
+        kind="handoff_failed",
+        run_id="committed-but-unreachable",
+        snapshot=snapshot,
     )
 
     head, body = _post_runs(
