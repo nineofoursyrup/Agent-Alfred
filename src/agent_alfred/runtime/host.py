@@ -83,7 +83,8 @@ class RuntimeHost:
     - admission: ``admission_observe`` (side-effect-free preflight) /
       ``admission_reserve`` (lease and busy card together) /
       ``admission_release`` / ``admission_close_idle`` /
-      ``admission_fail_recording`` / ``publish_work_item``;
+      ``admission_fail_recording`` / ``admission_discard_result_slot`` /
+      ``publish_work_item``;
     - execution: ``execution_mark_running``.
 
     Each method below owns one state-machine invariant (authority before
@@ -498,6 +499,18 @@ class RuntimeHost:
                 active_run=None,
                 unrecorded_terminal_projection=None,
             )
+
+    def admission_discard_result_slot(self, run_id: str) -> None:
+        """Atomically retire an admission result no caller can consume.
+
+        Admission calls this only after publishing the terminal result and
+        its done notification, once it knows submit will not return
+        ``accepted``. Accepted Runs retain the slot until :meth:`wait`
+        consumes it, while Web submissions never create one.
+        """
+        with self._lock:
+            self._results.pop(run_id, None)
+            self._done.pop(run_id, None)
 
     def admission_fail_recording(
         self,

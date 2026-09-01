@@ -329,6 +329,28 @@ def test_handoff_failure_finalizes_interrupted() -> None:
         host.close()
 
 
+def test_handoff_failures_discard_unreturnable_result_slots() -> None:
+    def boom(_item):
+        raise RuntimeError("queue full")
+
+    host, _conn, _ = _host(["must not execute"], publish_work=boom)
+    host.start()
+    try:
+        for _ in range(3):
+            submitted = host.submit(SubmitRequest(message="ping"))
+
+            assert submitted.kind == "admission_failed"
+            assert submitted.run_id is not None
+            assert submitted.run_id not in host._done
+            assert submitted.run_id not in host._results
+            assert host.snapshot().coordinator_state == "idle"
+
+        assert host._done == {}
+        assert host._results == {}
+    finally:
+        host.close()
+
+
 def test_handoff_and_finalize_failure_publish_consistent_terminal_state() -> None:
     raw = sqlite3.connect(":memory:", check_same_thread=False)
     schema.migrate(raw)
@@ -382,6 +404,8 @@ def test_handoff_and_finalize_failure_publish_consistent_terminal_state() -> Non
         refused = host.submit(SubmitRequest(message="still closed"))
         assert refused.kind == "recording_unavailable"
         assert refused.snapshot == snap
+        assert submitted.run_id not in host._done
+        assert submitted.run_id not in host._results
     finally:
         host.close()
 
@@ -398,6 +422,43 @@ def test_handoff_and_finalize_failure_publish_consistent_terminal_state() -> Non
     finally:
         recovered.close()
         raw.close()
+
+
+def test_unwaited_handoff_failure_still_publishes_and_notifies_without_a_slot(
+) -> None:
+    def boom(_item):
+        raise RuntimeError("queue full")
+
+    host, _conn, _ = _host(["must not execute"], publish_work=boom)
+    published: list[str] = []
+    notified: list[str] = []
+    publish_run_result = host.publish_run_result
+    notify_run_done = host.notify_run_done
+
+    def track_result(run_id, result):
+        published.append(run_id)
+        publish_run_result(run_id, result)
+
+    def track_notification(run_id):
+        notified.append(run_id)
+        notify_run_done(run_id)
+
+    host.publish_run_result = track_result
+    host.notify_run_done = track_notification
+    host.start()
+    try:
+        submitted = host.submit(
+            SubmitRequest(message="ping", wait_for_result=False)
+        )
+
+        assert submitted.kind == "admission_failed"
+        assert submitted.run_id is not None
+        assert published == [submitted.run_id]
+        assert notified == [submitted.run_id]
+        assert host._done == {}
+        assert host._results == {}
+    finally:
+        host.close()
 
 
 def test_startup_recovery_marks_leftover_runs_interrupted() -> None:
@@ -616,6 +677,7 @@ def test_admission_and_execution_only_use_narrow_seams() -> None:
         "admission_release",
         "admission_close_idle",
         "admission_fail_recording",
+        "admission_discard_result_slot",
         "publish_work_item",
         "execution_mark_running",
     ):
@@ -678,6 +740,10 @@ class _FakeAdmissionCoordinator:
         self.calls.append(
             ("fail_recording", projection.run_id, projection.recording_state)
         )
+
+    def admission_discard_result_slot(self, run_id):
+        self.done.pop(run_id, None)
+        self.calls.append(("discard_result_slot", run_id))
 
     def publish_work_item(self, item):
         if self.fail_publish:
@@ -959,6 +1025,7 @@ def test_unstarted_handoff_failure_finalizes_interrupted_through_seams() -> None
         "close_idle",
         "result",
         "notify",
+        "discard_result_slot",
     ]
     row = conn.execute(
         "SELECT phase, outcome, started_at FROM runs"
@@ -987,6 +1054,7 @@ def test_unstarted_db_failure_fails_closed_through_seams() -> None:
         "fail_recording",
         "result",
         "notify",
+        "discard_result_slot",
     ]
     assert coordinator.state == "recording_failed"
     fail_call = next(

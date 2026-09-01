@@ -76,6 +76,9 @@ class AdmissionCoordinator(Protocol):
         self, summary: ActiveRunSummary, projection: UnrecordedTerminalProjection
     ) -> None: ...
 
+    def admission_discard_result_slot(self, run_id: str) -> None:
+        """Discard a waiter/result pair that no caller can consume."""
+
     def publish_work_item(self, item: WorkItem) -> None: ...
 
     def publish_run_result(self, run_id: str, result: LoopResult) -> None: ...
@@ -193,6 +196,11 @@ class RunAdmission:
             self._coordinator.publish_work_item(item)
         except Exception:
             self.interrupt_unstarted(item)
+            # The terminal result and done notification above remain visible
+            # to their ordinary observers, but this submit will not return
+            # ``accepted`` and therefore cannot give a caller a run_id to
+            # wait on. Retire that unreachable single-consumer slot only now.
+            self._coordinator.admission_discard_result_slot(run_id)
             return SubmitResult(kind="admission_failed", run_id=run_id)
 
         return SubmitResult(
