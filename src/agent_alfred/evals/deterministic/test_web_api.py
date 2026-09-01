@@ -3,7 +3,8 @@
 The interesting assertions here are the ones about *when* each status is
 reachable: 202 only after the lease, the committed accepted row and the
 handoff have all happened; 409 while the lease is still held, including while
-the recording is pending; 503 only once ``recording_failed`` has landed. A
+the recording is pending; 503 after a committed handoff fails or once
+``recording_failed`` has landed. A
 failure to persist or to hand off is never allowed to look like an accepted
 Run -- a 202 for a Run nobody is running is worse than an error, because it
 is a promise the client will wait on.
@@ -312,19 +313,33 @@ def test_202_comes_only_from_the_coordinators_accepted_kind() -> None:
     thread, so "202" is a statement about all three -- not just about the
     request having been understood.
     """
-    for kind in ("run_in_progress", "recording_unavailable", "admission_failed"):
+    for kind in (
+        "run_in_progress",
+        "recording_unavailable",
+        "admission_failed",
+        "handoff_failed",
+    ):
         outcome = _api(SubmitResult(kind=kind)).submit(  # type: ignore[arg-type]
             {"message": "hello", "session_id": "s1"}
         )
         assert outcome.status != 202, f"{kind} must never answer 202"
 
 
-def test_a_failed_persist_or_handoff_never_looks_accepted() -> None:
+def test_a_failed_persist_never_looks_accepted() -> None:
     # A 202 here would tell the browser to wait for a Run nobody is running.
     outcome = _api(SubmitResult(kind="admission_failed")).submit(
         {"message": "hi", "session_id": "s1"}
     )
     assert outcome.status == 500
+    assert outcome.code == "admission_failed"
+    assert outcome.run_id is None
+
+
+def test_a_failed_handoff_answers_503_without_exposing_its_run_id() -> None:
+    outcome = _api(SubmitResult(kind="handoff_failed", run_id="r1")).submit(
+        {"message": "hi", "session_id": "s1"}
+    )
+    assert outcome.status == 503
     assert outcome.code == "admission_failed"
     assert outcome.run_id is None
 

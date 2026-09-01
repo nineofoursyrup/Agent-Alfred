@@ -4,9 +4,9 @@
 status code. This file proves the coordinator really does produce those
 answers: a 202 only after the lease, the committed accepted row and the
 handoff; a 409 while the lease is held -- including through the whole
-``recording_pending`` window; a 503 only once ``recording_failed`` has
-landed; and never a 202 for a Run that failed to persist or to be handed
-off.
+``recording_pending`` window; a 503 after a committed handoff fails or once
+``recording_failed`` has landed; and never a 202 for a Run that failed to
+persist or to be handed off.
 
 The orderings are tested with latches, not sleeps: each one pauses the
 finalizer at the exact instant the contract is about.
@@ -720,20 +720,93 @@ def test_a_failed_handoff_never_answers_202() -> None:
     def explode(item):
         raise RuntimeError("handoff refused")
 
-    host, _conn = build_runtime_host(publish_work=explode)
+    host, conn = build_runtime_host(publish_work=explode)
     host.start()
     try:
         session_id = host.create_session()
         outcome = dashboard_api(host).submit(
             {"message": "hello", "session_id": session_id}
         )
-        assert outcome.status == 500
+        assert outcome.status == 503
         assert outcome.code == "admission_failed"
+        assert outcome.run_id is None
         # The Run was finalized interrupted and admission reopened rather
         # than left dangling on a Run nobody will execute.
         wait_until(lambda: host.snapshot().coordinator_state == "idle")
+        assert conn.execute(
+            "SELECT phase, outcome, started_at FROM runs"
+        ).fetchone() == ("finished", "interrupted", None)
     finally:
         host.close()
+
+
+def test_a_failed_handoff_and_interrupted_finalize_still_answers_503(
+    tmp_path,
+) -> None:
+    flag = {"armed": False}
+    database_path = tmp_path / "handoff-finalize-failed.sqlite3"
+    database = sqlite3.connect(str(database_path), check_same_thread=False)
+    schema.migrate(database)
+    wrapped = FailFinalizeWhen(database, flag, "UPDATE runs SET phase = ?")
+
+    def explode(item):
+        raise RuntimeError("handoff refused")
+
+    host, conn = build_runtime_host(conn=wrapped, publish_work=explode)
+    host.start()
+    try:
+        session_id = host.create_session()
+        flag["armed"] = True
+
+        outcome = dashboard_api(host).submit(
+            {"message": "hello", "session_id": session_id}
+        )
+
+        assert outcome.status == 503
+        assert outcome.code == "admission_failed"
+        assert outcome.run_id is None
+        # The interrupted update could not commit, so recovery still has the
+        # accepted row plus the in-process failed-recording projection.
+        assert conn.execute(
+            "SELECT phase, outcome, started_at FROM runs"
+        ).fetchone() == ("accepted", None, None)
+        snapshot = host.snapshot()
+        assert snapshot.coordinator_state == "recording_failed"
+        assert snapshot.active_run is not None
+        assert (
+            snapshot.active_run.phase,
+            snapshot.active_run.outcome,
+            snapshot.active_run.recording_state,
+        ) == ("finished", "interrupted", "failed")
+        projection = snapshot.unrecorded_terminal_projection
+        assert projection is not None
+        assert (
+            projection.outcome,
+            projection.recording_state,
+            projection.reply_text,
+            projection.error,
+        ) == ("interrupted", "failed", None, "handoff_failed")
+        assert snapshot.active_run.run_id == projection.run_id
+        assert snapshot.active_run.session_id == projection.session_id == session_id
+    finally:
+        host.close()
+
+    # The failed-recording projection is deliberately process-local. The
+    # committed accepted row is the durable recovery fact: a new Host repairs
+    # it to finished/interrupted before reopening admission.
+    recovered_database = sqlite3.connect(
+        str(database_path), check_same_thread=False
+    )
+    recovered, recovered_conn = build_runtime_host(conn=recovered_database)
+    recovered.start()
+    try:
+        assert recovered_conn.execute(
+            "SELECT phase, outcome, started_at FROM runs"
+        ).fetchone() == ("finished", "interrupted", None)
+        assert recovered.snapshot().coordinator_state == "idle"
+        assert recovered.snapshot().unrecorded_terminal_projection is None
+    finally:
+        recovered.close()
 
 
 # --- the terminal snapshot survives the settlement window -------------------
@@ -1471,7 +1544,7 @@ def test_a_handoff_failure_retracts_the_lease_and_the_busy_card() -> None:
     host.start()
     try:
         result = host.submit(SubmitRequest(message="hello", gateway="web"))
-        assert result.kind == "admission_failed"
+        assert result.kind == "handoff_failed"
         assert result.run_id is not None
         idle = host.snapshot()
         assert idle.coordinator_state == "idle"

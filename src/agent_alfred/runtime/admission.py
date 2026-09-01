@@ -201,7 +201,7 @@ class RunAdmission:
             # ``accepted`` and therefore cannot give a caller a run_id to
             # wait on. Retire that unreachable single-consumer slot only now.
             self._coordinator.admission_discard_result_slot(run_id)
-            return SubmitResult(kind="admission_failed", run_id=run_id)
+            return SubmitResult(kind="handoff_failed", run_id=run_id)
 
         return SubmitResult(
             kind="accepted",

@@ -379,7 +379,7 @@ def test_handoff_and_interrupt_double_failure_fails_closed(tmp_path) -> None:
     host.start()
     try:
         first = host.submit(SubmitRequest(message="one"))
-        assert first.kind == "admission_failed"
+        assert first.kind == "handoff_failed"
         leftover = conn.execute(
             "SELECT run_id, phase, outcome FROM runs"
         ).fetchall()

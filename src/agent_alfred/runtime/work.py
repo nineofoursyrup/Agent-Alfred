@@ -19,11 +19,14 @@ AdmissionRefusalKind = Literal[
     "admission_failed",
 ]
 
-SubmitKind = Literal["accepted"] | AdmissionRefusalKind
+# The accepted row committed but the unique executor handoff did not. This is
+# a submit result, never a preflight/reserve refusal: keeping it out of
+# ``AdmissionRefusalKind`` prevents coordinators from claiming it before a
+# committed Run actually exists.
+SubmitKind = Literal["accepted", "handoff_failed"] | AdmissionRefusalKind
 
-# What admission_reserve answers before the handoff: the SubmitKind
-# vocabulary plus the internal "reserved" outcome that never escapes into a
-# SubmitResult.
+# What admission_reserve answers before the handoff: the refusal vocabulary
+# plus the internal "reserved" outcome that never escapes into a SubmitResult.
 ReserveKind = AdmissionRefusalKind | Literal["reserved"]
 
 # What the read-only admission preflight answers. ``admissible`` is only an

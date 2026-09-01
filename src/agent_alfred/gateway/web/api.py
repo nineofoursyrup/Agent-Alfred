@@ -4,7 +4,8 @@ Everything here is transport-shaped logic over an injected facade, with no
 sockets and no ``http.server``: the handler is a thin IO shroud around these
 functions, so the contract -- 202 only after the lease, accepted transaction
 and handoff have all happened; 409 while the lease is held, including while
-the recording is pending; 503 only once ``recording_failed`` has landed; a
+the recording is pending; 503 after a committed handoff fails or once
+``recording_failed`` has landed; a
 busy card that reads the same whether it came from a race or from a known-busy
 client -- is testable without a browser.
 
@@ -395,9 +396,9 @@ class DashboardApi:
         202 is reached only through ``kind == "accepted"``, which the
         admission path sets after the lease was reserved, the accepted
         transaction committed and the work item was handed to the single
-        execution thread. A failure to persist or to hand off returns
-        ``admission_failed`` and is reported as 500: pretending otherwise
-        would tell the browser a Run exists that nobody is running.
+        execution thread. A handoff failure is distinct from an earlier
+        internal admission failure: it closes the committed Run and reports
+        service unavailability without exposing its unreachable run id.
         """
         if result.kind == "accepted":
             return SubmitOutcome(
@@ -416,6 +417,12 @@ class DashboardApi:
             return SubmitOutcome(
                 status=503, code="recording_unavailable", busy=busy
             )
+        if result.kind == "handoff_failed":
+            # Keep the established public admission error code while
+            # distinguishing the committed-then-handoff failure internally.
+            # ``recording_unavailable`` remains exclusive to the closed
+            # recording gate.
+            return SubmitOutcome(status=503, code="admission_failed", busy=busy)
         if result.kind == "mutation_in_flight":
             # The same conflict the gate reports, reached through admission
             # because the write arrived between the gate's question and the

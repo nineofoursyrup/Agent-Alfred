@@ -320,7 +320,7 @@ def test_handoff_failure_finalizes_interrupted() -> None:
     host.start()
     try:
         submitted = host.submit(SubmitRequest(message="ping"))
-        assert submitted.kind == "admission_failed"
+        assert submitted.kind == "handoff_failed"
         row = conn.execute("SELECT phase, outcome FROM runs").fetchone()
         assert row == ("finished", "interrupted")
         assert conn.execute("SELECT started_at FROM runs").fetchone() == (None,)
@@ -339,7 +339,7 @@ def test_handoff_failures_discard_unreturnable_result_slots() -> None:
         for _ in range(3):
             submitted = host.submit(SubmitRequest(message="ping"))
 
-            assert submitted.kind == "admission_failed"
+            assert submitted.kind == "handoff_failed"
             assert submitted.run_id is not None
             assert submitted.run_id not in host._done
             assert submitted.run_id not in host._results
@@ -369,7 +369,7 @@ def test_handoff_and_finalize_failure_publish_consistent_terminal_state() -> Non
     host.start()
     try:
         submitted = host.submit(SubmitRequest(message="ping"))
-        assert submitted.kind == "admission_failed"
+        assert submitted.kind == "handoff_failed"
         assert submitted.run_id is not None
 
         row = conn.execute(
@@ -451,7 +451,7 @@ def test_unwaited_handoff_failure_still_publishes_and_notifies_without_a_slot(
             SubmitRequest(message="ping", wait_for_result=False)
         )
 
-        assert submitted.kind == "admission_failed"
+        assert submitted.kind == "handoff_failed"
         assert submitted.run_id is not None
         assert published == [submitted.run_id]
         assert notified == [submitted.run_id]
@@ -1018,7 +1018,7 @@ def test_unstarted_handoff_failure_finalizes_interrupted_through_seams() -> None
 
     result = admission.submit(SubmitRequest(message="hello"))
 
-    assert result.kind == "admission_failed"
+    assert result.kind == "handoff_failed"
     assert result.run_id is not None
     assert [call[0] for call in coordinator.calls] == [
         "reserve",
@@ -1048,7 +1048,7 @@ def test_unstarted_db_failure_fails_closed_through_seams() -> None:
 
     result = admission.submit(SubmitRequest(message="hello"))
 
-    assert result.kind == "admission_failed"
+    assert result.kind == "handoff_failed"
     assert [call[0] for call in coordinator.calls] == [
         "reserve",
         "fail_recording",

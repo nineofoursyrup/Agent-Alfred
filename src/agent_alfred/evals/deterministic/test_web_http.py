@@ -881,6 +881,20 @@ def test_recording_failed_is_a_real_http_503(server) -> None:
     _assert_no_cross_origin_permission(head)
 
 
+def test_handoff_failed_is_a_real_http_503_without_a_run_id(server) -> None:
+    server.facade.submit_result = SubmitResult(
+        kind="handoff_failed", run_id="committed-but-unreachable"
+    )
+
+    head, body = _post_runs(
+        server, b'{"message":"hi","session_id":"session-from-server"}'
+    )
+
+    assert head.startswith(b"HTTP/1.1 503")
+    assert json.loads(body) == {"code": "admission_failed"}
+    _assert_no_cross_origin_permission(head)
+
+
 def test_known_and_raced_busy_are_the_same_json_on_a_real_socket(server) -> None:
     snapshot = _snapshot(coordinator_state="running", active_run=_active())
     request = b'{"message":"hi","session_id":"session-from-server"}'
