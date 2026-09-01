@@ -51,6 +51,7 @@ from agent_alfred.gateway.web.broker import (
     _IngressKick,
     _IngressStop,
     _patch_frames,
+    _PublishedEvent,
 )
 from agent_alfred.gateway.web.connection import (
     CloseConnection,
@@ -803,6 +804,109 @@ def test_replayable_recovery_that_cannot_fit_closes_and_remains_replayable() -> 
     fresh = harness.connect(
         cursor=cursor_for(0),
         budget=frames.FrameBudget(4, 1 << 20),
+    )
+    assert replay_ids(drain_connection(fresh)) == [event.seq]
+
+
+def test_ingress_drop_recovery_admits_notice_and_transient_as_one_pair() -> None:
+    harness = Harness()
+    handle = harness.connect()
+    drain_connection(handle)
+
+    # This is a complete, measured physical domain-event frame. Its trailing
+    # JSON whitespace makes the worked example exactly 101 encoded bytes.
+    prefix = b'event: domain_event\ndata: {"event":"attempt.started"}'
+    candidate = frames.measured_frames(
+        frames=(prefix + b" " * 46,), replayable=False
+    )
+    candidate_cost = candidate.ingress_cost()
+    assert candidate_cost.encoded_bytes == 101
+
+    ingress_dropped = int("9" * 51)
+    notice_cost = frames.deltas_dropped_notice(
+        ingress_dropped
+    ).ingress_cost()
+    assert notice_cost.encoded_bytes == 117
+    assert notice_cost.encoded_bytes > candidate_cost.encoded_bytes
+
+    # A replay slice already owns part of this connection's central budget.
+    # What remains can hold the candidate exactly, but not notice + candidate.
+    startup_entry = frames.measured_frames(frames=(b"s",), replayable=True)
+    startup_cost = startup_entry.ingress_cost()
+    batch = ReplayBatch(
+        kind="batch", entries=(startup_entry,), cost=startup_cost
+    )
+    assert handle.queue.build_and_reserve_startup(lambda _remaining: batch) is batch
+    handle.queue.budget = frames.FrameBudget(
+        frames=(startup_cost + candidate_cost).frames,
+        encoded_bytes=(startup_cost + candidate_cost).encoded_bytes,
+    )
+
+    harness.broker._deliver_event(
+        handle, _PublishedEvent(1, candidate), ingress_dropped
+    )
+
+    # Neither half may appear alone and the ingress debt is not acknowledged.
+    with pytest.raises(queue.Empty):
+        handle.queue.take(timeout=0)
+    assert handle.ingress_seen == 0
+    assert handle.queue.current_cost == startup_cost
+
+    # The refused transient is now local debt. Once both debts and the next
+    # candidate fit, they collapse into one notice before that candidate.
+    handle.queue.release_startup(startup_cost)
+    merged_notice = frames.deltas_dropped_notice(ingress_dropped + 1)
+    combined = merged_notice.ingress_cost() + candidate.ingress_cost()
+    handle.queue.budget = frames.FrameBudget(
+        frames=combined.frames,
+        encoded_bytes=combined.encoded_bytes,
+    )
+    harness.broker._deliver_event(
+        handle, _PublishedEvent(2, candidate), ingress_dropped
+    )
+
+    notice = handle.queue.take(timeout=0)
+    recovered = handle.queue.take(timeout=0)
+    assert b'"code":"deltas_dropped"' in notice.wire_bytes()
+    assert f'"count":{ingress_dropped + 1}'.encode() in notice.wire_bytes()
+    assert recovered is candidate
+    assert handle.ingress_seen == ingress_dropped
+
+
+def test_ingress_drop_recovery_closes_before_admitting_replayable_alone() -> None:
+    harness = Harness(ingress_budget=frames.FrameBudget(1, 1 << 20))
+    handle = harness.connect()
+    drain_connection(handle)
+
+    event = harness.emit(
+        AttemptStarted(attempt_id="new", streamed=True), run_id="r1"
+    )
+    candidate = harness.broker.prepare(event)
+    assert isinstance(candidate, PreparedFrames)
+    checkpointed = candidate.with_checkpoint(event.seq, INSTANCE)
+    candidate_cost = checkpointed.ingress_cost()
+    handle.queue.budget = frames.FrameBudget(
+        frames=candidate_cost.frames,
+        encoded_bytes=candidate_cost.encoded_bytes,
+    )
+
+    harness.emit(BlockDelta(attempt_id="missed", text="x"), run_id="r1")
+    assert harness.broker._ingress_dropped == 1
+    harness.deliver()
+
+    assert handle.queue.close_requested is True
+    assert handle.ingress_seen == 0
+    remaining = drain_connection(handle)
+    wire = b"".join(
+        item.wire_bytes()
+        for item in remaining
+        if isinstance(item, PreparedFrames)
+    )
+    assert b"attempt.started" not in wire
+    assert b"deltas_dropped" not in wire
+
+    fresh = harness.connect(
+        cursor=cursor_for(0), budget=frames.FrameBudget(4, 1 << 20)
     )
     assert replay_ids(drain_connection(fresh)) == [event.seq]
 

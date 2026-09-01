@@ -176,6 +176,7 @@ class ConnectionQueue:
         item: frames.PreparedFrames,
         *,
         recover_dropped: bool = True,
+        ingress_dropped: int = 0,
     ) -> OfferOutcome:
         """Queue one logical event. O(1), non-blocking, no IO.
 
@@ -191,14 +192,26 @@ class ConnectionQueue:
         ``recover_dropped=False`` is for connection-local control frames whose
         own retry/accounting is owned by their caller. They neither consume a
         pending domain-drop count nor become part of it when refused.
+
+        ``ingress_dropped`` adds shared-ingress debt owned by the broker. It is
+        combined with this queue's local debt into one notice, and that notice
+        plus ``item`` receives one admission verdict under this queue's lock.
+        The caller may acknowledge its debt only when the pair is accepted.
         """
+        if ingress_dropped < 0:
+            raise ValueError("ingress_dropped must be >= 0")
+        if ingress_dropped and not recover_dropped:
+            raise ValueError(
+                "ingress_dropped requires recover_dropped=True"
+            )
         cost = item.ingress_cost()
         with self._lock:
             if self._closing:
                 return OfferOutcome(kind="dropped")
+            dropped = self._dropped + ingress_dropped
             notice = (
-                frames.deltas_dropped_notice(self._dropped)
-                if recover_dropped and self._dropped
+                frames.deltas_dropped_notice(dropped)
+                if recover_dropped and dropped
                 else None
             )
             notice_cost = (

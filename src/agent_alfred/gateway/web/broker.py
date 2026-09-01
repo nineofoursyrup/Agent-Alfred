@@ -1545,7 +1545,6 @@ class SSEBroker:
         dropped: int,
     ) -> None:
         """Deliver one domain event plus any drop count owed this connection."""
-        self._deliver_dropped_notice(handle, dropped)
         if item.published_seq <= handle.published_through:
             # The registration boundary already covers it. For a replayable
             # event that means the writer-owned replay cursor carries it; for
@@ -1558,21 +1557,18 @@ class SSEBroker:
             # resurrection, with no way for the client to tell either from
             # a new one.
             return
-        handle.queue.offer(item.frames)
-
-    def _deliver_dropped_notice(
-        self, handle: ConnectionHandle, dropped: int
-    ) -> None:
-        if dropped <= handle.ingress_seen:
-            return
-        notice = frames.deltas_dropped_notice(dropped - handle.ingress_seen)
-        # Only advanced when the notice was accepted, so a connection that
-        # had no room is told again on the next delivery instead of losing
-        # the count for good.
-        if (
-            handle.queue.offer(notice, recover_dropped=False).kind
-            == "accepted"
-        ):
+        ingress_dropped = max(dropped - handle.ingress_seen, 0)
+        outcome = (
+            handle.queue.offer(
+                item.frames, ingress_dropped=ingress_dropped
+            )
+            if ingress_dropped
+            else handle.queue.offer(item.frames)
+        )
+        # Accepted means the merged notice (when owed) and candidate were
+        # admitted in that order under one queue lock. Refusal leaves both the
+        # broker-owned ingress debt and any queue-local debt outstanding.
+        if ingress_dropped and outcome.kind == "accepted":
             handle.ingress_seen = dropped
 
     def _note_run_event(self, event: SequencedEvent) -> None:
