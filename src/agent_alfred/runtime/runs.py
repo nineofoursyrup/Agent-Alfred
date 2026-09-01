@@ -7,7 +7,8 @@ Two reads, both over an injected connection, neither of which commits:
   *separately* so the client can pin it above the page and fold it away by
   ``run_id`` rather than showing it twice.
 - :func:`mainbar_pairs` -- the MainBar's initial load: **recorded** chat Run
-  pairs newest-first, followed by historic messages without fabricated Runs.
+  pairs newest-first, a versioned wait boundary while a chat Run can still
+  record, then historic messages without fabricated Runs.
 
 Run-backed items sort on ``activity_revision`` and nothing else. It is the
 persistent activity clock's number and it is the only one of the three
@@ -32,6 +33,7 @@ from agent_alfred.messages import Message, blocks_from_jsonable, message_plain_t
 from agent_alfred.outcomes import RunOutcome
 from agent_alfred.redact import Redactor
 from agent_alfred.run_phases import (
+    IN_FLIGHT_RUN_PHASES,
     TERMINAL_RUN_PHASE,
     RunPhase,
     parse_run_lifecycle_pair,
@@ -49,11 +51,12 @@ from agent_alfred.runtime.cursor import (
 from agent_alfred.runtime.sessions import SessionNotFound
 
 _CURSOR_VERSION = 1
-_MAINBAR_CURSOR_VERSION = 2
+_MAINBAR_CURSOR_VERSION = 3
 _RUNS_KIND = "runs"
 _MAINBAR_KIND = "mainbar"
 _SESSION_RUNS_KIND = "session_runs"
 _RUNS_SEGMENT = "runs"
+_RUNS_PENDING_SEGMENT = "runs_pending"
 _HISTORIC_SEGMENT = "historic"
 
 # The runs page's filter is closed to three values (#30): a Run is either a
@@ -167,6 +170,7 @@ MainBarItem: TypeAlias = MainBarRunPair | MainBarHistoricMessage
 class MainBarPage:
     items: tuple[MainBarItem, ...]
     next_cursor: str | None
+    runs_pending: bool = False
 
     @property
     def pairs(self) -> tuple[MainBarRunPair, ...]:
@@ -267,16 +271,43 @@ def _mainbar_runs_cursor(
     return _encode_cursor(payload)
 
 
-def _mainbar_historic_cursor(session_id: str, position: int) -> str:
-    return _encode_cursor(
-        {
-            "v": _MAINBAR_CURSOR_VERSION,
-            "k": _MAINBAR_KIND,
-            "seg": _HISTORIC_SEGMENT,
-            "s": session_id,
-            "id": position,
-        }
-    )
+def _mainbar_historic_cursor(
+    session_id: str, position: int | None
+) -> str:
+    payload: dict[str, Any] = {
+        "v": _MAINBAR_CURSOR_VERSION,
+        "k": _MAINBAR_KIND,
+        "seg": _HISTORIC_SEGMENT,
+        "s": session_id,
+    }
+    if position is not None:
+        payload["id"] = position
+    return _encode_cursor(payload)
+
+
+def _mainbar_pending_cursor(
+    session_id: str,
+    watermark: int,
+    *,
+    upper_watermark: int | None = None,
+    catchup_position: tuple[int, str] | None = None,
+    historic_position: int | None = None,
+) -> str:
+    payload: dict[str, Any] = {
+        "v": _MAINBAR_CURSOR_VERSION,
+        "k": _MAINBAR_KIND,
+        "seg": _RUNS_PENDING_SEGMENT,
+        "s": session_id,
+        "w": watermark,
+    }
+    if upper_watermark is not None:
+        payload["u"] = upper_watermark
+    if catchup_position is not None:
+        payload["ca"] = catchup_position[0]
+        payload["cr"] = catchup_position[1]
+    if historic_position is not None:
+        payload["h"] = historic_position
+    return _encode_cursor(payload)
 
 
 # --- the runs page ----------------------------------------------------------
@@ -507,6 +538,7 @@ def mainbar_pairs(
     redactor: Redactor,
     limit: int = DEFAULT_MAINBAR_LIMIT,
     cursor: str | None = None,
+    recording_failed_run_ids: frozenset[str] = frozenset(),
 ) -> MainBarPage:
     """The recorded Run pairs then historic messages of one Session.
 
@@ -515,13 +547,19 @@ def mainbar_pairs(
     and the cursor names it, so a page minted by Session A answers nothing
     for Session B. Page size counts Run pairs and historic single messages;
     when the Run segment is exhausted, any room in that same page is filled
-    from the historic segment so no empty transition page is produced.
+    from the historic segment so no empty transition page is produced. An
+    accepted/running chat Run keeps that boundary open with a ``runs_pending``
+    cursor. Replaying it re-reads database authority; only the Host's explicit
+    recording-failed projection excludes a Run that can no longer record.
     """
     if limit < 1:
         raise ValueError("limit must be >= 1")
     in_runs_segment = True
     runs_position: tuple[int, str] | None = None
     historic_position: int | None = None
+    pending_watermark: int | None = None
+    pending_upper_watermark: int | None = None
+    catchup_position: tuple[int, str] | None = None
     if cursor is not None:
         payload = _decode_cursor(
             cursor, version=_MAINBAR_CURSOR_VERSION, kind=_MAINBAR_KIND
@@ -531,8 +569,40 @@ def mainbar_pairs(
         segment = payload.get("seg")
         if segment == _RUNS_SEGMENT:
             runs_position = _position(payload)
+        elif segment == _RUNS_PENDING_SEGMENT:
+            pending_watermark = parse_cursor_position_int(payload.get("w"))
+            upper = payload.get("u")
+            if upper is not None:
+                pending_upper_watermark = parse_cursor_position_int(upper)
+                if pending_upper_watermark < pending_watermark:
+                    raise MalformedCursor("pending cursor range is malformed")
+            catchup_ar = payload.get("ca")
+            catchup_run = payload.get("cr")
+            if catchup_ar is not None or catchup_run is not None:
+                if pending_upper_watermark is None or not isinstance(
+                    catchup_run, str
+                ):
+                    raise MalformedCursor("pending cursor position is malformed")
+                parsed_catchup_ar = parse_cursor_position_int(catchup_ar)
+                if not (
+                    pending_watermark
+                    < parsed_catchup_ar
+                    <= pending_upper_watermark
+                ):
+                    raise MalformedCursor("pending cursor position is malformed")
+                catchup_position = (parsed_catchup_ar, catchup_run)
+            raw_historic_position = payload.get("h")
+            if raw_historic_position is not None:
+                historic_position = parse_cursor_position_int(
+                    raw_historic_position
+                )
         elif segment == _HISTORIC_SEGMENT:
-            last_id = parse_cursor_position_int(payload.get("id"))
+            raw_id = payload.get("id")
+            last_id = (
+                None
+                if raw_id is None
+                else parse_cursor_position_int(raw_id)
+            )
             in_runs_segment = False
             historic_position = last_id
         else:
@@ -545,24 +615,88 @@ def mainbar_pairs(
 
     items: list[MainBarItem] = []
     remaining = limit
-    if in_runs_segment:
+    if (
+        not in_runs_segment
+        and _has_pending_chat_run(
+            conn, session_id, recording_failed_run_ids
+        )
+    ):
+        return MainBarPage(
+            items=(),
+            next_cursor=_mainbar_pending_cursor(
+                session_id,
+                _activity_watermark(conn),
+                historic_position=historic_position,
+            ),
+            runs_pending=True,
+        )
+    if pending_watermark is not None:
+        if (
+            pending_upper_watermark is None
+            and _has_pending_chat_run(
+                conn, session_id, recording_failed_run_ids
+            )
+        ):
+            # Do not expose a partially settled cohort. A second pending Run
+            # can finalize with a newer activity revision, so returning the
+            # first one now would make the eventual order older-before-newer.
+            # Replaying the same checkpoint is an instantaneous state read;
+            # no polling or waiting happens inside this request.
+            return MainBarPage(
+                items=(),
+                next_cursor=cursor,
+                runs_pending=True,
+            )
+        upper_watermark = (
+            _activity_watermark(conn)
+            if pending_upper_watermark is None
+            else pending_upper_watermark
+        )
+        rows = _mainbar_catchup_rows(
+            conn,
+            session_id,
+            pending_watermark,
+            upper_watermark,
+            catchup_position,
+            remaining + 1,
+        )
+        taken = rows[:remaining]
+        items.extend(_mainbar_pair(conn, row, redactor) for row in taken)
+        remaining -= len(taken)
+        if len(rows) > len(taken):
+            last = taken[-1]
+            still_pending = _has_pending_chat_run(
+                conn, session_id, recording_failed_run_ids
+            )
+            return MainBarPage(
+                items=tuple(items),
+                next_cursor=_mainbar_pending_cursor(
+                    session_id,
+                    pending_watermark,
+                    upper_watermark=upper_watermark,
+                    catchup_position=(last.activity_revision, last.run_id),
+                    historic_position=historic_position,
+                ),
+                runs_pending=still_pending,
+            )
+        if _has_pending_chat_run(
+            conn, session_id, recording_failed_run_ids
+        ):
+            return MainBarPage(
+                items=tuple(items),
+                next_cursor=_mainbar_pending_cursor(
+                    session_id,
+                    upper_watermark,
+                    historic_position=historic_position,
+                ),
+                runs_pending=True,
+            )
+    elif in_runs_segment:
         rows = _mainbar_run_rows(
             conn, session_id, runs_position, remaining + 1
         )
         taken = rows[:remaining]
-        items.extend(
-            MainBarRunPair(
-                run_id=row.run_id,
-                activity_revision=row.activity_revision,
-                session_id=row.session_id,
-                created_at=_created_at(conn, row.run_id),
-                user_message=_message(conn, row.run_id, "user", redactor),
-                assistant_message=_message(
-                    conn, row.run_id, "assistant", redactor
-                ),
-            )
-            for row in taken
-        )
+        items.extend(_mainbar_pair(conn, row, redactor) for row in taken)
         remaining -= len(taken)
         if taken:
             last = taken[-1]
@@ -573,6 +707,16 @@ def mainbar_pairs(
                 next_cursor=_mainbar_runs_cursor(
                     session_id, runs_position
                 ),
+            )
+        if _has_pending_chat_run(
+            conn, session_id, recording_failed_run_ids
+        ):
+            return MainBarPage(
+                items=tuple(items),
+                next_cursor=_mainbar_pending_cursor(
+                    session_id, _activity_watermark(conn)
+                ),
+                runs_pending=True,
             )
 
     historic_rows = _mainbar_historic_rows(
@@ -594,6 +738,13 @@ def mainbar_pairs(
             # No historic id has been consumed yet, so there is no honest
             # historic keyset position to sign. Replaying the exhausted Run
             # position starts the next page at the newest historic row.
+            if pending_watermark is not None:
+                return MainBarPage(
+                    items=tuple(items),
+                    next_cursor=_mainbar_historic_cursor(
+                        session_id, historic_position
+                    ),
+                )
             return MainBarPage(
                 items=tuple(items),
                 next_cursor=_mainbar_runs_cursor(session_id, runs_position),
@@ -605,6 +756,83 @@ def mainbar_pairs(
             ),
         )
     return MainBarPage(items=tuple(items), next_cursor=None)
+
+
+def _mainbar_pair(
+    conn, row: _MainBarRunRow, redactor: Redactor
+) -> MainBarRunPair:
+    return MainBarRunPair(
+        run_id=row.run_id,
+        activity_revision=row.activity_revision,
+        session_id=row.session_id,
+        created_at=_created_at(conn, row.run_id),
+        user_message=_message(conn, row.run_id, "user", redactor),
+        assistant_message=_message(conn, row.run_id, "assistant", redactor),
+    )
+
+
+def _activity_watermark(conn) -> int:
+    row = conn.execute(
+        "SELECT COALESCE(MAX(activity_revision), 0) FROM runs"
+    ).fetchone()
+    return 0 if row is None else row[0]
+
+
+def _has_pending_chat_run(
+    conn,
+    session_id: str,
+    recording_failed_run_ids: frozenset[str],
+) -> bool:
+    failed_clause = ""
+    params: list[Any] = [session_id, *IN_FLIGHT_RUN_PHASES]
+    if recording_failed_run_ids:
+        marks = ", ".join("?" for _ in recording_failed_run_ids)
+        failed_clause = f"AND run_id NOT IN ({marks})"
+        params.extend(sorted(recording_failed_run_ids))
+    row = conn.execute(
+        "SELECT 1 FROM runs WHERE session_id = ? AND purpose = 'chat' "
+        "AND phase IN (?, ?) " + failed_clause + " LIMIT 1",
+        params,
+    ).fetchone()
+    return row is not None
+
+
+def _mainbar_catchup_rows(
+    conn,
+    session_id: str,
+    after_revision: int,
+    through_revision: int,
+    position: tuple[int, str] | None,
+    count: int,
+) -> list[_MainBarRunRow]:
+    beyond = ""
+    params: list[Any] = [
+        _TERMINAL_PHASE,
+        session_id,
+        after_revision,
+        through_revision,
+    ]
+    if position is not None:
+        beyond = (
+            "AND (runs.activity_revision < ? OR "
+            "(runs.activity_revision = ? AND runs.run_id < ?)) "
+        )
+        params.extend([position[0], position[0], position[1]])
+    params.append(count)
+    return [
+        _MainBarRunRow(*row)
+        for row in conn.execute(
+            "SELECT runs.run_id, runs.session_id, runs.activity_revision "
+            "FROM runs WHERE runs.phase = ? AND runs.purpose = 'chat' "
+            "AND runs.session_id = ? AND runs.activity_revision > ? "
+            "AND runs.activity_revision <= ? "
+            "AND EXISTS (SELECT 1 FROM agent_log "
+            "WHERE agent_log.run_id = runs.run_id) "
+            + beyond
+            + "ORDER BY runs.activity_revision DESC, runs.run_id DESC LIMIT ?",
+            params,
+        ).fetchall()
+    ]
 
 
 def _mainbar_run_rows(

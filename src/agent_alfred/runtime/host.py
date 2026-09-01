@@ -720,13 +720,7 @@ class RuntimeHost:
     ) -> session_store.SessionMessagesPage:
         # The authoritative failure projection decides whether an in-flight
         # Run can still produce messages (see runtime.sessions).
-        projection = self._states.get().unrecorded_terminal_projection
-        recording_failed: frozenset[str] = frozenset()
-        if (
-            projection is not None
-            and projection.recording_state == "failed"
-        ):
-            recording_failed = frozenset({projection.run_id})
+        recording_failed = self._recording_failed_run_ids()
         with self._store.reading() as conn:
             return session_store.open_session(
                 conn,
@@ -737,6 +731,13 @@ class RuntimeHost:
                 title_max_chars=self._settings.prompt_preview_max_chars,
                 recording_failed_run_ids=recording_failed,
             )
+
+    def _recording_failed_run_ids(self) -> frozenset[str]:
+        """Run ids the authoritative in-process projection says cannot record."""
+        projection = self._states.get().unrecorded_terminal_projection
+        if projection is None or projection.recording_state != "failed":
+            return frozenset()
+        return frozenset({projection.run_id})
 
     def session_exists(self, session_id: str | None) -> bool:
         """Whether a Session row exists. A question, not a projection.
@@ -824,6 +825,7 @@ class RuntimeHost:
         cursor: str | None = None,
     ) -> runs.MainBarPage:
         """The MainBar's Run pairs and historic messages for one Session."""
+        recording_failed = self._recording_failed_run_ids()
         with self._store.reading() as conn:
             return runs.mainbar_pairs(
                 conn,
@@ -831,6 +833,7 @@ class RuntimeHost:
                 limit=limit,
                 cursor=cursor,
                 redactor=self._redactor,
+                recording_failed_run_ids=recording_failed,
             )
 
     def note_sink_disabled(self, sink: str, stage: str) -> None:

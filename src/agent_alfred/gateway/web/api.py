@@ -614,6 +614,7 @@ def _mainbar_payload(page) -> dict[str, Any]:
     return {
         "items": [_mainbar_item_json(item) for item in page.items],
         "next_cursor": page.next_cursor,
+        "runs_pending": page.runs_pending,
     }
 
 

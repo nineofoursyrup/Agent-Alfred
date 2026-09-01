@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 
 import pytest
 
@@ -80,6 +81,7 @@ def _host_over(
     script: list[str] | None = None,
     *,
     redactor: Redactor | None = None,
+    before_recording_commit: threading.Event | None = None,
 ) -> RuntimeHost:
     capture = CapturingSink(name="capture", flush_at_run_end=True)
     return RuntimeHost(
@@ -90,6 +92,7 @@ def _host_over(
         fanout=FanOutSink([capture], process_instance_id="proc-reads"),
         process_instance_id="proc-reads",
         redactor=redactor,
+        before_recording_commit=before_recording_commit,
     )
 
 
@@ -159,6 +162,7 @@ def _historic_host(
     script=None,
     *,
     redactor: Redactor | None = None,
+    before_recording_commit: threading.Event | None = None,
 ) -> RuntimeHost:
     """A Host over a real v2 database seeded with historic Message rows.
 
@@ -170,7 +174,12 @@ def _historic_host(
     for session_id, legacy_messages in messages_by_session.items():
         _seed_historic(conn, session_id, legacy_messages)
     schema.migrate(conn)
-    return _host_over(conn, script, redactor=redactor)
+    return _host_over(
+        conn,
+        script,
+        redactor=redactor,
+        before_recording_commit=before_recording_commit,
+    )
 
 
 # --- purpose classification -------------------------------------------------
@@ -600,13 +609,360 @@ def test_a_run_that_was_never_recorded_has_no_pair() -> None:
             host, "r-unrecorded", phase="finished", outcome="completed",
             session_id=session_id,
         )
-        _insert_run(host, "r-accepted", phase="accepted", session_id=session_id)
         page = host.mainbar_pairs(session_id=session_id)
         assert page.pairs == ()
         assert len(page.items) == 1
         assert isinstance(page.items[0], MainBarHistoricMessage)
         assert page.items[0].run_id is None
     finally:
+        host.close()
+
+
+class _FinalizerLatch(threading.Event):
+    """Expose arrival and release as two deterministic test gates."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.reached = threading.Event()
+        self.release = threading.Event()
+
+    def wait(self, timeout=None):
+        self.reached.set()
+        return self.release.wait(timeout)
+
+
+def test_mainbar_wait_cursor_sees_the_first_run_before_historic() -> None:
+    """A pending first Run owns the Run-to-historic boundary.
+
+    Reusing the exact wait cursor after recording must reveal that Run before
+    any legacy row, even though finalize assigns it a newer activity revision.
+    """
+    from agent_alfred.runtime.cursor import decode_cursor
+
+    latch = _FinalizerLatch()
+    host = _historic_host(
+        {
+            "s-mainbar-wait": ["旧问题", "旧回答"],
+            "s-mainbar-other": ["别的会话"],
+        },
+        script=["新回答"],
+        before_recording_commit=latch,
+    )
+    host.start()
+    try:
+        submitted = host.submit(
+            SubmitRequest(message="新问题", session_id="s-mainbar-wait")
+        )
+        assert latch.reached.wait(2.0)
+        assert host.snapshot().coordinator_state == "recording_pending"
+
+        api = DashboardApi(facade=host)
+        status, waiting = api.mainbar(
+            {"session_id": "s-mainbar-wait", "limit": "1"}
+        )
+        assert status == 200
+        assert waiting["items"] == []
+        assert waiting["runs_pending"] is True
+        assert waiting["next_cursor"] is not None
+        wait_cursor = waiting["next_cursor"]
+        payload = decode_cursor(wait_cursor, version=3, kind="mainbar")
+        assert payload["seg"] == "runs_pending"
+        assert payload["s"] == "s-mainbar-wait"
+        assert api.mainbar(
+            {"session_id": "s-mainbar-other", "cursor": wait_cursor}
+        ) == (400, {"code": "malformed_cursor"})
+
+        # An instantaneous reread is a stable wait-page snapshot, not IO.
+        assert api.mainbar(
+            {
+                "session_id": "s-mainbar-wait",
+                "limit": "1",
+                "cursor": wait_cursor,
+            }
+        ) == (status, waiting)
+
+        latch.release.set()
+        host.wait(submitted.run_id)
+
+        status, recorded = api.mainbar(
+            {
+                "session_id": "s-mainbar-wait",
+                "limit": "1",
+                "cursor": wait_cursor,
+            }
+        )
+        assert status == 200
+        assert recorded["runs_pending"] is False
+        assert [item["run_id"] for item in recorded["items"]] == [
+            submitted.run_id
+        ]
+        assert recorded["next_cursor"] is not None
+
+        seen = list(recorded["items"])
+        cursor = recorded["next_cursor"]
+        while cursor is not None:
+            status, page = api.mainbar(
+                {
+                    "session_id": "s-mainbar-wait",
+                    "limit": "1",
+                    "cursor": cursor,
+                }
+            )
+            assert status == 200
+            seen.extend(page["items"])
+            cursor = page["next_cursor"]
+        assert [item["type"] for item in seen] == [
+            "run_pair",
+            "historic_message",
+            "historic_message",
+        ]
+        assert sum(
+            item.get("run_id") == submitted.run_id for item in seen
+        ) == 1
+    finally:
+        latch.release.set()
+        host.close()
+
+
+class _FailMainbarFinalize:
+    def __init__(self, inner: sqlite3.Connection, armed: dict[str, bool]):
+        self._inner = inner
+        self._armed = armed
+
+    def execute(self, sql, parameters=()):
+        if (
+            self._armed["value"]
+            and sql.lstrip().upper().startswith("UPDATE")
+            and "finished_at" in sql
+        ):
+            raise sqlite3.OperationalError("injected finalize failure")
+        return self._inner.execute(sql, parameters)
+
+    def __getattr__(self, name):
+        return getattr(self._inner, name)
+
+
+def test_mainbar_failed_recording_releases_wait_cursor_to_historic() -> None:
+    """Only the Host's authoritative failed projection releases the wait."""
+    conn = _v2_database()
+    _seed_historic(conn, "s-mainbar-fail", ["旧问题"])
+    schema.migrate(conn)
+    armed = {"value": False}
+    latch = _FinalizerLatch()
+    host = _host_over(
+        _FailMainbarFinalize(conn, armed),
+        ["未保存回答"],
+        before_recording_commit=latch,
+    )
+    host.start()
+    try:
+        submitted = host.submit(
+            SubmitRequest(message="新问题", session_id="s-mainbar-fail")
+        )
+        assert latch.reached.wait(2.0)
+        assert host.snapshot().coordinator_state == "recording_pending"
+        api = DashboardApi(facade=host)
+        status, waiting = api.mainbar(
+            {"session_id": "s-mainbar-fail", "limit": "5"}
+        )
+        assert status == 200
+        assert waiting["items"] == []
+        assert waiting["runs_pending"] is True
+        wait_cursor = waiting["next_cursor"]
+        assert wait_cursor is not None
+
+        armed["value"] = True
+        latch.release.set()
+        host.wait(submitted.run_id)
+        snapshot = host.snapshot()
+        assert snapshot.coordinator_state == "recording_failed"
+        assert snapshot.unrecorded_terminal_projection is not None
+        assert snapshot.unrecorded_terminal_projection.run_id == submitted.run_id
+
+        status, released = api.mainbar(
+            {
+                "session_id": "s-mainbar-fail",
+                "limit": "5",
+                "cursor": wait_cursor,
+            }
+        )
+        assert status == 200
+        assert released["runs_pending"] is False
+        assert [item["type"] for item in released["items"]] == [
+            "historic_message"
+        ]
+        assert released["items"][0]["blocks"] == [
+            {"type": "text", "text": "旧问题"}
+        ]
+        assert all(
+            item.get("run_id") != submitted.run_id for item in released["items"]
+        )
+        assert released["next_cursor"] is None
+    finally:
+        latch.release.set()
+        host.close()
+
+
+def test_mainbar_terminal_and_non_chat_runs_do_not_block_historic() -> None:
+    host = _historic_host({"s-mainbar-nonblocking": ["旧问题"]})
+    host.start()
+    try:
+        _insert_run(
+            host,
+            "r-old-terminal",
+            phase="finished",
+            outcome="failed",
+            session_id="s-mainbar-nonblocking",
+        )
+        _insert_run(
+            host,
+            "r-system-live",
+            purpose="inference_probe",
+            phase="running",
+            session_id="s-mainbar-nonblocking",
+        )
+        page = host.mainbar_pairs(session_id="s-mainbar-nonblocking")
+        assert page.runs_pending is False
+        assert page.next_cursor is None
+        assert [message_plain_text(item.message) for item in page.items] == [
+            "旧问题"
+        ]
+    finally:
+        host.close()
+
+
+def _record_seeded_mainbar_run(host: RuntimeHost, run_id: str, reply: str) -> None:
+    with host._db_lock:  # noqa: SLF001 - deterministic setup transaction
+        conn = host._conn  # noqa: SLF001
+        revision = schema.allocate_activity_revision(conn)
+        schema.update_run_phase(
+            conn,
+            run_id=run_id,
+            from_phase="accepted",
+            to_phase="finished",
+            activity_revision=revision,
+            outcome="completed",
+            finished_at=_TS,
+            session_id="s-mainbar-many",
+        )
+        for role, text in (("user", f"q-{run_id}"), ("assistant", reply)):
+            conn.execute(
+                """INSERT INTO agent_log (
+                     session_id, run_id, role, content, source, telemetry,
+                     created_at
+                   ) VALUES (?, ?, ?, ?, 'web', NULL, ?)""",
+                (
+                    "s-mainbar-many",
+                    run_id,
+                    role,
+                    json.dumps([{"type": "text", "text": text}]),
+                    _TS,
+                ),
+            )
+        conn.commit()
+
+
+def test_mainbar_catches_multiple_pending_runs_after_a_recorded_page() -> None:
+    """The wait checkpoint is after the old page, not after future revisions."""
+    host = _historic_host(
+        {"s-mainbar-many": ["旧消息"]}, script=["已有回答"]
+    )
+    host.start()
+    try:
+        existing = _run(host, "已有问题", "s-mainbar-many")
+        _insert_run(host, "r-pending-one", session_id="s-mainbar-many")
+        _insert_run(host, "r-pending-two", session_id="s-mainbar-many")
+
+        first = host.mainbar_pairs(session_id="s-mainbar-many", limit=1)
+        assert [item.run_id for item in first.items] == [existing.run_id]
+        assert first.runs_pending is True
+        wait_cursor = first.next_cursor
+        assert wait_cursor is not None
+
+        _record_seeded_mainbar_run(host, "r-pending-one", "reply-one")
+        still_waiting = host.mainbar_pairs(
+            session_id="s-mainbar-many", limit=5, cursor=wait_cursor
+        )
+        assert still_waiting.items == ()
+        assert still_waiting.next_cursor == wait_cursor
+        assert still_waiting.runs_pending is True
+
+        _record_seeded_mainbar_run(host, "r-pending-two", "reply-two")
+
+        run_ids = [existing.run_id]
+        historic = []
+        cursor = wait_cursor
+        while cursor is not None:
+            page = host.mainbar_pairs(
+                session_id="s-mainbar-many", limit=1, cursor=cursor
+            )
+            for item in page.items:
+                if isinstance(item, MainBarHistoricMessage):
+                    historic.append(message_plain_text(item.message))
+                else:
+                    run_ids.append(item.run_id)
+            cursor = page.next_cursor
+
+        assert run_ids == [
+            existing.run_id,
+            "r-pending-two",
+            "r-pending-one",
+        ]
+        assert len(run_ids) == len(set(run_ids))
+        assert historic == ["旧消息"]
+    finally:
+        host.close()
+
+
+def test_mainbar_reopens_a_historic_cursor_without_repeating_historic() -> None:
+    latch = _FinalizerLatch()
+    host = _historic_host(
+        {"s-mainbar-reopen": ["h1", "h2", "h3"]},
+        script=["新回答"],
+        before_recording_commit=latch,
+    )
+    host.start()
+    try:
+        first = host.mainbar_pairs(session_id="s-mainbar-reopen", limit=1)
+        assert message_plain_text(first.items[0].message) == "h3"
+        historic_cursor = first.next_cursor
+        assert historic_cursor is not None
+
+        submitted = host.submit(
+            SubmitRequest(message="新问题", session_id="s-mainbar-reopen")
+        )
+        assert latch.reached.wait(2.0)
+        assert host.snapshot().coordinator_state == "recording_pending"
+        waiting = host.mainbar_pairs(
+            session_id="s-mainbar-reopen", limit=1, cursor=historic_cursor
+        )
+        assert waiting.items == ()
+        assert waiting.runs_pending is True
+        wait_cursor = waiting.next_cursor
+        assert wait_cursor is not None
+
+        latch.release.set()
+        host.wait(submitted.run_id)
+        seen = ["historic:h3"]
+        cursor = wait_cursor
+        while cursor is not None:
+            page = host.mainbar_pairs(
+                session_id="s-mainbar-reopen", limit=1, cursor=cursor
+            )
+            for item in page.items:
+                if isinstance(item, MainBarHistoricMessage):
+                    seen.append(f"historic:{message_plain_text(item.message)}")
+                else:
+                    seen.append(f"run:{item.run_id}")
+            cursor = page.next_cursor
+        assert seen == [
+            "historic:h3",
+            f"run:{submitted.run_id}",
+            "historic:h2",
+            "historic:h1",
+        ]
+    finally:
+        latch.release.set()
         host.close()
 
 
@@ -724,7 +1080,7 @@ def test_mainbar_cursor_is_session_bound_fail_closed_and_idempotent() -> None:
     try:
         first = host.mainbar_pairs(session_id="s-a", limit=1)
         assert first.next_cursor is not None
-        payload = decode_cursor(first.next_cursor, version=2, kind="mainbar")
+        payload = decode_cursor(first.next_cursor, version=3, kind="mainbar")
         assert payload["seg"] == "historic"
         assert payload["s"] == "s-a"
         assert type(payload["id"]) is int
@@ -740,20 +1096,44 @@ def test_mainbar_cursor_is_session_bound_fail_closed_and_idempotent() -> None:
             )
 
         malformed = [
-            {"v": 2, "k": "mainbar", "seg": "unknown", "s": "s-a"},
+            {"v": 3, "k": "mainbar", "seg": "unknown", "s": "s-a"},
             {
-                "v": 2,
+                "v": 3,
                 "k": "mainbar",
                 "seg": "historic",
                 "s": "s-a",
                 "id": True,
             },
             {
-                "v": 2,
+                "v": 3,
                 "k": "mainbar",
                 "seg": "historic",
                 "s": "s-a",
                 "id": -1,
+            },
+            {
+                "v": 3,
+                "k": "mainbar",
+                "seg": "runs_pending",
+                "s": "s-a",
+                "w": True,
+            },
+            {
+                "v": 3,
+                "k": "mainbar",
+                "seg": "runs_pending",
+                "s": "s-a",
+                "w": 2,
+                "u": 1,
+            },
+            {
+                "v": 3,
+                "k": "mainbar",
+                "seg": "runs_pending",
+                "s": "s-a",
+                "w": 1,
+                "ca": 2,
+                "cr": "r2",
             },
         ]
         for payload in malformed:
@@ -1099,7 +1479,7 @@ def test_run_reads_reject_boolean_activity_revisions(
             ),
             "mainbar": encode_cursor(
                 {
-                    "v": 2,
+                    "v": 3,
                     "k": "mainbar",
                     "seg": "runs",
                     "s": session_id,
@@ -1151,7 +1531,7 @@ def test_run_reads_keep_exact_integer_activity_revisions(
             ),
             "mainbar": encode_cursor(
                 {
-                    "v": 2,
+                    "v": 3,
                     "k": "mainbar",
                     "seg": "runs",
                     "s": session_id,
@@ -1205,7 +1585,7 @@ def test_paged_web_reads_reject_out_of_sqlite_range_positions_before_sql(
         ),
         "mainbar": encode_cursor(
             {
-                "v": 2,
+                "v": 3,
                 "k": "mainbar",
                 "seg": "runs",
                 "s": session_id,
@@ -1215,7 +1595,7 @@ def test_paged_web_reads_reject_out_of_sqlite_range_positions_before_sql(
         ),
         "mainbar_historic": encode_cursor(
             {
-                "v": 2,
+                "v": 3,
                 "k": "mainbar",
                 "seg": "historic",
                 "s": session_id,
@@ -1275,7 +1655,7 @@ def test_mainbar_historic_rejects_boolean_ids_before_sql(
 
     cursor = encode_cursor(
         {
-            "v": 2,
+            "v": 3,
             "k": "mainbar",
             "seg": "historic",
             "s": "s-cursor",
@@ -1301,7 +1681,7 @@ def test_mainbar_historic_keeps_exact_integer_ids(historic_id: int) -> None:
     try:
         cursor = encode_cursor(
             {
-                "v": 2,
+                "v": 3,
                 "k": "mainbar",
                 "seg": "historic",
                 "s": "s-cursor",
@@ -1324,7 +1704,7 @@ def test_mainbar_negative_run_position_cannot_skip_its_run_pair() -> None:
         admitted = _run(host, "新问题", "s-mixed")
         cursor = encode_cursor(
             {
-                "v": 2,
+                "v": 3,
                 "k": "mainbar",
                 "seg": "runs",
                 "s": "s-mixed",

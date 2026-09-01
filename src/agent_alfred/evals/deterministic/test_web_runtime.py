@@ -1724,7 +1724,10 @@ def test_malformed_cursors_reach_one_api_bad_request_boundary_on_the_real_host(
         host.close()
 
 
-def test_a_v1_mainbar_cursor_is_a_bad_request_on_the_real_host() -> None:
+@pytest.mark.parametrize("old_version", [1, 2])
+def test_an_old_mainbar_cursor_is_a_bad_request_on_the_real_host(
+    old_version: int,
+) -> None:
     host, _conn = build_runtime_host()
     host.start()
     try:
@@ -1732,7 +1735,7 @@ def test_a_v1_mainbar_cursor_is_a_bad_request_on_the_real_host() -> None:
         session_id = host.create_session()
         old_cursor = encode_cursor(
             {
-                "v": 1,
+                "v": old_version,
                 "k": "mainbar",
                 "s": session_id,
                 "ar": 0,
