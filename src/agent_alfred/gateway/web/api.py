@@ -225,6 +225,26 @@ def busy_summary_from(snapshot: RuntimeSnapshot) -> BusySummary | None:
     active = snapshot.active_run
     if active is None:
         return None
+    projection = snapshot.unrecorded_terminal_projection
+    if (
+        snapshot.coordinator_state == "recording_failed"
+        and active.phase == "finished"
+        and active.outcome == "interrupted"
+        and active.started_at is None
+        and active.recording_state == "failed"
+        and projection is not None
+        and projection.run_id == active.run_id
+        and projection.session_id == active.session_id
+        and projection.outcome == "interrupted"
+        and projection.recording_state == "failed"
+        and projection.reply_text is None
+        and projection.error == "handoff_failed"
+    ):
+        # This Run committed its accepted row but never reached the unique
+        # execution thread. If closing it as interrupted also failed, the
+        # recovery projection remains authoritative for fail-closed admission,
+        # but it does not make the unexecuted Run an addressable destination.
+        return None
     shelf, _known = runs.classify_purpose(active.purpose)
     return BusySummary(
         purpose=active.purpose,

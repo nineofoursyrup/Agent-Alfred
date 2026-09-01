@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import socket
+import sqlite3
 import time
 from dataclasses import replace
 from io import BytesIO
@@ -27,6 +28,11 @@ from urllib.parse import quote
 
 import pytest
 
+from agent_alfred import schema
+from agent_alfred.evals.deterministic._web_runtime_test_helpers import (
+    FailFinalizeWhen,
+    build_runtime_host,
+)
 from agent_alfred.events import EventEnvelope, FanOutSink, RunStarted, SequencedEvent
 from agent_alfred.gateway.web import broker as broker_module
 from agent_alfred.gateway.web import frames
@@ -192,7 +198,7 @@ def _free_port() -> int:
 
 
 class _Server:
-    def __init__(self, tmp_path, *, connection_budget=None):
+    def __init__(self, tmp_path, *, connection_budget=None, facade=None):
         self.port = _free_port()
         self.broker = SSEBroker(
             process_instance_id=INSTANCE,
@@ -211,7 +217,7 @@ class _Server:
         self.broker.start()
         self.fanout = FanOutSink([self.broker], process_instance_id=INSTANCE)
         self.guard = RequestGuard(port=self.port, csrf_token="token-from-process")
-        self.facade = _Facade()
+        self.facade = _Facade() if facade is None else facade
         context = HandlerContext(
             guard=self.guard,
             api=DashboardApi(facade=self.facade),
@@ -877,7 +883,13 @@ def test_recording_failed_is_a_real_http_503(server) -> None:
     )
 
     assert head.startswith(b"HTTP/1.1 503")
-    assert json.loads(body)["code"] == "recording_unavailable"
+    payload = json.loads(body)
+    assert payload["code"] == "recording_unavailable"
+    assert payload["busy"]["navigation"] == {
+        "href": "/runs/run-already-active?filter=chat",
+        "run_id": "run-already-active",
+        "filter": "chat",
+    }
     _assert_no_cross_origin_permission(head)
 
 
@@ -904,6 +916,50 @@ def test_handoff_failed_is_a_real_http_503_without_a_run_id(server) -> None:
     assert head.startswith(b"HTTP/1.1 503")
     assert json.loads(body) == {"code": "admission_failed"}
     _assert_no_cross_origin_permission(head)
+
+
+def test_handoff_finalize_double_failure_never_leaks_its_id_on_later_http_refusal(
+    tmp_path,
+) -> None:
+    flag = {"armed": False}
+    database = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(database)
+    wrapped = FailFinalizeWhen(database, flag, "UPDATE runs SET phase = ?")
+
+    def refuse_handoff(_item) -> None:
+        raise RuntimeError("injected handoff failure")
+
+    host, conn = build_runtime_host(conn=wrapped, publish_work=refuse_handoff)
+    host.start()
+    server = _Server(tmp_path, facade=host)
+    try:
+        session_id = host.create_session()
+        flag["armed"] = True
+        request = json.dumps({"message": "hi", "session_id": session_id}).encode()
+
+        first_head, first_body = _post_runs(server, request)
+        row = conn.execute(
+            "SELECT run_id, phase, outcome, started_at FROM runs"
+        ).fetchone()
+        assert row is not None
+        failed_run_id, phase, outcome, started_at = row
+
+        second_head, second_body = _post_runs(server, request)
+
+        first = json.loads(first_body)
+        second = json.loads(second_body)
+        assert first_head.startswith(b"HTTP/1.1 503")
+        assert first == {"code": "admission_failed"}
+        assert second_head.startswith(b"HTTP/1.1 503")
+        assert second == {"code": "recording_unavailable"}
+        assert (phase, outcome, started_at) == ("accepted", None, None)
+        for payload in (first, second):
+            serialized = json.dumps(payload, sort_keys=True)
+            assert failed_run_id not in serialized
+            assert "/runs/" not in serialized
+    finally:
+        server.close()
+        host.close()
 
 
 def test_known_and_raced_busy_are_the_same_json_on_a_real_socket(server) -> None:
