@@ -395,9 +395,9 @@ def _validate_snapshot_relations(snapshot: RunStateSnapshot) -> RunStateSnapshot
             raise ValueError(
                 "accepted coordinator_state requires started_at to be null"
             )
-        if state == "running" and active.started_at is None:
+        if state == "running" and not active.started_at:
             raise ValueError(
-                "running coordinator_state requires a non-null started_at"
+                "running coordinator_state requires a non-empty started_at"
             )
         if active.recording_state is not None:
             raise ValueError("active_run recording_state contradicts coordinator_state")
@@ -408,6 +408,10 @@ def _validate_snapshot_relations(snapshot: RunStateSnapshot) -> RunStateSnapshot
         if state == "accepted" and active.current_step is not None:
             raise ValueError("accepted coordinator_state cannot have a current step")
     elif state == "recording_pending":
+        if not active.started_at:
+            raise ValueError(
+                "recording_pending requires a non-empty started_at"
+            )
         if active.recording_state == "pending":
             if projection is None:
                 raise ValueError(
@@ -426,6 +430,23 @@ def _validate_snapshot_relations(snapshot: RunStateSnapshot) -> RunStateSnapshot
         if projection is None:
             raise ValueError(
                 "recording_failed requires unrecorded_terminal_projection"
+            )
+        unstarted_handoff_failure = (
+            active.started_at is None
+            and active.phase == "finished"
+            and active.outcome == "interrupted"
+            and active.recording_state == "failed"
+            and projection.outcome == "interrupted"
+            and projection.recording_state == "failed"
+            and projection.error == "handoff_failed"
+            and projection.reply_preview is None
+            and active.current_step is None
+            and snapshot.step is None
+        )
+        if not active.started_at and not unstarted_handoff_failure:
+            raise ValueError(
+                "recording_failed requires a non-empty started_at unless "
+                "an unstarted handoff failure could not be finalized"
             )
 
     if snapshot.recording_state != active.recording_state:

@@ -223,16 +223,21 @@ def snapshot_patch(
     pending: bool = False,
     run_id: str = "r1",
 ):
+    from agent_alfred.gateway.web.state import (
+        build_snapshot,
+        snapshot_from_payload,
+        snapshot_payload,
+    )
     from agent_alfred.runtime.snapshot import (
         ActiveRunSummary,
         RuntimeSnapshot,
         UnrecordedTerminalProjection,
     )
 
-    return RuntimeSnapshot(
+    runtime = RuntimeSnapshot(
         process_instance_id=instance,
         state_revision=revision,
-        coordinator_state="recording_pending" if pending else "idle",
+        coordinator_state="recording_pending",
         active_run=ActiveRunSummary(
             run_id=run_id,
             purpose="chat",
@@ -241,17 +246,17 @@ def snapshot_patch(
             outcome="completed",
             session_id="s1",
             prompt_preview="hi",
-            started_at=None,
+            started_at="2026-01-01T00:00:00Z",
             recording_state="pending" if pending else "recorded",
         ),
         unrecorded_terminal_projection=(
             UnrecordedTerminalProjection(
-                run_id="r1",
+                run_id=run_id,
                 purpose="chat",
                 outcome="completed",
                 reply_text="reply",
                 error=None,
-                recording_state="pending" if pending else "failed",
+                recording_state="pending",
                 session_id="s1",
                 prompt_preview="hi",
             )
@@ -259,6 +264,8 @@ def snapshot_patch(
             else None
         ),
     )
+    built = build_snapshot(runtime, step=None, session_valid=True)
+    return snapshot_from_payload(snapshot_payload(built))
 
 
 def refused(patch, current) -> str:

@@ -499,7 +499,7 @@ def test_the_snapshot_names_the_unrecorded_terminal_projection_bounded() -> None
                 outcome="completed",
                 session_id="s1",
                 prompt_preview="hi",
-                started_at=None,
+                started_at="2026-01-01T00:00:00Z",
                 recording_state="pending",
             ),
             unrecorded_terminal_projection=UnrecordedTerminalProjection(
@@ -564,7 +564,7 @@ def _recording_pending_snapshot(**kwargs) -> RuntimeSnapshot:
             phase="finished",
             session_id="s1",
             prompt_preview="hi",
-            started_at=None,
+            started_at="2026-01-01T00:00:00Z",
             recording_state="pending",
             current_step=2,
             outcome="completed",

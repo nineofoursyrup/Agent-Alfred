@@ -163,7 +163,7 @@ def test_snapshot_wire_valid_closed_document_round_trips() -> None:
     assert snapshot_payload(snapshot_from_payload(wire)) == wire
 
 
-def test_snapshot_wire_all_nullable_strings_round_trip_as_null() -> None:
+def test_snapshot_wire_nullable_metadata_strings_round_trip_as_null() -> None:
     wire = _wire_payload(with_step=True, with_projection=True)
     active = wire["active_run"]
     projection = wire["unrecorded_terminal_projection"]
@@ -175,7 +175,7 @@ def test_snapshot_wire_all_nullable_strings_round_trip_as_null() -> None:
     assert isinstance(attempts, list)
     attempt = attempts[0]
     assert isinstance(attempt, dict)
-    for field in ("session_id", "prompt_preview", "started_at"):
+    for field in ("session_id", "prompt_preview"):
         active[field] = None
     for field in ("reply_preview", "error", "session_id", "prompt_preview"):
         projection[field] = None

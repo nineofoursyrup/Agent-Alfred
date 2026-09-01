@@ -10,7 +10,11 @@ from agent_alfred.gateway.web.state import (
     snapshot_from_payload,
     snapshot_payload,
 )
-from agent_alfred.runtime.snapshot import ActiveRunSummary, RuntimeSnapshot
+from agent_alfred.runtime.snapshot import (
+    ActiveRunSummary,
+    RuntimeSnapshot,
+    UnrecordedTerminalProjection,
+)
 
 
 def _running_wire() -> dict[str, object]:
@@ -222,6 +226,153 @@ def test_build_snapshot_rejects_running_without_a_start_time() -> None:
         build_snapshot(runtime, step=None, session_valid=True)
 
 
+@pytest.mark.parametrize("seam", ["wire", "build"])
+def test_running_requires_a_non_empty_start_time(seam: str) -> None:
+    wire = _running_wire()
+    active = wire["active_run"]
+    assert isinstance(active, dict)
+    active["started_at"] = ""
+
+    with pytest.raises(ValueError, match="started_at"):
+        if seam == "wire":
+            snapshot_from_payload(wire)
+        else:
+            build_snapshot(
+                RuntimeSnapshot(
+                    process_instance_id="process-1",
+                    state_revision=1,
+                    coordinator_state="running",
+                    active_run=ActiveRunSummary(
+                        run_id="run-1",
+                        purpose="chat",
+                        gateway="web",
+                        phase="running",
+                        session_id="session-1",
+                        prompt_preview="hello",
+                        started_at="",
+                        recording_state=None,
+                    ),
+                    unrecorded_terminal_projection=None,
+                ),
+                step=None,
+                session_valid=True,
+            )
+
+
+@pytest.mark.parametrize("started_at", [None, ""], ids=["null", "empty"])
+@pytest.mark.parametrize(
+    ("state", "recording_state"),
+    [
+        pytest.param("recording_pending", "pending", id="pending"),
+        pytest.param("recording_failed", "failed", id="failed"),
+    ],
+)
+@pytest.mark.parametrize("seam", ["wire", "build"])
+def test_terminal_recording_requires_the_execution_start_time(
+    seam: str,
+    state: str,
+    recording_state: str,
+    started_at: str | None,
+) -> None:
+    wire = _lifecycle_wire(
+        state,
+        active_phase="finished",
+        active_outcome="completed",
+        active_recording=recording_state,
+        projection_recording=recording_state,
+    )
+    active = wire["active_run"]
+    assert isinstance(active, dict)
+    active["started_at"] = started_at
+
+    with pytest.raises(ValueError, match="started_at"):
+        if seam == "wire":
+            snapshot_from_payload(wire)
+        else:
+            build_snapshot(
+                _terminal_runtime(
+                    state=state,
+                    outcome="completed",
+                    recording_state=recording_state,
+                    started_at=started_at,
+                    error=None,
+                ),
+                step=None,
+                session_valid=True,
+            )
+
+
+@pytest.mark.parametrize("seam", ["wire", "build"])
+def test_unstarted_handoff_double_failure_is_the_only_terminal_exception(
+    seam: str,
+) -> None:
+    wire = _unstarted_handoff_failure_wire()
+
+    if seam == "wire":
+        assert snapshot_payload(snapshot_from_payload(wire)) == wire
+    else:
+        built = build_snapshot(
+            _terminal_runtime(
+                state="recording_failed",
+                outcome="interrupted",
+                recording_state="failed",
+                started_at=None,
+                error="handoff_failed",
+            ),
+            step=None,
+            session_valid=True,
+        )
+        assert snapshot_payload(built) == wire
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "outcome",
+        "error",
+        "started_at_empty",
+        "reply_preview",
+        "current_step",
+        "step",
+        "current_step_and_step",
+    ],
+)
+def test_unstarted_terminal_exception_is_a_closed_handoff_failure_shape(
+    mutation: str,
+) -> None:
+    wire = _unstarted_handoff_failure_wire()
+    active = wire["active_run"]
+    projection = wire["unrecorded_terminal_projection"]
+    assert isinstance(active, dict)
+    assert isinstance(projection, dict)
+    if mutation == "outcome":
+        active["outcome"] = projection["outcome"] = "failed"
+    elif mutation == "error":
+        projection["error"] = "database_failed"
+    elif mutation == "started_at_empty":
+        active["started_at"] = ""
+    elif mutation == "reply_preview":
+        projection["reply_preview"] = "reply"
+    elif mutation == "current_step":
+        active["current_step"] = 0
+    elif mutation == "step":
+        wire["step"] = {
+            "step_index": 0,
+            "attempts": [],
+            "attempts_truncated": False,
+        }
+    else:
+        active["current_step"] = 0
+        wire["step"] = {
+            "step_index": 0,
+            "attempts": [],
+            "attempts_truncated": False,
+        }
+
+    with pytest.raises(ValueError):
+        snapshot_from_payload(wire)
+
+
 def test_wire_rejects_current_step_without_its_projection() -> None:
     wire = _running_wire()
     active = wire["active_run"]
@@ -424,3 +575,57 @@ def _lifecycle_wire(
             "prompt_preview": "hello",
         }
     return wire
+
+
+def _unstarted_handoff_failure_wire() -> dict[str, object]:
+    wire = _lifecycle_wire(
+        "recording_failed",
+        active_phase="finished",
+        active_outcome="interrupted",
+        active_recording="failed",
+        projection_recording="failed",
+    )
+    active = wire["active_run"]
+    projection = wire["unrecorded_terminal_projection"]
+    assert isinstance(active, dict)
+    assert isinstance(projection, dict)
+    active["started_at"] = None
+    projection["error"] = "handoff_failed"
+    projection["reply_preview"] = None
+    return wire
+
+
+def _terminal_runtime(
+    *,
+    state: str,
+    outcome: str,
+    recording_state: str,
+    started_at: str | None,
+    error: str | None,
+) -> RuntimeSnapshot:
+    return RuntimeSnapshot(
+        process_instance_id="process-1",
+        state_revision=1,
+        coordinator_state=state,
+        active_run=ActiveRunSummary(
+            run_id="run-1",
+            purpose="chat",
+            gateway="web",
+            phase="finished",
+            outcome=outcome,
+            session_id="session-1",
+            prompt_preview="hello",
+            started_at=started_at,
+            recording_state=recording_state,
+        ),
+        unrecorded_terminal_projection=UnrecordedTerminalProjection(
+            run_id="run-1",
+            purpose="chat",
+            outcome=outcome,
+            reply_text=None if error == "handoff_failed" else "done",
+            error=error,
+            recording_state=recording_state,
+            session_id="session-1",
+            prompt_preview="hello",
+        ),
+    )
