@@ -642,7 +642,6 @@ def _mainbar_item_json(item) -> dict[str, Any]:
         "blocks": [_block_json(block) for block in item.message.blocks],
         "source": item.source,
         "created_at": item.created_at,
-        "telemetry": item.telemetry,
     }
 
 

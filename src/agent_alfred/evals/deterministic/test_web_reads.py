@@ -22,6 +22,7 @@ import pytest
 from agent_alfred import schema
 from agent_alfred.clock import FakeClock
 from agent_alfred.events import CapturingSink, FanOutSink
+from agent_alfred.gateway.web.api import DashboardApi
 from agent_alfred.messages import message_plain_text
 from agent_alfred.model import ScriptedModel, ScriptedModelFactory
 from agent_alfred.redact import Redactor
@@ -633,19 +634,12 @@ def test_historic_messages_are_visible_in_mainbar_without_a_fabricated_run() -> 
     host = _historic_host({"s-historic": ["旧问题", "旧回答"]})
     host.start()
     try:
-        with host._db_lock:  # noqa: SLF001 - legacy fixture setup
-            host._conn.execute(  # noqa: SLF001
-                "UPDATE agent_log SET telemetry = ? WHERE session_id = ? AND id = 1",
-                (json.dumps({"legacy": "kept"}), "s-historic"),
-            )
-            host._conn.commit()  # noqa: SLF001
         page = host.mainbar_pairs(session_id="s-historic")
         assert [message_plain_text(item.message) for item in page.items] == [
             "旧问题",
             "旧回答",
         ]
         assert all(item.run_id is None for item in page.items)
-        assert page.items[0].telemetry == {"legacy": "kept"}
     finally:
         host.close()
 
@@ -903,6 +897,57 @@ def test_historic_messages_go_through_the_central_redactor() -> None:
         page = host.open_session("s-historic-secret", page_size=10)
         mainbar = host.mainbar_pairs(session_id="s-historic-secret")
         _assert_redaction_canary_absent((inbox, page, mainbar))
+    finally:
+        host.close()
+
+
+def test_mainbar_never_sends_historic_telemetry_to_the_browser() -> None:
+    """Legacy telemetry remains storage/session history, not MainBar data."""
+    conn = _v2_database()
+    legacy_telemetry = {
+        "authorization": f"Bearer {_REDACTION_CANARY}",
+        "api_key": _REDACTION_CANARY,
+        "detail": _REDACTION_CANARY,
+    }
+    _seed_historic(
+        conn,
+        "s-historic-telemetry",
+        [f"historic body {_REDACTION_CANARY}"],
+    )
+    conn.execute(
+        "UPDATE agent_log SET telemetry = ? WHERE session_id = ?",
+        (
+            json.dumps(legacy_telemetry),
+            "s-historic-telemetry",
+        ),
+    )
+    conn.commit()
+    schema.migrate(conn)
+    host = _host_over(conn, redactor=Redactor((_REDACTION_CANARY,)))
+    try:
+        session_page = host.open_session(
+            "s-historic-telemetry", page_size=10
+        )
+        assert session_page.messages[0].telemetry == legacy_telemetry
+        historic_item = host.mainbar_pairs(
+            session_id="s-historic-telemetry"
+        ).items[0]
+        assert not hasattr(historic_item, "telemetry")
+        status, payload = DashboardApi(facade=host).mainbar(
+            {"session_id": "s-historic-telemetry"}
+        )
+        assert status == 200
+        [historic] = payload["items"]
+        assert historic == {
+            "type": "historic_message",
+            "run_id": None,
+            "role": "user",
+            "blocks": [{"type": "text", "text": "historic body ***"}],
+            "source": "cli",
+            "created_at": "legacy-00",
+        }
+        assert "telemetry" not in historic
+        _assert_redaction_canary_absent(payload)
     finally:
         host.close()
 

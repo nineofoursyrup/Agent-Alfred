@@ -152,7 +152,6 @@ class MainBarHistoricMessage:
     message: Message
     source: str
     created_at: str
-    telemetry: Any | None
 
     @property
     def run_id(self) -> None:
@@ -580,13 +579,12 @@ def mainbar_pairs(
     )
     taken_historic = historic_rows[:remaining]
     for row in taken_historic:
-        row_id, role, content, source, telemetry, created_at = row
+        row_id, role, content, source, created_at = row
         items.append(
             MainBarHistoricMessage(
                 message=_stored_message(role, content, redactor),
                 source=source,
                 created_at=created_at,
-                telemetry=None if telemetry is None else json.loads(telemetry),
             )
         )
         historic_position = row_id
@@ -639,7 +637,7 @@ def _mainbar_historic_rows(
     conn, session_id: str, after_id: int | None, count: int
 ):
     sql = """
-        SELECT id, role, content, source, telemetry, created_at
+        SELECT id, role, content, source, created_at
         FROM agent_log
         WHERE session_id = ? AND run_id IS NULL {after}
         ORDER BY id ASC LIMIT ?
