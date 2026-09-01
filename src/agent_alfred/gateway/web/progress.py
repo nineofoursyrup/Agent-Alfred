@@ -23,6 +23,8 @@ from agent_alfred.model import (
     ATTEMPT_ABORTED,
     ATTEMPT_COMMITTED,
     AttemptOutcome,
+    StopReason,
+    parse_stop_reason,
 )
 
 # A Step can hold a retry and a streaming fallback, both of which are real
@@ -37,9 +39,13 @@ class AttemptTerminal:
 
     attempt_id: str
     outcome: AttemptOutcome
-    stop_reason: str | None
+    stop_reason: StopReason | None
     error_code: str | None
     duration_ms: int
+
+    def __post_init__(self) -> None:
+        if self.stop_reason is not None:
+            parse_stop_reason(self.stop_reason)
 
 
 @dataclass(frozen=True)
@@ -111,21 +117,20 @@ class RunProgress:
         *,
         attempt_id: str,
         outcome: AttemptOutcome,
-        stop_reason: str | None,
+        stop_reason: StopReason | None,
         error_code: str | None,
         duration_ms: int,
     ) -> None:
+        terminal = AttemptTerminal(
+            attempt_id=attempt_id,
+            outcome=outcome,
+            stop_reason=stop_reason,
+            error_code=error_code,
+            duration_ms=duration_ms,
+        )
         if not self._tracking(run_id):
             return
-        self._attempts.append(
-            AttemptTerminal(
-                attempt_id=attempt_id,
-                outcome=outcome,
-                stop_reason=stop_reason,
-                error_code=error_code,
-                duration_ms=duration_ms,
-            )
-        )
+        self._attempts.append(terminal)
         while len(self._attempts) > self._max_attempts:
             self._attempts.pop(0)
             self._truncated = True

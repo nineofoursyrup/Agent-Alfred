@@ -17,7 +17,13 @@ from agent_alfred.events import (
 from agent_alfred.loop.budget import RunBudget, StepBudgetExceeded
 from agent_alfred.memory.retrieval_gate import evaluate as evaluate_retrieval_gate
 from agent_alfred.messages import Message, TextBlock, text_message
-from agent_alfred.model import ModelClient, ModelRef, ModelRequest, ModelResult
+from agent_alfred.model import (
+    ModelClient,
+    ModelRef,
+    ModelRequest,
+    ModelResult,
+    StopReason,
+)
 from agent_alfred.outcomes import RunOutcome
 from agent_alfred.settings import (
     CONTROLLED_FAILURE_TEXT,
@@ -143,7 +149,7 @@ class Assistant:
                 if bind is not None:
                     bind(None)
             results.append(model_result)
-            stop_reason = "error"
+            stop_reason: StopReason = "error"
             if model_result.response is not None:
                 stop_reason = model_result.response.stop_reason
                 reply = Message(

@@ -21,7 +21,13 @@ from agent_alfred.messages import (
     ToolResultBlock,
     blocks_to_jsonable,
 )
-from agent_alfred.model import ModelError, ModelRef, Usage
+from agent_alfred.model import (
+    ModelError,
+    ModelRef,
+    StopReason,
+    Usage,
+    parse_stop_reason,
+)
 from agent_alfred.outcomes import RunOutcome
 
 TracePolicy = Literal["transient", "persist"]
@@ -123,8 +129,11 @@ class StepFinished:
     name: str = "step.finished"
     trace_policy: TracePolicy = "persist"
     step_index: int = 0
-    stop_reason: str = "end_turn"
+    stop_reason: StopReason = "end_turn"
     duration_ms: int = 0
+
+    def __post_init__(self) -> None:
+        parse_stop_reason(self.stop_reason)
 
 
 @dataclass(frozen=True)
@@ -157,9 +166,12 @@ class AttemptCommitted:
     trace_policy: TracePolicy = "persist"
     attempt_id: str = ""
     blocks: tuple[Block, ...] = ()
-    stop_reason: str = "end_turn"
+    stop_reason: StopReason = "end_turn"
     usage: Usage | None = None
     duration_ms: int = 0
+
+    def __post_init__(self) -> None:
+        parse_stop_reason(self.stop_reason)
 
 
 @dataclass(frozen=True)

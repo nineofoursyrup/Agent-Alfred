@@ -7,7 +7,7 @@ import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from decimal import Decimal
-from typing import Any, Literal, Protocol
+from typing import Any, Literal, Protocol, cast, get_args
 
 from agent_alfred.messages import Block, Message, TextBlock
 
@@ -23,6 +23,14 @@ StopReason = Literal[
     "error",
     "unknown",
 ]
+STOP_REASONS: tuple[StopReason, ...] = get_args(StopReason)
+
+
+def parse_stop_reason(value: object) -> StopReason:
+    """Validate and narrow one model stop reason at a typed boundary."""
+    if type(value) is not str or value not in STOP_REASONS:
+        raise ValueError(f"invalid stop_reason: {value!r}")
+    return cast(StopReason, value)
 
 Retryable = Literal[True, False, "unknown"]
 AttemptOutcome = Literal["committed", "aborted"]
@@ -87,6 +95,9 @@ class ModelResponse:
     blocks: tuple[Block, ...]
     stop_reason: StopReason
     model: ModelRef
+
+    def __post_init__(self) -> None:
+        parse_stop_reason(self.stop_reason)
 
 
 @dataclass(frozen=True)

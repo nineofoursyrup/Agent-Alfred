@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from agent_alfred.gateway.web.progress import AttemptTerminal, StepProjection
-from agent_alfred.model import parse_attempt_outcome
+from agent_alfred.model import parse_attempt_outcome, parse_stop_reason
 from agent_alfred.outcomes import RunOutcome, parse_run_outcome
 from agent_alfred.run_phases import parse_run_lifecycle_pair
 from agent_alfred.runtime.recording_state import (
@@ -185,10 +185,13 @@ def _parse_exact_object(
 
 def _parse_attempt_terminal(value: object) -> AttemptTerminal:
     value = _parse_exact_object(value, "attempt", _ATTEMPT_FIELDS)
+    stop_reason = value["stop_reason"]
     return AttemptTerminal(
         attempt_id=_parse_required_nonempty_string(value["attempt_id"], "attempt_id"),
         outcome=parse_attempt_outcome(value["outcome"]),
-        stop_reason=_parse_optional_string(value["stop_reason"], "stop_reason"),
+        stop_reason=(
+            None if stop_reason is None else parse_stop_reason(stop_reason)
+        ),
         error_code=_parse_optional_string(value["error_code"], "error_code"),
         duration_ms=_parse_non_negative_int(value["duration_ms"], "duration_ms"),
     )
