@@ -9,8 +9,12 @@ from dataclasses import replace as _dc_replace
 from typing import Literal
 
 from agent_alfred.outcomes import RunOutcome
+from agent_alfred.runtime.recording_state import (
+    RecordingState,
+    UnrecordedTerminalState,
+    parse_recording_state,
+)
 
-RecordingState = Literal["pending", "recorded", "failed"]
 CoordinatorState = Literal[
     "idle", "accepted", "running", "recording_pending", "recording_failed"
 ]
@@ -33,6 +37,9 @@ class ActiveRunSummary:
     # Run is not terminal, exactly like the phase/outcome axes require.
     outcome: RunOutcome | None = None
 
+    def __post_init__(self) -> None:
+        parse_recording_state(self.recording_state, allow_none=True)
+
 
 @dataclass(frozen=True)
 class UnrecordedTerminalProjection:
@@ -41,9 +48,12 @@ class UnrecordedTerminalProjection:
     outcome: RunOutcome
     reply_text: str | None
     error: str | None
-    recording_state: Literal["pending", "failed"]
+    recording_state: UnrecordedTerminalState
     session_id: str | None
     prompt_preview: str | None
+
+    def __post_init__(self) -> None:
+        parse_recording_state(self.recording_state, unrecorded_terminal=True)
 
 
 @dataclass(frozen=True)

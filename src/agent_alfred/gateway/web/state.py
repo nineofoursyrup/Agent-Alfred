@@ -23,6 +23,11 @@ from typing import Any, Literal
 
 from agent_alfred.gateway.web.progress import AttemptTerminal, StepProjection
 from agent_alfred.outcomes import RunOutcome, parse_run_outcome
+from agent_alfred.runtime.recording_state import (
+    RecordingState,
+    UnrecordedTerminalState,
+    parse_recording_state,
+)
 from agent_alfred.runtime.snapshot import RuntimeSnapshot
 
 # The unrecorded reply is the one thing in the snapshot that could be long.
@@ -30,7 +35,6 @@ from agent_alfred.runtime.snapshot import RuntimeSnapshot
 # reads a truncated sentence as the whole sentence.
 SNAPSHOT_TEXT_LIMIT = 2000
 
-RecordingState = Literal["pending", "recorded", "failed"] | None
 PatchRejection = Literal[
     "instance_mismatch",
     "revision_duplicate",
@@ -58,7 +62,7 @@ class ActiveRunView:
     prompt_preview: str | None
     started_at: str | None
     current_step: int | None
-    recording_state: RecordingState
+    recording_state: RecordingState | None
 
 
 @dataclass(frozen=True)
@@ -68,7 +72,7 @@ class UnrecordedTerminalView:
     outcome: RunOutcome
     reply_preview: str | None
     error: str | None
-    recording_state: Literal["pending", "failed"]
+    recording_state: UnrecordedTerminalState
     session_id: str | None
     prompt_preview: str | None
 
@@ -80,7 +84,7 @@ class RunStateSnapshot:
     coordinator_state: str
     active_run: ActiveRunView | None
     step: StepProjection | None
-    recording_state: RecordingState
+    recording_state: RecordingState | None
     session_valid: bool
     unrecorded_terminal_projection: UnrecordedTerminalView | None
 
@@ -188,7 +192,9 @@ def snapshot_from_payload(payload: dict[str, Any]) -> RunStateSnapshot:
                 prompt_preview=active.get("prompt_preview"),
                 started_at=active.get("started_at"),
                 current_step=active.get("current_step"),
-                recording_state=active.get("recording_state"),
+                recording_state=parse_recording_state(
+                    active.get("recording_state"), allow_none=True
+                ),
             )
         ),
         step=(
@@ -202,7 +208,9 @@ def snapshot_from_payload(payload: dict[str, Any]) -> RunStateSnapshot:
                 attempts_truncated=bool(step.get("attempts_truncated", False)),
             )
         ),
-        recording_state=payload.get("recording_state"),
+        recording_state=parse_recording_state(
+            payload.get("recording_state"), allow_none=True
+        ),
         session_valid=bool(payload.get("session_valid", False)),
         unrecorded_terminal_projection=(
             None
@@ -213,7 +221,9 @@ def snapshot_from_payload(payload: dict[str, Any]) -> RunStateSnapshot:
                 outcome=parse_run_outcome(projection.get("outcome")),
                 reply_preview=projection.get("reply_preview"),
                 error=projection.get("error"),
-                recording_state=projection["recording_state"],
+                recording_state=parse_recording_state(
+                    projection.get("recording_state"), unrecorded_terminal=True
+                ),
                 session_id=projection.get("session_id"),
                 prompt_preview=projection.get("prompt_preview"),
             )
