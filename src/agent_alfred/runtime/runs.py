@@ -564,12 +564,14 @@ def mainbar_pairs(
             for row in taken
         )
         remaining -= len(taken)
-        if len(rows) > len(taken):
+        if taken:
             last = taken[-1]
+            runs_position = (last.activity_revision, last.run_id)
+        if len(rows) > len(taken):
             return MainBarPage(
                 items=tuple(items),
                 next_cursor=_mainbar_runs_cursor(
-                    session_id, (last.activity_revision, last.run_id)
+                    session_id, runs_position
                 ),
             )
 
@@ -588,6 +590,14 @@ def mainbar_pairs(
         )
         historic_position = row_id
     if len(historic_rows) > len(taken_historic):
+        if not taken_historic and in_runs_segment:
+            # No historic id has been consumed yet, so there is no honest
+            # historic keyset position to sign. Replaying the exhausted Run
+            # position starts the next page at the newest historic row.
+            return MainBarPage(
+                items=tuple(items),
+                next_cursor=_mainbar_runs_cursor(session_id, runs_position),
+            )
         return MainBarPage(
             items=tuple(items),
             next_cursor=_mainbar_historic_cursor(
@@ -633,18 +643,18 @@ def _mainbar_run_rows(
 
 
 def _mainbar_historic_rows(
-    conn, session_id: str, after_id: int | None, count: int
+    conn, session_id: str, before_id: int | None, count: int
 ):
     sql = """
         SELECT id, role, content, source, created_at
         FROM agent_log
-        WHERE session_id = ? AND run_id IS NULL {after}
-        ORDER BY id ASC LIMIT ?
+        WHERE session_id = ? AND run_id IS NULL {before}
+        ORDER BY id DESC LIMIT ?
     """
-    if after_id is None:
-        return conn.execute(sql.format(after=""), (session_id, count)).fetchall()
+    if before_id is None:
+        return conn.execute(sql.format(before=""), (session_id, count)).fetchall()
     return conn.execute(
-        sql.format(after="AND id > ? "), (session_id, after_id, count)
+        sql.format(before="AND id < ? "), (session_id, before_id, count)
     ).fetchall()
 
 

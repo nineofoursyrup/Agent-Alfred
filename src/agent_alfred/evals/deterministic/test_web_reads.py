@@ -636,8 +636,8 @@ def test_historic_messages_are_visible_in_mainbar_without_a_fabricated_run() -> 
     try:
         page = host.mainbar_pairs(session_id="s-historic")
         assert [message_plain_text(item.message) for item in page.items] == [
-            "旧问题",
             "旧回答",
+            "旧问题",
         ]
         assert all(item.run_id is None for item in page.items)
     finally:
@@ -652,24 +652,24 @@ def test_historic_messages_are_visible_in_mainbar_without_a_fabricated_run() -> 
             [
                 ["run:新问题二"],
                 ["run:新问题一"],
-                ["historic:旧问题"],
-                ["historic:旧回答"],
                 ["historic:旧问题二"],
+                ["historic:旧回答"],
+                ["historic:旧问题"],
             ],
         ),
         (
             2,
             [
                 ["run:新问题二", "run:新问题一"],
-                ["historic:旧问题", "historic:旧回答"],
-                ["historic:旧问题二"],
+                ["historic:旧问题二", "historic:旧回答"],
+                ["historic:旧问题"],
             ],
         ),
         (
             3,
             [
-                ["run:新问题二", "run:新问题一", "historic:旧问题"],
-                ["historic:旧回答", "historic:旧问题二"],
+                ["run:新问题二", "run:新问题一", "historic:旧问题二"],
+                ["historic:旧回答", "historic:旧问题"],
             ],
         ),
     ],
