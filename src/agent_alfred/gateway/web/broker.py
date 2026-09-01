@@ -49,6 +49,7 @@ from agent_alfred.gateway.web.connection import (
     ConnectionQueue,
     ConnectionWriter,
     SSEConnection,
+    StartupReplay,
 )
 from agent_alfred.gateway.web.frames import (
     CurrentRunState,
@@ -59,6 +60,7 @@ from agent_alfred.gateway.web.progress import RunProgress, StepProjection
 from agent_alfred.gateway.web.replay import (
     CursorText,
     CursorVerdict,
+    ReplayBatch,
     ReplayRing,
     classify_cursor,
 )
@@ -304,6 +306,7 @@ class ConnectionHandle:
     # poisoned connection or inventing a different answer.
     session_valid: bool | None = None
     thread: threading.Thread | None = None
+    writer: ConnectionWriter | None = None
     # The broker-level disconnect generation this connection registered
     # under. A generation bump marks an ingress overflow whose undroppable
     # item nobody received; connections from *earlier* generations are the
@@ -312,15 +315,6 @@ class ConnectionHandle:
     # starting state from the snapshot and the ring, so a sweep must leave
     # it alone.
     generation: int = 0
-    # The opening stream this connection's writer writes before touching
-    # the queue: retry, re-seed, any gap notice, the snapshot, and the
-    # exact replay tail. Held here rather than primed into the queue so the
-    # queue's two budgets are never spent before the writer has said a
-    # word -- a tail larger than the connection's own budget used to ride
-    # straight past them. The entries are the ring's own immutable frames
-    # shared by reference, and the whole sequence is bounded by what the
-    # ring was holding at registration.
-    startup: tuple[PreparedFrames, ...] = ()
     # How many ingress-dropped transients this connection had already been
     # told about. Connections that arrived later are not told about drops
     # that happened before they existed.
@@ -368,7 +362,6 @@ class _ConnectStartup:
                 registration_open = self.registration_open
         try:
             if handle is not None:
-                handle.startup = ()
                 while True:
                     try:
                         handle.queue.take(timeout=0)
@@ -866,12 +859,10 @@ class SSEBroker:
         argued once, at
         :data:`~agent_alfred.gateway.web.frames.STARTUP_CHECKPOINT_SEQ`.
 
-        The sequence is handed to the connection's writer rather than primed
-        into its queue: the exact replay tail can be larger than the
-        connection's own budgets, and it is those budgets' whole job to
-        bound what the queue holds. The entries are the ring's own immutable
-        frames, shared by reference -- nothing is re-encoded and nothing is
-        copied.
+        The fixed prefix is handed to the writer, while exact replay is a
+        frozen high-water cursor. The writer fetches one whole-event batch at
+        a time under both connection budgets and releases it before fetching
+        the next; neither the handle nor the writer pins the complete tail.
         """
         handle = ConnectionHandle(
             queue=ConnectionQueue(
@@ -903,8 +894,12 @@ class SSEBroker:
                         break
                     epoch = self._state_epoch
                     verdict = classify_cursor(
-                        cursor, self._ring, process_instance_id=self._instance
+                        cursor,
+                        self._ring,
+                        process_instance_id=self._instance,
+                        include_entries=False,
                     )
+                    replay_through = self._ring.latest_complete_seq()
                     # The gap notice's facts, captured where they are coherent:
                     # the ring and the run state cannot move inside this critical
                     # section, so the notice is built from frozen values outside.
@@ -953,7 +948,6 @@ class SSEBroker:
                         )
                     )
                 startup.append(_patch_frames(latest, step, session_valid))
-                startup.extend(verdict.entries)
                 built = tuple(startup)
                 boundary = (
                     nullcontext()
@@ -981,7 +975,6 @@ class SSEBroker:
                     # close it.
                     handle.generation = self._disconnect_generation
                     handle.registered_monotonic = self._clock.monotonic()
-                    handle.startup = built
                     self._connections.append(handle)
                     # The fence goes up with the registration and comes down only
                     # when the writer thread exists: in between, a close must see
@@ -1005,13 +998,52 @@ class SSEBroker:
             source=handle.queue,
             clock=self._clock,
             heartbeat_s=self._heartbeat_s,
-            startup=handle.startup,
+            startup=built,
+            startup_replay=(
+                StartupReplay(
+                    source=handle.queue,
+                    cursor_seq=verdict.requested_seq,
+                    through_seq=replay_through,
+                    fetch=lambda cursor_seq, through_seq, budget: (
+                        self._fetch_startup_replay(
+                            handle.queue, cursor_seq, through_seq, budget
+                        )
+                    ),
+                )
+                if verdict.kind == "valid"
+                and verdict.requested_seq is not None
+                and replay_through is not None
+                and verdict.requested_seq < replay_through
+                else None
+            ),
         )
+        handle.writer = writer
         handle.thread = self._spawn(lambda: self._run_writer(handle, writer))
         with self._lock:
             self._registrations -= 1
             acquisition.registration_open = False
         return handle
+
+    def _fetch_startup_replay(
+        self,
+        source: ConnectionQueue,
+        cursor_seq: int,
+        through_seq: int | None,
+        budget: frames.FrameBudget,
+    ) -> ReplayBatch:
+        """Fetch and account one immutable batch without IO or waiting."""
+        with self._lock:
+            batch = self._ring.bounded_entries_after(
+                cursor_seq, through_seq, budget
+            )
+            if batch.kind != "batch":
+                return batch
+            if source.reserve_startup(batch.cost):
+                return batch
+            # Live traffic consumed the shared budget while replay was still
+            # pending. Draining it first would invert wire order; retaining
+            # this batch would exceed the bound. Close and reconnect instead.
+            return ReplayBatch(kind="unavailable")
 
     @property
     def registrations_in_flight(self) -> int:
@@ -1397,8 +1429,8 @@ class SSEBroker:
         self._deliver_dropped_notice(handle, dropped)
         if item.published_seq <= handle.published_through:
             # The registration boundary already covers it. For a replayable
-            # event that means the replay primed into the opening stream
-            # carried it; for a transient it means the delta was published
+            # event that means the writer-owned replay cursor carries it; for
+            # a transient it means the delta was published
             # before this connection registered -- the half-finished
             # attempt ADR-0013 says a reconnect discards. The event was
             # committed (and so entered the ring, or moved the published

@@ -97,6 +97,28 @@ def test_an_empty_ring_distinguishes_never_used_from_run_over() -> None:
 # --- byte budget -----------------------------------------------------------
 
 
+def test_a_startup_batch_stops_at_the_byte_budget_before_the_frame_budget() -> None:
+    ring = replay.ReplayRing(
+        budget=frames.FrameBudget(frames=8, encoded_bytes=1 << 20)
+    )
+    entries = tuple(_entry(seq, size=700) for seq in (1, 2, 3))
+    for entry in entries:
+        ring.append(entry)
+    first_cost = entries[0].ingress_cost()
+    budget = frames.FrameBudget(
+        frames=8,
+        encoded_bytes=first_cost.encoded_bytes + 1,
+    )
+
+    batch = ring.bounded_entries_after(0, 3, budget)
+
+    assert batch.kind == "batch"
+    assert batch.entries == (entries[0],)
+    assert batch.cost.frames < budget.frames
+    assert budget.fits(batch.cost)
+    assert not budget.fits(batch.cost + entries[1].ingress_cost())
+
+
 def test_byte_budget_evicts_before_the_frame_limit_is_reached() -> None:
     ring = replay.ReplayRing(budget=frames.FrameBudget(frames=100, encoded_bytes=100))
     for seq in (1, 2, 3):

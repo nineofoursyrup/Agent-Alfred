@@ -21,7 +21,8 @@ from __future__ import annotations
 import queue
 import socket
 import threading
-from collections.abc import Sequence
+from collections import deque
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
@@ -220,6 +221,22 @@ class ConnectionQueue:
                 self._usage = self._usage - item.ingress_cost()
         return item
 
+    def reserve_startup(self, cost: frames.FrameCost) -> bool:
+        """Reserve one writer-owned replay batch against this connection."""
+        with self._lock:
+            if self._closing:
+                return False
+            projected = self._usage + cost
+            if not self.budget.fits(projected):
+                return False
+            self._usage = projected
+            return True
+
+    def release_startup(self, cost: frames.FrameCost) -> None:
+        """Release a replay batch immediately after its final frame is written."""
+        with self._lock:
+            self._usage = self._usage - cost
+
 
 class ConnectionSource(Protocol):
     def take(self, timeout: float): ...
@@ -227,14 +244,53 @@ class ConnectionSource(Protocol):
     def stop(self) -> None: ...
 
 
+class ReplayBatch(Protocol):
+    kind: str
+    entries: tuple[frames.PreparedFrames, ...]
+    cost: frames.FrameCost
+
+
+class StartupReplay:
+    """Writer-owned cursor over a frozen replay interval.
+
+    The fetcher returns ring-owned immutable logical events. Only one batch
+    is reserved and returned at a time; advancing happens only after the
+    writer releases the complete batch, so a multi-frame logical event can
+    never become a half-event checkpoint.
+    """
+
+    def __init__(
+        self,
+        *,
+        source: ConnectionQueue,
+        cursor_seq: int,
+        through_seq: int | None,
+        fetch: Callable[[int, int | None, frames.FrameBudget], ReplayBatch],
+    ):
+        self._source = source
+        self._cursor_seq = cursor_seq
+        self._through_seq = through_seq
+        self._fetch = fetch
+
+    def take(self) -> ReplayBatch:
+        return self._fetch(
+            self._cursor_seq, self._through_seq, self._source.budget
+        )
+
+    def release(self, batch: ReplayBatch) -> None:
+        self._source.release_startup(batch.cost)
+        last = batch.entries[-1]
+        assert last.seq is not None
+        self._cursor_seq = last.seq
+
 class ConnectionWriter:
     """The connection's own thread: open, take, write, heartbeat, close.
 
     The opening stream -- retry, re-seed, any gap notice, the snapshot and
-    the exact replay tail -- is the writer's own: it writes that sequence
-    before touching the queue, so the queue's two budgets are spent on live
-    frames only and the tail can be larger than the queue without ever
-    being squeezed past them. The clock and the source are injected so a
+    the exact replay tail -- is the writer's own. The fixed prefix precedes
+    a cursor that fetches only one whole-event, dual-budgeted replay batch at
+    a time; each batch shares the connection queue's capacity and is released
+    before the next is fetched. The clock and the source are injected so a
     heartbeat can be tested deterministically -- a test must never wait
     fifteen seconds to find out whether a comment line was written.
     """
@@ -247,12 +303,14 @@ class ConnectionWriter:
         clock: Clock,
         heartbeat_s: float = DEFAULT_HEARTBEAT_S,
         startup: Sequence[frames.PreparedFrames] = (),
+        startup_replay: StartupReplay | None = None,
     ):
         self._connection = connection
         self._source = source
         self._clock = clock
         self._heartbeat_s = heartbeat_s
-        self._startup = tuple(startup)
+        self._startup = deque(startup)
+        self._startup_replay = startup_replay
         self._last_write = clock.monotonic()
         self.failure: BaseException | None = None
 
@@ -260,14 +318,52 @@ class ConnectionWriter:
         """Ask the thread to return. Safe from any thread."""
         self._source.stop()
 
+    def deliver_startup(
+        self, consume: Callable[[frames.PreparedFrames], None]
+    ) -> bool:
+        """Stream the opening sequence to one consumer, one batch at a time.
+
+        The consumer is the socket writer in production and may be an
+        external observer in a deterministic rig. This writer never collects
+        what it has delivered: a replay batch remains reserved only while its
+        logical events are being consumed, then is released before the next
+        batch is fetched.
+
+        ``False`` means the frozen tail could no longer be delivered exactly;
+        the final item consumed is the retry instruction for reconnect.
+        """
+        while self._startup:
+            consume(self._startup.popleft())
+        replay = self._startup_replay
+        while replay is not None:
+            batch = replay.take()
+            if batch.kind == "complete":
+                self._startup_replay = None
+                return True
+            if batch.kind != "batch":
+                consume(frames.retry_frame(frames.BACKOFF_RETRY_MS))
+                self._startup_replay = None
+                return False
+            try:
+                for item in batch.entries:
+                    consume(item)
+            finally:
+                replay.release(batch)
+            # A released local is still a strong reference. End both loop
+            # variables before ``take`` can reserve the next batch, so the
+            # two generations never overlap even for one call expression.
+            del item
+            del batch
+        return True
+
     def run(self) -> None:
         """Block until told to stop, then close the connection exactly once."""
         try:
             # The opening sequence first, always: it is what tells the
             # client where it is, so it precedes anything the dispatcher
             # may already have queued behind it.
-            for item in self._startup:
-                self._write_frames(item)
+            if not self.deliver_startup(self._write_frames):
+                return
             while True:
                 try:
                     item = self._source.take(self._heartbeat_s)
@@ -291,6 +387,8 @@ class ConnectionWriter:
             # here would only print a traceback for a browser that left.
             self.failure = exc
         finally:
+            self._startup.clear()
+            self._startup_replay = None
             self._connection.close()
 
     def _maybe_heartbeat(self) -> None:

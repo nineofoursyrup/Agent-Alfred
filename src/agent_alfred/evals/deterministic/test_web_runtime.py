@@ -309,11 +309,12 @@ def test_finalizer_rollback_failure_keeps_the_sse_terminal_projection_recoverabl
             session_id=session_id,
             admission=reconnect_proof,
         )
-        startup_wire = [item.wire_bytes() for item in reconnect.startup]
+        startup = drain_connection(reconnect)
+        startup_wire = [item.wire_bytes() for item in startup]
         assert startup_wire[0] == b"retry: 1000\n\n"
         assert startup_wire[1].startswith(b"id: proc-runtime:")
         assert b"event: state_patch" in startup_wire[2]
-        failed_reconnect = _startup_patch(reconnect)
+        failed_reconnect = _patch_from_items(startup)
         assert failed_reconnect["session_valid"] is True
         assert failed_reconnect["unrecorded_terminal_projection"][
             "reply_preview"
@@ -752,7 +753,11 @@ def _unstarted(target):
 
 def _startup_patch(handle) -> dict:
     """The opening stream's state_patch document, exactly as it crossed."""
-    for item in handle.startup:
+    return _patch_from_items(drain_connection(handle))
+
+
+def _patch_from_items(items) -> dict:
+    for item in items:
         wire = item.wire_bytes()
         if b"event: state_patch" in wire:
             body = b"".join(

@@ -149,13 +149,13 @@ class _FakeThread:
 def drain_connection(handle) -> list:
     """Everything this connection would receive now -- and consume it.
 
-    The opening stream travels on the handle -- the writer writes it before
-    touching the queue -- so a drain returns startup then queue items, and
-    marks the startup as written: a second drain returns only what arrived
-    since, exactly what a running writer would leave behind.
+    The opening stream belongs only to the writer. The no-thread harness
+    drives that public writer seam first, then drains queue items, matching
+    the production wire order without putting replay references on a handle.
     """
-    items = list(handle.startup)
-    handle.startup = ()
+    items = []
+    if handle.writer is not None:
+        handle.writer.deliver_startup(items.append)
     while True:
         try:
             items.append(handle.queue.take(timeout=0))

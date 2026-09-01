@@ -34,8 +34,9 @@ def _primed_patches(handle) -> list[dict]:
     import json
 
     out: list[dict] = []
-    items = list(handle.startup)
-    handle.startup = ()
+    items = []
+    if handle.writer is not None:
+        handle.writer.deliver_startup(items.append)
     while True:
         try:
             items.append(handle.queue.take(timeout=0))

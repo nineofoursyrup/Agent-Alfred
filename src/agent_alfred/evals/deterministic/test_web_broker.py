@@ -52,6 +52,7 @@ from agent_alfred.gateway.web.broker import (
 from agent_alfred.gateway.web.connection import (
     CloseConnection,
     ConnectionQueue,
+    ConnectionWriter,
     FakeConnection,
     OfferOutcome,
 )
@@ -61,7 +62,7 @@ from agent_alfred.gateway.web.progress import (
     RunProgress,
     StepProjection,
 )
-from agent_alfred.gateway.web.replay import ReplayRing
+from agent_alfred.gateway.web.replay import ReplayBatch, ReplayRing
 from agent_alfred.gateway.web.state import SNAPSHOT_TEXT_LIMIT
 from agent_alfred.runtime.snapshot import (
     ActiveRunSummary,
@@ -96,17 +97,18 @@ def test_a_preflight_proof_is_the_only_session_fact_used_to_open_the_stream() ->
     )
     proof = broker.preflight_session("s1")
 
+    connection = FakeConnection()
     handle = broker.connect(
-        connection=FakeConnection(),
+        connection=connection,
         session_id="s1",
         admission=proof,
     )
 
     assert queries == ["s1"]
     assert handle.session_valid is True
-    assert handle.startup[0].wire_bytes() == b"retry: 1000\n\n"
-    assert handle.startup[1].wire_bytes().startswith(b"id: inst-test:")
-    assert b"event: state_patch" in handle.startup[2].wire_bytes()
+    assert connection.writes[0] == b"retry: 1000\n\n"
+    assert connection.writes[1].startswith(b"id: inst-test:")
+    assert b"event: state_patch" in connection.writes[2]
 
 
 def test_connect_closes_the_connection_when_session_validation_raises() -> None:
@@ -162,7 +164,7 @@ def test_connect_cleans_the_unowned_handle_when_startup_encoding_raises(
     assert connection.closed is True
     assert handle.finished.is_set()
     assert handle.thread is None
-    assert handle.startup == ()
+    assert handle.writer is None
     assert handle.queue.current_cost == frames.FrameCost(
         frames=0, encoded_bytes=0
     )
@@ -709,9 +711,9 @@ def test_a_replay_tail_over_the_connection_budget_still_arrives_whole() -> None:
 
     A reconnecting client's exact replay tail can be larger than the
     connection's own frame budget; priming it into the queue made the queue
-    hold more than it was ever allowed to the moment it existed. Held by the
-    handle for the writer instead, the tail still arrives whole -- in order,
-    with no hole -- while the queue starts (and stays) within its budget.
+    hold more than it was ever allowed to the moment it existed. A bounded
+    writer cursor still delivers the tail whole -- in order, with no hole --
+    while every individual batch stays within the connection budget.
     """
     harness = Harness(
         ring=ReplayRing(budget=frames.FrameBudget(frames=64, encoded_bytes=1 << 20)),
@@ -724,16 +726,293 @@ def test_a_replay_tail_over_the_connection_budget_still_arrives_whole() -> None:
     assert handle.queue.current_frames == 0
     assert handle.queue.current_bytes == 0
     # retry -> re-seed -> snapshot -> the exact tail, in order.
-    opening = handle.startup
+    opening = drain_connection(handle)
     assert opening[0].wire_bytes() == b"retry: 1000\n\n"
     assert opening[1].wire_bytes() == b"id: inst-test:0\n\n"
     assert any(b"event: state_patch" in frame for frame in opening[2].frames)
     assert replay_ids(opening) == list(range(1, 21))
-    # The tail is the ring's own frames, reused by reference -- not a
-    # second, re-encoded copy of them.
+    # The batches use the ring's immutable frames by reference -- not a
+    # second, re-encoded copy of them. The deterministic writer seam has
+    # already released each batch before returning this observation.
     stored = harness.broker._ring.entries_after(0)
     assert len(opening) == 3 + len(stored)
     assert all(a is b for a, b in zip(opening[3:], stored))
+
+
+def test_the_no_thread_writer_releases_each_observed_startup_batch() -> None:
+    """An observer never turns the writer back into a full-tail owner."""
+
+    source = ConnectionQueue(
+        budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20)
+    )
+
+    class TwoBatchReplay:
+        def __init__(self) -> None:
+            self.next_seq = 1
+            self.first_batch_refs: list = []
+            self.released: list[frames.FrameCost] = []
+
+        def take(self) -> ReplayBatch:
+            if self.next_seq > 4:
+                return ReplayBatch(kind="complete")
+            if self.next_seq == 3:
+                gc.collect()
+                assert all(ref() is None for ref in self.first_batch_refs)
+            entries = tuple(
+                frames.measured_frames(
+                    seq=seq,
+                    frames=(f"data: {seq}".encode(),),
+                    id_line=f"id: inst-test:{seq}\n".encode(),
+                    replayable=True,
+                )
+                for seq in range(self.next_seq, self.next_seq + 2)
+            )
+            if self.next_seq == 1:
+                self.first_batch_refs = [weakref.ref(item) for item in entries]
+            self.next_seq += 2
+            cost = frames.FrameCost(
+                frames=sum(item.ingress_cost().frames for item in entries),
+                encoded_bytes=sum(
+                    item.ingress_cost().encoded_bytes for item in entries
+                ),
+            )
+            assert source.reserve_startup(cost)
+            return ReplayBatch(kind="batch", entries=entries, cost=cost)
+
+        def release(self, batch: ReplayBatch) -> None:
+            source.release_startup(batch.cost)
+            self.released.append(batch.cost)
+
+    replay = TwoBatchReplay()
+    writer = ConnectionWriter(
+        connection=FakeConnection(),
+        source=source,
+        clock=FakeClock(),
+        startup_replay=replay,
+    )
+    observed: list[int] = []
+    peak_cost = frames.FrameCost(frames=0, encoded_bytes=0)
+
+    def observe(item: PreparedFrames) -> None:
+        nonlocal peak_cost
+        assert item.seq is not None
+        observed.append(item.seq)
+        cost = source.current_cost
+        peak_cost = frames.FrameCost(
+            frames=max(peak_cost.frames, cost.frames),
+            encoded_bytes=max(peak_cost.encoded_bytes, cost.encoded_bytes),
+        )
+
+    assert writer.deliver_startup(observe) is True
+    assert observed == [1, 2, 3, 4]
+    assert len(replay.released) == 2
+    assert source.budget.fits(peak_cost)
+    assert source.current_cost == frames.FrameCost(frames=0, encoded_bytes=0)
+
+
+def test_a_blocked_startup_replay_never_holds_more_than_its_frame_budget() -> None:
+    """A slow writer owns only one bounded replay batch at a time."""
+
+    class BlockFirstReplay(FakeConnection):
+        def __init__(self) -> None:
+            super().__init__()
+            self.blocked = threading.Event()
+            self.release = threading.Event()
+
+        def write(self, data: bytes) -> None:
+            if b"id: inst-test:1\n" in data:
+                self.blocked.set()
+                assert self.release.wait(2.0), "test did not release replay write"
+            super().write(data)
+
+    budget = frames.FrameBudget(frames=4, encoded_bytes=2_000)
+    harness = Harness(
+        ring=ReplayRing(
+            budget=frames.FrameBudget(frames=64, encoded_bytes=1 << 20)
+        ),
+        connection_budget=budget,
+        spawn=RealThreadSpawner(),
+    )
+    harness.emit_many(20)
+    assert harness.broker._ring.current_cost.frames > budget.frames
+    assert harness.broker._ring.current_cost.encoded_bytes > budget.encoded_bytes
+    connection = BlockFirstReplay()
+    handle = harness.connect(connection=connection, cursor=cursor_for(0))
+
+    try:
+        assert connection.blocked.wait(2.0), "writer never reached replay"
+        assert budget.fits(handle.queue.current_cost)
+        assert 0 < handle.queue.current_cost.frames <= budget.frames
+        assert not hasattr(handle, "startup")
+    finally:
+        connection.release.set()
+        handle.queue.stop()
+        assert handle.finished.wait(2.0)
+        assert handle.queue.current_cost == frames.FrameCost(0, 0)
+
+
+def test_a_failed_startup_write_releases_its_reserved_batch() -> None:
+    """A dead peer cannot strand startup capacity on the closed handle."""
+
+    class FailFirstReplay(FakeConnection):
+        def write(self, data: bytes) -> None:
+            if b"id: inst-test:1\n" in data:
+                raise BrokenPipeError("injected replay write failure")
+            super().write(data)
+
+    harness = Harness(
+        connection_budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20),
+        spawn=RealThreadSpawner(),
+    )
+    harness.emit_many(4)
+    connection = FailFirstReplay()
+    handle = harness.connect(connection=connection, cursor=cursor_for(0))
+
+    assert handle.finished.wait(2.0)
+    assert handle.writer is not None
+    assert isinstance(handle.writer.failure, BrokenPipeError)
+    assert connection.closed is True
+    assert handle.queue.current_cost == frames.FrameCost(0, 0)
+
+
+def test_slow_startup_generations_release_written_and_unfetched_history() -> None:
+    """Eviction cannot leave slow writers pinning complete old windows."""
+
+    class BlockFirstReplay(FakeConnection):
+        def __init__(self) -> None:
+            super().__init__()
+            self.blocked = threading.Event()
+            self.release = threading.Event()
+
+        def write(self, data: bytes) -> None:
+            if b"id: inst-test:1\n" in data:
+                self.blocked.set()
+                assert self.release.wait(2.0), "test did not release replay write"
+            super().write(data)
+
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=6, encoded_bytes=1 << 20)
+    )
+    harness = Harness(
+        ring=ring,
+        connection_budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20),
+        spawn=RealThreadSpawner(),
+    )
+    harness.emit_many(6)
+    drain_dispatcher(harness)
+    retained = ring.entries_after(0)
+    assert retained is not None
+    first_ref = weakref.ref(retained[0])
+    unfetched_ref = weakref.ref(retained[2])
+    del retained
+
+    connections = [BlockFirstReplay() for _ in range(3)]
+    handles = [
+        harness.connect(connection=connection, cursor=cursor_for(0))
+        for connection in connections
+    ]
+    assert all(connection.blocked.wait(2.0) for connection in connections)
+
+    # Replace the complete old ring while three generations are parked in
+    # their first two-entry batch. Entry 3 was never fetched by any writer,
+    # so eviction must release it even though all connections remain slow.
+    harness.emit_many(6, start=6)
+    gc.collect()
+    assert first_ref() is not None
+    assert unfetched_ref() is None
+
+    for connection in connections:
+        connection.release.set()
+    for handle in handles:
+        assert handle.finished.wait(2.0)
+        assert handle.queue.current_cost == frames.FrameCost(0, 0)
+    gc.collect()
+    assert first_ref() is None
+    assert all(connection.closed for connection in connections)
+    assert all(
+        frames.retry_frame(frames.BACKOFF_RETRY_MS).wire_bytes()
+        in connection.written
+        for connection in connections
+    )
+
+    # A new connection from the last complete batch boundary observes the
+    # gap explicitly and receives a fresh snapshot instead of a silent tail.
+    fresh = FakeConnection()
+    reconnected = harness.connect(
+        connection=fresh,
+        cursor=cursor_for(2),
+    )
+    deadline = time.monotonic() + 2.0
+    while b"replay_gap" not in fresh.written and time.monotonic() < deadline:
+        time.sleep(0.001)
+    reconnected.queue.stop()
+    assert reconnected.finished.wait(2.0)
+    assert b"replay_gap" in fresh.written
+    assert b"event: state_patch" in fresh.written
+
+
+def test_startup_batches_keep_a_chunked_logical_event_whole() -> None:
+    """The budget boundary is between logical events, never physical frames."""
+
+    class BlockFirstChunk(FakeConnection):
+        def __init__(self, marker: bytes) -> None:
+            super().__init__()
+            self._marker = marker
+            self.blocked = threading.Event()
+            self.release = threading.Event()
+            self.complete = threading.Event()
+
+        def write(self, data: bytes) -> None:
+            if self._marker in data and not self.blocked.is_set():
+                self.blocked.set()
+                assert self.release.wait(2.0), "test did not release chunk write"
+            super().write(data)
+            if b"id: inst-test:2\n" in data:
+                self.complete.set()
+
+    harness = Harness(
+        ring=ReplayRing(
+            budget=frames.FrameBudget(frames=64, encoded_bytes=1 << 20)
+        ),
+        max_frame_bytes=512,
+        spawn=RealThreadSpawner(),
+    )
+    first = harness.emit(RunStarted(purpose="chat"), run_id="first")
+    chunky = harness.emit(
+        RunStarted(
+            purpose="chat",
+            user_message=user_message_with("x" * 2_850),
+        ),
+        run_id="chunky",
+    )
+    drain_dispatcher(harness)
+    stored = harness.broker._ring.entries_after(first.seq)
+    assert stored is not None and len(stored) == 1
+    event = stored[0]
+    assert event.seq == chunky.seq and len(event.frames) > 1
+    budget = frames.FrameBudget(
+        frames=event.ingress_cost().frames,
+        encoded_bytes=event.ingress_cost().encoded_bytes,
+    )
+    marker = b'"run_id":"chunky"'
+    connection = BlockFirstChunk(marker)
+    handle = harness.connect(
+        connection=connection,
+        cursor=cursor_for(first.seq),
+        budget=budget,
+    )
+    try:
+        assert connection.blocked.wait(2.0), "writer never reached chunked event"
+        assert handle.queue.current_cost == event.ingress_cost()
+        connection.release.set()
+        assert connection.complete.wait(2.0), "logical event never completed"
+        handle.queue.stop()
+        assert handle.finished.wait(2.0)
+    finally:
+        connection.release.set()
+    expected = list(event.wire_frames())
+    start = connection.writes.index(expected[0])
+    assert connection.writes[start : start + len(expected)] == expected
 
 
 def test_the_queue_budget_holds_during_startup_and_live() -> None:
@@ -750,6 +1029,7 @@ def test_the_queue_budget_holds_during_startup_and_live() -> None:
     )
     harness.emit_many(20)
     handle = harness.connect(cursor=cursor_for(0))
+    drain_connection(handle)
     # The tail the opening stream carries makes the ingress backlog redundant
     # for this connection: everything committed before it registered is
     # skipped, so the dispatcher flushes it without the queue noticing.
@@ -774,6 +1054,7 @@ def test_startup_then_live_has_no_hole_and_reconnect_recovers_exactly() -> None:
     )
     harness.emit_many(20)
     handle = harness.connect(cursor=cursor_for(0))
+    opening = replay_ids(drain_connection(handle))
     # Flush the pre-registration backlog: the opening tail already covers
     # it, so the dispatcher skips every one of those items.
     drain_dispatcher(harness)
@@ -782,11 +1063,11 @@ def test_startup_then_live_has_no_hole_and_reconnect_recovers_exactly() -> None:
         harness.deliver()
     # What the client receives: the whole tail, then the live events that
     # fit -- every seq exactly once, no gap between the two.
-    seen = replay_ids(drain_connection(handle))
+    seen = opening + replay_ids(drain_connection(handle))
     assert seen == list(range(1, 29))
     # Reconnecting from the last delivered cursor recovers exactly the rest.
     fresh = harness.connect(cursor=cursor_for(28))
-    assert replay_ids(list(fresh.startup)) == [29]
+    assert replay_ids(drain_connection(fresh)) == [29]
 
 
 # --- chunking and mid-event disconnection ----------------------------------
@@ -2352,8 +2633,13 @@ def test_connect_encodes_its_startup_outside_the_lock(monkeypatch) -> None:
     descriptor: list[bytes] = []
 
     def do_connect() -> None:
-        handle = harness.broker.connect(connection=FakeConnection())
-        descriptor.append(b"".join(item.wire_bytes() for item in handle.startup))
+        connection = FakeConnection()
+        handle = harness.broker.connect(connection=connection)
+        deadline = time.monotonic() + 2.0
+        while len(connection.writes) < 3 and time.monotonic() < deadline:
+            time.sleep(0.001)
+        descriptor.append(connection.written)
+        handle.queue.stop()
         connect_done.set()
 
     connector = threading.Thread(target=do_connect, daemon=True)
@@ -2447,7 +2733,7 @@ def test_connect_refuses_after_bounded_startup_recaptures(monkeypatch) -> None:
     refused = answers[0]
     assert refused.finished.is_set()
     assert refused.thread is None
-    assert refused.startup == ()
+    assert refused.writer is None
     assert refused not in harness.broker.connections
     assert harness.broker.registrations_in_flight == 0
     assert harness.spawn.targets == []
@@ -2720,7 +3006,7 @@ def test_capture_exhaustion_still_moves_the_authority_and_disconnects(
     # A connection registering after the exhaustion re-seeds from whatever
     # the broker now holds -- and registers at the current generation.
     late = harness.connect()
-    late_wire = b"".join(item.wire_bytes() for item in late.startup)
+    late_wire = b"".join(item.wire_bytes() for item in drain_connection(late))
     drain_dispatcher(harness)
     # Observed before the first assert, so a red run reports the whole
     # failure, not just its first casualty.

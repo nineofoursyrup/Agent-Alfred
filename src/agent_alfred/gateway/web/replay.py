@@ -81,6 +81,7 @@ DEFAULT_BUDGET = FrameBudget(frames=2048, encoded_bytes=32 * 1024 * 1024)
 GapReason = Literal["malformed", "instance_mismatch", "too_old", "ahead"]
 CursorVerdictKind = Literal["absent", "valid", "gap"]
 SeqVerdict = Literal["valid", "too_old", "ahead", "malformed"]
+ReplayBatchKind = Literal["batch", "complete", "unavailable", "oversized"]
 
 # The wire shape of a cursor. NewType so a bare string is not quietly
 # accepted where a parsed cursor is meant.
@@ -125,6 +126,15 @@ class CursorVerdict:
     # The seq the client asked to resume from, so the notice can name it.
     # Absent for a first connection, which is not a gap.
     requested_seq: int | None = None
+
+
+@dataclass(frozen=True)
+class ReplayBatch:
+    """One whole-event, dual-budgeted slice of a frozen replay interval."""
+
+    kind: ReplayBatchKind
+    entries: tuple[PreparedFrames, ...] = ()
+    cost: FrameCost = FrameCost(frames=0, encoded_bytes=0)
 
 
 @dataclass
@@ -242,6 +252,18 @@ class _IndexedEntries:
             else:
                 high = middle
         return low < self._size and self[low].seq == seq
+
+    def first_after(self, seq: int) -> int:
+        """Index of the first retained entry strictly after ``seq``."""
+        low = 0
+        high = self._size
+        while low < high:
+            middle = (low + high) // 2
+            if self[middle].seq <= seq:
+                low = middle + 1
+            else:
+                high = middle
+        return low
 
     def drop_prefix(self, count: int) -> _RetiredPrefix | None:
         if count < 0 or count > self._size:
@@ -468,6 +490,43 @@ class ReplayRing:
             return None
         return tuple(entry for entry in self._entries if entry.seq > cursor_seq)
 
+    def bounded_entries_after(
+        self,
+        cursor_seq: int,
+        through_seq: int | None,
+        budget: FrameBudget,
+    ) -> ReplayBatch:
+        """Return the next whole-event slice without exceeding either budget.
+
+        ``through_seq`` freezes the registration boundary. If the next slice
+        has already fallen out of the ring, ``unavailable`` makes the writer
+        close so the browser reconnects and receives an explicit gap verdict.
+        """
+        if through_seq is None or cursor_seq >= through_seq:
+            return ReplayBatch(kind="complete")
+        if self.classify_seq(cursor_seq) != "valid":
+            return ReplayBatch(kind="unavailable")
+        index = self._entries.first_after(cursor_seq)
+        selected: list[PreparedFrames] = []
+        cost = FrameCost(frames=0, encoded_bytes=0)
+        while index < len(self._entries):
+            entry = self._entries[index]
+            if entry.seq is None or entry.seq > through_seq:
+                break
+            projected = cost + entry.ingress_cost()
+            if not budget.fits(projected):
+                if not selected:
+                    return ReplayBatch(kind="oversized")
+                break
+            selected.append(entry)
+            cost = projected
+            index += 1
+        if not selected:
+            # The frozen interval promised another replayable checkpoint but
+            # none remains. It was evicted between bounded fetches.
+            return ReplayBatch(kind="unavailable")
+        return ReplayBatch(kind="batch", entries=tuple(selected), cost=cost)
+
     def classify_seq(self, seq: int) -> SeqVerdict:
         """Close a cursor's position into one of the four decided reasons.
 
@@ -663,6 +722,7 @@ def classify_cursor(
     ring: ReplayRing,
     *,
     process_instance_id: str,
+    include_entries: bool = True,
 ) -> CursorVerdict:
     """Decide what one reconnecting client gets. No cursor is not a gap.
 
@@ -691,7 +751,7 @@ def classify_cursor(
             reason=verdict,
             requested_seq=seq,
         )
-    entries = ring.entries_after(seq)
+    entries = ring.entries_after(seq) if include_entries else ()
     # The nearest complete checkpoint strictly before the first replayed
     # frame is the cursor itself: it named a complete event boundary, which
     # is exactly what "checkpoint" means.
