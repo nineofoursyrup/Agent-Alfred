@@ -37,6 +37,7 @@ from agent_alfred.events import (
     CapturingSink,
     EventEnvelope,
     FanOutSink,
+    Notice,
     RunFinished,
     RunStarted,
     SequencedEvent,
@@ -2793,6 +2794,103 @@ class _BrokenRing(ReplayRing):
     def observe_published(self, seq, entry):
         del seq, entry
         raise RuntimeError("ring is broken")
+
+
+class _BrokenStartupGuardRing(ReplayRing):
+    """A real ring whose pre-registration replay read fails."""
+
+    def startup_guard_cost(self, progress, through_seq):
+        del progress, through_seq
+        raise RuntimeError("startup replay guard is broken")
+
+
+def test_a_startup_guard_read_failure_is_process_fatal_before_admission() -> None:
+    """A broken replay source cannot leave HTTP free to send SSE 200."""
+    ring = _BrokenStartupGuardRing()
+    harness = Harness(ring=ring, spawn=RealThreadSpawner())
+    broker = harness.broker
+    capture, fanout = _capture_fanout(broker)
+    broker.bind_fatal_handler(
+        lambda _exc: fanout.emit(
+            Notice(
+                level="error",
+                code="sink_disabled",
+                detail=(("sink", broker.name), ("stage", "dispatch")),
+            )
+        )
+    )
+    existing = harness.connect()
+    harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    connection = FakeConnection()
+
+    with pytest.raises(RuntimeError, match="startup replay guard is broken"):
+        broker.prepare_stream(connection=connection, cursor=cursor_for(0))
+
+    assert broker._fatal is not None  # noqa: SLF001
+    assert broker._stopping is True  # noqa: SLF001
+    assert existing.queue.close_requested is True
+    assert existing.finished.wait(5.0), "existing stream was not closed"
+    assert broker.connections == ()
+    assert broker.registrations_in_flight == 0
+
+    refused = broker.connect(connection=FakeConnection())
+    assert refused.finished.is_set()
+    assert refused not in broker.connections
+    notices = [
+        event
+        for event in capture.events
+        if getattr(event.payload, "code", None) == "sink_disabled"
+    ]
+    assert len(notices) == 1
+
+
+class _BrokenReplayFetchRing(ReplayRing):
+    """A real ring whose writer-owned replay read fails."""
+
+    def bounded_entries_after(self, progress, through_seq, budget):
+        del progress, through_seq, budget
+        raise RuntimeError("startup replay fetch is broken")
+
+
+def test_a_writer_replay_read_failure_disables_the_process_sink(
+    monkeypatch,
+) -> None:
+    """A writer cannot downgrade the active Run's only replay-source loss."""
+    monkeypatch.setattr(threading, "excepthook", lambda _args: None)
+    ring = _BrokenReplayFetchRing()
+    harness = Harness(ring=ring, spawn=RealThreadSpawner())
+    broker = harness.broker
+    capture, fanout = _capture_fanout(broker)
+    broker.bind_fatal_handler(
+        lambda _exc: fanout.emit(
+            Notice(
+                level="error",
+                code="sink_disabled",
+                detail=(("sink", broker.name), ("stage", "dispatch")),
+            )
+        )
+    )
+    existing = harness.connect()
+    harness.emit(RunStarted(purpose="chat"), run_id="r1")
+
+    replaying = harness.connect(cursor=cursor_for(0))
+    assert replaying.finished.wait(5.0), "replay writer never observed the failure"
+
+    assert broker._fatal is not None  # noqa: SLF001
+    assert broker._stopping is True  # noqa: SLF001
+    assert existing.queue.close_requested is True
+    assert existing.finished.wait(5.0), "existing stream was not closed"
+    assert broker.connections == ()
+
+    refused = broker.connect(connection=FakeConnection())
+    assert refused.finished.is_set()
+    assert refused not in broker.connections
+    notices = [
+        event
+        for event in capture.events
+        if getattr(event.payload, "code", None) == "sink_disabled"
+    ]
+    assert len(notices) == 1
 
 
 def test_a_broken_ring_is_a_process_fatal_not_a_run_local_error() -> None:

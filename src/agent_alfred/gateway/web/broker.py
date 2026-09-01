@@ -973,6 +973,7 @@ class SSEBroker:
         else:
             session_valid = admission.session_valid
             refusal_reason: str | None = None
+            replay_failure: BaseException | None = None
             for _ in range(_MAX_PATCH_CAPTURES):
                 boundary = (
                     nullcontext()
@@ -1067,10 +1068,18 @@ class SSEBroker:
                     )
                     guard = FrameCost(0, 0)
                     if needs_replay:
-                        guard = self._ring.startup_guard_cost(
-                            verdict.requested_seq,
-                            replay_through,
-                        )
+                        try:
+                            guard = self._ring.startup_guard_cost(
+                                verdict.requested_seq,
+                                replay_through,
+                            )
+                        except Exception as exc:
+                            # A ring read failing is a process-level sink
+                            # failure. Capture it here, but report it only
+                            # after leaving the broker lock: the handler may
+                            # publish ``sink_disabled`` through the FanOut.
+                            replay_failure = exc
+                            break
                         if guard is None:
                             # The frozen interval ceased to be reproducible
                             # before registration. A retry will receive the
@@ -1111,6 +1120,9 @@ class SSEBroker:
                 # observable shape as a closing broker; a reconnect gets a fresh
                 # atomic capture without poisoning the broker for other clients.
                 refusal_reason = "capture_exhausted"
+            if replay_failure is not None:
+                self._enter_fatal(replay_failure)
+                raise replay_failure
             if refusal_reason is not None:
                 raise StreamAdmissionRejected(refusal_reason, handle)
         writer = ConnectionWriter(
@@ -1156,13 +1168,30 @@ class SSEBroker:
         through_seq: int | None,
     ) -> ReplayBatch:
         """Fetch and account one immutable batch without IO or waiting."""
-        with self._lock:
-            return source.build_and_reserve_startup(
-                lambda remaining: self._ring.bounded_entries_after(
+        ring_failure: Exception | None = None
+
+        def fetch(remaining: frames.FrameBudget) -> ReplayBatch:
+            nonlocal ring_failure
+            try:
+                return self._ring.bounded_entries_after(
                     progress, through_seq, remaining
-                ),
-                continue_when_closing=progress.event_seq is not None,
-            )
+                )
+            except Exception as exc:
+                ring_failure = exc
+                raise
+
+        try:
+            with self._lock:
+                return source.build_and_reserve_startup(
+                    fetch,
+                    continue_when_closing=progress.event_seq is not None,
+                )
+        except Exception:
+            if ring_failure is not None:
+                # The callback may publish a domain notice through FanOut,
+                # so it must run after the broker lock has been released.
+                self._enter_fatal(ring_failure)
+            raise
 
     @property
     def registrations_in_flight(self) -> int:
@@ -1406,6 +1435,8 @@ class SSEBroker:
         reason.
         """
         with self._lock:
+            if self._fatal is not None:
+                return None
             self._fatal = exc
             self._stopping = True
             handles = tuple(self._connections)
