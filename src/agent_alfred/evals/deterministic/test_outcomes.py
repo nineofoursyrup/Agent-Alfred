@@ -103,6 +103,89 @@ def test_an_active_nonterminal_run_may_have_no_outcome(phase: RunPhase) -> None:
     assert rebuilt.active_run.outcome is None
 
 
+@pytest.mark.parametrize("phase", ["accepted", "running"])
+@pytest.mark.parametrize("outcome", RUN_OUTCOMES)
+def test_wire_rejects_an_outcome_before_the_run_is_finished(
+    phase: RunPhase, outcome: RunOutcome
+) -> None:
+    wire = _wire_payload(active_outcome=outcome, active_phase=phase)
+
+    with pytest.raises(ValueError, match="run lifecycle"):
+        snapshot_from_payload(wire)
+
+
+@pytest.mark.parametrize("phase", ["accepted", "running"])
+@pytest.mark.parametrize("outcome", RUN_OUTCOMES)
+def test_authoritative_summary_rejects_an_outcome_before_the_run_is_finished(
+    phase: RunPhase, outcome: RunOutcome
+) -> None:
+    with pytest.raises(ValueError, match="run lifecycle"):
+        _active_run_summary(phase=phase, outcome=outcome)
+
+
+def test_authoritative_summary_rejects_a_finished_run_without_an_outcome() -> None:
+    with pytest.raises(ValueError, match="run lifecycle"):
+        _active_run_summary(phase="finished", outcome=None)
+
+
+@pytest.mark.parametrize(
+    ("phase", "outcome"),
+    [
+        pytest.param("accepted", None, id="accepted"),
+        pytest.param("running", None, id="running"),
+        *(
+            pytest.param("finished", outcome, id=f"finished-{outcome}")
+            for outcome in RUN_OUTCOMES
+        ),
+    ],
+)
+def test_authoritative_summary_accepts_every_valid_lifecycle_pair(
+    phase: RunPhase, outcome: RunOutcome | None
+) -> None:
+    summary = _active_run_summary(phase=phase, outcome=outcome)
+
+    assert (summary.phase, summary.outcome) == (phase, outcome)
+
+
+@pytest.mark.parametrize("model", [RunSummary, SessionChatRun])
+@pytest.mark.parametrize(
+    ("phase", "outcome"),
+    [
+        pytest.param("running", "completed", id="nonterminal-with-outcome"),
+        pytest.param("finished", None, id="terminal-without-outcome"),
+    ],
+)
+def test_public_persisted_run_models_reject_impossible_lifecycle_pairs(
+    model: type[RunSummary] | type[SessionChatRun],
+    phase: RunPhase,
+    outcome: RunOutcome | None,
+) -> None:
+    kwargs: dict[str, object] = {
+        "run_id": "run-1",
+        "phase": phase,
+        "outcome": outcome,
+        "accepted_at": "2026-01-01T00:00:00Z",
+        "started_at": None,
+        "finished_at": None,
+        "activity_revision": 1,
+    }
+    if model is RunSummary:
+        kwargs.update(
+            purpose="chat",
+            filter="chat",
+            purpose_known=True,
+            session_id="session-1",
+            gateway="web",
+            entry_surface_id=None,
+            prompt_preview="hello",
+        )
+    else:
+        kwargs.update(reply_preview=None, reply_source=None)
+
+    with pytest.raises(ValueError, match="run lifecycle"):
+        model(**kwargs)
+
+
 @pytest.mark.parametrize("phase", ["accepted", "running", "finished"])
 @pytest.mark.parametrize(
     "coordinator_state",
@@ -251,3 +334,19 @@ def _wire_payload(
         "session_valid": True,
         "unrecorded_terminal_projection": projection,
     }
+
+
+def _active_run_summary(
+    *, phase: RunPhase, outcome: RunOutcome | None
+) -> ActiveRunSummary:
+    return ActiveRunSummary(
+        run_id="run-1",
+        purpose="chat",
+        gateway="web",
+        phase=phase,
+        outcome=outcome,
+        session_id="session-1",
+        prompt_preview="hello",
+        started_at=None,
+        recording_state=None,
+    )

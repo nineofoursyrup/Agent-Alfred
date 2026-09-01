@@ -365,7 +365,9 @@ def test_the_saving_stage_is_not_claimed_while_the_run_is_merely_running() -> No
 def test_recording_unavailable_answers_503() -> None:
     snapshot = _snapshot(
         coordinator_state="recording_failed",
-        active_run=_active(phase="finished", recording_state="failed"),
+        active_run=_active(
+            phase="finished", outcome="completed", recording_state="failed"
+        ),
         revision=9,
     )
     outcome = _api(
@@ -383,7 +385,8 @@ def test_503_is_only_ever_the_failed_states_answer() -> None:
     unavailable while it is still merely pending.
     """
     pending = _snapshot(
-        coordinator_state="recording_pending", active_run=_active(phase="finished")
+        coordinator_state="recording_pending",
+        active_run=_active(phase="finished", outcome="completed"),
     )
     assert (
         _api(SubmitResult(kind="run_in_progress", snapshot=pending))

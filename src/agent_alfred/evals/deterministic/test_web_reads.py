@@ -240,10 +240,12 @@ def test_the_chat_filter_returns_only_chat_runs() -> None:
     [
         ("phase", "unknown", "invalid run phase"),
         ("outcome", "unknown", "invalid run outcome"),
+        ("phase", "running", "invalid run lifecycle"),
+        ("outcome", None, "invalid run lifecycle"),
     ],
 )
 def test_runs_page_rejects_invalid_persisted_lifecycle_values(
-    column: str, invalid_value: str, expected_error: str
+    column: str, invalid_value: object, expected_error: str
 ) -> None:
     host = _fresh_host()
     host.start()
@@ -1089,10 +1091,12 @@ def test_a_sessions_chat_runs_group_takes_only_admitted_chat_runs() -> None:
     [
         ("phase", "unknown", "invalid run phase"),
         ("outcome", "unknown", "invalid run outcome"),
+        ("phase", "running", "invalid run lifecycle"),
+        ("outcome", None, "invalid run lifecycle"),
     ],
 )
 def test_session_run_list_rejects_invalid_persisted_lifecycle_values(
-    column: str, invalid_value: str, expected_error: str
+    column: str, invalid_value: object, expected_error: str
 ) -> None:
     host = _fresh_host()
     host.start()

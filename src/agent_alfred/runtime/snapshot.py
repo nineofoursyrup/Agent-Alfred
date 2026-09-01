@@ -9,7 +9,13 @@ from dataclasses import replace as _dc_replace
 from typing import Literal
 
 from agent_alfred.outcomes import RunOutcome
-from agent_alfred.run_phases import RunPhase, parse_run_phase
+from agent_alfred.run_phases import (
+    RunPhase,
+    parse_run_lifecycle_pair,
+)
+from agent_alfred.run_phases import (
+    parse_run_phase as parse_run_phase,
+)
 from agent_alfred.runtime.recording_state import (
     RecordingState,
     UnrecordedTerminalState,
@@ -50,7 +56,9 @@ class ActiveRunSummary:
     outcome: RunOutcome | None = None
 
     def __post_init__(self) -> None:
-        parse_run_phase(self.phase)
+        phase, outcome = parse_run_lifecycle_pair(self.phase, self.outcome)
+        object.__setattr__(self, "phase", phase)
+        object.__setattr__(self, "outcome", outcome)
         parse_recording_state(self.recording_state, allow_none=True)
 
 

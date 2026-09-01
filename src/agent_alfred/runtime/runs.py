@@ -29,12 +29,12 @@ from dataclasses import dataclass, replace
 from typing import Any, NamedTuple
 
 from agent_alfred.messages import Message, blocks_from_jsonable, message_plain_text
-from agent_alfred.outcomes import RunOutcome, parse_run_outcome
+from agent_alfred.outcomes import RunOutcome
 from agent_alfred.redact import Redactor
 from agent_alfred.run_phases import (
     TERMINAL_RUN_PHASE,
     RunPhase,
-    parse_run_phase,
+    parse_run_lifecycle_pair,
 )
 from agent_alfred.runtime.cursor import (
     MalformedCursor,
@@ -103,6 +103,11 @@ class RunSummary:
     finished_at: str | None
     activity_revision: int
 
+    def __post_init__(self) -> None:
+        phase, outcome = parse_run_lifecycle_pair(self.phase, self.outcome)
+        object.__setattr__(self, "phase", phase)
+        object.__setattr__(self, "outcome", outcome)
+
 
 @dataclass(frozen=True)
 class RunPage:
@@ -157,6 +162,11 @@ class SessionChatRun:
     activity_revision: int
     reply_preview: str | None
     reply_source: str | None
+
+    def __post_init__(self) -> None:
+        phase, outcome = parse_run_lifecycle_pair(self.phase, self.outcome)
+        object.__setattr__(self, "phase", phase)
+        object.__setattr__(self, "outcome", outcome)
 
 
 @dataclass(frozen=True)
@@ -248,6 +258,7 @@ def _row_to_summary(raw_row) -> RunSummary:
     row = _RunRow(*raw_row)
     purpose = row.purpose
     shelf, known = classify_purpose(purpose)
+    phase, outcome = parse_run_lifecycle_pair(row.phase, row.outcome)
     return RunSummary(
         run_id=row.run_id,
         purpose=purpose,
@@ -257,8 +268,8 @@ def _row_to_summary(raw_row) -> RunSummary:
         gateway=row.gateway,
         entry_surface_id=row.entry_surface_id,
         prompt_preview=row.prompt_preview,
-        phase=parse_run_phase(row.phase),
-        outcome=parse_run_outcome(row.outcome, allow_none=True),
+        phase=phase,
+        outcome=outcome,
         accepted_at=row.accepted_at,
         started_at=row.started_at,
         finished_at=row.finished_at,
@@ -618,19 +629,22 @@ def list_session_chat_runs(
     ).fetchall()
     has_more = len(rows) > limit
     rows = [_SessionChatRunRow(*row) for row in rows[:limit]]
-    entries = tuple(
-        SessionChatRun(
-            run_id=row.run_id,
-            phase=parse_run_phase(row.phase),
-            outcome=parse_run_outcome(row.outcome, allow_none=True),
-            accepted_at=row.accepted_at,
-            started_at=row.started_at,
-            finished_at=row.finished_at,
-            activity_revision=row.activity_revision,
-            **_final_reply(conn, row.run_id, redactor, reply_max_chars),
+    entries_list: list[SessionChatRun] = []
+    for row in rows:
+        phase, outcome = parse_run_lifecycle_pair(row.phase, row.outcome)
+        entries_list.append(
+            SessionChatRun(
+                run_id=row.run_id,
+                phase=phase,
+                outcome=outcome,
+                accepted_at=row.accepted_at,
+                started_at=row.started_at,
+                finished_at=row.finished_at,
+                activity_revision=row.activity_revision,
+                **_final_reply(conn, row.run_id, redactor, reply_max_chars),
+            )
         )
-        for row in rows
-    )
+    entries = tuple(entries_list)
     next_cursor = (
         _session_runs_cursor(
             session_id, (rows[-1].activity_revision, rows[-1].run_id)

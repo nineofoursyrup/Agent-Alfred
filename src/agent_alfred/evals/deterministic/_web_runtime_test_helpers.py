@@ -238,6 +238,7 @@ def snapshot_patch(
             purpose="chat",
             gateway="web",
             phase="finished",
+            outcome="completed",
             session_id="s1",
             prompt_preview="hi",
             started_at=None,

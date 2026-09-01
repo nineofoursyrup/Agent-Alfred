@@ -23,6 +23,7 @@ from typing import Any, Literal
 
 from agent_alfred.gateway.web.progress import AttemptTerminal, StepProjection
 from agent_alfred.outcomes import RunOutcome, parse_run_outcome
+from agent_alfred.run_phases import parse_run_lifecycle_pair
 from agent_alfred.runtime.recording_state import (
     RecordingState,
     UnrecordedTerminalState,
@@ -33,7 +34,6 @@ from agent_alfred.runtime.snapshot import (
     RunPhase,
     RuntimeSnapshot,
     parse_coordinator_state,
-    parse_run_phase,
 )
 
 # The unrecorded reply is the one thing in the snapshot that could be long.
@@ -180,15 +180,15 @@ def snapshot_from_payload(payload: dict[str, Any]) -> RunStateSnapshot:
     active = payload.get("active_run")
     active_run = None
     if active is not None:
-        phase = parse_run_phase(active["phase"])
+        phase, outcome = parse_run_lifecycle_pair(
+            active["phase"], active.get("outcome")
+        )
         active_run = ActiveRunView(
             run_id=active["run_id"],
             purpose=active["purpose"],
             gateway=active["gateway"],
             phase=phase,
-            outcome=parse_run_outcome(
-                active.get("outcome"), allow_none=phase != "finished"
-            ),
+            outcome=outcome,
             session_id=active.get("session_id"),
             prompt_preview=active.get("prompt_preview"),
             started_at=active.get("started_at"),
