@@ -19,6 +19,7 @@ docstring; none of them sleeps through a real timeout.
 
 from __future__ import annotations
 
+import os
 import queue
 import sqlite3
 import threading
@@ -32,8 +33,10 @@ from agent_alfred.events import (
     BarrierFlushResult,
     BestEffortFlushResult,
     CapturingSink,
+    EventEnvelope,
     FanOutSink,
     FlushResult,
+    RunStarted,
     SequencedEvent,
     UnsequencedEvent,
 )
@@ -41,6 +44,7 @@ from agent_alfred.model import ScriptedModel, ScriptedModelFactory
 from agent_alfred.runtime import host as host_module
 from agent_alfred.runtime.host import RuntimeHost, SubmitRequest
 from agent_alfred.settings import Settings
+from agent_alfred.trace import RunBundleTraceSink
 
 CLOSE_GRACE_S = 5.0
 
@@ -646,6 +650,52 @@ def test_runtime_host_retries_fanout_that_is_still_draining() -> None:
     finally:
         sink.release.set()
         host.close()
+
+
+def test_runtime_host_keeps_trace_drain_pending_within_close_budget(
+    tmp_path, monkeypatch
+) -> None:
+    """A live trace writer is an unfinished Host close, not a closed sink."""
+    import agent_alfred.trace as trace_module
+
+    real_write = os.write
+    write_reached = threading.Event()
+    release_write = threading.Event()
+
+    def gated_trace_write(fd, data):
+        if bytes(data[:6]) == b'{"seq"' and not write_reached.is_set():
+            write_reached.set()
+            release_write.wait(5.0)
+        return real_write(fd, data)
+
+    monkeypatch.setattr(os, "write", gated_trace_write)
+    monkeypatch.setattr(trace_module, "_CLOSE_JOIN_TIMEOUT_S", 0.01)
+    trace = RunBundleTraceSink(
+        root=tmp_path / "traces",
+        clock=FakeClock(),
+        process_instance_id="proc-lifecycle",
+    )
+    host, _conn, _capture, _model = _host(extra_sinks=[trace])
+    host.start()
+    try:
+        host._fanout.emit(
+            RunStarted(purpose="chat", user_message=None),
+            EventEnvelope(0.0, "run-close", None, None, None, None),
+        )
+        assert write_reached.wait(2.0), "trace drain did not reach the write"
+
+        assert host.close(timeout=0.05) is False
+        assert host.closed is False
+        assert host._fanout_closed is False
+        assert trace._drain.is_alive()
+
+        release_write.set()
+        assert host.close(timeout=2.0) is True
+        assert host.closed is True
+        assert trace._drain.is_alive() is False
+    finally:
+        release_write.set()
+        host.close(timeout=2.0)
 
 
 def test_keyboard_interrupt_produces_a_terminal_run_and_releases_the_lease() -> None:

@@ -313,7 +313,9 @@ class RuntimeHost:
                 # asks the unfinished sink again. Setting the bit first would
                 # make that retry skip the FanOut entirely -- a Host reported
                 # closed with a sink nobody ever closed.
-                if not self._fanout.close():
+                if not self._fanout.close(
+                    timeout=max(0.0, deadline - time.monotonic())
+                ):
                     return False
                 self._fanout_closed = True
             self._closed = True

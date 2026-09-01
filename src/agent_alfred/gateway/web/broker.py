@@ -1488,6 +1488,10 @@ class SSEBroker:
         self._fan_out(item)
         return True
 
+    def close_with_timeout(self, timeout: float | None = None) -> bool:
+        """TimedCloseSink capability for a Host's remaining close budget."""
+        return self.close(_DRAIN_TIMEOUT_S if timeout is None else timeout)
+
     def _sweep_stale_generations(self, *, clear_kick: bool = False) -> None:
         """Close every connection registered before an unpaid overflow.
 

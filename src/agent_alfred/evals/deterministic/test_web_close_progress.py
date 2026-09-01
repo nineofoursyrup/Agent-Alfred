@@ -31,6 +31,7 @@ correct.
 
 from __future__ import annotations
 
+import os
 import sqlite3
 import threading
 from pathlib import Path
@@ -50,7 +51,9 @@ from agent_alfred.evals.deterministic._web_close_test_helpers import (
 from agent_alfred.events import (
     BestEffortFlushResult,
     CapturingSink,
+    EventEnvelope,
     FanOutSink,
+    RunStarted,
 )
 from agent_alfred.gateway.web.broker import SSEBroker
 from agent_alfred.gateway.web.connection import FakeConnection
@@ -67,6 +70,7 @@ from agent_alfred.model import ScriptedModel, ScriptedModelFactory
 from agent_alfred.runtime.host import RuntimeHost
 from agent_alfred.runtime.snapshot import RuntimeSnapshot
 from agent_alfred.settings import Settings
+from agent_alfred.trace import RunBundleTraceSink
 
 # --- the runtime's tail: database, then entry, each refusable ---------------
 
@@ -502,3 +506,56 @@ def test_dashboard_tail_stays_owned_when_fanout_close_raises(tmp_path) -> None:
     finally:
         rig.sink.release.set()
         rig.runtime.close()
+
+
+def test_dashboard_keeps_ownership_while_trace_drain_is_still_writing(
+    tmp_path, monkeypatch
+) -> None:
+    """A trace writer must stop before Dashboard releases durable state."""
+    import agent_alfred.trace as trace_module
+
+    real_write = os.write
+    write_reached = threading.Event()
+    release_write = threading.Event()
+
+    def gated_trace_write(fd, data):
+        if bytes(data[:6]) == b'{"seq"' and not write_reached.is_set():
+            write_reached.set()
+            release_write.wait(5.0)
+        return real_write(fd, data)
+
+    monkeypatch.setattr(os, "write", gated_trace_write)
+    monkeypatch.setattr(trace_module, "_CLOSE_JOIN_TIMEOUT_S", 0.01)
+    rig = _RealHostFanOutRig(tmp_path)
+    trace = RunBundleTraceSink(
+        root=tmp_path / "traces",
+        clock=FakeClock(),
+        process_instance_id="inst-close-progress",
+    )
+    rig.sink = trace
+    rig.runtime.start()
+    try:
+        assert rig.host is not None
+        rig.host._fanout.emit(
+            RunStarted(purpose="chat", user_message=None),
+            EventEnvelope(0.0, "run-close", None, None, None, None),
+        )
+        assert write_reached.wait(2.0), "trace drain did not reach the write"
+
+        assert rig.runtime.close(timeout=0.05) is False
+        assert rig.runtime.state == "closing"
+        assert trace._drain.is_alive()
+        assert rig.host.closed is False
+        assert rig.conn is not None and rig.conn.close_calls == 0
+        assert read_entry_descriptor(tmp_path) is not None
+        assert rig.lock_is_held() is True
+
+        release_write.set()
+        assert rig.runtime.close(timeout=2.0) is True
+        assert trace._drain.is_alive() is False
+        assert rig.conn.close_calls == 1
+        assert read_entry_descriptor(tmp_path) is None
+        assert rig.lock.acquired is False
+    finally:
+        release_write.set()
+        rig.runtime.close(timeout=2.0)

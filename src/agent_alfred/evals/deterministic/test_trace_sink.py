@@ -1029,8 +1029,6 @@ def test_close_leaves_fd_ownership_to_the_drain_and_answers_queued_barriers(
     """close() must never close an fd the drain thread may hold, and a
     barrier still queued when the sink stops must fail fast with an honest
     reason instead of hanging for the full flush timeout."""
-    import agent_alfred.trace as trace_module
-
     real_write, real_close = os.write, os.close
     gate = threading.Event()
     first_line_reached = threading.Event()
@@ -1051,9 +1049,6 @@ def test_close_leaves_fd_ownership_to_the_drain_and_answers_queued_barriers(
 
     monkeypatch.setattr(os, "write", slow_first_write)
     monkeypatch.setattr(os, "close", counting_close)
-    monkeypatch.setattr(
-        trace_module, "_CLOSE_JOIN_TIMEOUT_S", 0.05, raising=False
-    )
     sink = _utc_sink(tmp_path)
     flush_box: dict[str, FlushResult] = {}
     try:
@@ -1068,10 +1063,13 @@ def test_close_leaves_fd_ownership_to_the_drain_and_answers_queued_barriers(
         flusher.start()
         _wait_for_queued_barrier(sink)
 
-        sink.close()  # its join times out while the drain is stuck on disk
+        assert sink.close(timeout=0.0) is False
 
         assert closed == [], (
             "close() must never close an fd the drain thread may hold"
+        )
+        assert sink._drain.is_alive(), (
+            "a timed-out close must report the still-live writer"
         )
         flusher.join(5.0)
         result = flush_box["result"]
@@ -1081,7 +1079,8 @@ def test_close_leaves_fd_ownership_to_the_drain_and_answers_queued_barriers(
         assert "flush_timeout" not in result.detail, result.detail
     finally:
         gate.set()
-        sink.close()
+        assert sink.close(timeout=2.0) is True
+        assert sink.close(timeout=0.0) is True
 
     sink._drain.join(2.0)
     assert closed == trace_fd, "the drain unwind closes the fd exactly once"

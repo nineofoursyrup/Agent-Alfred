@@ -463,7 +463,7 @@ class RunBundleTraceSink:
         root.mkdir(mode=0o700, parents=True, exist_ok=True)
         root.chmod(0o700)
         self._drain = threading.Thread(
-            target=self._drain_loop, name="trace-drain", daemon=True
+            target=self._drain_loop, name="trace-drain", daemon=False
         )
         self._drain.start()
 
@@ -786,7 +786,12 @@ class RunBundleTraceSink:
         except Exception as exc:
             return _exception_detail(REASON_FSYNC_FAILED, exc)
 
-    def close(self) -> None:
+    def close(self, timeout: float | None = None) -> bool:
+        """Ask the drain to stop and report whether its thread has exited.
+
+        A timed-out join is retryable progress, not completion: the queue,
+        bundles and descriptors stay owned by the same drain until it exits.
+        """
         with self._wake:
             if not self._stopping:
                 self._stopping = True
@@ -797,11 +802,17 @@ class RunBundleTraceSink:
                 # written -- the queue and the fds stay with the drain.
                 self._answer_queued_barriers_locked(REASON_SINK_CLOSED)
                 self._wake.notify_all()
-        self._drain.join(timeout=_CLOSE_JOIN_TIMEOUT_S)
+        wait = _CLOSE_JOIN_TIMEOUT_S if timeout is None else max(0.0, timeout)
+        self._drain.join(timeout=wait)
         # No fd is closed here, even after a timed-out join: the drain thread
         # is the sole owner of every fd and may be inside os.write on one
-        # right now. It closes what remains when it unwinds; the OS reclaims
-        # anything else at process exit.
+        # right now. It closes what remains when it unwinds; as a non-daemon
+        # owner it cannot be silently abandoned during interpreter shutdown.
+        return not self._drain.is_alive()
+
+    def close_with_timeout(self, timeout: float | None = None) -> bool:
+        """TimedCloseSink capability used by FanOut without signature guessing."""
+        return self.close(timeout=timeout)
 
     def _answer_queued_barriers_locked(self, reason: str) -> None:
         """Answer every barrier still in the queue that nobody has answered

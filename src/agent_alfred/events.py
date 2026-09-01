@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import threading
+import time
 import uuid
 from collections.abc import Callable, Sequence
 from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass, is_dataclass, replace
 from dataclasses import fields as dc_fields
 from decimal import Decimal
-from typing import Any, Literal, Protocol
+from typing import Any, Literal, Protocol, runtime_checkable
 
 from agent_alfred.messages import (
     Block,
@@ -346,6 +347,18 @@ class EventSink(Protocol):
         ``None`` are also treated as confirmed.
         """
         ...
+
+
+@runtime_checkable
+class TimedCloseSink(Protocol):
+    """Explicit capability for sinks that can honor a caller's close budget.
+
+    The distinct method is intentional: legacy EventSinks expose only a
+    no-argument ``close``. FanOut must not guess their signatures or turn a
+    ``TypeError`` raised *inside* close into a retry with different arguments.
+    """
+
+    def close_with_timeout(self, timeout: float | None = None) -> bool: ...
 
 
 class ProcessFatalSinkError(RuntimeError):
@@ -829,7 +842,7 @@ class FanOutSink:
             self._last_envelope.pop(run_id, None)
         return incomplete, reason
 
-    def close(self) -> bool:
+    def close(self, timeout: float | None = None) -> bool:
         """Close every sink, resumable per sink.
 
         One sink returning False is still draining, so its completion bit
@@ -842,12 +855,22 @@ class FanOutSink:
         # Attempts are serialized so two racing closers cannot both walk an
         # unfinished sink; the FanOut's close is otherwise on its own lock,
         # never on the publish lock a sink's emit path shares.
+        deadline = None if timeout is None else time.monotonic() + max(0.0, timeout)
         with self._close_lock:
             complete = True
             for index, sink in enumerate(self._sinks):
                 if self._closed_sinks[index]:
                     continue
-                if sink.close() is False:
+                if isinstance(sink, TimedCloseSink):
+                    remaining = (
+                        None
+                        if deadline is None
+                        else max(0.0, deadline - time.monotonic())
+                    )
+                    closed = sink.close_with_timeout(remaining)
+                else:
+                    closed = sink.close()
+                if closed is False:
                     complete = False
                     continue
                 self._closed_sinks[index] = True
