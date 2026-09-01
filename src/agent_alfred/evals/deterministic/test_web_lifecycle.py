@@ -532,6 +532,30 @@ def test_an_entry_descriptor_requires_a_shaped_string_instance_id(
 
 
 @pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("instance_id", True),
+        ("instance_id", ""),
+        ("instance_id", "bad:instance"),
+        ("pid", True),
+        ("pid", 0),
+        ("pid", 2_147_483_648),
+        ("port", True),
+        ("port", 0),
+        ("port", 65_536),
+    ),
+)
+def test_an_entry_descriptor_cannot_be_constructed_outside_its_wire_contract(
+    field: str, value: object
+) -> None:
+    values = {"instance_id": "inst", "pid": 123, "port": 7717}
+    values[field] = value
+
+    with pytest.raises(ValueError):
+        EntryDescriptor(**values)
+
+
+@pytest.mark.parametrize(
     "descriptor",
     (
         EntryDescriptor("minimums", 1, 1),
@@ -743,6 +767,42 @@ def test_close_confirms_the_serving_thread_has_exited(tmp_path) -> None:
 def test_a_negative_port_is_refused_before_anything_else(tmp_path) -> None:
     with pytest.raises(ValueError):
         _service(tmp_path, port=0)
+
+
+@pytest.mark.parametrize("port", (True, 0, 65_536))
+def test_an_invalid_service_port_is_refused_without_side_effects(
+    tmp_path, port: object
+) -> None:
+    state_dir = tmp_path / "state"
+    side_effects: list[str] = []
+
+    class RecordingLock:
+        acquired = False
+
+        def acquire(self) -> None:
+            side_effects.append("lock")
+
+    def bind(address, handler):
+        side_effects.append("bind")
+        return _RecordingServer(address, handler)
+
+    def write(directory: Path, descriptor: EntryDescriptor) -> Path:
+        side_effects.append("write")
+        return directory / DESCRIPTOR_NAME
+
+    with pytest.raises(ValueError):
+        DashboardService(
+            state_dir=state_dir,
+            handler=_Handler,
+            instance_id="inst-lifecycle",
+            port=port,
+            server_factory=bind,
+            lock=RecordingLock(),
+            write_descriptor=write,
+        )
+
+    assert side_effects == []
+    assert not state_dir.exists()
 
 
 # --- a release that fails keeps what it still needs -------------------------

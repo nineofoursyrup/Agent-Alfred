@@ -212,6 +212,20 @@ def _recorded_pid(path: Path) -> int | None:
     return None
 
 
+def _validated_instance_id(value: object) -> str:
+    """One entry-instance boundary: exact string, non-empty and delimiter-free."""
+    if type(value) is not str or not value or ":" in value:
+        raise ValueError("instance_id has the wrong type or shape")
+    return value
+
+
+def _exact_int_in_range(value: object, minimum: int, maximum: int) -> int:
+    """One entry-integer boundary: exact int, then domain range."""
+    if type(value) is not int or not minimum <= value <= maximum:
+        raise ValueError("integer field has the wrong type or range")
+    return value
+
+
 @dataclass(frozen=True)
 class EntryDescriptor:
     """The one entry fact: which instance, which process, which port.
@@ -224,6 +238,11 @@ class EntryDescriptor:
     instance_id: str
     pid: int
     port: int
+
+    def __post_init__(self) -> None:
+        _validated_instance_id(self.instance_id)
+        _exact_int_in_range(self.pid, MIN_PID, MAX_PID)
+        _exact_int_in_range(self.port, MIN_PORT, MAX_PORT)
 
     def to_json(self) -> str:
         return (
@@ -268,13 +287,6 @@ def write_entry_descriptor(directory: Path, descriptor: EntryDescriptor) -> Path
     return target
 
 
-def _exact_int_in_range(value: object, minimum: int, maximum: int) -> int:
-    """One persisted-integer boundary: exact JSON int, then domain range."""
-    if type(value) is not int or not minimum <= value <= maximum:
-        raise ValueError("integer field has the wrong type or range")
-    return value
-
-
 def read_entry_descriptor(directory: Path) -> EntryDescriptor | None:
     """The descriptor as it was last written, or None if there is none.
 
@@ -290,13 +302,10 @@ def read_entry_descriptor(directory: Path) -> EntryDescriptor | None:
         payload = json.loads(text)
         if type(payload) is not dict:
             raise TypeError("entry descriptor must be a JSON object")
-        instance_id = payload["instance_id"]
-        if type(instance_id) is not str or not instance_id or ":" in instance_id:
-            raise ValueError("instance_id has the wrong type or shape")
         return EntryDescriptor(
-            instance_id=instance_id,
-            pid=_exact_int_in_range(payload["pid"], MIN_PID, MAX_PID),
-            port=_exact_int_in_range(payload["port"], MIN_PORT, MAX_PORT),
+            instance_id=payload["instance_id"],
+            pid=payload["pid"],
+            port=payload["port"],
         )
     except (ValueError, KeyError, TypeError) as exc:
         raise ValueError(f"{path} is not a readable entry descriptor") from exc
@@ -337,15 +346,18 @@ class DashboardService:
         # was never accepted is stronger than validating one that was: no
         # caller -- and no injected server factory, the seam every test uses
         # to avoid a real socket -- can carry another address to the bind.
-        if port < MIN_PORT or port > MAX_PORT:
-            raise ValueError(f"port must be in {MIN_PORT}..{MAX_PORT}, got {port}")
+        instance_id = _validated_instance_id(instance_id)
+        port = _exact_int_in_range(port, MIN_PORT, MAX_PORT)
+        pid = _exact_int_in_range(
+            os.getpid() if pid is None else pid, MIN_PID, MAX_PID
+        )
         self._state_dir = state_dir
         self._handler = handler
         self._instance_id = instance_id
         self._requested_port = port
         self._server_factory = server_factory
         self._context = context
-        self._pid = os.getpid() if pid is None else pid
+        self._pid = pid
         self._lock = lock if lock is not None else ProcessLock(
             state_dir / LOCK_NAME
         )
