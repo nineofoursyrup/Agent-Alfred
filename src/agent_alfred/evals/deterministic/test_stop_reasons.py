@@ -7,6 +7,10 @@ from typing import get_type_hints
 
 import pytest
 
+from agent_alfred.evals.deterministic._state_wire_test_helpers import (
+    only_attempt_in_snapshot_wire,
+    running_snapshot_wire,
+)
 from agent_alfred.events import AttemptCommitted, StepFinished, event_json_default
 from agent_alfred.gateway.web.progress import AttemptTerminal, RunProgress
 from agent_alfred.gateway.web.state import snapshot_from_payload, snapshot_payload
@@ -154,8 +158,8 @@ def test_progress_construction_and_recording_reject_invalid_stop_reasons(
 def test_every_optional_stop_reason_round_trips_through_snapshot_wire(
     stop_reason: StopReason | None,
 ) -> None:
-    wire = _snapshot_wire()
-    _wire_attempt(wire)["stop_reason"] = stop_reason
+    wire = running_snapshot_wire()
+    only_attempt_in_snapshot_wire(wire)["stop_reason"] = stop_reason
 
     assert snapshot_payload(snapshot_from_payload(wire)) == wire
 
@@ -164,54 +168,8 @@ def test_every_optional_stop_reason_round_trips_through_snapshot_wire(
     "stop_reason", ["invented_stop", True], ids=["unknown", "bool"]
 )
 def test_snapshot_wire_rejects_invalid_stop_reasons(stop_reason: object) -> None:
-    wire = _snapshot_wire()
-    _wire_attempt(wire)["stop_reason"] = stop_reason
+    wire = running_snapshot_wire()
+    only_attempt_in_snapshot_wire(wire)["stop_reason"] = stop_reason
 
     with pytest.raises(ValueError, match=r"stop[_ ]reason"):
         snapshot_from_payload(wire)
-
-
-def _wire_attempt(wire: dict[str, object]) -> dict[str, object]:
-    step = wire["step"]
-    assert isinstance(step, dict)
-    attempts = step["attempts"]
-    assert isinstance(attempts, list)
-    attempt = attempts[0]
-    assert isinstance(attempt, dict)
-    return attempt
-
-
-def _snapshot_wire() -> dict[str, object]:
-    return {
-        "process_instance_id": "process-1",
-        "state_revision": 1,
-        "coordinator_state": "running",
-        "active_run": {
-            "run_id": "run-1",
-            "purpose": "chat",
-            "gateway": "web",
-            "phase": "running",
-            "outcome": None,
-            "session_id": "session-1",
-            "prompt_preview": "hello",
-            "started_at": "2026-01-01T00:00:00Z",
-            "current_step": 1,
-            "recording_state": None,
-        },
-        "step": {
-            "step_index": 1,
-            "attempts": [
-                {
-                    "attempt_id": "attempt-1",
-                    "outcome": "committed",
-                    "stop_reason": "end_turn",
-                    "error_code": None,
-                    "duration_ms": 5,
-                }
-            ],
-            "attempts_truncated": False,
-        },
-        "recording_state": None,
-        "session_valid": True,
-        "unrecorded_terminal_projection": None,
-    }
