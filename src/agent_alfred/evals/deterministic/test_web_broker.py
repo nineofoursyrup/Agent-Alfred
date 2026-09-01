@@ -2791,9 +2791,15 @@ class _BrokenRing(ReplayRing):
     intact -- only the recording step is broken.
     """
 
-    def observe_published(self, seq, entry):
-        del seq, entry
-        raise RuntimeError("ring is broken")
+    def __init__(self) -> None:
+        super().__init__()
+        self.failure = RuntimeError("ring is broken")
+
+    def observe_published(
+        self, seq, entry, *, defer_retired_release: bool = False
+    ):
+        del seq, entry, defer_retired_release
+        raise self.failure
 
 
 class _BrokenStartupGuardRing(ReplayRing):
@@ -3065,7 +3071,8 @@ def test_a_broken_ring_is_a_process_fatal_not_a_run_local_error() -> None:
     everything that would pour work into a broken recovery source, and the
     notice is said once.
     """
-    harness = Harness(ring=_BrokenRing())
+    ring = _BrokenRing()
+    harness = Harness(ring=ring)
     broker = harness.broker
     capture = CapturingSink(name="capture")
     fanout = FanOutSink([broker, capture], process_instance_id=INSTANCE)
@@ -3085,7 +3092,7 @@ def test_a_broken_ring_is_a_process_fatal_not_a_run_local_error() -> None:
 
     emit("r1")
     # The broker published the fatal state instead of limping on.
-    assert broker._fatal is not None  # noqa: SLF001
+    assert broker._fatal is ring.failure  # noqa: SLF001
     assert broker._stopping is True  # noqa: SLF001
     # New connections are refused, and so are state patches: both would
     # describe a world whose recovery source is gone.
