@@ -291,6 +291,7 @@ def _mainbar_pending_cursor(
     *,
     upper_watermark: int | None = None,
     catchup_position: tuple[int, str] | None = None,
+    runs_position: tuple[int, str] | None = None,
     historic_position: int | None = None,
 ) -> str:
     payload: dict[str, Any] = {
@@ -305,6 +306,9 @@ def _mainbar_pending_cursor(
     if catchup_position is not None:
         payload["ca"] = catchup_position[0]
         payload["cr"] = catchup_position[1]
+    if runs_position is not None:
+        payload["ra"] = runs_position[0]
+        payload["rr"] = runs_position[1]
     if historic_position is not None:
         payload["h"] = historic_position
     return _encode_cursor(payload)
@@ -560,6 +564,7 @@ def mainbar_pairs(
     pending_watermark: int | None = None
     pending_upper_watermark: int | None = None
     catchup_position: tuple[int, str] | None = None
+    pending_runs_position: tuple[int, str] | None = None
     if cursor is not None:
         payload = _decode_cursor(
             cursor, version=_MAINBAR_CURSOR_VERSION, kind=_MAINBAR_KIND
@@ -591,6 +596,15 @@ def mainbar_pairs(
                 ):
                     raise MalformedCursor("pending cursor position is malformed")
                 catchup_position = (parsed_catchup_ar, catchup_run)
+            resume_ar = payload.get("ra")
+            resume_run = payload.get("rr")
+            if resume_ar is not None or resume_run is not None:
+                if not isinstance(resume_run, str):
+                    raise MalformedCursor("pending runs position is malformed")
+                parsed_resume_ar = parse_cursor_position_int(resume_ar)
+                if parsed_resume_ar > pending_watermark:
+                    raise MalformedCursor("pending runs position is malformed")
+                pending_runs_position = (parsed_resume_ar, resume_run)
             raw_historic_position = payload.get("h")
             if raw_historic_position is not None:
                 historic_position = parse_cursor_position_int(
@@ -675,6 +689,7 @@ def mainbar_pairs(
                     pending_watermark,
                     upper_watermark=upper_watermark,
                     catchup_position=(last.activity_revision, last.run_id),
+                    runs_position=pending_runs_position,
                     historic_position=historic_position,
                 ),
                 runs_pending=still_pending,
@@ -687,11 +702,14 @@ def mainbar_pairs(
                 next_cursor=_mainbar_pending_cursor(
                     session_id,
                     upper_watermark,
+                    runs_position=pending_runs_position,
                     historic_position=historic_position,
                 ),
                 runs_pending=True,
             )
-    elif in_runs_segment:
+        in_runs_segment = pending_runs_position is not None
+        runs_position = pending_runs_position
+    if in_runs_segment:
         rows = _mainbar_run_rows(
             conn, session_id, runs_position, remaining + 1
         )
@@ -702,6 +720,19 @@ def mainbar_pairs(
             last = taken[-1]
             runs_position = (last.activity_revision, last.run_id)
         if len(rows) > len(taken):
+            if _has_pending_chat_run(
+                conn, session_id, recording_failed_run_ids
+            ):
+                return MainBarPage(
+                    items=tuple(items),
+                    next_cursor=_mainbar_pending_cursor(
+                        session_id,
+                        _activity_watermark(conn),
+                        runs_position=runs_position,
+                        historic_position=historic_position,
+                    ),
+                    runs_pending=True,
+                )
             return MainBarPage(
                 items=tuple(items),
                 next_cursor=_mainbar_runs_cursor(
@@ -714,7 +745,10 @@ def mainbar_pairs(
             return MainBarPage(
                 items=tuple(items),
                 next_cursor=_mainbar_pending_cursor(
-                    session_id, _activity_watermark(conn)
+                    session_id,
+                    _activity_watermark(conn),
+                    runs_position=runs_position,
+                    historic_position=historic_position,
                 ),
                 runs_pending=True,
             )
@@ -734,7 +768,9 @@ def mainbar_pairs(
         )
         historic_position = row_id
     if len(historic_rows) > len(taken_historic):
-        if not taken_historic and in_runs_segment:
+        if not taken_historic and (
+            in_runs_segment or pending_watermark is not None
+        ):
             # No historic id has been consumed yet, so there is no honest
             # historic keyset position to sign. Replaying the exhausted Run
             # position starts the next page at the newest historic row.

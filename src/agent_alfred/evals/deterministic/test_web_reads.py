@@ -862,6 +862,154 @@ def _record_seeded_mainbar_run(host: RuntimeHost, run_id: str, reply: str) -> No
         conn.commit()
 
 
+def test_mainbar_paged_recorded_prefix_waits_for_a_later_recorded_run() -> None:
+    """A pending Run cannot be lost behind an ordinary DESC continuation.
+
+    The first page has more old recorded Runs available.  Its continuation
+    must nevertheless preserve both the activity watermark and the consumed
+    old-Run position while the real finalizer is paused.  Once recording
+    settles, the new cohort is returned first, then the old suffix, then the
+    historic segment, exactly once each.
+    """
+    from agent_alfred.runtime.cursor import decode_cursor
+
+    latch = _FinalizerLatch()
+    host = _historic_host(
+        {"s-mainbar-many": ["旧消息"]},
+        script=["稍后保存的回答"],
+        before_recording_commit=latch,
+    )
+    host.start()
+    try:
+        for run_id in ("r-oldest", "r-middle", "r-newest"):
+            _insert_run(host, run_id, session_id="s-mainbar-many")
+            _record_seeded_mainbar_run(host, run_id, f"reply-{run_id}")
+
+        submitted = host.submit(
+            SubmitRequest(message="稍后保存的问题", session_id="s-mainbar-many")
+        )
+        assert latch.reached.wait(2.0)
+        assert host.snapshot().coordinator_state == "recording_pending"
+
+        api = DashboardApi(facade=host)
+        status, first = api.mainbar(
+            {"session_id": "s-mainbar-many", "limit": "1"}
+        )
+        assert status == 200
+        assert [item["run_id"] for item in first["items"]] == ["r-newest"]
+        assert first["runs_pending"] is True
+        wait_cursor = first["next_cursor"]
+        assert wait_cursor is not None
+        payload = decode_cursor(wait_cursor, version=3, kind="mainbar")
+        assert payload["seg"] == "runs_pending"
+        assert payload["s"] == "s-mainbar-many"
+        assert type(payload["w"]) is int
+        assert payload["ra"] == first["items"][0]["activity_revision"]
+        assert payload["rr"] == "r-newest"
+        assert api.mainbar(
+            {"session_id": "not-the-cursor-session", "cursor": wait_cursor}
+        ) == (400, {"code": "malformed_cursor"})
+
+        latch.release.set()
+        host.wait(submitted.run_id)
+
+        seen = list(first["items"])
+        cursor = wait_cursor
+        while cursor is not None:
+            status, page = api.mainbar(
+                {
+                    "session_id": "s-mainbar-many",
+                    "limit": "1",
+                    "cursor": cursor,
+                }
+            )
+            assert status == 200
+            seen.extend(page["items"])
+            cursor = page["next_cursor"]
+
+        assert [item.get("run_id") for item in seen] == [
+            "r-newest",
+            submitted.run_id,
+            "r-middle",
+            "r-oldest",
+            None,
+        ]
+        assert len([item.get("run_id") for item in seen if item.get("run_id")]) == len(
+            {
+                item.get("run_id")
+                for item in seen
+                if item.get("run_id") is not None
+            }
+        )
+    finally:
+        latch.release.set()
+        host.close()
+
+
+def test_mainbar_paged_recorded_prefix_resumes_after_recording_failure() -> None:
+    """A failed pending Run releases the preserved old suffix, not a gap."""
+    conn = _v2_database()
+    _seed_historic(conn, "s-mainbar-many", ["旧消息"])
+    schema.migrate(conn)
+    armed = {"value": False}
+    latch = _FinalizerLatch()
+    host = _host_over(
+        _FailMainbarFinalize(conn, armed),
+        ["不会保存的回答"],
+        before_recording_commit=latch,
+    )
+    host.start()
+    try:
+        for run_id in ("r-oldest", "r-middle", "r-newest"):
+            _insert_run(host, run_id, session_id="s-mainbar-many")
+            _record_seeded_mainbar_run(host, run_id, f"reply-{run_id}")
+
+        submitted = host.submit(
+            SubmitRequest(message="不会保存的问题", session_id="s-mainbar-many")
+        )
+        assert latch.reached.wait(2.0)
+        api = DashboardApi(facade=host)
+        status, first = api.mainbar(
+            {"session_id": "s-mainbar-many", "limit": "1"}
+        )
+        assert status == 200
+        assert [item["run_id"] for item in first["items"]] == ["r-newest"]
+        assert first["runs_pending"] is True
+        wait_cursor = first["next_cursor"]
+        assert wait_cursor is not None
+
+        armed["value"] = True
+        latch.release.set()
+        host.wait(submitted.run_id)
+        assert host.snapshot().coordinator_state == "recording_failed"
+
+        seen = list(first["items"])
+        cursor = wait_cursor
+        while cursor is not None:
+            status, page = api.mainbar(
+                {
+                    "session_id": "s-mainbar-many",
+                    "limit": "1",
+                    "cursor": cursor,
+                }
+            )
+            assert status == 200
+            assert page["runs_pending"] is False
+            seen.extend(page["items"])
+            cursor = page["next_cursor"]
+
+        assert [item.get("run_id") for item in seen] == [
+            "r-newest",
+            "r-middle",
+            "r-oldest",
+            None,
+        ]
+        assert all(item.get("run_id") != submitted.run_id for item in seen)
+    finally:
+        latch.release.set()
+        host.close()
+
+
 def test_mainbar_catches_multiple_pending_runs_after_a_recorded_page() -> None:
     """The wait checkpoint is after the old page, not after future revisions."""
     host = _historic_host(
@@ -869,12 +1017,15 @@ def test_mainbar_catches_multiple_pending_runs_after_a_recorded_page() -> None:
     )
     host.start()
     try:
-        existing = _run(host, "已有问题", "s-mainbar-many")
+        existing_oldest = _run(host, "已有问题", "s-mainbar-many")
+        for run_id in ("r-existing-middle", "r-existing-newest"):
+            _insert_run(host, run_id, session_id="s-mainbar-many")
+            _record_seeded_mainbar_run(host, run_id, f"reply-{run_id}")
         _insert_run(host, "r-pending-one", session_id="s-mainbar-many")
         _insert_run(host, "r-pending-two", session_id="s-mainbar-many")
 
         first = host.mainbar_pairs(session_id="s-mainbar-many", limit=1)
-        assert [item.run_id for item in first.items] == [existing.run_id]
+        assert [item.run_id for item in first.items] == ["r-existing-newest"]
         assert first.runs_pending is True
         wait_cursor = first.next_cursor
         assert wait_cursor is not None
@@ -889,7 +1040,7 @@ def test_mainbar_catches_multiple_pending_runs_after_a_recorded_page() -> None:
 
         _record_seeded_mainbar_run(host, "r-pending-two", "reply-two")
 
-        run_ids = [existing.run_id]
+        run_ids = ["r-existing-newest"]
         historic = []
         cursor = wait_cursor
         while cursor is not None:
@@ -904,9 +1055,11 @@ def test_mainbar_catches_multiple_pending_runs_after_a_recorded_page() -> None:
             cursor = page.next_cursor
 
         assert run_ids == [
-            existing.run_id,
+            "r-existing-newest",
             "r-pending-two",
             "r-pending-one",
+            "r-existing-middle",
+            existing_oldest.run_id,
         ]
         assert len(run_ids) == len(set(run_ids))
         assert historic == ["旧消息"]
@@ -1134,6 +1287,40 @@ def test_mainbar_cursor_is_session_bound_fail_closed_and_idempotent() -> None:
                 "w": 1,
                 "ca": 2,
                 "cr": "r2",
+            },
+            {
+                "v": 3,
+                "k": "mainbar",
+                "seg": "runs_pending",
+                "s": "s-a",
+                "w": 2,
+                "ra": 1,
+            },
+            {
+                "v": 3,
+                "k": "mainbar",
+                "seg": "runs_pending",
+                "s": "s-a",
+                "w": 2,
+                "rr": "r1",
+            },
+            {
+                "v": 3,
+                "k": "mainbar",
+                "seg": "runs_pending",
+                "s": "s-a",
+                "w": 2,
+                "ra": True,
+                "rr": "r1",
+            },
+            {
+                "v": 3,
+                "k": "mainbar",
+                "seg": "runs_pending",
+                "s": "s-a",
+                "w": 2,
+                "ra": 3,
+                "rr": "r1",
             },
         ]
         for payload in malformed:
