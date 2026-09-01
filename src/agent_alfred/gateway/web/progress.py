@@ -19,13 +19,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from agent_alfred.model import (
+    ATTEMPT_ABORTED,
+    ATTEMPT_COMMITTED,
+    AttemptOutcome,
+)
+
 # A Step can hold a retry and a streaming fallback, both of which are real
 # billed round-trips; eight leaves room for a pathological Step without
 # letting one unbounded retry chain inflate every snapshot.
 DEFAULT_MAX_ATTEMPTS = 8
-
-_COMMITTED = "committed"
-_ABORTED = "aborted"
 
 
 @dataclass(frozen=True)
@@ -33,7 +36,7 @@ class AttemptTerminal:
     """What became of one Attempt. A terminal fact, never a partial."""
 
     attempt_id: str
-    outcome: str
+    outcome: AttemptOutcome
     stop_reason: str | None
     error_code: str | None
     duration_ms: int
@@ -107,7 +110,7 @@ class RunProgress:
         run_id: str,
         *,
         attempt_id: str,
-        outcome: str,
+        outcome: AttemptOutcome,
         stop_reason: str | None,
         error_code: str | None,
         duration_ms: int,
@@ -156,7 +159,7 @@ def observe(payload: Any, run_id: str, progress: RunProgress) -> None:
         progress.note_attempt_terminal(
             run_id,
             attempt_id=getattr(payload, "attempt_id", ""),
-            outcome=_COMMITTED,
+            outcome=ATTEMPT_COMMITTED,
             stop_reason=getattr(payload, "stop_reason", None),
             error_code=None,
             duration_ms=int(getattr(payload, "duration_ms", 0)),
@@ -165,7 +168,7 @@ def observe(payload: Any, run_id: str, progress: RunProgress) -> None:
         progress.note_attempt_terminal(
             run_id,
             attempt_id=getattr(payload, "attempt_id", ""),
-            outcome=_ABORTED,
+            outcome=ATTEMPT_ABORTED,
             stop_reason=None,
             error_code=_error_code(getattr(payload, "error", None)),
             duration_ms=int(getattr(payload, "duration_ms", 0)),

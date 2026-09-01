@@ -25,6 +25,25 @@ StopReason = Literal[
 ]
 
 Retryable = Literal[True, False, "unknown"]
+AttemptOutcome = Literal["committed", "aborted"]
+
+ATTEMPT_COMMITTED: AttemptOutcome = "committed"
+ATTEMPT_ABORTED: AttemptOutcome = "aborted"
+ATTEMPT_OUTCOMES: tuple[AttemptOutcome, ...] = (
+    ATTEMPT_COMMITTED,
+    ATTEMPT_ABORTED,
+)
+
+
+def parse_attempt_outcome(value: object) -> AttemptOutcome:
+    """Validate and narrow one Attempt outcome crossing a wire boundary."""
+    if type(value) is not str:
+        raise ValueError(f"invalid attempt outcome: {value!r}")
+    if value == ATTEMPT_COMMITTED:
+        return ATTEMPT_COMMITTED
+    if value == ATTEMPT_ABORTED:
+        return ATTEMPT_ABORTED
+    raise ValueError(f"invalid attempt outcome: {value!r}")
 
 
 @dataclass(frozen=True)
@@ -58,7 +77,7 @@ class ModelError:
 class AttemptRecord:
     attempt_id: str
     streamed: bool
-    outcome: Literal["committed", "aborted"]
+    outcome: AttemptOutcome
     usage: Usage
     error: ModelError | None = None
 

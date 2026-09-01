@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from agent_alfred.gateway.web.progress import AttemptTerminal, StepProjection
+from agent_alfred.model import parse_attempt_outcome
 from agent_alfred.outcomes import RunOutcome, parse_run_outcome
 from agent_alfred.run_phases import parse_run_lifecycle_pair
 from agent_alfred.runtime.recording_state import (
@@ -40,6 +41,9 @@ from agent_alfred.runtime.snapshot import (
 # Bounding it keeps the snapshot bounded, and the cut is marked so nobody
 # reads a truncated sentence as the whole sentence.
 SNAPSHOT_TEXT_LIMIT = 2000
+_ATTEMPT_FIELDS = frozenset(
+    {"attempt_id", "outcome", "stop_reason", "error_code", "duration_ms"}
+)
 
 PatchRejection = Literal[
     "instance_mismatch",
@@ -108,6 +112,41 @@ def _parse_required_bool(payload: dict[str, Any], field: str) -> bool:
     if type(value) is not bool:
         raise ValueError(f"{field} must be a boolean")
     return value
+
+
+def _parse_non_negative_int(value: object, field: str) -> int:
+    if type(value) is not int or value < 0:
+        raise ValueError(f"{field} must be a non-negative integer")
+    return value
+
+
+def _parse_required_nonempty_string(value: object, field: str) -> str:
+    if type(value) is not str or not value:
+        raise ValueError(f"{field} must be a non-empty string")
+    return value
+
+
+def _parse_optional_string(value: object, field: str) -> str | None:
+    if value is None:
+        return None
+    if type(value) is not str:
+        raise ValueError(f"{field} must be a string or null")
+    return value
+
+
+def _parse_attempt_terminal(value: object) -> AttemptTerminal:
+    if type(value) is not dict or set(value) != _ATTEMPT_FIELDS:
+        raise ValueError(
+            "attempt must contain exactly attempt_id, outcome, stop_reason, "
+            "error_code, and duration_ms"
+        )
+    return AttemptTerminal(
+        attempt_id=_parse_required_nonempty_string(value["attempt_id"], "attempt_id"),
+        outcome=parse_attempt_outcome(value["outcome"]),
+        stop_reason=_parse_optional_string(value["stop_reason"], "stop_reason"),
+        error_code=_parse_optional_string(value["error_code"], "error_code"),
+        duration_ms=_parse_non_negative_int(value["duration_ms"], "duration_ms"),
+    )
 
 
 def snapshot_payload(
@@ -199,23 +238,29 @@ def snapshot_from_payload(payload: dict[str, Any]) -> RunStateSnapshot:
             session_id=active.get("session_id"),
             prompt_preview=active.get("prompt_preview"),
             started_at=active.get("started_at"),
-            current_step=active.get("current_step"),
+            current_step=(
+                None
+                if active.get("current_step") is None
+                else _parse_non_negative_int(active.get("current_step"), "current_step")
+            ),
             recording_state=parse_recording_state(
                 active.get("recording_state"), allow_none=True
             ),
         )
     return RunStateSnapshot(
         process_instance_id=payload["process_instance_id"],
-        state_revision=payload["state_revision"],
+        state_revision=_parse_non_negative_int(
+            payload["state_revision"], "state_revision"
+        ),
         coordinator_state=parse_coordinator_state(payload["coordinator_state"]),
         active_run=active_run,
         step=(
             None
             if step is None
             else StepProjection(
-                step_index=step["step_index"],
+                step_index=_parse_non_negative_int(step["step_index"], "step_index"),
                 attempts=tuple(
-                    AttemptTerminal(**attempt) for attempt in step["attempts"]
+                    _parse_attempt_terminal(attempt) for attempt in step["attempts"]
                 ),
                 attempts_truncated=_parse_required_bool(step, "attempts_truncated"),
             )
