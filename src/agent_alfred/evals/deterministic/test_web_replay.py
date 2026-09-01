@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 import weakref
 
 import pytest
@@ -349,6 +352,54 @@ def test_cursor_text_parses_only_the_issued_shape() -> None:
 @pytest.mark.parametrize("raw", ("9" * 5_000, "²"))
 def test_cursor_text_rejects_unconvertible_digit_shapes(raw: str) -> None:
     assert replay.parse_cursor(f"inst:{raw}", "inst") == (None, "malformed")
+
+
+def test_cursor_text_owns_its_decimal_length_boundary() -> None:
+    largest_text = "1" + "0" * (replay.MAX_CURSOR_SEQ_DIGITS - 1)
+    assert replay.parse_cursor(f"inst:{largest_text}", "inst") == (
+        10 ** (replay.MAX_CURSOR_SEQ_DIGITS - 1),
+        None,
+    )
+    assert replay.parse_cursor(f"inst:{largest_text}0", "inst") == (
+        None,
+        "malformed",
+    )
+
+
+@pytest.mark.parametrize(
+    ("configured_limit", "expected_limit"),
+    (
+        (None, sys.int_info.default_max_str_digits),
+        (0, 0),
+        (10_000, 10_000),
+    ),
+)
+def test_overlong_cursor_is_malformed_under_every_interpreter_digit_limit(
+    configured_limit: int | None, expected_limit: int
+) -> None:
+    """The wire verdict belongs to the application, not Python startup."""
+    environment = os.environ.copy()
+    if configured_limit is None:
+        environment.pop("PYTHONINTMAXSTRDIGITS", None)
+    else:
+        environment["PYTHONINTMAXSTRDIGITS"] = str(configured_limit)
+    script = """
+import sys
+from agent_alfred.gateway.web.replay import parse_cursor
+
+reason = parse_cursor("inst:" + "9" * 5_000, "inst")[1]
+print(f"{sys.get_int_max_str_digits()}:{reason or 'accepted'}")
+"""
+
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        check=True,
+        capture_output=True,
+        env=environment,
+        text=True,
+    )
+
+    assert completed.stdout.strip() == f"{expected_limit}:malformed"
 
 
 def test_the_reserved_startup_cursor_parses_and_formats() -> None:

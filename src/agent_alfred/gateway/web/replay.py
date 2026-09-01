@@ -83,6 +83,15 @@ CursorVerdictKind = Literal["absent", "valid", "gap"]
 SeqVerdict = Literal["valid", "too_old", "ahead", "malformed"]
 ReplayBatchKind = Literal["batch", "complete", "unavailable", "oversized"]
 
+# ``seq`` is a process-local Python integer, not a SQLite position, so the
+# paging codec's signed-64-bit limit is not its domain.  The cursor boundary
+# nevertheless owns a fixed text budget before calling ``int``: 640 decimal
+# digits is the largest conversion size every supported Python process must
+# accept even when its startup digit limit is configured to the minimum.
+# Freezing that value here makes the wire verdict independent of whether the
+# interpreter keeps, disables, or raises its configurable conversion limit.
+MAX_CURSOR_SEQ_DIGITS = 640
+
 # The wire shape of a cursor. NewType so a bare string is not quietly
 # accepted where a parsed cursor is meant.
 CursorText = NewType("CursorText", str)
@@ -380,6 +389,7 @@ def parse_cursor(
     if (
         not raw.isascii()
         or not raw.isdecimal()
+        or len(raw) > MAX_CURSOR_SEQ_DIGITS
         or (len(raw) > 1 and raw[0] == "0")
     ):
         return None, "malformed"
