@@ -33,7 +33,6 @@ from agent_alfred.messages import Message, blocks_from_jsonable, message_plain_t
 from agent_alfred.outcomes import RunOutcome
 from agent_alfred.redact import Redactor
 from agent_alfred.run_phases import (
-    IN_FLIGHT_RUN_PHASES,
     TERMINAL_RUN_PHASE,
     RunPhase,
     parse_run_lifecycle_pair,
@@ -48,7 +47,7 @@ from agent_alfred.runtime.cursor import (
 from agent_alfred.runtime.cursor import (
     encode_cursor as _encode_cursor,
 )
-from agent_alfred.runtime.sessions import SessionNotFound
+from agent_alfred.runtime.sessions import SessionNotFound, _has_inflight_chat_run
 
 _CURSOR_VERSION = 1
 _MAINBAR_CURSOR_VERSION = 3
@@ -655,8 +654,8 @@ def mainbar_pairs(
     remaining = limit
     if (
         not in_runs_segment
-        and _has_pending_chat_run(
-            conn, session_id, recording_failed_run_ids
+        and _has_inflight_chat_run(
+            conn, session_id, None, recording_failed_run_ids
         )
     ):
         return MainBarPage(
@@ -671,8 +670,8 @@ def mainbar_pairs(
     if pending_watermark is not None:
         if (
             pending_upper_watermark is None
-            and _has_pending_chat_run(
-                conn, session_id, recording_failed_run_ids
+            and _has_inflight_chat_run(
+                conn, session_id, None, recording_failed_run_ids
             )
         ):
             # Do not expose a partially settled cohort. A second pending Run
@@ -703,8 +702,8 @@ def mainbar_pairs(
         remaining -= len(taken)
         if len(rows) > len(taken):
             last = taken[-1]
-            still_pending = _has_pending_chat_run(
-                conn, session_id, recording_failed_run_ids
+            still_pending = _has_inflight_chat_run(
+                conn, session_id, None, recording_failed_run_ids
             )
             return MainBarPage(
                 items=tuple(items),
@@ -718,8 +717,8 @@ def mainbar_pairs(
                 ),
                 runs_pending=still_pending,
             )
-        if _has_pending_chat_run(
-            conn, session_id, recording_failed_run_ids
+        if _has_inflight_chat_run(
+            conn, session_id, None, recording_failed_run_ids
         ):
             return MainBarPage(
                 items=tuple(items),
@@ -744,8 +743,8 @@ def mainbar_pairs(
             last = taken[-1]
             runs_position = (last.activity_revision, last.run_id)
         if len(rows) > len(taken):
-            if _has_pending_chat_run(
-                conn, session_id, recording_failed_run_ids
+            if _has_inflight_chat_run(
+                conn, session_id, None, recording_failed_run_ids
             ):
                 return MainBarPage(
                     items=tuple(items),
@@ -763,8 +762,8 @@ def mainbar_pairs(
                     session_id, runs_position
                 ),
             )
-        if _has_pending_chat_run(
-            conn, session_id, recording_failed_run_ids
+        if _has_inflight_chat_run(
+            conn, session_id, None, recording_failed_run_ids
         ):
             return MainBarPage(
                 items=tuple(items),
@@ -836,25 +835,6 @@ def _activity_watermark(conn) -> int:
         "SELECT COALESCE(MAX(activity_revision), 0) FROM runs"
     ).fetchone()
     return 0 if row is None else row[0]
-
-
-def _has_pending_chat_run(
-    conn,
-    session_id: str,
-    recording_failed_run_ids: frozenset[str],
-) -> bool:
-    failed_clause = ""
-    params: list[Any] = [session_id, *IN_FLIGHT_RUN_PHASES]
-    if recording_failed_run_ids:
-        marks = ", ".join("?" for _ in recording_failed_run_ids)
-        failed_clause = f"AND run_id NOT IN ({marks})"
-        params.extend(sorted(recording_failed_run_ids))
-    row = conn.execute(
-        "SELECT 1 FROM runs WHERE session_id = ? AND purpose = 'chat' "
-        "AND phase IN (?, ?) " + failed_clause + " LIMIT 1",
-        params,
-    ).fetchone()
-    return row is not None
 
 
 def _mainbar_catchup_rows(

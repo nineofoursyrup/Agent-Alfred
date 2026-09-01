@@ -300,7 +300,7 @@ def open_session(
                 title_max_chars,
                 runs_pending=False,
             )
-        if _has_inflight_run(
+        if _has_inflight_chat_run(
             conn, session_id, runs_position, recording_failed_run_ids
         ):
             # The runs segment is not closed for this view: a chat Run that
@@ -360,7 +360,7 @@ def _runs_beyond_clause() -> str:
     )
 
 
-def _has_inflight_run(
+def _has_inflight_chat_run(
     conn,
     session_id: str,
     position: tuple[int, str] | None,
@@ -490,7 +490,7 @@ def _page_run_keys(
     Runs are only written into the message pair at finalize, in the same
     transaction that stamps activity_revision, so an in-flight Run has no
     messages and no key -- it is held out of this segment by the wait cursor
-    (:func:`_has_inflight_run`) instead of being mistaken for exhaustion.
+    (:func:`_has_inflight_chat_run`) instead of being mistaken for exhaustion.
     The agent_log unique index guarantees at most one pair per Run.
     """
     sql = """
