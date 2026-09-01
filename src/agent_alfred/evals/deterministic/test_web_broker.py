@@ -2839,6 +2839,21 @@ class _BrokenOpenReadRing(ReplayRing):
         self._raise_if_broken("published_high_water_seq")
         return super().published_high_water_seq()
 
+    def replay_floor_seq(self):
+        self._raise_if_broken("replay_floor_seq")
+        return super().replay_floor_seq()
+
+
+class _RecordingRealThreadSpawner(RealThreadSpawner):
+    """Runs writers while retaining proof that admission spawned no extra one."""
+
+    def __init__(self) -> None:
+        self.targets: list = []
+
+    def spawn(self, target):
+        self.targets.append(target)
+        return super().spawn(target)
+
 
 @pytest.mark.parametrize(
     ("broken_read", "cursor"),
@@ -2850,6 +2865,7 @@ class _BrokenOpenReadRing(ReplayRing):
         pytest.param(
             "published_high_water_seq", "malformed", id="gap-published-high-water"
         ),
+        pytest.param("replay_floor_seq", "malformed", id="gap-replay-floor"),
         pytest.param(
             "published_high_water_seq", None, id="registration-published-high-water"
         ),
@@ -2861,7 +2877,8 @@ def test_every_opening_ring_read_failure_is_process_fatal_before_admission(
 ) -> None:
     """Every ring read before HTTP 200 shares the process-fatal boundary."""
     ring = _BrokenOpenReadRing()
-    harness = Harness(ring=ring, spawn=RealThreadSpawner())
+    spawn = _RecordingRealThreadSpawner()
+    harness = Harness(ring=ring, spawn=spawn)
     broker = harness.broker
     capture, fanout = _capture_fanout(broker)
     broker.bind_fatal_handler(
@@ -2874,6 +2891,24 @@ def test_every_opening_ring_read_failure_is_process_fatal_before_admission(
         )
     )
     existing = harness.connect()
+    if broken_read == "replay_floor_seq":
+        harness.emit(RunStarted(purpose="chat"), run_id="r1")
+        broker.publish_state_patch(
+            runtime_snapshot(
+                state_revision=1,
+                coordinator_state="running",
+                active_run=ActiveRunSummary(
+                    run_id="r1",
+                    purpose="chat",
+                    gateway="web",
+                    phase="running",
+                    session_id=None,
+                    prompt_preview="hi",
+                    started_at="2026-01-01T00:00:00Z",
+                    recording_state=None,
+                ),
+            )
+        )
     ring.break_read(broken_read)
     connection = FakeConnection()
 
@@ -2887,6 +2922,8 @@ def test_every_opening_ring_read_failure_is_process_fatal_before_admission(
     assert existing.finished.wait(5.0), "existing stream was not closed"
     assert broker.connections == ()
     assert broker.registrations_in_flight == 0
+    assert len(spawn.targets) == 1, "failed admission leaked writer ownership"
+    assert connection.writes == []
 
     refused = broker.connect(connection=FakeConnection())
     assert refused.finished.is_set()
@@ -2897,6 +2934,34 @@ def test_every_opening_ring_read_failure_is_process_fatal_before_admission(
         if getattr(event.payload, "code", None) == "sink_disabled"
     ]
     assert len(notices) == 1
+
+
+def test_a_non_gap_open_does_not_read_the_replay_floor() -> None:
+    """Current Run recoverability is a gap-only opening fact."""
+    ring = _BrokenOpenReadRing()
+    harness = Harness(ring=ring)
+    harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    harness.broker.publish_state_patch(
+        runtime_snapshot(
+            state_revision=1,
+            coordinator_state="running",
+            active_run=ActiveRunSummary(
+                run_id="r1",
+                purpose="chat",
+                gateway="web",
+                phase="running",
+                session_id=None,
+                prompt_preview="hi",
+                started_at="2026-01-01T00:00:00Z",
+                recording_state=None,
+            ),
+        )
+    )
+    ring.break_read("replay_floor_seq")
+
+    handle = harness.connect()
+
+    assert handle in harness.broker.connections
 
 
 def test_a_startup_guard_read_failure_is_process_fatal_before_admission() -> None:

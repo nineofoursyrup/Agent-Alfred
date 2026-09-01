@@ -922,10 +922,16 @@ class SSEBroker:
         except Exception as exc:
             return None, exc
 
-    def _opening_ring_snapshot(
+    def _opening_stream_snapshot(
         self, cursor: CursorText | None
-    ) -> tuple[CursorVerdict, int | None, int | None, int]:
-        """Capture every ring fact used to admit a stream before HTTP 200."""
+    ) -> tuple[
+        CursorVerdict,
+        int | None,
+        int | None,
+        int,
+        CurrentRunState | None,
+    ]:
+        """Capture every replay-dependent opening fact before HTTP 200."""
         verdict = classify_cursor(
             cursor,
             self._ring,
@@ -935,7 +941,16 @@ class SSEBroker:
         replay_through = self._ring.latest_complete_seq()
         oldest_seq = self._ring.oldest_seq() if verdict.kind == "gap" else None
         published_through = self._ring.published_high_water_seq()
-        return verdict, replay_through, oldest_seq, published_through
+        current_run_state = (
+            self._current_run_state_locked() if verdict.kind == "gap" else None
+        )
+        return (
+            verdict,
+            replay_through,
+            oldest_seq,
+            published_through,
+            current_run_state,
+        )
 
     def _prepare_before_writer(
         self,
@@ -1017,7 +1032,7 @@ class SSEBroker:
                         break
                     epoch = self._state_epoch
                     ring_snapshot, replay_failure = self._capture_ring_read(
-                        lambda: self._opening_ring_snapshot(cursor)
+                        lambda: self._opening_stream_snapshot(cursor)
                     )
                     if replay_failure is not None:
                         break
@@ -1027,6 +1042,7 @@ class SSEBroker:
                         replay_through,
                         oldest_seq,
                         published_through,
+                        current_run_state,
                     ) = ring_snapshot
                     # The gap notice's facts, captured where they are coherent:
                     # the ring and the run state cannot move inside this critical
@@ -1036,12 +1052,13 @@ class SSEBroker:
                         | None
                     ) = None
                     if verdict.kind == "gap":
+                        assert current_run_state is not None
                         gap_args = (
                             verdict.reason or "malformed",
                             verdict.requested_seq,
                             oldest_seq,
                             published_through,
-                            self._current_run_state_locked(),
+                            current_run_state,
                         )
                     latest = self._latest
                     # Same binding as publish_state_patch: the step summary is
