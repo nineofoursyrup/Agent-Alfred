@@ -99,6 +99,8 @@ class _Facade:
         self.mainbar_sessions: list[str] = []
         # The same record for the Session group's run list.
         self.session_run_sessions: list[str] = []
+        # The normalized page size observed by each real HTTP read route.
+        self.read_limits: list[tuple[str, int]] = []
 
     # The gate's authority, in the shape the Host provides it. No Run is
     # ever in flight behind this facade, so the only thing that can busy the
@@ -141,6 +143,7 @@ class _Facade:
     def list_sessions(self, *, limit: int, cursor: str | None = None):
         from agent_alfred.runtime.sessions import SessionInboxPage
 
+        self.read_limits.append(("sessions", limit))
         return SessionInboxPage(sessions=(), next_cursor=None)
 
     def open_session(
@@ -148,6 +151,7 @@ class _Facade:
     ):
         from agent_alfred.runtime.sessions import SessionMessagesPage
 
+        self.read_limits.append(("messages", page_size))
         return SessionMessagesPage(
             session_id=session_id, title="t", messages=(), next_cursor=None
         )
@@ -155,6 +159,7 @@ class _Facade:
     def list_runs(self, *, filter: str, limit: int, cursor: str | None = None):
         from agent_alfred.runtime.runs import RunPage
 
+        self.read_limits.append(("runs", limit))
         return RunPage(filter=filter, runs=(), non_terminal=None, next_cursor=None)
 
     def locate_run(self, run_id: str, *, limit: int):
@@ -162,6 +167,7 @@ class _Facade:
 
     def mainbar_pairs(self, *, session_id: str, limit: int, cursor: str | None):
         self.mainbar_sessions.append(session_id)
+        self.read_limits.append(("mainbar", limit))
         from agent_alfred.runtime.runs import MainBarPage
 
         return MainBarPage(items=(), next_cursor=None)
@@ -170,6 +176,7 @@ class _Facade:
         self, *, session_id: str, limit: int, cursor: str | None
     ):
         self.session_run_sessions.append(session_id)
+        self.read_limits.append(("session-runs", limit))
         from agent_alfred.runtime.runs import SessionChatRunsPage
 
         return SessionChatRunsPage(session_id=session_id, runs=(), next_cursor=None)
@@ -389,6 +396,40 @@ def test_a_malformed_page_cursor_is_a_secret_free_bad_request_on_the_wire(
     assert b"Traceback" not in body
     assert b"decoder detail" not in body
     _assert_no_cross_origin_permission(head)
+
+
+@pytest.mark.parametrize(
+    ("path", "route", "expected"),
+    [
+        ("/api/sessions?limit=%D9%A1", "sessions", 25),
+        (
+            "/api/sessions/messages?session_id=s1&page_size=%2B7",
+            "messages",
+            25,
+        ),
+        ("/api/runs?limit=" + "9" * 5000, "runs", 100),
+        ("/api/sessions/runs?session_id=s1&limit=0", "session-runs", 1),
+        (
+            "/api/mainbar?session_id=s1&limit=" + "0" * 5000 + "7",
+            "mainbar",
+            7,
+        ),
+    ],
+    ids=[
+        "unicode-falls-back",
+        "sign-falls-back",
+        "huge-clamps",
+        "zero-clamps",
+        "leading-zeroes-preserve-value",
+    ],
+)
+def test_pagination_routes_share_the_ascii_decimal_boundary_on_the_wire(
+    server, path: str, route: str, expected: int
+) -> None:
+    head, _body = _request(server.port, _get(server.port, path))
+
+    assert head.startswith(b"HTTP/1.1 200")
+    assert server.facade.read_limits == [(route, expected)]
 
 
 def test_an_unknown_read_failure_remains_an_internal_error_on_the_wire(

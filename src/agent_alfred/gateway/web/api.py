@@ -501,21 +501,27 @@ class DashboardApi:
 
 
 def _page_size(params: dict[str, str], key: str) -> int:
-    """A page size, clamped rather than trusted.
+    """A bounded ASCII-decimal page size, clamped rather than trusted.
 
     An unclamped limit is a denial of service with one query parameter, and
-    a non-numeric one is a client bug that must not become a 500.
+    a non-numeric one is a client bug that must not become a 500. Compare the
+    normalized text with the maximum before conversion so an arbitrarily long
+    query never reaches Python's process-wide integer digit limit.
     """
     raw = params.get(key)
     if raw is None:
         return DEFAULT_PAGE_SIZE
-    try:
-        value = int(raw)
-    except ValueError:
+    if not raw or any(character < "0" or character > "9" for character in raw):
         return DEFAULT_PAGE_SIZE
-    if value < 1:
-        return DEFAULT_PAGE_SIZE
-    return min(value, MAX_PAGE_SIZE)
+    normalized = raw.lstrip("0")
+    if not normalized:
+        return 1
+    maximum = str(MAX_PAGE_SIZE)
+    if len(normalized) > len(maximum) or (
+        len(normalized) == len(maximum) and normalized > maximum
+    ):
+        return MAX_PAGE_SIZE
+    return int(normalized)
 
 
 def _inbox_payload(page: SessionInboxPage) -> dict[str, Any]:

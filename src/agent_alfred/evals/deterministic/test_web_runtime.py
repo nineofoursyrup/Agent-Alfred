@@ -1517,7 +1517,7 @@ def test_dashboard_runs_do_not_retain_unconsumed_in_memory_results() -> None:
             "SELECT COUNT(*) FROM runs WHERE phase = 'finished'"
         ).fetchone() == (run_count,)
         status, messages = api.session_messages(
-            session_id, {"page_size": run_count * 2}
+            session_id, {"page_size": str(run_count * 2)}
         )
         assert status == 200
         assert len(messages["messages"]) == run_count * 2

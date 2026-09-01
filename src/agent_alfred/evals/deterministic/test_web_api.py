@@ -11,11 +11,15 @@ is a promise the client will wait on.
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 from dataclasses import dataclass
 from typing import Any
 
 import pytest
 
+from agent_alfred.gateway.web import api as api_module
 from agent_alfred.gateway.web.api import (
     STAGE_SAVING,
     DashboardApi,
@@ -654,23 +658,96 @@ def test_a_deep_link_locates_a_run_and_a_missing_one_404s() -> None:
     assert api.locate_run("missing", {}) == (404, {"code": "unknown_run"})
 
 
-@pytest.mark.parametrize("raw,expected", [("0", 25), ("-3", 25), ("abc", 25)])
-def test_an_unusable_page_size_falls_back_to_the_default(
-    raw: str, expected: int
+@pytest.mark.parametrize(
+    ("params", "expected"),
+    [
+        ({}, 25),
+        ({"limit": ""}, 25),
+        ({"limit": "١"}, 25),
+        ({"limit": "１２"}, 25),
+        ({"limit": "+7"}, 25),
+        ({"limit": "-3"}, 25),
+        ({"limit": "7_0"}, 25),
+        ({"limit": "abc"}, 25),
+        ({"limit": " 7"}, 25),
+        ({"limit": "7 "}, 25),
+        ({"limit": "0"}, 1),
+        ({"limit": "1"}, 1),
+        ({"limit": "100"}, 100),
+        ({"limit": "101"}, 100),
+        ({"limit": "9" * 5000}, 100),
+        ({"limit": "0" * 5000 + "7"}, 7),
+    ],
+    ids=[
+        "missing",
+        "empty",
+        "arabic-indic",
+        "full-width",
+        "plus-sign",
+        "minus-sign",
+        "underscore",
+        "letters",
+        "leading-space",
+        "trailing-space",
+        "zero",
+        "one",
+        "maximum",
+        "maximum-plus-one",
+        "five-thousand-nines",
+        "five-thousand-leading-zeroes",
+    ],
+)
+def test_page_sizes_have_one_bounded_ascii_decimal_parser(
+    params: dict[str, str], expected: int
+) -> None:
+    assert api_module._page_size(params, "limit") == expected
+
+
+@pytest.mark.parametrize(
+    ("params", "expected"),
+    [
+        ({}, 25),
+        ({"limit": "0"}, 1),
+        ({"limit": "100"}, 100),
+        ({"limit": "9" * 5000}, 100),
+    ],
+    ids=["missing", "zero", "maximum", "five-thousand-nines"],
+)
+def test_the_public_api_uses_the_bounded_page_size(
+    params: dict[str, str], expected: int
 ) -> None:
     api = _api(_accepted())
-    api.runs_page({"limit": raw})
-    facade = api._facade
-    assert facade.run_queries[0][1] == expected
+
+    api.runs_page(params)
+
+    assert api._facade.run_queries[0][1] == expected
 
 
-@pytest.mark.parametrize("raw,expected", [("99999", 100), ("7", 7), ("1", 1)])
-def test_the_page_size_is_clamped_not_trusted(raw: str, expected: int) -> None:
-    # An unclamped limit is a denial of service behind one query parameter.
-    api = _api(_accepted())
-    api.runs_page({"limit": raw})
-    facade = api._facade
-    assert facade.run_queries[0][1] == expected
+@pytest.mark.parametrize("int_max_str_digits", [None, "0", "10000"])
+def test_long_page_sizes_do_not_depend_on_the_interpreter_integer_limit(
+    int_max_str_digits: str | None,
+) -> None:
+    environment = os.environ.copy()
+    if int_max_str_digits is None:
+        environment.pop("PYTHONINTMAXSTRDIGITS", None)
+    else:
+        environment["PYTHONINTMAXSTRDIGITS"] = int_max_str_digits
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "from agent_alfred.gateway.web.api import _page_size; "
+                "print(_page_size({'limit': '9' * 5000}, 'limit'))"
+            ),
+        ],
+        check=True,
+        capture_output=True,
+        env=environment,
+        text=True,
+    )
+
+    assert result.stdout == "100\n"
 
 
 def test_the_mainbar_requires_a_session_id() -> None:
