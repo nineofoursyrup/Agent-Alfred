@@ -9,6 +9,8 @@ nobody is listening on.
 
 from __future__ import annotations
 
+import errno
+import fcntl
 import json
 import os
 import socket
@@ -120,6 +122,54 @@ def test_a_conflict_names_the_holder_when_the_file_says_who(tmp_path) -> None:
     finally:
         holder.release()
     assert caught.value.holder_pid is not None
+
+
+@pytest.mark.parametrize("conflict_errno", (errno.EACCES, errno.EAGAIN))
+def test_only_lock_contention_is_reported_as_a_state_directory_conflict(
+    tmp_path, monkeypatch, conflict_errno: int
+) -> None:
+    path = tmp_path / LOCK_NAME
+    path.write_text("pid=123\n", encoding="utf-8")
+    flock_error = OSError(conflict_errno, os.strerror(conflict_errno))
+
+    def refuse_lock(fd: int, operation: int) -> None:
+        raise flock_error
+
+    monkeypatch.setattr(fcntl, "flock", refuse_lock)
+
+    with pytest.raises(StateDirLocked) as caught:
+        ProcessLock(path).acquire()
+
+    assert caught.value.path == path
+    assert caught.value.holder_pid == 123
+    assert caught.value.__cause__ is flock_error
+
+
+@pytest.mark.parametrize("failure_errno", (errno.EIO, errno.EINTR, errno.ENOLCK))
+def test_a_non_contention_flock_failure_is_preserved_without_reading_a_holder(
+    tmp_path, monkeypatch, failure_errno: int
+) -> None:
+    path = tmp_path / LOCK_NAME
+    flock_error = OSError(failure_errno, os.strerror(failure_errno))
+    holder_was_read = False
+
+    def fail_lock(fd: int, operation: int) -> None:
+        raise flock_error
+
+    def record_unexpected_holder_read(*args, **kwargs):
+        nonlocal holder_was_read
+        holder_was_read = True
+        raise AssertionError("a non-contention failure has no lock holder")
+
+    monkeypatch.setattr(fcntl, "flock", fail_lock)
+    monkeypatch.setattr(Path, "read_text", record_unexpected_holder_read)
+
+    with pytest.raises(OSError) as caught:
+        ProcessLock(path).acquire()
+
+    assert caught.value is flock_error
+    assert caught.value.errno == failure_errno
+    assert holder_was_read is False
 
 
 @pytest.mark.parametrize(

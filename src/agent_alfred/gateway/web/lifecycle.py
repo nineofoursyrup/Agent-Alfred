@@ -152,6 +152,8 @@ class ProcessLock:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError as exc:
             os.close(fd)
+            if exc.errno not in (errno.EACCES, errno.EAGAIN):
+                raise
             raise StateDirLocked(self._path, _recorded_pid(self._path)) from exc
         try:
             os.ftruncate(fd, 0)
