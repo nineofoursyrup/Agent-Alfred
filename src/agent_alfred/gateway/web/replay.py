@@ -377,9 +377,16 @@ def parse_cursor(
     instance, raw = parts
     if instance != process_instance_id:
         return None, "instance_mismatch"
-    if not raw.isdigit() or (len(raw) > 1 and raw[0] == "0"):
+    if (
+        not raw.isascii()
+        or not raw.isdecimal()
+        or (len(raw) > 1 and raw[0] == "0")
+    ):
         return None, "malformed"
-    seq = int(raw)
+    try:
+        seq = int(raw)
+    except ValueError:
+        return None, "malformed"
     if seq < STARTUP_CHECKPOINT_SEQ:
         return None, "malformed"
     return seq, None

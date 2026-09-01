@@ -546,6 +546,58 @@ def test_an_unusable_cursor_is_reported_as_a_gap_not_a_silent_resume(server) -> 
     assert b"id: " not in notice
 
 
+def test_an_overlong_digit_cursor_is_a_malformed_gap_then_snapshot(server) -> None:
+    sock = _connect(server.port)
+    handle = None
+    try:
+        sock.sendall(
+            _get(
+                server.port,
+                "/api/events",
+                f"Last-Event-ID: {INSTANCE}:{'9' * 5_000}\r\n",
+            )
+        )
+        response = _read_until(
+            sock,
+            lambda raw: b"event: state_patch" in _split_head(raw)[1],
+        )
+        head, body = _split_head(response)
+
+        assert head.startswith(b"HTTP/1.1 200")
+        assert _headers_of(head)["content-type"].startswith("text/event-stream")
+        gap_at = body.index(b"event: transport_notice")
+        patch_at = body.index(b"event: state_patch")
+        assert gap_at < patch_at
+        gap_frame = next(
+            frame for frame in body.split(b"\n\n") if b"replay_gap" in frame
+        )
+        gap_payload = json.loads(
+            next(
+                line.removeprefix(b"data: ")
+                for line in gap_frame.splitlines()
+                if line.startswith(b"data: ")
+            )
+        )
+        assert gap_payload["code"] == "replay_gap"
+        assert gap_payload["gap_reason"] == "malformed"
+        assert b'"process_instance_id":"inst-http"' in body[patch_at:]
+        assert b'"state_revision":0' in body[patch_at:]
+        (handle,) = server.broker.connections
+    finally:
+        try:
+            sock.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+        sock.close()
+
+    assert handle is not None
+    handle.queue.request_close()
+    assert handle.finished.wait(_TIMEOUT)
+    assert handle.queue.current_cost == frames.FrameCost(0, 0)
+    assert server.broker.connections == ()
+    assert server.broker.registrations_in_flight == 0
+
+
 def test_a_transport_notice_never_advances_the_cursor(server) -> None:
     server.emit("r1")
     _head, body = _raw_stream(

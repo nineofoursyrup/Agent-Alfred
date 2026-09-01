@@ -346,6 +346,11 @@ def test_cursor_text_parses_only_the_issued_shape() -> None:
     assert replay.parse_cursor("inst:x", "inst")[1] == "malformed"
 
 
+@pytest.mark.parametrize("raw", ("9" * 5_000, "²"))
+def test_cursor_text_rejects_unconvertible_digit_shapes(raw: str) -> None:
+    assert replay.parse_cursor(f"inst:{raw}", "inst") == (None, "malformed")
+
+
 def test_the_reserved_startup_cursor_parses_and_formats() -> None:
     """``instance:0`` is a real cursor, and the only non-positive one.
 
