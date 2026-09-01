@@ -444,6 +444,18 @@ def _validate_snapshot_relations(snapshot: RunStateSnapshot) -> RunStateSnapshot
                 "recording_failed started_at must be non-empty or null"
             )
 
+    if state in ("recording_pending", "recording_failed") and active.started_at is None:
+        if active.outcome not in ("failed", "interrupted"):
+            raise ValueError(
+                "terminal active_run with null started_at requires a failed or "
+                "interrupted outcome"
+            )
+        if active.current_step is not None or snapshot.step is not None:
+            raise ValueError(
+                "terminal active_run with null started_at cannot contain "
+                "current_step or step"
+            )
+
     if snapshot.recording_state != active.recording_state:
         raise ValueError("top-level recording_state disagrees with active_run")
 
