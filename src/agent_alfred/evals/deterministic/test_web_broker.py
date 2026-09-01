@@ -2804,6 +2804,101 @@ class _BrokenStartupGuardRing(ReplayRing):
         raise RuntimeError("startup replay guard is broken")
 
 
+class _BrokenOpenReadRing(ReplayRing):
+    """A real ring with one selectable pre-registration read fault."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._broken_read: str | None = None
+        self.failure = RuntimeError("opening replay read is broken")
+
+    def break_read(self, name: str) -> None:
+        self._broken_read = name
+
+    def _raise_if_broken(self, name: str) -> None:
+        if self._broken_read == name:
+            raise self.failure
+
+    def reseed_boundary_seq(self):
+        self._raise_if_broken("reseed_boundary_seq")
+        return super().reseed_boundary_seq()
+
+    def classify_seq(self, seq):
+        self._raise_if_broken("classify_seq")
+        return super().classify_seq(seq)
+
+    def latest_complete_seq(self):
+        self._raise_if_broken("latest_complete_seq")
+        return super().latest_complete_seq()
+
+    def oldest_seq(self):
+        self._raise_if_broken("oldest_seq")
+        return super().oldest_seq()
+
+    def published_high_water_seq(self):
+        self._raise_if_broken("published_high_water_seq")
+        return super().published_high_water_seq()
+
+
+@pytest.mark.parametrize(
+    ("broken_read", "cursor"),
+    [
+        pytest.param("reseed_boundary_seq", None, id="classify-cursor-reseed"),
+        pytest.param("classify_seq", cursor_for(0), id="classify-cursor-seq"),
+        pytest.param("latest_complete_seq", None, id="latest-complete"),
+        pytest.param("oldest_seq", "malformed", id="gap-oldest"),
+        pytest.param(
+            "published_high_water_seq", "malformed", id="gap-published-high-water"
+        ),
+        pytest.param(
+            "published_high_water_seq", None, id="registration-published-high-water"
+        ),
+    ],
+)
+def test_every_opening_ring_read_failure_is_process_fatal_before_admission(
+    broken_read: str,
+    cursor: str | None,
+) -> None:
+    """Every ring read before HTTP 200 shares the process-fatal boundary."""
+    ring = _BrokenOpenReadRing()
+    harness = Harness(ring=ring, spawn=RealThreadSpawner())
+    broker = harness.broker
+    capture, fanout = _capture_fanout(broker)
+    broker.bind_fatal_handler(
+        lambda _exc: fanout.emit(
+            Notice(
+                level="error",
+                code="sink_disabled",
+                detail=(("sink", broker.name), ("stage", "dispatch")),
+            )
+        )
+    )
+    existing = harness.connect()
+    ring.break_read(broken_read)
+    connection = FakeConnection()
+
+    with pytest.raises(RuntimeError, match="opening replay read is broken") as raised:
+        broker.prepare_stream(connection=connection, cursor=cursor)
+
+    assert raised.value is ring.failure
+    assert broker._fatal is ring.failure  # noqa: SLF001
+    assert broker._stopping is True  # noqa: SLF001
+    assert existing.queue.close_requested is True
+    assert existing.finished.wait(5.0), "existing stream was not closed"
+    assert broker.connections == ()
+    assert broker.registrations_in_flight == 0
+
+    refused = broker.connect(connection=FakeConnection())
+    assert refused.finished.is_set()
+    assert refused not in broker.connections
+    notices = [
+        event
+        for event in capture.events
+        if getattr(event.payload, "code", None) == "sink_disabled"
+    ]
+    assert len(notices) == 1
+
+
 def test_a_startup_guard_read_failure_is_process_fatal_before_admission() -> None:
     """A broken replay source cannot leave HTTP free to send SSE 200."""
     ring = _BrokenStartupGuardRing()

@@ -32,7 +32,7 @@ import time
 from collections.abc import Callable
 from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Any, Protocol, TypeVar
 
 from agent_alfred.clock import Clock, SystemClock
 from agent_alfred.events import (
@@ -95,6 +95,8 @@ _DRAIN_TIMEOUT_S = 2.0
 # socket and asks the browser to try again. Neither path may ship the stale
 # patch it just lost the race to register.
 _MAX_PATCH_CAPTURES = 4
+
+_RingRead = TypeVar("_RingRead")
 
 @dataclass(frozen=True)
 class _SessionAdmissionProof:
@@ -910,6 +912,31 @@ class SSEBroker:
             raise ValueError("stream admission proof belongs to another broker")
         proof._acquisition.abort(self)
 
+    @staticmethod
+    def _capture_ring_read(
+        read: Callable[[], _RingRead],
+    ) -> tuple[_RingRead | None, Exception | None]:
+        """Run one ring read and retain its fault for lock-exit escalation."""
+        try:
+            return read(), None
+        except Exception as exc:
+            return None, exc
+
+    def _opening_ring_snapshot(
+        self, cursor: CursorText | None
+    ) -> tuple[CursorVerdict, int | None, int | None, int]:
+        """Capture every ring fact used to admit a stream before HTTP 200."""
+        verdict = classify_cursor(
+            cursor,
+            self._ring,
+            process_instance_id=self._instance,
+            include_entries=False,
+        )
+        replay_through = self._ring.latest_complete_seq()
+        oldest_seq = self._ring.oldest_seq() if verdict.kind == "gap" else None
+        published_through = self._ring.published_high_water_seq()
+        return verdict, replay_through, oldest_seq, published_through
+
     def _prepare_before_writer(
         self,
         *,
@@ -989,13 +1016,18 @@ class SSEBroker:
                         refusal_reason = "broker_closing"
                         break
                     epoch = self._state_epoch
-                    verdict = classify_cursor(
-                        cursor,
-                        self._ring,
-                        process_instance_id=self._instance,
-                        include_entries=False,
+                    ring_snapshot, replay_failure = self._capture_ring_read(
+                        lambda: self._opening_ring_snapshot(cursor)
                     )
-                    replay_through = self._ring.latest_complete_seq()
+                    if replay_failure is not None:
+                        break
+                    assert ring_snapshot is not None
+                    (
+                        verdict,
+                        replay_through,
+                        oldest_seq,
+                        published_through,
+                    ) = ring_snapshot
                     # The gap notice's facts, captured where they are coherent:
                     # the ring and the run state cannot move inside this critical
                     # section, so the notice is built from frozen values outside.
@@ -1007,8 +1039,8 @@ class SSEBroker:
                         gap_args = (
                             verdict.reason or "malformed",
                             verdict.requested_seq,
-                            self._ring.oldest_seq(),
-                            self._ring.published_high_water_seq(),
+                            oldest_seq,
+                            published_through,
                             self._current_run_state_locked(),
                         )
                     latest = self._latest
@@ -1068,17 +1100,16 @@ class SSEBroker:
                     )
                     guard = FrameCost(0, 0)
                     if needs_replay:
-                        try:
-                            guard = self._ring.startup_guard_cost(
-                                verdict.requested_seq,
-                                replay_through,
+                        guard, replay_failure = self._capture_ring_read(
+                            lambda: self._ring.startup_guard_cost(
+                                verdict.requested_seq, replay_through
                             )
-                        except Exception as exc:
+                        )
+                        if replay_failure is not None:
                             # A ring read failing is a process-level sink
                             # failure. Capture it here, but report it only
                             # after leaving the broker lock: the handler may
                             # publish ``sink_disabled`` through the FanOut.
-                            replay_failure = exc
                             break
                         if guard is None:
                             # The frozen interval ceased to be reproducible
@@ -1096,9 +1127,7 @@ class SSEBroker:
                     del built
                     handle.verdict = verdict
                     handle.ingress_seen = self._ingress_dropped
-                    handle.published_through = (
-                        self._ring.published_high_water_seq()
-                    )
+                    handle.published_through = published_through
                     # Registered at the current disconnect generation: everything
                     # published so far is either in this opening stream or behind
                     # the published boundary above, so a later sweep must not
