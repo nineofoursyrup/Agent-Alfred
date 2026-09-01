@@ -819,6 +819,63 @@ def test_a_replay_tail_over_the_connection_budget_still_arrives_whole() -> None:
     assert all(a is b for a, b in zip(opening[3:], stored))
 
 
+def test_replay_guard_must_fit_before_connection_registration() -> None:
+    """A frozen record without priority capacity refuses the whole stream."""
+    harness = Harness()
+    event = harness.emit(RunStarted(purpose="chat"), run_id="frozen")
+    stored = harness.broker._ring.entries_after(0)
+    assert stored is not None and len(stored) == 1
+    record = stored[0]
+    assert record.seq == event.seq and len(record.frames) == 1
+    record_cost = record.ingress_cost()
+    refusing_budget = frames.FrameBudget(
+        frames=1,
+        encoded_bytes=record_cost.encoded_bytes - 1,
+    )
+    connection = FakeConnection()
+
+    refused = harness.connect(
+        connection=connection,
+        cursor=cursor_for(0),
+        budget=refusing_budget,
+    )
+
+    assert refused.finished.is_set()
+    assert refused.thread is None
+    assert refused.writer is None
+    assert refused not in harness.broker.connections
+    assert harness.broker.registrations_in_flight == 0
+    assert harness.spawn.targets == []
+    assert connection.closed is True
+    assert connection.written == b""
+    assert refused.queue.current_cost == frames.FrameCost(0, 0)
+    assert refused.queue.close_requested is False
+
+    # Filling the entire queue proves abort left neither usage nor a hidden
+    # startup priority guard behind on the returned, unregistered handle.
+    full_budget_probe = frames.measured_frames(
+        frames=(b"x" * (refusing_budget.encoded_bytes - 2),)
+    )
+    assert full_budget_probe.ingress_cost() == frames.FrameCost(
+        frames=1,
+        encoded_bytes=refusing_budget.encoded_bytes,
+    )
+    assert refused.queue.offer(full_budget_probe).kind == "accepted"
+    assert refused.queue.take(0) is full_budget_probe
+    assert refused.queue.current_cost == frames.FrameCost(0, 0)
+
+    healthy = harness.connect(
+        cursor=cursor_for(0),
+        budget=frames.FrameBudget(
+            frames=1,
+            encoded_bytes=record_cost.encoded_bytes,
+        ),
+    )
+    assert healthy in harness.broker.connections
+    assert healthy.writer is not None
+    assert replay_ids(drain_connection(healthy)) == [event.seq]
+
+
 def test_startup_replay_uses_the_capacity_left_by_queued_live_traffic() -> None:
     """A frozen event makes progress in smaller slices instead of backing off."""
     harness = Harness(

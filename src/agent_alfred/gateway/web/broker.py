@@ -977,7 +977,9 @@ class SSEBroker:
                             # ring's explicit gap verdict instead.
                             refused = True
                             break
-                        handle.queue.activate_startup(guard)
+                        if not handle.queue.activate_startup(guard):
+                            refused = True
+                            break
                     handle.verdict = verdict
                     handle.ingress_seen = self._ingress_dropped
                     handle.published_through = (
