@@ -136,6 +136,29 @@ class FrameCost:
 
 
 @dataclass(frozen=True)
+class FrameBudget:
+    """Capacity for physical frames and their encoded wire bytes."""
+
+    frames: int
+    encoded_bytes: int
+
+    def __post_init__(self) -> None:
+        if self.frames < 1:
+            raise ValueError(f"frames must be >= 1, got {self.frames}")
+        if self.encoded_bytes < 1:
+            raise ValueError(
+                f"encoded_bytes must be >= 1, got {self.encoded_bytes}"
+            )
+
+    def fits(self, cost: FrameCost) -> bool:
+        """Whether ``cost`` stays within both capacity dimensions."""
+        return (
+            cost.frames <= self.frames
+            and cost.encoded_bytes <= self.encoded_bytes
+        )
+
+
+@dataclass(frozen=True)
 class PreparedFrames:
     """One logical thing to write: the frames, and the cursor it advances.
 

@@ -43,25 +43,20 @@ class Harness:
         self,
         *,
         ring=None,
-        max_ingress_frames=4096,
-        max_ingress_bytes=32 * 1024 * 1024,
-        connection_frames=512,
-        connection_bytes=8 * 1024 * 1024,
+        ingress_budget=frames.FrameBudget(4096, 32 * 1024 * 1024),
+        connection_budget=frames.FrameBudget(512, 8 * 1024 * 1024),
         max_frame_bytes=frames.MAX_FRAME_BYTES,
         spawn=None,
     ):
         self.spawn = spawn if spawn is not None else _NoThreads()
-        self.connection_frames = connection_frames
-        self.connection_bytes = connection_bytes
+        self.connection_budget = connection_budget
         self.broker = SSEBroker(
             process_instance_id=INSTANCE,
             snapshot=runtime_snapshot(),
             session_is_valid=lambda session_id: session_id in (None, "s1"),
             ring=ring if ring is not None else ReplayRing(),
-            max_ingress_frames=max_ingress_frames,
-            max_ingress_bytes=max_ingress_bytes,
-            max_connection_frames=connection_frames,
-            max_connection_bytes=connection_bytes,
+            ingress_budget=ingress_budget,
+            connection_budget=connection_budget,
             max_frame_bytes=max_frame_bytes,
             spawn=self.spawn.spawn,
         )

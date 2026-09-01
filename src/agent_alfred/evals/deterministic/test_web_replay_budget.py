@@ -49,7 +49,7 @@ def test_a_forged_cursor_on_an_unrecoverable_event_is_a_gap() -> None:
     ``instance:seq`` for it was told "valid" -- letting it skip the one fact
     it was owed a gap notice for.
     """
-    ring = ReplayRing(max_frames=100, max_bytes=1 << 10)
+    ring = ReplayRing(budget=frames.FrameBudget(frames=100, encoded_bytes=1 << 10))
     ring.append(_entry(1))
     result = ring.append(_entry(2, size=(1 << 10) + 1))
     assert result.accepted is False
@@ -79,7 +79,11 @@ def test_a_forged_cursor_on_an_unrecoverable_event_is_a_gap() -> None:
 
 def test_an_unrecoverable_seq_never_appears_in_an_id_line() -> None:
     """A checkpoint the ring cannot honour is not issued at all."""
-    harness = Harness(ring=ReplayRing(max_frames=100, max_bytes=64))
+    harness = Harness(
+        ring=ReplayRing(
+            budget=frames.FrameBudget(frames=100, encoded_bytes=64)
+        )
+    )
     harness.emit(RunStarted(purpose="chat"), run_id="r1")  # seq 1, too big
     harness.emit(RunStarted(purpose="chat"), run_id="r1")  # seq 2, fits
     ring = harness.broker._ring
@@ -92,7 +96,7 @@ def test_an_unrecoverable_seq_never_appears_in_an_id_line() -> None:
 
 def test_an_evicted_floor_is_still_a_usable_checkpoint() -> None:
     """Normal eviction and unrecoverable loss are different facts."""
-    ring = ReplayRing(max_frames=2, max_bytes=1 << 20)
+    ring = ReplayRing(budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20))
     for seq in (1, 2, 3, 4):
         ring.append(_entry(seq))
     assert ring.replay_floor_seq() == 2
@@ -108,7 +112,7 @@ def test_an_evicted_floor_is_still_a_usable_checkpoint() -> None:
 
 
 def test_cursors_around_an_unrecoverable_event_leave_no_silent_hole() -> None:
-    ring = ReplayRing(max_frames=100, max_bytes=1 << 10)
+    ring = ReplayRing(budget=frames.FrameBudget(frames=100, encoded_bytes=1 << 10))
     ring.append(_entry(1))
     ring.append(_entry(2, size=(1 << 10) + 1))  # unrecoverable
     ring.append(_entry(3))
@@ -127,7 +131,11 @@ def test_cursors_around_an_unrecoverable_event_leave_no_silent_hole() -> None:
 
 
 def test_a_run_spanning_an_unrecoverable_event_is_unrecoverable() -> None:
-    harness = Harness(ring=ReplayRing(max_frames=100, max_bytes=64))
+    harness = Harness(
+        ring=ReplayRing(
+            budget=frames.FrameBudget(frames=100, encoded_bytes=64)
+        )
+    )
     harness.emit(RunStarted(purpose="chat"), run_id="r1")
     harness.emit(RunStarted(purpose="chat"), run_id="r1")
     harness.broker._run_start_seq["r1"] = 1
@@ -163,7 +171,7 @@ def test_the_frame_budget_is_counted_in_physical_frames() -> None:
     A logical event may be many frames, so counting entries let a handful of
     chunked events pin far more than the budget ever meant to allow.
     """
-    ring = ReplayRing(max_frames=4, max_bytes=1 << 20)
+    ring = ReplayRing(budget=frames.FrameBudget(frames=4, encoded_bytes=1 << 20))
     ring.append(_entry(1, chunks=3))
     assert _frames_in(ring) == 3
     # A second chunked event would take the ring to six frames, so the
@@ -175,7 +183,7 @@ def test_the_frame_budget_is_counted_in_physical_frames() -> None:
 
 
 def test_the_ring_never_holds_more_frames_than_its_budget() -> None:
-    ring = ReplayRing(max_frames=5, max_bytes=1 << 20)
+    ring = ReplayRing(budget=frames.FrameBudget(frames=5, encoded_bytes=1 << 20))
     for seq in range(1, 12):
         ring.append(_entry(seq, chunks=2))
         assert _frames_in(ring) <= 5
@@ -188,7 +196,7 @@ def test_one_event_with_more_frames_than_the_budget_is_not_kept() -> None:
     It is not stored in part, the unrecoverable boundary advances, and no
     checkpoint is issued for a boundary the ring could never reproduce.
     """
-    ring = ReplayRing(max_frames=3, max_bytes=1 << 20)
+    ring = ReplayRing(budget=frames.FrameBudget(frames=3, encoded_bytes=1 << 20))
     ring.append(_entry(1))
     result = ring.append(_entry(2, chunks=4))
     assert result.accepted is False
@@ -203,12 +211,14 @@ def test_one_event_with_more_frames_than_the_budget_is_not_kept() -> None:
 
 
 def test_the_two_budgets_are_counted_independently() -> None:
-    frames_first = ReplayRing(max_frames=2, max_bytes=1 << 20)
+    frames_first = ReplayRing(
+        budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20)
+    )
     for seq in (1, 2, 3):
         frames_first.append(_entry(seq, chunks=1))
     assert _frames_in(frames_first) == 2  # frames ran out, bytes nowhere near
 
-    bytes_first = ReplayRing(max_frames=100, max_bytes=40)
+    bytes_first = ReplayRing(budget=frames.FrameBudget(frames=100, encoded_bytes=40))
     for seq in (1, 2, 3):
         bytes_first.append(_entry(seq, size=20))
     assert _frames_in(bytes_first) == 1  # bytes ran out, frames nowhere near
@@ -228,7 +238,7 @@ def test_a_chunked_event_is_replayed_whole_after_breaking_midway() -> None:
     big = "é" * (200 * 1024)
     harness = Harness(
         max_frame_bytes=16 * 1024,
-        ring=ReplayRing(max_frames=27, max_bytes=1 << 22),
+        ring=ReplayRing(budget=frames.FrameBudget(frames=27, encoded_bytes=1 << 22)),
     )
     first = harness.emit(RunStarted(purpose="chat"), run_id="r1")
     chunky = harness.emit(

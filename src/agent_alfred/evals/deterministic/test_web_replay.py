@@ -21,7 +21,7 @@ def _entry(seq: int, size: int = 8) -> frames.PreparedFrames:
 
 
 def test_an_event_is_evicted_whole_never_half() -> None:
-    ring = replay.ReplayRing(max_frames=2, max_bytes=1 << 20)
+    ring = replay.ReplayRing(budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20))
     for seq in (1, 2, 3):
         ring.append(_entry(seq))
     assert ring.oldest_seq() == 2
@@ -38,7 +38,7 @@ def test_a_multi_frame_event_keeps_every_frame_together() -> None:
     the chunked event plus one each for its neighbours -- and what it costs
     is a whole logical event, never the tail of one.
     """
-    ring = replay.ReplayRing(max_frames=5, max_bytes=1 << 20)
+    ring = replay.ReplayRing(budget=frames.FrameBudget(frames=5, encoded_bytes=1 << 20))
     chunked = frames.measured_frames(
         seq=7,
         frames=(b"data: a", b"data: b", b"data: c"),
@@ -63,7 +63,7 @@ def test_a_multi_frame_event_keeps_every_frame_together() -> None:
 
 
 def test_replay_floor_advances_monotonically_and_never_goes_back() -> None:
-    ring = replay.ReplayRing(max_frames=2, max_bytes=1 << 20)
+    ring = replay.ReplayRing(budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20))
     assert ring.replay_floor_seq() == 0
     for seq in (1, 2, 3, 4):
         ring.append(_entry(seq))
@@ -76,12 +76,16 @@ def test_replay_floor_advances_monotonically_and_never_goes_back() -> None:
 
 
 def test_an_empty_ring_distinguishes_never_used_from_run_over() -> None:
-    fresh = replay.ReplayRing(max_frames=4, max_bytes=1 << 20)
+    fresh = replay.ReplayRing(
+        budget=frames.FrameBudget(frames=4, encoded_bytes=1 << 20)
+    )
     assert fresh.replay_floor_seq() == 0
     assert fresh.oldest_seq() is None
     assert fresh.emitted_any() is False
 
-    cleared = replay.ReplayRing(max_frames=4, max_bytes=1 << 20)
+    cleared = replay.ReplayRing(
+        budget=frames.FrameBudget(frames=4, encoded_bytes=1 << 20)
+    )
     for seq in (1, 2, 3):
         cleared.append(_entry(seq))
     cleared.append(_entry(4, size=(1 << 20) + 1))
@@ -94,7 +98,7 @@ def test_an_empty_ring_distinguishes_never_used_from_run_over() -> None:
 
 
 def test_byte_budget_evicts_before_the_frame_limit_is_reached() -> None:
-    ring = replay.ReplayRing(max_frames=100, max_bytes=100)
+    ring = replay.ReplayRing(budget=frames.FrameBudget(frames=100, encoded_bytes=100))
     for seq in (1, 2, 3):
         ring.append(_entry(seq, size=40))
     # The frame limit is nowhere near reached; the byte budget did the work.
@@ -103,7 +107,9 @@ def test_byte_budget_evicts_before_the_frame_limit_is_reached() -> None:
 
 
 def test_one_event_over_the_byte_budget_clears_the_ring() -> None:
-    ring = replay.ReplayRing(max_frames=100, max_bytes=1 << 10)
+    ring = replay.ReplayRing(
+        budget=frames.FrameBudget(frames=100, encoded_bytes=1 << 10)
+    )
     for seq in (1, 2, 3):
         ring.append(_entry(seq, size=128))
     assert [entry.seq for entry in ring.entries_after(1) or ()] == [2, 3]
@@ -125,7 +131,9 @@ def test_an_oversized_event_cannot_be_replayed_from_the_ring() -> None:
     cursor naming it is a client asking for a fact this process does not
     hold -- and the answer has to be a gap, not a silent resume.
     """
-    ring = replay.ReplayRing(max_frames=100, max_bytes=1 << 10)
+    ring = replay.ReplayRing(
+        budget=frames.FrameBudget(frames=100, encoded_bytes=1 << 10)
+    )
     ring.append(_entry(1, size=(1 << 10) + 1))
     ring.append(_entry(2, size=8))
     assert ring.replay_floor_seq() == 1
@@ -140,7 +148,9 @@ def test_an_oversized_event_cannot_be_replayed_from_the_ring() -> None:
 
 
 def test_cursors_that_were_never_issued_are_not_valid_checkpoints() -> None:
-    ring = replay.ReplayRing(max_frames=10, max_bytes=1 << 20)
+    ring = replay.ReplayRing(
+        budget=frames.FrameBudget(frames=10, encoded_bytes=1 << 20)
+    )
     ring.append(_entry(1))
     ring.append(_entry(2))
     # seq 3 has not been produced yet; a seq inside the range that only a
@@ -163,7 +173,9 @@ def test_the_startup_boundary_dies_with_the_first_unrecoverable_loss() -> None:
     the beginning and here, so the reserved boundary stops being a position
     a client may stand on -- and says so, rather than replaying a hole.
     """
-    ring = replay.ReplayRing(max_frames=10, max_bytes=1 << 10)
+    ring = replay.ReplayRing(
+        budget=frames.FrameBudget(frames=10, encoded_bytes=1 << 10)
+    )
     ring.append(_entry(1))
     ring.append(_entry(2, size=(1 << 10) + 1))  # unrecoverable
     assert ring.replay_floor_seq() == 2
@@ -172,14 +184,16 @@ def test_the_startup_boundary_dies_with_the_first_unrecoverable_loss() -> None:
 
 
 def test_a_transient_seq_in_the_middle_is_not_a_checkpoint() -> None:
-    ring = replay.ReplayRing(max_frames=10, max_bytes=1 << 20)
+    ring = replay.ReplayRing(
+        budget=frames.FrameBudget(frames=10, encoded_bytes=1 << 20)
+    )
     ring.append(_entry(1))
     ring.append(_entry(3))
     assert ring.classify_seq(2) == "malformed"
 
 
 def test_a_cursor_on_the_floor_is_still_usable() -> None:
-    ring = replay.ReplayRing(max_frames=2, max_bytes=1 << 20)
+    ring = replay.ReplayRing(budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20))
     for seq in (1, 2, 3, 4):
         ring.append(_entry(seq))
     assert ring.replay_floor_seq() == 2
@@ -188,7 +202,7 @@ def test_a_cursor_on_the_floor_is_still_usable() -> None:
 
 
 def test_entries_after_a_gap_cursor_is_none_not_a_silent_partial() -> None:
-    ring = replay.ReplayRing(max_frames=2, max_bytes=1 << 20)
+    ring = replay.ReplayRing(budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20))
     for seq in (1, 2, 3):
         ring.append(_entry(seq))
     assert ring.entries_after(0) is None
@@ -196,7 +210,7 @@ def test_entries_after_a_gap_cursor_is_none_not_a_silent_partial() -> None:
 
 
 def test_high_water_tracks_every_appended_event() -> None:
-    ring = replay.ReplayRing(max_frames=2, max_bytes=1 << 20)
+    ring = replay.ReplayRing(budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20))
     for seq in (1, 2, 3, 4, 5):
         ring.append(_entry(seq))
     assert ring.high_water_seq() == 5
@@ -215,7 +229,9 @@ def test_a_published_transient_advances_only_the_published_high_water() -> None:
     (``malformed``), not ``ahead`` (which would claim it was never sent).
     The transient itself never enters the ring.
     """
-    ring = replay.ReplayRing(max_frames=10, max_bytes=1 << 20)
+    ring = replay.ReplayRing(
+        budget=frames.FrameBudget(frames=10, encoded_bytes=1 << 20)
+    )
     ring.append(_entry(1))
     ring.observe_published(2, None)
     assert ring.published_high_water_seq() == 2
@@ -235,7 +251,9 @@ def test_a_published_transient_advances_only_the_published_high_water() -> None:
 
 
 def test_published_high_water_is_monotonic_across_both_kinds() -> None:
-    ring = replay.ReplayRing(max_frames=10, max_bytes=1 << 20)
+    ring = replay.ReplayRing(
+        budget=frames.FrameBudget(frames=10, encoded_bytes=1 << 20)
+    )
     ring.observe_published(1, None)
     with pytest.raises(ValueError):
         ring.observe_published(1, None)
@@ -250,7 +268,7 @@ def test_published_high_water_is_monotonic_across_both_kinds() -> None:
 
 
 def test_append_is_observe_published_with_the_entry_given() -> None:
-    ring = replay.ReplayRing(max_frames=2, max_bytes=1 << 20)
+    ring = replay.ReplayRing(budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20))
     for seq in (1, 2, 3):
         ring.append(_entry(seq))
     assert ring.published_high_water_seq() == 3
@@ -299,7 +317,9 @@ def test_format_cursor_is_the_inverse_of_parse() -> None:
 
 
 def test_a_well_formed_cursor_beyond_the_ring_is_ahead() -> None:
-    ring = replay.ReplayRing(max_frames=10, max_bytes=1 << 20)
+    ring = replay.ReplayRing(
+        budget=frames.FrameBudget(frames=10, encoded_bytes=1 << 20)
+    )
     ring.append(_entry(1))
     verdict = replay.classify_cursor(
         replay.CursorText("inst:9"), ring, process_instance_id="inst"
@@ -309,7 +329,9 @@ def test_a_well_formed_cursor_beyond_the_ring_is_ahead() -> None:
 
 
 def test_a_valid_cursor_replays_exactly_the_missing_tail() -> None:
-    ring = replay.ReplayRing(max_frames=10, max_bytes=1 << 20)
+    ring = replay.ReplayRing(
+        budget=frames.FrameBudget(frames=10, encoded_bytes=1 << 20)
+    )
     for seq in (1, 2, 3):
         ring.append(_entry(seq))
     verdict = replay.classify_cursor(
@@ -321,7 +343,9 @@ def test_a_valid_cursor_replays_exactly_the_missing_tail() -> None:
 
 
 def test_the_first_connection_has_no_cursor_and_is_not_a_gap() -> None:
-    ring = replay.ReplayRing(max_frames=10, max_bytes=1 << 20)
+    ring = replay.ReplayRing(
+        budget=frames.FrameBudget(frames=10, encoded_bytes=1 << 20)
+    )
     ring.append(_entry(1))
     verdict = replay.classify_cursor(None, ring, process_instance_id="inst")
     assert verdict.kind == "absent"
@@ -329,7 +353,9 @@ def test_the_first_connection_has_no_cursor_and_is_not_a_gap() -> None:
 
 
 def test_a_cleared_ring_answers_too_old_for_surviving_cursors() -> None:
-    ring = replay.ReplayRing(max_frames=100, max_bytes=1 << 10)
+    ring = replay.ReplayRing(
+        budget=frames.FrameBudget(frames=100, encoded_bytes=1 << 10)
+    )
     for seq in (1, 2):
         ring.append(_entry(seq, size=8))
     ring.append(_entry(3, size=(1 << 10) + 1))
@@ -343,36 +369,31 @@ def test_a_cleared_ring_answers_too_old_for_surviving_cursors() -> None:
 def test_capacity_defaults_match_the_decided_table() -> None:
     ring = replay.ReplayRing()
     # Physical frames, not logical events: the name is the assertion.
-    assert ring.max_frames == 2048
-    assert ring.max_bytes == 32 * 1024 * 1024
-
-
-def test_a_ring_rejects_a_non_positive_capacity() -> None:
-    with pytest.raises(ValueError):
-        replay.ReplayRing(max_frames=0)
-    with pytest.raises(ValueError):
-        replay.ReplayRing(max_bytes=0)
+    assert ring.budget == frames.FrameBudget(2048, 32 * 1024 * 1024)
 
 
 # --- the named cost of the ring's accounting --------------------------------
 
 
 def test_the_ring_capacity_contract_holds_per_dimension() -> None:
-    capacity = frames.FrameCost(frames=2048, encoded_bytes=32 * 1024 * 1024)
+    capacity = frames.FrameBudget(frames=2048, encoded_bytes=32 * 1024 * 1024)
     ring = replay.ReplayRing()
-    assert ring.max_frames == capacity.frames
-    assert ring.max_bytes == capacity.encoded_bytes
+    assert ring.budget == capacity
 
 
 def test_the_ring_judges_each_dimension_of_the_cost_independently() -> None:
     # The frame dimension binds while the bytes sit far under their budget.
-    frame_bound = replay.ReplayRing(max_frames=2, max_bytes=1 << 20)
+    frame_bound = replay.ReplayRing(
+        budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20)
+    )
     for seq in (1, 2, 3):
         frame_bound.append(_entry(seq))
     assert len(frame_bound) == 2
     # The byte dimension binds while the frame count sits far under its
     # budget.
-    byte_bound = replay.ReplayRing(max_frames=100, max_bytes=100)
+    byte_bound = replay.ReplayRing(
+        budget=frames.FrameBudget(frames=100, encoded_bytes=100)
+    )
     for seq in (1, 2, 3):
         byte_bound.append(_entry(seq, size=40))
     assert len(byte_bound) == 1
@@ -382,7 +403,7 @@ def test_the_ring_judges_each_dimension_of_the_cost_independently() -> None:
 
 def test_eviction_leaves_exactly_the_survivors_cost() -> None:
     """Eviction subtracts in the unit it added: whole logical events."""
-    ring = replay.ReplayRing(max_frames=2, max_bytes=1 << 20)
+    ring = replay.ReplayRing(budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20))
     for seq in (1, 2, 3):
         ring.append(_entry(seq))
     assert ring.current_cost == (
@@ -394,7 +415,9 @@ def test_one_append_does_not_walk_the_evicted_prefix(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A legal large event cannot charge commit for every displaced event."""
-    ring = replay.ReplayRing(max_frames=64, max_bytes=1 << 20)
+    ring = replay.ReplayRing(
+        budget=frames.FrameBudget(frames=64, encoded_bytes=1 << 20)
+    )
     for seq in range(1, 65):
         ring.append(_entry(seq))
 
@@ -425,7 +448,7 @@ def test_one_append_does_not_walk_the_evicted_prefix(
 
 def test_delayed_cleanup_never_releases_a_reused_live_slot() -> None:
     """A later publisher may reuse a slot before an earlier cleanup runs."""
-    ring = replay.ReplayRing(max_frames=2, max_bytes=1 << 20)
+    ring = replay.ReplayRing(budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20))
     first = _entry(1)
     first_ref = weakref.ref(first)
     ring.append(first)
@@ -449,7 +472,7 @@ def test_delayed_cleanup_never_releases_a_reused_live_slot() -> None:
 def test_failed_retirement_release_is_retryable_then_idempotent(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    ring = replay.ReplayRing(max_frames=1, max_bytes=1 << 20)
+    ring = replay.ReplayRing(budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20))
     ring.append(_entry(1))
     result = ring.observe_published(
         2, _entry(2), defer_retired_release=True
@@ -475,7 +498,7 @@ def test_failed_retirement_release_is_retryable_then_idempotent(
 
 
 def test_ring_accounting_returns_exactly_to_zero() -> None:
-    ring = replay.ReplayRing(max_frames=4, max_bytes=200)
+    ring = replay.ReplayRing(budget=frames.FrameBudget(frames=4, encoded_bytes=200))
     first, second = _entry(1), _entry(2)
     ring.append(first)
     ring.append(second)

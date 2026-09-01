@@ -62,7 +62,7 @@ def _fill_ingress(harness, count: int) -> None:
 
 def test_an_undeliverable_patch_still_moves_the_authoritative_snapshot() -> None:
     """Authority first, delivery second -- even when delivery fails."""
-    harness = Harness(max_ingress_frames=2, max_ingress_bytes=1 << 20)
+    harness = Harness(ingress_budget=frames.FrameBudget(2, 1 << 20))
     handle = harness.connect(session_id="s1")
     _fill_ingress(harness, 2)
     assert harness.broker._ingress.current_cost.frames == 2
@@ -92,7 +92,7 @@ def test_an_undeliverable_patch_still_moves_the_authoritative_snapshot() -> None
 
 
 def test_a_reconnect_after_a_failed_patch_gets_the_new_revision() -> None:
-    harness = Harness(max_ingress_frames=1, max_ingress_bytes=1 << 20)
+    harness = Harness(ingress_budget=frames.FrameBudget(1, 1 << 20))
     harness.connect(session_id="s1")
     _fill_ingress(harness, 1)
     harness.broker.publish_state_patch(runtime_snapshot(state_revision=11))
@@ -105,13 +105,13 @@ def test_a_reconnect_after_a_failed_patch_gets_the_new_revision() -> None:
 
 
 def test_the_frame_budget_alone_can_refuse_a_patch() -> None:
-    harness = Harness(max_ingress_frames=1, max_ingress_bytes=1 << 20)
+    harness = Harness(ingress_budget=frames.FrameBudget(1, 1 << 20))
     handle = harness.connect(session_id="s1")
     _fill_ingress(harness, 1)
     assert harness.broker._ingress.current_cost.frames == 1
     assert (
         harness.broker._ingress.current_cost.encoded_bytes
-        < harness.broker._ingress.max_bytes
+        < harness.broker._ingress.budget.encoded_bytes
     )
     assert (
         harness.broker.publish_state_patch(runtime_snapshot(state_revision=3)) is False
@@ -121,7 +121,7 @@ def test_the_frame_budget_alone_can_refuse_a_patch() -> None:
 
 
 def test_the_byte_budget_alone_can_refuse_a_patch() -> None:
-    harness = Harness(max_ingress_frames=4096, max_ingress_bytes=1)
+    harness = Harness(ingress_budget=frames.FrameBudget(4096, 1))
     handle = harness.connect(session_id="s1")
     # One event already blows the byte budget, so the patch is refused on
     # bytes while the frame count is nowhere near its limit.

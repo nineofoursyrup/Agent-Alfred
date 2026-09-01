@@ -217,7 +217,11 @@ def test_reconnect_never_duplicates_and_never_leaves_a_hole() -> None:
 
 
 def test_a_rolled_out_ring_answers_a_gap_not_a_silent_resume() -> None:
-    harness = Harness(ring=ReplayRing(max_frames=2, max_bytes=1 << 20))
+    harness = Harness(
+        ring=ReplayRing(
+            budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20)
+        )
+    )
     harness.emit_many(5)
     handle = harness.connect(cursor=cursor_for(1))
     items = drain_connection(handle)
@@ -231,7 +235,7 @@ def test_a_rolled_out_ring_answers_a_gap_not_a_silent_resume() -> None:
 def test_commit_does_not_walk_a_large_evicted_replay_prefix(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    ring = ReplayRing(max_frames=64, max_bytes=1 << 20)
+    ring = ReplayRing(budget=frames.FrameBudget(frames=64, encoded_bytes=1 << 20))
     retired_refs: list[weakref.ReferenceType[PreparedFrames]] = []
     for seq in range(1, 65):
         entry = frames.measured_frames(
@@ -301,7 +305,7 @@ def test_retirement_cleanup_failure_is_fatal_after_publish(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     secret = "retirement-secret-must-not-be-published"
-    ring = ReplayRing(max_frames=1, max_bytes=1 << 20)
+    ring = ReplayRing(budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20))
     harness = Harness(ring=ring)
     capture = CapturingSink(name="capture")
     fanout = FanOutSink(
@@ -341,7 +345,11 @@ def test_retirement_cleanup_failure_is_fatal_after_publish(
 
 
 def test_the_four_illegal_cursors_each_name_their_reason() -> None:
-    harness = Harness(ring=ReplayRing(max_frames=2, max_bytes=1 << 20))
+    harness = Harness(
+        ring=ReplayRing(
+            budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20)
+        )
+    )
     harness.emit_many(4)
     cases = {
         "garbage": "malformed",
@@ -357,7 +365,11 @@ def test_the_four_illegal_cursors_each_name_their_reason() -> None:
 
 
 def test_the_gap_notice_distinguishes_no_run_from_unrecoverable_run() -> None:
-    harness = Harness(ring=ReplayRing(max_frames=1, max_bytes=1 << 20))
+    harness = Harness(
+        ring=ReplayRing(
+            budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+        )
+    )
     harness.emit(RunStarted(purpose="chat"), run_id="r1")
     harness.emit_many(3, start=10)
     # No active Run in the snapshot: absent.
@@ -599,8 +611,8 @@ def test_a_connection_that_never_consumes_does_not_block_the_run_or_others() -> 
     # One tab that never reads a single frame from its queue, with a queue
     # small enough to actually fill; the other one keeps up. Backpressure is
     # per connection, so only the first is allowed to suffer for it.
-    slow = harness.connect(max_frames=8)
-    other = harness.connect(max_frames=512)
+    slow = harness.connect(budget=frames.FrameBudget(8, 8 * 1024 * 1024))
+    other = harness.connect(budget=frames.FrameBudget(512, 8 * 1024 * 1024))
     started = time.monotonic()
     for _ in range(80):
         harness.emit(RunStarted(purpose="chat"), run_id="r1")
@@ -618,7 +630,7 @@ def test_dropped_transients_are_reported_once_the_connection_recovers() -> None:
     harness = Harness()
     # A queue with room for exactly two transient frames: the third is
     # backpressure, and transients are what gives way.
-    handle = harness.connect(max_frames=2)
+    handle = harness.connect(budget=frames.FrameBudget(2, 8 * 1024 * 1024))
     for _ in range(3):
         harness.emit(BlockDelta(text="x"), run_id="r1")
         harness.deliver()
@@ -643,7 +655,7 @@ def test_dropped_transients_are_reported_once_the_connection_recovers() -> None:
 
 
 def test_a_transient_missed_by_the_ingress_costs_liveness_only() -> None:
-    harness = Harness(max_ingress_frames=1, max_ingress_bytes=1 << 20)
+    harness = Harness(ingress_budget=frames.FrameBudget(1, 1 << 20))
     handle = harness.connect()
     # The first transient occupies the ingress; the second finds it full.
     harness.emit(BlockDelta(text="x"), run_id="r1")
@@ -661,7 +673,7 @@ def test_a_transient_missed_by_the_ingress_costs_liveness_only() -> None:
 
 
 def test_a_replayable_that_misses_the_ingress_closes_live_connections() -> None:
-    harness = Harness(max_ingress_frames=1, max_ingress_bytes=1 << 20)
+    harness = Harness(ingress_budget=frames.FrameBudget(1, 1 << 20))
     handle = harness.connect()
     # One replayable event occupies the ingress; the next cannot fit.
     harness.emit(RunStarted(purpose="chat"), run_id="r1")
@@ -702,9 +714,8 @@ def test_a_replay_tail_over_the_connection_budget_still_arrives_whole() -> None:
     with no hole -- while the queue starts (and stays) within its budget.
     """
     harness = Harness(
-        ring=ReplayRing(max_frames=64, max_bytes=1 << 20),
-        connection_frames=8,
-        connection_bytes=1 << 20,
+        ring=ReplayRing(budget=frames.FrameBudget(frames=64, encoded_bytes=1 << 20)),
+        connection_budget=frames.FrameBudget(8, 1 << 20),
     )
     harness.emit_many(20)
     handle = harness.connect(cursor=cursor_for(0))
@@ -734,9 +745,8 @@ def test_the_queue_budget_holds_during_startup_and_live() -> None:
     closed it on the very first live event instead.
     """
     harness = Harness(
-        ring=ReplayRing(max_frames=64, max_bytes=1 << 20),
-        connection_frames=8,
-        connection_bytes=1 << 20,
+        ring=ReplayRing(budget=frames.FrameBudget(frames=64, encoded_bytes=1 << 20)),
+        connection_budget=frames.FrameBudget(8, 1 << 20),
     )
     harness.emit_many(20)
     handle = harness.connect(cursor=cursor_for(0))
@@ -759,9 +769,8 @@ def test_the_queue_budget_holds_during_startup_and_live() -> None:
 def test_startup_then_live_has_no_hole_and_reconnect_recovers_exactly() -> None:
     """Line order, integrity, budget and recovery, on a tail over budget."""
     harness = Harness(
-        ring=ReplayRing(max_frames=64, max_bytes=1 << 20),
-        connection_frames=8,
-        connection_bytes=1 << 20,
+        ring=ReplayRing(budget=frames.FrameBudget(frames=64, encoded_bytes=1 << 20)),
+        connection_budget=frames.FrameBudget(8, 1 << 20),
     )
     harness.emit_many(20)
     handle = harness.connect(cursor=cursor_for(0))
@@ -948,10 +957,8 @@ def test_flush_cannot_claim_to_have_flushed() -> None:
 
 def test_capacity_defaults_match_the_decided_table() -> None:
     broker = SSEBroker(process_instance_id=INSTANCE, snapshot=runtime_snapshot())
-    assert broker._ingress.max_frames == 4096
-    assert broker._ingress.max_bytes == 32 * 1024 * 1024
-    assert broker._ring.max_frames == 2048
-    assert broker._ring.max_bytes == 32 * 1024 * 1024
+    assert broker._ingress.budget == frames.FrameBudget(4096, 32 * 1024 * 1024)
+    assert broker._ring.budget == frames.FrameBudget(2048, 32 * 1024 * 1024)
 
 
 # --- the named cost of the ingress's accounting ------------------------------
@@ -1316,7 +1323,7 @@ def test_the_dispatcher_stops_on_the_sentinel() -> None:
 
 def test_only_the_stop_sentinel_may_bypass_the_budget() -> None:
     """``put_stop`` takes no argument, so nothing else can ride it."""
-    harness = Harness(max_ingress_frames=1, max_ingress_bytes=1)
+    harness = Harness(ingress_budget=frames.FrameBudget(1, 1))
     # The event cannot fit a one-byte ingress, so the overflow queues the
     # free kick -- and a full ingress still accepts the end sentinel: the
     # dispatcher's own end cannot be refused for want of room.
@@ -1359,7 +1366,7 @@ def test_commit_is_quantitative_and_never_writes_io() -> None:
 
 @pytest.mark.parametrize("seq", [1, 2, 3])
 def test_a_sequenced_event_enters_the_ring_before_the_ingress(seq: int) -> None:
-    harness = Harness(max_ingress_frames=1, max_ingress_bytes=1 << 20)
+    harness = Harness(ingress_budget=frames.FrameBudget(1, 1 << 20))
     event = harness.emit(RunStarted(purpose="chat"), run_id=f"r{seq}")
     harness.deliver()
     # The very next event cannot fit the ingress, yet the ring already has
@@ -1824,7 +1831,9 @@ def test_overflow_kicks_merge_and_stay_bounded() -> None:
     The generation may grow without limit; the number of pending kicks
     may not.
     """
-    harness = Harness(max_ingress_frames=2)
+    harness = Harness(
+        ingress_budget=frames.FrameBudget(2, 32 * 1024 * 1024)
+    )
     broker = harness.broker
     for _ in range(2):
         harness.emit(RunStarted(purpose="chat"))
@@ -2533,7 +2542,7 @@ def test_ingress_overflow_never_walks_the_connections_from_commit() -> None:
     asking them to hang up is the dispatcher's work, outside the publish
     critical section.
     """
-    harness = Harness(max_ingress_frames=1, max_ingress_bytes=1 << 20)
+    harness = Harness(ingress_budget=frames.FrameBudget(1, 1 << 20))
     probes: list[_ProbingQueue] = []
     for _ in range(6):
         handle = harness.connect()
@@ -2561,7 +2570,7 @@ def test_a_connection_registered_after_the_overflow_is_not_closed() -> None:
     state from the snapshot and the ring; closing it would punish the one
     client that cannot be missing anything.
     """
-    harness = Harness(max_ingress_frames=1, max_ingress_bytes=1 << 20)
+    harness = Harness(ingress_budget=frames.FrameBudget(1, 1 << 20))
     handle = harness.connect()
     harness.emit(RunStarted(purpose="chat"), run_id="r1")
     _commit_direct(harness, seq=2, run_id="r2")  # overflows the ingress
@@ -2578,7 +2587,7 @@ def test_patch_overflow_never_walks_the_connections_from_the_publisher() -> None
     generation; the publisher itself touches no queue, and the dispatcher
     closes exactly the connections that predate the incident.
     """
-    harness = Harness(max_ingress_frames=1, max_ingress_bytes=1 << 20)
+    harness = Harness(ingress_budget=frames.FrameBudget(1, 1 << 20))
     probes: list[_ProbingQueue] = []
     for _ in range(4):
         handle = harness.connect()

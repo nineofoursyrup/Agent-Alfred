@@ -67,6 +67,7 @@ from typing import Literal, NewType
 
 from agent_alfred.gateway.web.frames import (
     STARTUP_CHECKPOINT_SEQ,
+    FrameBudget,
     FrameCost,
     PreparedFrames,
 )
@@ -75,8 +76,7 @@ from agent_alfred.gateway.web.frames import (
 # user-facing knobs, and a test needs a two-frame ring to reach the overflow
 # paths at all. ``max_frames`` counts *physical* frames; calling it
 # ``max_entries`` would invite the reader to assume one entry is one frame.
-DEFAULT_MAX_FRAMES = 2048
-DEFAULT_MAX_BYTES = 32 * 1024 * 1024
+DEFAULT_BUDGET = FrameBudget(frames=2048, encoded_bytes=32 * 1024 * 1024)
 
 GapReason = Literal["malformed", "instance_mismatch", "too_old", "ahead"]
 CursorVerdictKind = Literal["absent", "valid", "gap"]
@@ -345,16 +345,10 @@ class ReplayRing:
     def __init__(
         self,
         *,
-        max_frames: int = DEFAULT_MAX_FRAMES,
-        max_bytes: int = DEFAULT_MAX_BYTES,
+        budget: FrameBudget = DEFAULT_BUDGET,
     ):
-        if max_frames < 1:
-            raise ValueError("max_frames must be >= 1")
-        if max_bytes < 1:
-            raise ValueError("max_bytes must be >= 1")
-        self.max_frames = max_frames
-        self.max_bytes = max_bytes
-        self._entries = _IndexedEntries(max_frames)
+        self.budget = budget
+        self._entries = _IndexedEntries(budget.frames)
         self._usage = FrameCost(frames=0, encoded_bytes=0)
         # Monotonic totals make a displaced prefix discoverable by two
         # bounded index searches. ``_retained_base`` is the cumulative cost
@@ -583,11 +577,7 @@ class ReplayRing:
         self._high_water = entry.seq
         self._emitted_any = True
         cost = entry.ingress_cost()
-        if (
-            not entry.frames
-            or cost.frames > self.max_frames
-            or cost.encoded_bytes > self.max_bytes
-        ):
+        if not entry.frames or not self.budget.fits(cost):
             retired = self._clear()
             self._unrecoverable_floor = entry.seq
             return self._finish_append(
@@ -612,10 +602,7 @@ class ReplayRing:
         )
 
     def _evict_while_over_budget(self) -> _RetiredPrefix | None:
-        if (
-            self._usage.frames <= self.max_frames
-            and self._usage.encoded_bytes <= self.max_bytes
-        ):
+        if self.budget.fits(self._usage):
             return None
 
         # Prefix totals are monotonic. Two binary searches find the shortest
@@ -626,8 +613,8 @@ class ReplayRing:
         # it is independent of the number of displaced entries: none is
         # visited, moved, or released in the publish critical section.
         drop_count = self._entries.prefix_through_cost(
-            self._cumulative_cost.frames - self.max_frames,
-            self._cumulative_cost.encoded_bytes - self.max_bytes,
+            self._cumulative_cost.frames - self.budget.frames,
+            self._cumulative_cost.encoded_bytes - self.budget.encoded_bytes,
             self._retained_base,
         )
         dropped = self._entries[drop_count - 1]

@@ -67,13 +67,13 @@ from agent_alfred.runtime.recording import RecordingUnavailable
 from agent_alfred.runtime.snapshot import RuntimeSnapshot
 
 # The decided capacity table. Constructor defaults, not user knobs.
-MAX_INGRESS_FRAMES = 4096
-MAX_INGRESS_BYTES = 32 * 1024 * 1024
+INGRESS_BUDGET = frames.FrameBudget(
+    frames=4096, encoded_bytes=32 * 1024 * 1024
+)
 # Each connection's own queue, so backpressure stays a per-connection fact.
 # The numbers live in the connection module -- the queue that implements
 # them is the one place they should be readable.
-MAX_CONNECTION_FRAMES = connection_module.DEFAULT_MAX_FRAMES
-MAX_CONNECTION_BYTES = connection_module.DEFAULT_MAX_BYTES
+CONNECTION_BUDGET = connection_module.DEFAULT_BUDGET
 DEFAULT_HEARTBEAT_S = connection_module.DEFAULT_HEARTBEAT_S
 # How long close() waits for the dispatcher and then for the writers. A
 # bounded, honest "not fully drained" beats hanging on a socket whose peer
@@ -235,15 +235,9 @@ class _Ingress:
     def __init__(
         self,
         *,
-        max_frames: int = MAX_INGRESS_FRAMES,
-        max_bytes: int = MAX_INGRESS_BYTES,
+        budget: frames.FrameBudget = INGRESS_BUDGET,
     ):
-        if max_frames < 1:
-            raise ValueError("max_frames must be >= 1")
-        if max_bytes < 1:
-            raise ValueError("max_bytes must be >= 1")
-        self.max_frames = max_frames
-        self.max_bytes = max_bytes
+        self.budget = budget
         self._items: queue.SimpleQueue = queue.SimpleQueue()
         self._lock = threading.Lock()
         self._usage = FrameCost(frames=0, encoded_bytes=0)
@@ -263,10 +257,7 @@ class _Ingress:
         cost = item.ingress_cost()
         with self._lock:
             projected = self._usage + cost
-            if (
-                projected.frames > self.max_frames
-                or projected.encoded_bytes > self.max_bytes
-            ):
+            if not self.budget.fits(projected):
                 return False
             self._items.put(item)
             self._usage = projected
@@ -413,10 +404,8 @@ class SSEBroker:
         session_is_valid: Callable[[str | None], bool | SessionValidity] | None = None,
         ring: ReplayRing | None = None,
         progress: RunProgress | None = None,
-        max_ingress_frames: int = MAX_INGRESS_FRAMES,
-        max_ingress_bytes: int = MAX_INGRESS_BYTES,
-        max_connection_frames: int = MAX_CONNECTION_FRAMES,
-        max_connection_bytes: int = MAX_CONNECTION_BYTES,
+        ingress_budget: frames.FrameBudget = INGRESS_BUDGET,
+        connection_budget: frames.FrameBudget = CONNECTION_BUDGET,
         max_frame_bytes: int = frames.MAX_FRAME_BYTES,
         heartbeat_s: float = DEFAULT_HEARTBEAT_S,
         clock: Clock | None = None,
@@ -434,16 +423,12 @@ class SSEBroker:
         # ring is a legal ring, so the default is chosen on None, not on falsy.
         self._ring = ring if ring is not None else ReplayRing()
         self._progress = progress if progress is not None else RunProgress()
-        self._connection_limits = FrameCost(
-            frames=max_connection_frames, encoded_bytes=max_connection_bytes
-        )
+        self._connection_budget = connection_budget
         self._max_frame_bytes = max_frame_bytes
         self._heartbeat_s = heartbeat_s
         self._clock = clock or SystemClock()
         self._spawn = spawn or _spawn_thread
-        self._ingress = _Ingress(
-            max_frames=max_ingress_frames, max_bytes=max_ingress_bytes
-        )
+        self._ingress = _Ingress(budget=ingress_budget)
         self._lock = threading.Lock()
         self._projection_boundary: AbstractContextManager[object] | None = None
         self._connections: list[ConnectionHandle] = []
@@ -808,8 +793,7 @@ class SSEBroker:
         connection: SSEConnection,
         cursor: CursorText | None = None,
         session_id: str | None = None,
-        max_frames: int | None = None,
-        max_bytes: int | None = None,
+        budget: frames.FrameBudget | None = None,
         admission: StreamAdmissionProof | None = None,
     ) -> ConnectionHandle:
         """Build and register a stream, retaining ownership until its writer exists."""
@@ -826,8 +810,7 @@ class SSEBroker:
                 connection=connection,
                 cursor=cursor,
                 session_id=session_id,
-                max_frames=max_frames,
-                max_bytes=max_bytes,
+                budget=budget,
                 acquisition=acquisition,
                 admission=proof,
             )
@@ -847,8 +830,7 @@ class SSEBroker:
         connection: SSEConnection,
         cursor: CursorText | None,
         session_id: str | None,
-        max_frames: int | None,
-        max_bytes: int | None,
+        budget: frames.FrameBudget | None,
         acquisition: _ConnectStartup,
         admission: StreamAdmissionProof,
     ) -> ConnectionHandle:
@@ -893,16 +875,7 @@ class SSEBroker:
         """
         handle = ConnectionHandle(
             queue=ConnectionQueue(
-                max_frames=(
-                    self._connection_limits.frames
-                    if max_frames is None
-                    else max_frames
-                ),
-                max_bytes=(
-                    self._connection_limits.encoded_bytes
-                    if max_bytes is None
-                    else max_bytes
-                ),
+                budget=self._connection_budget if budget is None else budget,
             ),
             connection=connection,
             session_id=session_id,

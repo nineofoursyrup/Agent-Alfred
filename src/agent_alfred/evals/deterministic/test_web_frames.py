@@ -310,6 +310,23 @@ def test_frame_cost_refuses_negative_counts() -> None:
         )
 
 
+def test_frame_budget_requires_positive_dimensions() -> None:
+    with pytest.raises(ValueError, match="frames must be >= 1"):
+        frames.FrameBudget(frames=0, encoded_bytes=1)
+    with pytest.raises(ValueError, match="encoded_bytes must be >= 1"):
+        frames.FrameBudget(frames=1, encoded_bytes=0)
+
+
+def test_frame_budget_fits_only_when_both_dimensions_fit() -> None:
+    budget = frames.FrameBudget(frames=2, encoded_bytes=300)
+
+    assert budget.fits(frames.FrameCost(frames=2, encoded_bytes=300)) is True
+    assert budget.fits(frames.FrameCost(frames=3, encoded_bytes=299)) is False
+    assert budget.fits(frames.FrameCost(frames=1, encoded_bytes=301)) is False
+    with pytest.raises(FrozenInstanceError):
+        budget.frames = 3
+
+
 def test_ingress_cost_is_a_frame_cost_with_both_dimensions() -> None:
     prepared = _domain(text="z" * 4096, max_frame_bytes=1024).with_checkpoint(
         4, "inst"

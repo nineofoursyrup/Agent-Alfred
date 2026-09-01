@@ -35,12 +35,12 @@ def _frames(seq: int = 1, *, size: int = 8, replayable: bool = False):
 
 
 def test_a_transient_frame_that_fits_is_accepted() -> None:
-    conn = ConnectionQueue(max_frames=4, max_bytes=1 << 20)
+    conn = ConnectionQueue(budget=frames.FrameBudget(frames=4, encoded_bytes=1 << 20))
     assert conn.offer(_frames(replayable=False)).kind == "accepted"
 
 
 def test_a_full_queue_drops_transients_and_counts_them() -> None:
-    conn = ConnectionQueue(max_frames=2, max_bytes=1 << 20)
+    conn = ConnectionQueue(budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20))
     assert conn.offer(_frames(1, replayable=False)).kind == "accepted"
     assert conn.offer(_frames(2, replayable=False)).kind == "accepted"
     outcome = conn.offer(_frames(3, replayable=False))
@@ -50,7 +50,7 @@ def test_a_full_queue_drops_transients_and_counts_them() -> None:
 
 
 def test_the_dropped_count_is_reported_exactly_once_on_recovery() -> None:
-    conn = ConnectionQueue(max_frames=1, max_bytes=1 << 20)
+    conn = ConnectionQueue(budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20))
     conn.offer(_frames(1, replayable=False))
     for seq in (2, 3, 4):
         assert conn.offer(_frames(seq, replayable=False)).kind == "dropped"
@@ -63,7 +63,7 @@ def test_the_dropped_count_is_reported_exactly_once_on_recovery() -> None:
 
 
 def test_a_replayable_frame_that_does_not_fit_closes_the_connection() -> None:
-    conn = ConnectionQueue(max_frames=1, max_bytes=1 << 20)
+    conn = ConnectionQueue(budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20))
     conn.offer(_frames(1, replayable=False))
     outcome = conn.offer(_frames(2, replayable=True))
     assert outcome.kind == "overflowed"
@@ -77,30 +77,30 @@ def test_a_replayable_frame_that_does_not_fit_closes_the_connection() -> None:
 
 
 def test_the_byte_budget_binds_before_the_frame_count() -> None:
-    conn = ConnectionQueue(max_frames=100, max_bytes=64)
+    conn = ConnectionQueue(budget=frames.FrameBudget(frames=100, encoded_bytes=64))
     assert conn.offer(_frames(1, replayable=False, size=40)).kind == "accepted"
     assert conn.offer(_frames(2, replayable=False, size=40)).kind == "dropped"
 
 
 def test_capacity_defaults_match_the_decided_table() -> None:
     conn = ConnectionQueue()
-    assert conn.max_frames == 512
-    assert conn.max_bytes == 8 * 1024 * 1024
+    assert conn.budget == frames.FrameBudget(512, 8 * 1024 * 1024)
 
 
 # --- the named cost of the queue's accounting --------------------------------
 
 
 def test_the_queue_capacity_contract_holds_per_dimension() -> None:
-    capacity = frames.FrameCost(frames=512, encoded_bytes=8 * 1024 * 1024)
+    capacity = frames.FrameBudget(frames=512, encoded_bytes=8 * 1024 * 1024)
     conn = ConnectionQueue()
-    assert conn.max_frames == capacity.frames
-    assert conn.max_bytes == capacity.encoded_bytes
+    assert conn.budget == capacity
 
 
 def test_a_queue_judges_each_dimension_of_the_cost_independently() -> None:
     # The frame dimension binds while the bytes sit far under their budget.
-    frame_bound = ConnectionQueue(max_frames=2, max_bytes=1 << 20)
+    frame_bound = ConnectionQueue(
+        budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20)
+    )
     assert frame_bound.offer(_frames(1)).kind == "accepted"
     assert frame_bound.offer(_frames(2)).kind == "accepted"
     third = _frames(3)
@@ -109,7 +109,9 @@ def test_a_queue_judges_each_dimension_of_the_cost_independently() -> None:
     assert frame_bound.offer(third).kind == "dropped"
     # The byte dimension binds while the frame count sits far under its
     # budget.
-    byte_bound = ConnectionQueue(max_frames=100, max_bytes=64)
+    byte_bound = ConnectionQueue(
+        budget=frames.FrameBudget(frames=100, encoded_bytes=64)
+    )
     assert byte_bound.offer(_frames(1, size=40)).kind == "accepted"
     second = _frames(2, size=40)
     projected = byte_bound.current_cost + second.ingress_cost()
@@ -118,7 +120,7 @@ def test_a_queue_judges_each_dimension_of_the_cost_independently() -> None:
 
 
 def test_queue_accounting_returns_exactly_to_zero() -> None:
-    conn = ConnectionQueue(max_frames=4, max_bytes=1 << 20)
+    conn = ConnectionQueue(budget=frames.FrameBudget(frames=4, encoded_bytes=1 << 20))
     first, second = _frames(1), _frames(2)
     assert conn.offer(first).kind == "accepted"
     assert conn.offer(second).kind == "accepted"
@@ -129,7 +131,7 @@ def test_queue_accounting_returns_exactly_to_zero() -> None:
 
 
 def test_a_closed_queue_refuses_further_offers() -> None:
-    conn = ConnectionQueue(max_frames=4, max_bytes=1 << 20)
+    conn = ConnectionQueue(budget=frames.FrameBudget(frames=4, encoded_bytes=1 << 20))
     conn.request_close()
     assert conn.close_requested is True
     assert conn.offer(_frames(1, replayable=True)).kind == "dropped"
@@ -207,7 +209,7 @@ def test_the_writer_preserves_physical_frame_boundaries(phase: str) -> None:
     assert len(prepared.wire_bytes()) == 3912
 
     connection = FakeConnection()
-    source = ConnectionQueue(max_frames=9, max_bytes=1 << 20)
+    source = ConnectionQueue(budget=frames.FrameBudget(frames=9, encoded_bytes=1 << 20))
     startup = (prepared,) if phase == "startup" else ()
     if phase == "live":
         assert source.offer(prepared).kind == "accepted"

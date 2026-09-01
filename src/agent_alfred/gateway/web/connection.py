@@ -29,8 +29,7 @@ from agent_alfred.clock import Clock
 from agent_alfred.gateway.web import frames
 
 # The decided capacity table: frames *and* encoded bytes, counted together.
-DEFAULT_MAX_FRAMES = 512
-DEFAULT_MAX_BYTES = 8 * 1024 * 1024
+DEFAULT_BUDGET = frames.FrameBudget(frames=512, encoded_bytes=8 * 1024 * 1024)
 # 15 s: long enough to be free, short enough to notice a dead peer. The write
 # is what discovers a closed socket -- without it an idle connection thread
 # would sit on get() forever and leak.
@@ -141,15 +140,9 @@ class ConnectionQueue:
     def __init__(
         self,
         *,
-        max_frames: int = DEFAULT_MAX_FRAMES,
-        max_bytes: int = DEFAULT_MAX_BYTES,
+        budget: frames.FrameBudget = DEFAULT_BUDGET,
     ):
-        if max_frames < 1:
-            raise ValueError("max_frames must be >= 1")
-        if max_bytes < 1:
-            raise ValueError("max_bytes must be >= 1")
-        self.max_frames = max_frames
-        self.max_bytes = max_bytes
+        self.budget = budget
         self._items: queue.SimpleQueue = queue.SimpleQueue()
         self._lock = threading.Lock()
         self._usage = frames.FrameCost(frames=0, encoded_bytes=0)
@@ -194,10 +187,7 @@ class ConnectionQueue:
             if self._closing:
                 return OfferOutcome(kind="dropped")
             projected = self._usage + cost
-            if (
-                projected.frames <= self.max_frames
-                and projected.encoded_bytes <= self.max_bytes
-            ):
+            if self.budget.fits(projected):
                 self._items.put(item)
                 self._usage = projected
                 dropped, self._dropped = self._dropped, 0

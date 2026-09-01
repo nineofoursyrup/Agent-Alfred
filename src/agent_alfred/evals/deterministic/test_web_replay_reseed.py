@@ -139,7 +139,11 @@ def test_a_first_event_over_budget_still_plants_a_cursor() -> None:
     and it classifies as ``too_old`` for exactly the reason the client needs
     to hear.
     """
-    harness = Harness(ring=ReplayRing(max_frames=100, max_bytes=8))
+    harness = Harness(
+        ring=ReplayRing(
+            budget=frames.FrameBudget(frames=100, encoded_bytes=8)
+        )
+    )
     harness.emit_many(1)
     ring = harness.broker._ring  # noqa: SLF001
     assert ring.replay_floor_seq() == 1
@@ -168,7 +172,13 @@ def test_a_cleared_ring_keeps_reporting_the_gap() -> None:
     empty browser cursor, and an empty cursor is a client that looks like it
     never connected -- which is the one shape that never gets a gap notice.
     """
-    harness = Harness(ring=ReplayRing(max_frames=100, max_bytes=_TIGHT_BYTES))
+    harness = Harness(
+        ring=ReplayRing(
+            budget=frames.FrameBudget(
+                frames=100, encoded_bytes=_TIGHT_BYTES
+            )
+        )
+    )
     harness.emit_many(1)  # seq 1, small enough to be issued
     # seq 2, padded past the byte budget: the ring is cleared.
     harness.emit(RunStarted(purpose="chat"), run_id="r" + "x" * 400)
@@ -241,7 +251,13 @@ def test_a_gap_that_survives_a_disconnect_does_not_go_quiet() -> None:
 
 def test_the_replay_order_is_retry_reseed_gap_patch_then_events() -> None:
     """The decided order appears on the wire in one place."""
-    harness = Harness(ring=ReplayRing(max_frames=100, max_bytes=_TIGHT_BYTES))
+    harness = Harness(
+        ring=ReplayRing(
+            budget=frames.FrameBudget(
+                frames=100, encoded_bytes=_TIGHT_BYTES
+            )
+        )
+    )
     harness.emit_many(1)
     harness.emit(RunStarted(purpose="chat"), run_id="r" + "x" * 400)
     items = drain_connection(harness.connect(cursor=cursor_for(1)))
@@ -267,7 +283,7 @@ def test_a_forged_positive_seq_is_still_refused() -> None:
     A plain positive integer the server never issued is not a checkpoint and
     cannot be faked into one -- not even one sitting inside the ring's range.
     """
-    ring = ReplayRing(max_frames=100, max_bytes=1 << 10)
+    ring = ReplayRing(budget=frames.FrameBudget(frames=100, encoded_bytes=1 << 10))
     ring.append(_entry(1))
     ring.append(_entry(2, size=(1 << 10) + 1))  # unrecoverable
     ring.append(_entry(3))
