@@ -185,6 +185,53 @@ def test_wire_rejects_a_step_without_an_active_run() -> None:
         snapshot_from_payload(wire)
 
 
+def test_wire_rejects_accepted_snapshot_that_claims_execution_started() -> None:
+    wire = _lifecycle_wire(
+        "accepted",
+        active_phase="accepted",
+        active_recording=None,
+        projection_recording=None,
+    )
+    active = wire["active_run"]
+    assert isinstance(active, dict)
+    active["started_at"] = "2026-01-01T00:00:00Z"
+
+    with pytest.raises(ValueError, match="started_at"):
+        snapshot_from_payload(wire)
+
+
+def test_build_snapshot_rejects_running_without_a_start_time() -> None:
+    runtime = RuntimeSnapshot(
+        process_instance_id="process-1",
+        state_revision=1,
+        coordinator_state="running",
+        active_run=ActiveRunSummary(
+            run_id="run-1",
+            purpose="chat",
+            gateway="web",
+            phase="running",
+            session_id="session-1",
+            prompt_preview="hello",
+            started_at=None,
+            recording_state=None,
+        ),
+        unrecorded_terminal_projection=None,
+    )
+
+    with pytest.raises(ValueError, match="started_at"):
+        build_snapshot(runtime, step=None, session_valid=True)
+
+
+def test_wire_rejects_current_step_without_its_projection() -> None:
+    wire = _running_wire()
+    active = wire["active_run"]
+    assert isinstance(active, dict)
+    active["current_step"] = 3
+
+    with pytest.raises(ValueError, match="step"):
+        snapshot_from_payload(wire)
+
+
 @pytest.mark.parametrize("top_recording", [None, "failed", "recorded"])
 def test_wire_rejects_top_level_recording_that_disagrees_with_pending_authority(
     top_recording: str | None,
@@ -362,6 +409,8 @@ def _lifecycle_wire(
         active["phase"] = active_phase
         active["outcome"] = active_outcome
         active["recording_state"] = active_recording
+        if active_phase == "accepted":
+            active["started_at"] = None
     wire["recording_state"] = active_recording
     if projection_recording is not None:
         wire["unrecorded_terminal_projection"] = {

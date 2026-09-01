@@ -310,7 +310,11 @@ def _wire_payload(*, projection_state: object = _NO_PROJECTION) -> dict[str, obj
         "state_revision": 1,
         "coordinator_state": "running",
         "active_run": active,
-        "step": None,
+        "step": {
+            "step_index": 1,
+            "attempts": [],
+            "attempts_truncated": False,
+        },
         "recording_state": None,
         "session_valid": True,
         "unrecorded_terminal_projection": projection,

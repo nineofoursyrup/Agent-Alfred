@@ -206,6 +206,7 @@ def test_every_coordinator_lifecycle_state_has_a_valid_wire_form(
         wire = _wire_payload(active_outcome=None)
         wire["coordinator_state"] = "idle"
         wire["active_run"] = None
+        wire["step"] = None
         wire["recording_state"] = None
         wire["unrecorded_terminal_projection"] = None
         assert snapshot_payload(snapshot_from_payload(wire)) == wire
@@ -356,6 +357,7 @@ def _wire_payload(
         if projection_outcome is ...:
             del projection["outcome"]
     if active_phase == "accepted":
+        active["started_at"] = None
         active["current_step"] = None
     recording_state = None
     if active_phase == "finished":
@@ -374,7 +376,15 @@ def _wire_payload(
         "state_revision": 1,
         "coordinator_state": coordinator_state,
         "active_run": active,
-        "step": None,
+        "step": (
+            None
+            if active["current_step"] is None
+            else {
+                "step_index": active["current_step"],
+                "attempts": [],
+                "attempts_truncated": False,
+            }
+        ),
         "recording_state": recording_state,
         "session_valid": True,
         "unrecorded_terminal_projection": projection,

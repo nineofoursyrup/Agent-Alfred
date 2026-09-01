@@ -391,6 +391,14 @@ def _validate_snapshot_relations(snapshot: RunStateSnapshot) -> RunStateSnapshot
         raise ValueError("active_run phase contradicts coordinator_state")
 
     if state == "accepted" or state == "running":
+        if state == "accepted" and active.started_at is not None:
+            raise ValueError(
+                "accepted coordinator_state requires started_at to be null"
+            )
+        if state == "running" and active.started_at is None:
+            raise ValueError(
+                "running coordinator_state requires a non-null started_at"
+            )
         if active.recording_state is not None:
             raise ValueError("active_run recording_state contradicts coordinator_state")
         if projection is not None:
@@ -424,8 +432,8 @@ def _validate_snapshot_relations(snapshot: RunStateSnapshot) -> RunStateSnapshot
         raise ValueError("top-level recording_state disagrees with active_run")
 
     step = snapshot.step
-    if step is not None and (
-        active.current_step is None or step.step_index != active.current_step
+    if (active.current_step is None) != (step is None) or (
+        step is not None and step.step_index != active.current_step
     ):
         raise ValueError("step must match active_run.current_step")
 

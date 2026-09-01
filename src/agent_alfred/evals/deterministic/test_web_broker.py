@@ -452,7 +452,7 @@ def test_the_gap_notice_distinguishes_no_run_from_unrecoverable_run() -> None:
             phase="running",
             session_id=None,
             prompt_preview="hi",
-            started_at=None,
+            started_at="2026-01-01T00:00:00Z",
             recording_state=None,
         ),
     )
@@ -670,7 +670,7 @@ def test_the_startup_patch_keeps_the_frozen_summary_while_authoritative() -> Non
                 phase="running",
                 session_id="s1",
                 prompt_preview="next",
-                started_at=None,
+                started_at="2026-01-01T00:00:00Z",
                 recording_state=None,
             ),
         )
@@ -3241,7 +3241,7 @@ def test_stale_step_never_publishes_after_newer_revision(monkeypatch) -> None:
         phase="running",
         session_id=None,
         prompt_preview="hi",
-        started_at=None,
+        started_at="2026-01-01T00:00:00Z",
         recording_state=None,
         current_step=0,
     )
@@ -3309,7 +3309,7 @@ def test_connection_never_regresses_to_stale_absolute_replacement(
         phase="running",
         session_id=None,
         prompt_preview="hi",
-        started_at=None,
+        started_at="2026-01-01T00:00:00Z",
         recording_state=None,
         current_step=0,
     )
