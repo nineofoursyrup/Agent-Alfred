@@ -32,7 +32,7 @@ import time
 from collections.abc import Callable
 from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass, field
-from typing import Any, Literal, Protocol
+from typing import Any, Protocol
 
 from agent_alfred.clock import Clock, SystemClock
 from agent_alfred.events import (
@@ -67,6 +67,10 @@ from agent_alfred.gateway.web.replay import (
 from agent_alfred.gateway.web.state import build_snapshot, snapshot_payload
 from agent_alfred.runtime.recording import RecordingUnavailable
 from agent_alfred.runtime.snapshot import RuntimeSnapshot
+from agent_alfred.session_validity import (
+    SessionValidity,
+    parse_session_validity,
+)
 
 # The decided capacity table. Constructor defaults, not user knobs.
 INGRESS_BUDGET = frames.FrameBudget(
@@ -90,26 +94,12 @@ _DRAIN_TIMEOUT_S = 2.0
 # patch it just lost the race to register.
 _MAX_PATCH_CAPTURES = 4
 
-SessionValidity = Literal["valid", "invalid", "unavailable"]
-
-
 @dataclass(frozen=True)
 class StreamAdmissionProof:
     """The one Session fact established before an HTTP stream is opened."""
 
     session_id: str | None
     session_valid: bool
-
-
-def _normalize_session_validity(value: bool | SessionValidity) -> SessionValidity:
-    """Keep old boolean injectors honest while the Host supplies all three states."""
-    if value is True or value == "valid":
-        return "valid"
-    if value is False or value == "invalid":
-        return "invalid"
-    if value == "unavailable":
-        return "unavailable"
-    raise TypeError(f"unknown Session validity result: {value!r}")
 
 
 class _IngressStop:
@@ -128,7 +118,7 @@ class _IngressKick:
     """
 
 
-def _unbound_session_check(session_id: str | None) -> bool:
+def _unbound_session_check(session_id: str | None) -> SessionValidity:
     """The answer before :meth:`SSEBroker.bind_session_check` has run.
 
     Silently claiming "valid" would be a lie about a database nobody has been
@@ -394,7 +384,7 @@ class SSEBroker:
         *,
         process_instance_id: str,
         snapshot: RuntimeSnapshot,
-        session_is_valid: Callable[[str | None], bool | SessionValidity] | None = None,
+        session_is_valid: Callable[[str | None], SessionValidity] | None = None,
         ring: ReplayRing | None = None,
         progress: RunProgress | None = None,
         ingress_budget: frames.FrameBudget = INGRESS_BUDGET,
@@ -410,7 +400,9 @@ class SSEBroker:
         # Bound to the Host as soon as the Host exists -- see
         # :meth:`bind_session_check`. Until then there is no Session truth to
         # consult and, more to the point, no connection to answer for.
-        self._session_is_valid = session_is_valid or _unbound_session_check
+        self._session_is_valid: Callable[
+            [str | None], SessionValidity
+        ] = session_is_valid or _unbound_session_check
         # ``ring or ...`` would silently swap in a fresh ring whenever the
         # caller's happens to be empty, because ReplayRing is sized. An empty
         # ring is a legal ring, so the default is chosen on None, not on falsy.
@@ -472,7 +464,7 @@ class SSEBroker:
         self._closed = False
 
     def bind_session_check(
-        self, check: Callable[[str | None], bool | SessionValidity]
+        self, check: Callable[[str | None], SessionValidity]
     ) -> None:
         """Aim the "does this Session exist?" question at the Host.
 
@@ -490,7 +482,7 @@ class SSEBroker:
 
     def preflight_session(self, session_id: str | None) -> StreamAdmissionProof:
         """Establish one immutable Session fact before response ownership moves."""
-        validity = _normalize_session_validity(self._session_is_valid(session_id))
+        validity = parse_session_validity(self._session_is_valid(session_id))
         if validity == "unavailable":
             raise RecordingUnavailable("recording store is unavailable")
         return StreamAdmissionProof(
@@ -1384,7 +1376,7 @@ class SSEBroker:
             for handle in handles:
                 if handle.session_id not in validity_by_session:
                     validity_by_session[handle.session_id] = (
-                        _normalize_session_validity(
+                        parse_session_validity(
                             self._session_is_valid(handle.session_id)
                         )
                     )

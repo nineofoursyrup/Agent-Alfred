@@ -186,7 +186,7 @@ class _Server:
         self.broker = SSEBroker(
             process_instance_id=INSTANCE,
             snapshot=_snapshot(),
-            session_is_valid=lambda session_id: True,
+            session_is_valid=lambda _session_id: "valid",
             ring=ReplayRing(),
         )
         # The dispatcher runs before the socket exists, so an event published

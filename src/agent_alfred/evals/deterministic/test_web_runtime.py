@@ -790,7 +790,7 @@ def _wired_broker(**kwargs) -> SSEBroker:
     return SSEBroker(
         process_instance_id=INSTANCE,
         snapshot=RuntimeSnapshot(INSTANCE, 0, "idle", None, None),
-        session_is_valid=lambda _session_id: True,
+        session_is_valid=lambda _session_id: "valid",
         spawn=_unstarted,
         **kwargs,
     )
@@ -1291,7 +1291,7 @@ def test_the_three_revisions_are_orthogonal() -> None:
     broker = SSEBroker(
         process_instance_id=INSTANCE,
         snapshot=RuntimeSnapshot(INSTANCE, 0, "idle", None, None),
-        session_is_valid=lambda _sid: True,
+        session_is_valid=lambda _sid: "valid",
     )
     host, _conn = build_runtime_host(extra_sinks=[broker])
     host.start()

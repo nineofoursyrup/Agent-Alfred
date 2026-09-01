@@ -53,7 +53,9 @@ class Harness:
         self.broker = SSEBroker(
             process_instance_id=INSTANCE,
             snapshot=runtime_snapshot(),
-            session_is_valid=lambda session_id: session_id in (None, "s1"),
+            session_is_valid=lambda session_id: (
+                "valid" if session_id in (None, "s1") else "invalid"
+            ),
             ring=ring if ring is not None else ReplayRing(),
             ingress_budget=ingress_budget,
             connection_budget=connection_budget,

@@ -221,7 +221,7 @@ class _RealBrokerRig:
                 active_run=None,
                 unrecorded_terminal_projection=None,
             ),
-            session_is_valid=lambda _sid: True,
+            session_is_valid=lambda _sid: "valid",
             spawn=self.gates.spawn,
         )
         return self.host, self.broker
@@ -421,7 +421,7 @@ class _RealHostFanOutRig:
                 active_run=None,
                 unrecorded_terminal_projection=None,
             ),
-            session_is_valid=lambda _sid: True,
+            session_is_valid=lambda _sid: "valid",
         )
         capture = CapturingSink(name="capture", flush_at_run_end=True)
         fanout = FanOutSink(
@@ -436,7 +436,7 @@ class _RealHostFanOutRig:
             process_instance_id=instance_id,
             snapshot_listener=broker.publish_state_patch,
         )
-        broker.bind_session_check(host.session_exists)
+        broker.bind_session_check(host.transport_session_validity)
         self.host, self.broker = host, broker
         return host, broker
 

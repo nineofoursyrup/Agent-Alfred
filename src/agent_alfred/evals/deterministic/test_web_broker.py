@@ -70,6 +70,7 @@ from agent_alfred.runtime.snapshot import (
     RuntimeSnapshot,
     UnrecordedTerminalProjection,
 )
+from agent_alfred.session_validity import SessionValidity
 
 INSTANCE = "inst-test"
 
@@ -1237,7 +1238,7 @@ def test_snapshots_and_live_events_never_duplicate_or_gap_under_concurrency() ->
     broker = SSEBroker(
         process_instance_id=INSTANCE,
         snapshot=runtime_snapshot(),
-        session_is_valid=lambda _sid: True,
+        session_is_valid=lambda _sid: "valid",
     )
     fanout = FanOutSink([broker], process_instance_id=INSTANCE)
     broker.start()
@@ -1359,7 +1360,7 @@ def test_close_is_idempotent_and_leaves_no_thread_running() -> None:
     broker = SSEBroker(
         process_instance_id=INSTANCE,
         snapshot=runtime_snapshot(),
-        session_is_valid=lambda _sid: True,
+        session_is_valid=lambda _sid: "valid",
         spawn=spawn,
     )
     broker.start()
@@ -1381,7 +1382,7 @@ def test_a_wedged_connection_does_not_hold_close_open() -> None:
     broker = SSEBroker(
         process_instance_id=INSTANCE,
         snapshot=runtime_snapshot(),
-        session_is_valid=lambda _sid: True,
+        session_is_valid=lambda _sid: "valid",
     )
     broker.start()
     connection = Stuck()
@@ -1411,7 +1412,7 @@ def test_close_reports_false_until_every_thread_has_really_exited() -> None:
     broker = SSEBroker(
         process_instance_id=INSTANCE,
         snapshot=runtime_snapshot(),
-        session_is_valid=lambda _sid: True,
+        session_is_valid=lambda _sid: "valid",
         spawn=gates.spawn,
     )
     broker.start()
@@ -1511,7 +1512,7 @@ def test_close_cannot_complete_behind_an_in_flight_registration() -> None:
     broker = SSEBroker(
         process_instance_id=INSTANCE,
         snapshot=runtime_snapshot(),
-        session_is_valid=lambda _sid: True,
+        session_is_valid=lambda _sid: "valid",
         spawn=gated.spawn,
     )
     connect_done = threading.Event()
@@ -1605,7 +1606,7 @@ def test_one_connections_failure_does_not_touch_the_others() -> None:
     broker = SSEBroker(
         process_instance_id=INSTANCE,
         snapshot=runtime_snapshot(),
-        session_is_valid=lambda _sid: True,
+        session_is_valid=lambda _sid: "valid",
         spawn=spawn,
     )
     broker.start()
@@ -1671,7 +1672,9 @@ def test_a_broker_without_a_session_source_refuses_to_guess() -> None:
     broker = SSEBroker(process_instance_id=INSTANCE, snapshot=runtime_snapshot())
     with pytest.raises(RuntimeError):
         broker.connect(connection=FakeConnection())
-    broker.bind_session_check(lambda session_id: session_id is None)
+    broker.bind_session_check(
+        lambda session_id: "valid" if session_id is None else "invalid"
+    )
     assert broker.connect(connection=FakeConnection()) is not None
 
 
@@ -1867,7 +1870,7 @@ def test_a_fatal_dispatcher_closes_connections_and_refuses_the_rest(
     broker = SSEBroker(
         process_instance_id=INSTANCE,
         snapshot=runtime_snapshot(),
-        session_is_valid=lambda _sid: True,
+        session_is_valid=lambda _sid: "valid",
         spawn=RealThreadSpawner().spawn,
     )
     broker.bind_fatal_handler(lambda exc: (fatal_calls.append(exc), fatal_done.set()))
@@ -1936,7 +1939,7 @@ def test_a_fatal_commit_fails_instead_of_delivering_to_no_one(monkeypatch) -> No
     broker = SSEBroker(
         process_instance_id=INSTANCE,
         snapshot=runtime_snapshot(),
-        session_is_valid=lambda _sid: True,
+        session_is_valid=lambda _sid: "valid",
     )
     broker.connect(connection=FakeConnection())
     payload = RunStarted(purpose="chat")
@@ -2051,7 +2054,7 @@ def test_process_level_sink_disabled_notification_is_persistent_and_once(
     broker = SSEBroker(
         process_instance_id=INSTANCE,
         snapshot=runtime_snapshot(),
-        session_is_valid=lambda _sid: True,
+        session_is_valid=lambda _sid: "valid",
         spawn=RealThreadSpawner().spawn,
     )
     dead = threading.Event()
@@ -2366,9 +2369,9 @@ def test_a_patch_queries_each_distinct_session_at_most_once() -> None:
         drain_connection(handle)
     queried: list[str | None] = []
 
-    def session_exists(session_id: str | None) -> bool:
+    def session_exists(session_id: str | None) -> SessionValidity:
         queried.append(session_id)
-        return session_id == "s1"
+        return "valid" if session_id == "s1" else "invalid"
 
     harness.broker.bind_session_check(session_exists)
     harness.broker.publish_state_patch(runtime_snapshot(state_revision=1))

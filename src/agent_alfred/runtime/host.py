@@ -9,7 +9,6 @@ import time
 import uuid
 from collections.abc import Callable
 from dataclasses import replace
-from typing import Literal
 
 from agent_alfred import schema
 from agent_alfred.clock import Clock, format_instant
@@ -52,6 +51,7 @@ from agent_alfred.runtime.work import (
     SubmitResult,
     WorkItem,
 )
+from agent_alfred.session_validity import SessionValidity
 from agent_alfred.settings import Settings
 
 __all__ = [
@@ -740,7 +740,7 @@ class RuntimeHost:
 
     def transport_session_validity(
         self, session_id: str | None
-    ) -> Literal["valid", "invalid", "unavailable"]:
+    ) -> SessionValidity:
         """Bounded Session truth for SSE startup and lifecycle patches.
 
         Ordinary reads remain fail-closed through ``session_exists``. This
