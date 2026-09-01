@@ -149,7 +149,7 @@ def test_a_run_spanning_an_unrecoverable_event_is_unrecoverable() -> None:
                 phase="running",
                 session_id="s1",
                 prompt_preview="hi",
-                started_at=None,
+                started_at="2026-01-01T00:00:00Z",
                 recording_state=None,
             ),
         )
