@@ -21,6 +21,7 @@ from agent_alfred.evals.deterministic._web_broker_test_helpers import (
     GatedWriteConnection,
     Harness,
     RealThreadSpawner,
+    _NoThreads,
     cursor_for,
     drain_connection,
     drain_dispatcher,
@@ -121,6 +122,56 @@ def test_a_preflight_proof_is_the_only_session_fact_used_to_open_the_stream() ->
     assert connection.writes[0] == b"retry: 1000\n\n"
     assert connection.writes[1].startswith(b"id: inst-test:")
     assert b"event: state_patch" in connection.writes[2]
+
+
+def test_a_full_admission_is_transferred_once_without_rechecking_session() -> None:
+    queries: list[str | None] = []
+
+    def validity(session_id: str | None):
+        queries.append(session_id)
+        return "valid" if len(queries) == 1 else "unavailable"
+
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=validity,
+        spawn=_NoThreads().spawn,
+    )
+    connection = FakeConnection()
+    proof = broker.prepare_stream(connection=connection, session_id="s1")
+
+    handle = broker.start_stream(proof)
+
+    assert queries == ["s1"]
+    assert handle in broker.connections
+    with pytest.raises(RuntimeError, match="already transferred"):
+        broker.start_stream(proof)
+
+
+def test_a_writer_spawn_failure_revokes_the_prepared_admission_once() -> None:
+    failure = RuntimeError("injected writer handoff failure")
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _session_id: "valid",
+        spawn=lambda _target: (_ for _ in ()).throw(failure),
+    )
+    connection = FakeConnection()
+    proof = broker.prepare_stream(connection=connection)
+    handle = proof._handle
+    assert handle.queue.current_cost.frames > 0
+
+    with pytest.raises(RuntimeError) as raised:
+        broker.start_stream(proof)
+
+    assert raised.value is failure
+    assert connection.closed is True
+    assert handle.finished.is_set()
+    assert handle.queue.current_cost == frames.FrameCost(0, 0)
+    assert broker.connections == ()
+    assert broker.registrations_in_flight == 0
+    broker.abort_stream(proof)
+    assert handle.queue.current_cost == frames.FrameCost(0, 0)
 
 
 def test_connect_closes_the_connection_when_session_validation_raises() -> None:

@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import socket
 import time
+from dataclasses import replace
 from io import BytesIO
 from typing import Any
 from urllib.parse import quote
@@ -27,6 +28,8 @@ from urllib.parse import quote
 import pytest
 
 from agent_alfred.events import EventEnvelope, FanOutSink, RunStarted, SequencedEvent
+from agent_alfred.gateway.web import broker as broker_module
+from agent_alfred.gateway.web import frames
 from agent_alfred.gateway.web.api import DashboardApi
 from agent_alfred.gateway.web.broker import SSEBroker
 from agent_alfred.gateway.web.guard import CSRF_HEADER, RequestGuard
@@ -182,13 +185,18 @@ def _free_port() -> int:
 
 
 class _Server:
-    def __init__(self, tmp_path):
+    def __init__(self, tmp_path, *, connection_budget=None):
         self.port = _free_port()
         self.broker = SSEBroker(
             process_instance_id=INSTANCE,
             snapshot=_snapshot(),
             session_is_valid=lambda _session_id: "valid",
             ring=ReplayRing(),
+            **(
+                {}
+                if connection_budget is None
+                else {"connection_budget": connection_budget}
+            ),
         )
         # The dispatcher runs before the socket exists, so an event published
         # while a stream is open reaches that stream rather than waiting for
@@ -570,6 +578,85 @@ def test_an_unverifiable_session_is_refused_before_stream_ownership(
     _assert_no_cross_origin_permission(head)
     assert json.loads(body) == {"code": "recording_unavailable"}
     assert spawned_writers == []
+    assert server.broker.connections == ()
+    assert server.broker.registrations_in_flight == 0
+
+
+def test_startup_budget_refusal_is_json_before_sse_headers(tmp_path) -> None:
+    server = _Server(
+        tmp_path,
+        connection_budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20),
+    )
+    try:
+        head, body = _request(server.port, _get(server.port, "/api/events"))
+    finally:
+        server.close()
+
+    assert head.startswith(b"HTTP/1.1 503")
+    assert _headers_of(head)["content-type"] == "application/json; charset=utf-8"
+    assert json.loads(body) == {"code": "stream_unavailable"}
+    assert server.broker.connections == ()
+    assert server.broker.registrations_in_flight == 0
+
+
+def test_capture_exhaustion_is_json_before_sse_headers(
+    tmp_path, monkeypatch
+) -> None:
+    server = _Server(tmp_path)
+    captures = 0
+    real_encoder = broker_module._patch_frames
+
+    def advancing_encoder(snapshot, step, session_valid):
+        nonlocal captures
+        captures += 1
+        encoded = real_encoder(snapshot, step, session_valid)
+        server.broker.publish_state_patch(
+            replace(_snapshot(), state_revision=captures)
+        )
+        return encoded
+
+    monkeypatch.setattr(broker_module, "_patch_frames", advancing_encoder)
+    try:
+        head, body = _request(server.port, _get(server.port, "/api/events"))
+    finally:
+        server.close()
+
+    assert captures == broker_module._MAX_PATCH_CAPTURES
+    assert head.startswith(b"HTTP/1.1 503")
+    assert _headers_of(head)["content-type"] == "application/json; charset=utf-8"
+    assert json.loads(body) == {"code": "stream_unavailable"}
+    assert server.broker.connections == ()
+    assert server.broker.registrations_in_flight == 0
+
+
+def test_response_header_failure_revokes_the_prepared_stream(
+    server, monkeypatch
+) -> None:
+    prepared = []
+    real_prepare = server.broker.prepare_stream
+
+    def capture_proof(**kwargs):
+        proof = real_prepare(**kwargs)
+        prepared.append(proof)
+        return proof
+
+    monkeypatch.setattr(server.broker, "prepare_stream", capture_proof)
+    monkeypatch.setattr(
+        DashboardHandler,
+        "end_headers",
+        lambda _handler: (_ for _ in ()).throw(
+            OSError("injected response header failure")
+        ),
+    )
+
+    head, body = _request(server.port, _get(server.port, "/api/events"))
+
+    assert head == b""
+    assert body == b""
+    assert len(prepared) == 1
+    handle = prepared[0]._handle
+    assert handle.finished.is_set()
+    assert handle.queue.current_cost == frames.FrameCost(0, 0)
     assert server.broker.connections == ()
     assert server.broker.registrations_in_flight == 0
 

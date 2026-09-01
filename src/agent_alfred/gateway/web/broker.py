@@ -97,11 +97,35 @@ _DRAIN_TIMEOUT_S = 2.0
 _MAX_PATCH_CAPTURES = 4
 
 @dataclass(frozen=True)
-class StreamAdmissionProof:
-    """The one Session fact established before an HTTP stream is opened."""
+class _SessionAdmissionProof:
+    """The one Session fact used while full stream admission is prepared."""
 
     session_id: str | None
     session_valid: bool
+
+
+@dataclass(frozen=True)
+class StreamAdmissionProof:
+    """Unique ownership of a fully admitted stream before HTTP 200."""
+
+    session_id: str | None
+    session_valid: bool
+    _broker: SSEBroker = field(repr=False, compare=False)
+    _acquisition: _ConnectStartup = field(repr=False, compare=False)
+    _handle: ConnectionHandle = field(repr=False, compare=False)
+    _writer: ConnectionWriter = field(repr=False, compare=False)
+
+
+class StreamAdmissionRejected(Exception):
+    """A complete stream could not be admitted before response headers."""
+
+    status = 503
+    code = "stream_unavailable"
+
+    def __init__(self, reason: str, handle: ConnectionHandle):
+        super().__init__(reason)
+        self.reason = reason
+        self.handle = handle
 
 
 class _IngressStop:
@@ -337,41 +361,55 @@ class _ConnectStartup:
     handle: ConnectionHandle | None = None
     startup_reservation: StartupPrefixReservation | None = None
     registration_open: bool = False
+    transferred: bool = False
+    aborted: bool = False
+    ownership_lock: threading.RLock = field(
+        default_factory=threading.RLock, repr=False
+    )
 
-    def abort(self, broker: SSEBroker) -> None:
+    def abort(
+        self, broker: SSEBroker, *, close_connection: bool = True
+    ) -> None:
         """Revoke a startup that never handed ownership to a writer."""
-        handle = self.handle
-        registration_open = False
-        if handle is not None:
-            with broker._lock:
-                if self.registration_open:
-                    # A dispatcher may already have captured this registered
-                    # handle. Mark its queue first so such a stale bounded
-                    # offer is refused instead of retaining a frame after the
-                    # startup owner drains the queue below.
-                    handle.queue.request_close()
-                if handle in broker._connections:
-                    broker._connections.remove(handle)
-                registration_open = self.registration_open
-        try:
+        with self.ownership_lock:
+            if self.transferred:
+                raise RuntimeError("stream admission ownership already transferred")
+            if self.aborted:
+                return
+            self.aborted = True
+            handle = self.handle
+            registration_open = False
             if handle is not None:
-                if self.startup_reservation is not None:
-                    self.startup_reservation.cancel()
-                    self.startup_reservation = None
-                while True:
-                    try:
-                        handle.queue.take(timeout=0)
-                    except queue.Empty:
-                        break
-                handle.queue.cancel_startup()
-            self.connection.close()
-        finally:
-            if handle is not None:
-                handle.finished.set()
-            if registration_open:
                 with broker._lock:
-                    broker._registrations -= 1
-                    self.registration_open = False
+                    if self.registration_open:
+                        # A dispatcher may already have captured this registered
+                        # handle. Mark its queue first so such a stale bounded
+                        # offer is refused instead of retaining a frame after the
+                        # startup owner drains the queue below.
+                        handle.queue.request_close()
+                    if handle in broker._connections:
+                        broker._connections.remove(handle)
+                    registration_open = self.registration_open
+            try:
+                if handle is not None:
+                    if self.startup_reservation is not None:
+                        self.startup_reservation.cancel()
+                        self.startup_reservation = None
+                    while True:
+                        try:
+                            handle.queue.take(timeout=0)
+                        except queue.Empty:
+                            break
+                    handle.queue.cancel_startup()
+                if close_connection:
+                    self.connection.close()
+            finally:
+                if handle is not None:
+                    handle.finished.set()
+                if registration_open:
+                    with broker._lock:
+                        broker._registrations -= 1
+                        self.registration_open = False
 
 
 class SSEBroker:
@@ -487,12 +525,12 @@ class SSEBroker:
         with self._lock:
             self._session_is_valid = check
 
-    def preflight_session(self, session_id: str | None) -> StreamAdmissionProof:
+    def preflight_session(self, session_id: str | None) -> _SessionAdmissionProof:
         """Establish one immutable Session fact before response ownership moves."""
         validity = parse_session_validity(self._session_is_valid(session_id))
         if validity == "unavailable":
             raise RecordingUnavailable("recording store is unavailable")
-        return StreamAdmissionProof(
+        return _SessionAdmissionProof(
             session_id=session_id,
             session_valid=validity == "valid",
         )
@@ -786,37 +824,93 @@ class SSEBroker:
         cursor: CursorText | None = None,
         session_id: str | None = None,
         budget: frames.FrameBudget | None = None,
-        admission: StreamAdmissionProof | None = None,
+        admission: _SessionAdmissionProof | None = None,
     ) -> ConnectionHandle:
-        """Build and register a stream, retaining ownership until its writer exists."""
+        """Convenience seam that admits and immediately starts one stream."""
+        try:
+            proof = self.prepare_stream(
+                connection=connection,
+                cursor=cursor,
+                session_id=session_id,
+                budget=budget,
+                session_admission=admission,
+            )
+            return self.start_stream(proof)
+        except StreamAdmissionRejected as exc:
+            connection.close()
+            return exc.handle
+        except BaseException:
+            connection.close()
+            raise
+
+    def prepare_stream(
+        self,
+        *,
+        connection: SSEConnection,
+        cursor: CursorText | None = None,
+        session_id: str | None = None,
+        budget: frames.FrameBudget | None = None,
+        session_admission: _SessionAdmissionProof | None = None,
+    ) -> StreamAdmissionProof:
+        """Atomically reserve every stream resource before HTTP 200."""
         acquisition = _ConnectStartup(connection=connection)
         try:
-            proof = (
+            admission = (
                 self.preflight_session(session_id)
-                if admission is None
-                else admission
+                if session_admission is None
+                else session_admission
             )
-            if proof.session_id != session_id:
+            if admission.session_id != session_id:
                 raise ValueError("stream admission proof does not match session_id")
-            return self._connect_before_writer(
+            return self._prepare_before_writer(
                 connection=connection,
                 cursor=cursor,
                 session_id=session_id,
                 budget=budget,
                 acquisition=acquisition,
-                admission=proof,
+                admission=admission,
             )
         except BaseException:
             try:
-                acquisition.abort(self)
+                acquisition.abort(self, close_connection=False)
             except Exception:
-                # The acquisition failure is the caller-visible fact. Socket
-                # closure is best-effort, while process-control exceptions
-                # from cleanup still keep their normal propagation semantics.
                 pass
             raise
 
-    def _connect_before_writer(
+    def start_stream(self, proof: StreamAdmissionProof) -> ConnectionHandle:
+        """Transfer one prepared admission to its writer exactly once."""
+        if proof._broker is not self:
+            raise ValueError("stream admission proof belongs to another broker")
+        acquisition = proof._acquisition
+        with acquisition.ownership_lock:
+            if acquisition.aborted:
+                raise RuntimeError("stream admission proof was revoked")
+            if acquisition.transferred:
+                raise RuntimeError(
+                    "stream admission ownership already transferred"
+                )
+            handle = proof._handle
+            try:
+                handle.thread = self._spawn(
+                    lambda: self._run_writer(handle, proof._writer)
+                )
+            except BaseException:
+                acquisition.abort(self)
+                raise
+            acquisition.startup_reservation = None
+            with self._lock:
+                self._registrations -= 1
+                acquisition.registration_open = False
+            acquisition.transferred = True
+            return handle
+
+    def abort_stream(self, proof: StreamAdmissionProof) -> None:
+        """Revoke a prepared stream whose HTTP/writer handoff failed."""
+        if proof._broker is not self:
+            raise ValueError("stream admission proof belongs to another broker")
+        proof._acquisition.abort(self)
+
+    def _prepare_before_writer(
         self,
         *,
         connection: SSEConnection,
@@ -824,8 +918,8 @@ class SSEBroker:
         session_id: str | None,
         budget: frames.FrameBudget | None,
         acquisition: _ConnectStartup,
-        admission: StreamAdmissionProof,
-    ) -> ConnectionHandle:
+        admission: _SessionAdmissionProof,
+    ) -> StreamAdmissionProof:
         """Register one connection and build its opening stream.
 
         The snapshot, the high-water mark and the registration all happen in
@@ -878,7 +972,7 @@ class SSEBroker:
             raise TypeError("stream admission proof must carry a boolean verdict")
         else:
             session_valid = admission.session_valid
-            refused = False
+            refusal_reason: str | None = None
             for _ in range(_MAX_PATCH_CAPTURES):
                 boundary = (
                     nullcontext()
@@ -891,7 +985,7 @@ class SSEBroker:
                         # started now would never be told to stop by anyone but
                         # us, and a caller that already holds a True close is
                         # tearing down what this stream would read from.
-                        refused = True
+                        refusal_reason = "broker_closing"
                         break
                     epoch = self._state_epoch
                     verdict = classify_cursor(
@@ -957,7 +1051,7 @@ class SSEBroker:
                 )
                 with boundary, self._lock:
                     if self._stopping or self._closed:
-                        refused = True
+                        refusal_reason = "broker_closing"
                         break
                     if self._state_epoch != epoch:
                         # An event or a patch moved the world while the frames
@@ -981,13 +1075,13 @@ class SSEBroker:
                             # The frozen interval ceased to be reproducible
                             # before registration. A retry will receive the
                             # ring's explicit gap verdict instead.
-                            refused = True
+                            refusal_reason = "replay_unavailable"
                             break
                     startup_reservation = handle.queue.reserve_startup_prefix(
                         built, guard
                     )
                     if startup_reservation is None:
-                        refused = True
+                        refusal_reason = "startup_capacity"
                         break
                     acquisition.startup_reservation = startup_reservation
                     del built
@@ -1016,10 +1110,9 @@ class SSEBroker:
                 # snapshots and replay. Refuse this connection in the same
                 # observable shape as a closing broker; a reconnect gets a fresh
                 # atomic capture without poisoning the broker for other clients.
-                refused = True
-            if refused:
-                acquisition.abort(self)
-                return handle
+                refusal_reason = "capture_exhausted"
+            if refusal_reason is not None:
+                raise StreamAdmissionRejected(refusal_reason, handle)
         writer = ConnectionWriter(
             connection=connection,
             source=handle.queue,
@@ -1047,12 +1140,14 @@ class SSEBroker:
             ),
         )
         handle.writer = writer
-        handle.thread = self._spawn(lambda: self._run_writer(handle, writer))
-        acquisition.startup_reservation = None
-        with self._lock:
-            self._registrations -= 1
-            acquisition.registration_open = False
-        return handle
+        return StreamAdmissionProof(
+            session_id=session_id,
+            session_valid=session_valid,
+            _broker=self,
+            _acquisition=acquisition,
+            _handle=handle,
+            _writer=writer,
+        )
 
     def _fetch_startup_replay(
         self,

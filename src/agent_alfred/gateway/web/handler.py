@@ -25,6 +25,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 from agent_alfred.gateway.web.api import DashboardApi
+from agent_alfred.gateway.web.broker import StreamAdmissionRejected
 from agent_alfred.gateway.web.connection import SocketConnection
 from agent_alfred.gateway.web.guard import (
     AuthorizedRequest,
@@ -310,25 +311,42 @@ class DashboardHandler(BaseHTTPRequestHandler):
         """
         context = self._context
         session_id = self._params().get("session_id")
+        connection = SocketConnection(self.connection, self.wfile)
+        cursor = self.headers.get("last-event-id")
         try:
-            admission = context.broker.preflight_session(session_id)
+            proof = context.broker.prepare_stream(
+                connection=connection,
+                cursor=CursorText(cursor) if cursor else None,
+                session_id=session_id,
+            )
         except RecordingUnavailable:
             self._send(503, {"code": "recording_unavailable"})
             return
-        self.send_response(200)
-        for name, value in BASE_HEADERS:
-            self.send_header(name, value)
-        for name, value in SSE_HEADERS:
-            self.send_header(name, value)
-        self.end_headers()
-        connection = SocketConnection(self.connection, self.wfile)
-        cursor = self.headers.get("last-event-id")
-        handle = context.broker.connect(
-            connection=connection,
-            cursor=CursorText(cursor) if cursor else None,
-            session_id=session_id,
-            admission=admission,
-        )
+        except StreamAdmissionRejected as rejection:
+            self._send(rejection.status, {"code": rejection.code})
+            return
+        except Exception:  # noqa: BLE001 - no detail crosses the HTTP boundary
+            self._send(500, {"code": "internal_error"})
+            return
+        try:
+            self.send_response(200)
+            for name, value in BASE_HEADERS:
+                self.send_header(name, value)
+            for name, value in SSE_HEADERS:
+                self.send_header(name, value)
+            self.end_headers()
+        except BaseException:
+            context.broker.abort_stream(proof)
+            self.close_connection = True
+            return
+        try:
+            handle = context.broker.start_stream(proof)
+        except BaseException:
+            # ``start_stream`` revokes the proof if spawning fails. A second
+            # response is impossible after 200; closing is the only honest
+            # outcome, and no reservation or registration survives it.
+            self.close_connection = True
+            return
         # The writer closes the socket; this thread must not touch it again,
         # so it only waits for the writer to say it is done.
         handle.finished.wait()
