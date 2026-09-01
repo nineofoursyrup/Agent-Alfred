@@ -260,24 +260,34 @@ def test_wire_requires_lifecycle_keys(field: str) -> None:
     else:
         del wire["coordinator_state"]
 
-    with pytest.raises(KeyError):
+    expected_object = "active_run" if field == "phase" else "top"
+    with pytest.raises(ValueError, match=expected_object):
         snapshot_from_payload(wire)
 
 
 @pytest.mark.parametrize(
-    ("target", "outcome"),
+    ("target", "outcome", "error"),
     [
-        pytest.param("active", 1, id="active-non-string"),
-        pytest.param("active", "unknown", id="active-unknown"),
-        pytest.param("active", None, id="active-terminal-null"),
-        pytest.param("active", ..., id="active-terminal-missing"),
-        pytest.param("projection", 1, id="projection-non-string"),
-        pytest.param("projection", "unknown", id="projection-unknown"),
-        pytest.param("projection", None, id="projection-null"),
-        pytest.param("projection", ..., id="projection-missing"),
+        pytest.param("active", 1, "run outcome", id="active-non-string"),
+        pytest.param("active", "unknown", "run outcome", id="active-unknown"),
+        pytest.param("active", None, "run outcome", id="active-terminal-null"),
+        pytest.param("active", ..., "active_run", id="active-terminal-missing"),
+        pytest.param("projection", 1, "run outcome", id="projection-non-string"),
+        pytest.param(
+            "projection", "unknown", "run outcome", id="projection-unknown"
+        ),
+        pytest.param("projection", None, "run outcome", id="projection-null"),
+        pytest.param(
+            "projection",
+            ...,
+            "unrecorded_terminal_projection",
+            id="projection-missing",
+        ),
     ],
 )
-def test_wire_rejects_invalid_run_outcomes(target: str, outcome: object) -> None:
+def test_wire_rejects_invalid_run_outcomes(
+    target: str, outcome: object, error: str
+) -> None:
     kwargs: dict[str, object] = {"active_outcome": None}
     if target == "active":
         kwargs.update(active_outcome=outcome, active_phase="finished")
@@ -285,7 +295,7 @@ def test_wire_rejects_invalid_run_outcomes(target: str, outcome: object) -> None
         kwargs["projection_outcome"] = outcome
     wire = _wire_payload(**kwargs)
 
-    with pytest.raises(ValueError, match="run outcome"):
+    with pytest.raises(ValueError, match=error):
         snapshot_from_payload(wire)
 
 

@@ -145,17 +145,12 @@ def test_runtime_unrecorded_terminal_state_is_preserved_in_the_web_view(
     assert view.unrecorded_terminal_projection.outcome == "completed"
 
 
-@pytest.mark.parametrize("state", [None, ...], ids=["null", "missing"])
-def test_nullable_wire_fields_accept_null_and_missing(state: object) -> None:
+def test_nullable_wire_fields_accept_null() -> None:
     wire = _wire_payload()
     active = wire["active_run"]
     assert isinstance(active, dict)
-    if state is ...:
-        del wire["recording_state"]
-        del active["recording_state"]
-    else:
-        wire["recording_state"] = state
-        active["recording_state"] = state
+    wire["recording_state"] = None
+    active["recording_state"] = None
 
     rebuilt = snapshot_from_payload(wire)
 
@@ -231,7 +226,12 @@ def test_wire_rejects_invalid_nullable_recording_states(
 def test_wire_rejects_invalid_unrecorded_terminal_states(state: object) -> None:
     wire = _wire_payload(projection_state=state)
 
-    with pytest.raises(ValueError, match="unrecorded terminal recording state"):
+    error = (
+        "unrecorded_terminal_projection"
+        if state is ...
+        else "unrecorded terminal recording state"
+    )
+    with pytest.raises(ValueError, match=error):
         snapshot_from_payload(wire)
 
 

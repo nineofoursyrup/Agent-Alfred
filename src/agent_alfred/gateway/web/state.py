@@ -44,6 +44,45 @@ SNAPSHOT_TEXT_LIMIT = 2000
 _ATTEMPT_FIELDS = frozenset(
     {"attempt_id", "outcome", "stop_reason", "error_code", "duration_ms"}
 )
+_SNAPSHOT_FIELDS = frozenset(
+    {
+        "process_instance_id",
+        "state_revision",
+        "coordinator_state",
+        "active_run",
+        "step",
+        "recording_state",
+        "session_valid",
+        "unrecorded_terminal_projection",
+    }
+)
+_ACTIVE_RUN_FIELDS = frozenset(
+    {
+        "run_id",
+        "purpose",
+        "gateway",
+        "phase",
+        "outcome",
+        "session_id",
+        "prompt_preview",
+        "started_at",
+        "current_step",
+        "recording_state",
+    }
+)
+_STEP_FIELDS = frozenset({"step_index", "attempts", "attempts_truncated"})
+_TERMINAL_PROJECTION_FIELDS = frozenset(
+    {
+        "run_id",
+        "purpose",
+        "outcome",
+        "reply_preview",
+        "error",
+        "recording_state",
+        "session_id",
+        "prompt_preview",
+    }
+)
 
 PatchRejection = Literal[
     "instance_mismatch",
@@ -134,12 +173,17 @@ def _parse_optional_string(value: object, field: str) -> str | None:
     return value
 
 
+def _parse_exact_object(
+    value: object, field: str, expected_fields: frozenset[str]
+) -> dict[str, Any]:
+    if type(value) is not dict or set(value) != expected_fields:
+        names = ", ".join(sorted(expected_fields))
+        raise ValueError(f"{field} must be an object containing exactly {names}")
+    return value
+
+
 def _parse_attempt_terminal(value: object) -> AttemptTerminal:
-    if type(value) is not dict or set(value) != _ATTEMPT_FIELDS:
-        raise ValueError(
-            "attempt must contain exactly attempt_id, outcome, stop_reason, "
-            "error_code, and duration_ms"
-        )
+    value = _parse_exact_object(value, "attempt", _ATTEMPT_FIELDS)
     return AttemptTerminal(
         attempt_id=_parse_required_nonempty_string(value["attempt_id"], "attempt_id"),
         outcome=parse_attempt_outcome(value["outcome"]),
@@ -214,41 +258,58 @@ def snapshot_payload(
     }
 
 
-def snapshot_from_payload(payload: dict[str, Any]) -> RunStateSnapshot:
+def snapshot_from_payload(payload: object) -> RunStateSnapshot:
     """Rebuild the typed snapshot from a wire document.
 
     The client is our own code, so it reads the typed form; the round trip
     exists so the merge rules are exercised against what actually crossed the
     wire rather than against a convenient in-memory object.
     """
-    step = payload.get("step")
-    projection = payload.get("unrecorded_terminal_projection")
-    active = payload.get("active_run")
+    payload = _parse_exact_object(payload, "top", _SNAPSHOT_FIELDS)
+    step = payload["step"]
+    projection = payload["unrecorded_terminal_projection"]
+    active = payload["active_run"]
     active_run = None
     if active is not None:
+        active = _parse_exact_object(active, "active_run", _ACTIVE_RUN_FIELDS)
         phase, outcome = parse_run_lifecycle_pair(
-            active["phase"], active.get("outcome")
+            active["phase"], active["outcome"]
         )
         active_run = ActiveRunView(
-            run_id=active["run_id"],
-            purpose=active["purpose"],
-            gateway=active["gateway"],
+            run_id=_parse_required_nonempty_string(active["run_id"], "run_id"),
+            purpose=_parse_required_nonempty_string(active["purpose"], "purpose"),
+            gateway=_parse_required_nonempty_string(active["gateway"], "gateway"),
             phase=phase,
             outcome=outcome,
-            session_id=active.get("session_id"),
-            prompt_preview=active.get("prompt_preview"),
-            started_at=active.get("started_at"),
+            session_id=_parse_optional_string(active["session_id"], "session_id"),
+            prompt_preview=_parse_optional_string(
+                active["prompt_preview"], "prompt_preview"
+            ),
+            started_at=_parse_optional_string(active["started_at"], "started_at"),
             current_step=(
                 None
-                if active.get("current_step") is None
-                else _parse_non_negative_int(active.get("current_step"), "current_step")
+                if active["current_step"] is None
+                else _parse_non_negative_int(active["current_step"], "current_step")
             ),
             recording_state=parse_recording_state(
-                active.get("recording_state"), allow_none=True
+                active["recording_state"], allow_none=True
             ),
         )
+    if step is not None:
+        step = _parse_exact_object(step, "step", _STEP_FIELDS)
+        attempts = step["attempts"]
+        if type(attempts) is not list:
+            raise ValueError("attempts must be a list")
+    if projection is not None:
+        projection = _parse_exact_object(
+            projection,
+            "unrecorded_terminal_projection",
+            _TERMINAL_PROJECTION_FIELDS,
+        )
     return RunStateSnapshot(
-        process_instance_id=payload["process_instance_id"],
+        process_instance_id=_parse_required_nonempty_string(
+            payload["process_instance_id"], "process_instance_id"
+        ),
         state_revision=_parse_non_negative_int(
             payload["state_revision"], "state_revision"
         ),
@@ -258,31 +319,43 @@ def snapshot_from_payload(payload: dict[str, Any]) -> RunStateSnapshot:
             None
             if step is None
             else StepProjection(
-                step_index=_parse_non_negative_int(step["step_index"], "step_index"),
+                step_index=_parse_non_negative_int(
+                    step["step_index"], "step_index"
+                ),
                 attempts=tuple(
-                    _parse_attempt_terminal(attempt) for attempt in step["attempts"]
+                    _parse_attempt_terminal(attempt) for attempt in attempts
                 ),
                 attempts_truncated=_parse_required_bool(step, "attempts_truncated"),
             )
         ),
         recording_state=parse_recording_state(
-            payload.get("recording_state"), allow_none=True
+            payload["recording_state"], allow_none=True
         ),
         session_valid=_parse_required_bool(payload, "session_valid"),
         unrecorded_terminal_projection=(
             None
             if projection is None
             else UnrecordedTerminalView(
-                run_id=projection["run_id"],
-                purpose=projection["purpose"],
-                outcome=parse_run_outcome(projection.get("outcome")),
-                reply_preview=projection.get("reply_preview"),
-                error=projection.get("error"),
-                recording_state=parse_recording_state(
-                    projection.get("recording_state"), unrecorded_terminal=True
+                run_id=_parse_required_nonempty_string(
+                    projection["run_id"], "run_id"
                 ),
-                session_id=projection.get("session_id"),
-                prompt_preview=projection.get("prompt_preview"),
+                purpose=_parse_required_nonempty_string(
+                    projection["purpose"], "purpose"
+                ),
+                outcome=parse_run_outcome(projection["outcome"]),
+                reply_preview=_parse_optional_string(
+                    projection["reply_preview"], "reply_preview"
+                ),
+                error=_parse_optional_string(projection["error"], "error"),
+                recording_state=parse_recording_state(
+                    projection["recording_state"], unrecorded_terminal=True
+                ),
+                session_id=_parse_optional_string(
+                    projection["session_id"], "session_id"
+                ),
+                prompt_preview=_parse_optional_string(
+                    projection["prompt_preview"], "prompt_preview"
+                ),
             )
         ),
     )
