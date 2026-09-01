@@ -609,29 +609,40 @@ def _run_json(run) -> dict[str, Any]:
 
 def _mainbar_payload(page) -> dict[str, Any]:
     return {
-        "pairs": [
-            {
-                "run_id": pair.run_id,
-                "activity_revision": pair.activity_revision,
-                "session_id": pair.session_id,
-                "created_at": pair.created_at,
-                "user": (
-                    None
-                    if pair.user_message is None
-                    else [_block_json(block) for block in pair.user_message.blocks]
-                ),
-                "assistant": (
-                    None
-                    if pair.assistant_message is None
-                    else [
-                        _block_json(block)
-                        for block in pair.assistant_message.blocks
-                    ]
-                ),
-            }
-            for pair in page.pairs
-        ],
+        "items": [_mainbar_item_json(item) for item in page.items],
         "next_cursor": page.next_cursor,
+    }
+
+
+def _mainbar_item_json(item) -> dict[str, Any]:
+    if isinstance(item, runs.MainBarRunPair):
+        return {
+            "type": "run_pair",
+            "run_id": item.run_id,
+            "activity_revision": item.activity_revision,
+            "session_id": item.session_id,
+            "created_at": item.created_at,
+            "user": (
+                None
+                if item.user_message is None
+                else [_block_json(block) for block in item.user_message.blocks]
+            ),
+            "assistant": (
+                None
+                if item.assistant_message is None
+                else [_block_json(block) for block in item.assistant_message.blocks]
+            ),
+        }
+    if not isinstance(item, runs.MainBarHistoricMessage):
+        raise TypeError(f"unknown MainBar item: {type(item).__name__}")
+    return {
+        "type": "historic_message",
+        "run_id": item.run_id,
+        "role": item.message.role,
+        "blocks": [_block_json(block) for block in item.message.blocks],
+        "source": item.source,
+        "created_at": item.created_at,
+        "telemetry": item.telemetry,
     }
 
 

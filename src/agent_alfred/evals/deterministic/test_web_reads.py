@@ -1,5 +1,5 @@
 """The Dashboard's read side over a real database: runs page, deep links,
-MainBar pairs.
+MainBar items.
 
 Driven only through the public Host API, because every claim here is about
 what a browser is allowed to see. The two properties that matter and that a
@@ -30,6 +30,7 @@ from agent_alfred.runtime import sessions as session_store
 from agent_alfred.runtime.host import RuntimeHost, SubmitRequest
 from agent_alfred.runtime.runs import (
     DEFAULT_MAINBAR_LIMIT,
+    MainBarHistoricMessage,
     MalformedCursor,
     UnknownRunFilter,
     classify_purpose,
@@ -590,16 +591,20 @@ def test_a_run_that_was_never_recorded_has_no_pair() -> None:
     A finished Run with no message rows never committed its finalize
     transaction; giving it a pair would be inventing a reply.
     """
-    host = _fresh_host()
+    host = _historic_host({"s-unrecorded": ["旧消息"]})
     host.start()
     try:
-        session_id = host.create_session()
+        session_id = "s-unrecorded"
         _insert_run(
             host, "r-unrecorded", phase="finished", outcome="completed",
             session_id=session_id,
         )
         _insert_run(host, "r-accepted", phase="accepted", session_id=session_id)
-        assert host.mainbar_pairs(session_id=session_id).pairs == ()
+        page = host.mainbar_pairs(session_id=session_id)
+        assert page.pairs == ()
+        assert len(page.items) == 1
+        assert isinstance(page.items[0], MainBarHistoricMessage)
+        assert page.items[0].run_id is None
     finally:
         host.close()
 
@@ -618,20 +623,150 @@ def test_a_system_run_never_reaches_the_mainbar() -> None:
         host.close()
 
 
-def test_historic_messages_are_never_dressed_up_as_a_run() -> None:
+def test_historic_messages_are_visible_in_mainbar_without_a_fabricated_run() -> None:
     """The ADR-0027 line, seen from the MainBar.
 
-    Historic rows have no run_id and no Run exists for them. The MainBar is
-    paged by Run, so the only honest answer is: they are not here. They are
-    still visible -- in the session view, with a null run_id.
+    Historic rows have no run_id and no Run exists for them. The MainBar
+    returns the single messages as their own union arm instead of pretending
+    they are a user/assistant Run pair.
     """
     host = _historic_host({"s-historic": ["旧问题", "旧回答"]})
     host.start()
     try:
-        assert host.mainbar_pairs(session_id="s-historic").pairs == ()
-        page = host.open_session("s-historic", page_size=10)
-        assert [message_plain_text(m) for m in page.messages] == ["旧问题", "旧回答"]
-        assert all(m.run_id is None for m in page.messages)
+        with host._db_lock:  # noqa: SLF001 - legacy fixture setup
+            host._conn.execute(  # noqa: SLF001
+                "UPDATE agent_log SET telemetry = ? WHERE session_id = ? AND id = 1",
+                (json.dumps({"legacy": "kept"}), "s-historic"),
+            )
+            host._conn.commit()  # noqa: SLF001
+        page = host.mainbar_pairs(session_id="s-historic")
+        assert [message_plain_text(item.message) for item in page.items] == [
+            "旧问题",
+            "旧回答",
+        ]
+        assert all(item.run_id is None for item in page.items)
+        assert page.items[0].telemetry == {"legacy": "kept"}
+    finally:
+        host.close()
+
+
+@pytest.mark.parametrize(
+    "limit,expected_pages",
+    [
+        (
+            1,
+            [
+                ["run:新问题二"],
+                ["run:新问题一"],
+                ["historic:旧问题"],
+                ["historic:旧回答"],
+                ["historic:旧问题二"],
+            ],
+        ),
+        (
+            2,
+            [
+                ["run:新问题二", "run:新问题一"],
+                ["historic:旧问题", "historic:旧回答"],
+                ["historic:旧问题二"],
+            ],
+        ),
+        (
+            3,
+            [
+                ["run:新问题二", "run:新问题一", "historic:旧问题"],
+                ["historic:旧回答", "historic:旧问题二"],
+            ],
+        ),
+    ],
+)
+def test_mainbar_pages_across_the_run_to_historic_boundary_without_gaps(
+    limit: int, expected_pages: list[list[str]]
+) -> None:
+    host = _historic_host(
+        {"s-mixed-mainbar": ["旧问题", "旧回答", "旧问题二"]},
+        script=["新回答一", "新回答二"],
+    )
+    host.start()
+    try:
+        first = _run(host, "新问题一", "s-mixed-mainbar")
+        second = _run(host, "新问题二", "s-mixed-mainbar")
+        pages = []
+        all_items = []
+        cursor = None
+        while True:
+            page = host.mainbar_pairs(
+                session_id="s-mixed-mainbar", limit=limit, cursor=cursor
+            )
+            assert page.items
+            labels = []
+            for item in page.items:
+                if isinstance(item, MainBarHistoricMessage):
+                    assert item.run_id is None
+                    labels.append(f"historic:{message_plain_text(item.message)}")
+                else:
+                    assert item.run_id in {first.run_id, second.run_id}
+                    labels.append(f"run:{message_plain_text(item.user_message)}")
+            pages.append(labels)
+            all_items.extend(page.items)
+            if page.next_cursor is None:
+                break
+            cursor = page.next_cursor
+
+        assert pages == expected_pages
+        assert len(all_items) == 5
+        assert len({repr(item) for item in all_items}) == 5
+    finally:
+        host.close()
+
+
+def test_mainbar_cursor_is_session_bound_fail_closed_and_idempotent() -> None:
+    from agent_alfred.runtime.cursor import decode_cursor, encode_cursor
+
+    host = _historic_host(
+        {"s-a": ["a-one", "a-two"], "s-b": ["b-one"]}
+    )
+    host.start()
+    try:
+        first = host.mainbar_pairs(session_id="s-a", limit=1)
+        assert first.next_cursor is not None
+        payload = decode_cursor(first.next_cursor, version=2, kind="mainbar")
+        assert payload["seg"] == "historic"
+        assert payload["s"] == "s-a"
+        assert type(payload["id"]) is int
+        continuation = host.mainbar_pairs(
+            session_id="s-a", limit=1, cursor=first.next_cursor
+        )
+        assert continuation == host.mainbar_pairs(
+            session_id="s-a", limit=1, cursor=first.next_cursor
+        )
+        with pytest.raises(MalformedCursor):
+            host.mainbar_pairs(
+                session_id="s-b", limit=1, cursor=first.next_cursor
+            )
+
+        malformed = [
+            {"v": 2, "k": "mainbar", "seg": "unknown", "s": "s-a"},
+            {
+                "v": 2,
+                "k": "mainbar",
+                "seg": "historic",
+                "s": "s-a",
+                "id": True,
+            },
+            {
+                "v": 2,
+                "k": "mainbar",
+                "seg": "historic",
+                "s": "s-a",
+                "id": -1,
+            },
+        ]
+        for payload in malformed:
+            with pytest.raises(MalformedCursor):
+                host.mainbar_pairs(
+                    session_id="s-a", cursor=encode_cursor(payload)
+                )
     finally:
         host.close()
 
@@ -766,7 +901,25 @@ def test_historic_messages_go_through_the_central_redactor() -> None:
     try:
         inbox = host.list_sessions(limit=10)
         page = host.open_session("s-historic-secret", page_size=10)
-        _assert_redaction_canary_absent((inbox, page))
+        mainbar = host.mainbar_pairs(session_id="s-historic-secret")
+        _assert_redaction_canary_absent((inbox, page, mainbar))
+    finally:
+        host.close()
+
+
+def test_mainbar_does_not_replace_invalid_historic_content_with_a_message() -> None:
+    from agent_alfred.messages import MessageError
+
+    host = _historic_host({"s-invalid": ["will be corrupted"]})
+    try:
+        with host._db_lock:  # noqa: SLF001 - corrupt legacy fixture setup
+            host._conn.execute(  # noqa: SLF001
+                "UPDATE agent_log SET content = ? WHERE session_id = ?",
+                (json.dumps([{"type": "made_up"}]), "s-invalid"),
+            )
+            host._conn.commit()  # noqa: SLF001
+        with pytest.raises(MessageError):
+            host.mainbar_pairs(session_id="s-invalid")
     finally:
         host.close()
 
@@ -901,8 +1054,9 @@ def test_run_reads_reject_boolean_activity_revisions(
             ),
             "mainbar": encode_cursor(
                 {
-                    "v": 1,
+                    "v": 2,
                     "k": "mainbar",
+                    "seg": "runs",
                     "s": session_id,
                     "ar": activity_revision,
                     "r": "r1",
@@ -952,8 +1106,9 @@ def test_run_reads_keep_exact_integer_activity_revisions(
             ),
             "mainbar": encode_cursor(
                 {
-                    "v": 1,
+                    "v": 2,
                     "k": "mainbar",
+                    "seg": "runs",
                     "s": session_id,
                     "ar": activity_revision,
                     "r": "r1",

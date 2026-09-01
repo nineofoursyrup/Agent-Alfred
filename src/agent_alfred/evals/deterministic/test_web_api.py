@@ -211,17 +211,27 @@ def _page(filter_name: str):
 
 def _pairs():
     from agent_alfred.messages import text_message
-    from agent_alfred.runtime.runs import MainBarPage, MainBarPair
+    from agent_alfred.runtime.runs import (
+        MainBarHistoricMessage,
+        MainBarPage,
+        MainBarRunPair,
+    )
 
     return MainBarPage(
-        pairs=(
-            MainBarPair(
+        items=(
+            MainBarRunPair(
                 run_id="r1",
                 activity_revision=7,
                 session_id="s1",
                 created_at="2026-08-27T12:00:00Z",
                 user_message=text_message("user", "hello"),
                 assistant_message=text_message("assistant", "hi there"),
+            ),
+            MainBarHistoricMessage(
+                message=text_message("user", "old hello"),
+                source="cli",
+                created_at="2026-08-26T12:00:00Z",
+                telemetry={"legacy": True},
             ),
         ),
         next_cursor=None,
@@ -686,10 +696,21 @@ def test_the_mainbar_targets_the_requested_session() -> None:
     facade = _facade()
     _status, payload = DashboardApi(facade=facade).mainbar({"session_id": "s1"})
     assert facade.mainbar_queries[0][0] == "s1"
-    pair = payload["pairs"][0]
+    assert "pairs" not in payload
+    pair, historic = payload["items"]
+    assert pair["type"] == "run_pair"
     assert pair["run_id"] == "r1"
     assert pair["user"][0]["text"] == "hello"
     assert pair["assistant"][0]["text"] == "hi there"
+    assert historic == {
+        "type": "historic_message",
+        "run_id": None,
+        "role": "user",
+        "blocks": [{"type": "text", "text": "old hello"}],
+        "source": "cli",
+        "created_at": "2026-08-26T12:00:00Z",
+        "telemetry": {"legacy": True},
+    }
 
 
 # --- the Session group's run list -------------------------------------------

@@ -160,7 +160,7 @@ class _Facade:
         self.mainbar_sessions.append(session_id)
         from agent_alfred.runtime.runs import MainBarPage
 
-        return MainBarPage(pairs=(), next_cursor=None)
+        return MainBarPage(items=(), next_cursor=None)
 
     def list_session_chat_runs(
         self, *, session_id: str, limit: int, cursor: str | None

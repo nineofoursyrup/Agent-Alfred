@@ -1607,7 +1607,8 @@ def test_a_directly_injected_host_reads_sessions_runs_and_the_mainbar() -> None:
         # The MainBar is the same conversation, user and assistant.
         status, mainbar = api.mainbar({"session_id": session_id})
         assert status == 200
-        pair = mainbar["pairs"][0]
+        pair = mainbar["items"][0]
+        assert pair["type"] == "run_pair"
         assert pair["run_id"] == outcome.run_id
         assert pair["user"][0] == {"type": "text", "text": "hello"}
         assert pair["assistant"][0] == {"type": "text", "text": "pong"}

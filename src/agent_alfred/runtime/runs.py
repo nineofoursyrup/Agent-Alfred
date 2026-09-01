@@ -1,4 +1,4 @@
-"""Transport-agnostic Run read side: the runs page and the MainBar pairs.
+"""Transport-agnostic Run read side: the runs page and the MainBar items.
 
 Two reads, both over an injected connection, neither of which commits:
 
@@ -6,14 +6,14 @@ Two reads, both over an injected connection, neither of which commits:
   ``(activity_revision, run_id)``, with the one non-terminal Run returned
   *separately* so the client can pin it above the page and fold it away by
   ``run_id`` rather than showing it twice.
-- :func:`mainbar_pairs` -- the MainBar's initial load: the unique user /
-  assistant message pair of each **recorded** chat Run, newest activity
-  first, 25 by default.
+- :func:`mainbar_pairs` -- the MainBar's initial load: **recorded** chat Run
+  pairs newest-first, followed by historic messages without fabricated Runs.
 
-Both sort on ``activity_revision`` and nothing else. It is the persistent
-activity clock's number and it is the only one of the three revisions that
-orders *stored* state; ``seq`` and ``state_revision`` are in-process numbers
-and comparing any of the three to another is meaningless (CONTEXT.md).
+Run-backed items sort on ``activity_revision`` and nothing else. It is the
+persistent activity clock's number and it is the only one of the three
+revisions that orders *stored* state; ``seq`` and ``state_revision`` are
+in-process numbers and comparing any of the three to another is meaningless
+(CONTEXT.md).
 
 "Recorded" is decided here by the only thing that can decide it (ADR-0024):
 the finalizing transaction wrote the Run's phase and its message rows in one
@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, replace
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, TypeAlias
 
 from agent_alfred.messages import Message, blocks_from_jsonable, message_plain_text
 from agent_alfred.outcomes import RunOutcome
@@ -48,9 +48,12 @@ from agent_alfred.runtime.cursor import (
 from agent_alfred.runtime.sessions import SessionNotFound
 
 _CURSOR_VERSION = 1
+_MAINBAR_CURSOR_VERSION = 2
 _RUNS_KIND = "runs"
 _MAINBAR_KIND = "mainbar"
 _SESSION_RUNS_KIND = "session_runs"
+_RUNS_SEGMENT = "runs"
+_HISTORIC_SEGMENT = "historic"
 
 # The runs page's filter is closed to three values (#30): a Run is either a
 # conversation, a system run, or it is included because the filter is "all".
@@ -122,7 +125,7 @@ class RunPage:
 
 
 @dataclass(frozen=True)
-class MainBarPair:
+class MainBarRunPair:
     """The unique user/assistant pair of one recorded chat Run.
 
     Either side may be missing: an interrupted Run produces no assistant
@@ -138,10 +141,39 @@ class MainBarPair:
     assistant_message: Message | None
 
 
+# Compatibility name for callers that still describe the Run arm as a pair.
+MainBarPair = MainBarRunPair
+
+
+@dataclass(frozen=True)
+class MainBarHistoricMessage:
+    """One pre-Run message, kept distinct from a recorded Run pair."""
+
+    message: Message
+    source: str
+    created_at: str
+    telemetry: Any | None
+
+    @property
+    def run_id(self) -> None:
+        """Historic messages can never be attributed to a Run."""
+        return None
+
+
+MainBarItem: TypeAlias = MainBarRunPair | MainBarHistoricMessage
+
+
 @dataclass(frozen=True)
 class MainBarPage:
-    pairs: tuple[MainBarPair, ...]
+    items: tuple[MainBarItem, ...]
     next_cursor: str | None
+
+    @property
+    def pairs(self) -> tuple[MainBarRunPair, ...]:
+        """Read-only compatibility projection of the recorded Run arm."""
+        return tuple(
+            item for item in self.items if isinstance(item, MainBarRunPair)
+        )
 
 
 @dataclass(frozen=True)
@@ -220,16 +252,31 @@ def _runs_cursor(position: tuple[int, str] | None) -> str:
     return _encode_cursor(payload)
 
 
-def _mainbar_cursor(session_id: str, position: tuple[int, str] | None) -> str:
+def _mainbar_runs_cursor(
+    session_id: str, position: tuple[int, str] | None
+) -> str:
     payload: dict[str, Any] = {
-        "v": _CURSOR_VERSION,
+        "v": _MAINBAR_CURSOR_VERSION,
         "k": _MAINBAR_KIND,
+        "seg": _RUNS_SEGMENT,
         "s": session_id,
     }
     if position is not None:
         payload["ar"] = position[0]
         payload["r"] = position[1]
     return _encode_cursor(payload)
+
+
+def _mainbar_historic_cursor(session_id: str, position: int) -> str:
+    return _encode_cursor(
+        {
+            "v": _MAINBAR_CURSOR_VERSION,
+            "k": _MAINBAR_KIND,
+            "seg": _HISTORIC_SEGMENT,
+            "s": session_id,
+            "id": position,
+        }
+    )
 
 
 # --- the runs page ----------------------------------------------------------
@@ -461,12 +508,14 @@ def mainbar_pairs(
     limit: int = DEFAULT_MAINBAR_LIMIT,
     cursor: str | None = None,
 ) -> MainBarPage:
-    """The unique message pair of each recorded chat Run of one Session.
+    """The recorded Run pairs then historic messages of one Session.
 
     Each tab's MainBar is that tab's Session's only conversation, so the
     Session is part of the question, not a post-filter: the SQL carries it,
     and the cursor names it, so a page minted by Session A answers nothing
-    for Session B.
+    for Session B. Page size counts Run pairs and historic single messages;
+    when the Run segment is exhausted, any room in that same page is filled
+    from the historic segment so no empty transition page is produced.
     """
     if limit < 1:
         raise ValueError("limit must be >= 1")
@@ -475,12 +524,88 @@ def mainbar_pairs(
     ).fetchone()
     if exists is None:
         raise SessionNotFound(f"no such session: {session_id!r}")
-    position: tuple[int, str] | None = None
+    in_runs_segment = True
+    runs_position: tuple[int, str] | None = None
+    historic_position: int | None = None
     if cursor is not None:
-        payload = _decode_read_cursor(cursor, _MAINBAR_KIND)
+        payload = _decode_cursor(
+            cursor, version=_MAINBAR_CURSOR_VERSION, kind=_MAINBAR_KIND
+        )
         if payload.get("s") != session_id:
             raise MalformedCursor("cursor belongs to a different session")
-        position = _position(payload)
+        segment = payload.get("seg")
+        if segment == _RUNS_SEGMENT:
+            runs_position = _position(payload)
+        elif segment == _HISTORIC_SEGMENT:
+            last_id = payload.get("id")
+            if type(last_id) is not int or last_id < 0:
+                raise MalformedCursor("historic cursor position is malformed")
+            in_runs_segment = False
+            historic_position = last_id
+        else:
+            raise MalformedCursor("unknown cursor segment")
+
+    items: list[MainBarItem] = []
+    remaining = limit
+    if in_runs_segment:
+        rows = _mainbar_run_rows(
+            conn, session_id, runs_position, remaining + 1
+        )
+        taken = rows[:remaining]
+        items.extend(
+            MainBarRunPair(
+                run_id=row.run_id,
+                activity_revision=row.activity_revision,
+                session_id=row.session_id,
+                created_at=_created_at(conn, row.run_id),
+                user_message=_message(conn, row.run_id, "user", redactor),
+                assistant_message=_message(
+                    conn, row.run_id, "assistant", redactor
+                ),
+            )
+            for row in taken
+        )
+        remaining -= len(taken)
+        if len(rows) > len(taken):
+            last = taken[-1]
+            return MainBarPage(
+                items=tuple(items),
+                next_cursor=_mainbar_runs_cursor(
+                    session_id, (last.activity_revision, last.run_id)
+                ),
+            )
+
+    historic_rows = _mainbar_historic_rows(
+        conn, session_id, historic_position, remaining + 1
+    )
+    taken_historic = historic_rows[:remaining]
+    for row in taken_historic:
+        row_id, role, content, source, telemetry, created_at = row
+        items.append(
+            MainBarHistoricMessage(
+                message=_stored_message(role, content, redactor),
+                source=source,
+                created_at=created_at,
+                telemetry=None if telemetry is None else json.loads(telemetry),
+            )
+        )
+        historic_position = row_id
+    if len(historic_rows) > len(taken_historic):
+        return MainBarPage(
+            items=tuple(items),
+            next_cursor=_mainbar_historic_cursor(
+                session_id, historic_position or 0
+            ),
+        )
+    return MainBarPage(items=tuple(items), next_cursor=None)
+
+
+def _mainbar_run_rows(
+    conn,
+    session_id: str,
+    position: tuple[int, str] | None,
+    count: int,
+) -> list[_MainBarRunRow]:
     beyond = (
         "AND (runs.activity_revision < ?"
         " OR (runs.activity_revision = ? AND runs.run_id < ?))\n"
@@ -490,42 +615,46 @@ def mainbar_pairs(
     params: tuple[Any, ...] = (_TERMINAL_PHASE, session_id)
     if position is not None:
         params += (position[0], position[0], position[1])
-    params += (limit + 1,)
+    params += (count,)
     # EXISTS on agent_log is what makes "recorded" a database fact: the
     # finalize transaction wrote the phase and the messages together, so a
     # finished Run with rows is a Run whose recording committed.
-    rows = conn.execute(
-        "SELECT runs.run_id, runs.session_id, runs.activity_revision\n"
-        "  FROM runs\n"
-        "  WHERE runs.phase = ? AND runs.purpose = 'chat'\n"
-        "    AND runs.session_id = ?\n"
-        "    AND EXISTS (SELECT 1 FROM agent_log\n"
-        "                WHERE agent_log.run_id = runs.run_id)\n"
-        f"  {beyond}"
-        "  ORDER BY runs.activity_revision DESC, runs.run_id DESC LIMIT ?",
-        params,
+    return [
+        _MainBarRunRow(*row)
+        for row in conn.execute(
+            "SELECT runs.run_id, runs.session_id, runs.activity_revision\n"
+            "  FROM runs\n"
+            "  WHERE runs.phase = ? AND runs.purpose = 'chat'\n"
+            "    AND runs.session_id = ?\n"
+            "    AND EXISTS (SELECT 1 FROM agent_log\n"
+            "                WHERE agent_log.run_id = runs.run_id)\n"
+            f"  {beyond}"
+            "  ORDER BY runs.activity_revision DESC, runs.run_id DESC LIMIT ?",
+            params,
+        ).fetchall()
+    ]
+
+
+def _mainbar_historic_rows(
+    conn, session_id: str, after_id: int | None, count: int
+):
+    sql = """
+        SELECT id, role, content, source, telemetry, created_at
+        FROM agent_log
+        WHERE session_id = ? AND run_id IS NULL {after}
+        ORDER BY id ASC LIMIT ?
+    """
+    if after_id is None:
+        return conn.execute(sql.format(after=""), (session_id, count)).fetchall()
+    return conn.execute(
+        sql.format(after="AND id > ? "), (session_id, after_id, count)
     ).fetchall()
-    has_more = len(rows) > limit
-    rows = [_MainBarRunRow(*row) for row in rows[:limit]]
-    pairs = tuple(
-        MainBarPair(
-            run_id=row.run_id,
-            activity_revision=row.activity_revision,
-            session_id=row.session_id,
-            created_at=_created_at(conn, row.run_id),
-            user_message=_message(conn, row.run_id, "user", redactor),
-            assistant_message=_message(conn, row.run_id, "assistant", redactor),
-        )
-        for row in rows
-    )
-    next_cursor = (
-        _mainbar_cursor(
-            session_id, (rows[-1].activity_revision, rows[-1].run_id)
-        )
-        if has_more and rows
-        else None
-    )
-    return MainBarPage(pairs=pairs, next_cursor=next_cursor)
+
+
+def _stored_message(role: str, content: str, redactor: Redactor) -> Message:
+    parsed = json.loads(content)
+    parsed = redactor.redact_jsonable(parsed)
+    return Message(role=role, blocks=tuple(blocks_from_jsonable(parsed)))
 
 
 def _created_at(conn, run_id: str) -> str | None:
@@ -555,9 +684,7 @@ def _message(
     # The same central pass the session view uses, and the same reason: the
     # user message was stored verbatim, so this read is the last chance to
     # stop a secret reaching a surface (ADR-0003).
-    parsed = json.loads(row[0])
-    parsed = redactor.redact_jsonable(parsed)
-    return Message(role=role, blocks=tuple(blocks_from_jsonable(parsed)))
+    return _stored_message(role, row[0], redactor)
 
 
 # --- one Session's chat Runs -------------------------------------------------

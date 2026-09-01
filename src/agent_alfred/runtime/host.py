@@ -823,7 +823,7 @@ class RuntimeHost:
         limit: int = runs.DEFAULT_MAINBAR_LIMIT,
         cursor: str | None = None,
     ) -> runs.MainBarPage:
-        """The MainBar's message pairs for one Session's recorded chat Runs."""
+        """The MainBar's Run pairs and historic messages for one Session."""
         with self._store.reading() as conn:
             return runs.mainbar_pairs(
                 conn,
