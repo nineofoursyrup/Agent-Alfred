@@ -69,8 +69,6 @@ def test_an_undeliverable_patch_still_moves_the_authoritative_snapshot() -> None
     assert harness.broker._ingress.current_cost.frames == 2
     snapshot = runtime_snapshot(
         state_revision=7,
-        coordinator_state="running",
-        active_run=None,
     )
     returned, accepted = call_within(
         lambda: harness.broker.publish_state_patch(snapshot), seconds=5.0

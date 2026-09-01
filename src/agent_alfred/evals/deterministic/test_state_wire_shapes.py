@@ -188,7 +188,7 @@ def test_snapshot_wire_all_nullable_strings_round_trip_as_null() -> None:
 def _wire_payload(
     *, with_step: bool = False, with_projection: bool = False
 ) -> dict[str, object]:
-    return {
+    wire = {
         "process_instance_id": "process-1",
         "state_revision": 1,
         "coordinator_state": "running",
@@ -238,3 +238,12 @@ def _wire_payload(
             else None
         ),
     }
+    if with_projection:
+        wire["coordinator_state"] = "recording_pending"
+        wire["recording_state"] = "pending"
+        active = wire["active_run"]
+        assert isinstance(active, dict)
+        active["phase"] = "finished"
+        active["outcome"] = "completed"
+        active["recording_state"] = "pending"
+    return wire

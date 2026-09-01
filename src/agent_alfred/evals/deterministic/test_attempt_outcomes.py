@@ -139,7 +139,18 @@ def _wire_payload() -> dict[str, object]:
         "process_instance_id": "process-1",
         "state_revision": 1,
         "coordinator_state": "running",
-        "active_run": None,
+        "active_run": {
+            "run_id": "run-1",
+            "purpose": "chat",
+            "gateway": "web",
+            "phase": "running",
+            "outcome": None,
+            "session_id": "session-1",
+            "prompt_preview": "hello",
+            "started_at": "2026-01-01T00:00:00Z",
+            "current_step": 1,
+            "recording_state": None,
+        },
         "step": {
             "step_index": 1,
             "attempts": [

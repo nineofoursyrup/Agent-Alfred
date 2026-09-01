@@ -51,6 +51,7 @@ def test_nullable_current_step_accepts_none() -> None:
     active = wire["active_run"]
     assert isinstance(active, dict)
     active["current_step"] = None
+    wire["step"] = None
 
     rebuilt = snapshot_from_payload(wire)
 

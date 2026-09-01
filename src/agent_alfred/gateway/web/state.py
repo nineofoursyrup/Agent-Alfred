@@ -306,59 +306,143 @@ def snapshot_from_payload(payload: object) -> RunStateSnapshot:
             "unrecorded_terminal_projection",
             _TERMINAL_PROJECTION_FIELDS,
         )
-    return RunStateSnapshot(
-        process_instance_id=_parse_required_nonempty_string(
-            payload["process_instance_id"], "process_instance_id"
-        ),
-        state_revision=_parse_non_negative_int(
-            payload["state_revision"], "state_revision"
-        ),
-        coordinator_state=parse_coordinator_state(payload["coordinator_state"]),
-        active_run=active_run,
-        step=(
-            None
-            if step is None
-            else StepProjection(
-                step_index=_parse_non_negative_int(
-                    step["step_index"], "step_index"
-                ),
-                attempts=tuple(
-                    _parse_attempt_terminal(attempt) for attempt in attempts
-                ),
-                attempts_truncated=_parse_required_bool(step, "attempts_truncated"),
-            )
-        ),
-        recording_state=parse_recording_state(
-            payload["recording_state"], allow_none=True
-        ),
-        session_valid=_parse_required_bool(payload, "session_valid"),
-        unrecorded_terminal_projection=(
-            None
-            if projection is None
-            else UnrecordedTerminalView(
-                run_id=_parse_required_nonempty_string(
-                    projection["run_id"], "run_id"
-                ),
-                purpose=_parse_required_nonempty_string(
-                    projection["purpose"], "purpose"
-                ),
-                outcome=parse_run_outcome(projection["outcome"]),
-                reply_preview=_parse_optional_string(
-                    projection["reply_preview"], "reply_preview"
-                ),
-                error=_parse_optional_string(projection["error"], "error"),
-                recording_state=parse_recording_state(
-                    projection["recording_state"], unrecorded_terminal=True
-                ),
-                session_id=_parse_optional_string(
-                    projection["session_id"], "session_id"
-                ),
-                prompt_preview=_parse_optional_string(
-                    projection["prompt_preview"], "prompt_preview"
-                ),
-            )
-        ),
+    return _validate_snapshot_relations(
+        RunStateSnapshot(
+            process_instance_id=_parse_required_nonempty_string(
+                payload["process_instance_id"], "process_instance_id"
+            ),
+            state_revision=_parse_non_negative_int(
+                payload["state_revision"], "state_revision"
+            ),
+            coordinator_state=parse_coordinator_state(payload["coordinator_state"]),
+            active_run=active_run,
+            step=(
+                None
+                if step is None
+                else StepProjection(
+                    step_index=_parse_non_negative_int(
+                        step["step_index"], "step_index"
+                    ),
+                    attempts=tuple(
+                        _parse_attempt_terminal(attempt) for attempt in attempts
+                    ),
+                    attempts_truncated=_parse_required_bool(
+                        step, "attempts_truncated"
+                    ),
+                )
+            ),
+            recording_state=parse_recording_state(
+                payload["recording_state"], allow_none=True
+            ),
+            session_valid=_parse_required_bool(payload, "session_valid"),
+            unrecorded_terminal_projection=(
+                None
+                if projection is None
+                else UnrecordedTerminalView(
+                    run_id=_parse_required_nonempty_string(
+                        projection["run_id"], "run_id"
+                    ),
+                    purpose=_parse_required_nonempty_string(
+                        projection["purpose"], "purpose"
+                    ),
+                    outcome=parse_run_outcome(projection["outcome"]),
+                    reply_preview=_parse_optional_string(
+                        projection["reply_preview"], "reply_preview"
+                    ),
+                    error=_parse_optional_string(projection["error"], "error"),
+                    recording_state=parse_recording_state(
+                        projection["recording_state"], unrecorded_terminal=True
+                    ),
+                    session_id=_parse_optional_string(
+                        projection["session_id"], "session_id"
+                    ),
+                    prompt_preview=_parse_optional_string(
+                        projection["prompt_preview"], "prompt_preview"
+                    ),
+                )
+            ),
+        )
     )
+
+
+def _validate_snapshot_relations(snapshot: RunStateSnapshot) -> RunStateSnapshot:
+    """Prove that all independently parsed fields describe one lifecycle."""
+    state = snapshot.coordinator_state
+    active = snapshot.active_run
+    projection = snapshot.unrecorded_terminal_projection
+
+    if state == "idle":
+        if (
+            active is not None
+            or snapshot.step is not None
+            or snapshot.recording_state is not None
+            or projection is not None
+        ):
+            raise ValueError("idle snapshot must not contain run lifecycle state")
+        return snapshot
+
+    if active is None:
+        raise ValueError(f"{state} snapshot requires active_run")
+
+    expected_phase = "accepted" if state == "accepted" else "running"
+    if state == "recording_pending" or state == "recording_failed":
+        expected_phase = "finished"
+    if active.phase != expected_phase:
+        raise ValueError("active_run phase contradicts coordinator_state")
+
+    if state == "accepted" or state == "running":
+        if active.recording_state is not None:
+            raise ValueError("active_run recording_state contradicts coordinator_state")
+        if projection is not None:
+            raise ValueError(
+                "unrecorded_terminal_projection contradicts coordinator_state"
+            )
+        if state == "accepted" and active.current_step is not None:
+            raise ValueError("accepted coordinator_state cannot have a current step")
+    elif state == "recording_pending":
+        if active.recording_state == "pending":
+            if projection is None:
+                raise ValueError(
+                    "pending recording requires unrecorded_terminal_projection"
+                )
+        elif active.recording_state == "recorded":
+            if projection is not None:
+                raise ValueError(
+                    "recorded transition cannot retain terminal projection"
+                )
+        else:
+            raise ValueError("active_run recording_state contradicts coordinator_state")
+    else:
+        if active.recording_state != "failed":
+            raise ValueError("active_run recording_state contradicts coordinator_state")
+        if projection is None:
+            raise ValueError(
+                "recording_failed requires unrecorded_terminal_projection"
+            )
+
+    if snapshot.recording_state != active.recording_state:
+        raise ValueError("top-level recording_state disagrees with active_run")
+
+    step = snapshot.step
+    if step is not None and (
+        active.current_step is None or step.step_index != active.current_step
+    ):
+        raise ValueError("step must match active_run.current_step")
+
+    if projection is not None:
+        for field in (
+            "run_id",
+            "purpose",
+            "session_id",
+            "prompt_preview",
+            "outcome",
+            "recording_state",
+        ):
+            if getattr(projection, field) != getattr(active, field):
+                raise ValueError(
+                    f"unrecorded_terminal_projection {field} disagrees with active_run"
+                )
+    return snapshot
 
 
 def build_snapshot(
@@ -380,43 +464,45 @@ def build_snapshot(
         recording_state = active.recording_state
     elif projection is not None:
         recording_state = projection.recording_state
-    return RunStateSnapshot(
-        process_instance_id=snapshot.process_instance_id,
-        state_revision=snapshot.state_revision,
-        coordinator_state=snapshot.coordinator_state,
-        active_run=(
-            None
-            if active is None
-            else ActiveRunView(
-                run_id=active.run_id,
-                purpose=active.purpose,
-                gateway=active.gateway,
-                phase=active.phase,
-                outcome=active.outcome,
-                session_id=active.session_id,
-                prompt_preview=active.prompt_preview,
-                started_at=active.started_at,
-                current_step=active.current_step,
-                recording_state=active.recording_state,
-            )
-        ),
-        step=step,
-        recording_state=recording_state,
-        session_valid=session_valid,
-        unrecorded_terminal_projection=(
-            None
-            if projection is None
-            else UnrecordedTerminalView(
-                run_id=projection.run_id,
-                purpose=projection.purpose,
-                outcome=projection.outcome,
-                reply_preview=_limit(projection.reply_text),
-                error=projection.error,
-                recording_state=projection.recording_state,
-                session_id=projection.session_id,
-                prompt_preview=projection.prompt_preview,
-            )
-        ),
+    return _validate_snapshot_relations(
+        RunStateSnapshot(
+            process_instance_id=snapshot.process_instance_id,
+            state_revision=snapshot.state_revision,
+            coordinator_state=snapshot.coordinator_state,
+            active_run=(
+                None
+                if active is None
+                else ActiveRunView(
+                    run_id=active.run_id,
+                    purpose=active.purpose,
+                    gateway=active.gateway,
+                    phase=active.phase,
+                    outcome=active.outcome,
+                    session_id=active.session_id,
+                    prompt_preview=active.prompt_preview,
+                    started_at=active.started_at,
+                    current_step=active.current_step,
+                    recording_state=active.recording_state,
+                )
+            ),
+            step=step,
+            recording_state=recording_state,
+            session_valid=session_valid,
+            unrecorded_terminal_projection=(
+                None
+                if projection is None
+                else UnrecordedTerminalView(
+                    run_id=projection.run_id,
+                    purpose=projection.purpose,
+                    outcome=projection.outcome,
+                    reply_preview=_limit(projection.reply_text),
+                    error=projection.error,
+                    recording_state=projection.recording_state,
+                    session_id=projection.session_id,
+                    prompt_preview=projection.prompt_preview,
+                )
+            ),
+        )
     )
 
 

@@ -109,33 +109,21 @@ def test_active_run_summary_rejects_invalid_recording_states(state: object) -> N
 def test_runtime_active_recording_state_is_preserved_in_the_web_view(
     state: object,
 ) -> None:
-    active = ActiveRunSummary(
-        run_id="run-1",
-        purpose="chat",
-        gateway="web",
-        phase="finished",
-        session_id="session-1",
-        prompt_preview="hello",
-        started_at="2026-01-01T00:00:00Z",
-        recording_state=state,  # type: ignore[arg-type]
-        outcome="completed",
-    )
-    runtime = RuntimeSnapshot("process-1", 1, "idle", active, None)
+    runtime = _runtime_recording_snapshot(state)
 
     view = build_snapshot(runtime, step=None, session_valid=True)
 
     assert view.recording_state == state
     assert view.active_run is not None
     assert view.active_run.recording_state == state
-    assert view.active_run.outcome == "completed"
+    assert view.active_run.outcome == (None if state is None else "completed")
 
 
 @pytest.mark.parametrize("state", ["pending", "failed"])
 def test_runtime_unrecorded_terminal_state_is_preserved_in_the_web_view(
     state: object,
 ) -> None:
-    projection = _projection(state)
-    runtime = RuntimeSnapshot("process-1", 1, "idle", None, projection)
+    runtime = _runtime_recording_snapshot(state)
 
     view = build_snapshot(runtime, step=None, session_valid=True)
 
@@ -160,24 +148,14 @@ def test_nullable_wire_fields_accept_null() -> None:
 
 
 @pytest.mark.parametrize("state", ["pending", "recorded", "failed"])
-@pytest.mark.parametrize("target", ["top-level", "active"])
-def test_every_recording_state_crosses_the_wire(target: str, state: object) -> None:
-    wire = _wire_payload()
-    if target == "top-level":
-        wire["recording_state"] = state
-    else:
-        active = wire["active_run"]
-        assert isinstance(active, dict)
-        active["recording_state"] = state
+def test_every_authoritative_recording_state_crosses_the_wire(state: str) -> None:
+    wire = _wire_for_recording(state)
 
     rebuilt = snapshot_from_payload(wire)
 
-    actual = (
-        rebuilt.recording_state
-        if target == "top-level"
-        else rebuilt.active_run.recording_state if rebuilt.active_run else None
-    )
-    assert actual == state
+    assert rebuilt.recording_state == state
+    assert rebuilt.active_run is not None
+    assert rebuilt.active_run.recording_state == state
 
 
 @pytest.mark.parametrize("state", ["pending", "failed"])
@@ -236,17 +214,11 @@ def test_wire_rejects_invalid_unrecorded_terminal_states(state: object) -> None:
 
 
 def test_parsed_pending_wire_patch_cannot_overwrite_recorded_state() -> None:
-    current_wire = _wire_payload()
-    current_active = current_wire["active_run"]
-    assert isinstance(current_active, dict)
-    current_active["recording_state"] = "recorded"
+    current_wire = _wire_for_recording("recorded")
     current = snapshot_from_payload(current_wire)
 
-    patch_wire = _wire_payload()
+    patch_wire = _wire_for_recording("pending")
     patch_wire["state_revision"] = 2
-    patch_active = patch_wire["active_run"]
-    assert isinstance(patch_active, dict)
-    patch_active["recording_state"] = "pending"
     patch = snapshot_from_payload(patch_wire)
 
     with pytest.raises(StatePatchRejected, match="pending_over_terminal"):
@@ -264,6 +236,46 @@ def _projection(recording_state: object) -> UnrecordedTerminalProjection:
         session_id="session-1",
         prompt_preview="hello",
     )
+
+
+def _runtime_recording_snapshot(state: object) -> RuntimeSnapshot:
+    terminal = state is not None
+    active = ActiveRunSummary(
+        run_id="run-1",
+        purpose="chat",
+        gateway="web",
+        phase="finished" if terminal else "running",
+        session_id="session-1",
+        prompt_preview="hello",
+        started_at="2026-01-01T00:00:00Z",
+        recording_state=state,  # type: ignore[arg-type]
+        outcome="completed" if terminal else None,
+    )
+    coordinator_state = (
+        "recording_failed" if state == "failed" else "recording_pending"
+        if terminal
+        else "running"
+    )
+    projection = _projection(state) if state in ("pending", "failed") else None
+    return RuntimeSnapshot(
+        "process-1", 1, coordinator_state, active, projection  # type: ignore[arg-type]
+    )
+
+
+def _wire_for_recording(state: str) -> dict[str, object]:
+    wire = _wire_payload(
+        projection_state=state if state in ("pending", "failed") else _NO_PROJECTION
+    )
+    active = wire["active_run"]
+    assert isinstance(active, dict)
+    wire["coordinator_state"] = (
+        "recording_failed" if state == "failed" else "recording_pending"
+    )
+    wire["recording_state"] = state
+    active["phase"] = "finished"
+    active["outcome"] = "completed"
+    active["recording_state"] = state
+    return wire
 
 
 def _wire_payload(*, projection_state: object = _NO_PROJECTION) -> dict[str, object]:
@@ -293,7 +305,7 @@ def _wire_payload(*, projection_state: object = _NO_PROJECTION) -> dict[str, obj
         }
         if projection_state is ...:
             del projection["recording_state"]
-    return {
+    wire = {
         "process_instance_id": "process-1",
         "state_revision": 1,
         "coordinator_state": "running",
@@ -303,3 +315,14 @@ def _wire_payload(*, projection_state: object = _NO_PROJECTION) -> dict[str, obj
         "session_valid": True,
         "unrecorded_terminal_projection": projection,
     }
+    if type(projection_state) is str and projection_state in ("pending", "failed"):
+        active["phase"] = "finished"
+        active["outcome"] = "completed"
+        active["recording_state"] = projection_state
+        wire["coordinator_state"] = (
+            "recording_failed"
+            if projection_state == "failed"
+            else "recording_pending"
+        )
+        wire["recording_state"] = projection_state
+    return wire

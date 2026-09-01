@@ -88,6 +88,7 @@ def test_every_run_outcome_round_trips_through_the_wire(outcome: RunOutcome) -> 
         active_outcome=outcome,
         projection_outcome=outcome,
         active_phase="finished",
+        coordinator_state="recording_pending",
     )
 
     assert snapshot_payload(snapshot_from_payload(wire)) == wire
@@ -95,7 +96,9 @@ def test_every_run_outcome_round_trips_through_the_wire(outcome: RunOutcome) -> 
 
 @pytest.mark.parametrize("phase", ["accepted", "running"])
 def test_an_active_nonterminal_run_may_have_no_outcome(phase: RunPhase) -> None:
-    wire = _wire_payload(active_outcome=None, active_phase=phase)
+    wire = _wire_payload(
+        active_outcome=None, active_phase=phase, coordinator_state=phase
+    )
 
     rebuilt = snapshot_from_payload(wire)
 
@@ -186,19 +189,37 @@ def test_public_persisted_run_models_reject_impossible_lifecycle_pairs(
         model(**kwargs)
 
 
-@pytest.mark.parametrize("phase", ["accepted", "running", "finished"])
 @pytest.mark.parametrize(
-    "coordinator_state",
-    ["idle", "accepted", "running", "recording_pending", "recording_failed"],
+    ("phase", "coordinator_state"),
+    [
+        pytest.param(None, "idle", id="idle"),
+        pytest.param("accepted", "accepted", id="accepted"),
+        pytest.param("running", "running", id="running"),
+        pytest.param("finished", "recording_pending", id="recording-pending"),
+        pytest.param("finished", "recording_failed", id="recording-failed"),
+    ],
 )
-def test_every_lifecycle_literal_round_trips_through_the_wire(
-    phase: RunPhase, coordinator_state: CoordinatorState
+def test_every_coordinator_lifecycle_state_has_a_valid_wire_form(
+    phase: RunPhase | None, coordinator_state: CoordinatorState
 ) -> None:
+    if phase is None:
+        wire = _wire_payload(active_outcome=None)
+        wire["coordinator_state"] = "idle"
+        wire["active_run"] = None
+        wire["recording_state"] = None
+        wire["unrecorded_terminal_projection"] = None
+        assert snapshot_payload(snapshot_from_payload(wire)) == wire
+        return
     outcome = "completed" if phase == "finished" else None
     wire = _wire_payload(
         active_outcome=outcome,
         active_phase=phase,
         coordinator_state=coordinator_state,
+        projection_outcome=(
+            outcome
+            if coordinator_state in ("recording_pending", "recording_failed")
+            else _NO_PROJECTION
+        ),
     )
 
     assert snapshot_payload(snapshot_from_payload(wire)) == wire
@@ -334,13 +355,27 @@ def _wire_payload(
         }
         if projection_outcome is ...:
             del projection["outcome"]
+    if active_phase == "accepted":
+        active["current_step"] = None
+    recording_state = None
+    if active_phase == "finished":
+        recording_state = (
+            "failed"
+            if coordinator_state == "recording_failed"
+            else "pending"
+            if projection is not None
+            else "recorded"
+        )
+        active["recording_state"] = recording_state
+    if projection is not None and coordinator_state == "recording_failed":
+        projection["recording_state"] = "failed"
     return {
         "process_instance_id": "process-1",
         "state_revision": 1,
         "coordinator_state": coordinator_state,
         "active_run": active,
         "step": None,
-        "recording_state": None,
+        "recording_state": recording_state,
         "session_valid": True,
         "unrecorded_terminal_projection": projection,
     }

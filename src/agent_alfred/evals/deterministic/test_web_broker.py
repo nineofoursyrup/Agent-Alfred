@@ -491,6 +491,17 @@ def test_the_snapshot_names_the_unrecorded_terminal_projection_bounded() -> None
         runtime_snapshot(
             state_revision=4,
             coordinator_state="recording_pending",
+            active_run=ActiveRunSummary(
+                run_id="r1",
+                purpose="chat",
+                gateway="web",
+                phase="finished",
+                outcome="completed",
+                session_id="s1",
+                prompt_preview="hi",
+                started_at=None,
+                recording_state="pending",
+            ),
             unrecorded_terminal_projection=UnrecordedTerminalProjection(
                 run_id="r1",
                 purpose="chat",
