@@ -1184,6 +1184,161 @@ def test_run_reads_keep_exact_integer_activity_revisions(
         host.close()
 
 
+@pytest.mark.parametrize("position", [-1, 2**63])
+@pytest.mark.parametrize(
+    "read", ["runs", "mainbar", "mainbar_historic", "session_runs"]
+)
+def test_paged_web_reads_reject_out_of_sqlite_range_positions_before_sql(
+    position: int, read: str
+) -> None:
+    """A forged keyset position never reaches SQLite or becomes an empty page."""
+    from agent_alfred.runtime.cursor import encode_cursor
+
+    class SqlMustNotRun:
+        def execute(self, *_args, **_kwargs):
+            raise AssertionError("cursor validation must precede SQL")
+
+    session_id = "s-cursor"
+    cursors = {
+        "runs": encode_cursor(
+            {"v": 1, "k": "runs", "ar": position, "r": "r1"}
+        ),
+        "mainbar": encode_cursor(
+            {
+                "v": 2,
+                "k": "mainbar",
+                "seg": "runs",
+                "s": session_id,
+                "ar": position,
+                "r": "r1",
+            }
+        ),
+        "mainbar_historic": encode_cursor(
+            {
+                "v": 2,
+                "k": "mainbar",
+                "seg": "historic",
+                "s": session_id,
+                "id": position,
+            }
+        ),
+        "session_runs": encode_cursor(
+            {
+                "v": 1,
+                "k": "session_runs",
+                "s": session_id,
+                "ar": position,
+                "r": "r1",
+            }
+        ),
+    }
+    conn = SqlMustNotRun()
+    redactor = Redactor(())
+    reads = {
+        "runs": lambda: runs_store.list_runs(
+            conn, redactor=redactor, cursor=cursors[read]
+        ),
+        "mainbar": lambda: runs_store.mainbar_pairs(
+            conn,
+            session_id=session_id,
+            redactor=redactor,
+            cursor=cursors[read],
+        ),
+        "mainbar_historic": lambda: runs_store.mainbar_pairs(
+            conn,
+            session_id=session_id,
+            redactor=redactor,
+            cursor=cursors[read],
+        ),
+        "session_runs": lambda: runs_store.list_session_chat_runs(
+            conn,
+            session_id=session_id,
+            limit=10,
+            redactor=redactor,
+            cursor=cursors[read],
+        ),
+    }
+
+    with pytest.raises(MalformedCursor):
+        reads[read]()
+
+
+@pytest.mark.parametrize("historic_id", [True, False])
+def test_mainbar_historic_rejects_boolean_ids_before_sql(
+    historic_id: bool,
+) -> None:
+    from agent_alfred.runtime.cursor import encode_cursor
+
+    class SqlMustNotRun:
+        def execute(self, *_args, **_kwargs):
+            raise AssertionError("cursor validation must precede SQL")
+
+    cursor = encode_cursor(
+        {
+            "v": 2,
+            "k": "mainbar",
+            "seg": "historic",
+            "s": "s-cursor",
+            "id": historic_id,
+        }
+    )
+    with pytest.raises(MalformedCursor):
+        runs_store.mainbar_pairs(
+            SqlMustNotRun(),
+            session_id="s-cursor",
+            redactor=Redactor(()),
+            cursor=cursor,
+        )
+
+
+@pytest.mark.parametrize("historic_id", [0, 1, 2**63 - 1])
+def test_mainbar_historic_keeps_exact_integer_ids(historic_id: int) -> None:
+    """Every legal SQLite historic position remains stable on replay."""
+    from agent_alfred.runtime.cursor import encode_cursor
+
+    host = _historic_host({"s-cursor": ["旧问题"]})
+    host.start()
+    try:
+        cursor = encode_cursor(
+            {
+                "v": 2,
+                "k": "mainbar",
+                "seg": "historic",
+                "s": "s-cursor",
+                "id": historic_id,
+            }
+        )
+        first = host.mainbar_pairs(session_id="s-cursor", cursor=cursor)
+        assert first == host.mainbar_pairs(session_id="s-cursor", cursor=cursor)
+    finally:
+        host.close()
+
+
+def test_mainbar_negative_run_position_cannot_skip_its_run_pair() -> None:
+    """A negative Run cursor must not fall through into historic messages."""
+    from agent_alfred.runtime.cursor import encode_cursor
+
+    host = _historic_host({"s-mixed": ["旧问题"]}, script=["新回答"])
+    host.start()
+    try:
+        admitted = _run(host, "新问题", "s-mixed")
+        cursor = encode_cursor(
+            {
+                "v": 2,
+                "k": "mainbar",
+                "seg": "runs",
+                "s": "s-mixed",
+                "ar": -1,
+                "r": admitted.run_id,
+            }
+        )
+
+        with pytest.raises(MalformedCursor):
+            host.mainbar_pairs(session_id="s-mixed", cursor=cursor)
+    finally:
+        host.close()
+
+
 def test_reads_reject_each_others_cursors_and_keep_the_old_wire_tokens() -> None:
     """Cross-read tokens fail closed; existing tokens still decode.
 

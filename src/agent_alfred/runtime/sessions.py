@@ -43,6 +43,7 @@ from agent_alfred.redact import Redactor
 from agent_alfred.run_phases import IN_FLIGHT_RUN_PHASES
 from agent_alfred.runtime.cursor import (
     MalformedCursor,
+    parse_cursor_position_int,
 )
 from agent_alfred.runtime.cursor import (
     decode_cursor as _decode_cursor_shared,
@@ -139,9 +140,7 @@ def list_sessions(
     position: int | None = None
     if cursor is not None:
         payload = _decode_cursor(cursor, _INBOX_KIND)
-        position = payload.get("ar")
-        if type(position) is not int or position < 0:
-            raise MalformedCursor("cursor position is not an activity_revision")
+        position = parse_cursor_position_int(payload.get("ar"))
     sql = (
         "SELECT session_id, created_at, activity_revision FROM sessions\n"
         "  {where} ORDER BY activity_revision DESC LIMIT ?"
@@ -254,12 +253,6 @@ def open_session(
     """
     if page_size < 1:
         raise ValueError("page_size must be >= 1")
-    exists = conn.execute(
-        "SELECT 1 FROM sessions WHERE session_id = ?", (session_id,)
-    ).fetchone()
-    if exists is None:
-        raise SessionNotFound(f"no such session: {session_id!r}")
-
     in_runs_segment = True
     runs_position: tuple[int, str] | None = None
     historic_position: int | None = None
@@ -271,17 +264,20 @@ def open_session(
             ar = payload.get("ar")
             run_key = payload.get("r")
             if ar is not None or run_key is not None:
-                if type(ar) is not int or not isinstance(run_key, str):
+                if not isinstance(run_key, str):
                     raise MalformedCursor("runs cursor position is malformed")
-                runs_position = (ar, run_key)
+                runs_position = (parse_cursor_position_int(ar), run_key)
         elif segment == _HISTORIC_SEGMENT:
-            last_id = payload.get("id")
-            if type(last_id) is not int or last_id < 0:
-                raise MalformedCursor("historic cursor position is malformed")
+            last_id = parse_cursor_position_int(payload.get("id"))
             in_runs_segment = False
             historic_position = last_id
         else:
             raise MalformedCursor("unknown cursor segment")
+    exists = conn.execute(
+        "SELECT 1 FROM sessions WHERE session_id = ?", (session_id,)
+    ).fetchone()
+    if exists is None:
+        raise SessionNotFound(f"no such session: {session_id!r}")
 
     messages: list[SessionMessage] = []
     remaining = page_size

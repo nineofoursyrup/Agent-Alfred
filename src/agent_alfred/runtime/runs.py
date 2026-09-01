@@ -38,6 +38,7 @@ from agent_alfred.run_phases import (
 )
 from agent_alfred.runtime.cursor import (
     MalformedCursor,
+    parse_cursor_position_int,
 )
 from agent_alfred.runtime.cursor import (
     decode_cursor as _decode_cursor,
@@ -238,9 +239,9 @@ def _position(payload: dict[str, Any]) -> tuple[int, str] | None:
     run_key = payload.get("r")
     if ar is None and run_key is None:
         return None
-    if type(ar) is not int or not isinstance(run_key, str):
+    if not isinstance(run_key, str):
         raise MalformedCursor("cursor position is malformed")
-    return (ar, run_key)
+    return (parse_cursor_position_int(ar), run_key)
 
 
 def _runs_cursor(position: tuple[int, str] | None) -> str:
@@ -518,11 +519,6 @@ def mainbar_pairs(
     """
     if limit < 1:
         raise ValueError("limit must be >= 1")
-    exists = conn.execute(
-        "SELECT 1 FROM sessions WHERE session_id = ?", (session_id,)
-    ).fetchone()
-    if exists is None:
-        raise SessionNotFound(f"no such session: {session_id!r}")
     in_runs_segment = True
     runs_position: tuple[int, str] | None = None
     historic_position: int | None = None
@@ -536,13 +532,16 @@ def mainbar_pairs(
         if segment == _RUNS_SEGMENT:
             runs_position = _position(payload)
         elif segment == _HISTORIC_SEGMENT:
-            last_id = payload.get("id")
-            if type(last_id) is not int or last_id < 0:
-                raise MalformedCursor("historic cursor position is malformed")
+            last_id = parse_cursor_position_int(payload.get("id"))
             in_runs_segment = False
             historic_position = last_id
         else:
             raise MalformedCursor("unknown cursor segment")
+    exists = conn.execute(
+        "SELECT 1 FROM sessions WHERE session_id = ?", (session_id,)
+    ).fetchone()
+    if exists is None:
+        raise SessionNotFound(f"no such session: {session_id!r}")
 
     items: list[MainBarItem] = []
     remaining = limit
@@ -722,17 +721,17 @@ def list_session_chat_runs(
         raise ValueError("limit must be >= 1")
     if reply_max_chars < 1:
         raise ValueError("reply_max_chars must be >= 1")
-    exists = conn.execute(
-        "SELECT 1 FROM sessions WHERE session_id = ?", (session_id,)
-    ).fetchone()
-    if exists is None:
-        raise SessionNotFound(f"no such session: {session_id!r}")
     position: tuple[int, str] | None = None
     if cursor is not None:
         payload = _decode_read_cursor(cursor, _SESSION_RUNS_KIND)
         if payload.get("s") != session_id:
             raise MalformedCursor("cursor belongs to a different session")
         position = _position(payload)
+    exists = conn.execute(
+        "SELECT 1 FROM sessions WHERE session_id = ?", (session_id,)
+    ).fetchone()
+    if exists is None:
+        raise SessionNotFound(f"no such session: {session_id!r}")
     beyond = (
         "AND (runs.activity_revision < ?"
         " OR (runs.activity_revision = ? AND runs.run_id < ?))\n"

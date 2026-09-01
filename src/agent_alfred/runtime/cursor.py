@@ -2,12 +2,11 @@
 
 The reads that page -- the runs page, the MainBar, the Session inbox and a
 Session's messages -- each own their payload (their version, their kind,
-their position fields) but none of them owns the envelope: canonical JSON,
-URL-safe base64, and the one malformed exception are the same for all of
-them, and two private copies are how versions and error words drift one at
-a time. What this module deliberately does *not* do is validate positions
-or bind cursors to Sessions: those are per-read facts, and a codec that
-"helped" with them would grow into a paging framework nobody decided on.
+their position fields) but none of them owns the envelope or the SQLite
+integer domain shared by every position: canonical JSON, URL-safe base64,
+and the one malformed exception are the same for all of them, and private
+copies are how versions, limits and error words drift one at a time. Session
+binding and paired-position shape remain facts owned by each read.
 """
 
 from __future__ import annotations
@@ -16,11 +15,30 @@ import json
 from base64 import urlsafe_b64decode, urlsafe_b64encode
 from typing import Any
 
-__all__ = ["MalformedCursor", "decode_cursor", "encode_cursor"]
+__all__ = [
+    "MAX_SQLITE_CURSOR_POSITION",
+    "MalformedCursor",
+    "decode_cursor",
+    "encode_cursor",
+    "parse_cursor_position_int",
+]
+
+MAX_SQLITE_CURSOR_POSITION = 2**63 - 1
 
 
 class MalformedCursor(ValueError):
     """The cursor cannot be decoded or does not belong to this read."""
+
+
+def parse_cursor_position_int(value: Any) -> int:
+    """Return one exact JSON integer in SQLite's non-negative key domain."""
+    if (
+        type(value) is not int
+        or value < 0
+        or value > MAX_SQLITE_CURSOR_POSITION
+    ):
+        raise MalformedCursor("cursor position is outside the SQLite integer domain")
+    return value
 
 
 def encode_cursor(payload: dict[str, Any]) -> str:

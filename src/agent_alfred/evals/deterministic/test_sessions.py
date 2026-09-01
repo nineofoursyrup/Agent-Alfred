@@ -494,6 +494,68 @@ def test_session_reads_keep_exact_integer_positions(position: int, read: str) ->
         host.close()
 
 
+@pytest.mark.parametrize("position", [-1, 2**63])
+@pytest.mark.parametrize("read", ["inbox", "runs", "historic"])
+def test_session_reads_reject_out_of_sqlite_range_positions_before_sql(
+    position: int, read: str
+) -> None:
+    """Invalid JSON positions fail closed before any SQLite parameter bind."""
+    from agent_alfred.redact import Redactor
+    from agent_alfred.runtime import sessions as session_store
+    from agent_alfred.runtime.cursor import encode_cursor
+
+    class SqlMustNotRun:
+        def execute(self, *_args, **_kwargs):
+            raise AssertionError("cursor validation must precede SQL")
+
+    cursors = {
+        "inbox": encode_cursor({"v": 2, "k": "inbox", "ar": position}),
+        "runs": encode_cursor(
+            {
+                "v": 2,
+                "k": "runs",
+                "seg": "runs",
+                "s": "s-cursor",
+                "ar": position,
+                "r": "r1",
+            }
+        ),
+        "historic": encode_cursor(
+            {
+                "v": 2,
+                "k": "runs",
+                "seg": "historic",
+                "s": "s-cursor",
+                "id": position,
+            }
+        ),
+    }
+    conn = SqlMustNotRun()
+    redactor = Redactor(())
+    reads = {
+        "inbox": lambda: session_store.list_sessions(
+            conn, limit=10, redactor=redactor, cursor=cursors[read]
+        ),
+        "runs": lambda: session_store.open_session(
+            conn,
+            session_id="s-cursor",
+            page_size=10,
+            redactor=redactor,
+            cursor=cursors[read],
+        ),
+        "historic": lambda: session_store.open_session(
+            conn,
+            session_id="s-cursor",
+            page_size=10,
+            redactor=redactor,
+            cursor=cursors[read],
+        ),
+    }
+
+    with pytest.raises(MalformedCursor):
+        reads[read]()
+
+
 # --- an in-flight Run must not close the runs segment (the #30 lease) --------
 
 
