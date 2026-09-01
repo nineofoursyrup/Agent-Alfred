@@ -13,6 +13,8 @@ import json
 import os
 import socket
 import stat
+import subprocess
+import sys
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
@@ -118,6 +120,139 @@ def test_a_conflict_names_the_holder_when_the_file_says_who(tmp_path) -> None:
     finally:
         holder.release()
     assert caught.value.holder_pid is not None
+
+
+@pytest.mark.parametrize(
+    "recorded_pid",
+    (
+        "",
+        "9" * 5_000,
+        "²",
+        "١٢٣",
+        "+123",
+        "01",
+        "0",
+        "2147483648",
+    ),
+    ids=(
+        "empty",
+        "five-thousand-digits",
+        "unicode-digit",
+        "unicode-decimal",
+        "signed",
+        "leading-zero",
+        "zero",
+        "past-portable-pid-max",
+    ),
+)
+def test_a_malformed_recorded_pid_cannot_mask_a_lock_conflict(
+    tmp_path, recorded_pid: str
+) -> None:
+    path = tmp_path / LOCK_NAME
+    holder = ProcessLock(path)
+    holder.acquire()
+    path.write_text(f"pid={recorded_pid}\n", encoding="utf-8")
+    try:
+        with pytest.raises(StateDirLocked) as caught:
+            ProcessLock(path).acquire()
+    finally:
+        holder.release()
+    assert caught.value.path == path
+    assert caught.value.holder_pid is None
+
+
+def test_a_canonical_recorded_pid_is_kept_as_lock_diagnostic(tmp_path) -> None:
+    path = tmp_path / LOCK_NAME
+    holder = ProcessLock(path)
+    holder.acquire()
+    path.write_text("pid=123\n", encoding="utf-8")
+    try:
+        with pytest.raises(StateDirLocked) as caught:
+            ProcessLock(path).acquire()
+    finally:
+        holder.release()
+    assert caught.value.holder_pid == 123
+
+
+def test_an_unreadable_recorded_pid_cannot_mask_a_lock_conflict(tmp_path) -> None:
+    path = tmp_path / LOCK_NAME
+    holder = ProcessLock(path)
+    holder.acquire()
+    path.write_bytes(b"pid=\xff\n")
+    try:
+        with pytest.raises(StateDirLocked) as caught:
+            ProcessLock(path).acquire()
+    finally:
+        holder.release()
+    assert caught.value.holder_pid is None
+
+
+def test_an_unexpected_lock_diagnostic_error_is_not_silenced(
+    tmp_path, monkeypatch
+) -> None:
+    path = tmp_path / LOCK_NAME
+    holder = ProcessLock(path)
+    holder.acquire()
+
+    def explode(*args, **kwargs):
+        raise RuntimeError("diagnostic bug")
+
+    monkeypatch.setattr(Path, "read_text", explode)
+    try:
+        with pytest.raises(RuntimeError, match="diagnostic bug"):
+            ProcessLock(path).acquire()
+    finally:
+        holder.release()
+
+
+@pytest.mark.parametrize(
+    ("configured_limit", "expected_limit"),
+    (
+        (None, sys.int_info.default_max_str_digits),
+        (0, 0),
+        (10_000, 10_000),
+    ),
+)
+def test_a_long_recorded_pid_is_unknown_under_every_integer_digit_limit(
+    configured_limit: int | None, expected_limit: int
+) -> None:
+    environment = os.environ.copy()
+    if configured_limit is None:
+        environment.pop("PYTHONINTMAXSTRDIGITS", None)
+    else:
+        environment["PYTHONINTMAXSTRDIGITS"] = str(configured_limit)
+    script = """
+import fcntl
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+from agent_alfred.gateway.web.lifecycle import ProcessLock, StateDirLocked
+
+with tempfile.TemporaryDirectory() as directory:
+    path = Path(directory) / "dashboard.lock"
+    fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
+    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    path.write_text("pid=" + "9" * 5_000 + "\\n", encoding="utf-8")
+    try:
+        ProcessLock(path).acquire()
+    except StateDirLocked as exc:
+        print(sys.get_int_max_str_digits(), exc.holder_pid)
+    finally:
+        os.close(fd)
+"""
+
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        check=True,
+        capture_output=True,
+        env=environment,
+        text=True,
+    )
+
+    assert completed.stdout.strip() == f"{expected_limit} None"
+    assert completed.stderr == ""
 
 
 def test_acquire_is_idempotent_and_release_is_too(tmp_path) -> None:
@@ -287,6 +422,77 @@ def test_an_unreadable_descriptor_is_an_error_not_a_missing_one(tmp_path) -> Non
     (tmp_path / DESCRIPTOR_NAME).write_text("not json", encoding="utf-8")
     with pytest.raises(ValueError):
         read_entry_descriptor(tmp_path)
+
+
+@pytest.mark.parametrize("payload", ([], None, 7, "descriptor"))
+def test_an_entry_descriptor_must_be_a_json_object(tmp_path, payload) -> None:
+    path = tmp_path / DESCRIPTOR_NAME
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(
+        ValueError, match="dashboard.json is not a readable entry descriptor"
+    ):
+        read_entry_descriptor(tmp_path)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("pid", True),
+        ("pid", "123"),
+        ("pid", 12.5),
+        ("pid", None),
+        ("pid", -1),
+        ("pid", 0),
+        ("pid", 2_147_483_648),
+        ("port", True),
+        ("port", "7717"),
+        ("port", 7717.0),
+        ("port", None),
+        ("port", -1),
+        ("port", 0),
+        ("port", 65_536),
+    ),
+)
+def test_an_entry_descriptor_refuses_non_exact_or_out_of_range_integers(
+    tmp_path, field: str, value: object
+) -> None:
+    payload = {"instance_id": "inst", "pid": 123, "port": 7717}
+    payload[field] = value
+    path = tmp_path / DESCRIPTOR_NAME
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(
+        ValueError, match="dashboard.json is not a readable entry descriptor"
+    ):
+        read_entry_descriptor(tmp_path)
+
+
+@pytest.mark.parametrize("instance_id", (None, True, 7, "", "bad:instance"))
+def test_an_entry_descriptor_requires_a_shaped_string_instance_id(
+    tmp_path, instance_id: object
+) -> None:
+    path = tmp_path / DESCRIPTOR_NAME
+    path.write_text(
+        json.dumps({"instance_id": instance_id, "pid": 123, "port": 7717}),
+        encoding="utf-8",
+    )
+    with pytest.raises(
+        ValueError, match="dashboard.json is not a readable entry descriptor"
+    ):
+        read_entry_descriptor(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "descriptor",
+    (
+        EntryDescriptor("minimums", 1, 1),
+        EntryDescriptor("maximums", 2_147_483_647, 65_535),
+    ),
+)
+def test_entry_descriptor_integer_boundaries_round_trip(
+    tmp_path, descriptor: EntryDescriptor
+) -> None:
+    write_entry_descriptor(tmp_path, descriptor)
+    assert read_entry_descriptor(tmp_path) == descriptor
 
 
 def test_a_missing_descriptor_reads_as_none(tmp_path) -> None:

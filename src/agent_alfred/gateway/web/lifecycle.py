@@ -53,6 +53,16 @@ DEFAULT_PORT = 7717
 LOCK_NAME = "dashboard.lock"
 DESCRIPTOR_NAME = "dashboard.json"
 
+# ``pid_t`` is a signed integer on the POSIX systems this flock-based
+# lifecycle supports.  Keeping the persisted/diagnostic boundary inside the
+# positive signed-32-bit domain accepts every real PID those systems issue
+# without turning an arbitrary Python integer into a purported OS process.
+MIN_PID = 1
+MAX_PID = (1 << 31) - 1
+MAX_PID_DIGITS = len(str(MAX_PID))
+MIN_PORT = 1
+MAX_PORT = 65_535
+
 # The seam ``start_serving`` takes: a target, in; an **unstarted** thread,
 # out. Injected so both failures of the step are reachable from a test --
 # "cannot be created" from the factory raising, "cannot be started" from the
@@ -177,13 +187,26 @@ def _recorded_pid(path: Path) -> int | None:
     """
     try:
         text = path.read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeError):
+        # This file is never evidence of ownership -- flock is.  A read or
+        # decode failure therefore cannot replace the lock-conflict fact.
         return None
     for line in text.splitlines():
         if line.startswith("pid="):
-            digits = line[len("pid=") :].strip()
-            if digits.isdigit():
-                return int(digits)
+            digits = line[len("pid=") :]
+            if (
+                digits.isascii()
+                and digits.isdecimal()
+                and len(digits) <= MAX_PID_DIGITS
+                and digits[0] != "0"
+            ):
+                try:
+                    pid = int(digits)
+                except ValueError:
+                    return None
+                if MIN_PID <= pid <= MAX_PID:
+                    return pid
+            return None
     return None
 
 
@@ -243,6 +266,13 @@ def write_entry_descriptor(directory: Path, descriptor: EntryDescriptor) -> Path
     return target
 
 
+def _exact_int_in_range(value: object, minimum: int, maximum: int) -> int:
+    """One persisted-integer boundary: exact JSON int, then domain range."""
+    if type(value) is not int or not minimum <= value <= maximum:
+        raise ValueError("integer field has the wrong type or range")
+    return value
+
+
 def read_entry_descriptor(directory: Path) -> EntryDescriptor | None:
     """The descriptor as it was last written, or None if there is none.
 
@@ -256,10 +286,15 @@ def read_entry_descriptor(directory: Path) -> EntryDescriptor | None:
         return None
     try:
         payload = json.loads(text)
+        if type(payload) is not dict:
+            raise TypeError("entry descriptor must be a JSON object")
+        instance_id = payload["instance_id"]
+        if type(instance_id) is not str or not instance_id or ":" in instance_id:
+            raise ValueError("instance_id has the wrong type or shape")
         return EntryDescriptor(
-            instance_id=payload["instance_id"],
-            pid=int(payload["pid"]),
-            port=int(payload["port"]),
+            instance_id=instance_id,
+            pid=_exact_int_in_range(payload["pid"], MIN_PID, MAX_PID),
+            port=_exact_int_in_range(payload["port"], MIN_PORT, MAX_PORT),
         )
     except (ValueError, KeyError, TypeError) as exc:
         raise ValueError(f"{path} is not a readable entry descriptor") from exc
@@ -300,8 +335,8 @@ class DashboardService:
         # was never accepted is stronger than validating one that was: no
         # caller -- and no injected server factory, the seam every test uses
         # to avoid a real socket -- can carry another address to the bind.
-        if port < 1 or port > 65535:
-            raise ValueError(f"port must be in 1..65535, got {port}")
+        if port < MIN_PORT or port > MAX_PORT:
+            raise ValueError(f"port must be in {MIN_PORT}..{MAX_PORT}, got {port}")
         self._state_dir = state_dir
         self._handler = handler
         self._instance_id = instance_id
