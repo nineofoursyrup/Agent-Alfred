@@ -744,27 +744,19 @@ class RuntimeHost:
         """Bounded Session truth for SSE startup and lifecycle patches.
 
         Ordinary reads remain fail-closed through ``session_exists``. This
-        transport-only question may use the current Run's already-admitted
-        Session when the Store is poisoned, because that Session committed
-        before the Run could enter memory. No other Session is guessed.
+        transport-only question preserves the closed unavailable result so
+        a new stream cannot acquire response ownership without Store proof.
         """
         if session_id is None:
             return "invalid"
-        if self._store.available:
-            try:
-                return "valid" if self.session_exists(session_id) else "invalid"
-            except RecordingUnavailable:
-                # Poison may land between the cheap availability check and
-                # the guarded read. Continue from memory without retrying.
-                pass
-        snapshot = self._states.get()
-        active = snapshot.active_run
-        projection = snapshot.unrecorded_terminal_projection
-        if active is not None and active.session_id == session_id:
-            return "valid"
-        if projection is not None and projection.session_id == session_id:
-            return "valid"
-        return "unavailable"
+        if not self._store.available:
+            return "unavailable"
+        try:
+            return "valid" if self.session_exists(session_id) else "invalid"
+        except RecordingUnavailable:
+            # Poison may land between the cheap availability check and the
+            # guarded read. It is unavailable without a second read.
+            return "unavailable"
 
     def list_runs(
         self,

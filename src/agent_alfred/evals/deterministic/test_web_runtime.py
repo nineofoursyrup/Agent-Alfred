@@ -323,7 +323,7 @@ def test_finalizer_rollback_failure_keeps_the_sse_terminal_projection_recoverabl
         assert "raw tail" not in json.dumps(failed_reconnect)
 
         calls_before_transport = conn.execute_calls
-        assert host.transport_session_validity(session_id) == "valid"
+        assert host.transport_session_validity(session_id) == "unavailable"
         assert host.transport_session_validity(None) == "invalid"
         assert (
             host.transport_session_validity("never-committed")
@@ -331,6 +331,10 @@ def test_finalizer_rollback_failure_keeps_the_sse_terminal_projection_recoverabl
         )
         assert conn.execute_calls == calls_before_transport
 
+        with pytest.raises(
+            RecordingUnavailable, match="recording store is unavailable"
+        ):
+            broker.preflight_session(session_id)
         with pytest.raises(
             RecordingUnavailable, match="recording store is unavailable"
         ):
