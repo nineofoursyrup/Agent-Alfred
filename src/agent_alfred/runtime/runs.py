@@ -359,12 +359,26 @@ def _row_to_summary(raw_row) -> RunSummary:
     )
 
 
-def _non_terminal_run(conn, purpose_clause: str) -> RunSummary | None:
+def _excluded_runs_clause(
+    run_ids: frozenset[str], *, column: str = "run_id"
+) -> tuple[str, tuple[str, ...]]:
+    if not run_ids:
+        return "", ()
+    marks = ", ".join("?" for _ in run_ids)
+    return f"AND {column} NOT IN ({marks})", tuple(sorted(run_ids))
+
+
+def _non_terminal_run(
+    conn,
+    purpose_clause: str,
+    recording_failed_run_ids: frozenset[str],
+) -> RunSummary | None:
+    excluded, excluded_params = _excluded_runs_clause(recording_failed_run_ids)
     row = conn.execute(
         f"SELECT {_COLUMNS} FROM runs\n"
-        f"  WHERE phase != ? {purpose_clause}\n"
+        f"  WHERE phase != ? {purpose_clause} {excluded}\n"
         "  ORDER BY activity_revision DESC, run_id DESC LIMIT 1",
-        (_TERMINAL_PHASE,),
+        (_TERMINAL_PHASE, *excluded_params),
     ).fetchone()
     return None if row is None else _row_to_summary(row)
 
@@ -376,6 +390,7 @@ def list_runs(
     filter: str = ALL_FILTER,
     limit: int = DEFAULT_RUN_PAGE_SIZE,
     cursor: str | None = None,
+    recording_failed_run_ids: frozenset[str] = frozenset(),
 ) -> RunPage:
     """The runs page: terminal Runs newest first, plus the pinned live Run."""
     if filter not in RUN_FILTERS:
@@ -404,13 +419,14 @@ def list_runs(
         else ""
     )
     params: tuple[Any, ...]
-    params = (_TERMINAL_PHASE,)
+    excluded, excluded_params = _excluded_runs_clause(recording_failed_run_ids)
+    params = (_TERMINAL_PHASE, *excluded_params)
     if position is not None:
         params += (position[0], position[0], position[1])
     params += (limit + 1,)
     rows = conn.execute(
         f"SELECT {_COLUMNS} FROM runs\n"
-        f"  WHERE phase = ? {purpose_clause}\n  {beyond}"
+        f"  WHERE phase = ? {purpose_clause} {excluded}\n  {beyond}"
         "  ORDER BY activity_revision DESC, run_id DESC LIMIT ?",
         params,
     ).fetchall()
@@ -428,7 +444,8 @@ def list_runs(
         filter=filter,
         runs=summaries,
         non_terminal=_redact_summary(
-            _non_terminal_run(conn, purpose_clause), redactor
+            _non_terminal_run(conn, purpose_clause, recording_failed_run_ids),
+            redactor,
         ),
         next_cursor=next_cursor,
     )
@@ -456,6 +473,7 @@ def locate_run(
     run_id: str,
     redactor: Redactor,
     limit: int = DEFAULT_RUN_PAGE_SIZE,
+    recording_failed_run_ids: frozenset[str] = frozenset(),
 ) -> RunPage | None:
     """The page a deep link should open on for one Run.
 
@@ -464,6 +482,8 @@ def locate_run(
     page positioned so the Run is the *last* item, so continuing from the
     returned cursor walks forward without repeating it.
     """
+    if run_id in recording_failed_run_ids:
+        return None
     row = conn.execute(
         f"SELECT {_COLUMNS} FROM runs WHERE run_id = ?", (run_id,)
     ).fetchone()
@@ -487,15 +507,19 @@ def locate_run(
     # taken nearest-first and then turned back around, so the page ends on
     # the target itself. Bounded either way: a deep link into the ten
     # thousandth Run still returns one page, not ten thousand rows.
+    excluded, excluded_params = _excluded_runs_clause(recording_failed_run_ids)
     older = conn.execute(
         f"SELECT {_COLUMNS} FROM runs\n"
         "  WHERE phase = ? "
         + purpose_clause
+        + " "
+        + excluded
         + "\n  AND (activity_revision > ?"
         " OR (activity_revision = ? AND run_id > ?))\n"
         "  ORDER BY activity_revision ASC, run_id ASC LIMIT ?",
         (
             _TERMINAL_PHASE,
+            *excluded_params,
             summary.activity_revision,
             summary.activity_revision,
             run_id,
@@ -510,14 +534,25 @@ def locate_run(
         "SELECT 1 FROM runs\n"
         "  WHERE phase = ? "
         + purpose_clause
+        + " "
+        + excluded
         + "\n  AND (activity_revision < ?"
         " OR (activity_revision = ? AND run_id < ?)) LIMIT 1",
-        (_TERMINAL_PHASE, summary.activity_revision, summary.activity_revision, run_id),
+        (
+            _TERMINAL_PHASE,
+            *excluded_params,
+            summary.activity_revision,
+            summary.activity_revision,
+            run_id,
+        ),
     ).fetchone()
     return RunPage(
         filter=summary.filter,
         runs=tuple(runs),
-        non_terminal=_redact_summary(_non_terminal_run(conn, purpose_clause), redactor),
+        non_terminal=_redact_summary(
+            _non_terminal_run(conn, purpose_clause, recording_failed_run_ids),
+            redactor,
+        ),
         next_cursor=(
             _runs_cursor((summary.activity_revision, run_id))
             if beyond is not None
@@ -981,6 +1016,7 @@ def list_session_chat_runs(
     redactor: Redactor,
     cursor: str | None = None,
     reply_max_chars: int = DEFAULT_REPLY_PREVIEW_CHARS,
+    recording_failed_run_ids: frozenset[str] = frozenset(),
 ) -> SessionChatRunsPage:
     """One Session's admitted chat Runs, newest activity first, keyset paged.
 
@@ -1012,7 +1048,10 @@ def list_session_chat_runs(
         if position is not None
         else ""
     )
-    params: tuple[Any, ...] = (session_id,)
+    excluded, excluded_params = _excluded_runs_clause(
+        recording_failed_run_ids, column="runs.run_id"
+    )
+    params: tuple[Any, ...] = (session_id, *excluded_params)
     if position is not None:
         params += (position[0], position[0], position[1])
     params += (limit + 1,)
@@ -1021,6 +1060,7 @@ def list_session_chat_runs(
         "       runs.started_at, runs.finished_at, runs.activity_revision\n"
         "  FROM runs\n"
         "  WHERE runs.session_id = ? AND runs.purpose = 'chat'\n"
+        f"  {excluded}\n"
         f"  {beyond}"
         "  ORDER BY runs.activity_revision DESC, runs.run_id DESC LIMIT ?",
         params,

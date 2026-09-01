@@ -957,6 +957,23 @@ def test_handoff_finalize_double_failure_never_leaks_its_id_on_later_http_refusa
             serialized = json.dumps(payload, sort_keys=True)
             assert failed_run_id not in serialized
             assert "/runs/" not in serialized
+
+        reads = (
+            "/api/runs",
+            "/api/sessions/runs?session_id=" + quote(session_id, safe=""),
+            "/api/runs/locate/" + quote(failed_run_id, safe=""),
+        )
+        for path in reads:
+            read_head, read_body = _request(
+                server.port, _get(server.port, path)
+            )
+            read_payload = json.loads(read_body)
+            assert failed_run_id not in json.dumps(read_payload, sort_keys=True)
+            if "/locate/" in path:
+                assert read_head.startswith(b"HTTP/1.1 404")
+                assert read_payload == {"code": "unknown_run"}
+            else:
+                assert read_head.startswith(b"HTTP/1.1 200")
     finally:
         server.close()
         host.close()

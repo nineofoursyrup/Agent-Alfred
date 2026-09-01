@@ -30,7 +30,10 @@ from agent_alfred.runtime.sessions import (
     SessionMessagesPage,
     SessionNotFound,
 )
-from agent_alfred.runtime.snapshot import RuntimeSnapshot
+from agent_alfred.runtime.snapshot import (
+    RuntimeSnapshot,
+    is_unaddressable_unstarted_handoff_failure,
+)
 from agent_alfred.runtime.work import (
     AdmissionObservationKind,
     SubmitRequest,
@@ -223,27 +226,7 @@ def busy_summary_from(snapshot: RuntimeSnapshot) -> BusySummary | None:
     "saving", which is the whole point -- it is busy saving, not busy running.
     """
     active = snapshot.active_run
-    if active is None:
-        return None
-    projection = snapshot.unrecorded_terminal_projection
-    if (
-        snapshot.coordinator_state == "recording_failed"
-        and active.phase == "finished"
-        and active.outcome == "interrupted"
-        and active.started_at is None
-        and active.recording_state == "failed"
-        and projection is not None
-        and projection.run_id == active.run_id
-        and projection.session_id == active.session_id
-        and projection.outcome == "interrupted"
-        and projection.recording_state == "failed"
-        and projection.reply_text is None
-        and projection.error == "handoff_failed"
-    ):
-        # This Run committed its accepted row but never reached the unique
-        # execution thread. If closing it as interrupted also failed, the
-        # recovery projection remains authoritative for fail-closed admission,
-        # but it does not make the unexecuted Run an addressable destination.
+    if active is None or is_unaddressable_unstarted_handoff_failure(snapshot):
         return None
     shelf, _known = runs.classify_purpose(active.purpose)
     return BusySummary(

@@ -89,6 +89,35 @@ class RuntimeSnapshot:
         parse_coordinator_state(self.coordinator_state)
 
 
+def is_unaddressable_unstarted_handoff_failure(
+    snapshot: RuntimeSnapshot,
+) -> bool:
+    """Whether recovery authority names a Run that never reached execution.
+
+    The accepted database row and the in-process projection must survive so
+    restart recovery and admission remain fail-closed.  This exact shape is
+    nevertheless not a Run a browser can navigate to: handoff failed before
+    execution and even the interrupted finalize could not commit.
+    """
+    active = snapshot.active_run
+    projection = snapshot.unrecorded_terminal_projection
+    return bool(
+        snapshot.coordinator_state == "recording_failed"
+        and active is not None
+        and active.phase == "finished"
+        and active.outcome == "interrupted"
+        and active.started_at is None
+        and active.recording_state == "failed"
+        and projection is not None
+        and projection.run_id == active.run_id
+        and projection.session_id == active.session_id
+        and projection.outcome == "interrupted"
+        and projection.recording_state == "failed"
+        and projection.reply_text is None
+        and projection.error == "handoff_failed"
+    )
+
+
 class RunStateStore:
     """Authoritative in-process snapshot. Seq and activity_revision never live here.
 

@@ -854,13 +854,22 @@ def test_a_failed_handoff_and_interrupted_finalize_still_answers_503(
     def explode(item):
         raise RuntimeError("handoff refused")
 
-    host, conn = build_runtime_host(conn=wrapped, publish_work=explode)
+    broker = _wired_broker()
+    host, conn = build_runtime_host(
+        conn=wrapped,
+        publish_work=explode,
+        extra_sinks=[broker],
+        snapshot_listener=broker.publish_state_patch,
+    )
     host.start()
     try:
         session_id = host.create_session()
+        live = broker.connect(connection=FakeConnection(), session_id=session_id)
+        drain_connection(live)
         flag["armed"] = True
 
-        outcome = dashboard_api(host).submit(
+        api = dashboard_api(host)
+        outcome = api.submit(
             {"message": "hello", "session_id": session_id}
         )
 
@@ -894,7 +903,46 @@ def test_a_failed_handoff_and_interrupted_finalize_still_answers_503(
         assert snapshot.active_run.run_id == projection.run_id
         assert snapshot.active_run.session_id == projection.session_id == session_id
         assert snapshot.active_run.run_id not in repr(payload)
+
+        # Admission stays fail-closed, but the Run that never reached the
+        # executor is not a browser-addressable Run on any read surface.
+        again = api.submit({"message": "again", "session_id": session_id})
+        assert (again.status, again.code, again.run_id) == (
+            503,
+            "recording_unavailable",
+            None,
+        )
+
+        while broker.deliver_next(timeout=0):
+            pass
+        failed_patch = next(
+            patch
+            for patch in reversed(_state_patches(live))
+            if patch["coordinator_state"] == "recording_failed"
+        )
+        reconnect_patch = _startup_patch(
+            broker.connect(connection=FakeConnection(), session_id=session_id)
+        )
+        for patch in (failed_patch, reconnect_patch):
+            assert patch["coordinator_state"] == "recording_failed"
+            assert patch["active_run"] is None
+            assert patch["unrecorded_terminal_projection"] is None
+            assert snapshot.active_run.run_id not in repr(patch)
+            assert snapshot_payload(snapshot_from_payload(patch)) == patch
+
+        status, runs_page = api.runs_page({})
+        assert status == 200
+        assert runs_page["non_terminal"] is None
+        assert snapshot.active_run.run_id not in repr(runs_page)
+        assert api.locate_run(snapshot.active_run.run_id, {}) == (
+            404,
+            {"code": "unknown_run"},
+        )
+        status, session_runs = api.session_runs({"session_id": session_id})
+        assert status == 200
+        assert snapshot.active_run.run_id not in repr(session_runs)
     finally:
+        broker.close(timeout=1.0)
         host.close()
 
     # The failed-recording projection is deliberately process-local. The

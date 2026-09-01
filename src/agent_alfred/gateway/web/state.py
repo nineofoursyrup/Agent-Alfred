@@ -34,6 +34,7 @@ from agent_alfred.runtime.snapshot import (
     CoordinatorState,
     RunPhase,
     RuntimeSnapshot,
+    is_unaddressable_unstarted_handoff_failure,
     parse_coordinator_state,
 )
 
@@ -382,6 +383,13 @@ def _validate_snapshot_relations(snapshot: RunStateSnapshot) -> RunStateSnapshot
         return snapshot
 
     if active is None:
+        if (
+            state == "recording_failed"
+            and snapshot.recording_state == "failed"
+            and snapshot.step is None
+            and projection is None
+        ):
+            return snapshot
         raise ValueError(f"{state} snapshot requires active_run")
 
     expected_phase = "accepted" if state == "accepted" else "running"
@@ -473,10 +481,15 @@ def build_snapshot(
     Host holds is the full text, and the snapshot is the one place that text
     would otherwise escape into something sent to a browser.
     """
-    active = snapshot.active_run
-    projection = snapshot.unrecorded_terminal_projection
+    suppress_run = is_unaddressable_unstarted_handoff_failure(snapshot)
+    active = None if suppress_run else snapshot.active_run
+    projection = (
+        None if suppress_run else snapshot.unrecorded_terminal_projection
+    )
     recording_state = None
-    if active is not None and active.recording_state is not None:
+    if suppress_run:
+        recording_state = "failed"
+    elif active is not None and active.recording_state is not None:
         recording_state = active.recording_state
     elif projection is not None:
         recording_state = projection.recording_state

@@ -41,6 +41,7 @@ from agent_alfred.runtime.snapshot import (
     RunStateStore,
     RuntimeSnapshot,
     UnrecordedTerminalProjection,
+    is_unaddressable_unstarted_handoff_failure,
 )
 from agent_alfred.runtime.work import (
     AdmissionObservationKind,
@@ -739,6 +740,14 @@ class RuntimeHost:
             return frozenset()
         return frozenset({projection.run_id})
 
+    def _unaddressable_run_ids(self) -> frozenset[str]:
+        """Unexecuted failed-handoff ids that have no Web destination."""
+        snapshot = self._states.get()
+        if not is_unaddressable_unstarted_handoff_failure(snapshot):
+            return frozenset()
+        assert snapshot.active_run is not None
+        return frozenset({snapshot.active_run.run_id})
+
     def session_exists(self, session_id: str | None) -> bool:
         """Whether a Session row exists. A question, not a projection.
 
@@ -783,6 +792,7 @@ class RuntimeHost:
         cursor: str | None = None,
     ) -> runs.RunPage:
         """The runs page: terminal Runs paged, the live Run pinned."""
+        recording_failed = self._unaddressable_run_ids()
         with self._store.reading() as conn:
             return runs.list_runs(
                 conn,
@@ -790,13 +800,19 @@ class RuntimeHost:
                 limit=limit,
                 cursor=cursor,
                 redactor=self._redactor,
+                recording_failed_run_ids=recording_failed,
             )
 
     def locate_run(self, run_id: str, *, limit: int = 25) -> runs.RunPage | None:
         """The page a deep link to one Run should open on."""
+        recording_failed = self._unaddressable_run_ids()
         with self._store.reading() as conn:
             return runs.locate_run(
-                conn, run_id=run_id, limit=limit, redactor=self._redactor
+                conn,
+                run_id=run_id,
+                limit=limit,
+                redactor=self._redactor,
+                recording_failed_run_ids=recording_failed,
             )
 
     def list_session_chat_runs(
@@ -807,6 +823,7 @@ class RuntimeHost:
         cursor: str | None = None,
     ) -> runs.SessionChatRunsPage:
         """One Session's admitted chat Runs, keyset paged."""
+        recording_failed = self._unaddressable_run_ids()
         with self._store.reading() as conn:
             return runs.list_session_chat_runs(
                 conn,
@@ -815,6 +832,7 @@ class RuntimeHost:
                 cursor=cursor,
                 redactor=self._redactor,
                 reply_max_chars=self._settings.prompt_preview_max_chars,
+                recording_failed_run_ids=recording_failed,
             )
 
     def mainbar_pairs(
