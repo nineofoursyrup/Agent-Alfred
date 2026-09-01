@@ -1095,6 +1095,176 @@ def test_startup_batches_keep_a_chunked_logical_event_whole() -> None:
     assert connection.writes[start : start + len(expected)] == expected
 
 
+def test_startup_replay_slices_one_large_event_without_advancing_its_id() -> None:
+    """A ring-sized event may cross several connection-sized batches."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=10, encoded_bytes=1 << 20)
+    )
+    previous = frames.measured_frames(
+        seq=1,
+        frames=(b"data: previous",),
+        id_line=b"id: inst-test:1\n",
+        replayable=True,
+    )
+    large = frames.measured_frames(
+        seq=2,
+        frames=(b"data: first", b"data: second", b"data: third"),
+        id_line=b"id: inst-test:2\n",
+        replayable=True,
+    )
+    ring.append(previous)
+    ring.append(large)
+    budget = frames.FrameBudget(frames=2, encoded_bytes=1 << 20)
+    harness = Harness(ring=ring, connection_budget=budget)
+    handle = harness.connect(cursor=cursor_for(1))
+    observed: list[PreparedFrames] = []
+    reservation_costs: list[frames.FrameCost] = []
+
+    def observe(item: PreparedFrames) -> None:
+        if item.seq == 2:
+            observed.append(item)
+            reservation_costs.append(handle.queue.current_cost)
+            assert budget.fits(handle.queue.current_cost)
+            assert len(item.frames) <= budget.frames
+
+    assert handle.writer is not None
+    assert handle.writer.deliver_startup(observe) is True
+
+    assert [item.frames for item in observed] == [
+        large.frames[:2],
+        large.frames[2:],
+    ]
+    assert observed[0].id_line == b""
+    assert observed[1].id_line == large.id_line
+    assert b"".join(item.wire_bytes() for item in observed) == large.wire_bytes()
+    assert all(budget.fits(cost) and cost.frames > 0 for cost in reservation_costs)
+    assert handle.queue.current_cost == frames.FrameCost(0, 0)
+    assert not any(
+        item.wire_bytes() == frames.retry_frame(frames.BACKOFF_RETRY_MS).wire_bytes()
+        for item in observed
+    )
+
+
+def test_live_large_event_overflow_reconnects_and_advances_once() -> None:
+    """A live overflow is recovered in bounded slices, then stays checkpointed."""
+    budget = frames.FrameBudget(frames=2, encoded_bytes=1 << 20)
+    harness = Harness(
+        ring=ReplayRing(
+            budget=frames.FrameBudget(frames=10, encoded_bytes=1 << 20)
+        ),
+        connection_budget=budget,
+        max_frame_bytes=512,
+        spawn=RealThreadSpawner(),
+    )
+    old_connection = FakeConnection()
+    old = harness.connect(connection=old_connection, cursor=cursor_for(0))
+    deadline = time.monotonic() + 2.0
+    while b"event: state_patch" not in old_connection.written:
+        assert time.monotonic() < deadline, "opening stream did not finish"
+        time.sleep(0.001)
+    event = harness.emit(
+        RunStarted(
+            purpose="chat",
+            user_message=user_message_with("x" * 300),
+        ),
+        run_id="large",
+    )
+    stored = harness.broker._ring.entries_after(0)
+    assert stored is not None and len(stored) == 1
+    assert len(stored[0].frames) == 3
+    harness.deliver()
+
+    assert old.finished.wait(2.0)
+    assert old_connection.written.endswith(
+        frames.retry_frame(frames.BACKOFF_RETRY_MS).wire_bytes()
+    )
+    assert old_connection.closed is True
+
+    recovered_connection = FakeConnection()
+    recovered = harness.connect(
+        connection=recovered_connection, cursor=cursor_for(0)
+    )
+    deadline = time.monotonic() + 2.0
+    while stored[0].id_line not in recovered_connection.written:
+        assert time.monotonic() < deadline, "large replay did not finish"
+        time.sleep(0.001)
+    expected = stored[0].wire_bytes()
+    start = recovered_connection.written.index(stored[0].wire_frames()[0])
+    assert recovered_connection.written[start : start + len(expected)] == expected
+    assert recovered_connection.written.count(stored[0].id_line) == 1
+    assert not recovered_connection.written.endswith(
+        frames.retry_frame(frames.BACKOFF_RETRY_MS).wire_bytes()
+    )
+    recovered.queue.stop()
+    assert recovered.finished.wait(2.0)
+
+    caught_up_connection = FakeConnection()
+    caught_up = harness.connect(
+        connection=caught_up_connection, cursor=cursor_for(event.seq)
+    )
+    deadline = time.monotonic() + 2.0
+    while b"event: state_patch" not in caught_up_connection.written:
+        assert time.monotonic() < deadline, "caught-up opening did not finish"
+        time.sleep(0.001)
+    assert b"event: domain_event" not in caught_up_connection.written
+    caught_up.queue.stop()
+    assert caught_up.finished.wait(2.0)
+
+
+def test_eviction_between_large_event_slices_never_issues_its_checkpoint() -> None:
+    """Losing a partial event closes now and reports a gap on reconnect."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=4, encoded_bytes=1 << 20)
+    )
+    previous = frames.measured_frames(
+        seq=1,
+        frames=(b"data: previous",),
+        id_line=b"id: inst-test:1\n",
+        replayable=True,
+    )
+    large = frames.measured_frames(
+        seq=2,
+        frames=(b"data: first", b"data: second", b"data: third"),
+        id_line=b"id: inst-test:2\n",
+        replayable=True,
+    )
+    replacement = frames.measured_frames(
+        seq=3,
+        frames=(b"data: replacement-a", b"data: replacement-b"),
+        id_line=b"id: inst-test:3\n",
+        replayable=True,
+    )
+    ring.append(previous)
+    ring.append(large)
+    harness = Harness(
+        ring=ring,
+        connection_budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20),
+    )
+    handle = harness.connect(cursor=cursor_for(1))
+    opening: list[PreparedFrames] = []
+
+    def evict_after_first_slice(item: PreparedFrames) -> None:
+        opening.append(item)
+        if item.seq == 2 and not item.id_line:
+            ring.append(replacement)
+
+    assert handle.writer is not None
+    assert handle.writer.deliver_startup(evict_after_first_slice) is False
+    assert not any(item.id_line == large.id_line for item in opening)
+    assert opening[-1].wire_bytes() == frames.retry_frame(
+        frames.BACKOFF_RETRY_MS
+    ).wire_bytes()
+    assert handle.queue.current_cost == frames.FrameCost(0, 0)
+
+    reconnected = harness.connect(cursor=cursor_for(1))
+    next_opening = drain_connection(reconnected)
+    gap = next(
+        item for item in next_opening if b"replay_gap" in item.wire_bytes()
+    )
+    assert b'"gap_reason":"too_old"' in gap.wire_bytes()
+    assert not any(item.id_line == large.id_line for item in next_opening)
+
+
 def test_the_queue_budget_holds_during_startup_and_live() -> None:
     """A full ring behind it does not spend a small connection's budget.
 

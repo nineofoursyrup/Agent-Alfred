@@ -129,12 +129,28 @@ class CursorVerdict:
 
 
 @dataclass(frozen=True)
+class ReplayProgress:
+    """Writer-owned position inside a frozen replay interval.
+
+    ``completed_seq`` is the last checkpoint the browser has actually been
+    sent.  ``event_seq`` and ``next_frame_index`` exist only while one
+    logical event is being delivered across several bounded batches; that
+    partial position is never exposed as an SSE checkpoint.
+    """
+
+    completed_seq: int
+    event_seq: int | None = None
+    next_frame_index: int = 0
+
+
+@dataclass(frozen=True)
 class ReplayBatch:
-    """One whole-event, dual-budgeted slice of a frozen replay interval."""
+    """One dual-budgeted physical slice of a frozen replay interval."""
 
     kind: ReplayBatchKind
     entries: tuple[PreparedFrames, ...] = ()
     cost: FrameCost = FrameCost(frames=0, encoded_bytes=0)
+    next_progress: ReplayProgress | None = None
 
 
 @dataclass
@@ -252,6 +268,14 @@ class _IndexedEntries:
             else:
                 high = middle
         return low < self._size and self[low].seq == seq
+
+    def entry_at_seq(self, seq: int) -> PreparedFrames | None:
+        """Return the retained entry with exactly ``seq``, if any."""
+        index = self.first_after(seq - 1)
+        if index >= self._size:
+            return None
+        entry = self[index]
+        return entry if entry.seq == seq else None
 
     def first_after(self, seq: int) -> int:
         """Index of the first retained entry strictly after ``seq``."""
@@ -492,40 +516,98 @@ class ReplayRing:
 
     def bounded_entries_after(
         self,
-        cursor_seq: int,
+        progress: ReplayProgress | int,
         through_seq: int | None,
         budget: FrameBudget,
     ) -> ReplayBatch:
-        """Return the next whole-event slice without exceeding either budget.
+        """Return the next continuous event slice within both budgets.
 
         ``through_seq`` freezes the registration boundary. If the next slice
         has already fallen out of the ring, ``unavailable`` makes the writer
         close so the browser reconnects and receives an explicit gap verdict.
+
+        An integer is accepted as the initial completed checkpoint for the
+        public deterministic seam.  Subsequent calls use ``next_progress``;
+        callers never infer progress from an entry's seq because a partial
+        slice deliberately carries that seq without carrying its ``id:``.
         """
-        if through_seq is None or cursor_seq >= through_seq:
+        if isinstance(progress, int):
+            progress = ReplayProgress(completed_seq=progress)
+        if through_seq is None or (
+            progress.event_seq is None
+            and progress.completed_seq >= through_seq
+        ):
             return ReplayBatch(kind="complete")
-        if self.classify_seq(cursor_seq) != "valid":
-            return ReplayBatch(kind="unavailable")
-        index = self._entries.first_after(cursor_seq)
-        selected: list[PreparedFrames] = []
-        cost = FrameCost(frames=0, encoded_bytes=0)
-        while index < len(self._entries):
+        if progress.event_seq is None:
+            if self.classify_seq(progress.completed_seq) != "valid":
+                return ReplayBatch(kind="unavailable")
+            index = self._entries.first_after(progress.completed_seq)
+            if index >= len(self._entries):
+                return ReplayBatch(kind="unavailable")
             entry = self._entries[index]
-            if entry.seq is None or entry.seq > through_seq:
-                break
-            projected = cost + entry.ingress_cost()
-            if not budget.fits(projected):
-                if not selected:
-                    return ReplayBatch(kind="oversized")
-                break
-            selected.append(entry)
-            cost = projected
-            index += 1
-        if not selected:
-            # The frozen interval promised another replayable checkpoint but
-            # none remains. It was evicted between bounded fetches.
+            start = 0
+        else:
+            entry = self._entries.entry_at_seq(progress.event_seq)
+            if entry is None:
+                # The writer released the preceding slice before this fetch;
+                # eviction is therefore allowed to reclaim the logical event.
+                return ReplayBatch(kind="unavailable")
+            start = progress.next_frame_index
+        if entry.seq is None or entry.seq > through_seq:
             return ReplayBatch(kind="unavailable")
-        return ReplayBatch(kind="batch", entries=tuple(selected), cost=cost)
+        if start < 0 or start >= len(entry.frames):
+            return ReplayBatch(kind="unavailable")
+
+        end = start
+        selected_cost = FrameCost(frames=0, encoded_bytes=0)
+        while end < len(entry.frames):
+            is_final = end + 1 == len(entry.frames)
+            frame_cost = FrameCost(
+                frames=1,
+                encoded_bytes=len(entry.frames[end])
+                + 2
+                + (len(entry.id_line) if is_final else 0),
+            )
+            projected = selected_cost + frame_cost
+            if not budget.fits(projected):
+                break
+            selected_cost = projected
+            end += 1
+        if end == start:
+            # One physical SSE record (including a final id line, if this is
+            # the last one) cannot be split without changing its wire bytes.
+            return ReplayBatch(kind="oversized")
+
+        final = end == len(entry.frames)
+        # Keep the original immutable object when the whole event fits.  A
+        # partial batch needs a tiny view object, but never a payload copy.
+        sliced = (
+            entry
+            if start == 0 and final
+            else PreparedFrames(
+                seq=entry.seq,
+                frames=entry.frames[start:end],
+                id_line=entry.id_line if final else b"",
+                byte_size=selected_cost.encoded_bytes,
+                replayable=entry.replayable,
+                must_deliver=entry.must_deliver,
+            )
+        )
+        next_progress = (
+            ReplayProgress(completed_seq=entry.seq)
+            if final
+            else ReplayProgress(
+                completed_seq=progress.completed_seq,
+                event_seq=entry.seq,
+                next_frame_index=end,
+            )
+        )
+        return ReplayBatch(
+            kind="batch",
+            entries=(sliced,),
+            cost=selected_cost,
+            next_progress=next_progress,
+        )
 
     def classify_seq(self, seq: int) -> SeqVerdict:
         """Close a cursor's position into one of the four decided reasons.

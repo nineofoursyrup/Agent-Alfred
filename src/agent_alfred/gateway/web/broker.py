@@ -61,6 +61,7 @@ from agent_alfred.gateway.web.replay import (
     CursorText,
     CursorVerdict,
     ReplayBatch,
+    ReplayProgress,
     ReplayRing,
     classify_cursor,
 )
@@ -852,9 +853,11 @@ class SSEBroker:
         :data:`~agent_alfred.gateway.web.frames.STARTUP_CHECKPOINT_SEQ`.
 
         The fixed prefix is handed to the writer, while exact replay is a
-        frozen high-water cursor. The writer fetches one whole-event batch at
-        a time under both connection budgets and releases it before fetching
-        the next; neither the handle nor the writer pins the complete tail.
+        frozen high-water cursor. The writer fetches one continuous physical
+        slice at a time under both connection budgets and releases it before
+        fetching the next; neither the handle nor the writer pins the complete
+        tail, and only a slice containing the event's final frame carries its
+        checkpoint.
         """
         handle = ConnectionHandle(
             queue=ConnectionQueue(
@@ -996,9 +999,9 @@ class SSEBroker:
                     source=handle.queue,
                     cursor_seq=verdict.requested_seq,
                     through_seq=replay_through,
-                    fetch=lambda cursor_seq, through_seq, budget: (
+                    fetch=lambda progress, through_seq, budget: (
                         self._fetch_startup_replay(
-                            handle.queue, cursor_seq, through_seq, budget
+                            handle.queue, progress, through_seq, budget
                         )
                     ),
                 )
@@ -1019,14 +1022,14 @@ class SSEBroker:
     def _fetch_startup_replay(
         self,
         source: ConnectionQueue,
-        cursor_seq: int,
+        progress: ReplayProgress,
         through_seq: int | None,
         budget: frames.FrameBudget,
     ) -> ReplayBatch:
         """Fetch and account one immutable batch without IO or waiting."""
         with self._lock:
             batch = self._ring.bounded_entries_after(
-                cursor_seq, through_seq, budget
+                progress, through_seq, budget
             )
             if batch.kind != "batch":
                 return batch

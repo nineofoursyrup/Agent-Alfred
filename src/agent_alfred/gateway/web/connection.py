@@ -28,6 +28,7 @@ from typing import Literal, Protocol
 
 from agent_alfred.clock import Clock
 from agent_alfred.gateway.web import frames
+from agent_alfred.gateway.web.replay import ReplayProgress
 
 # The decided capacity table: frames *and* encoded bytes, counted together.
 DEFAULT_BUDGET = frames.FrameBudget(frames=512, encoded_bytes=8 * 1024 * 1024)
@@ -267,15 +268,16 @@ class ReplayBatch(Protocol):
     kind: str
     entries: tuple[frames.PreparedFrames, ...]
     cost: frames.FrameCost
+    next_progress: ReplayProgress | None
 
 
 class StartupReplay:
     """Writer-owned cursor over a frozen replay interval.
 
-    The fetcher returns ring-owned immutable logical events. Only one batch
-    is reserved and returned at a time; advancing happens only after the
-    writer releases the complete batch, so a multi-frame logical event can
-    never become a half-event checkpoint.
+    The fetcher returns immutable physical-frame slices. Only one slice is
+    reserved at a time; advancing happens only after the writer releases it,
+    and the explicit progress keeps a partial logical event distinct from
+    the browser's last complete checkpoint.
     """
 
     def __init__(
@@ -284,32 +286,34 @@ class StartupReplay:
         source: ConnectionQueue,
         cursor_seq: int,
         through_seq: int | None,
-        fetch: Callable[[int, int | None, frames.FrameBudget], ReplayBatch],
+        fetch: Callable[
+            [ReplayProgress, int | None, frames.FrameBudget], ReplayBatch
+        ],
     ):
         self._source = source
-        self._cursor_seq = cursor_seq
+        self._progress = ReplayProgress(completed_seq=cursor_seq)
         self._through_seq = through_seq
         self._fetch = fetch
 
     def take(self) -> ReplayBatch:
         return self._fetch(
-            self._cursor_seq, self._through_seq, self._source.budget
+            self._progress, self._through_seq, self._source.budget
         )
 
     def release(self, batch: ReplayBatch) -> None:
         self._source.release_startup(batch.cost)
-        last = batch.entries[-1]
-        assert last.seq is not None
-        self._cursor_seq = last.seq
+        if batch.next_progress is None:
+            raise RuntimeError("replay batch did not declare its next progress")
+        self._progress = batch.next_progress
 
 class ConnectionWriter:
     """The connection's own thread: open, take, write, heartbeat, close.
 
     The opening stream -- retry, re-seed, any gap notice, the snapshot and
     the exact replay tail -- is the writer's own. The fixed prefix precedes
-    a cursor that fetches only one whole-event, dual-budgeted replay batch at
-    a time; each batch shares the connection queue's capacity and is released
-    before the next is fetched. The clock and the source are injected so a
+    a cursor that fetches only one dual-budgeted replay slice at a time; each
+    slice shares the connection queue's capacity and is released before the
+    next is fetched. The clock and the source are injected so a
     heartbeat can be tested deterministically -- a test must never wait
     fifteen seconds to find out whether a comment line was written.
     """

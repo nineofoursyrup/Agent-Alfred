@@ -119,6 +119,37 @@ def test_a_startup_batch_stops_at_the_byte_budget_before_the_frame_budget() -> N
     assert not budget.fits(batch.cost + entries[1].ingress_cost())
 
 
+def test_one_logical_event_is_sliced_by_bytes_without_moving_its_checkpoint() -> None:
+    ring = replay.ReplayRing(
+        budget=frames.FrameBudget(frames=10, encoded_bytes=1 << 20)
+    )
+    entry = frames.measured_frames(
+        seq=1,
+        frames=(b"data: " + b"a" * 200,) * 3,
+        id_line=b"id: inst:1\n",
+        replayable=True,
+    )
+    ring.append(entry)
+    one_final_frame = len(entry.frames[-1]) + 2 + len(entry.id_line)
+    budget = frames.FrameBudget(frames=3, encoded_bytes=one_final_frame)
+    progress = replay.ReplayProgress(completed_seq=0)
+    slices = []
+
+    while True:
+        batch = ring.bounded_entries_after(progress, 1, budget)
+        if batch.kind == "complete":
+            break
+        assert batch.kind == "batch"
+        assert budget.fits(batch.cost)
+        assert batch.cost.frames == 1
+        slices.extend(batch.entries)
+        assert batch.next_progress is not None
+        progress = batch.next_progress
+
+    assert [item.id_line for item in slices] == [b"", b"", entry.id_line]
+    assert b"".join(item.wire_bytes() for item in slices) == entry.wire_bytes()
+
+
 def test_byte_budget_evicts_before_the_frame_limit_is_reached() -> None:
     ring = replay.ReplayRing(budget=frames.FrameBudget(frames=100, encoded_bytes=100))
     for seq in (1, 2, 3):
