@@ -103,6 +103,13 @@ def _limit(text: str | None, limit: int = SNAPSHOT_TEXT_LIMIT) -> str | None:
     return text[: limit - 1] + "…"
 
 
+def _parse_required_bool(payload: dict[str, Any], field: str) -> bool:
+    value = payload.get(field)
+    if type(value) is not bool:
+        raise ValueError(f"{field} must be a boolean")
+    return value
+
+
 def snapshot_payload(
     snapshot: RunStateSnapshot,
 ) -> dict[str, Any]:
@@ -210,13 +217,13 @@ def snapshot_from_payload(payload: dict[str, Any]) -> RunStateSnapshot:
                 attempts=tuple(
                     AttemptTerminal(**attempt) for attempt in step["attempts"]
                 ),
-                attempts_truncated=bool(step.get("attempts_truncated", False)),
+                attempts_truncated=_parse_required_bool(step, "attempts_truncated"),
             )
         ),
         recording_state=parse_recording_state(
             payload.get("recording_state"), allow_none=True
         ),
-        session_valid=bool(payload.get("session_valid", False)),
+        session_valid=_parse_required_bool(payload, "session_valid"),
         unrecorded_terminal_projection=(
             None
             if projection is None
