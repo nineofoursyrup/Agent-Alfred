@@ -270,7 +270,7 @@ class RuntimeHost:
         the ground out from under a Run that was still being recorded. The
         order here is the other way round -- refuse new work, let the
         in-flight Run finish, wait for the worker to actually stop, and only
-        then close the sinks, once.
+        then close the sinks to completion.
 
         A bounded wait that expires returns False and closes nothing: an
         honest "not yet closed" beats a FanOut pulled out from under a live
@@ -305,13 +305,14 @@ class RuntimeHost:
                 return False
         with self._lifecycle:
             if not self._fanout_closed:
-                # The bit moves only behind a close() that returned: a sink
-                # that raises leaves the FanOut unfinished, this exception
-                # propagates, and the next close() asks it again. Setting
-                # the bit first would make that retry skip the FanOut
-                # entirely -- a Host reported closed with a sink nobody
-                # ever closed.
-                self._fanout.close()
+                # The bit moves only behind a confirmed FanOut close. A sink
+                # that reports False is still draining; a sink that raises
+                # propagates that exception. Either way, the next close()
+                # asks the unfinished sink again. Setting the bit first would
+                # make that retry skip the FanOut entirely -- a Host reported
+                # closed with a sink nobody ever closed.
+                if not self._fanout.close():
+                    return False
                 self._fanout_closed = True
             self._closed = True
         return True

@@ -572,6 +572,14 @@ class _SpyCloseConnection(sqlite3.Connection):
         super().close()
 
 
+class _DrainingCloseSink(_FlakyCloseSink):
+    """An SSEBroker-shaped sink: False means its writers still drain."""
+
+    def close(self) -> bool:
+        self.close_calls += 1
+        return self.release.is_set()
+
+
 def test_runtime_host_retries_fanout_close_before_reporting_closed() -> None:
     """A sink whose close() raises is an unfinished close, not a finished one.
 
@@ -614,6 +622,27 @@ def test_runtime_host_retries_fanout_close_before_reporting_closed() -> None:
         assert host._fanout_closed is True
         assert host.closed is True
         assert conn.close_calls == 0, "the Host never closes the database itself"
+    finally:
+        sink.release.set()
+        host.close()
+
+
+def test_runtime_host_retries_fanout_that_is_still_draining() -> None:
+    """A non-drained stream sink keeps the Host honestly incomplete."""
+    sink = _DrainingCloseSink()
+    host, _conn, _capture, _model = _host(["pong"], extra_sinks=[sink])
+    host.start()
+    try:
+        assert host.close(timeout=CLOSE_GRACE_S) is False
+        assert sink.close_calls == 1
+        assert host._fanout_closed is False
+        assert host.closed is False
+
+        sink.release.set()
+        assert host.close(timeout=CLOSE_GRACE_S) is True
+        assert sink.close_calls == 2
+        assert host._fanout_closed is True
+        assert host.closed is True
     finally:
         sink.release.set()
         host.close()

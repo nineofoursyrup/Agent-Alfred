@@ -338,7 +338,14 @@ class EventSink(Protocol):
         not a question anybody is allowed to ask."""
         ...
 
-    def close(self) -> None: ...
+    def close(self) -> bool | None:
+        """Release this sink.
+
+        ``False`` reports that release is still in progress and must be
+        retried. ``True`` confirms completion; legacy sinks that return
+        ``None`` are also treated as confirmed.
+        """
+        ...
 
 
 class ProcessFatalSinkError(RuntimeError):
@@ -822,24 +829,29 @@ class FanOutSink:
             self._last_envelope.pop(run_id, None)
         return incomplete, reason
 
-    def close(self) -> None:
+    def close(self) -> bool:
         """Close every sink, resumable per sink.
 
-        One sink raising is an unfinished close, not a finished one: its
-        exception propagates unchanged and the sinks after it are still
-        unclosed, so the FanOut as a whole stays unfinished. Asking again
-        resumes where the failure was -- the already-closed sinks are not
-        touched a second time.
+        One sink returning False is still draining, so its completion bit
+        does not move and a later close asks it again. Legacy sinks return
+        None; that remains a confirmed close. One sink raising is likewise
+        unfinished: its exception propagates unchanged and the sinks after
+        it are still unclosed. Asking again resumes at unfinished sinks --
+        the already-closed sinks are not touched a second time.
         """
         # Attempts are serialized so two racing closers cannot both walk an
         # unfinished sink; the FanOut's close is otherwise on its own lock,
         # never on the publish lock a sink's emit path shares.
         with self._close_lock:
+            complete = True
             for index, sink in enumerate(self._sinks):
                 if self._closed_sinks[index]:
                     continue
-                sink.close()
+                if sink.close() is False:
+                    complete = False
+                    continue
                 self._closed_sinks[index] = True
+            return complete
 
 
 def _fail_closed_event(event: UnsequencedEvent) -> UnsequencedEvent:

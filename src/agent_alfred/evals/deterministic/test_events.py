@@ -86,6 +86,18 @@ class _CountingCloseSink:
             raise RuntimeError(f"{self.name} close refused")
 
 
+class _RetryableCloseSink(_CountingCloseSink):
+    """A sink that reports incomplete until its close is allowed to finish."""
+
+    def __init__(self, *, name: str):
+        super().__init__(name=name)
+        self.close_complete = False
+
+    def close(self) -> bool:
+        self.close_calls += 1
+        return self.close_complete
+
+
 def test_fanout_close_resumes_per_sink_without_reclosing_succeeded_sinks() -> None:
     """A sink that failed to close is the only one the retry may ask again.
 
@@ -117,6 +129,26 @@ def test_fanout_close_resumes_per_sink_without_reclosing_succeeded_sinks() -> No
     # Fully confirmed, a further close asks nobody.
     fanout.close()
     assert (good.close_calls, flaky.close_calls, tail.close_calls) == (1, 2, 1)
+
+
+def test_fanout_close_retries_sinks_that_report_incomplete() -> None:
+    """False is an unfinished close; legacy None remains a confirmed close."""
+    legacy = _CountingCloseSink(name="legacy")
+    draining = _RetryableCloseSink(name="draining")
+    tail = _CountingCloseSink(name="tail")
+    fanout = FanOutSink(
+        [legacy, draining, tail], process_instance_id="proc-retryable-close"
+    )
+
+    assert fanout.close() is False
+    assert (legacy.close_calls, draining.close_calls, tail.close_calls) == (1, 1, 1)
+
+    draining.close_complete = True
+    assert fanout.close() is True
+    assert (legacy.close_calls, draining.close_calls, tail.close_calls) == (1, 2, 1)
+
+    assert fanout.close() is True
+    assert (legacy.close_calls, draining.close_calls, tail.close_calls) == (1, 2, 1)
 
 
 def test_each_logical_event_gets_one_distinct_identity_before_prepare() -> None:
