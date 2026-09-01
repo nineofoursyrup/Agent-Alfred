@@ -28,7 +28,13 @@ from agent_alfred.runtime.recording_state import (
     UnrecordedTerminalState,
     parse_recording_state,
 )
-from agent_alfred.runtime.snapshot import RuntimeSnapshot
+from agent_alfred.runtime.snapshot import (
+    CoordinatorState,
+    RunPhase,
+    RuntimeSnapshot,
+    parse_coordinator_state,
+    parse_run_phase,
+)
 
 # The unrecorded reply is the one thing in the snapshot that could be long.
 # Bounding it keeps the snapshot bounded, and the cut is marked so nobody
@@ -56,7 +62,7 @@ class ActiveRunView:
     run_id: str
     purpose: str
     gateway: str
-    phase: str
+    phase: RunPhase
     outcome: RunOutcome | None
     session_id: str | None
     prompt_preview: str | None
@@ -81,7 +87,7 @@ class UnrecordedTerminalView:
 class RunStateSnapshot:
     process_instance_id: str
     state_revision: int
-    coordinator_state: str
+    coordinator_state: CoordinatorState
     active_run: ActiveRunView | None
     step: StepProjection | None
     recording_state: RecordingState | None
@@ -172,31 +178,30 @@ def snapshot_from_payload(payload: dict[str, Any]) -> RunStateSnapshot:
     step = payload.get("step")
     projection = payload.get("unrecorded_terminal_projection")
     active = payload.get("active_run")
+    active_run = None
+    if active is not None:
+        phase = parse_run_phase(active["phase"])
+        active_run = ActiveRunView(
+            run_id=active["run_id"],
+            purpose=active["purpose"],
+            gateway=active["gateway"],
+            phase=phase,
+            outcome=parse_run_outcome(
+                active.get("outcome"), allow_none=phase != "finished"
+            ),
+            session_id=active.get("session_id"),
+            prompt_preview=active.get("prompt_preview"),
+            started_at=active.get("started_at"),
+            current_step=active.get("current_step"),
+            recording_state=parse_recording_state(
+                active.get("recording_state"), allow_none=True
+            ),
+        )
     return RunStateSnapshot(
         process_instance_id=payload["process_instance_id"],
         state_revision=payload["state_revision"],
-        coordinator_state=payload["coordinator_state"],
-        active_run=(
-            None
-            if active is None
-            else ActiveRunView(
-                run_id=active["run_id"],
-                purpose=active["purpose"],
-                gateway=active["gateway"],
-                phase=active["phase"],
-                outcome=parse_run_outcome(
-                    active.get("outcome"),
-                    allow_none=active["phase"] != "finished",
-                ),
-                session_id=active.get("session_id"),
-                prompt_preview=active.get("prompt_preview"),
-                started_at=active.get("started_at"),
-                current_step=active.get("current_step"),
-                recording_state=parse_recording_state(
-                    active.get("recording_state"), allow_none=True
-                ),
-            )
-        ),
+        coordinator_state=parse_coordinator_state(payload["coordinator_state"]),
+        active_run=active_run,
         step=(
             None
             if step is None

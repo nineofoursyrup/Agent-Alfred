@@ -9,6 +9,7 @@ import pytest
 from agent_alfred.events import RunOutcome as EventOutcome
 from agent_alfred.gateway.web.state import (
     ActiveRunView,
+    RunStateSnapshot,
     UnrecordedTerminalView,
     snapshot_from_payload,
     snapshot_payload,
@@ -18,11 +19,24 @@ from agent_alfred.outcomes import RUN_OUTCOMES, RunOutcome
 from agent_alfred.runtime.recording import RunRecorder
 from agent_alfred.runtime.snapshot import (
     ActiveRunSummary,
+    CoordinatorState,
+    RunPhase,
+    RuntimeSnapshot,
     UnrecordedTerminalProjection,
 )
 from agent_alfred.schema import OUTCOMES
 
 _NO_PROJECTION = object()
+
+
+class LiteralImpostor:
+    """A non-string that claims equality with one chosen wire literal."""
+
+    def __init__(self, literal: str) -> None:
+        self.literal = literal
+
+    def __eq__(self, other: object) -> bool:
+        return other == self.literal
 
 
 def test_run_outcome_is_a_single_closed_set() -> None:
@@ -40,6 +54,13 @@ def test_authoritative_snapshot_and_wire_views_reuse_run_outcome() -> None:
     assert get_type_hints(RunRecorder.settle)["outcome"] is RunOutcome
 
 
+def test_authoritative_snapshot_and_wire_views_reuse_lifecycle_types() -> None:
+    assert get_type_hints(ActiveRunSummary)["phase"] is RunPhase
+    assert get_type_hints(ActiveRunView)["phase"] is RunPhase
+    assert get_type_hints(RuntimeSnapshot)["coordinator_state"] is CoordinatorState
+    assert get_type_hints(RunStateSnapshot)["coordinator_state"] is CoordinatorState
+
+
 @pytest.mark.parametrize("outcome", RUN_OUTCOMES)
 def test_every_run_outcome_round_trips_through_the_wire(outcome: RunOutcome) -> None:
     wire = _wire_payload(
@@ -51,13 +72,92 @@ def test_every_run_outcome_round_trips_through_the_wire(outcome: RunOutcome) -> 
     assert snapshot_payload(snapshot_from_payload(wire)) == wire
 
 
-def test_an_active_nonterminal_run_may_have_no_outcome() -> None:
-    wire = _wire_payload(active_outcome=None)
+@pytest.mark.parametrize("phase", ["accepted", "running"])
+def test_an_active_nonterminal_run_may_have_no_outcome(phase: RunPhase) -> None:
+    wire = _wire_payload(active_outcome=None, active_phase=phase)
 
     rebuilt = snapshot_from_payload(wire)
 
     assert rebuilt.active_run is not None
     assert rebuilt.active_run.outcome is None
+
+
+@pytest.mark.parametrize("phase", ["accepted", "running", "finished"])
+@pytest.mark.parametrize(
+    "coordinator_state",
+    ["idle", "accepted", "running", "recording_pending", "recording_failed"],
+)
+def test_every_lifecycle_literal_round_trips_through_the_wire(
+    phase: RunPhase, coordinator_state: CoordinatorState
+) -> None:
+    outcome = "completed" if phase == "finished" else None
+    wire = _wire_payload(
+        active_outcome=outcome,
+        active_phase=phase,
+        coordinator_state=coordinator_state,
+    )
+
+    assert snapshot_payload(snapshot_from_payload(wire)) == wire
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "error"),
+    [
+        pytest.param("phase", "unknown", "run phase", id="phase-unknown"),
+        pytest.param("phase", 1, "run phase", id="phase-non-string"),
+        pytest.param(
+            "phase",
+            LiteralImpostor("finished"),
+            "run phase",
+            id="phase-literal-impostor",
+        ),
+        pytest.param(
+            "coordinator_state",
+            "unknown",
+            "coordinator state",
+            id="coordinator-unknown",
+        ),
+        pytest.param(
+            "coordinator_state",
+            1,
+            "coordinator state",
+            id="coordinator-non-string",
+        ),
+        pytest.param(
+            "coordinator_state",
+            LiteralImpostor("running"),
+            "coordinator state",
+            id="coordinator-literal-impostor",
+        ),
+    ],
+)
+def test_wire_rejects_invalid_lifecycle_literals(
+    field: str, value: object, error: str
+) -> None:
+    wire = _wire_payload(active_outcome=None)
+    if field == "phase":
+        active = wire["active_run"]
+        assert isinstance(active, dict)
+        active["phase"] = value
+    else:
+        wire["coordinator_state"] = value
+
+    with pytest.raises(ValueError, match=error):
+        snapshot_from_payload(wire)
+
+
+@pytest.mark.parametrize("field", ["phase", "coordinator_state"])
+def test_wire_requires_lifecycle_keys(field: str) -> None:
+    wire = _wire_payload(active_outcome=None)
+    if field == "phase":
+        active = wire["active_run"]
+        assert isinstance(active, dict)
+        del active["phase"]
+    else:
+        del wire["coordinator_state"]
+
+    with pytest.raises(KeyError):
+        snapshot_from_payload(wire)
 
 
 @pytest.mark.parametrize(
@@ -89,7 +189,8 @@ def _wire_payload(
     *,
     active_outcome: object,
     projection_outcome: object = _NO_PROJECTION,
-    active_phase: str = "running",
+    active_phase: object = "running",
+    coordinator_state: object = "running",
 ) -> dict[str, object]:
     active = {
         "run_id": "run-1",
@@ -122,7 +223,7 @@ def _wire_payload(
     return {
         "process_instance_id": "process-1",
         "state_revision": 1,
-        "coordinator_state": "running",
+        "coordinator_state": coordinator_state,
         "active_run": active,
         "step": None,
         "recording_state": None,

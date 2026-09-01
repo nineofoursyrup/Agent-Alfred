@@ -18,6 +18,28 @@ from agent_alfred.runtime.recording_state import (
 CoordinatorState = Literal[
     "idle", "accepted", "running", "recording_pending", "recording_failed"
 ]
+RunPhase = Literal["accepted", "running", "finished"]
+
+
+def parse_coordinator_state(value: object) -> CoordinatorState:
+    """Validate and narrow a coordinator state crossing a runtime boundary."""
+    if not isinstance(value, str):
+        raise ValueError(f"invalid coordinator state: {value!r}")
+    if value == "idle" or value == "accepted" or value == "running":
+        return value
+    if value == "recording_pending" or value == "recording_failed":
+        return value
+    raise ValueError(f"invalid coordinator state: {value!r}")
+
+
+def parse_run_phase(value: object) -> RunPhase:
+    """Validate and narrow a Run phase crossing a runtime boundary."""
+    if not isinstance(value, str):
+        raise ValueError(f"invalid run phase: {value!r}")
+    if value == "accepted" or value == "running" or value == "finished":
+        return value
+    raise ValueError(f"invalid run phase: {value!r}")
+
 
 _UNSET = object()
 
@@ -27,7 +49,7 @@ class ActiveRunSummary:
     run_id: str
     purpose: str
     gateway: str
-    phase: str
+    phase: RunPhase
     session_id: str | None
     prompt_preview: str | None
     started_at: str | None
@@ -38,6 +60,7 @@ class ActiveRunSummary:
     outcome: RunOutcome | None = None
 
     def __post_init__(self) -> None:
+        parse_run_phase(self.phase)
         parse_recording_state(self.recording_state, allow_none=True)
 
 
@@ -63,6 +86,9 @@ class RuntimeSnapshot:
     coordinator_state: CoordinatorState
     active_run: ActiveRunSummary | None
     unrecorded_terminal_projection: UnrecordedTerminalProjection | None
+
+    def __post_init__(self) -> None:
+        parse_coordinator_state(self.coordinator_state)
 
 
 class RunStateStore:
