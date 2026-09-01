@@ -1859,64 +1859,103 @@ def _chunk_meta(frame: bytes) -> dict:
 # --- the concurrency race --------------------------------------------------
 
 
+class _CaptureRegistrationGate:
+    """Pause one connect after capture and before registration."""
+
+    def __init__(self) -> None:
+        self._entries = 0
+        self._lock = threading.Lock()
+        self.registration_entered = threading.Event()
+        self.release_registration = threading.Event()
+
+    def __enter__(self) -> None:
+        with self._lock:
+            self._entries += 1
+            entry = self._entries
+        if entry == 2:
+            self.registration_entered.set()
+            assert self.release_registration.wait(timeout=2), (
+                "test did not release registration"
+            )
+
+    def __exit__(self, *_exc: object) -> None:
+        return None
+
+
 def test_snapshots_and_live_events_never_duplicate_or_gap_under_concurrency() -> None:
+    spawn = _NoThreads()
     broker = SSEBroker(
         process_instance_id=INSTANCE,
         snapshot=runtime_snapshot(),
         session_is_valid=lambda _sid: "valid",
+        spawn=spawn.spawn,
     )
     fanout = FanOutSink([broker], process_instance_id=INSTANCE)
-    broker.start()
-    connections: list[tuple[object, FakeConnection]] = []
+    gate = _CaptureRegistrationGate()
+    connections = [broker.connect(connection=FakeConnection(), cursor=cursor_for(0))]
+    broker.bind_projection_boundary(gate)
+    connected: list[object] = []
+    connect_errors: list[BaseException] = []
+    connect_finished = threading.Event()
+
+    def connect_across_publication() -> None:
+        try:
+            connected.append(
+                broker.connect(connection=FakeConnection(), cursor=cursor_for(0))
+            )
+        except BaseException as exc:
+            connect_errors.append(exc)
+        finally:
+            connect_finished.set()
+
+    worker = threading.Thread(target=connect_across_publication, daemon=True)
     try:
-        connections.append(
-            (broker.connect(connection=FakeConnection()), _conn_of(broker, 0))
-        )
-        stop = threading.Event()
-
-        def emit_forever() -> None:
-            i = 0
-            while not stop.is_set():
-                i += 1
-                fanout.emit(
-                    RunStarted(purpose="chat"),
-                    EventEnvelope(
-                        ts=float(i),
-                        run_id=f"r{i}",
-                        session_id=None,
-                        step_index=None,
-                        attempt_id=None,
-                        node_id=None,
-                    ),
-                )
-
-        worker = threading.Thread(target=emit_forever, daemon=True)
         worker.start()
-        # Connect three more times while events are being published: each
-        # one's snapshot, high-water mark and registration must land together.
-        for _ in range(3):
-            connection = FakeConnection()
-            handle = broker.connect(connection=connection)
-            connections.append((handle, connection))
-            time.sleep(0.01)
-        time.sleep(0.15)
-        stop.set()
+        assert gate.registration_entered.wait(timeout=2), (
+            "connect never reached the capture-to-registration boundary"
+        )
+        crossed = fanout.emit(
+            RunStarted(purpose="chat"),
+            EventEnvelope(
+                ts=1.0,
+                run_id="r1",
+                session_id=None,
+                step_index=None,
+                attempt_id=None,
+                node_id=None,
+            ),
+        )
+        gate.release_registration.set()
+        assert connect_finished.wait(timeout=2), "connect did not finish"
         worker.join(timeout=2)
-        time.sleep(0.1)
+        assert not worker.is_alive()
+        assert not connect_errors
+        assert len(connected) == 1
+        connections.extend(connected)
+
+        after_registration = fanout.emit(
+            RunStarted(purpose="chat"),
+            EventEnvelope(
+                ts=2.0,
+                run_id="r2",
+                session_id=None,
+                step_index=None,
+                attempt_id=None,
+                node_id=None,
+            ),
+        )
+        assert [crossed.seq, after_registration.seq] == [1, 2]
+        assert broker.deliver_next(timeout=0)
+        assert broker.deliver_next(timeout=0)
+
+        for handle in connections:
+            ids = replay_ids(drain_connection(handle))
+            target_ids = [seq for seq in ids if seq in (1, 2)]
+            assert target_ids == [1, 2]
     finally:
+        gate.release_registration.set()
+        worker.join(timeout=2)
         broker.close(timeout=2.0)
-
-    for _handle, connection in connections:
-        ids = _ids_from_wire(connection.written)
-        assert ids, "a connection received no event at all"
-        # No duplicate, no hole: strictly increasing by exactly one from the
-        # first id this connection was given.
-        assert ids == sorted(set(ids)), f"duplicates: {ids[:20]}"
-        assert ids == list(range(ids[0], ids[0] + len(ids))), f"hole: {ids[:20]}"
-
-
-def _conn_of(broker, index: int) -> FakeConnection:
-    return broker.connections[index].connection
 
 
 def _ids_from_wire(wire: bytes) -> list[int]:
