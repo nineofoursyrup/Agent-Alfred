@@ -29,6 +29,7 @@ from agent_alfred.evals.deterministic._web_broker_test_helpers import (
 )
 from agent_alfred.events import (
     AttemptCommitted,
+    AttemptStarted,
     BestEffortFlushResult,
     BlockDelta,
     CapturingSink,
@@ -654,6 +655,84 @@ def test_dropped_transients_are_reported_once_the_connection_recovers() -> None:
     assert not any(
         b"deltas_dropped" in item.wire_bytes() for item in drain_connection(handle)
     )
+
+
+def test_drop_recovery_keeps_the_new_attempt_and_its_following_delta() -> None:
+    harness = Harness()
+    handle = harness.connect(budget=frames.FrameBudget(2, 8 * 1024 * 1024))
+    drain_connection(handle)
+
+    for text in ("queued-1", "queued-2", "missed-1", "missed-2"):
+        harness.emit(BlockDelta(attempt_id="old", text=text), run_id="r1")
+        harness.deliver()
+    drain_connection(handle)
+
+    harness.emit(
+        AttemptStarted(attempt_id="new", streamed=True),
+        run_id="r1",
+    )
+    harness.deliver()
+    recovery = drain_connection(handle)
+    assert len(recovery) == 2
+
+    state: dict[str, str | None] = {"attempt_id": "old", "text": "stale"}
+
+    def consume(item: PreparedFrames) -> None:
+        payload = _decode_patch(item.wire_bytes())
+        if payload.get("code") == "deltas_dropped":
+            state.update(attempt_id=None, text="")
+            return
+        event = payload.get("event")
+        event_payload = payload.get("payload", {}).get("payload", {})
+        if event == "attempt.started":
+            state.update(attempt_id=event_payload["attempt_id"], text="")
+        elif (
+            event == "block.delta"
+            and event_payload.get("attempt_id") == state["attempt_id"]
+        ):
+            state["text"] = str(state["text"]) + event_payload["text"]
+
+    for item in recovery:
+        consume(item)
+    assert state == {"attempt_id": "new", "text": ""}
+
+    harness.emit(BlockDelta(attempt_id="new", text="kept"), run_id="r1")
+    harness.deliver()
+    for item in drain_connection(handle):
+        consume(item)
+    assert state == {"attempt_id": "new", "text": "kept"}
+
+
+def test_replayable_recovery_that_cannot_fit_closes_and_remains_replayable() -> None:
+    harness = Harness(connection_budget=frames.FrameBudget(2, 1 << 20))
+    handle = harness.connect()
+    drain_connection(handle)
+
+    for text in ("queued-1", "queued-2", "missed"):
+        harness.emit(BlockDelta(attempt_id="old", text=text), run_id="r1")
+        harness.deliver()
+    # Keep one queued physical frame, leaving room for either the notice or
+    # the replayable candidate, but not the atomic pair.
+    handle.queue.take(timeout=0)
+
+    event = harness.emit(
+        AttemptStarted(attempt_id="new", streamed=True),
+        run_id="r1",
+    )
+    harness.deliver()
+
+    assert handle.queue.close_requested is True
+    remaining = drain_connection(handle)
+    wire = b"".join(
+        item.wire_bytes()
+        for item in remaining
+        if isinstance(item, PreparedFrames)
+    )
+    assert b"attempt.started" not in wire
+    assert b"deltas_dropped" not in wire
+
+    fresh = harness.connect(cursor=cursor_for(0))
+    assert replay_ids(drain_connection(fresh)) == [event.seq]
 
 
 def test_a_transient_missed_by_the_ingress_costs_liveness_only() -> None:

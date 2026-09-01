@@ -49,17 +49,137 @@ def test_a_full_queue_drops_transients_and_counts_them() -> None:
     assert conn.close_requested is False
 
 
-def test_the_dropped_count_is_reported_exactly_once_on_recovery() -> None:
-    conn = ConnectionQueue(budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20))
+def test_recovery_queues_the_exact_drop_notice_before_the_first_domain_frame() -> None:
+    conn = ConnectionQueue(budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20))
     conn.offer(_frames(1, replayable=False))
-    for seq in (2, 3, 4):
+    conn.offer(_frames(2, replayable=False))
+    for seq in (3, 4, 5):
         assert conn.offer(_frames(seq, replayable=False)).kind == "dropped"
-    # Drain one, then make room: the first accepted offer carries the count.
+    # Drain the full queue, then recover. The notice and candidate are one
+    # ordered admission: callers cannot observe the candidate first.
     conn.take(timeout=0)
-    outcome = conn.offer(_frames(5, replayable=False))
-    assert outcome.kind == "accepted"
-    assert outcome.recovered_dropped == 3
-    assert conn.offer(_frames(6, replayable=False)).recovered_dropped == 0
+    conn.take(timeout=0)
+    candidate = _frames(6, replayable=False)
+    assert conn.offer(candidate).kind == "accepted"
+    expected_notice = frames.deltas_dropped_notice(3)
+    assert conn.current_cost == (
+        expected_notice.ingress_cost() + candidate.ingress_cost()
+    )
+    assert conn.budget.fits(conn.current_cost)
+
+    notice = conn.take(timeout=0)
+    assert b'"code":"deltas_dropped"' in notice.wire_bytes()
+    assert b'"count":3' in notice.wire_bytes()
+    assert conn.take(timeout=0) is candidate
+
+
+def test_recovery_pair_waits_for_shared_startup_capacity_without_losing_count() -> None:
+    conn = ConnectionQueue(budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20))
+    startup = frames.FrameCost(frames=1, encoded_bytes=32)
+    assert conn.reserve_startup(startup)
+
+    queued = _frames(1)
+    assert conn.offer(queued).kind == "accepted"
+    assert conn.offer(_frames(2)).kind == "dropped"
+    assert conn.take(timeout=0) is queued
+
+    # Only one physical-frame slot is free while startup owns the other.
+    # Neither half of the recovery pair may appear on its own.
+    assert conn.offer(_frames(3)).kind == "dropped"
+    with pytest.raises(queue.Empty):
+        conn.take(timeout=0)
+    assert conn.current_cost == startup
+
+    conn.release_startup(startup)
+    candidate = _frames(4)
+    assert conn.offer(candidate).kind == "accepted"
+    notice = conn.take(timeout=0)
+    assert b'"count":2' in notice.wire_bytes()
+    assert conn.take(timeout=0) is candidate
+    assert conn.current_cost == frames.FrameCost(frames=0, encoded_bytes=0)
+
+
+def test_recovery_pair_also_waits_for_shared_startup_byte_capacity() -> None:
+    candidate = _frames(10)
+    notice_cost = frames.deltas_dropped_notice(2).ingress_cost()
+    budget = frames.FrameBudget(
+        frames=3,
+        encoded_bytes=(notice_cost + candidate.ingress_cost()).encoded_bytes,
+    )
+    conn = ConnectionQueue(budget=budget)
+    startup = frames.FrameCost(frames=0, encoded_bytes=1)
+    assert conn.reserve_startup(startup)
+
+    # Fill every remaining byte, then establish one missed transient.
+    filler = _frames(1, size=budget.encoded_bytes - 9)
+    assert conn.offer(filler).kind == "accepted"
+    assert conn.offer(_frames(2)).kind == "dropped"
+    assert conn.take(timeout=0) is filler
+
+    # Both frames fit, but the shared byte reserve keeps the pair one byte
+    # over budget. The candidate is not admitted alone.
+    assert conn.offer(_frames(3)).kind == "dropped"
+    with pytest.raises(queue.Empty):
+        conn.take(timeout=0)
+    assert conn.current_cost == startup
+
+    conn.release_startup(startup)
+    assert conn.offer(candidate).kind == "accepted"
+    notice = conn.take(timeout=0)
+    assert b'"count":2' in notice.wire_bytes()
+    assert conn.take(timeout=0) is candidate
+
+
+def test_a_control_notice_does_not_clear_an_unreported_domain_drop() -> None:
+    conn = ConnectionQueue(budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20))
+    conn.offer(_frames(1))
+    conn.offer(_frames(2))
+    assert conn.offer(_frames(3)).kind == "dropped"
+    conn.take(timeout=0)
+    conn.take(timeout=0)
+
+    ingress_notice = frames.deltas_dropped_notice(7)
+    assert (
+        conn.offer(ingress_notice, recover_dropped=False).kind == "accepted"
+    )
+    assert conn.take(timeout=0) is ingress_notice
+
+    candidate = _frames(4)
+    assert conn.offer(candidate).kind == "accepted"
+    local_notice = conn.take(timeout=0)
+    assert b'"count":1' in local_notice.wire_bytes()
+    assert conn.take(timeout=0) is candidate
+
+
+def test_concurrent_recovery_offers_cannot_enter_ahead_of_the_notice() -> None:
+    conn = ConnectionQueue(budget=frames.FrameBudget(frames=3, encoded_bytes=1 << 20))
+    for seq in (1, 2, 3):
+        assert conn.offer(_frames(seq)).kind == "accepted"
+    assert conn.offer(_frames(4)).kind == "dropped"
+    for _ in range(3):
+        conn.take(timeout=0)
+
+    candidates = (_frames(5), _frames(6))
+    barrier = threading.Barrier(3)
+    outcomes: list[str] = []
+
+    def offer(candidate) -> None:
+        barrier.wait()
+        outcomes.append(conn.offer(candidate).kind)
+
+    workers = [threading.Thread(target=offer, args=(item,)) for item in candidates]
+    for worker in workers:
+        worker.start()
+    barrier.wait()
+    for worker in workers:
+        worker.join(timeout=2)
+        assert not worker.is_alive()
+
+    queued = [conn.take(timeout=0) for _ in range(3)]
+    assert b'"code":"deltas_dropped"' in queued[0].wire_bytes()
+    assert b'"count":1' in queued[0].wire_bytes()
+    assert set(queued[1:]) == set(candidates)
+    assert outcomes == ["accepted", "accepted"]
 
 
 def test_a_replayable_frame_that_does_not_fit_closes_the_connection() -> None:

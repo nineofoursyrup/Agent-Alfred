@@ -1439,16 +1439,7 @@ class SSEBroker:
             # resurrection, with no way for the client to tell either from
             # a new one.
             return
-        outcome = handle.queue.offer(item.frames)
-        # A transient *this* connection had no room for is this connection's
-        # own fact: the queue counts it and it is reported once the queue
-        # recovers. The ingress-wide count above is a different fact -- it
-        # covers events nobody saw because the shared hand-off was full,
-        # including connections that did not exist yet.
-        if outcome.recovered_dropped:
-            handle.queue.offer(
-                frames.deltas_dropped_notice(outcome.recovered_dropped)
-            )
+        handle.queue.offer(item.frames)
 
     def _deliver_dropped_notice(
         self, handle: ConnectionHandle, dropped: int
@@ -1459,7 +1450,10 @@ class SSEBroker:
         # Only advanced when the notice was accepted, so a connection that
         # had no room is told again on the next delivery instead of losing
         # the count for good.
-        if handle.queue.offer(notice).kind == "accepted":
+        if (
+            handle.queue.offer(notice, recover_dropped=False).kind
+            == "accepted"
+        ):
             handle.ingress_seen = dropped
 
     def _note_run_event(self, event: SequencedEvent) -> None:

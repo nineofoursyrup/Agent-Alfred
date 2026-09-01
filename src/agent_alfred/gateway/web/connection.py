@@ -124,10 +124,6 @@ class StopWriter:
 @dataclass(frozen=True)
 class OfferOutcome:
     kind: Literal["accepted", "dropped", "overflowed"]
-    # Transients this connection missed since the last successful offer.
-    # Reported once, on recovery: the notice belongs after the frames that
-    # were dropped and before the ones that were not.
-    recovered_dropped: int = 0
 
 
 class ConnectionQueue:
@@ -171,7 +167,12 @@ class ConnectionQueue:
         """The encoded bytes this queue is holding right now."""
         return self.current_cost.encoded_bytes
 
-    def offer(self, item: frames.PreparedFrames) -> OfferOutcome:
+    def offer(
+        self,
+        item: frames.PreparedFrames,
+        *,
+        recover_dropped: bool = True,
+    ) -> OfferOutcome:
         """Queue one logical event. O(1), non-blocking, no IO.
 
         A transient event that does not fit is dropped and counted -- it is
@@ -182,24 +183,42 @@ class ConnectionQueue:
         exactly, and a lost state patch is corrected by the snapshot a
         reconnect asks for. Dropping either would leave the client with a
         hole it cannot see.
+
+        ``recover_dropped=False`` is for connection-local control frames whose
+        own retry/accounting is owned by their caller. They neither consume a
+        pending domain-drop count nor become part of it when refused.
         """
         cost = item.ingress_cost()
         with self._lock:
             if self._closing:
                 return OfferOutcome(kind="dropped")
-            projected = self._usage + cost
+            notice = (
+                frames.deltas_dropped_notice(self._dropped)
+                if recover_dropped and self._dropped
+                else None
+            )
+            notice_cost = (
+                notice.ingress_cost()
+                if notice is not None
+                else frames.FrameCost(frames=0, encoded_bytes=0)
+            )
+            projected = self._usage + notice_cost + cost
             if self.budget.fits(projected):
+                if notice is not None:
+                    self._items.put(notice)
                 self._items.put(item)
                 self._usage = projected
-                dropped, self._dropped = self._dropped, 0
-                return OfferOutcome(kind="accepted", recovered_dropped=dropped)
+                if notice is not None:
+                    self._dropped = 0
+                return OfferOutcome(kind="accepted")
             if item.replayable or item.must_deliver:
                 self._closing = True
                 self._items.put(
                     CloseConnection(retry_ms=frames.BACKOFF_RETRY_MS)
                 )
                 return OfferOutcome(kind="overflowed")
-            self._dropped += 1
+            if recover_dropped:
+                self._dropped += 1
             return OfferOutcome(kind="dropped")
 
     def request_close(self, *, retry_ms: int | None = None) -> None:
