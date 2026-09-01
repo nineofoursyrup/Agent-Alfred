@@ -18,8 +18,10 @@ from agent_alfred.gateway.web.connection import (
     ConnectionWriter,
     FakeConnection,
     SocketConnection,
+    StartupReplay,
     StopWriter,
 )
+from agent_alfred.gateway.web.replay import ReplayBatch, ReplayProgress
 
 
 def _frames(seq: int = 1, *, size: int = 8, replayable: bool = False):
@@ -75,8 +77,10 @@ def test_recovery_queues_the_exact_drop_notice_before_the_first_domain_frame() -
 
 def test_recovery_pair_waits_for_shared_startup_capacity_without_losing_count() -> None:
     conn = ConnectionQueue(budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20))
-    startup = frames.FrameCost(frames=1, encoded_bytes=32)
-    assert conn.reserve_startup(startup)
+    startup_entry = _frames(99, replayable=True)
+    startup = startup_entry.ingress_cost()
+    batch = ReplayBatch(kind="batch", entries=(startup_entry,), cost=startup)
+    assert conn.build_and_reserve_startup(lambda _remaining: batch) is batch
 
     queued = _frames(1)
     assert conn.offer(queued).kind == "accepted"
@@ -102,16 +106,26 @@ def test_recovery_pair_waits_for_shared_startup_capacity_without_losing_count() 
 def test_recovery_pair_also_waits_for_shared_startup_byte_capacity() -> None:
     candidate = _frames(10)
     notice_cost = frames.deltas_dropped_notice(2).ingress_cost()
+    startup_entry = _frames(99, replayable=True)
+    startup = startup_entry.ingress_cost()
     budget = frames.FrameBudget(
-        frames=3,
+        frames=4,
         encoded_bytes=(notice_cost + candidate.ingress_cost()).encoded_bytes,
     )
     conn = ConnectionQueue(budget=budget)
-    startup = frames.FrameCost(frames=0, encoded_bytes=1)
-    assert conn.reserve_startup(startup)
+    batch = ReplayBatch(kind="batch", entries=(startup_entry,), cost=startup)
+    assert conn.build_and_reserve_startup(lambda _remaining: batch) is batch
 
     # Fill every remaining byte, then establish one missed transient.
-    filler = _frames(1, size=budget.encoded_bytes - 9)
+    empty_filler_cost = _frames(1, size=0).ingress_cost().encoded_bytes
+    filler = _frames(
+        1,
+        size=(
+            budget.encoded_bytes
+            - startup.encoded_bytes
+            - empty_filler_cost
+        ),
+    )
     assert conn.offer(filler).kind == "accepted"
     assert conn.offer(_frames(2)).kind == "dropped"
     assert conn.take(timeout=0) is filler
@@ -128,6 +142,7 @@ def test_recovery_pair_also_waits_for_shared_startup_byte_capacity() -> None:
     notice = conn.take(timeout=0)
     assert b'"count":2' in notice.wire_bytes()
     assert conn.take(timeout=0) is candidate
+    assert conn.current_cost == frames.FrameCost(frames=0, encoded_bytes=0)
 
 
 def test_a_control_notice_does_not_clear_an_unreported_domain_drop() -> None:
@@ -205,6 +220,29 @@ def test_the_byte_budget_binds_before_the_frame_count() -> None:
 def test_capacity_defaults_match_the_decided_table() -> None:
     conn = ConnectionQueue()
     assert conn.budget == frames.FrameBudget(512, 8 * 1024 * 1024)
+
+
+def test_startup_reservation_has_only_the_atomic_builder_entrypoint() -> None:
+    assert "reserve_startup" not in vars(ConnectionQueue)
+
+
+def test_startup_replay_fetch_receives_only_progress_and_frozen_boundary() -> None:
+    source = ConnectionQueue()
+    calls = []
+
+    def fetch(progress, through_seq):
+        calls.append((progress, through_seq))
+        return ReplayBatch(kind="complete")
+
+    replay = StartupReplay(
+        source=source,
+        cursor_seq=3,
+        through_seq=7,
+        fetch=fetch,
+    )
+
+    assert replay.take() == ReplayBatch(kind="complete")
+    assert calls == [(ReplayProgress(completed_seq=3), 7)]
 
 
 # --- the named cost of the queue's accounting --------------------------------

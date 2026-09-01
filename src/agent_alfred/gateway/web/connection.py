@@ -255,18 +255,6 @@ class ConnectionQueue:
                 self._usage = self._usage - item.ingress_cost()
         return item
 
-    def reserve_startup(self, cost: frames.FrameCost) -> bool:
-        """Reserve one writer-owned replay batch against this connection."""
-        with self._lock:
-            if self._closing:
-                return False
-            projected = self._usage + cost
-            if not self.budget.fits(projected):
-                return False
-            self._usage = projected
-            self._startup_usage = self._startup_usage + cost
-            return True
-
     def activate_startup(self, guard: frames.FrameCost) -> bool:
         """Protect capacity for one physical frame until frozen replay ends."""
         with self._lock:
@@ -366,10 +354,7 @@ class StartupReplay:
         source: ConnectionQueue,
         cursor_seq: int,
         through_seq: int | None,
-        fetch: Callable[
-            [ReplayProgress, int | None, frames.FrameBudget],
-            ReplayBatch,
-        ],
+        fetch: Callable[[ReplayProgress, int | None], ReplayBatch],
     ):
         self._source = source
         self._progress = ReplayProgress(completed_seq=cursor_seq)
@@ -380,7 +365,6 @@ class StartupReplay:
         return self._fetch(
             self._progress,
             self._through_seq,
-            self._source.budget,
         )
 
     def release(self, batch: ReplayBatch) -> None:

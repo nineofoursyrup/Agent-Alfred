@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import gc
+import inspect
 import json
 import queue
 import re
@@ -82,6 +83,15 @@ def test_transport_notice_code_is_the_decided_two_value_closed_set() -> None:
         "replay_gap",
         "deltas_dropped",
     }
+
+
+def test_startup_replay_fetch_has_no_semantically_dead_budget_parameter() -> None:
+    assert tuple(inspect.signature(SSEBroker._fetch_startup_replay).parameters) == (
+        "self",
+        "source",
+        "progress",
+        "through_seq",
+    )
 
 
 def test_a_preflight_proof_is_the_only_session_fact_used_to_open_the_stream() -> None:
@@ -1054,8 +1064,8 @@ def test_the_no_thread_writer_releases_each_observed_startup_batch() -> None:
                     item.ingress_cost().encoded_bytes for item in entries
                 ),
             )
-            assert source.reserve_startup(cost)
-            return ReplayBatch(kind="batch", entries=entries, cost=cost)
+            batch = ReplayBatch(kind="batch", entries=entries, cost=cost)
+            return source.build_and_reserve_startup(lambda _remaining: batch)
 
         def release(self, batch: ReplayBatch) -> None:
             source.release_startup(batch.cost)

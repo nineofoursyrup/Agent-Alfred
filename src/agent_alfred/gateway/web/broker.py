@@ -1020,12 +1020,11 @@ class SSEBroker:
                     source=handle.queue,
                     cursor_seq=verdict.requested_seq,
                     through_seq=replay_through,
-                    fetch=lambda progress, through_seq, budget: (
+                    fetch=lambda progress, through_seq: (
                         self._fetch_startup_replay(
                             handle.queue,
                             progress,
                             through_seq,
-                            budget,
                         )
                     ),
                 )
@@ -1048,11 +1047,9 @@ class SSEBroker:
         source: ConnectionQueue,
         progress: ReplayProgress,
         through_seq: int | None,
-        budget: frames.FrameBudget,
     ) -> ReplayBatch:
         """Fetch and account one immutable batch without IO or waiting."""
         with self._lock:
-            del budget
             return source.build_and_reserve_startup(
                 lambda remaining: self._ring.bounded_entries_after(
                     progress, through_seq, remaining
