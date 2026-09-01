@@ -33,6 +33,7 @@ from agent_alfred.runtime.host import RuntimeHost, SubmitRequest
 from agent_alfred.runtime.runs import (
     DEFAULT_MAINBAR_LIMIT,
     MainBarHistoricMessage,
+    MainBarRunPair,
     MalformedCursor,
     UnknownRunFilter,
     classify_purpose,
@@ -501,6 +502,27 @@ def test_a_deep_link_to_a_missing_run_is_none() -> None:
 # --- the MainBar pairs ------------------------------------------------------
 
 
+def test_mainbar_page_items_is_the_only_public_item_read_surface() -> None:
+    host = _historic_host({"s-mainbar-items": ["旧消息"]}, script=["新回答"])
+    host.start()
+    try:
+        recorded = _run(host, "新问题", "s-mainbar-items")
+        page = host.mainbar_pairs(session_id="s-mainbar-items")
+
+        removed_projection = "pairs"
+        removed_alias = "MainBar" + "Pair"
+        assert removed_projection not in dir(page)
+        assert removed_alias not in vars(runs_store)
+        assert tuple(type(item) for item in page.items) == (
+            MainBarRunPair,
+            MainBarHistoricMessage,
+        )
+        assert page.items[0].run_id == recorded.run_id
+        assert message_plain_text(page.items[1].message) == "旧消息"
+    finally:
+        host.close()
+
+
 def test_mainbar_returns_one_pair_per_recorded_chat_run() -> None:
     host = _fresh_host(script=["pong", "pong"])
     host.start()
@@ -509,14 +531,15 @@ def test_mainbar_returns_one_pair_per_recorded_chat_run() -> None:
         first = _run(host, "first question", session_id)
         second = _run(host, "second question", session_id)
         page = host.mainbar_pairs(session_id=session_id)
-        assert [pair.run_id for pair in page.pairs] == [
+        assert all(isinstance(item, MainBarRunPair) for item in page.items)
+        assert [item.run_id for item in page.items] == [
             second.run_id,
             first.run_id,
         ]
-        for pair in page.pairs:
-            assert pair.user_message is not None
-            assert pair.assistant_message is not None
-        newest = page.pairs[0]
+        for item in page.items:
+            assert item.user_message is not None
+            assert item.assistant_message is not None
+        newest = page.items[0]
         assert message_plain_text(newest.user_message) == "second question"
         assert message_plain_text(newest.assistant_message) == "pong"
     finally:
@@ -532,16 +555,20 @@ def test_the_mainbar_default_is_the_most_recent_25() -> None:
         for index in range(30):
             _run(host, f"q{index:02d}", session_id)
         page = host.mainbar_pairs(session_id=session_id)
-        assert len(page.pairs) == 25
+        assert len(page.items) == 25
+        assert all(isinstance(item, MainBarRunPair) for item in page.items)
         assert page.next_cursor is not None
         # The newest first, and the cursor continues where it stopped.
         continuing = host.mainbar_pairs(
             session_id=session_id, cursor=page.next_cursor
         )
-        assert len(continuing.pairs) == 5
+        assert len(continuing.items) == 5
+        assert all(
+            isinstance(item, MainBarRunPair) for item in continuing.items
+        )
         assert continuing.next_cursor is None
-        overlap = {p.run_id for p in page.pairs} & {
-            p.run_id for p in continuing.pairs
+        overlap = {item.run_id for item in page.items} & {
+            item.run_id for item in continuing.items
         }
         assert overlap == set()
     finally:
@@ -566,9 +593,11 @@ def test_the_mainbar_only_shows_the_requested_session() -> None:
         run_a2 = _run(host, "a-two", session_a).run_id
 
         page_a = host.mainbar_pairs(session_id=session_a)
-        assert [pair.run_id for pair in page_a.pairs] == [run_a2, run_a1]
+        assert all(isinstance(item, MainBarRunPair) for item in page_a.items)
+        assert [item.run_id for item in page_a.items] == [run_a2, run_a1]
         page_b = host.mainbar_pairs(session_id=session_b)
-        assert [pair.run_id for pair in page_b.pairs] == [run_b]
+        assert all(isinstance(item, MainBarRunPair) for item in page_b.items)
+        assert [item.run_id for item in page_b.items] == [run_b]
 
         # The cursor is bound to its Session: no cross-Session paging.
         first_page = host.mainbar_pairs(session_id=session_a, limit=1)
@@ -580,7 +609,8 @@ def test_the_mainbar_only_shows_the_requested_session() -> None:
         rest = host.mainbar_pairs(
             session_id=session_a, cursor=first_page.next_cursor
         )
-        assert [pair.run_id for pair in rest.pairs] == [run_a1]
+        assert all(isinstance(item, MainBarRunPair) for item in rest.items)
+        assert [item.run_id for item in rest.items] == [run_a1]
     finally:
         host.close()
 
@@ -610,8 +640,9 @@ def test_a_run_that_was_never_recorded_has_no_pair() -> None:
             session_id=session_id,
         )
         page = host.mainbar_pairs(session_id=session_id)
-        assert page.pairs == ()
-        assert len(page.items) == 1
+        assert tuple(type(item) for item in page.items) == (
+            MainBarHistoricMessage,
+        )
         assert isinstance(page.items[0], MainBarHistoricMessage)
         assert page.items[0].run_id is None
     finally:
@@ -1138,7 +1169,7 @@ def test_a_system_run_never_reaches_the_mainbar() -> None:
             host, "r-probe", purpose="inference_probe", phase="finished",
             outcome="completed", session_id=session_id,
         )
-        assert host.mainbar_pairs(session_id=session_id).pairs == ()
+        assert host.mainbar_pairs(session_id=session_id).items == ()
     finally:
         host.close()
 

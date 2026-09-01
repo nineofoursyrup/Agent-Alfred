@@ -145,10 +145,6 @@ class MainBarRunPair:
     assistant_message: Message | None
 
 
-# Compatibility name for callers that still describe the Run arm as a pair.
-MainBarPair = MainBarRunPair
-
-
 @dataclass(frozen=True)
 class MainBarHistoricMessage:
     """One pre-Run message, kept distinct from a recorded Run pair."""
@@ -171,13 +167,6 @@ class MainBarPage:
     items: tuple[MainBarItem, ...]
     next_cursor: str | None
     runs_pending: bool = False
-
-    @property
-    def pairs(self) -> tuple[MainBarRunPair, ...]:
-        """Read-only compatibility projection of the recorded Run arm."""
-        return tuple(
-            item for item in self.items if isinstance(item, MainBarRunPair)
-        )
 
 
 @dataclass(frozen=True)
