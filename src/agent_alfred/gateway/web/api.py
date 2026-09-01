@@ -22,6 +22,7 @@ from typing import Any, Protocol
 from urllib.parse import quote
 
 from agent_alfred.runtime import runs
+from agent_alfred.runtime.cursor import MalformedCursor
 from agent_alfred.runtime.recording import RecordingUnavailable
 from agent_alfred.runtime.sessions import (
     SessionInboxPage,
@@ -61,13 +62,15 @@ DEFAULT_PAGE_SIZE = min(runs.DEFAULT_RUN_PAGE_SIZE, runs.DEFAULT_MAINBAR_LIMIT)
 MAX_PAGE_SIZE = 100
 
 
-def _map_recording_unavailable(method):
-    """Give every HTTP database read the same secret-free failure shape."""
+def _map_read_errors(method):
+    """Give every HTTP database read the same secret-free failure shapes."""
 
     @wraps(method)
     def guarded(*args, **kwargs):
         try:
             return method(*args, **kwargs)
+        except MalformedCursor:
+            return 400, {"code": "malformed_cursor"}
         except RecordingUnavailable:
             return 503, {"code": "recording_unavailable"}
 
@@ -422,14 +425,14 @@ class DashboardApi:
 
     # -- reads -------------------------------------------------------------
 
-    @_map_recording_unavailable
+    @_map_read_errors
     def session_inbox(self, params: dict[str, str]) -> tuple[int, Any]:
         limit = _page_size(params, "limit")
         return 200, _inbox_payload(
             self._facade.list_sessions(limit=limit, cursor=params.get("cursor"))
         )
 
-    @_map_recording_unavailable
+    @_map_read_errors
     def session_messages(
         self, session_id: str, params: dict[str, str]
     ) -> tuple[int, Any]:
@@ -442,7 +445,7 @@ class DashboardApi:
             return 404, {"code": "unknown_session"}
         return 200, _messages_payload(page)
 
-    @_map_recording_unavailable
+    @_map_read_errors
     def runs_page(self, params: dict[str, str]) -> tuple[int, Any]:
         filter_name = params.get("filter", "all")
         if filter_name not in RUN_FILTERS:
@@ -454,7 +457,7 @@ class DashboardApi:
             )
         )
 
-    @_map_recording_unavailable
+    @_map_read_errors
     def locate_run(self, run_id: str, params: dict[str, str]) -> tuple[int, Any]:
         limit = _page_size(params, "limit")
         page = self._facade.locate_run(run_id, limit=limit)
@@ -462,7 +465,7 @@ class DashboardApi:
             return 404, {"code": "unknown_run"}
         return 200, _runs_payload(page)
 
-    @_map_recording_unavailable
+    @_map_read_errors
     def session_runs(self, params: dict[str, str]) -> tuple[int, Any]:
         # Same rule as the other Session-scoped reads: the Session is named
         # by the query parameter, verbatim, and only its absence is a bad
@@ -479,7 +482,7 @@ class DashboardApi:
             return 404, {"code": "unknown_session"}
         return 200, _session_runs_payload(page)
 
-    @_map_recording_unavailable
+    @_map_read_errors
     def mainbar(self, params: dict[str, str]) -> tuple[int, Any]:
         # The MainBar answers one Session, named by the query parameter like
         # the messages read: absent and empty are different facts, and only

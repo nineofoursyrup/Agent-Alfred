@@ -33,6 +33,7 @@ from agent_alfred.gateway.web.guard import CSRF_HEADER, RequestGuard
 from agent_alfred.gateway.web.handler import DashboardHandler, HandlerContext
 from agent_alfred.gateway.web.lifecycle import DEFAULT_HOST, DashboardService
 from agent_alfred.gateway.web.replay import ReplayRing
+from agent_alfred.runtime.cursor import MalformedCursor
 from agent_alfred.runtime.snapshot import (
     ActiveRunSummary,
     CoordinatorState,
@@ -347,6 +348,56 @@ def _get(port: int, path: str, extra: str = "", host: str | None = None) -> byte
         f"Host: {host_header}\r\n"
         f"Connection: close\r\n{extra}\r\n"
     ).encode()
+
+
+@pytest.mark.parametrize(
+    ("facade_method", "path"),
+    [
+        ("list_sessions", "/api/sessions?cursor=bad"),
+        (
+            "open_session",
+            "/api/sessions/messages?session_id=s1&cursor=bad",
+        ),
+        ("list_runs", "/api/runs?cursor=bad"),
+        (
+            "list_session_chat_runs",
+            "/api/sessions/runs?session_id=s1&cursor=bad",
+        ),
+        ("mainbar_pairs", "/api/mainbar?session_id=s1&cursor=bad"),
+    ],
+)
+def test_a_malformed_page_cursor_is_a_secret_free_bad_request_on_the_wire(
+    server, monkeypatch, facade_method: str, path: str
+) -> None:
+    def reject_cursor(*_args, **_kwargs):
+        raise MalformedCursor("decoder detail must not cross the wire")
+
+    monkeypatch.setattr(server.facade, facade_method, reject_cursor)
+
+    head, body = _request(server.port, _get(server.port, path))
+
+    assert head.startswith(b"HTTP/1.1 400")
+    assert json.loads(body) == {"code": "malformed_cursor"}
+    assert b"Traceback" not in body
+    assert b"decoder detail" not in body
+    _assert_no_cross_origin_permission(head)
+
+
+def test_an_unknown_read_failure_remains_an_internal_error_on_the_wire(
+    server, monkeypatch
+) -> None:
+    def fail_read(*_args, **_kwargs):
+        raise RuntimeError("unexpected read failure")
+
+    monkeypatch.setattr(server.facade, "list_sessions", fail_read)
+
+    head, body = _request(server.port, _get(server.port, "/api/sessions"))
+
+    assert head.startswith(b"HTTP/1.1 500")
+    assert json.loads(body) == {"code": "internal_error"}
+    assert b"unexpected read failure" not in body
+    assert b"Traceback" not in body
+    _assert_no_cross_origin_permission(head)
 
 
 # --- the stream -------------------------------------------------------------

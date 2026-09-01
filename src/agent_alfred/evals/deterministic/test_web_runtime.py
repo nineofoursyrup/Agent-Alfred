@@ -54,6 +54,7 @@ from agent_alfred.gateway.web.state import (
 )
 from agent_alfred.messages import message_plain_text
 from agent_alfred.redact import Redactor
+from agent_alfred.runtime.cursor import encode_cursor
 from agent_alfred.runtime.recording import RecordingUnavailable
 from agent_alfred.runtime.snapshot import RuntimeSnapshot
 
@@ -1688,5 +1689,59 @@ def test_the_read_contracts_hold_on_the_real_host() -> None:
         missing = (400, {"code": "missing_session_id"})
         assert api.mainbar({}) == missing
         assert api.session_runs({}) == missing
+    finally:
+        host.close()
+
+
+@pytest.mark.parametrize(
+    "read_name",
+    [
+        "session_inbox",
+        "session_messages",
+        "runs_page",
+        "session_runs",
+        "mainbar",
+    ],
+)
+def test_malformed_cursors_reach_one_api_bad_request_boundary_on_the_real_host(
+    read_name: str,
+) -> None:
+    host, _conn = build_runtime_host()
+    host.start()
+    try:
+        api = DashboardApi(facade=host)
+        session_id = host.create_session()
+        params = {"cursor": "not-base64!!"}
+        if read_name == "session_messages":
+            response = api.session_messages(session_id, params)
+        else:
+            if read_name in {"session_runs", "mainbar"}:
+                params["session_id"] = session_id
+            response = getattr(api, read_name)(params)
+
+        assert response == (400, {"code": "malformed_cursor"})
+    finally:
+        host.close()
+
+
+def test_a_v1_mainbar_cursor_is_a_bad_request_on_the_real_host() -> None:
+    host, _conn = build_runtime_host()
+    host.start()
+    try:
+        api = DashboardApi(facade=host)
+        session_id = host.create_session()
+        old_cursor = encode_cursor(
+            {
+                "v": 1,
+                "k": "mainbar",
+                "s": session_id,
+                "ar": 0,
+                "r": "old-run-position",
+            }
+        )
+
+        assert api.mainbar(
+            {"session_id": session_id, "cursor": old_cursor}
+        ) == (400, {"code": "malformed_cursor"})
     finally:
         host.close()
