@@ -9,6 +9,9 @@ asserts the layer that is supposed to catch it still does.
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 from dataclasses import dataclass
 
 import pytest
@@ -19,6 +22,7 @@ from agent_alfred.gateway.web.guard import (
     JSON_CONTENT_TYPE,
     MAX_BODY_BYTES,
     AuthorizedRequest,
+    Rejection,
     RequestGuard,
     normalize_host,
     normalize_origin,
@@ -303,6 +307,91 @@ def test_a_write_over_the_body_limit_is_refused_before_reading() -> None:
 
 def test_the_body_limit_is_the_limit_not_a_suggestion() -> None:
     assert _write(**_valid_write(**{"content-length": str(MAX_BODY_BYTES)})) is None
+
+
+@pytest.mark.parametrize(
+    "int_max_digits",
+    [None, "0", "10000"],
+    ids=["default", "unlimited", "ten-thousand"],
+)
+def test_an_arbitrarily_long_ascii_byte_count_is_stably_refused(
+    int_max_digits: str | None,
+) -> None:
+    """The protocol answer must not depend on Python's integer limit."""
+    script = """
+from agent_alfred.gateway.web.guard import CSRF_HEADER, RequestGuard
+
+result = RequestGuard(port=7717, csrf_token="token").authorize(
+    method="POST",
+    headers={
+        "host": "localhost",
+        CSRF_HEADER: "token",
+        "content-type": "application/json",
+        "content-length": "9" * 5000,
+    },
+)
+print(result.status, result.code)
+"""
+    env = os.environ.copy()
+    if int_max_digits is None:
+        env.pop("PYTHONINTMAXSTRDIGITS", None)
+    else:
+        env["PYTHONINTMAXSTRDIGITS"] = int_max_digits
+
+    completed = subprocess.run(
+        [sys.executable, "-c", script],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "413 body_too_large"
+    assert completed.stderr == ""
+
+
+@pytest.mark.parametrize("length", ["²", "١"])
+def test_a_non_ascii_digit_is_not_an_http_byte_count(length: str) -> None:
+    rejection = _write(**_valid_write(**{"content-length": length}))
+    assert rejection is not None
+    assert rejection.status == 400
+    assert rejection.code == "bad_content_length"
+
+
+@pytest.mark.parametrize(
+    ("length", "expected"),
+    [
+        ("0", 0),
+        (str(MAX_BODY_BYTES - 1), MAX_BODY_BYTES - 1),
+        (str(MAX_BODY_BYTES), MAX_BODY_BYTES),
+        (str(MAX_BODY_BYTES + 1), "body_too_large"),
+        ("0" * 5000, 0),
+        ("0" * 5000 + str(MAX_BODY_BYTES), MAX_BODY_BYTES),
+        ("0" * 5000 + str(MAX_BODY_BYTES + 1), "body_too_large"),
+    ],
+    ids=[
+        "zero",
+        "max-minus-one",
+        "max",
+        "max-plus-one",
+        "zero-padded-zero",
+        "zero-padded-max",
+        "zero-padded-max-plus-one",
+    ],
+)
+def test_content_length_comparison_preserves_boundaries_and_leading_zeroes(
+    length: str, expected: int | str
+) -> None:
+    result = _guard().authorize(
+        method="POST",
+        headers=_headers(**_valid_write(**{"content-length": length})),
+    )
+    if isinstance(expected, int):
+        assert result == AuthorizedRequest(body_length=expected)
+    else:
+        assert isinstance(result, Rejection)
+        assert result.code == expected
 
 
 @pytest.mark.parametrize("length", ["-1", "lots", "1.5", ""])

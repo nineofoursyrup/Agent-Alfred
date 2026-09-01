@@ -1005,6 +1005,78 @@ def test_an_oversized_write_is_refused_before_its_body_is_read(server) -> None:
     assert b"body_too_large" in body
 
 
+@pytest.mark.parametrize(
+    ("length", "status", "payload"),
+    [
+        (
+            "9" * 5000,
+            413,
+            {
+                "code": "body_too_large",
+                "detail": "the body may be at most 1048576 bytes",
+            },
+        ),
+        (
+            "\N{SUPERSCRIPT TWO}",
+            400,
+            {
+                "code": "bad_content_length",
+                "detail": "Content-Length is not a byte count",
+            },
+        ),
+    ],
+    ids=["long-ascii", "non-ascii"],
+)
+def test_invalid_content_lengths_are_closed_json_answers_on_the_wire(
+    server, length: str, status: int, payload: dict[str, Any]
+) -> None:
+    raw = (
+        f"POST /api/runs HTTP/1.1\r\n"
+        f"Host: localhost:{server.port}\r\n"
+        f"Content-Type: application/json\r\n"
+        f"{CSRF_HEADER}: {server.guard.csrf_token}\r\n"
+        f"Content-Length: {length}\r\n\r\n"
+    ).encode("latin-1")
+
+    head, body = _request(server.port, raw)
+
+    assert head.startswith(f"HTTP/1.1 {status}".encode())
+    assert json.loads(body) == payload
+    assert b"Traceback" not in body
+    assert b"Exceeds the limit" not in body
+    _assert_no_cross_origin_permission(head)
+
+
+@pytest.mark.parametrize(
+    ("length", "status", "code"),
+    [
+        ("0" * 5000 + "1048576", 201, None),
+        ("0" * 5000 + "1048577", 413, "body_too_large"),
+    ],
+    ids=["zero-padded-max", "zero-padded-max-plus-one"],
+)
+def test_the_http_parser_preserves_leading_zero_body_boundaries(
+    server, length: str, status: int, code: str | None
+) -> None:
+    raw = (
+        f"POST /api/sessions HTTP/1.1\r\n"
+        f"Host: localhost:{server.port}\r\n"
+        f"Content-Type: application/json\r\n"
+        f"{CSRF_HEADER}: {server.guard.csrf_token}\r\n"
+        f"Content-Length: {length}\r\n\r\n"
+    ).encode()
+
+    head, body = _request(server.port, raw)
+
+    assert head.startswith(f"HTTP/1.1 {status}".encode())
+    payload = json.loads(body)
+    if code is None:
+        assert payload == {"session_id": "session-from-server"}
+    else:
+        assert payload["code"] == code
+    _assert_no_cross_origin_permission(head)
+
+
 def test_a_write_without_content_length_is_411_on_the_wire(server) -> None:
     raw = (
         f"POST /api/runs HTTP/1.1\r\n"

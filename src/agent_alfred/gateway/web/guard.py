@@ -211,19 +211,28 @@ class RequestGuard:
             return Rejection(
                 411, "length_required", "a Content-Length is required to write"
             )
-        text = raw.strip()
-        if not text.isdigit():
-            return Rejection(
-                400, "bad_content_length", "Content-Length is not a byte count"
-            )
-        length = int(text)
-        if length > MAX_BODY_BYTES:
-            return Rejection(
-                413,
-                "body_too_large",
-                f"the body may be at most {MAX_BODY_BYTES} bytes",
-            )
-        return AuthorizedRequest(body_length=length)
+        return _authorize_body_length(raw)
+
+
+def _authorize_body_length(raw: str) -> AuthorizedRequest | Rejection:
+    """Parse one HTTP decimal without constructing an unbounded integer."""
+    text = raw.strip()
+    if not text.isascii() or not text.isdecimal():
+        return Rejection(
+            400, "bad_content_length", "Content-Length is not a byte count"
+        )
+
+    significant = text.lstrip("0") or "0"
+    maximum = str(MAX_BODY_BYTES)
+    if len(significant) > len(maximum) or (
+        len(significant) == len(maximum) and significant > maximum
+    ):
+        return Rejection(
+            413,
+            "body_too_large",
+            f"the body may be at most {MAX_BODY_BYTES} bytes",
+        )
+    return AuthorizedRequest(body_length=int(significant))
 
 
 def _header(headers: Mapping[str, str], name: str) -> str | None:
