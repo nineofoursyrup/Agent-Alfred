@@ -329,6 +329,77 @@ def test_handoff_failure_finalizes_interrupted() -> None:
         host.close()
 
 
+def test_handoff_and_finalize_failure_publish_consistent_terminal_state() -> None:
+    raw = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(raw)
+    fail_finalize = [True]
+    wrapped = _FailOn(
+        raw,
+        when=lambda sql: fail_finalize[0]
+        and sql.lstrip().upper().startswith("UPDATE RUNS")
+        and "FINISHED_AT" in sql.upper(),
+    )
+
+    def boom(_item):
+        raise RuntimeError("queue full")
+
+    host, conn, _ = _host(["must not execute"], conn=wrapped, publish_work=boom)
+    host.start()
+    try:
+        submitted = host.submit(SubmitRequest(message="ping"))
+        assert submitted.kind == "admission_failed"
+        assert submitted.run_id is not None
+
+        row = conn.execute(
+            "SELECT run_id, session_id, phase, outcome, started_at FROM runs"
+        ).fetchone()
+        run_id, session_id, phase, outcome, started_at = row
+        assert run_id == submitted.run_id
+        assert session_id is not None
+        assert (phase, outcome, started_at) == ("accepted", None, None)
+        assert conn.execute("SELECT COUNT(*) FROM agent_log").fetchone() == (0,)
+
+        snap = host.snapshot()
+        assert snap.coordinator_state == "recording_failed"
+        assert snap.active_run is not None
+        assert snap.unrecorded_terminal_projection is not None
+        summary = snap.active_run
+        projection = snap.unrecorded_terminal_projection
+        assert (
+            summary.phase,
+            summary.outcome,
+            summary.recording_state,
+        ) == ("finished", "interrupted", "failed")
+        assert (
+            projection.outcome,
+            projection.recording_state,
+            projection.reply_text,
+            projection.error,
+        ) == ("interrupted", "failed", None, "handoff_failed")
+        assert summary.run_id == projection.run_id == run_id
+        assert summary.session_id == projection.session_id == session_id
+
+        refused = host.submit(SubmitRequest(message="still closed"))
+        assert refused.kind == "recording_unavailable"
+        assert refused.snapshot == snap
+    finally:
+        host.close()
+
+    fail_finalize[0] = False
+    recovered, _conn, _ = _host(["pong"], conn=raw)
+    recovered.start()
+    try:
+        stored = raw.execute(
+            "SELECT phase, outcome, started_at FROM runs WHERE run_id = ?",
+            (submitted.run_id,),
+        ).fetchone()
+        assert stored == ("finished", "interrupted", None)
+        assert recovered.snapshot().coordinator_state == "idle"
+    finally:
+        recovered.close()
+        raw.close()
+
+
 def test_startup_recovery_marks_leftover_runs_interrupted() -> None:
     conn = sqlite3.connect(":memory:", check_same_thread=False)
     schema.migrate(conn)

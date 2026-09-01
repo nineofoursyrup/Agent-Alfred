@@ -73,7 +73,7 @@ class AdmissionCoordinator(Protocol):
     def admission_close_idle(self) -> None: ...
 
     def admission_fail_recording(
-        self, fallback: ActiveRunSummary, projection: UnrecordedTerminalProjection
+        self, summary: ActiveRunSummary, projection: UnrecordedTerminalProjection
     ) -> None: ...
 
     def publish_work_item(self, item: WorkItem) -> None: ...
@@ -256,11 +256,12 @@ class RunAdmission:
             run_id=item.run_id,
             purpose=item.request.purpose,
             gateway=item.request.gateway,
-            phase="accepted",
+            phase="finished",
             session_id=item.session_id,
             prompt_preview=item.prompt_preview,
             started_at=None,
             recording_state="failed",
+            outcome="interrupted",
         )
         projection = UnrecordedTerminalProjection(
             run_id=item.run_id,

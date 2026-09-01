@@ -501,15 +501,17 @@ class RuntimeHost:
 
     def admission_fail_recording(
         self,
-        fallback: ActiveRunSummary,
+        summary: ActiveRunSummary,
         projection: UnrecordedTerminalProjection,
     ) -> None:
-        """recording_failed: keep the same projection, mark the summary failed,
-        and close admission. Ordering is the #30 contract: the failed state is
-        authoritative before anything answers 503."""
+        """Publish admission's terminal summary and projection, then close.
+
+        Admission owns the result of an unstarted handoff failure, including
+        the exceptional path where its interrupted finalize cannot commit.
+        Publishing that pair together keeps the active lifecycle and bounded
+        terminal projection as one fact before anything answers 503.
+        """
         with self._lock:
-            summary = self._active_summary or fallback
-            summary = replace(summary, recording_state="failed")
             self._active_summary = summary
             self._coord = "recording_failed"
             self._states.replace(
