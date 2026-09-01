@@ -235,6 +235,39 @@ def test_the_chat_filter_returns_only_chat_runs() -> None:
         host.close()
 
 
+@pytest.mark.parametrize(
+    "column,invalid_value,expected_error",
+    [
+        ("phase", "unknown", "invalid run phase"),
+        ("outcome", "unknown", "invalid run outcome"),
+    ],
+)
+def test_runs_page_rejects_invalid_persisted_lifecycle_values(
+    column: str, invalid_value: str, expected_error: str
+) -> None:
+    host = _fresh_host()
+    host.start()
+    try:
+        _insert_run(
+            host,
+            "r-corrupt",
+            phase="finished",
+            outcome="completed",
+        )
+        with host._db_lock:  # noqa: SLF001 - corrupt DB is test setup
+            conn = host._conn  # noqa: SLF001
+            conn.execute("PRAGMA ignore_check_constraints = ON")
+            conn.execute(
+                f"UPDATE runs SET {column} = ? WHERE run_id = ?",
+                (invalid_value, "r-corrupt"),
+            )
+            conn.commit()
+        with pytest.raises(ValueError, match=expected_error):
+            host.list_runs(filter="chat")
+    finally:
+        host.close()
+
+
 def test_the_all_filter_sees_both_shelves() -> None:
     host = _fresh_host()
     host.start()
@@ -1047,6 +1080,41 @@ def test_a_sessions_chat_runs_group_takes_only_admitted_chat_runs() -> None:
             "running",
             "accepted",
         ]
+    finally:
+        host.close()
+
+
+@pytest.mark.parametrize(
+    "column,invalid_value,expected_error",
+    [
+        ("phase", "unknown", "invalid run phase"),
+        ("outcome", "unknown", "invalid run outcome"),
+    ],
+)
+def test_session_run_list_rejects_invalid_persisted_lifecycle_values(
+    column: str, invalid_value: str, expected_error: str
+) -> None:
+    host = _fresh_host()
+    host.start()
+    try:
+        session_id = host.create_session()
+        _insert_run(
+            host,
+            "r-corrupt-session",
+            phase="finished",
+            outcome="completed",
+            session_id=session_id,
+        )
+        with host._db_lock:  # noqa: SLF001 - corrupt DB is test setup
+            conn = host._conn  # noqa: SLF001
+            conn.execute("PRAGMA ignore_check_constraints = ON")
+            conn.execute(
+                f"UPDATE runs SET {column} = ? WHERE run_id = ?",
+                (invalid_value, "r-corrupt-session"),
+            )
+            conn.commit()
+        with pytest.raises(ValueError, match=expected_error):
+            host.list_session_chat_runs(session_id=session_id, limit=10)
     finally:
         host.close()
 

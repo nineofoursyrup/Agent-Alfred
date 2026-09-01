@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import NamedTuple
 
 from agent_alfred.outcomes import RUN_OUTCOMES
+from agent_alfred.run_phases import RUN_PHASES as PHASES
 
 BUSY_TIMEOUT_MS = 5000
 # Highest first. One deletion may match several reasons; the stored
@@ -48,7 +49,6 @@ GATEWAYS = ("cli", "web")
 _GATEWAY_SQL = ", ".join(f"'{gateway}'" for gateway in GATEWAYS)
 PURPOSES = ("chat", "inference_probe")
 _PURPOSE_SQL = ", ".join(f"'{purpose}'" for purpose in PURPOSES)
-PHASES = ("accepted", "running", "finished")
 _PHASE_SQL = ", ".join(f"'{phase}'" for phase in PHASES)
 OUTCOMES = RUN_OUTCOMES
 _OUTCOME_SQL = ", ".join(f"'{outcome}'" for outcome in OUTCOMES)

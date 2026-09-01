@@ -29,7 +29,13 @@ from dataclasses import dataclass, replace
 from typing import Any, NamedTuple
 
 from agent_alfred.messages import Message, blocks_from_jsonable, message_plain_text
+from agent_alfred.outcomes import RunOutcome, parse_run_outcome
 from agent_alfred.redact import Redactor
+from agent_alfred.run_phases import (
+    TERMINAL_RUN_PHASE,
+    RunPhase,
+    parse_run_phase,
+)
 from agent_alfred.runtime.cursor import (
     MalformedCursor,
 )
@@ -56,7 +62,7 @@ RUN_FILTERS = (CHAT_FILTER, SYSTEM_FILTER, ALL_FILTER)
 DEFAULT_RUN_PAGE_SIZE = 25
 DEFAULT_MAINBAR_LIMIT = 25
 
-_TERMINAL_PHASE = "finished"
+_TERMINAL_PHASE = TERMINAL_RUN_PHASE
 
 
 class UnknownRunFilter(ValueError):
@@ -90,8 +96,8 @@ class RunSummary:
     gateway: str
     entry_surface_id: str | None
     prompt_preview: str | None
-    phase: str
-    outcome: str | None
+    phase: RunPhase
+    outcome: RunOutcome | None
     accepted_at: str
     started_at: str | None
     finished_at: str | None
@@ -143,8 +149,8 @@ class SessionChatRun:
     """
 
     run_id: str
-    phase: str
-    outcome: str | None
+    phase: RunPhase
+    outcome: RunOutcome | None
     accepted_at: str
     started_at: str | None
     finished_at: str | None
@@ -230,8 +236,8 @@ class _RunRow(NamedTuple):
     gateway: str
     entry_surface_id: str | None
     prompt_preview: str | None
-    phase: str
-    outcome: str | None
+    phase: object
+    outcome: object
     accepted_at: str
     started_at: str | None
     finished_at: str | None
@@ -251,8 +257,8 @@ def _row_to_summary(raw_row) -> RunSummary:
         gateway=row.gateway,
         entry_surface_id=row.entry_surface_id,
         prompt_preview=row.prompt_preview,
-        phase=row.phase,
-        outcome=row.outcome,
+        phase=parse_run_phase(row.phase),
+        outcome=parse_run_outcome(row.outcome, allow_none=True),
         accepted_at=row.accepted_at,
         started_at=row.started_at,
         finished_at=row.finished_at,
@@ -550,8 +556,8 @@ DEFAULT_REPLY_PREVIEW_CHARS = 240
 
 class _SessionChatRunRow(NamedTuple):
     run_id: str
-    phase: str
-    outcome: str | None
+    phase: object
+    outcome: object
     accepted_at: str
     started_at: str | None
     finished_at: str | None
@@ -615,8 +621,8 @@ def list_session_chat_runs(
     entries = tuple(
         SessionChatRun(
             run_id=row.run_id,
-            phase=row.phase,
-            outcome=row.outcome,
+            phase=parse_run_phase(row.phase),
+            outcome=parse_run_outcome(row.outcome, allow_none=True),
             accepted_at=row.accepted_at,
             started_at=row.started_at,
             finished_at=row.finished_at,

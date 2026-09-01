@@ -16,15 +16,23 @@ from agent_alfred.gateway.web.state import (
 )
 from agent_alfred.loop.assistant import RunOutcome as LoopOutcome
 from agent_alfred.outcomes import RUN_OUTCOMES, RunOutcome
+from agent_alfred.run_phases import (
+    RUN_PHASES,
+    RunPhase,
+    parse_run_phase,
+)
 from agent_alfred.runtime.recording import RunRecorder
+from agent_alfred.runtime.runs import RunSummary, SessionChatRun
 from agent_alfred.runtime.snapshot import (
     ActiveRunSummary,
     CoordinatorState,
-    RunPhase,
     RuntimeSnapshot,
     UnrecordedTerminalProjection,
 )
-from agent_alfred.schema import OUTCOMES
+from agent_alfred.runtime.snapshot import (
+    parse_run_phase as snapshot_parse_run_phase,
+)
+from agent_alfred.schema import OUTCOMES, PHASES
 
 _NO_PROJECTION = object()
 
@@ -46,6 +54,12 @@ def test_run_outcome_is_a_single_closed_set() -> None:
     assert RUN_OUTCOMES == ("completed", "max_steps", "failed", "interrupted")
 
 
+def test_run_phase_is_a_single_closed_set() -> None:
+    assert PHASES is RUN_PHASES
+    assert snapshot_parse_run_phase is parse_run_phase
+    assert RUN_PHASES == ("accepted", "running", "finished")
+
+
 def test_authoritative_snapshot_and_wire_views_reuse_run_outcome() -> None:
     assert get_type_hints(ActiveRunSummary)["outcome"] == RunOutcome | None
     assert get_type_hints(UnrecordedTerminalProjection)["outcome"] is RunOutcome
@@ -59,6 +73,13 @@ def test_authoritative_snapshot_and_wire_views_reuse_lifecycle_types() -> None:
     assert get_type_hints(ActiveRunView)["phase"] is RunPhase
     assert get_type_hints(RuntimeSnapshot)["coordinator_state"] is CoordinatorState
     assert get_type_hints(RunStateSnapshot)["coordinator_state"] is CoordinatorState
+
+
+def test_persisted_run_views_reuse_lifecycle_types() -> None:
+    assert get_type_hints(RunSummary)["phase"] is RunPhase
+    assert get_type_hints(RunSummary)["outcome"] == RunOutcome | None
+    assert get_type_hints(SessionChatRun)["phase"] is RunPhase
+    assert get_type_hints(SessionChatRun)["outcome"] == RunOutcome | None
 
 
 @pytest.mark.parametrize("outcome", RUN_OUTCOMES)

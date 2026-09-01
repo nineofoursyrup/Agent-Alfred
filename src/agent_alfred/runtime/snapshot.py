@@ -9,6 +9,7 @@ from dataclasses import replace as _dc_replace
 from typing import Literal
 
 from agent_alfred.outcomes import RunOutcome
+from agent_alfred.run_phases import RunPhase, parse_run_phase
 from agent_alfred.runtime.recording_state import (
     RecordingState,
     UnrecordedTerminalState,
@@ -18,7 +19,6 @@ from agent_alfred.runtime.recording_state import (
 CoordinatorState = Literal[
     "idle", "accepted", "running", "recording_pending", "recording_failed"
 ]
-RunPhase = Literal["accepted", "running", "finished"]
 
 
 def parse_coordinator_state(value: object) -> CoordinatorState:
@@ -30,16 +30,6 @@ def parse_coordinator_state(value: object) -> CoordinatorState:
     if value == "recording_pending" or value == "recording_failed":
         return value
     raise ValueError(f"invalid coordinator state: {value!r}")
-
-
-def parse_run_phase(value: object) -> RunPhase:
-    """Validate and narrow a Run phase crossing a runtime boundary."""
-    if not isinstance(value, str):
-        raise ValueError(f"invalid run phase: {value!r}")
-    if value == "accepted" or value == "running" or value == "finished":
-        return value
-    raise ValueError(f"invalid run phase: {value!r}")
-
 
 _UNSET = object()
 

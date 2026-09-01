@@ -40,6 +40,7 @@ from agent_alfred.messages import (
     message_plain_text,
 )
 from agent_alfred.redact import Redactor
+from agent_alfred.run_phases import IN_FLIGHT_RUN_PHASES
 from agent_alfred.runtime.cursor import (
     MalformedCursor,
 )
@@ -56,7 +57,6 @@ _RUNS_SEGMENT = "runs"
 _HISTORIC_SEGMENT = "historic"
 # Chat Runs in these phases may still enter the session record (messages and
 # the phase flip commit in the same finalize transaction).
-_IN_FLIGHT_PHASES = ("accepted", "running")
 
 
 class SessionNotFound(ValueError):
@@ -389,7 +389,7 @@ def _has_inflight_run(
           {beyond}
         LIMIT 1
     """
-    params: list = [session_id, *_IN_FLIGHT_PHASES]
+    params: list = [session_id, *IN_FLIGHT_RUN_PHASES]
     failed_clause = ""
     if recording_failed_run_ids:
         marks = ", ".join("?" for _ in recording_failed_run_ids)
