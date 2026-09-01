@@ -28,7 +28,7 @@ from typing import Literal, Protocol
 
 from agent_alfred.clock import Clock
 from agent_alfred.gateway.web import frames
-from agent_alfred.gateway.web.replay import ReplayProgress
+from agent_alfred.gateway.web.replay import ReplayBatch, ReplayProgress
 
 # The decided capacity table: frames *and* encoded bytes, counted together.
 DEFAULT_BUDGET = frames.FrameBudget(frames=512, encoded_bytes=8 * 1024 * 1024)
@@ -144,6 +144,8 @@ class ConnectionQueue:
         self._items: queue.SimpleQueue = queue.SimpleQueue()
         self._lock = threading.Lock()
         self._usage = frames.FrameCost(frames=0, encoded_bytes=0)
+        self._startup_usage = frames.FrameCost(frames=0, encoded_bytes=0)
+        self._startup_guard = frames.FrameCost(frames=0, encoded_bytes=0)
         self._dropped = 0
         self._closing = False
 
@@ -203,12 +205,24 @@ class ConnectionQueue:
                 if notice is not None
                 else frames.FrameCost(frames=0, encoded_bytes=0)
             )
-            projected = self._usage + notice_cost + cost
+            admitted = self._usage + notice_cost + cost
+            protected = frames.FrameCost(
+                frames=max(
+                    self._startup_guard.frames - self._startup_usage.frames,
+                    0,
+                ),
+                encoded_bytes=max(
+                    self._startup_guard.encoded_bytes
+                    - self._startup_usage.encoded_bytes,
+                    0,
+                ),
+            )
+            projected = admitted + protected
             if self.budget.fits(projected):
                 if notice is not None:
                     self._items.put(notice)
                 self._items.put(item)
-                self._usage = projected
+                self._usage = admitted
                 if notice is not None:
                     self._dropped = 0
                 return OfferOutcome(kind="accepted")
@@ -250,12 +264,83 @@ class ConnectionQueue:
             if not self.budget.fits(projected):
                 return False
             self._usage = projected
+            self._startup_usage = self._startup_usage + cost
             return True
+
+    def activate_startup(self, guard: frames.FrameCost) -> bool:
+        """Protect capacity for one physical frame until frozen replay ends."""
+        with self._lock:
+            if self._closing or not self.budget.fits(self._usage + guard):
+                return False
+            self._startup_guard = guard
+            return True
+
+    def build_and_reserve_startup(
+        self,
+        build: Callable[[frames.FrameBudget], ReplayBatch],
+        *,
+        continue_when_closing: bool = False,
+    ) -> ReplayBatch:
+        """Build one replay slice against the capacity that is free now.
+
+        The caller owns the broker lock before entering this queue lock.  The
+        remaining-budget observation, slice choice and reservation are one
+        queue critical section, so a live offer cannot make the chosen slice
+        stale between those steps.
+        """
+        with self._lock:
+            if self._closing and not continue_when_closing:
+                self._startup_guard = frames.FrameCost(0, 0)
+                return ReplayBatch(kind="unavailable")
+            remaining_frames = self.budget.frames - self._usage.frames
+            remaining_bytes = (
+                self.budget.encoded_bytes - self._usage.encoded_bytes
+            )
+            if remaining_frames < 1 or remaining_bytes < 1:
+                return ReplayBatch(kind="unavailable")
+            batch = build(
+                frames.FrameBudget(
+                    frames=remaining_frames,
+                    encoded_bytes=remaining_bytes,
+                )
+            )
+            if batch.kind == "batch":
+                projected = self._usage + batch.cost
+                if not self.budget.fits(projected):
+                    raise RuntimeError("startup builder exceeded remaining budget")
+                self._usage = projected
+                self._startup_usage = self._startup_usage + batch.cost
+            else:
+                self._startup_guard = frames.FrameCost(0, 0)
+            return batch
 
     def release_startup(self, cost: frames.FrameCost) -> None:
         """Release a replay batch immediately after its final frame is written."""
         with self._lock:
             self._usage = self._usage - cost
+            self._startup_usage = self._startup_usage - cost
+
+    def cancel_startup(
+        self, cost: frames.FrameCost = frames.FrameCost(0, 0)
+    ) -> None:
+        """Release a writer's final local slice and its priority guard."""
+        with self._lock:
+            self._usage = self._usage - cost
+            self._startup_usage = self._startup_usage - cost
+            self._startup_guard = frames.FrameCost(0, 0)
+
+    def finish(self) -> None:
+        """Revoke admission and release every reference the dead writer owned."""
+        with self._lock:
+            self._closing = True
+            while True:
+                try:
+                    self._items.get_nowait()
+                except queue.Empty:
+                    break
+            self._usage = frames.FrameCost(0, 0)
+            self._startup_usage = frames.FrameCost(0, 0)
+            self._startup_guard = frames.FrameCost(0, 0)
 
 
 class ConnectionSource(Protocol):
@@ -263,12 +348,7 @@ class ConnectionSource(Protocol):
 
     def stop(self) -> None: ...
 
-
-class ReplayBatch(Protocol):
-    kind: str
-    entries: tuple[frames.PreparedFrames, ...]
-    cost: frames.FrameCost
-    next_progress: ReplayProgress | None
+    def finish(self) -> None: ...
 
 
 class StartupReplay:
@@ -287,7 +367,8 @@ class StartupReplay:
         cursor_seq: int,
         through_seq: int | None,
         fetch: Callable[
-            [ReplayProgress, int | None, frames.FrameBudget], ReplayBatch
+            [ReplayProgress, int | None, frames.FrameBudget],
+            ReplayBatch,
         ],
     ):
         self._source = source
@@ -297,14 +378,21 @@ class StartupReplay:
 
     def take(self) -> ReplayBatch:
         return self._fetch(
-            self._progress, self._through_seq, self._source.budget
+            self._progress,
+            self._through_seq,
+            self._source.budget,
         )
 
     def release(self, batch: ReplayBatch) -> None:
-        self._source.release_startup(batch.cost)
+        """Turn this slice back into the protected next-frame capacity."""
         if batch.next_progress is None:
             raise RuntimeError("replay batch did not declare its next progress")
+        self._source.release_startup(batch.cost)
         self._progress = batch.next_progress
+
+    def cancel(self, batch: ReplayBatch) -> None:
+        self._source.cancel_startup(batch.cost)
+
 
 class ConnectionWriter:
     """The connection's own thread: open, take, write, heartbeat, close.
@@ -358,8 +446,8 @@ class ConnectionWriter:
         while self._startup:
             consume(self._startup.popleft())
         replay = self._startup_replay
-        while replay is not None:
-            batch = replay.take()
+        batch = replay.take() if replay is not None else None
+        while replay is not None and batch is not None:
             if batch.kind == "complete":
                 self._startup_replay = None
                 return True
@@ -370,13 +458,16 @@ class ConnectionWriter:
             try:
                 for item in batch.entries:
                     consume(item)
-            finally:
-                replay.release(batch)
-            # A released local is still a strong reference. End both loop
-            # variables before ``take`` can reserve the next batch, so the
-            # two generations never overlap even for one call expression.
+            except BaseException:
+                replay.cancel(batch)
+                raise
+            replay.release(batch)
+            # The queue's guard now protects the next physical record. End
+            # the old strong references before fetching it, so two replay
+            # generations never coexist in this writer.
             del item
             del batch
+            batch = replay.take()
         return True
 
     def run(self) -> None:
@@ -412,6 +503,7 @@ class ConnectionWriter:
         finally:
             self._startup.clear()
             self._startup_replay = None
+            self._source.finish()
             self._connection.close()
 
     def _maybe_heartbeat(self) -> None:

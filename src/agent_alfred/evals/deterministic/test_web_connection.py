@@ -295,6 +295,9 @@ class _ScriptedSource:
     def stop(self) -> None:
         self._items.append(StopWriter())
 
+    def finish(self) -> None:
+        self._items.clear()
+
 
 def _writer(source, *, clock, connection=None, heartbeat_s=15.0):
     return ConnectionWriter(

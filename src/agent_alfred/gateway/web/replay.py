@@ -609,6 +609,60 @@ class ReplayRing:
             next_progress=next_progress,
         )
 
+    def startup_guard_cost(
+        self,
+        progress: ReplayProgress | int,
+        through_seq: int | None,
+    ) -> FrameCost | None:
+        """Largest single physical record in one frozen replay interval.
+
+        Keeping this much capacity out of live admission guarantees that a
+        writer can always reserve at least its next physical record.  The
+        scan is bounded by the ring's fixed physical-frame capacity and runs
+        only while a connection registers, never on event publication.
+        """
+        if isinstance(progress, int):
+            progress = ReplayProgress(completed_seq=progress)
+        if through_seq is None:
+            return FrameCost(0, 0)
+        if progress.event_seq is None:
+            if progress.completed_seq >= through_seq:
+                return FrameCost(0, 0)
+            if self.classify_seq(progress.completed_seq) != "valid":
+                return None
+            index = self._entries.first_after(progress.completed_seq)
+            start = 0
+        else:
+            entry = self._entries.entry_at_seq(progress.event_seq)
+            if entry is None:
+                return None
+            index = self._entries.first_after(progress.event_seq - 1)
+            start = progress.next_frame_index
+
+        maximum_bytes = 0
+        found = False
+        while index < len(self._entries):
+            entry = self._entries[index]
+            if entry.seq is None or entry.seq > through_seq:
+                break
+            frame_start = start if not found else 0
+            if frame_start < 0 or frame_start >= len(entry.frames):
+                return None
+            for frame_index in range(frame_start, len(entry.frames)):
+                is_final = frame_index + 1 == len(entry.frames)
+                maximum_bytes = max(
+                    maximum_bytes,
+                    len(entry.frames[frame_index])
+                    + 2
+                    + (len(entry.id_line) if is_final else 0),
+                )
+                found = True
+            index += 1
+            start = 0
+        if not found:
+            return None
+        return FrameCost(frames=1, encoded_bytes=maximum_bytes)
+
     def classify_seq(self, seq: int) -> SeqVerdict:
         """Close a cursor's position into one of the four decided reasons.
 

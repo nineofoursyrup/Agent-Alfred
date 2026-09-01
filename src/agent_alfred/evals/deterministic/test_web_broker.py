@@ -819,6 +819,147 @@ def test_a_replay_tail_over_the_connection_budget_still_arrives_whole() -> None:
     assert all(a is b for a, b in zip(opening[3:], stored))
 
 
+def test_startup_replay_uses_the_capacity_left_by_queued_live_traffic() -> None:
+    """A frozen event makes progress in smaller slices instead of backing off."""
+    harness = Harness(
+        connection_budget=frames.FrameBudget(2, 1 << 20),
+        max_frame_bytes=384,
+    )
+    event = harness.emit(RunStarted(purpose="x" * 100), run_id="r1")
+    stored = harness.broker._ring.entries_after(0)
+    assert stored is not None and len(stored[0].frames) == 3
+
+    handle = harness.connect(cursor=cursor_for(0))
+    live = frames.measured_frames(
+        seq=event.seq + 1,
+        frames=(b"data: live",),
+    )
+    assert handle.queue.offer(live).kind == "accepted"
+
+    opening = drain_connection(handle)
+    replay = [
+        item
+        for item in opening
+        if isinstance(item, PreparedFrames) and item.seq == event.seq
+    ]
+    assert [len(item.frames) for item in replay] == [1, 1, 1]
+    assert [item.id_line for item in replay] == [b"", b"", stored[0].id_line]
+    assert b"".join(item.wire_bytes() for item in replay) == stored[0].wire_bytes()
+    assert opening[-1] is live
+    assert all(item.wire_bytes() != b"retry: 3000\n\n" for item in opening)
+    assert handle.queue.current_cost == frames.FrameCost(0, 0)
+
+
+def test_live_offers_cannot_steal_capacity_between_startup_slices() -> None:
+    """Release-to-fetch handoff keeps one next record protected by bytes."""
+    budget = frames.FrameBudget(4, 650)
+    harness = Harness(connection_budget=budget, max_frame_bytes=384)
+    event = harness.emit(RunStarted(purpose="x" * 100), run_id="r1")
+    stored = harness.broker._ring.entries_after(0)
+    assert stored is not None and len(stored[0].frames) == 3
+    handle = harness.connect(cursor=cursor_for(0))
+
+    first_live = frames.measured_frames(frames=(b"a" * 118,))
+    inserted = tuple(
+        frames.measured_frames(frames=(bytes([98 + index]) * 48,))
+        for index in range(2)
+    )
+    assert handle.queue.offer(first_live).kind == "accepted"
+
+    original_release = handle.queue.release_startup
+    releases = 0
+    outcomes: list[str] = []
+
+    def release_then_offer(cost: frames.FrameCost) -> None:
+        nonlocal releases
+        original_release(cost)
+        if releases < len(inserted):
+            # This is the exact old race window: the current slice is gone,
+            # but the next fetch has not started. No sleep or scheduler luck.
+            outcomes.append(handle.queue.offer(inserted[releases]).kind)
+        releases += 1
+
+    handle.queue.release_startup = release_then_offer  # type: ignore[method-assign]
+    replay: list[PreparedFrames] = []
+    peak = frames.FrameCost(0, 0)
+
+    def observe(item: PreparedFrames) -> None:
+        nonlocal peak
+        if item.seq == event.seq:
+            replay.append(item)
+        current = handle.queue.current_cost
+        assert budget.fits(current)
+        peak = frames.FrameCost(
+            max(peak.frames, current.frames),
+            max(peak.encoded_bytes, current.encoded_bytes),
+        )
+
+    assert handle.writer is not None
+    assert handle.writer.deliver_startup(observe) is True
+    assert outcomes == ["accepted", "accepted"]
+    assert [len(item.frames) for item in replay] == [1, 1, 1]
+    assert [item.id_line for item in replay] == [b"", b"", stored[0].id_line]
+    assert budget.fits(peak)
+    assert [handle.queue.take(0) for _ in range(3)] == [
+        first_live,
+        *inserted,
+    ]
+    assert handle.queue.current_cost == frames.FrameCost(0, 0)
+
+
+def test_startup_finishes_its_partial_checkpoint_before_overflow_backoff() -> None:
+    """A live overflow cannot strand a frozen logical event mid-checkpoint."""
+    harness = Harness(
+        connection_budget=frames.FrameBudget(2, 1 << 20),
+        max_frame_bytes=384,
+    )
+    frozen = harness.emit(RunStarted(purpose="x" * 100), run_id="frozen")
+    harness.deliver()
+    stored = harness.broker._ring.entries_after(0)
+    assert stored is not None and len(stored[0].frames) == 3
+
+    class OverflowOnFirstReplay(FakeConnection):
+        def __init__(self) -> None:
+            super().__init__()
+            self.handle = None
+            self.live = None
+            self.triggered = False
+
+        def write(self, data: bytes) -> None:
+            if b'"chunk_index":0' in data and not self.triggered:
+                self.triggered = True
+                self.live = harness.emit(
+                    RunStarted(purpose="after-overflow"), run_id="live"
+                )
+                harness.deliver()
+                assert self.handle is not None
+                assert self.handle.queue.close_requested is True
+            super().write(data)
+
+    connection = OverflowOnFirstReplay()
+    handle = harness.connect(connection=connection, cursor=cursor_for(0))
+    connection.handle = handle
+    queued_live = frames.measured_frames(frames=(b"data: queued-live",))
+    assert handle.queue.offer(queued_live).kind == "accepted"
+
+    # Drive the production _run_writer target synchronously: deterministic
+    # socket callback, real unregister/final cleanup, no scheduling race.
+    harness.spawn.targets[-1]()
+
+    assert connection.triggered is True
+    assert connection.live is not None
+    frozen_wire = stored[0].wire_bytes()
+    assert frozen_wire in connection.written
+    assert connection.written.count(stored[0].id_line) == 1
+    assert connection.written.endswith(b"retry: 3000\n\n")
+    assert queued_live.wire_bytes() not in connection.written
+    assert handle.queue.current_cost == frames.FrameCost(0, 0)
+    assert handle.finished.is_set()
+
+    fresh = harness.connect(cursor=cursor_for(frozen.seq))
+    assert replay_ids(drain_connection(fresh)) == [connection.live.seq]
+
+
 def test_the_no_thread_writer_releases_each_observed_startup_batch() -> None:
     """An observer never turns the writer back into a full-tail owner."""
 
@@ -862,6 +1003,9 @@ def test_the_no_thread_writer_releases_each_observed_startup_batch() -> None:
         def release(self, batch: ReplayBatch) -> None:
             source.release_startup(batch.cost)
             self.released.append(batch.cost)
+
+        def cancel(self, batch: ReplayBatch) -> None:
+            source.release_startup(batch.cost)
 
     replay = TwoBatchReplay()
     writer = ConnectionWriter(

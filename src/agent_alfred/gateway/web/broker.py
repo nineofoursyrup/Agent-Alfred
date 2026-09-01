@@ -358,6 +358,7 @@ class _ConnectStartup:
                         handle.queue.take(timeout=0)
                     except queue.Empty:
                         break
+                handle.queue.cancel_startup()
             self.connection.close()
         finally:
             if handle is not None:
@@ -959,6 +960,24 @@ class SSEBroker:
                         # invariant -- snapshot, high-water, registration, one
                         # critical section -- is worth another lap, not a lie.
                         continue
+                    needs_replay = (
+                        verdict.kind == "valid"
+                        and verdict.requested_seq is not None
+                        and replay_through is not None
+                        and verdict.requested_seq < replay_through
+                    )
+                    if needs_replay:
+                        guard = self._ring.startup_guard_cost(
+                            verdict.requested_seq,
+                            replay_through,
+                        )
+                        if guard is None:
+                            # The frozen interval ceased to be reproducible
+                            # before registration. A retry will receive the
+                            # ring's explicit gap verdict instead.
+                            refused = True
+                            break
+                        handle.queue.activate_startup(guard)
                     handle.verdict = verdict
                     handle.ingress_seen = self._ingress_dropped
                     handle.published_through = (
@@ -1001,7 +1020,10 @@ class SSEBroker:
                     through_seq=replay_through,
                     fetch=lambda progress, through_seq, budget: (
                         self._fetch_startup_replay(
-                            handle.queue, progress, through_seq, budget
+                            handle.queue,
+                            progress,
+                            through_seq,
+                            budget,
                         )
                     ),
                 )
@@ -1028,17 +1050,13 @@ class SSEBroker:
     ) -> ReplayBatch:
         """Fetch and account one immutable batch without IO or waiting."""
         with self._lock:
-            batch = self._ring.bounded_entries_after(
-                progress, through_seq, budget
+            del budget
+            return source.build_and_reserve_startup(
+                lambda remaining: self._ring.bounded_entries_after(
+                    progress, through_seq, remaining
+                ),
+                continue_when_closing=progress.event_seq is not None,
             )
-            if batch.kind != "batch":
-                return batch
-            if source.reserve_startup(batch.cost):
-                return batch
-            # Live traffic consumed the shared budget while replay was still
-            # pending. Draining it first would invert wire order; retaining
-            # this batch would exceed the bound. Close and reconnect instead.
-            return ReplayBatch(kind="unavailable")
 
     @property
     def registrations_in_flight(self) -> int:
