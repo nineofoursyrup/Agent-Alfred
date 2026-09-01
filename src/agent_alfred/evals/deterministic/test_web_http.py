@@ -593,6 +593,38 @@ def test_an_unusable_cursor_is_reported_as_a_gap_not_a_silent_resume(server) -> 
     assert b"id: " not in notice
 
 
+def test_an_explicitly_empty_cursor_is_a_malformed_gap_then_snapshot(server) -> None:
+    server.emit("r1")
+    head, body = _raw_stream(
+        server,
+        "Last-Event-ID:\r\n",
+        lambda data: b"event: state_patch" in data,
+    )
+
+    assert head.startswith(b"HTTP/1.1 200")
+    _assert_no_cross_origin_permission(head)
+    stream_frames = [frame for frame in body.split(b"\n\n") if frame]
+    assert stream_frames[0] == b"retry: 1000"
+    assert stream_frames[1].startswith(b"id: ")
+
+    notices = [
+        frame for frame in stream_frames if b"event: transport_notice" in frame
+    ]
+    assert len(notices) == 1
+    notice = notices[0]
+    notice_payload = json.loads(
+        next(
+            line.removeprefix(b"data: ")
+            for line in notice.splitlines()
+            if line.startswith(b"data: ")
+        )
+    )
+    assert notice_payload["code"] == "replay_gap"
+    assert notice_payload["gap_reason"] == "malformed"
+    assert b"id: " not in notice
+    assert body.index(notice) < body.index(b"event: state_patch")
+
+
 def test_an_overlong_digit_cursor_is_a_malformed_gap_then_snapshot(server) -> None:
     sock = _connect(server.port)
     handle = None

@@ -316,7 +316,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
         try:
             proof = context.broker.prepare_stream(
                 connection=connection,
-                cursor=CursorText(cursor) if cursor else None,
+                cursor=CursorText(cursor) if cursor is not None else None,
                 session_id=session_id,
             )
         except RecordingUnavailable:
