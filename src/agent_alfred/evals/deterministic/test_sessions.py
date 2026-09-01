@@ -373,6 +373,127 @@ def test_malformed_cursor_is_rejected_not_restarted() -> None:
         host.close()
 
 
+@pytest.mark.parametrize("activity_revision", [True, False])
+def test_inbox_rejects_boolean_activity_revisions(
+    activity_revision: bool,
+) -> None:
+    from agent_alfred.runtime.cursor import encode_cursor
+
+    conn = _database_through_version(2)
+    _seed_historic(conn, "s-cursor", ["q"])
+    host = _migrated_host(conn)
+    host.start()
+    try:
+        cursor = encode_cursor(
+            {"v": 2, "k": "inbox", "ar": activity_revision}
+        )
+        with pytest.raises(MalformedCursor):
+            host.list_sessions(limit=10, cursor=cursor)
+    finally:
+        host.close()
+
+
+@pytest.mark.parametrize("activity_revision", [True, False])
+def test_session_messages_runs_segment_rejects_boolean_activity_revisions(
+    activity_revision: bool,
+) -> None:
+    from agent_alfred.runtime.cursor import encode_cursor
+
+    conn = _database_through_version(2)
+    _seed_historic(conn, "s-cursor", ["q"])
+    host = _migrated_host(conn)
+    host.start()
+    try:
+        cursor = encode_cursor(
+            {
+                "v": 2,
+                "k": "runs",
+                "seg": "runs",
+                "s": "s-cursor",
+                "ar": activity_revision,
+                "r": "r1",
+            }
+        )
+        with pytest.raises(MalformedCursor):
+            host.open_session("s-cursor", page_size=10, cursor=cursor)
+    finally:
+        host.close()
+
+
+@pytest.mark.parametrize("historic_id", [True, False])
+def test_session_messages_historic_segment_rejects_boolean_ids(
+    historic_id: bool,
+) -> None:
+    from agent_alfred.runtime.cursor import encode_cursor
+
+    conn = _database_through_version(2)
+    _seed_historic(conn, "s-cursor", ["q"])
+    host = _migrated_host(conn)
+    host.start()
+    try:
+        cursor = encode_cursor(
+            {
+                "v": 2,
+                "k": "runs",
+                "seg": "historic",
+                "s": "s-cursor",
+                "id": historic_id,
+            }
+        )
+        with pytest.raises(MalformedCursor):
+            host.open_session("s-cursor", page_size=10, cursor=cursor)
+    finally:
+        host.close()
+
+
+@pytest.mark.parametrize("position", [0, 1, 2**63 - 1])
+@pytest.mark.parametrize("read", ["inbox", "runs", "historic"])
+def test_session_reads_keep_exact_integer_positions(position: int, read: str) -> None:
+    """Zero, one and the largest SQLite integer remain legal positions."""
+    from agent_alfred.runtime.cursor import encode_cursor
+
+    conn = _database_through_version(2)
+    _seed_historic(conn, "s-cursor", ["q"])
+    host = _migrated_host(conn)
+    host.start()
+    try:
+        cursors = {
+            "inbox": encode_cursor({"v": 2, "k": "inbox", "ar": position}),
+            "runs": encode_cursor(
+                {
+                    "v": 2,
+                    "k": "runs",
+                    "seg": "runs",
+                    "s": "s-cursor",
+                    "ar": position,
+                    "r": "r1",
+                }
+            ),
+            "historic": encode_cursor(
+                {
+                    "v": 2,
+                    "k": "runs",
+                    "seg": "historic",
+                    "s": "s-cursor",
+                    "id": position,
+                }
+            ),
+        }
+        reads = {
+            "inbox": lambda: host.list_sessions(limit=10, cursor=cursors[read]),
+            "runs": lambda: host.open_session(
+                "s-cursor", page_size=10, cursor=cursors[read]
+            ),
+            "historic": lambda: host.open_session(
+                "s-cursor", page_size=10, cursor=cursors[read]
+            ),
+        }
+
+        reads[read]()
+    finally:
+        host.close()
+
+
 # --- an in-flight Run must not close the runs segment (the #30 lease) --------
 
 

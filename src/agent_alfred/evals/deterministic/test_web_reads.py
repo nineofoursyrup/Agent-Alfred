@@ -851,7 +851,11 @@ def test_every_read_cursor_round_trips_through_the_shared_codec() -> None:
 
 
 def test_the_shared_codec_refuses_undecodable_and_foreign_tokens() -> None:
-    from agent_alfred.runtime.cursor import MalformedCursor, decode_cursor
+    from agent_alfred.runtime.cursor import (
+        MalformedCursor,
+        decode_cursor,
+        encode_cursor,
+    )
 
     with pytest.raises(MalformedCursor):
         decode_cursor("not-base64!!", version=1, kind="runs")
@@ -870,6 +874,114 @@ def test_the_shared_codec_refuses_undecodable_and_foreign_tokens() -> None:
             version=2,  # wrong version
             kind="runs",
         )
+    for boolean_version in (True, False):
+        with pytest.raises(MalformedCursor):
+            decode_cursor(
+                encode_cursor({"v": boolean_version, "k": "runs"}),
+                version=1,
+                kind="runs",
+            )
+
+
+@pytest.mark.parametrize("activity_revision", [True, False])
+@pytest.mark.parametrize("read", ["runs", "mainbar", "session_runs"])
+def test_run_reads_reject_boolean_activity_revisions(
+    activity_revision: bool, read: str
+) -> None:
+    """JSON booleans are not SQLite keyset positions for any Run read."""
+    from agent_alfred.runtime.cursor import encode_cursor
+
+    host = _fresh_host()
+    host.start()
+    try:
+        session_id = host.create_session()
+        cursors = {
+            "runs": encode_cursor(
+                {"v": 1, "k": "runs", "ar": activity_revision, "r": "r1"}
+            ),
+            "mainbar": encode_cursor(
+                {
+                    "v": 1,
+                    "k": "mainbar",
+                    "s": session_id,
+                    "ar": activity_revision,
+                    "r": "r1",
+                }
+            ),
+            "session_runs": encode_cursor(
+                {
+                    "v": 1,
+                    "k": "session_runs",
+                    "s": session_id,
+                    "ar": activity_revision,
+                    "r": "r1",
+                }
+            ),
+        }
+        reads = {
+            "runs": lambda: host.list_runs(cursor=cursors[read]),
+            "mainbar": lambda: host.mainbar_pairs(
+                session_id=session_id, cursor=cursors[read]
+            ),
+            "session_runs": lambda: host.list_session_chat_runs(
+                session_id=session_id, limit=10, cursor=cursors[read]
+            ),
+        }
+
+        with pytest.raises(MalformedCursor):
+            reads[read]()
+    finally:
+        host.close()
+
+
+@pytest.mark.parametrize("activity_revision", [0, 1, 2**63 - 1])
+@pytest.mark.parametrize("read", ["runs", "mainbar", "session_runs"])
+def test_run_reads_keep_exact_integer_activity_revisions(
+    activity_revision: int, read: str
+) -> None:
+    """Zero, one and the largest SQLite integer remain legal positions."""
+    from agent_alfred.runtime.cursor import encode_cursor
+
+    host = _fresh_host()
+    host.start()
+    try:
+        session_id = host.create_session()
+        cursors = {
+            "runs": encode_cursor(
+                {"v": 1, "k": "runs", "ar": activity_revision, "r": "r1"}
+            ),
+            "mainbar": encode_cursor(
+                {
+                    "v": 1,
+                    "k": "mainbar",
+                    "s": session_id,
+                    "ar": activity_revision,
+                    "r": "r1",
+                }
+            ),
+            "session_runs": encode_cursor(
+                {
+                    "v": 1,
+                    "k": "session_runs",
+                    "s": session_id,
+                    "ar": activity_revision,
+                    "r": "r1",
+                }
+            ),
+        }
+        reads = {
+            "runs": lambda: host.list_runs(cursor=cursors[read]),
+            "mainbar": lambda: host.mainbar_pairs(
+                session_id=session_id, cursor=cursors[read]
+            ),
+            "session_runs": lambda: host.list_session_chat_runs(
+                session_id=session_id, limit=10, cursor=cursors[read]
+            ),
+        }
+
+        reads[read]()
+    finally:
+        host.close()
 
 
 def test_reads_reject_each_others_cursors_and_keep_the_old_wire_tokens() -> None:

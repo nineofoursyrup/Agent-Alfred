@@ -207,7 +207,7 @@ def _position(payload: dict[str, Any]) -> tuple[int, str] | None:
     run_key = payload.get("r")
     if ar is None and run_key is None:
         return None
-    if not isinstance(ar, int) or not isinstance(run_key, str):
+    if type(ar) is not int or not isinstance(run_key, str):
         raise MalformedCursor("cursor position is malformed")
     return (ar, run_key)
 

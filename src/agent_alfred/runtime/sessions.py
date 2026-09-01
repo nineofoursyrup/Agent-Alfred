@@ -140,7 +140,7 @@ def list_sessions(
     if cursor is not None:
         payload = _decode_cursor(cursor, _INBOX_KIND)
         position = payload.get("ar")
-        if not isinstance(position, int) or position < 0:
+        if type(position) is not int or position < 0:
             raise MalformedCursor("cursor position is not an activity_revision")
     sql = (
         "SELECT session_id, created_at, activity_revision FROM sessions\n"
@@ -271,12 +271,12 @@ def open_session(
             ar = payload.get("ar")
             run_key = payload.get("r")
             if ar is not None or run_key is not None:
-                if not isinstance(ar, int) or not isinstance(run_key, str):
+                if type(ar) is not int or not isinstance(run_key, str):
                     raise MalformedCursor("runs cursor position is malformed")
                 runs_position = (ar, run_key)
         elif segment == _HISTORIC_SEGMENT:
             last_id = payload.get("id")
-            if not isinstance(last_id, int) or last_id < 0:
+            if type(last_id) is not int or last_id < 0:
                 raise MalformedCursor("historic cursor position is malformed")
             in_runs_segment = False
             historic_position = last_id

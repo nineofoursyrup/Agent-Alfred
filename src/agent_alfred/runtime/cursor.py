@@ -48,6 +48,7 @@ def decode_cursor(cursor: str, *, version: int, kind: str) -> dict[str, Any]:
         raise MalformedCursor("cursor is not a readable token") from None
     if (
         not isinstance(payload, dict)
+        or type(payload.get("v")) is not int
         or payload.get("v") != version
         or payload.get("k") != kind
     ):
