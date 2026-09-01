@@ -57,6 +57,7 @@ from agent_alfred.redact import Redactor
 from agent_alfred.runtime.cursor import encode_cursor
 from agent_alfred.runtime.recording import RecordingUnavailable
 from agent_alfred.runtime.snapshot import RuntimeSnapshot
+from agent_alfred.settings import CONTROLLED_FAILURE_TEXT
 
 INSTANCE = "proc-runtime"
 _REDACTION_CANARY = "sk-terminal-projection-secret"
@@ -374,6 +375,107 @@ def test_a_real_submit_answers_202_with_its_run_id() -> None:
         assert outcome.session_id == session_id
         wait_until(lambda: host.snapshot().coordinator_state == "idle")
     finally:
+        host.close()
+
+
+def test_pre_execution_failure_finalizes_and_keeps_the_worker_serving() -> None:
+    """A failure before ``running`` is still a recordable terminal Run."""
+
+    class FailRunningTransitionOnce:
+        def __init__(self, inner: sqlite3.Connection):
+            self._inner = inner
+            self.failed = False
+
+        def execute(self, sql, parameters=()):
+            if (
+                not self.failed
+                and sql.startswith("UPDATE runs SET")
+                and parameters
+                and parameters[0] == "running"
+            ):
+                self.failed = True
+                raise sqlite3.OperationalError("injected running transition failure")
+            return self._inner.execute(sql, parameters)
+
+        def __getattr__(self, name):
+            return getattr(self._inner, name)
+
+    inner = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(inner)
+    conn = FailRunningTransitionOnce(inner)
+    broker = _wired_broker()
+    host, _database = build_runtime_host(
+        ["later reply"],
+        conn=conn,
+        extra_sinks=[broker],
+        snapshot_listener=broker.publish_state_patch,
+    )
+    broker.bind_session_check(host.transport_session_validity)
+    host.start()
+    try:
+        api = dashboard_api(host)
+        session_id = host.create_session()
+        live = broker.connect(connection=FakeConnection(), session_id=session_id)
+        drain_connection(live)
+
+        first = api.submit({"message": "first", "session_id": session_id})
+
+        assert first.status == 202
+        assert first.run_id is not None
+        wait_until(lambda: host.snapshot().coordinator_state == "idle")
+        while broker.deliver_next(timeout=0):
+            pass
+
+        assert conn.failed is True
+        assert inner.execute(
+            "SELECT phase, outcome, started_at FROM runs WHERE run_id = ?",
+            (first.run_id,),
+        ).fetchone() == ("finished", "failed", None)
+        status, payload = api.session_messages(session_id, {"page_size": "10"})
+        assert status == 200
+        first_messages = [
+            message
+            for message in payload["messages"]
+            if message["run_id"] == first.run_id
+        ]
+        assert [message["role"] for message in first_messages] == [
+            "user",
+            "assistant",
+        ]
+        assert first_messages[0]["blocks"] == [
+            {"type": "text", "text": "first"}
+        ]
+        assert first_messages[1]["blocks"] == [
+            {"type": "text", "text": CONTROLLED_FAILURE_TEXT}
+        ]
+
+        terminal = [
+            patch
+            for patch in _state_patches(live)
+            if patch["active_run"] is not None
+            and patch["active_run"]["run_id"] == first.run_id
+            and patch["coordinator_state"] == "recording_pending"
+        ]
+        assert [patch["recording_state"] for patch in terminal] == [
+            "pending",
+            "recorded",
+        ]
+        assert all(patch["active_run"]["started_at"] is None for patch in terminal)
+        assert all(snapshot_from_payload(patch) for patch in terminal)
+        assert host.snapshot().coordinator_state == "idle"
+        assert host._worker.is_alive()
+
+        second = api.submit({"message": "second", "session_id": session_id})
+
+        assert second.status == 202
+        assert second.run_id is not None
+        wait_until(lambda: host.snapshot().coordinator_state == "idle")
+        assert inner.execute(
+            "SELECT phase, outcome FROM runs WHERE run_id = ?", (second.run_id,)
+        ).fetchone() == ("finished", "completed")
+        assert host._worker.is_alive()
+    finally:
+        broker.close(timeout=1.0)
         host.close()
 
 
