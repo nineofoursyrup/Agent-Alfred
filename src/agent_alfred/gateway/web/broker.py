@@ -49,6 +49,7 @@ from agent_alfred.gateway.web.connection import (
     ConnectionQueue,
     ConnectionWriter,
     SSEConnection,
+    StartupPrefixReservation,
     StartupReplay,
 )
 from agent_alfred.gateway.web.frames import (
@@ -334,6 +335,7 @@ class _ConnectStartup:
 
     connection: SSEConnection
     handle: ConnectionHandle | None = None
+    startup_reservation: StartupPrefixReservation | None = None
     registration_open: bool = False
 
     def abort(self, broker: SSEBroker) -> None:
@@ -353,6 +355,9 @@ class _ConnectStartup:
                 registration_open = self.registration_open
         try:
             if handle is not None:
+                if self.startup_reservation is not None:
+                    self.startup_reservation.cancel()
+                    self.startup_reservation = None
                 while True:
                     try:
                         handle.queue.take(timeout=0)
@@ -966,6 +971,7 @@ class SSEBroker:
                         and replay_through is not None
                         and verdict.requested_seq < replay_through
                     )
+                    guard = FrameCost(0, 0)
                     if needs_replay:
                         guard = self._ring.startup_guard_cost(
                             verdict.requested_seq,
@@ -977,9 +983,14 @@ class SSEBroker:
                             # ring's explicit gap verdict instead.
                             refused = True
                             break
-                        if not handle.queue.activate_startup(guard):
-                            refused = True
-                            break
+                    startup_reservation = handle.queue.reserve_startup_prefix(
+                        built, guard
+                    )
+                    if startup_reservation is None:
+                        refused = True
+                        break
+                    acquisition.startup_reservation = startup_reservation
+                    del built
                     handle.verdict = verdict
                     handle.ingress_seen = self._ingress_dropped
                     handle.published_through = (
@@ -1014,7 +1025,7 @@ class SSEBroker:
             source=handle.queue,
             clock=self._clock,
             heartbeat_s=self._heartbeat_s,
-            startup=built,
+            startup_reservation=acquisition.startup_reservation,
             startup_replay=(
                 StartupReplay(
                     source=handle.queue,
@@ -1037,6 +1048,7 @@ class SSEBroker:
         )
         handle.writer = writer
         handle.thread = self._spawn(lambda: self._run_writer(handle, writer))
+        acquisition.startup_reservation = None
         with self._lock:
             self._registrations -= 1
             acquisition.registration_open = False

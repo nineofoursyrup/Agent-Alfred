@@ -642,13 +642,14 @@ def test_a_connection_that_never_consumes_does_not_block_the_run_or_others() -> 
 
 def test_dropped_transients_are_reported_once_the_connection_recovers() -> None:
     harness = Harness()
-    # A queue with room for exactly two transient frames: the third is
-    # backpressure, and transients are what gives way.
-    handle = harness.connect(budget=frames.FrameBudget(2, 8 * 1024 * 1024))
-    for _ in range(3):
+    # The real fixed prefix needs three frame slots before it drains. The live
+    # queue then fills those same three slots and drops the fourth transient.
+    handle = harness.connect(budget=frames.FrameBudget(3, 8 * 1024 * 1024))
+    drain_connection(handle)
+    for _ in range(4):
         harness.emit(BlockDelta(text="x"), run_id="r1")
         harness.deliver()
-    # Two were accepted, one was dropped. Drain past them until the queue
+    # Three were accepted, one was dropped. Drain past them until the queue
     # has room again.
     drain_connection(handle)
     harness.emit(RunStarted(purpose="chat"), run_id="r1")
@@ -670,10 +671,16 @@ def test_dropped_transients_are_reported_once_the_connection_recovers() -> None:
 
 def test_drop_recovery_keeps_the_new_attempt_and_its_following_delta() -> None:
     harness = Harness()
-    handle = harness.connect(budget=frames.FrameBudget(2, 8 * 1024 * 1024))
+    handle = harness.connect(budget=frames.FrameBudget(3, 8 * 1024 * 1024))
     drain_connection(handle)
 
-    for text in ("queued-1", "queued-2", "missed-1", "missed-2"):
+    for text in (
+        "queued-1",
+        "queued-2",
+        "queued-3",
+        "missed-1",
+        "missed-2",
+    ):
         harness.emit(BlockDelta(attempt_id="old", text=text), run_id="r1")
         harness.deliver()
     drain_connection(handle)
@@ -715,14 +722,14 @@ def test_drop_recovery_keeps_the_new_attempt_and_its_following_delta() -> None:
 
 
 def test_replayable_recovery_that_cannot_fit_closes_and_remains_replayable() -> None:
-    harness = Harness(connection_budget=frames.FrameBudget(2, 1 << 20))
+    harness = Harness(connection_budget=frames.FrameBudget(3, 1 << 20))
     handle = harness.connect()
     drain_connection(handle)
 
-    for text in ("queued-1", "queued-2", "missed"):
+    for text in ("queued-1", "queued-2", "queued-3", "missed"):
         harness.emit(BlockDelta(attempt_id="old", text=text), run_id="r1")
         harness.deliver()
-    # Keep one queued physical frame, leaving room for either the notice or
+    # Keep two queued physical frames, leaving room for either the notice or
     # the replayable candidate, but not the atomic pair.
     handle.queue.take(timeout=0)
 
@@ -742,7 +749,10 @@ def test_replayable_recovery_that_cannot_fit_closes_and_remains_replayable() -> 
     assert b"attempt.started" not in wire
     assert b"deltas_dropped" not in wire
 
-    fresh = harness.connect(cursor=cursor_for(0))
+    fresh = harness.connect(
+        cursor=cursor_for(0),
+        budget=frames.FrameBudget(4, 1 << 20),
+    )
     assert replay_ids(drain_connection(fresh)) == [event.seq]
 
 
@@ -811,10 +821,11 @@ def test_a_replay_tail_over_the_connection_budget_still_arrives_whole() -> None:
     )
     harness.emit_many(20)
     handle = harness.connect(cursor=cursor_for(0))
-    # The queue itself holds nothing: the opening stream belongs to the
-    # writer, and the queue's budget has not been spent before it began.
-    assert handle.queue.current_frames == 0
-    assert handle.queue.current_bytes == 0
+    # The writer-owned fixed prefix is held by reference and fully charged
+    # before the writer begins; the replay tail itself remains cursor-bounded.
+    assert handle.queue.current_frames == 3
+    assert handle.queue.current_bytes > 0
+    assert handle.queue.budget.fits(handle.queue.current_cost)
     # retry -> re-seed -> snapshot -> the exact tail, in order.
     opening = drain_connection(handle)
     assert opening[0].wire_bytes() == b"retry: 1000\n\n"
@@ -838,9 +849,18 @@ def test_replay_guard_must_fit_before_connection_registration() -> None:
     record = stored[0]
     assert record.seq == event.seq and len(record.frames) == 1
     record_cost = record.ingress_cost()
+    prefix = (
+        frames.retry_frame(frames.DEFAULT_RETRY_MS),
+        frames.reseed_frame(INSTANCE, 0),
+        _patch_frames(runtime_snapshot(), None, True),
+    )
+    prefix_cost = frames.FrameCost(
+        frames=sum(item.ingress_cost().frames for item in prefix),
+        encoded_bytes=sum(item.ingress_cost().encoded_bytes for item in prefix),
+    )
     refusing_budget = frames.FrameBudget(
-        frames=1,
-        encoded_bytes=record_cost.encoded_bytes - 1,
+        frames=prefix_cost.frames + record_cost.frames,
+        encoded_bytes=prefix_cost.encoded_bytes + record_cost.encoded_bytes - 1,
     )
     connection = FakeConnection()
 
@@ -877,8 +897,8 @@ def test_replay_guard_must_fit_before_connection_registration() -> None:
     healthy = harness.connect(
         cursor=cursor_for(0),
         budget=frames.FrameBudget(
-            frames=1,
-            encoded_bytes=record_cost.encoded_bytes,
+            frames=prefix_cost.frames + record_cost.frames,
+            encoded_bytes=prefix_cost.encoded_bytes + record_cost.encoded_bytes,
         ),
     )
     assert healthy in harness.broker.connections
@@ -886,15 +906,37 @@ def test_replay_guard_must_fit_before_connection_registration() -> None:
     assert replay_ids(drain_connection(healthy)) == [event.seq]
 
 
+def test_fixed_startup_prefix_must_fit_before_connection_registration() -> None:
+    """Retry, re-seed and snapshot are all admitted before registration."""
+    harness = Harness()
+    connection = FakeConnection()
+
+    refused = harness.connect(
+        connection=connection,
+        budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20),
+    )
+
+    assert refused.finished.is_set()
+    assert refused.thread is None
+    assert refused.writer is None
+    assert refused not in harness.broker.connections
+    assert harness.broker.registrations_in_flight == 0
+    assert harness.spawn.targets == []
+    assert connection.closed is True
+    assert connection.written == b""
+    assert refused.queue.current_cost == frames.FrameCost(0, 0)
+    assert refused.queue.close_requested is False
+
+
 def test_startup_replay_uses_the_capacity_left_by_queued_live_traffic() -> None:
     """A frozen event makes progress in smaller slices instead of backing off."""
     harness = Harness(
-        connection_budget=frames.FrameBudget(2, 1 << 20),
+        connection_budget=frames.FrameBudget(5, 1 << 20),
         max_frame_bytes=384,
     )
-    event = harness.emit(RunStarted(purpose="x" * 100), run_id="r1")
+    event = harness.emit(RunStarted(purpose="x" * 500), run_id="r1")
     stored = harness.broker._ring.entries_after(0)
-    assert stored is not None and len(stored[0].frames) == 3
+    assert stored is not None and len(stored[0].frames) > 4
 
     handle = harness.connect(cursor=cursor_for(0))
     live = frames.measured_frames(
@@ -909,8 +951,10 @@ def test_startup_replay_uses_the_capacity_left_by_queued_live_traffic() -> None:
         for item in opening
         if isinstance(item, PreparedFrames) and item.seq == event.seq
     ]
-    assert [len(item.frames) for item in replay] == [1, 1, 1]
-    assert [item.id_line for item in replay] == [b"", b"", stored[0].id_line]
+    assert len(replay) >= 2
+    assert all(1 <= len(item.frames) <= 4 for item in replay)
+    assert all(item.id_line == b"" for item in replay[:-1])
+    assert replay[-1].id_line == stored[0].id_line
     assert b"".join(item.wire_bytes() for item in replay) == stored[0].wire_bytes()
     assert opening[-1] is live
     assert all(item.wire_bytes() != b"retry: 3000\n\n" for item in opening)
@@ -919,7 +963,15 @@ def test_startup_replay_uses_the_capacity_left_by_queued_live_traffic() -> None:
 
 def test_live_offers_cannot_steal_capacity_between_startup_slices() -> None:
     """Release-to-fetch handoff keeps one next record protected by bytes."""
-    budget = frames.FrameBudget(4, 650)
+    fixed_prefix_bytes = sum(
+        item.ingress_cost().encoded_bytes
+        for item in (
+            frames.retry_frame(frames.DEFAULT_RETRY_MS),
+            frames.reseed_frame(INSTANCE, 0),
+            _patch_frames(runtime_snapshot(), None, True),
+        )
+    )
+    budget = frames.FrameBudget(7, fixed_prefix_bytes + 650)
     harness = Harness(connection_budget=budget, max_frame_bytes=384)
     event = harness.emit(RunStarted(purpose="x" * 100), run_id="r1")
     stored = harness.broker._ring.entries_after(0)
@@ -964,8 +1016,8 @@ def test_live_offers_cannot_steal_capacity_between_startup_slices() -> None:
     assert handle.writer is not None
     assert handle.writer.deliver_startup(observe) is True
     assert outcomes == ["accepted", "accepted"]
-    assert [len(item.frames) for item in replay] == [1, 1, 1]
-    assert [item.id_line for item in replay] == [b"", b"", stored[0].id_line]
+    assert [len(item.frames) for item in replay] == [2, 1]
+    assert [item.id_line for item in replay] == [b"", stored[0].id_line]
     assert budget.fits(peak)
     assert [handle.queue.take(0) for _ in range(3)] == [
         first_live,
@@ -977,7 +1029,7 @@ def test_live_offers_cannot_steal_capacity_between_startup_slices() -> None:
 def test_startup_finishes_its_partial_checkpoint_before_overflow_backoff() -> None:
     """A live overflow cannot strand a frozen logical event mid-checkpoint."""
     harness = Harness(
-        connection_budget=frames.FrameBudget(2, 1 << 20),
+        connection_budget=frames.FrameBudget(5, 1 << 20),
         max_frame_bytes=384,
     )
     frozen = harness.emit(RunStarted(purpose="x" * 100), run_id="frozen")
@@ -1142,6 +1194,46 @@ def test_a_blocked_startup_replay_never_holds_more_than_its_frame_budget() -> No
         assert handle.queue.current_cost == frames.FrameCost(0, 0)
 
 
+def test_blocked_fixed_prefix_preserves_replay_guard_and_live_budget() -> None:
+    """The real broker charges its prefix before the first socket write."""
+
+    class BlockFirstPrefix(FakeConnection):
+        def __init__(self) -> None:
+            super().__init__()
+            self.blocked = threading.Event()
+            self.release = threading.Event()
+
+        def write(self, data: bytes) -> None:
+            if not self.blocked.is_set():
+                self.blocked.set()
+                assert self.release.wait(2.0), "test did not release prefix write"
+            super().write(data)
+
+    budget = frames.FrameBudget(frames=5, encoded_bytes=1 << 20)
+    harness = Harness(connection_budget=budget, spawn=RealThreadSpawner())
+    harness.emit(RunStarted(purpose="chat"), run_id="frozen")
+    connection = BlockFirstPrefix()
+    handle = harness.connect(connection=connection, cursor=cursor_for(0))
+
+    try:
+        assert connection.blocked.wait(2.0), "writer never reached fixed prefix"
+        assert handle.queue.current_frames == 3
+        live = frames.measured_frames(frames=(b"data: live",))
+        assert handle.queue.offer(live).kind == "accepted"
+        # Prefix 3 + live 1 are actual references; the final frame remains
+        # protected for frozen replay, so another live frame is refused.
+        assert handle.queue.offer(frames.measured_frames(frames=(b"x",))).kind == (
+            "dropped"
+        )
+        assert handle.queue.current_frames == 4
+        assert budget.fits(handle.queue.current_cost)
+    finally:
+        connection.release.set()
+        handle.queue.stop()
+        assert handle.finished.wait(2.0)
+    assert handle.queue.current_cost == frames.FrameCost(0, 0)
+
+
 def test_a_failed_startup_write_releases_its_reserved_batch() -> None:
     """A dead peer cannot strand startup capacity on the closed handle."""
 
@@ -1152,7 +1244,7 @@ def test_a_failed_startup_write_releases_its_reserved_batch() -> None:
             super().write(data)
 
     harness = Harness(
-        connection_budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20),
+        connection_budget=frames.FrameBudget(frames=5, encoded_bytes=1 << 20),
         spawn=RealThreadSpawner(),
     )
     harness.emit_many(4)
@@ -1186,7 +1278,7 @@ def test_slow_startup_generations_release_written_and_unfetched_history() -> Non
     )
     harness = Harness(
         ring=ring,
-        connection_budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20),
+        connection_budget=frames.FrameBudget(frames=5, encoded_bytes=1 << 20),
         spawn=RealThreadSpawner(),
     )
     harness.emit_many(6)
@@ -1319,13 +1411,13 @@ def test_startup_replay_slices_one_large_event_without_advancing_its_id() -> Non
     )
     large = frames.measured_frames(
         seq=2,
-        frames=(b"data: first", b"data: second", b"data: third"),
+        frames=tuple(f"data: part-{index}".encode() for index in range(6)),
         id_line=b"id: inst-test:2\n",
         replayable=True,
     )
     ring.append(previous)
     ring.append(large)
-    budget = frames.FrameBudget(frames=2, encoded_bytes=1 << 20)
+    budget = frames.FrameBudget(frames=5, encoded_bytes=1 << 20)
     harness = Harness(ring=ring, connection_budget=budget)
     handle = harness.connect(cursor=cursor_for(1))
     observed: list[PreparedFrames] = []
@@ -1341,10 +1433,7 @@ def test_startup_replay_slices_one_large_event_without_advancing_its_id() -> Non
     assert handle.writer is not None
     assert handle.writer.deliver_startup(observe) is True
 
-    assert [item.frames for item in observed] == [
-        large.frames[:2],
-        large.frames[2:],
-    ]
+    assert [item.frames for item in observed] == [large.frames[:5], large.frames[5:]]
     assert observed[0].id_line == b""
     assert observed[1].id_line == large.id_line
     assert b"".join(item.wire_bytes() for item in observed) == large.wire_bytes()
@@ -1358,7 +1447,7 @@ def test_startup_replay_slices_one_large_event_without_advancing_its_id() -> Non
 
 def test_live_large_event_overflow_reconnects_and_advances_once() -> None:
     """A live overflow is recovered in bounded slices, then stays checkpointed."""
-    budget = frames.FrameBudget(frames=2, encoded_bytes=1 << 20)
+    budget = frames.FrameBudget(frames=5, encoded_bytes=1 << 20)
     harness = Harness(
         ring=ReplayRing(
             budget=frames.FrameBudget(frames=10, encoded_bytes=1 << 20)
@@ -1376,13 +1465,13 @@ def test_live_large_event_overflow_reconnects_and_advances_once() -> None:
     event = harness.emit(
         RunStarted(
             purpose="chat",
-            user_message=user_message_with("x" * 300),
+            user_message=user_message_with("x" * 1_200),
         ),
         run_id="large",
     )
     stored = harness.broker._ring.entries_after(0)
     assert stored is not None and len(stored) == 1
-    assert len(stored[0].frames) == 3
+    assert len(stored[0].frames) > budget.frames
     harness.deliver()
 
     assert old.finished.wait(2.0)
@@ -1425,7 +1514,7 @@ def test_live_large_event_overflow_reconnects_and_advances_once() -> None:
 def test_eviction_between_large_event_slices_never_issues_its_checkpoint() -> None:
     """Losing a partial event closes now and reports a gap on reconnect."""
     ring = ReplayRing(
-        budget=frames.FrameBudget(frames=4, encoded_bytes=1 << 20)
+        budget=frames.FrameBudget(frames=7, encoded_bytes=1 << 20)
     )
     previous = frames.measured_frames(
         seq=1,
@@ -1435,7 +1524,7 @@ def test_eviction_between_large_event_slices_never_issues_its_checkpoint() -> No
     )
     large = frames.measured_frames(
         seq=2,
-        frames=(b"data: first", b"data: second", b"data: third"),
+        frames=tuple(f"data: part-{index}".encode() for index in range(6)),
         id_line=b"id: inst-test:2\n",
         replayable=True,
     )
@@ -1449,7 +1538,7 @@ def test_eviction_between_large_event_slices_never_issues_its_checkpoint() -> No
     ring.append(large)
     harness = Harness(
         ring=ring,
-        connection_budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20),
+        connection_budget=frames.FrameBudget(frames=5, encoded_bytes=1 << 20),
     )
     handle = harness.connect(cursor=cursor_for(1))
     opening: list[PreparedFrames] = []

@@ -144,7 +144,8 @@ class ConnectionQueue:
         self._items: queue.SimpleQueue = queue.SimpleQueue()
         self._lock = threading.Lock()
         self._usage = frames.FrameCost(frames=0, encoded_bytes=0)
-        self._startup_usage = frames.FrameCost(frames=0, encoded_bytes=0)
+        self._prefix_usage = frames.FrameCost(frames=0, encoded_bytes=0)
+        self._replay_usage = frames.FrameCost(frames=0, encoded_bytes=0)
         self._startup_guard = frames.FrameCost(frames=0, encoded_bytes=0)
         self._dropped = 0
         self._closing = False
@@ -208,12 +209,12 @@ class ConnectionQueue:
             admitted = self._usage + notice_cost + cost
             protected = frames.FrameCost(
                 frames=max(
-                    self._startup_guard.frames - self._startup_usage.frames,
+                    self._startup_guard.frames - self._replay_usage.frames,
                     0,
                 ),
                 encoded_bytes=max(
                     self._startup_guard.encoded_bytes
-                    - self._startup_usage.encoded_bytes,
+                    - self._replay_usage.encoded_bytes,
                     0,
                 ),
             )
@@ -255,13 +256,35 @@ class ConnectionQueue:
                 self._usage = self._usage - item.ingress_cost()
         return item
 
-    def activate_startup(self, guard: frames.FrameCost) -> bool:
-        """Protect capacity for one physical frame until frozen replay ends."""
+    def reserve_startup_prefix(
+        self,
+        startup: Sequence[frames.PreparedFrames],
+        guard: frames.FrameCost,
+    ) -> StartupPrefixReservation | None:
+        """Atomically admit the fixed prefix and frozen-replay protection."""
         with self._lock:
-            if self._closing or not self.budget.fits(self._usage + guard):
-                return False
+            entries = tuple(startup)
+            cost = frames.FrameCost(frames=0, encoded_bytes=0)
+            for item in entries:
+                cost = cost + item.ingress_cost()
+            projected = self._usage + cost + guard
+            if self._closing or not self.budget.fits(projected):
+                return None
+            self._usage = self._usage + cost
+            self._prefix_usage = self._prefix_usage + cost
             self._startup_guard = guard
-            return True
+        return StartupPrefixReservation(self, entries)
+
+    def _release_startup_prefix(self, cost: frames.FrameCost) -> None:
+        with self._lock:
+            self._usage = self._usage - cost
+            self._prefix_usage = self._prefix_usage - cost
+
+    def _cancel_startup_prefix(self, cost: frames.FrameCost) -> None:
+        with self._lock:
+            self._usage = self._usage - cost
+            self._prefix_usage = self._prefix_usage - cost
+            self._startup_guard = frames.FrameCost(0, 0)
 
     def build_and_reserve_startup(
         self,
@@ -297,7 +320,7 @@ class ConnectionQueue:
                 if not self.budget.fits(projected):
                     raise RuntimeError("startup builder exceeded remaining budget")
                 self._usage = projected
-                self._startup_usage = self._startup_usage + batch.cost
+                self._replay_usage = self._replay_usage + batch.cost
             else:
                 self._startup_guard = frames.FrameCost(0, 0)
             return batch
@@ -306,7 +329,7 @@ class ConnectionQueue:
         """Release a replay batch immediately after its final frame is written."""
         with self._lock:
             self._usage = self._usage - cost
-            self._startup_usage = self._startup_usage - cost
+            self._replay_usage = self._replay_usage - cost
 
     def cancel_startup(
         self, cost: frames.FrameCost = frames.FrameCost(0, 0)
@@ -314,7 +337,7 @@ class ConnectionQueue:
         """Release a writer's final local slice and its priority guard."""
         with self._lock:
             self._usage = self._usage - cost
-            self._startup_usage = self._startup_usage - cost
+            self._replay_usage = self._replay_usage - cost
             self._startup_guard = frames.FrameCost(0, 0)
 
     def finish(self) -> None:
@@ -327,8 +350,36 @@ class ConnectionQueue:
                 except queue.Empty:
                     break
             self._usage = frames.FrameCost(0, 0)
-            self._startup_usage = frames.FrameCost(0, 0)
+            self._prefix_usage = frames.FrameCost(0, 0)
+            self._replay_usage = frames.FrameCost(0, 0)
             self._startup_guard = frames.FrameCost(0, 0)
+
+
+class StartupPrefixReservation:
+    """Unique ownership of an already-accounted fixed startup prefix."""
+
+    def __init__(
+        self,
+        source: ConnectionQueue,
+        entries: Sequence[frames.PreparedFrames],
+    ) -> None:
+        self._source = source
+        self._entries = deque(entries)
+
+    def peek(self) -> frames.PreparedFrames | None:
+        return self._entries[0] if self._entries else None
+
+    def release_current(self, item: frames.PreparedFrames) -> None:
+        if not self._entries or self._entries[0] is not item:
+            raise RuntimeError("startup prefix released out of order")
+        released = self._entries.popleft()
+        self._source._release_startup_prefix(released.ingress_cost())
+
+    def cancel(self) -> None:
+        cost = frames.FrameCost(frames=0, encoded_bytes=0)
+        while self._entries:
+            cost = cost + self._entries.popleft().ingress_cost()
+        self._source._cancel_startup_prefix(cost)
 
 
 class ConnectionSource(Protocol):
@@ -397,14 +448,14 @@ class ConnectionWriter:
         source: ConnectionSource,
         clock: Clock,
         heartbeat_s: float = DEFAULT_HEARTBEAT_S,
-        startup: Sequence[frames.PreparedFrames] = (),
+        startup_reservation: StartupPrefixReservation | None = None,
         startup_replay: StartupReplay | None = None,
     ):
         self._connection = connection
         self._source = source
         self._clock = clock
         self._heartbeat_s = heartbeat_s
-        self._startup = deque(startup)
+        self._startup_reservation = startup_reservation
         self._startup_replay = startup_replay
         self._last_write = clock.monotonic()
         self.failure: BaseException | None = None
@@ -427,8 +478,18 @@ class ConnectionWriter:
         ``False`` means the frozen tail could no longer be delivered exactly;
         the final item consumed is the retry instruction for reconnect.
         """
-        while self._startup:
-            consume(self._startup.popleft())
+        reservation = self._startup_reservation
+        item = reservation.peek() if reservation is not None else None
+        while reservation is not None and item is not None:
+            try:
+                consume(item)
+            except BaseException:
+                reservation.cancel()
+                raise
+            reservation.release_current(item)
+            del item
+            item = reservation.peek()
+        self._startup_reservation = None
         replay = self._startup_replay
         batch = replay.take() if replay is not None else None
         while replay is not None and batch is not None:
@@ -485,7 +546,9 @@ class ConnectionWriter:
             # here would only print a traceback for a browser that left.
             self.failure = exc
         finally:
-            self._startup.clear()
+            if self._startup_reservation is not None:
+                self._startup_reservation.cancel()
+                self._startup_reservation = None
             self._startup_replay = None
             self._source.finish()
             self._connection.close()

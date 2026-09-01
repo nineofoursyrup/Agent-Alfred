@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import gc
 import queue
 import socket
 import threading
 import time
+import weakref
 
 import pytest
 
@@ -245,6 +247,175 @@ def test_startup_replay_fetch_receives_only_progress_and_frozen_boundary() -> No
     assert calls == [(ReplayProgress(completed_seq=3), 7)]
 
 
+def test_blocked_fixed_startup_prefix_shares_the_live_frame_budget() -> None:
+    """A blocked first write cannot hide the still-retained fixed prefix."""
+
+    class BlockFirstWrite(FakeConnection):
+        def __init__(self) -> None:
+            super().__init__()
+            self.blocked = threading.Event()
+            self.release = threading.Event()
+
+        def write(self, data: bytes) -> None:
+            if not self.blocked.is_set():
+                self.blocked.set()
+                assert self.release.wait(2.0), "test did not release prefix write"
+            super().write(data)
+
+    prefix = (_frames(90), _frames(91))
+    source = ConnectionQueue(
+        budget=frames.FrameBudget(frames=3, encoded_bytes=1 << 20)
+    )
+    reservation = source.reserve_startup_prefix(prefix, frames.FrameCost(0, 0))
+    assert reservation is not None
+    connection = BlockFirstWrite()
+    writer = ConnectionWriter(
+        connection=connection,
+        source=source,
+        clock=FakeClock(),
+        startup_reservation=reservation,
+    )
+    thread = threading.Thread(target=writer.run, daemon=True)
+    thread.start()
+    try:
+        assert connection.blocked.wait(2.0), "writer never reached fixed prefix"
+        live = _frames(1)
+        assert source.offer(live).kind == "accepted"
+        assert source.offer(_frames(2)).kind == "dropped"
+        assert source.current_cost == frames.FrameCost(
+            frames=3,
+            encoded_bytes=sum(item.ingress_cost().encoded_bytes for item in prefix)
+            + live.ingress_cost().encoded_bytes,
+        )
+        assert source.budget.fits(source.current_cost)
+    finally:
+        connection.release.set()
+        source.stop()
+        thread.join(timeout=2.0)
+    assert not thread.is_alive()
+    assert source.current_cost == frames.FrameCost(0, 0)
+
+
+def test_blocked_fixed_startup_prefix_shares_the_live_byte_budget() -> None:
+    class BlockFirstWrite(FakeConnection):
+        def __init__(self) -> None:
+            super().__init__()
+            self.blocked = threading.Event()
+            self.release = threading.Event()
+
+        def write(self, data: bytes) -> None:
+            if not self.blocked.is_set():
+                self.blocked.set()
+                assert self.release.wait(2.0), "test did not release prefix write"
+            super().write(data)
+
+    prefix = (_frames(90, size=5), _frames(91, size=7))
+    live = _frames(1, size=9)
+    total_bytes = sum(item.ingress_cost().encoded_bytes for item in prefix) + (
+        live.ingress_cost().encoded_bytes
+    )
+    source = ConnectionQueue(
+        budget=frames.FrameBudget(frames=100, encoded_bytes=total_bytes)
+    )
+    reservation = source.reserve_startup_prefix(prefix, frames.FrameCost(0, 0))
+    assert reservation is not None
+    connection = BlockFirstWrite()
+    writer = ConnectionWriter(
+        connection=connection,
+        source=source,
+        clock=FakeClock(),
+        startup_reservation=reservation,
+    )
+    thread = threading.Thread(target=writer.run, daemon=True)
+    thread.start()
+    try:
+        assert connection.blocked.wait(2.0), "writer never reached fixed prefix"
+        assert source.offer(live).kind == "accepted"
+        assert source.offer(_frames(2, size=0)).kind == "dropped"
+        assert source.current_bytes == total_bytes
+        assert source.current_frames < source.budget.frames
+        assert source.budget.fits(source.current_cost)
+    finally:
+        connection.release.set()
+        source.stop()
+        thread.join(timeout=2.0)
+    assert not thread.is_alive()
+    assert source.current_cost == frames.FrameCost(0, 0)
+
+
+def test_fixed_startup_prefix_releases_each_item_after_it_is_written() -> None:
+    prefix = (_frames(90), _frames(91), _frames(92))
+    costs = [item.ingress_cost() for item in prefix]
+    references = [weakref.ref(item) for item in prefix]
+    source = ConnectionQueue(
+        budget=frames.FrameBudget(frames=3, encoded_bytes=1 << 20)
+    )
+    reservation = source.reserve_startup_prefix(prefix, frames.FrameCost(0, 0))
+    assert reservation is not None
+    writer = ConnectionWriter(
+        connection=FakeConnection(),
+        source=source,
+        clock=FakeClock(),
+        startup_reservation=reservation,
+    )
+    del prefix
+    held_while_writing: list[frames.FrameCost] = []
+    retained_while_writing: list[int] = []
+
+    def observe(_item) -> None:
+        gc.collect()
+        held_while_writing.append(source.current_cost)
+        retained_while_writing.append(sum(ref() is not None for ref in references))
+
+    assert writer.deliver_startup(observe)
+
+    assert held_while_writing == [
+        costs[0] + costs[1] + costs[2],
+        costs[1] + costs[2],
+        costs[2],
+    ]
+    assert retained_while_writing == [3, 2, 1]
+    gc.collect()
+    assert all(ref() is None for ref in references)
+    assert source.current_cost == frames.FrameCost(0, 0)
+
+
+@pytest.mark.parametrize("fail_at", [0, 1])
+def test_fixed_startup_prefix_failure_releases_current_and_remaining(
+    fail_at: int,
+) -> None:
+    prefix = (_frames(90), _frames(91), _frames(92))
+    guard = frames.FrameCost(frames=1, encoded_bytes=1)
+    budget = frames.FrameBudget(frames=4, encoded_bytes=1 << 20)
+    source = ConnectionQueue(budget=budget)
+    reservation = source.reserve_startup_prefix(prefix, guard)
+    assert reservation is not None
+    writer = ConnectionWriter(
+        connection=FakeConnection(),
+        source=source,
+        clock=FakeClock(),
+        startup_reservation=reservation,
+    )
+    writes = 0
+
+    def fail(item) -> None:
+        nonlocal writes
+        if writes == fail_at:
+            raise BrokenPipeError("injected fixed-prefix failure")
+        writes += 1
+
+    with pytest.raises(BrokenPipeError, match="fixed-prefix failure"):
+        writer.deliver_startup(fail)
+    assert source.current_cost == frames.FrameCost(0, 0)
+
+    probes = tuple(_frames(seq) for seq in range(1, 5))
+    assert all(source.offer(item).kind == "accepted" for item in probes)
+    assert source.current_frames == budget.frames
+    assert source.offer(_frames(5)).kind == "dropped"
+    assert [source.take(0) for _ in probes] == list(probes)
+    assert source.current_cost == frames.FrameCost(0, 0)
+
+
 # --- the named cost of the queue's accounting --------------------------------
 
 
@@ -371,7 +542,12 @@ def test_the_writer_preserves_physical_frame_boundaries(phase: str) -> None:
 
     connection = FakeConnection()
     source = ConnectionQueue(budget=frames.FrameBudget(frames=9, encoded_bytes=1 << 20))
-    startup = (prepared,) if phase == "startup" else ()
+    startup_reservation = None
+    if phase == "startup":
+        startup_reservation = source.reserve_startup_prefix(
+            (prepared,), frames.FrameCost(0, 0)
+        )
+        assert startup_reservation is not None
     if phase == "live":
         assert source.offer(prepared).kind == "accepted"
     source.stop()
@@ -380,7 +556,7 @@ def test_the_writer_preserves_physical_frame_boundaries(phase: str) -> None:
         connection=connection,
         source=source,
         clock=FakeClock(),
-        startup=startup,
+        startup_reservation=startup_reservation,
     ).run()
 
     assert connection.writes == list(expected)
