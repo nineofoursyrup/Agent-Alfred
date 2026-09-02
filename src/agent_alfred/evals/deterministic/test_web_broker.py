@@ -1139,7 +1139,7 @@ def test_live_offers_cannot_steal_capacity_between_startup_slices() -> None:
         )
     )
     budget = frames.FrameBudget(7, fixed_prefix_bytes + 650)
-    harness = Harness(connection_budget=budget, max_frame_bytes=384)
+    harness = Harness(connection_budget=budget, max_frame_bytes=448)
     event = harness.emit(RunStarted(purpose="x" * 100), run_id="r1")
     stored = harness.broker._ring.entries_after(0)
     assert stored is not None and len(stored[0].frames) == 3
@@ -1197,7 +1197,7 @@ def test_startup_finishes_its_partial_checkpoint_before_overflow_backoff() -> No
     """A live overflow cannot strand a frozen logical event mid-checkpoint."""
     harness = Harness(
         connection_budget=frames.FrameBudget(5, 1 << 20),
-        max_frame_bytes=384,
+        max_frame_bytes=448,
     )
     frozen = harness.emit(RunStarted(purpose="x" * 100), run_id="frozen")
     harness.deliver()

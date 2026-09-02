@@ -29,10 +29,12 @@ The wire shape in one place:
 
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 from dataclasses import dataclass, replace
 from functools import partial
-from typing import Any, Literal
+from typing import Any, Literal, Sequence
 
 from agent_alfred.events import event_json_default
 
@@ -156,6 +158,19 @@ class FrameBudget:
             cost.frames <= self.frames
             and cost.encoded_bytes <= self.encoded_bytes
         )
+
+
+class WireFrameError(ValueError):
+    """A candidate domain event is not one complete valid wire event."""
+
+
+@dataclass(frozen=True)
+class AssembledEvent:
+    event: str
+    event_id: str
+    payload: object
+    event_sha256: str
+    checkpoint: str | None
 
 
 @dataclass(frozen=True)
@@ -344,6 +359,7 @@ def _body_budget(
     sse_event: str,
     event_name: str,
     event_id: str,
+    event_sha256: str,
     chunk_count: int,
     max_frame_bytes: int,
 ) -> int:
@@ -352,16 +368,20 @@ def _body_budget(
     ``chunk_count`` enters because the header it appears in is part of the
     frame: a three-digit count costs two bytes more than a one-digit one.
     """
-    head = '{"event":%s,"event_id":%s,"chunk_index":%d,"chunk_count":%d,"payload":'
+    head = (
+        '{"event":%s,"event_id":%s,"chunk_index":%d,"chunk_count":%d,'
+        '"event_sha256":%s,"payload":'
+    )
     longest = head % (
         _dump_json(event_name),
         _dump_json(event_id),
         chunk_count,
         chunk_count,
+        _dump_json(event_sha256),
     )
     fixed = len(b"event: ") + len(sse_event) + len(_NEWLINE)
     fixed += len(_DATA_PREFIX) + len(longest.encode("utf-8")) + len(b"}")
-    fixed += len(_NEWLINE) + _ID_LINE_RESERVE
+    fixed += 2 * len(_NEWLINE) + _ID_LINE_RESERVE
     return max_frame_bytes - fixed
 
 
@@ -387,6 +407,9 @@ def domain_event_frames(
             f"max_frame_bytes must be >= {MIN_FRAME_BYTES}, got {max_frame_bytes}"
         )
     body = _dump(payload)
+    event_sha256 = hashlib.sha256(
+        _dump({"event": event_name, "event_id": event_id, "payload": payload})
+    ).hexdigest()
     count = 1
     chunks: tuple[bytes, ...] = ()
     for _ in range(16):
@@ -394,6 +417,7 @@ def domain_event_frames(
             sse_event=DOMAIN_EVENT,
             event_name=event_name,
             event_id=event_id,
+            event_sha256=event_sha256,
             chunk_count=count,
             max_frame_bytes=max_frame_bytes,
         )
@@ -406,6 +430,7 @@ def domain_event_frames(
             sse_event=DOMAIN_EVENT,
             event_name=event_name,
             event_id=event_id,
+            event_sha256=event_sha256,
             chunk_count=len(chunks),
             max_frame_bytes=max_frame_bytes,
         )
@@ -416,12 +441,14 @@ def domain_event_frames(
         + _NEWLINE
         + _DATA_PREFIX
         + (
-            '{"event":%s,"event_id":%s,"chunk_index":%d,"chunk_count":%d,"payload":'
+            '{"event":%s,"event_id":%s,"chunk_index":%d,"chunk_count":%d,'
+            '"event_sha256":%s,"payload":'
             % (
                 _dump_json(event_name),
                 _dump_json(event_id),
                 index,
                 len(chunks),
+                _dump_json(event_sha256),
             )
         ).encode("utf-8")
         + chunk
@@ -430,6 +457,185 @@ def domain_event_frames(
     )
     return measured_frames(
         frames=frames, replayable=replayable, must_deliver=replayable
+    )
+
+
+_WIRE_INTEGER = re.compile(r"(?:0|[1-9][0-9]*)")
+_WIRE_DIGEST = re.compile(r"[0-9a-f]{64}")
+_WIRE_CHECKPOINT = re.compile(rb"id: [^:\r\n]+:[1-9][0-9]*")
+
+
+def _take_json_string(text: str, position: int) -> tuple[str, bytes, int]:
+    value, end = json.JSONDecoder().raw_decode(text, position)
+    if not isinstance(value, str):
+        raise WireFrameError("domain event metadata must be strings")
+    raw_token = text[position:end].encode("utf-8")
+    try:
+        canonical_token = _dump_json(value).encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise WireFrameError("domain event metadata is not canonical UTF-8") from exc
+    if raw_token != canonical_token:
+        raise WireFrameError("domain event metadata is not canonically encoded")
+    return value, raw_token, end
+
+
+def _take_wire_integer(text: str, position: int) -> tuple[int, int]:
+    matched = _WIRE_INTEGER.match(text, position)
+    if matched is None:
+        raise WireFrameError("chunk metadata must be non-negative integers")
+    return int(matched.group()), matched.end()
+
+
+def _parse_domain_data(
+    data: bytes,
+) -> tuple[str, bytes, str, bytes, int, int, str, bytes, bytes]:
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise WireFrameError("domain event data must be UTF-8") from exc
+    position = 0
+
+    def consume(literal: str) -> None:
+        nonlocal position
+        if not text.startswith(literal, position):
+            raise WireFrameError("domain event data has an invalid shape")
+        position += len(literal)
+
+    consume('{"event":')
+    event, event_token, position = _take_json_string(text, position)
+    consume(',"event_id":')
+    event_id, event_id_token, position = _take_json_string(text, position)
+    consume(',"chunk_index":')
+    chunk_index, position = _take_wire_integer(text, position)
+    consume(',"chunk_count":')
+    chunk_count, position = _take_wire_integer(text, position)
+    consume(',"event_sha256":')
+    event_sha256, digest_token, position = _take_json_string(text, position)
+    if _WIRE_DIGEST.fullmatch(event_sha256) is None:
+        raise WireFrameError("event_sha256 must be 64 lowercase hexadecimal characters")
+    consume(',"payload":')
+    if not text.endswith("}"):
+        raise WireFrameError("domain event data has an invalid payload fragment")
+    payload_fragment = text[position:-1].encode("utf-8")
+    return (
+        event,
+        event_token,
+        event_id,
+        event_id_token,
+        chunk_index,
+        chunk_count,
+        event_sha256,
+        digest_token,
+        payload_fragment,
+    )
+
+
+def assemble_domain_event_wire_frames(
+    wire_records: Sequence[bytes],
+    *,
+    budget: FrameBudget,
+) -> AssembledEvent:
+    """Validate and assemble exactly one complete domain event.
+
+    The input is a finite candidate boundary rather than a stream: absence of
+    the final chunk is therefore an error, not an ambiguous "wait for more".
+    """
+    if not wire_records:
+        raise WireFrameError("a domain event requires at least one wire record")
+    if len(wire_records) > budget.frames:
+        raise WireFrameError("domain event exceeds the frame budget")
+
+    total_bytes = 0
+    identity: tuple[str, bytes, str, bytes, int, str, bytes] | None = None
+    payload_fragments: list[bytes] = []
+    checkpoint: str | None = None
+    for expected_index, record in enumerate(wire_records):
+        if not isinstance(record, bytes):
+            raise WireFrameError("wire records must be bytes")
+        total_bytes += len(record)
+        if len(record) > MAX_FRAME_BYTES:
+            raise WireFrameError("wire record exceeds the hard frame limit")
+        if total_bytes > budget.encoded_bytes:
+            raise WireFrameError("domain event exceeds the encoded-byte budget")
+        if not record.endswith(b"\n\n"):
+            raise WireFrameError("wire record must end in exactly one blank line")
+        content = record[:-2]
+        lines = content.split(b"\n")
+        if len(lines) not in (2, 3) or lines[0] != b"event: domain_event":
+            raise WireFrameError("wire record is not exactly one domain_event record")
+        if not lines[1].startswith(_DATA_PREFIX):
+            raise WireFrameError("wire record must contain exactly one data field")
+        if len(lines) == 3:
+            if expected_index != len(wire_records) - 1:
+                raise WireFrameError("checkpoint is only valid on the final chunk")
+            if (
+                len(lines[2]) + len(_NEWLINE) > _ID_LINE_RESERVE
+                or _WIRE_CHECKPOINT.fullmatch(lines[2]) is None
+            ):
+                raise WireFrameError("checkpoint has an invalid wire shape")
+            checkpoint = lines[2][len(b"id: ") :].decode("utf-8")
+
+        (
+            event,
+            event_token,
+            event_id,
+            event_id_token,
+            index,
+            count,
+            digest,
+            digest_token,
+            fragment,
+        ) = _parse_domain_data(lines[1][len(_DATA_PREFIX) :])
+        if count < 1 or count > budget.frames:
+            raise WireFrameError("chunk_count is outside the frame budget")
+        if index != expected_index or index >= count:
+            raise WireFrameError("chunk indexes must be consecutive and in range")
+        current_identity = (
+            event,
+            event_token,
+            event_id,
+            event_id_token,
+            count,
+            digest,
+            digest_token,
+        )
+        if identity is None:
+            identity = current_identity
+        elif current_identity != identity:
+            raise WireFrameError("domain event metadata changed between chunks")
+        payload_fragments.append(fragment)
+
+    assert identity is not None
+    (
+        event,
+        _event_token,
+        event_id,
+        _event_id_token,
+        chunk_count,
+        event_sha256,
+        _digest_token,
+    ) = identity
+    if len(wire_records) != chunk_count:
+        raise WireFrameError("domain event is missing or has extra chunks")
+    try:
+        payload = json.loads(b"".join(payload_fragments).decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise WireFrameError("assembled payload is not valid JSON") from exc
+    try:
+        canonical_event = _dump(
+            {"event": event, "event_id": event_id, "payload": payload}
+        )
+    except UnicodeEncodeError as exc:
+        raise WireFrameError("assembled event is not canonical UTF-8") from exc
+    actual_digest = hashlib.sha256(canonical_event).hexdigest()
+    if actual_digest != event_sha256:
+        raise WireFrameError("event_sha256 does not match the assembled event")
+    return AssembledEvent(
+        event=event,
+        event_id=event_id,
+        payload=payload,
+        event_sha256=event_sha256,
+        checkpoint=checkpoint,
     )
 
 

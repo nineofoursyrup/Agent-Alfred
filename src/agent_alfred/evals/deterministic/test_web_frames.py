@@ -61,16 +61,42 @@ def test_a_small_event_is_one_frame_carrying_the_checkpoint() -> None:
     assert wire.count(b"id: inst:9") == 1
 
 
+def test_event_sha256_has_fixed_literal_for_known_event() -> None:
+    prepared = _domain()
+    [physical] = prepared.frames
+
+    assert b'"event_sha256":"' in physical
+    assert (
+        b'"event_sha256":"'
+        b"22da99b10adb62dfa04c2b163118496bab1f366f8787cfed02c40e1ecb025515"
+        b'"' in physical
+    )
+
+
+def test_maximum_checkpoint_reserve_keeps_every_wire_record_within_limit() -> None:
+    prepared = frames.domain_event_frames(
+        event_name="e",
+        payload="x" * 92,
+        event_id="i",
+        replayable=True,
+        max_frame_bytes=256,
+    ).with_checkpoint(1, "p" * 57)
+
+    assert max(map(len, prepared.wire_frames())) <= 256
+
+
 def test_small_event_wire_digest_and_checkpoint_bytes_are_stable() -> None:
     wire = _domain().with_checkpoint(9, "inst").wire_bytes()
     assert wire == (
         b"event: domain_event\n"
         b'data: {"event":"block.delta","event_id":"eid-1",'
-        b'"chunk_index":0,"chunk_count":1,"payload":{"text":"hello"}}\n'
+        b'"chunk_index":0,"chunk_count":1,'
+        b'"event_sha256":"22da99b10adb62dfa04c2b163118496bab1f366f8787cfed02c40e1ecb025515",'
+        b'"payload":{"text":"hello"}}\n'
         b"id: inst:9\n\n"
     )
     assert hashlib.sha256(wire).hexdigest() == (
-        "074b30013f402c34de364d5247cb89e14760053ab730096c27ba2f75b6c39aed"
+        "93b9a79406b9ecb6d72152cbd10cbb0e968d42480c97b1f7cca5a7cac1924b26"
     )
 
 
@@ -129,7 +155,7 @@ def test_utf8_splitting_never_tears_a_character() -> None:
         payload=body,
         event_id="e",
         replayable=False,
-        max_frame_bytes=frames.MIN_FRAME_BYTES,
+        max_frame_bytes=512,
     )
     assert len(prepared.frames) > 1
     for frame in prepared.frames:
@@ -147,6 +173,364 @@ def test_reassembly_is_exact_for_a_multi_chunk_event() -> None:
         max_frame_bytes=8 * 1024,
     )
     assert _reassemble(prepared) == body
+
+
+def test_reference_assembler_commits_complete_digest_verified_event_once() -> None:
+    prepared = _domain(text="中文é\U0001f600" * 500, max_frame_bytes=512)
+    identified = prepared.with_checkpoint(9, "inst")
+
+    assembled = frames.assemble_domain_event_wire_frames(
+        identified.wire_frames(),
+        budget=frames.FrameBudget(
+            frames=len(identified.frames),
+            encoded_bytes=identified.byte_size,
+        ),
+    )
+
+    assert assembled == frames.AssembledEvent(
+        event="block.delta",
+        event_id="eid-1",
+        payload={"text": "中文é\U0001f600" * 500},
+        event_sha256=(
+            "687b41dc0294e093a96d36e8e907b42e92b0a482007b7d56e1a029b919498e57"
+        ),
+        checkpoint="inst:9",
+    )
+
+
+def _assembly_budget(
+    records: tuple[bytes, ...], *, extra_frames: int = 0
+) -> frames.FrameBudget:
+    return frames.FrameBudget(
+        frames=len(records) + extra_frames,
+        encoded_bytes=sum(map(len, records)),
+    )
+
+
+def _assemble(prepared: frames.PreparedFrames) -> frames.AssembledEvent:
+    records = prepared.wire_frames()
+    return frames.assemble_domain_event_wire_frames(
+        records, budget=_assembly_budget(records)
+    )
+
+
+def _chunked_wire(*, event_id: str = "eid-1") -> tuple[bytes, ...]:
+    return frames.domain_event_frames(
+        event_name="block.delta",
+        payload={"text": "é\U0001f600" * 300},
+        event_id=event_id,
+        replayable=True,
+        max_frame_bytes=512,
+    ).with_checkpoint(8, "inst").wire_frames()
+
+
+def test_every_single_and_chunked_frame_carries_same_event_sha256() -> None:
+    single = _domain()
+    chunked_small = _domain(text="x" * 6000, max_frame_bytes=512)
+    chunked_large = _domain(text="x" * 6000, max_frame_bytes=1024)
+
+    single_digest = _chunk_meta(single.frames[0])["event_sha256"]
+    small_digests = {
+        _chunk_meta(frame)["event_sha256"] for frame in chunked_small.frames
+    }
+    large_digests = {
+        _chunk_meta(frame)["event_sha256"] for frame in chunked_large.frames
+    }
+    assert small_digests == large_digests
+    assert len(single_digest) == 64
+    assert all("a" <= char <= "f" or char.isdigit() for char in single_digest)
+
+
+def test_reference_assembler_rejects_malformed_sse_and_nonterminal_checkpoint() -> None:
+    records = _chunked_wire()
+    malformed = (records[0].replace(b"event: domain_event", b"event: state_patch"),)
+    with pytest.raises(frames.WireFrameError):
+        frames.assemble_domain_event_wire_frames(
+            malformed, budget=_assembly_budget(malformed)
+        )
+
+    nonterminal = records[0][:-1] + b"id: inst:8\n\n"
+    candidate = (nonterminal, *records[1:])
+    with pytest.raises(frames.WireFrameError):
+        frames.assemble_domain_event_wire_frames(
+            candidate, budget=_assembly_budget(candidate)
+        )
+
+
+def test_reference_assembler_rejects_missing_chunk() -> None:
+    records = _chunked_wire()
+    candidate = records[:-1]
+    with pytest.raises(frames.WireFrameError):
+        frames.assemble_domain_event_wire_frames(
+            candidate,
+            budget=frames.FrameBudget(
+                frames=len(records), encoded_bytes=sum(map(len, records))
+            ),
+        )
+
+
+def test_reference_assembler_rejects_duplicate_chunk() -> None:
+    records = _chunked_wire()
+    candidate = (records[0], records[0], *records[1:])
+    with pytest.raises(frames.WireFrameError):
+        frames.assemble_domain_event_wire_frames(
+            candidate, budget=_assembly_budget(candidate)
+        )
+
+
+def test_reference_assembler_rejects_out_of_order_chunk() -> None:
+    records = _chunked_wire()
+    candidate = (records[1], records[0], *records[2:])
+    with pytest.raises(frames.WireFrameError):
+        frames.assemble_domain_event_wire_frames(
+            candidate, budget=_assembly_budget(candidate)
+        )
+
+
+def test_reference_assembler_rejects_chunk_count_drift() -> None:
+    records = _chunked_wire()
+    candidate = (
+        records[0],
+        records[1].replace(
+            f'"chunk_count":{len(records)}'.encode(),
+            f'"chunk_count":{len(records) + 1}'.encode(),
+        ),
+        *records[2:],
+    )
+    with pytest.raises(frames.WireFrameError):
+        frames.assemble_domain_event_wire_frames(
+            candidate, budget=_assembly_budget(candidate)
+        )
+
+
+def test_reference_assembler_rejects_digest_drift() -> None:
+    records = _chunked_wire()
+    digest = _chunk_meta(records[1])["event_sha256"].encode()
+    replacement = (b"0" if digest[:1] != b"0" else b"1") + digest[1:]
+    candidate = (records[0], records[1].replace(digest, replacement), *records[2:])
+    with pytest.raises(frames.WireFrameError):
+        frames.assemble_domain_event_wire_frames(
+            candidate, budget=_assembly_budget(candidate)
+        )
+
+
+def test_reference_assembler_rejects_payload_tampering() -> None:
+    prepared = _domain()
+    [record] = prepared.wire_frames()
+    candidate = (record.replace(b"hello", b"jello"),)
+    with pytest.raises(frames.WireFrameError, match="does not match"):
+        frames.assemble_domain_event_wire_frames(
+            candidate, budget=_assembly_budget(candidate)
+        )
+
+
+def test_reference_assembler_rejects_interleaved_event_frames() -> None:
+    first = _chunked_wire(event_id="first")
+    second = _chunked_wire(event_id="second")
+    candidate = (first[0], second[1], *first[2:])
+    with pytest.raises(frames.WireFrameError):
+        frames.assemble_domain_event_wire_frames(
+            candidate, budget=_assembly_budget(candidate)
+        )
+
+
+@pytest.mark.parametrize(
+    "literal,escaped",
+    [
+        (b'"event":"block.delta"', b'"event":"\\u0062lock.delta"'),
+        (b'"event_id":"eid-1"', b'"event_id":"\\u0065id-1"'),
+    ],
+)
+def test_reference_assembler_rejects_metadata_escape_drift_between_chunks(
+    literal: bytes,
+    escaped: bytes,
+) -> None:
+    records = _chunked_wire()
+    candidate = (records[0], records[1].replace(literal, escaped), *records[2:])
+
+    with pytest.raises(frames.WireFrameError):
+        frames.assemble_domain_event_wire_frames(
+            candidate, budget=_assembly_budget(candidate)
+        )
+
+
+def test_reference_assembler_rejects_noncanonical_digest_escape() -> None:
+    [record] = _domain().wire_frames()
+    digest = _chunk_meta(record)["event_sha256"].encode()
+    assert digest.startswith(b"2")
+    escaped = b"\\u0032" + digest[1:]
+    candidate = (record.replace(digest, escaped, 1),)
+
+    with pytest.raises(frames.WireFrameError):
+        frames.assemble_domain_event_wire_frames(
+            candidate, budget=_assembly_budget(candidate)
+        )
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        (b'"event":"block.delta"', b'"event":"\\ud800"'),
+        (b'"event_id":"eid-1"', b'"event_id":"\\ud800"'),
+        (b'"payload":{"text":"hello"}', b'"payload":{"text":"\\ud800"}'),
+    ],
+)
+def test_reference_assembler_normalizes_lone_surrogate_to_wire_error(
+    old: bytes,
+    new: bytes,
+) -> None:
+    [record] = _domain().wire_frames()
+    candidate = (record.replace(old, new, 1),)
+
+    with pytest.raises(frames.WireFrameError) as caught:
+        frames.assemble_domain_event_wire_frames(
+            candidate, budget=_assembly_budget(candidate)
+        )
+    assert isinstance(caught.value.__cause__, UnicodeEncodeError)
+
+
+def test_reference_assembler_round_trips_canonical_escaped_metadata() -> None:
+    prepared = frames.domain_event_frames(
+        event_name='quoted "event" \\ 中文',
+        event_id='quoted "id" \\ é',
+        payload={"nested": ['quoted "value"', "反斜杠\\", "😀"]},
+        replayable=False,
+        max_frame_bytes=512,
+    )
+
+    assembled = _assemble(prepared)
+    assert assembled.event == 'quoted "event" \\ 中文'
+    assert assembled.event_id == 'quoted "id" \\ é'
+    assert assembled.payload == {"nested": ['quoted "value"', "反斜杠\\", "😀"]}
+
+
+def test_digest_overhead_is_included_in_frame_hard_limit() -> None:
+    prepared = frames.domain_event_frames(
+        event_name="e",
+        payload="x" * 8000,
+        event_id="i",
+        replayable=True,
+        max_frame_bytes=256,
+    ).with_checkpoint(1, "p" * 57)
+    assert len(prepared.frames) > 1
+    assert max(map(len, prepared.wire_frames())) <= 256
+
+    production = frames.domain_event_frames(
+        event_name="e",
+        payload="x" * (2 * frames.MAX_FRAME_BYTES),
+        event_id="i",
+        replayable=True,
+    ).with_checkpoint(1, "p" * 57)
+    assert len(production.frames) > 1
+    assert max(map(len, production.wire_frames())) <= frames.MAX_FRAME_BYTES
+    assert _assemble(production).payload == "x" * (2 * frames.MAX_FRAME_BYTES)
+
+
+def test_digest_does_not_move_checkpoint_off_last_wire_record() -> None:
+    records = frames.domain_event_frames(
+        event_name="e",
+        payload="x" * 8000,
+        event_id="i",
+        replayable=True,
+        max_frame_bytes=256,
+    ).with_checkpoint(1, "inst").wire_frames()
+    assert all(b"\nid: " not in record for record in records[:-1])
+    assert records[-1].endswith(b"\nid: inst:1\n\n")
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        [],
+        "",
+        True,
+        17,
+        {"z": 1, "a": "中文é\U0001f600" * 100},
+    ],
+)
+def test_digest_budget_boundary_round_trips_through_reference_assembler(
+    payload: object,
+) -> None:
+    prepared = frames.domain_event_frames(
+        event_name="boundary",
+        payload=payload,
+        event_id="event",
+        replayable=False,
+        max_frame_bytes=512,
+    )
+    assert max(map(len, prepared.wire_frames())) <= 512
+    assert _assemble(prepared).payload == payload
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        (b'"chunk_index":0', b'"chunk_index":-1'),
+        (b'"chunk_index":0', b'"chunk_index":true'),
+        (b'"chunk_count":1', b'"chunk_count":0'),
+        (b'"chunk_count":1', b'"chunk_count":true'),
+        (b'"event_sha256":"', b'"event_sha256":"A'),
+    ],
+)
+def test_reference_assembler_rejects_invalid_central_metadata(
+    old: bytes, new: bytes
+) -> None:
+    [record] = _domain().wire_frames()
+    candidate = (record.replace(old, new, 1),)
+    with pytest.raises(frames.WireFrameError):
+        frames.assemble_domain_event_wire_frames(
+            candidate, budget=_assembly_budget(candidate)
+        )
+
+
+@pytest.mark.parametrize(
+    "candidate",
+    [
+        (),
+        (b"event: domain_event\ndata: {}",),
+        (b"event: domain_event\ndata: {}\n\nextra",),
+        (b"event: domain_event\ndata: {}\n\n\n",),
+        (b"event: domain_event\ndata: {}\nid: bad\n\n",),
+        (b"event: domain_event\ndata: {}\nid: inst:1\nid: inst:2\n\n",),
+    ],
+)
+def test_reference_assembler_rejects_invalid_record_boundaries(
+    candidate: tuple[bytes, ...],
+) -> None:
+    with pytest.raises(frames.WireFrameError):
+        frames.assemble_domain_event_wire_frames(
+            candidate,
+            budget=frames.FrameBudget(frames=8, encoded_bytes=2 * 1024 * 1024),
+        )
+
+
+def test_reference_assembler_enforces_frame_and_encoded_byte_budgets() -> None:
+    records = _chunked_wire()
+    with pytest.raises(frames.WireFrameError, match="frame budget"):
+        frames.assemble_domain_event_wire_frames(
+            records,
+            budget=frames.FrameBudget(
+                frames=len(records) - 1,
+                encoded_bytes=sum(map(len, records)),
+            ),
+        )
+    with pytest.raises(frames.WireFrameError, match="encoded-byte budget"):
+        frames.assemble_domain_event_wire_frames(
+            records,
+            budget=frames.FrameBudget(
+                frames=len(records),
+                encoded_bytes=sum(map(len, records)) - 1,
+            ),
+        )
+
+
+def test_reference_assembler_returns_none_for_transient_checkpoint_and_is_frozen(
+) -> None:
+    assembled = _assemble(_domain(replayable=False))
+    assert assembled.checkpoint is None
+    with pytest.raises(FrozenInstanceError):
+        assembled.payload = {}
 
 
 def _reassemble(prepared: frames.PreparedFrames) -> object:

@@ -537,11 +537,13 @@ def test_the_writer_preserves_physical_frame_boundaries(phase: str) -> None:
         max_frame_bytes=512,
     ).with_checkpoint(1, "inst-test")
     expected = prepared.wire_frames()
-    assert len(expected) == 9
-    assert len(prepared.wire_bytes()) == 3912
+    assert len(expected) == 12
+    assert len(prepared.wire_bytes()) == 5255
 
     connection = FakeConnection()
-    source = ConnectionQueue(budget=frames.FrameBudget(frames=9, encoded_bytes=1 << 20))
+    source = ConnectionQueue(
+        budget=frames.FrameBudget(frames=len(expected), encoded_bytes=1 << 20)
+    )
     startup_reservation = None
     if phase == "startup":
         startup_reservation = source.reserve_startup_prefix(

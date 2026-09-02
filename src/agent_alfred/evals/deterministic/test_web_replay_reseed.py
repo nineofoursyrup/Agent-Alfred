@@ -14,10 +14,10 @@ from agent_alfred.gateway.web import frames, replay
 from agent_alfred.gateway.web.frames import PreparedFrames
 from agent_alfred.gateway.web.replay import ReplayRing, classify_cursor
 
-# A RunStarted frame is ~467 bytes, so 512 admits one and refuses a padded
+# A RunStarted frame including its event digest is under 700 bytes, while a padded
 # one -- the two events a test needs in order to reach the clear path with
 # a checkpoint already issued in front of it.
-_TIGHT_BYTES = 512
+_TIGHT_BYTES = 700
 
 
 def _entry(seq: int, size: int = 8, chunks: int = 1) -> PreparedFrames:
