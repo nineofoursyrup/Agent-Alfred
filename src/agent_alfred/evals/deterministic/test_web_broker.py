@@ -299,6 +299,83 @@ def test_a_rolled_out_ring_answers_a_gap_not_a_silent_resume() -> None:
     assert replay_ids(items) == []
 
 
+class _ClassifyThenEvictRing(ReplayRing):
+    """Pause one real replay read after its cursor verdict is decided."""
+
+    def __init__(self, *, budget: frames.FrameBudget) -> None:
+        super().__init__(budget=budget)
+        self.classified = threading.Event()
+        self.continue_read = threading.Event()
+        self.armed = False
+
+    def classify_seq(self, seq):
+        verdict = super().classify_seq(seq)
+        if self.armed:
+            self.armed = False
+            self.classified.set()
+            self.continue_read.wait()
+        return verdict
+
+
+@pytest.mark.parametrize(
+    ("ring_budget", "max_frame_bytes"),
+    [
+        pytest.param(
+            frames.FrameBudget(frames=2, encoded_bytes=1 << 20),
+            frames.MAX_FRAME_BYTES,
+            id="frame-budget",
+        ),
+        pytest.param(
+            frames.FrameBudget(frames=64, encoded_bytes=1098),
+            frames.MAX_FRAME_BYTES,
+            id="byte-budget",
+        ),
+        pytest.param(
+            frames.FrameBudget(frames=6, encoded_bytes=1 << 20),
+            400,
+            id="multi-frame-event",
+        ),
+    ],
+)
+def test_replay_eviction_after_cursor_classification_never_sends_a_holey_tail(
+    ring_budget: frames.FrameBudget,
+    max_frame_bytes: int,
+) -> None:
+    ring = _ClassifyThenEvictRing(budget=ring_budget)
+    harness = Harness(ring=ring, max_frame_bytes=max_frame_bytes)
+    harness.emit_many(2)
+    handle = harness.connect(cursor=cursor_for(0))
+    delivered = []
+    completed: list[bool] = []
+
+    ring.armed = True
+    writer = threading.Thread(
+        target=lambda: completed.append(
+            handle.writer.deliver_startup(delivered.append)
+        )
+    )
+    writer.start()
+    assert ring.classified.wait(5.0), "writer never classified its cursor"
+
+    harness.emit_many(1, start=2)
+    ring.continue_read.set()
+    writer.join(5.0)
+    assert not writer.is_alive(), "writer did not finish the frozen replay"
+
+    assert completed == [False]
+    assert replay_ids(delivered) == []
+    assert delivered[-1].wire_bytes() == frames.retry_frame(
+        frames.BACKOFF_RETRY_MS
+    ).wire_bytes()
+    assert handle.queue.current_cost == frames.FrameCost(0, 0)
+
+    reconnect = harness.connect(cursor=cursor_for(0))
+    opening = drain_connection(reconnect)
+    gap = next(item for item in opening if b"replay_gap" in item.wire_bytes())
+    assert b'"gap_reason":"too_old"' in gap.wire_bytes()
+    assert replay_ids(opening) == []
+
+
 def test_commit_does_not_walk_a_large_evicted_replay_prefix(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

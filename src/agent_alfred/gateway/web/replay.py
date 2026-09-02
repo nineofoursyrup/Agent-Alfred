@@ -160,6 +160,9 @@ class ReplayBatch:
     entries: tuple[PreparedFrames, ...] = ()
     cost: FrameCost = FrameCost(frames=0, encoded_bytes=0)
     next_progress: ReplayProgress | None = None
+    _ring_generation: int | None = field(
+        default=None, repr=False, compare=False
+    )
 
 
 @dataclass
@@ -440,6 +443,10 @@ class ReplayRing:
         # floors, the re-seed boundary) stay independent of it.
         self._published_high_water = 0
         self._emitted_any = False
+        # Every valid publication changes the replay classification or the
+        # retained interval. A writer carries this O(1) token from selection
+        # to the broker's publication-lock fence before sending anything.
+        self._generation = 0
 
     # -- reads ------------------------------------------------------------
 
@@ -548,6 +555,7 @@ class ReplayRing:
         callers never infer progress from an entry's seq because a partial
         slice deliberately carries that seq without carrying its ``id:``.
         """
+        generation = self._generation
         if isinstance(progress, int):
             progress = ReplayProgress(completed_seq=progress)
         if through_seq is None or (
@@ -619,11 +627,27 @@ class ReplayRing:
                 next_frame_index=end,
             )
         )
+        if generation != self._generation:
+            return ReplayBatch(kind="unavailable")
         return ReplayBatch(
             kind="batch",
             entries=(sliced,),
             cost=selected_cost,
             next_progress=next_progress,
+            _ring_generation=generation,
+        )
+
+    def replay_batch_is_current(self, batch: ReplayBatch) -> bool:
+        """Whether a selected batch still names the same retained interval.
+
+        The caller holds the publication lock, so equality remains true
+        through ownership transfer to the immutable batch. No ring scan or
+        connection-queue operation is performed here.
+        """
+        return (
+            batch.kind == "batch"
+            and batch._ring_generation is not None
+            and batch._ring_generation == self._generation
         )
 
     def startup_guard_cost(
@@ -783,6 +807,7 @@ class ReplayRing:
             raise ValueError(
                 f"entry seq {entry.seq} does not match published seq {seq}"
             )
+        self._generation += 1
         self._published_high_water = seq
         if entry is None:
             return AppendResult(accepted=False)

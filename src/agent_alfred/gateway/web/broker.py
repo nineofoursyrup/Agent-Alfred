@@ -1256,10 +1256,21 @@ class SSEBroker:
                 raise
 
         try:
-            return source.build_and_reserve_startup(
+            batch = source.build_and_reserve_startup(
                 fetch,
                 continue_when_closing=progress.event_seq is not None,
             )
+            if batch.kind != "batch":
+                return batch
+            with self._lock:
+                current = self._ring.replay_batch_is_current(batch)
+            if current:
+                return batch
+            # Queue accounting has its own lock. Cancel only after leaving
+            # the publication lock so neither lock order nor publication
+            # latency depends on a connection queue.
+            source.cancel_startup(batch.cost)
+            return ReplayBatch(kind="unavailable")
         except Exception:
             if ring_failure is not None:
                 # The callback may publish a domain notice through FanOut,
