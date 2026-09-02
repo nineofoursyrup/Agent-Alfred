@@ -56,7 +56,7 @@ import threading
 import uuid
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Protocol
 
 from agent_alfred.database import open_database
 from agent_alfred.gateway.web.api import DashboardApi
@@ -70,6 +70,8 @@ from agent_alfred.gateway.web.lifecycle import (
     ProcessLock,
     SpawnThread,
 )
+from agent_alfred.managed_state import ManagedStateLease
+from agent_alfred.resource_rollback import IncompleteRollback, ResumableRollback
 from agent_alfred.runtime.host import RuntimeHost
 
 # What :class:`DashboardRuntime` needs from the outside to build a Host and a
@@ -78,11 +80,19 @@ from agent_alfred.runtime.host import RuntimeHost
 # seam a test replaces to prove the order without a real Host.
 AssembleHost = Callable[[sqlite3.Connection, str], tuple[RuntimeHost, SSEBroker]]
 
+
+class ResumableConstructionRollback(Protocol):
+    """Narrow owner retained when host assembly cleanup is incomplete."""
+
+    def retry(self) -> bool: ...
+
+    def owns(self, owner: ResumableRollback) -> bool: ...
+
+    def capture_failure(self, failure: BaseException) -> None: ...
+
 # Where the Dashboard is in its one life. Closed and failed are both
 # terminal: neither is a state a Dashboard comes back from.
-DashboardState = Literal[
-    "new", "starting", "running", "closing", "closed", "failed"
-]
+DashboardState = Literal["new", "starting", "running", "closing", "closed", "failed"]
 
 # How long each **step** of a failed start's rollback may wait, when the
 # caller has not said. Not the whole rollback: every step that has not run
@@ -124,13 +134,14 @@ class DashboardRuntime:
         port: int = DEFAULT_PORT,
         instance_id: str | None = None,
         csrf_token: str | None = None,
-        open_database: Callable[[Path], sqlite3.Connection] | None = None,
+        open_database: Callable[[ManagedStateLease], sqlite3.Connection] | None = None,
         server_factory: Any = None,
         write_descriptor: Callable[[Path, EntryDescriptor], Path] | None = None,
-        lock: ProcessLock | None = None,
+        lock: Callable[[Any], ProcessLock] | None = None,
         pid: int | None = None,
         spawn: SpawnThread | None = None,
         rollback_step_timeout: float | None = ROLLBACK_STEP_TIMEOUT_S,
+        construction_rollback: ResumableConstructionRollback | None = None,
     ):
         self._state_dir = state_dir
         self._assemble = assemble
@@ -167,6 +178,7 @@ class DashboardRuntime:
         # to :data:`ROLLBACK_STEP_TIMEOUT_S`, not to the components' own
         # answers the way ``close()`` uses them.
         self._rollback_step_timeout = rollback_step_timeout
+        self._construction_rollback = construction_rollback
         self._host: RuntimeHost | None = None
         self._broker: SSEBroker | None = None
         self._conn: sqlite3.Connection | None = None
@@ -280,7 +292,9 @@ class DashboardRuntime:
             self._state = "starting"
             try:
                 descriptor = self._start_locked()
-            except BaseException:
+            except BaseException as start_failure:
+                if self._construction_rollback is not None:
+                    self._construction_rollback.capture_failure(start_failure)
                 # A start that failed inside the service may still own what
                 # it took: the service's own undo can refuse, and then the
                 # socket and the lock are still held even though this loop
@@ -291,6 +305,21 @@ class DashboardRuntime:
                 # winner's descriptor alone.
                 if self._service.lock_held:
                     self._entry_owned = True
+                start_is_control = isinstance(
+                    start_failure, (KeyboardInterrupt, SystemExit, GeneratorExit)
+                )
+                construction_cause = start_failure.__cause__
+                if (
+                    start_is_control
+                    and isinstance(construction_cause, IncompleteRollback)
+                    and self._construction_rollback is not None
+                    and self._construction_rollback.owns(construction_cause.owner)
+                ):
+                    # Assembly already attempted all rollback steps and put
+                    # its resumable owner on this exact exception. Preserve
+                    # that observable progress until the caller retries.
+                    self._state = "closing"
+                    raise
                 # One rollback, run once, for all eight steps. A rollback
                 # that cannot stop the Host has not finished, so it stays in
                 # ``closing`` still owning everything; one that ran to the
@@ -302,11 +331,19 @@ class DashboardRuntime:
                 # the caller is waiting for, so it is the one re-raised.
                 rollback_done = False
                 try:
-                    rollback_done = self._stop_all_locked(
-                        self._rollback_step_timeout
-                    )
-                except BaseException:  # noqa: BLE001 - the tail retries later
+                    rollback_done = self._stop_all_locked(self._rollback_step_timeout)
+                except BaseException as cleanup_failure:
                     rollback_done = False
+                    self._state = "closing"
+                    if isinstance(
+                        cleanup_failure,
+                        (KeyboardInterrupt, SystemExit, GeneratorExit),
+                    ):
+                        if isinstance(
+                            cleanup_failure.__cause__, IncompleteRollback
+                        ):
+                            raise cleanup_failure
+                        raise cleanup_failure from start_failure
                 self._state = "failed" if rollback_done else "closing"
                 raise
             self._state = "running"
@@ -402,9 +439,11 @@ class DashboardRuntime:
     # -- internals --------------------------------------------------------
 
     def _open_conn(self) -> sqlite3.Connection:
+        state = self._service.managed_state
+        assert state is not None
         if self._open_database is not None:
-            return self._open_database(self._state_dir)
-        return open_database(self._state_dir)
+            return self._open_database(state)
+        return open_database(state)
 
     def _stop_all_locked(self, timeout: float | None) -> bool:
         """Run every step of the close that has not run yet.
@@ -423,6 +462,12 @@ class DashboardRuntime:
         #    being wound down.
         if not service.stop_serving(timeout=timeout):
             return False
+        # An assembler can fail after creating a Host but before returning
+        # it.  Its typed owner must finish before this runtime releases the
+        # borrowed database or any earlier process-level capability.
+        if self._construction_rollback is not None:
+            if not self._construction_rollback.retry():
+                return False
         # 7. The Host before the stream it emits into. A worker that is still
         #    inside its Run owns the database, so a refused stop ends here:
         #    tearing the Broker down under a Host that is still publishing

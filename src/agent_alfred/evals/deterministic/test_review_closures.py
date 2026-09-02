@@ -683,11 +683,47 @@ def test_unknown_payload_and_sensitive_notice_field_fail_closed() -> None:
 def test_open_database_forces_managed_path_permissions(tmp_path) -> None:
     state_dir = tmp_path / "state"
 
-    conn = open_database(state_dir)
-    conn.close()
+    from agent_alfred.managed_state import ManagedStateDirectory
+
+    state = ManagedStateDirectory.acquire(state_dir)
+    try:
+        conn = open_database(state)
+        conn.close()
+    finally:
+        state.close()
 
     assert stat.S_IMODE(state_dir.stat().st_mode) == 0o700
     assert stat.S_IMODE((state_dir / "db.sqlite3").stat().st_mode) == 0o600
+
+
+def test_open_database_refuses_symlink_database_without_touching_target(
+    tmp_path,
+) -> None:
+    from agent_alfred.managed_state import (
+        ManagedPathSecurityError,
+        ManagedStateDirectory,
+    )
+
+    state_dir = tmp_path / "state"
+    state = ManagedStateDirectory.acquire(state_dir)
+    target = tmp_path / "outside.sqlite3"
+    target.write_bytes(b"outside")
+    target.chmod(0o644)
+    before = target.stat()
+    (state_dir / "db.sqlite3").symlink_to(target)
+    try:
+        with pytest.raises(ManagedPathSecurityError) as caught:
+            open_database(state)
+    finally:
+        state.close()
+    after = target.stat()
+    assert caught.value.reason == "symlink"
+    assert target.read_bytes() == b"outside"
+    assert (after.st_ino, after.st_mode, after.st_mtime_ns) == (
+        before.st_ino,
+        before.st_mode,
+        before.st_mtime_ns,
+    )
 
 
 def test_connection_local_transport_notices_are_not_domain_events() -> None:

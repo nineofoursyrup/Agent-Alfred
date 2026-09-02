@@ -2,15 +2,23 @@
 
 from __future__ import annotations
 
+import errno
 import json
+import os
 import re
 import sqlite3
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import pytest
 
+from agent_alfred import database as database_module
 from agent_alfred import schema
 from agent_alfred.evals.deterministic import historic_schema
+from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
+from agent_alfred.managed_state import (
+    ManagedPathSecurityError,
+    ManagedStateDirectory,
+)
 
 _TS = "2026-08-27T12:00:00+00:00"
 # Spelled out from the spec (#4 for the ledger states, the agent_log brief for
@@ -32,6 +40,316 @@ def _migrate() -> sqlite3.Connection:
     conn = sqlite3.connect(":memory:")
     schema.migrate(conn)
     return conn
+
+
+def test_open_database_connect_failure_releases_the_managed_file_lease(
+    tmp_path, monkeypatch
+) -> None:
+    state = ManagedStateDirectory.acquire(tmp_path)
+    baseline = _open_fd_count()
+    failure = sqlite3.OperationalError("injected connect failure")
+
+    def fail_connect(*args, **kwargs):
+        raise failure
+
+    monkeypatch.setattr(database_module.sqlite3, "connect", fail_connect)
+    try:
+        with pytest.raises(sqlite3.OperationalError) as caught:
+            database_module.open_database(state)
+        assert caught.value is failure
+        assert _open_fd_count() == baseline
+    finally:
+        state.close()
+
+
+def test_open_database_identity_change_closes_before_migration(
+    tmp_path, monkeypatch
+) -> None:
+    state = ManagedStateDirectory.acquire(tmp_path / "state")
+    external = tmp_path / "external.sqlite3"
+    external.write_bytes(b"sentinel")
+    real_connect = sqlite3.connect
+    migrated: list[sqlite3.Connection] = []
+
+    def connect_then_replace(path, **kwargs):
+        conn = real_connect(path, **kwargs)
+        managed = state.path / "db.sqlite3"
+        os.rename(managed, state.path / "db.displaced")
+        managed.symlink_to(external)
+        return conn
+
+    monkeypatch.setattr(database_module.sqlite3, "connect", connect_then_replace)
+    monkeypatch.setattr(database_module.schema, "migrate", migrated.append)
+    baseline = _open_fd_count()
+    try:
+        with pytest.raises(ManagedPathSecurityError) as caught:
+            database_module.open_database(state)
+        assert caught.value.reason == "identity_changed"
+        assert migrated == []
+        assert external.read_bytes() == b"sentinel"
+        assert _open_fd_count() == baseline
+    finally:
+        state.close()
+
+
+def test_open_database_refuses_a_replaced_state_root_before_migration(
+    tmp_path, monkeypatch
+) -> None:
+    state_path = tmp_path / "state"
+    state = ManagedStateDirectory.acquire(state_path)
+    displaced = tmp_path / "state-displaced"
+    replacement = tmp_path / "state-replacement"
+    replacement.mkdir(mode=0o700)
+    replacement_database = replacement / "db.sqlite3"
+    seed = sqlite3.connect(replacement_database)
+    seed.execute("CREATE TABLE sentinel (value TEXT NOT NULL)")
+    seed.execute("INSERT INTO sentinel VALUES ('untouched')")
+    seed.commit()
+    seed.close()
+    before = replacement_database.read_bytes()
+    real_connect = sqlite3.connect
+
+    def replace_root_then_connect(path, **kwargs):
+        state_path.rename(displaced)
+        replacement.rename(state_path)
+        return real_connect(path, **kwargs)
+
+    monkeypatch.setattr(
+        database_module.sqlite3, "connect", replace_root_then_connect
+    )
+    baseline = _open_fd_count()
+    try:
+        with pytest.raises(ManagedPathSecurityError) as caught:
+            database_module.open_database(state)
+        assert caught.value.reason == "identity_changed"
+        assert replacement_database.with_name("db.sqlite3").exists() is False
+        assert (state_path / "db.sqlite3").read_bytes() == before
+        assert _open_fd_count() == baseline
+    finally:
+        state.close()
+
+
+def test_open_database_refuses_a_replaced_state_ancestor_before_migration(
+    tmp_path, monkeypatch
+) -> None:
+    container = tmp_path / "container"
+    container.mkdir(mode=0o700)
+    state_path = container / "state"
+    state = ManagedStateDirectory.acquire(state_path)
+    displaced = tmp_path / "container-displaced"
+    replacement = tmp_path / "container-replacement"
+    replacement_state = replacement / "state"
+    replacement_state.mkdir(parents=True, mode=0o700)
+    replacement_database = replacement_state / "db.sqlite3"
+    seed = sqlite3.connect(replacement_database)
+    seed.execute("CREATE TABLE sentinel (value TEXT NOT NULL)")
+    seed.execute("INSERT INTO sentinel VALUES ('untouched')")
+    seed.commit()
+    seed.close()
+    before = replacement_database.read_bytes()
+    real_connect = sqlite3.connect
+
+    def replace_ancestor_then_connect(path, **kwargs):
+        container.rename(displaced)
+        replacement.rename(container)
+        return real_connect(path, **kwargs)
+
+    monkeypatch.setattr(
+        database_module.sqlite3, "connect", replace_ancestor_then_connect
+    )
+    baseline = _open_fd_count()
+    try:
+        with pytest.raises(ManagedPathSecurityError) as caught:
+            database_module.open_database(state)
+        assert caught.value.reason == "identity_changed"
+        assert (state_path / "db.sqlite3").read_bytes() == before
+        assert _open_fd_count() == baseline
+    finally:
+        state.close()
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="POSIX managed paths")
+@pytest.mark.parametrize("target_kind", ("directory", "fifo", "symlink"))
+def test_open_database_normalizes_replaced_ancestor_target_shapes(
+    tmp_path, monkeypatch, target_kind: str
+) -> None:
+    container = tmp_path / "container"
+    container.mkdir(mode=0o700)
+    state_path = container / "state"
+    state = ManagedStateDirectory.acquire(state_path)
+    displaced = tmp_path / "container-displaced"
+    replacement = tmp_path / "container-replacement"
+    replacement_state = replacement / "state"
+    replacement_state.mkdir(parents=True, mode=0o700)
+    replacement_database = replacement_state / "db.sqlite3"
+    outside = tmp_path / "outside.sqlite3"
+    outside.write_bytes(b"untouched")
+    if target_kind == "directory":
+        replacement_database.mkdir()
+    elif target_kind == "fifo":
+        os.mkfifo(replacement_database)
+    else:
+        replacement_database.symlink_to(outside)
+    before = replacement_database.lstat()
+    real_connect = sqlite3.connect
+
+    def replace_ancestor_then_connect(path, **kwargs):
+        container.rename(displaced)
+        replacement.rename(container)
+        return real_connect(path, **kwargs)
+
+    monkeypatch.setattr(
+        database_module.sqlite3, "connect", replace_ancestor_then_connect
+    )
+    baseline = _open_fd_count()
+    try:
+        with pytest.raises(ManagedPathSecurityError) as caught:
+            database_module.open_database(state)
+        assert caught.value.reason == "identity_changed"
+        after = (state_path / "db.sqlite3").lstat()
+        assert (after.st_dev, after.st_ino, after.st_mode) == (
+            before.st_dev,
+            before.st_ino,
+            before.st_mode,
+        )
+        assert outside.read_bytes() == b"untouched"
+        assert _open_fd_count() == baseline
+    finally:
+        state.close()
+
+
+def test_open_database_process_control_retains_retryable_connection_cleanup(
+    tmp_path, monkeypatch
+) -> None:
+    state = ManagedStateDirectory.acquire(tmp_path / "state")
+    real_connect = sqlite3.connect
+    real_connection = real_connect(state.path / "real.sqlite3")
+    close_attempts = 0
+    interrupt = KeyboardInterrupt()
+
+    class Connection:
+        def close(self) -> None:
+            nonlocal close_attempts
+            close_attempts += 1
+            if close_attempts == 1:
+                raise RuntimeError("injected close failure")
+            real_connection.close()
+
+    monkeypatch.setattr(
+        database_module.sqlite3, "connect", lambda *a, **k: Connection()
+    )
+    monkeypatch.setattr(
+        database_module.schema,
+        "migrate",
+        lambda _connection: (_ for _ in ()).throw(interrupt),
+    )
+    try:
+        with pytest.raises(KeyboardInterrupt) as caught:
+            database_module.open_database(state)
+        assert caught.value is interrupt
+        cleanup = caught.value.__cause__
+        assert cleanup is not None
+        assert cleanup.retry() is True
+        assert close_attempts == 2
+        assert cleanup.retry() is True
+        assert close_attempts == 2
+    finally:
+        if close_attempts < 2:
+            real_connection.close()
+        state.close()
+
+
+def test_open_database_cleanup_process_control_leads_the_business_failure(
+    tmp_path, monkeypatch
+) -> None:
+    state = ManagedStateDirectory.acquire(tmp_path / "state")
+    real_connect = sqlite3.connect
+    real_connection = real_connect(state.path / "real.sqlite3")
+    close_attempts = 0
+    control = KeyboardInterrupt()
+    business_failure = RuntimeError("migration failed")
+
+    class Connection:
+        def close(self) -> None:
+            nonlocal close_attempts
+            close_attempts += 1
+            if close_attempts == 1:
+                raise control
+            real_connection.close()
+
+    monkeypatch.setattr(
+        database_module.sqlite3, "connect", lambda *a, **k: Connection()
+    )
+    monkeypatch.setattr(
+        database_module.schema,
+        "migrate",
+        lambda _connection: (_ for _ in ()).throw(business_failure),
+    )
+    try:
+        with pytest.raises(KeyboardInterrupt) as caught:
+            database_module.open_database(state)
+        assert caught.value is control
+        cleanup = caught.value.__cause__
+        assert cleanup is not None
+        assert cleanup.failure is business_failure
+        assert cleanup.retry() is True
+        assert close_attempts == 2
+        assert caught.value.__cause__ is None
+        assert cleanup.retry() is True
+        assert close_attempts == 2
+    finally:
+        if close_attempts < 2:
+            real_connection.close()
+        state.close()
+
+
+def test_open_database_normalizes_a_vanished_post_open_name(tmp_path, monkeypatch):
+    from agent_alfred import managed_state as managed_module
+
+    state = ManagedStateDirectory.acquire(tmp_path / "state")
+    real_open = managed_module.os.open
+    removed = False
+
+    def open_then_remove(path, flags, mode=0o777, *, dir_fd=None):
+        nonlocal removed
+        fd = real_open(path, flags, mode, dir_fd=dir_fd)
+        if path == "db.sqlite3" and not removed:
+            removed = True
+            os.unlink(path, dir_fd=dir_fd)
+        return fd
+
+    monkeypatch.setattr(managed_module.os, "open", open_then_remove)
+    baseline = _open_fd_count()
+    try:
+        with pytest.raises(ManagedPathSecurityError) as caught:
+            database_module.open_database(state)
+        assert caught.value.reason == "identity_changed"
+        assert caught.value.role == "SQLite database"
+        assert caught.value.errno == errno.ENOENT
+        assert _open_fd_count() == baseline
+    finally:
+        state.close()
+
+
+def test_managed_open_preserves_ordinary_io_errno_instead_of_security_label(
+    tmp_path, monkeypatch
+) -> None:
+    real_fchmod = os.fchmod
+
+    def fail_database_fchmod(fd, mode):
+        if mode == 0o600:
+            raise OSError(errno.EIO, "injected ordinary I/O failure")
+        return real_fchmod(fd, mode)
+
+    monkeypatch.setattr("agent_alfred.managed_state.os.fchmod", fail_database_fchmod)
+    state = ManagedStateDirectory.acquire(tmp_path)
+    try:
+        with pytest.raises(OSError) as caught:
+            database_module.open_database(state)
+        assert not isinstance(caught.value, ManagedPathSecurityError)
+        assert caught.value.errno == errno.EIO
+    finally:
+        state.close()
 
 
 def _connect_with_schema_migrations() -> sqlite3.Connection:

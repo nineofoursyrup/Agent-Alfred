@@ -20,8 +20,10 @@ from agent_alfred.events import (
     StepStarted,
 )
 from agent_alfred.loop.assistant import Assistant, LoopResult
+from agent_alfred.managed_state import ManagedStateLease
 from agent_alfred.model import ModelClientFactory
 from agent_alfred.redact import Redactor
+from agent_alfred.resource_rollback import ResumableRollback
 from agent_alfred.runtime import runs
 from agent_alfred.runtime import sessions as session_store
 from agent_alfred.runtime.admission import RunAdmission
@@ -152,6 +154,7 @@ class RuntimeHost:
         self._closed = False
         self._stop_sent = False
         self._fanout_closed = False
+        self._owned_resources: ResumableRollback | None = None
         self._publish_work = publish_work
         self._before_recording_commit = before_recording_commit
         self._after_recorded_snapshot = after_recorded_snapshot
@@ -318,8 +321,24 @@ class RuntimeHost:
                 ):
                     return False
                 self._fanout_closed = True
+            if self._owned_resources is not None:
+                self._owned_resources.close()
             self._closed = True
         return True
+
+    def attach_owned_resources(
+        self, conn: sqlite3.Connection, state: ManagedStateLease
+    ) -> None:
+        """Transfer standalone factory resources before the Host is started."""
+        with self._lifecycle:
+            if self._started or self._closing or self._owned_resources is not None:
+                raise RuntimeError(
+                    "owned resources must be attached exactly once before start"
+                )
+            owner = ResumableRollback()
+            owner.own(state)
+            owner.own(conn)
+            self._owned_resources = owner
 
     def _await_handoffs(self, deadline: float) -> bool:
         """Wait until no Run admitted before close() is still unpublished."""
@@ -338,9 +357,7 @@ class RuntimeHost:
         session_id = uuid.uuid4().hex
         now = format_instant(self._clock.wall_utc())
         with self._store.transaction() as conn:
-            schema.insert_session(
-                conn, session_id=session_id, created_at=now
-            )
+            schema.insert_session(conn, session_id=session_id, created_at=now)
             conn.commit()
         return session_id
 
@@ -408,11 +425,7 @@ class RuntimeHost:
         if self._executor.stopped_by is not None:
             return "admission_failed"
         with self._lifecycle:
-            unstartable = (
-                self._start_error is not None
-                or self._closing
-                or self._closed
-            )
+            unstartable = self._start_error is not None or self._closing or self._closed
         if unstartable:
             return "admission_failed"
         if self._coord == "recording_failed" or not self._store.available:
@@ -607,9 +620,7 @@ class RuntimeHost:
 
     # -- recording-settlement transitions -----------------------------------
 
-    def recording_enter_pending(
-        self, projection: UnrecordedTerminalProjection
-    ) -> None:
+    def recording_enter_pending(self, projection: UnrecordedTerminalProjection) -> None:
         """running -> recording_pending. The lease is NOT released here.
 
         The terminal outcome already exists -- it is the projection's -- so
@@ -633,9 +644,7 @@ class RuntimeHost:
                 unrecorded_terminal_projection=projection,
             )
 
-    def recording_enter_failed(
-        self, projection: UnrecordedTerminalProjection
-    ) -> None:
+    def recording_enter_failed(self, projection: UnrecordedTerminalProjection) -> None:
         """recording_pending -> recording_failed, keeping the same projection.
 
         The same terminal outcome travels with it: the failure is a
@@ -668,9 +677,7 @@ class RuntimeHost:
         with self._lock:
             recorded = None
             if self._active_summary is not None:
-                recorded = replace(
-                    self._active_summary, recording_state="recorded"
-                )
+                recorded = replace(self._active_summary, recording_state="recorded")
                 self._active_summary = recorded
             self._states.replace(
                 coordinator_state="recording_pending",
@@ -766,9 +773,7 @@ class RuntimeHost:
             ).fetchone()
         return row is not None
 
-    def transport_session_validity(
-        self, session_id: str | None
-    ) -> SessionValidity:
+    def transport_session_validity(self, session_id: str | None) -> SessionValidity:
         """Bounded Session truth for SSE startup and lifecycle patches.
 
         Ordinary reads remain fail-closed through ``session_exists``. This

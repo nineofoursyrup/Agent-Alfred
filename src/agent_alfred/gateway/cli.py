@@ -202,6 +202,11 @@ def main(
 
     import os
 
+    # Installed before settings resolution or runtime assembly can create a
+    # managed object. Explicit fchmod remains authoritative; this closes the
+    # creation window.
+    os.umask(0o077)
+
     from dotenv import load_dotenv
 
     from agent_alfred.settings import SettingsError, load_settings
@@ -280,7 +285,16 @@ def _start_or_report(runtime: Any, out: TextIO) -> int | None:
     try:
         runtime.start()
     except Exception as exc:
-        out.write(f"dashboard unavailable: {exc}\n")
+        from agent_alfred.managed_state import ManagedPathSecurityError
+
+        if isinstance(exc, ManagedPathSecurityError):
+            out.write(
+                "dashboard unavailable: managed path refused "
+                f"reason={exc.reason} role={exc.role} errno={exc.errno}; "
+                f"repair: {exc.repair_hint}\n"
+            )
+        else:
+            out.write(f"dashboard unavailable: {exc}\n")
         out.flush()
         _close_runtime(runtime, out)
         return 1

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import errno
 import io
+import os
+import socket
 import sqlite3
+import stat
 import threading
-from pathlib import Path
 
 import pytest
 
@@ -16,10 +18,10 @@ from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
 )
 from agent_alfred.evals.deterministic._web_startup_test_helpers import (
     file_database,
+    managed_process_lock,
     scripted_factory,
 )
 from agent_alfred.gateway.web.lifecycle import (
-    LOCK_NAME,
     PortUnavailable,
     ProcessLock,
     StateDirLocked,
@@ -27,8 +29,206 @@ from agent_alfred.gateway.web.lifecycle import (
     write_entry_descriptor,
 )
 from agent_alfred.gateway.web.server import DashboardRuntime
+from agent_alfred.managed_state import ManagedFileLease, ManagedPathSecurityError
 from agent_alfred.settings import Settings
 from agent_alfred.wiring import build_dashboard
+
+
+@pytest.mark.parametrize("root_kind", ("state", "external_trace"))
+def test_dashboard_refuses_any_managed_root_beneath_an_ancestor_symlink(
+    tmp_path, root_kind: str
+) -> None:
+    external = tmp_path / "external"
+    external.mkdir()
+    external.chmod(0o755)
+    alias = tmp_path / "alias"
+    alias.symlink_to(external, target_is_directory=True)
+    state = alias / "state" if root_kind == "state" else tmp_path / "state"
+    trace_root = alias / "traces" if root_kind == "external_trace" else None
+    before = external.stat()
+    before_entries = list(external.iterdir())
+    dashboard = build_dashboard(
+        state_dir=state,
+        trace_root=trace_root,
+        factory=scripted_factory(),
+        clock=FakeClock(),
+        port=free_loopback_port(),
+        open_database=file_database,
+    )
+    try:
+        with pytest.raises(ManagedPathSecurityError) as caught:
+            dashboard.start()
+        assert caught.value.reason == "symlink"
+    finally:
+        dashboard.close()
+    after = external.stat()
+    assert list(external.iterdir()) == before_entries
+    assert (after.st_ino, after.st_mode, after.st_mtime_ns) == (
+        before.st_ino,
+        before.st_mode,
+        before.st_mtime_ns,
+    )
+    if root_kind == "external_trace":
+        assert read_entry_descriptor(state) is None
+
+
+def test_build_dashboard_refuses_unsafe_trace_root_and_rolls_back_prior_resources(
+    tmp_path,
+) -> None:
+    state = tmp_path / "state"
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    outside.chmod(0o755)
+    trace_root = tmp_path / "external-traces"
+    trace_root.symlink_to(outside, target_is_directory=True)
+    dashboard = build_dashboard(
+        state_dir=state,
+        trace_root=trace_root,
+        factory=scripted_factory(),
+        clock=FakeClock(),
+        port=free_loopback_port(),
+        open_database=file_database,
+    )
+    with pytest.raises(ManagedPathSecurityError) as caught:
+        dashboard.start()
+    assert caught.value.reason == "symlink"
+    assert dashboard.state == "failed"
+    assert read_entry_descriptor(state) is None
+    assert stat.S_IMODE(outside.stat().st_mode) == 0o755
+    assert list(outside.iterdir()) == []
+
+
+def test_dashboard_reports_managed_child_permission_denied_and_rolls_back(
+    tmp_path, monkeypatch
+) -> None:
+    state = tmp_path / "state"
+    real_mkdir = os.mkdir
+
+    def deny_traces(path, mode=0o777, *, dir_fd=None):
+        if path == "traces":
+            raise PermissionError(errno.EACCES, "denied", path)
+        return real_mkdir(path, mode, dir_fd=dir_fd)
+
+    monkeypatch.setattr("agent_alfred.managed_state.os.mkdir", deny_traces)
+    dashboard = build_dashboard(
+        state_dir=state,
+        factory=scripted_factory(),
+        clock=FakeClock(),
+        port=free_loopback_port(),
+        open_database=file_database,
+    )
+    with pytest.raises(ManagedPathSecurityError) as caught:
+        dashboard.start()
+    assert caught.value.reason == "permission_denied"
+    assert caught.value.errno == errno.EACCES
+    assert dashboard.state == "failed"
+    assert read_entry_descriptor(state) is None
+
+
+def test_host_construction_failure_closes_constructed_broker_and_prior_resources(
+    tmp_path, monkeypatch
+) -> None:
+    from agent_alfred import wiring as wiring_module
+    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
+
+    closed: list[bool] = []
+
+    class BrokerBeforeHost:
+        name = "sse"
+
+        def __init__(self, **kwargs):
+            del kwargs
+
+        def publish_state_patch(self, patch):
+            del patch
+
+        def close(self, timeout=0.0):
+            del timeout
+            closed.append(True)
+            return True
+
+    def fail_host(**kwargs):
+        del kwargs
+        raise RuntimeError("injected host construction failure")
+
+    monkeypatch.setattr(wiring_module, "SSEBroker", BrokerBeforeHost)
+    monkeypatch.setattr(wiring_module, "build_host", fail_host)
+    socket.getfqdn()
+    baseline = _open_fd_count()
+    dashboard = build_dashboard(
+        state_dir=tmp_path,
+        factory=scripted_factory(),
+        clock=FakeClock(),
+        port=free_loopback_port(),
+        open_database=file_database,
+    )
+    with pytest.raises(RuntimeError, match="host construction failure"):
+        dashboard.start()
+    assert closed == [True]
+    assert read_entry_descriptor(tmp_path) is None
+    assert _open_fd_count() == baseline
+
+
+@pytest.mark.parametrize("host_outcome", (False, RuntimeError("host close failed")))
+def test_dashboard_post_host_assembly_failure_retains_retryable_owner(
+    tmp_path, monkeypatch, host_outcome
+) -> None:
+    from agent_alfred import wiring as wiring_module
+
+    trace: list[str] = []
+    assembly_failure = ValueError("post-host assembly failed")
+
+    class Broker:
+        name = "sse"
+
+        def __init__(self, **kwargs):
+            del kwargs
+
+        def publish_state_patch(self, patch):
+            del patch
+
+        def bind_session_check(self, check):
+            del check
+            raise assembly_failure
+
+        def close(self, timeout=0.0):
+            del timeout
+            trace.append("broker.close")
+            return True
+
+    class Host:
+        close_calls = 0
+        transport_session_validity = object()
+
+        def close(self, timeout=None):
+            del timeout
+            self.close_calls += 1
+            trace.append("host.close")
+            if self.close_calls <= 2:
+                if isinstance(host_outcome, BaseException):
+                    raise host_outcome
+                return host_outcome
+            return True
+
+    host = Host()
+    monkeypatch.setattr(wiring_module, "SSEBroker", Broker)
+    monkeypatch.setattr(wiring_module, "build_host", lambda **kwargs: host)
+    dashboard = build_dashboard(
+        state_dir=tmp_path,
+        factory=scripted_factory(),
+        clock=FakeClock(),
+        port=free_loopback_port(),
+        open_database=file_database,
+    )
+
+    with pytest.raises(ValueError) as caught:
+        dashboard.start()
+    assert caught.value is assembly_failure
+    assert trace == ["host.close", "broker.close", "host.close"]
+    assert dashboard.state == "closing"
+    assert dashboard.close() is True
+    assert host.close_calls == 3
+    assert trace == ["host.close", "broker.close", "host.close", "host.close"]
 
 # --- single-process Host startup ordering ---------------------------------
 #
@@ -43,8 +243,8 @@ from agent_alfred.wiring import build_dashboard
 class _RecordingLock(ProcessLock):
     """A real flock that writes down when it was taken and when it went."""
 
-    def __init__(self, path: Path, log: list[str]) -> None:
-        super().__init__(path)
+    def __init__(self, lease: ManagedFileLease, log: list[str]) -> None:
+        super().__init__(lease)
         self._log = log
 
     def acquire(self) -> None:
@@ -52,7 +252,8 @@ class _RecordingLock(ProcessLock):
         super().acquire()
 
     def release(self) -> None:
-        self._log.append("unlock")
+        if self.acquired:
+            self._log.append("unlock")
         super().release()
 
 
@@ -155,7 +356,7 @@ def _step_runtime(tmp_path, *, log, bind_error=None, describe_error=None):
         open_database=open_database,
         server_factory=server_factory,
         write_descriptor=write_descriptor,
-        lock=_RecordingLock(tmp_path / LOCK_NAME, log),
+        lock=lambda lease: _RecordingLock(lease, log),
     )
 
 
@@ -167,7 +368,7 @@ def test_a_lock_conflict_touches_nothing_at_all(tmp_path) -> None:
     facts on its way out of the door -- which is the thing the lock exists
     to prevent, and it only holds if nothing precedes it.
     """
-    holder = ProcessLock(tmp_path / LOCK_NAME)
+    holder = managed_process_lock(tmp_path)
     holder.acquire()
     log: list[str] = []
     runtime = _step_runtime(tmp_path, log=log)
@@ -189,7 +390,7 @@ def test_a_failed_bind_releases_the_lock_and_never_starts_the_host(tmp_path) -> 
     # Unwound completely: no descriptor, no database, no Host, lock back.
     assert log == ["lock", "bind", "unlock"]
     assert read_entry_descriptor(tmp_path) is None
-    fresh = ProcessLock(tmp_path / LOCK_NAME)
+    fresh = managed_process_lock(tmp_path)
     fresh.acquire()
     fresh.release()
 
@@ -206,7 +407,7 @@ def test_a_failed_descriptor_closes_the_socket_and_releases_the_lock(
     assert "database" not in log
     assert "host.start" not in log
     assert read_entry_descriptor(tmp_path) is None
-    fresh = ProcessLock(tmp_path / LOCK_NAME)
+    fresh = managed_process_lock(tmp_path)
     fresh.acquire()
     fresh.release()
 
@@ -238,7 +439,7 @@ def test_the_successful_path_runs_the_steps_in_one_order(tmp_path) -> None:
     assert undone.index("host.close") < undone.index("broker.close")
     assert undone.index("broker.close") < undone.index("unlock")
     assert read_entry_descriptor(tmp_path) is None
-    fresh = ProcessLock(tmp_path / LOCK_NAME)
+    fresh = managed_process_lock(tmp_path)
     fresh.acquire()
     fresh.release()
 

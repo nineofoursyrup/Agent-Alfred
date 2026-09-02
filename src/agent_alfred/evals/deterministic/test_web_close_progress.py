@@ -32,6 +32,7 @@ correct.
 from __future__ import annotations
 
 import os
+import socket
 import sqlite3
 import threading
 from pathlib import Path
@@ -59,13 +60,12 @@ from agent_alfred.gateway.web.broker import SSEBroker
 from agent_alfred.gateway.web.connection import FakeConnection
 from agent_alfred.gateway.web.lifecycle import (
     DESCRIPTOR_NAME,
-    LOCK_NAME,
-    ProcessLock,
     StateDirLocked,
     read_entry_descriptor,
     write_entry_descriptor,
 )
 from agent_alfred.gateway.web.server import DashboardRuntime
+from agent_alfred.managed_state import ManagedPathSecurityError, ManagedStateDirectory
 from agent_alfred.model import ScriptedModel, ScriptedModelFactory
 from agent_alfred.runtime.host import RuntimeHost
 from agent_alfred.runtime.snapshot import RuntimeSnapshot
@@ -73,6 +73,51 @@ from agent_alfred.settings import Settings
 from agent_alfred.trace import RunBundleTraceSink
 
 # --- the runtime's tail: database, then entry, each refusable ---------------
+
+
+def test_dashboard_success_and_rollback_balance_managed_lease_fds(
+    tmp_path,
+) -> None:
+    """The document-indexed public startup/close oracle owns this filename."""
+    from agent_alfred.clock import FakeClock
+    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
+    from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
+        free_loopback_port,
+    )
+    from agent_alfred.evals.deterministic._web_startup_test_helpers import (
+        file_database,
+        scripted_factory,
+    )
+    from agent_alfred.wiring import build_dashboard
+
+    socket.getfqdn()
+    baseline = _open_fd_count()
+    dashboard = build_dashboard(
+        state_dir=tmp_path / "ok",
+        factory=scripted_factory(),
+        clock=FakeClock(),
+        port=free_loopback_port(),
+        open_database=file_database,
+    )
+    dashboard.start()
+    assert dashboard.close() is True
+    assert _open_fd_count() == baseline
+
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    unsafe = tmp_path / "unsafe"
+    unsafe.symlink_to(outside, target_is_directory=True)
+    failing = build_dashboard(
+        state_dir=tmp_path / "rollback",
+        trace_root=unsafe,
+        factory=scripted_factory(),
+        clock=FakeClock(),
+        port=free_loopback_port(),
+        open_database=file_database,
+    )
+    with pytest.raises(ManagedPathSecurityError):
+        failing.start()
+    assert _open_fd_count() == baseline
 
 
 class _FailingCloseConnection(CloseTrackingConnection):
@@ -92,8 +137,8 @@ class _FailingCloseConnection(CloseTrackingConnection):
 class _StickyReleaseLock(RecordingProcessLock):
     """A process lock whose release refuses the first N times."""
 
-    def __init__(self, path: Path, trace: list[str], failures: int):
-        super().__init__(path, trace)
+    def __init__(self, lease, trace: list[str], failures: int):
+        super().__init__(lease, trace)
         self.release_calls = 0
         self._failures = failures
 
@@ -117,12 +162,13 @@ class RefusableTailRig(DashboardCloseRig):
             return _FailingCloseConnection(self.trace, self._conn_close_failures)
         return super()._make_conn()
 
-    def _make_lock(self):
+    def _make_lock(self, lease):
         if self._lock_release_failures:
-            return _StickyReleaseLock(
-                self.tmp_path / LOCK_NAME, self.trace, self._lock_release_failures
+            self.lock = _StickyReleaseLock(
+                lease, self.trace, self._lock_release_failures
             )
-        return super()._make_lock()
+            return self.lock
+        return super()._make_lock(lease)
 
 
 def test_a_database_that_will_not_close_keeps_the_tail_pending(tmp_path) -> None:
@@ -196,7 +242,7 @@ class _RealBrokerRig:
         self.trace: list[str] = []
         self.gates = GatedThreads()
         self.conn = CloseTrackingConnection(self.trace)
-        self.lock = RecordingProcessLock(self.tmp_path / LOCK_NAME, self.trace)
+        self.lock: RecordingProcessLock | None = None
         self.host: CloseTrackingHost | None = None
         self.broker: SSEBroker | None = None
         self.runtime = DashboardRuntime(
@@ -207,8 +253,12 @@ class _RealBrokerRig:
             open_database=self._open_database,
             server_factory=RecordingServer,
             write_descriptor=lambda d, e: write_entry_descriptor(d, e),
-            lock=self.lock,
+            lock=self._make_lock,
         )
+
+    def _make_lock(self, lease):
+        self.lock = RecordingProcessLock(lease, self.trace)
+        return self.lock
 
     def _open_database(self, directory):
         del directory
@@ -233,7 +283,11 @@ class _RealBrokerRig:
     def lock_is_held(self) -> bool:
         if not self.lock.acquired:
             return False
-        probe = ProcessLock(self.tmp_path / LOCK_NAME)
+        from agent_alfred.evals.deterministic._web_startup_test_helpers import (
+            managed_process_lock,
+        )
+
+        probe = managed_process_lock(self.tmp_path)
         try:
             probe.acquire()
         except StateDirLocked:
@@ -298,17 +352,18 @@ def test_a_descriptor_that_refuses_deletion_keeps_the_tail_pending(
     rig = RefusableTailRig(tmp_path)
     rig.runtime.start()
     attempts = {"count": 0}
-    real_unlink = Path.unlink
+    real_unlink = os.unlink
 
-    def refusing_unlink(self, missing_ok=False):
-        if self.name == DESCRIPTOR_NAME and attempts["count"] == 0:
+    def refusing_unlink(path, *, dir_fd=None):
+        if path == DESCRIPTOR_NAME and attempts["count"] == 0:
             attempts["count"] += 1
-            raise PermissionError(1, "Operation not permitted", str(self))
-        return real_unlink(self, missing_ok=missing_ok)
+            raise PermissionError(1, "Operation not permitted", path)
+        return real_unlink(path, dir_fd=dir_fd)
 
-    monkeypatch.setattr(Path, "unlink", refusing_unlink)
-    with pytest.raises(PermissionError):
+    monkeypatch.setattr("agent_alfred.managed_state.os.unlink", refusing_unlink)
+    with pytest.raises(ManagedPathSecurityError) as caught:
         rig.runtime.close()
+    assert caught.value.reason == "permission_denied"
 
     assert rig.runtime.state == "closing"
     assert read_entry_descriptor(tmp_path) is not None
@@ -380,7 +435,7 @@ class _RealHostFanOutRig:
     def __init__(self, tmp_path):
         self.tmp_path = Path(tmp_path)
         self.trace: list[str] = []
-        self.lock = RecordingProcessLock(self.tmp_path / LOCK_NAME, self.trace)
+        self.lock: RecordingProcessLock | None = None
         self.sink = _FlakyCloseSink()
         self.conn: _SpyCloseConnection | None = None
         self.host: RuntimeHost | None = None
@@ -393,8 +448,12 @@ class _RealHostFanOutRig:
             open_database=self._open_database,
             server_factory=self._server_factory,
             write_descriptor=self._write_descriptor,
-            lock=self.lock,
+            lock=self._make_lock,
         )
+
+    def _make_lock(self, lease):
+        self.lock = RecordingProcessLock(lease, self.trace)
+        return self.lock
 
     def _server_factory(self, address, handler):
         self.trace.append("bind")
@@ -447,7 +506,11 @@ class _RealHostFanOutRig:
     def lock_is_held(self) -> bool:
         if not self.lock.acquired:
             return False
-        probe = ProcessLock(self.tmp_path / LOCK_NAME)
+        from agent_alfred.evals.deterministic._web_startup_test_helpers import (
+            managed_process_lock,
+        )
+
+        probe = managed_process_lock(self.tmp_path)
         try:
             probe.acquire()
         except StateDirLocked:
@@ -528,7 +591,7 @@ def test_dashboard_keeps_ownership_while_trace_drain_is_still_writing(
     monkeypatch.setattr(trace_module, "_CLOSE_JOIN_TIMEOUT_S", 0.01)
     rig = _RealHostFanOutRig(tmp_path)
     trace = RunBundleTraceSink(
-        root=tmp_path / "traces",
+        root=ManagedStateDirectory.acquire_trace_root(tmp_path / "traces"),
         clock=FakeClock(),
         process_instance_id="inst-close-progress",
     )

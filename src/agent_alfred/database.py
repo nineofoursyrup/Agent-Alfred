@@ -3,20 +3,33 @@
 from __future__ import annotations
 
 import sqlite3
-from pathlib import Path
+from pathlib import PurePath
 
 from agent_alfred import schema
+from agent_alfred.managed_state import ManagedStateLease
+from agent_alfred.resource_rollback import ResumableRollback
 
 
-def open_database(state_dir: Path) -> sqlite3.Connection:
-    state_dir.mkdir(mode=0o700, exist_ok=True)
-    state_dir.chmod(0o700)
-    path = state_dir / "db.sqlite3"
-    conn = sqlite3.connect(str(path), check_same_thread=False)
+def open_database(state: ManagedStateLease) -> sqlite3.Connection:
+    file_lease = state.open_regular(
+        PurePath("db.sqlite3"),
+        access="read_write",
+        create=True,
+        role="SQLite database",
+    )
+    rollback = ResumableRollback()
+    rollback.own(file_lease)
+    conn: sqlite3.Connection | None = None
     try:
-        path.chmod(0o600)
+        token = file_lease.connection_token()
+        conn = token.connect(sqlite3.connect, check_same_thread=False)
+        rollback.own(conn)
+        token.verify()
         schema.migrate(conn)
-    except Exception:
-        conn.close()
-        raise
+        file_lease.close()
+        rollback.transfer(file_lease)
+    except BaseException as exc:
+        rollback.raise_failure(exc)
+    assert conn is not None
+    rollback.transfer(conn)
     return conn

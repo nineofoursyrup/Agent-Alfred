@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Any
 
 from agent_alfred.gateway.web.lifecycle import (
-    LOCK_NAME,
     ProcessLock,
     StateDirLocked,
     write_entry_descriptor,
@@ -110,8 +109,8 @@ class RecordingServer:
 class RecordingProcessLock(ProcessLock):
     """A real flock that records when it is let go."""
 
-    def __init__(self, path: Path, trace: list[str]):
-        super().__init__(path)
+    def __init__(self, lease, trace: list[str]):
+        super().__init__(lease)
         self._trace = trace
 
     def release(self) -> None:
@@ -144,7 +143,7 @@ class DashboardCloseRig:
         self.host: CloseTrackingHost | None = None
         self.broker: _FakeBroker | None = None
         self.conn = self._make_conn()
-        self.lock = self._make_lock()
+        self.lock: ProcessLock | None = None
         self.runtime = DashboardRuntime(
             state_dir=self.tmp_path,
             assemble=self._assemble,
@@ -153,7 +152,7 @@ class DashboardCloseRig:
             open_database=self._open_database,
             server_factory=self._server_factory,
             write_descriptor=self._write_descriptor,
-            lock=self.lock,
+            lock=self._make_lock,
             spawn=spawn,
             rollback_step_timeout=rollback_step_timeout,
         )
@@ -163,15 +162,17 @@ class DashboardCloseRig:
     def _make_conn(self) -> CloseTrackingConnection:
         return CloseTrackingConnection(self.trace)
 
-    def _make_lock(self) -> ProcessLock:
-        return RecordingProcessLock(self.tmp_path / LOCK_NAME, self.trace)
+    def _make_lock(self, lease) -> ProcessLock:
+        self.lock = RecordingProcessLock(lease, self.trace)
+        return self.lock
 
     def _server_factory(self, address, handler):
         self.binds += 1
         self.trace.append("bind")
         return RecordingServer(address, handler)
 
-    def _open_database(self, directory):
+    def _open_database(self, state):
+        del state
         self.database_opens += 1
         self.trace.append("open_db")
         return self.conn
@@ -199,9 +200,14 @@ class DashboardCloseRig:
 
     def lock_is_held(self) -> bool:
         """Whether some *other* holder would be refused the state directory."""
+        assert self.lock is not None
         if not self.lock.acquired:
             return False
-        probe = ProcessLock(self.tmp_path / LOCK_NAME)
+        from agent_alfred.evals.deterministic._web_startup_test_helpers import (
+            managed_process_lock,
+        )
+
+        probe = managed_process_lock(self.tmp_path)
         try:
             probe.acquire()
         except StateDirLocked:

@@ -39,6 +39,32 @@ from agent_alfred.runtime.snapshot import (
 )
 from agent_alfred.runtime.work import WorkItem
 from agent_alfred.settings import MAX_STEPS_REACHED_TEXT, Settings
+from agent_alfred.wiring import build_default_host
+
+
+def test_build_default_host_close_releases_owned_connection_and_leases_once(
+    tmp_path, monkeypatch
+) -> None:
+    from agent_alfred import wiring as wiring_module
+
+    real_open_database = wiring_module.open_database
+    captured_connections = []
+
+    def capture_database(state):
+        connection = real_open_database(state)
+        captured_connections.append(connection)
+        return connection
+
+    monkeypatch.setattr(wiring_module, "open_database", capture_database)
+    host = build_default_host(
+        state_dir=tmp_path / "state",
+        factory=ScriptedModelFactory(ScriptedModel(["unused"])),
+    )
+    conn = captured_connections[0]
+    assert host.close() is True
+    assert host.close() is True
+    with pytest.raises(sqlite3.ProgrammingError):
+        conn.execute("SELECT 1")
 
 
 class HoldingBarrierSink:

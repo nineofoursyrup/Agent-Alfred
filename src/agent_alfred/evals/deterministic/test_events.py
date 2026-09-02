@@ -20,6 +20,7 @@ from agent_alfred.events import (
     UnsequencedEvent,
     event_json_default,
 )
+from agent_alfred.managed_state import ManagedStateDirectory
 from agent_alfred.messages import message_plain_text
 from agent_alfred.model import ScriptedModel, ScriptedModelFactory
 from agent_alfred.runtime.host import RuntimeHost, SubmitRequest
@@ -219,7 +220,7 @@ def test_post_commit_failure_cannot_reverse_publish_or_skip_later_cleanup(
     released = CleanupSink(name="released")
     capture = CapturingSink(name="capture")
     trace = RunBundleTraceSink(
-        root=tmp_path / "traces",
+        root=ManagedStateDirectory.acquire_trace_root(tmp_path / "traces"),
         clock=FakeClock(),
         process_instance_id="proc-post-commit",
     )

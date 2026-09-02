@@ -29,12 +29,15 @@ from agent_alfred.evals.deterministic._web_close_test_helpers import (
     DashboardCloseRig,
     RecordingServer,
 )
+from agent_alfred.evals.deterministic._web_startup_test_helpers import (
+    managed_process_lock,
+)
 from agent_alfred.gateway.web.lifecycle import (
     LOCK_NAME,
-    ProcessLock,
     StateDirLocked,
     read_entry_descriptor,
 )
+from agent_alfred.resource_rollback import IncompleteRollback
 
 
 class _DescriptorWriteRefused(RuntimeError):
@@ -106,7 +109,10 @@ def test_start_failure_keeps_runtime_closing_with_resources_owned(tmp_path) -> N
 
     # The start failure is the one that propagates, never the rollback's.
     assert caught.value is rig.start_error
-    assert caught.value.__cause__ is rig.server.close_error
+    cleanup = caught.value.__cause__
+    assert isinstance(cleanup, IncompleteRollback)
+    assert cleanup.failure is rig.start_error
+    assert cleanup.errors == (rig.server.close_error,)
     # Retryable, not terminal: the undo has not finished.
     assert rig.runtime.state == "closing"
     # What was taken before the failure is still held, references and all.
@@ -133,7 +139,7 @@ def test_process_lock_rejects_second_lock_until_socket_confirmed_closed(
     rig = _StartFailureRig(tmp_path, close_failures=2)
     with pytest.raises(RuntimeError):
         rig.runtime.start()
-    second = ProcessLock(tmp_path / LOCK_NAME)
+    second = managed_process_lock(tmp_path)
 
     # The socket has not been confirmed closed, so the lock is really held.
     with pytest.raises(StateDirLocked) as refused:
@@ -143,8 +149,8 @@ def test_process_lock_rejects_second_lock_until_socket_confirmed_closed(
     # The close confirms the socket, withdraws the entry, lets the lock go.
     assert rig.runtime.close() is True
     assert rig.lock.acquired is False
-    # The same second lock is no longer refused: the flock went with the
-    # descriptor once the socket was confirmed, not with a flag.
+    # A refused capability is spent; a fresh central capability now succeeds.
+    second = managed_process_lock(tmp_path)
     second.acquire()
     second.release()
 

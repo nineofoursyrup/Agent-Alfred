@@ -12,10 +12,12 @@ Two things can only be checked here:
 
 from __future__ import annotations
 
+import errno
 import io
 import json
 import socket
 import sqlite3
+import stat
 import threading
 from pathlib import Path
 
@@ -27,6 +29,9 @@ from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
 )
 from agent_alfred.evals.deterministic._web_runtime_test_helpers import (
     FailNextSessionCommit,
+)
+from agent_alfred.evals.deterministic._web_startup_test_helpers import (
+    record_managed_state_acquires,
 )
 from agent_alfred.events import event_json_default
 from agent_alfred.gateway.cli import serve_dashboard
@@ -45,7 +50,7 @@ def _factory() -> ScriptedModelFactory:
     return ScriptedModelFactory(ScriptedModel(["pong"]))
 
 
-def _database(directory: Path) -> sqlite3.Connection:
+def _database(state) -> sqlite3.Connection:
     """The production database seam, on a real file in the state directory.
 
     A file rather than ``:memory:`` so that "the database appeared after the
@@ -53,7 +58,88 @@ def _database(directory: Path) -> sqlite3.Connection:
     """
     from agent_alfred.wiring import open_database
 
-    return open_database(directory)
+    return open_database(state)
+
+
+def test_dashboard_derives_canonical_trace_from_one_state_root_lease(
+    tmp_path, monkeypatch
+) -> None:
+    paths = record_managed_state_acquires(monkeypatch)
+    dashboard = build_dashboard(
+        state_dir=tmp_path,
+        trace_root=tmp_path / "traces",
+        factory=_factory(),
+        clock=FakeClock(),
+        port=free_loopback_port(),
+        open_database=_database,
+    )
+    dashboard.start()
+    dashboard.close()
+    assert paths == [tmp_path]
+
+
+def test_dashboard_external_trace_uses_second_root_lease_and_closes_both(
+    tmp_path, monkeypatch
+) -> None:
+    state = tmp_path / "state"
+    traces = tmp_path / "external traces"
+    paths = record_managed_state_acquires(monkeypatch)
+    dashboard = build_dashboard(
+        state_dir=state,
+        trace_root=traces,
+        factory=_factory(),
+        clock=FakeClock(),
+        port=free_loopback_port(),
+        open_database=_database,
+    )
+    dashboard.start()
+    dashboard.close()
+    assert paths == [state, traces]
+    assert stat.S_IMODE(state.stat().st_mode) == 0o700
+    assert stat.S_IMODE(traces.stat().st_mode) == 0o700
+
+
+@pytest.mark.parametrize("failure_errno", [errno.ENOSPC, errno.EIO])
+def test_trace_initialization_io_failure_keeps_dashboard_runs_available(
+    tmp_path, monkeypatch, failure_errno
+) -> None:
+    from agent_alfred import managed_state as managed_state_module
+
+    real_mkdir = managed_state_module.os.mkdir
+
+    def fail_trace_directory(path, mode=0o777, *, dir_fd=None):
+        if path == "traces" and dir_fd is not None:
+            raise OSError(failure_errno, "injected trace initialization failure")
+        return real_mkdir(path, mode, dir_fd=dir_fd)
+
+    monkeypatch.setattr(managed_state_module.os, "mkdir", fail_trace_directory)
+    baseline_threads = {thread.ident for thread in threading.enumerate()}
+    dashboard = build_dashboard(
+        state_dir=tmp_path,
+        factory=_factory(),
+        clock=FakeClock(),
+        port=free_loopback_port(),
+        open_database=_database,
+    )
+    try:
+        dashboard.start()
+        host = dashboard.host
+        submitted = host.submit(
+            SubmitRequest(message="hello", session_id=host.create_session())
+        )
+        assert submitted.kind == "accepted"
+        result = host.wait(submitted.run_id)
+        assert result.outcome == "completed"
+        row = host._conn.execute(
+            "SELECT telemetry FROM runs WHERE run_id = ?", (submitted.run_id,)
+        ).fetchone()
+        assert row is not None
+        telemetry = json.loads(row[0])
+        assert telemetry["trace_incomplete"] is True
+        assert "trace_sink_init_failed" in telemetry["trace_incomplete_reason"]
+    finally:
+        assert dashboard.close() is True
+    assert {thread.ident for thread in threading.enumerate()} == baseline_threads
 
 
 def _wait_until(predicate, timeout: float = 5.0) -> None:
@@ -252,9 +338,7 @@ def test_a_dead_dispatcher_reports_only_machine_safe_context(
         )
         assert submitted.kind == "accepted"
 
-        assert dispatch_notice_seen.wait(5.0), (
-            "dispatcher notice was not published"
-        )
+        assert dispatch_notice_seen.wait(5.0), "dispatcher notice was not published"
         host.wait(submitted.run_id)
 
         event_document = json.dumps(capture.events, default=event_json_default)

@@ -40,6 +40,7 @@ from agent_alfred.events import (
     SequencedEvent,
     UnsequencedEvent,
 )
+from agent_alfred.managed_state import ManagedStateDirectory
 from agent_alfred.model import ScriptedModel, ScriptedModelFactory
 from agent_alfred.runtime import host as host_module
 from agent_alfred.runtime.host import RuntimeHost, SubmitRequest
@@ -671,7 +672,7 @@ def test_runtime_host_keeps_trace_drain_pending_within_close_budget(
     monkeypatch.setattr(os, "write", gated_trace_write)
     monkeypatch.setattr(trace_module, "_CLOSE_JOIN_TIMEOUT_S", 0.01)
     trace = RunBundleTraceSink(
-        root=tmp_path / "traces",
+        root=ManagedStateDirectory.acquire_trace_root(tmp_path / "traces"),
         clock=FakeClock(),
         process_instance_id="proc-lifecycle",
     )

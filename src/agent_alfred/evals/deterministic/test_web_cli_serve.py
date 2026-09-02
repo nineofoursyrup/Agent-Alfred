@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import io
+import os
 import socket
+import stat
+import subprocess
 import threading
 
 import pytest
@@ -14,19 +17,136 @@ from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
 )
 from agent_alfred.evals.deterministic._web_startup_test_helpers import (
     file_database,
+    managed_process_lock,
     scripted_factory,
 )
 from agent_alfred.gateway.web.api import DashboardApi
 from agent_alfred.gateway.web.lifecycle import (
-    LOCK_NAME,
     EntryDescriptor,
-    ProcessLock,
     read_entry_descriptor,
 )
+from agent_alfred.managed_state import ManagedPathSecurityError
 from agent_alfred.model import ScriptedModel, ScriptedModelFactory
 from agent_alfred.runtime.work import SubmitRequest
 from agent_alfred.settings import Settings
 from agent_alfred.wiring import build_dashboard
+
+
+class _RefusingRuntime:
+    def __init__(self, error: BaseException) -> None:
+        self._error = error
+
+    def start(self):
+        raise self._error
+
+    def close(self):
+        return True
+
+
+def test_cli_reports_managed_path_reason_and_manual_repair_command(
+    tmp_path,
+) -> None:
+    from agent_alfred.gateway import cli as cli_module
+
+    state = tmp_path / "state with 'quote'"
+    error = ManagedPathSecurityError(
+        reason="mode_tighten_failed",
+        role="state root",
+        path=state,
+        expected_mode=0o700,
+    )
+    out = io.StringIO()
+    result = cli_module.serve_dashboard(
+        state_dir=state,
+        settings=Settings(),
+        out=out,
+        build=lambda **kwargs: _RefusingRuntime(error),
+    )
+    rendered = out.getvalue()
+    assert result == 1
+    assert "reason=mode_tighten_failed role=state root" in rendered
+    assert error.repair_hint in rendered
+    assert "/bin/chmod 0700" in rendered
+
+
+@pytest.mark.parametrize(
+    ("component", "directory", "expected_mode"),
+    (
+        ("space name", True, 0o700),
+        ("single'quote", False, 0o600),
+        ("-option", False, 0o600),
+    ),
+)
+def test_mode_repair_hint_is_a_real_shell_quoting_oracle(
+    tmp_path, component: str, directory: bool, expected_mode: int
+) -> None:
+    safe_root = tmp_path / "disposable repair oracle"
+    safe_root.mkdir()
+    target = safe_root / component
+    untouched = safe_root / "untouched"
+    untouched.write_text("keep", encoding="utf-8")
+    if directory:
+        target.mkdir(mode=0o755)
+    else:
+        target.write_text("target", encoding="utf-8")
+        target.chmod(0o644)
+    before_untouched = untouched.stat()
+    error = ManagedPathSecurityError(
+        reason="mode_tighten_failed",
+        role="repair oracle",
+        path=target,
+        expected_mode=expected_mode,
+    )
+
+    result = subprocess.run(
+        error.repair_hint,
+        shell=True,
+        cwd=safe_root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert stat.S_IMODE(target.stat().st_mode) == expected_mode
+    after_untouched = untouched.stat()
+    after_identity = (
+        after_untouched.st_ino,
+        after_untouched.st_mode,
+        after_untouched.st_mtime_ns,
+    )
+    assert after_identity == (
+        before_untouched.st_ino,
+        before_untouched.st_mode,
+        before_untouched.st_mtime_ns,
+    )
+    assert sorted(path.name for path in safe_root.iterdir()) == sorted(
+        (component, "untouched")
+    )
+
+
+def test_cli_sets_private_umask_before_building_runtime(tmp_path) -> None:
+    from agent_alfred.gateway import cli as cli_module
+
+    observed: list[int] = []
+
+    def build(**kwargs):
+        del kwargs
+        previous = os.umask(0o077)
+        os.umask(previous)
+        observed.append(previous)
+        return _RefusingRuntime(RuntimeError("stop after build"))
+
+    original = os.umask(0o022)
+    try:
+        result = cli_module.main(
+            ["--serve", "--state-dir", str(tmp_path / "state")],
+            build=build,
+        )
+    finally:
+        os.umask(original)
+    assert result == 1
+    assert observed == [0o077]
 
 # --- the CLI hosts the Dashboard ------------------------------------------
 
@@ -236,7 +356,7 @@ def test_the_cli_releases_the_socket_the_descriptor_and_the_lock(tmp_path) -> No
     probe.bind(("127.0.0.1", port))
     probe.close()
     # And so does the lock.
-    fresh = ProcessLock(tmp_path / LOCK_NAME)
+    fresh = managed_process_lock(tmp_path)
     fresh.acquire()
     fresh.release()
 

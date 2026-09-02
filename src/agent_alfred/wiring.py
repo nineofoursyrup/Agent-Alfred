@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 import uuid
 from collections.abc import Callable, Sequence
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Any
 
 from agent_alfred.clock import Clock, SystemClock
@@ -18,6 +18,12 @@ from agent_alfred.gateway.web.lifecycle import (
     ProcessLock,
 )
 from agent_alfred.gateway.web.server import DashboardRuntime
+from agent_alfred.managed_state import (
+    ManagedPathSecurityError,
+    ManagedStateDirectory,
+    ManagedStateLease,
+    ManagedTraceRoot,
+)
 from agent_alfred.model import (
     ClientSnapshot,
     EndpointUnconfigured,
@@ -27,6 +33,7 @@ from agent_alfred.model import (
 )
 from agent_alfred.openai_compatible import OpenAICompatibleAdapter
 from agent_alfred.redact import Redactor
+from agent_alfred.resource_rollback import ResumableRollback, RollbackSlot
 from agent_alfred.retry import RetryPolicy, SystemSleeper
 from agent_alfred.runtime.config import SettingsBackedSnapshotProvider
 from agent_alfred.runtime.host import RuntimeHost
@@ -129,21 +136,47 @@ class UnavailableTraceSink:
         return None
 
 
-def _trace_sink(trace_root: Path, clock: Clock, instance_id: str) -> EventSink:
+TraceRootRequest = tuple[ManagedStateLease, PurePath]
+
+
+def _trace_sink(
+    trace_root: Path | ManagedTraceRoot | TraceRootRequest,
+    clock: Clock,
+    instance_id: str,
+) -> EventSink:
     """The production durability-critical sink, or an honest failure stub.
 
     Initialization failure must not remove durability from the barrier: the
     stub keeps the barrier critical and permanently incomplete instead of
     letting a Run claim a trace that was never written.
     """
+    acquired: ManagedTraceRoot | None = None
+    rollback = ResumableRollback()
     try:
+        if isinstance(trace_root, tuple):
+            state, relative = trace_root
+            acquired = state.ensure_trace_directory(relative)
+        elif isinstance(trace_root, Path):
+            acquired = ManagedStateDirectory.acquire_trace_root(trace_root)
+        else:
+            acquired = trace_root
+        rollback.own(acquired)
         return RunBundleTraceSink(
-            root=trace_root, clock=clock, process_instance_id=instance_id
+            root=acquired,
+            clock=clock,
+            process_instance_id=instance_id,
+            _rollback=rollback,
         )
+    except ManagedPathSecurityError as exc:
+        rollback.raise_failure(exc)
     except Exception as exc:
+        if not rollback.retry():
+            rollback.raise_incomplete(exc)
         return UnavailableTraceSink(
             detail=f"trace_sink_init_failed {type(exc).__name__}"
         )
+    except BaseException as exc:
+        rollback.raise_failure(exc)
 
 
 def build_host(
@@ -154,31 +187,47 @@ def build_host(
     clock: Clock | None = None,
     extra_sinks: Sequence[EventSink] = (),
     process_instance_id: str | None = None,
-    trace_root: Path | None = None,
+    trace_root: Path | ManagedTraceRoot | TraceRootRequest | None = None,
     snapshot_listener: Callable[[RuntimeSnapshot], None] | None = None,
+    _rollback: ResumableRollback | None = None,
 ) -> RuntimeHost:
     settings = settings or Settings()
     clock = clock or SystemClock()
     instance_id = process_instance_id or uuid.uuid4().hex
     secrets = _secrets_from_env(settings)
     redactor = Redactor(secrets)
-    sinks: list[EventSink] = []
-    if trace_root is not None:
-        sinks.append(_trace_sink(trace_root, clock, instance_id))
-    sinks.extend(extra_sinks)
-    fanout = FanOutSink(sinks, process_instance_id=instance_id, redactor=redactor)
-    provider = SettingsBackedSnapshotProvider(settings)
-    return RuntimeHost(
-        conn=conn,
-        factory=factory,
-        settings=settings,
-        clock=clock,
-        fanout=fanout,
-        process_instance_id=instance_id,
-        redactor=redactor,
-        snapshot_provider=provider,
-        snapshot_listener=snapshot_listener,
-    )
+    rollback = _rollback or ResumableRollback()
+    try:
+        sinks: list[EventSink] = []
+        if trace_root is not None:
+            trace_sink = _trace_sink(trace_root, clock, instance_id)
+            sinks.append(trace_sink)
+            rollback.own(trace_sink)
+        for sink in extra_sinks:
+            sinks.append(sink)
+            rollback.own(sink)
+        fanout = FanOutSink(
+            sinks, process_instance_id=instance_id, redactor=redactor
+        )
+        rollback.own(fanout)
+        for sink in sinks:
+            rollback.transfer(sink)
+        provider = SettingsBackedSnapshotProvider(settings)
+        host = RuntimeHost(
+            conn=conn,
+            factory=factory,
+            settings=settings,
+            clock=clock,
+            fanout=fanout,
+            process_instance_id=instance_id,
+            redactor=redactor,
+            snapshot_provider=provider,
+            snapshot_listener=snapshot_listener,
+        )
+        rollback.transfer(fanout)
+        return host
+    except BaseException as exc:
+        rollback.raise_failure(exc)
 
 
 def build_dashboard(
@@ -191,10 +240,10 @@ def build_dashboard(
     port: int = DEFAULT_PORT,
     extra_sinks: Sequence[EventSink] = (),
     instance_id: str | None = None,
-    open_database: Callable[[Path], sqlite3.Connection] | None = None,
+    open_database: Callable[[ManagedStateLease], sqlite3.Connection] | None = None,
     server_factory: Any = None,
     write_descriptor: Callable[[Path, EntryDescriptor], Path] | None = None,
-    lock: ProcessLock | None = None,
+    lock: Callable[[Any], ProcessLock] | None = None,
     pid: int | None = None,
 ) -> DashboardRuntime:
     """Build the one Dashboard object. Take no ownership yet.
@@ -220,60 +269,87 @@ def build_dashboard(
     clock = clock or SystemClock()
     settings = settings or Settings()
     resolved_factory = factory or OpenCodeGoFactory(clock=clock)
+    captured_state: list[ManagedStateLease] = []
+    construction_rollback = RollbackSlot()
+
+    def dashboard_database(state: ManagedStateLease) -> sqlite3.Connection:
+        captured_state[:] = [state]
+        opener = open_database or globals()["open_database"]
+        return opener(state)
 
     def assemble(
         conn: sqlite3.Connection, instance: str
     ) -> tuple[RuntimeHost, SSEBroker]:
-        broker = SSEBroker(
-            process_instance_id=instance,
-            snapshot=RuntimeSnapshot(
+        state = captured_state[0]
+        if trace_root is None or Path(trace_root) == state.path / "traces":
+            managed_trace: Path | TraceRootRequest = (
+                state,
+                PurePath("traces"),
+            )
+        else:
+            managed_trace = Path(trace_root)
+        rollback = ResumableRollback()
+        construction_rollback.begin(rollback)
+        try:
+            broker = SSEBroker(
                 process_instance_id=instance,
-                state_revision=0,
-                coordinator_state="idle",
-                active_run=None,
-                unrecorded_terminal_projection=None,
-            ),
-        )
-        host = build_host(
-            conn=conn,
-            factory=resolved_factory,
-            settings=settings,
-            clock=clock,
-            trace_root=trace_root,
-            extra_sinks=[broker, *extra_sinks],
-            process_instance_id=instance,
-            snapshot_listener=broker.publish_state_patch,
-        )
-        broker.bind_session_check(host.transport_session_validity)
+                snapshot=RuntimeSnapshot(
+                    process_instance_id=instance,
+                    state_revision=0,
+                    coordinator_state="idle",
+                    active_run=None,
+                    unrecorded_terminal_projection=None,
+                ),
+            )
+            rollback.own(broker)
+            host = build_host(
+                conn=conn,
+                factory=resolved_factory,
+                settings=settings,
+                clock=clock,
+                trace_root=managed_trace,
+                extra_sinks=[broker, *extra_sinks],
+                process_instance_id=instance,
+                snapshot_listener=broker.publish_state_patch,
+                _rollback=rollback,
+            )
+            rollback.own(host)
+            broker.bind_session_check(host.transport_session_validity)
 
-        def note_dispatcher_fatal(exc: BaseException) -> None:
-            """Publish only the fixed, machine-safe dispatcher diagnosis.
+            def note_dispatcher_fatal(exc: BaseException) -> None:
+                """Publish only the fixed, machine-safe dispatcher diagnosis.
 
-            The broker keeps the original exception in its in-memory fatal
-            latch for local causal diagnosis. Its message may contain user
-            or credential text, so this domain-event boundary deliberately
-            drops the callback reference instead of copying it into an event
-            or trace.
-            """
-            del exc
-            host.note_sink_disabled(broker.name, "dispatch")
+                The broker keeps the original exception in its in-memory fatal
+                latch for local causal diagnosis. Its message may contain user
+                or credential text, so this domain-event boundary deliberately
+                drops the callback reference instead of copying it into an event
+                or trace.
+                """
+                del exc
+                assert host is not None
+                host.note_sink_disabled(broker.name, "dispatch")
 
-        # A dead dispatcher is the one failure the broker cannot fix on its
-        # own, so it is reported where a process-level fact belongs: into
-        # the trace, through the same notice every other sink failure uses.
-        broker.bind_fatal_handler(note_dispatcher_fatal)
-        return host, broker
+            # A dead dispatcher is the one failure the broker cannot fix on its
+            # own, so it is reported where a process-level fact belongs: into
+            # the trace, through the same notice every other sink failure uses.
+            broker.bind_fatal_handler(note_dispatcher_fatal)
+            rollback.transfer(host)
+            construction_rollback.complete(rollback)
+            return host, broker
+        except BaseException as exc:
+            rollback.raise_failure(exc)
 
     return DashboardRuntime(
         state_dir=state_dir,
         assemble=assemble,
         port=port,
         instance_id=instance_id,
-        open_database=open_database,
+        open_database=dashboard_database,
         server_factory=server_factory,
         write_descriptor=write_descriptor,
         lock=lock,
         pid=pid,
+        construction_rollback=construction_rollback,
     )
 
 
@@ -286,13 +362,27 @@ def build_default_host(
     clock = SystemClock()
     settings = settings or load_settings()
     directory = state_dir or resolve_state_dir()
-    conn = open_database(directory)
-    if factory is None:
-        factory = OpenCodeGoFactory(clock=clock)
-    return build_host(
-        conn=conn,
-        factory=factory,
-        settings=settings,
-        clock=clock,
-        trace_root=directory / "traces",
-    )
+    rollback = ResumableRollback()
+    try:
+        state = ManagedStateDirectory.acquire(directory)
+        rollback.own(state)
+        conn = open_database(state)
+        rollback.own(conn)
+        if factory is None:
+            factory = OpenCodeGoFactory(clock=clock)
+        host = build_host(
+            conn=conn,
+            factory=factory,
+            settings=settings,
+            clock=clock,
+            trace_root=(state, PurePath("traces")),
+            _rollback=rollback,
+        )
+        rollback.own(host)
+        host.attach_owned_resources(conn, state)
+    except BaseException as exc:
+        rollback.raise_failure(exc)
+    rollback.transfer(host)
+    rollback.transfer(conn)
+    rollback.transfer(state)
+    return host

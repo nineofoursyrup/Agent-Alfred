@@ -38,8 +38,15 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Any
+
+from agent_alfred.managed_state import (
+    ManagedFileLease,
+    ManagedStateDirectory,
+    ManagedStateLease,
+)
+from agent_alfred.resource_rollback import OwnedDescriptor, ResumableRollback
 
 # The one and only bindable address. "Only listen locally" is one of four
 # independent defences (ADR-0014) and it is the one that shrinks the attack
@@ -182,9 +189,17 @@ class ProcessLock:
     state directory, nothing more: it is not consulted to decide ownership.
     """
 
-    def __init__(self, path: Path):
-        self._path = path
+    def __init__(
+        self,
+        lease: ManagedFileLease,
+        *,
+        owned_state: ManagedStateLease | None = None,
+    ):
+        self._path = lease.path
+        self._lease = lease
+        self._owned_state = owned_state
         self._fd: int | None = None
+        self._closed = False
 
     @property
     def path(self) -> Path:
@@ -197,34 +212,49 @@ class ProcessLock:
     def acquire(self) -> None:
         if self._fd is not None:
             return
-        fd = os.open(
-            self._path,
-            os.O_CREAT | os.O_RDWR | getattr(os, "O_CLOEXEC", 0),
-            0o600,
-        )
+        if self._closed:
+            raise RuntimeError("a released ProcessLock capability cannot be reused")
+        self._lease.verify_identity()
+        fd = self._lease.duplicate_fd()
+        rollback = ResumableRollback()
+        descriptor = OwnedDescriptor(fd)
+        capability = object()
+        rollback.own(capability, self._close_capability)
+        rollback.own(descriptor)
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError as exc:
-            os.close(fd)
             if exc.errno not in (errno.EACCES, errno.EAGAIN):
-                raise
-            raise StateDirLocked(self._path, _recorded_pid(self._path)) from exc
+                rollback.raise_failure(exc)
+            holder_pid = _recorded_pid(fd)
+            failure = StateDirLocked(self._path, holder_pid)
+            failure.__cause__ = exc
+            rollback.raise_failure(failure)
         try:
-            os.ftruncate(fd, 0)
-            os.write(fd, b"pid=%d\n" % os.getpid())
-            os.fsync(fd)
-        except OSError:
+            self._lease.write_lock_diagnostic(fd, b"pid=%d\n" % os.getpid())
+        except BaseException as exc:
             # The lock is held either way; the pid is only a note. Undo the
             # whole acquisition rather than report success on a half-done
             # one -- closing the descriptor drops the flock with it.
-            os.close(fd)
-            raise
+            rollback.raise_failure(exc)
+        rollback.transfer(descriptor)
+        rollback.transfer(capability)
         self._fd = fd
 
+    def _close_capability(self) -> None:
+        self._lease.close()
+        self._closed = True
+        if self._owned_state is not None:
+            self._owned_state.close()
+            self._owned_state = None
+
     def release(self) -> None:
+        if self._closed:
+            return
         fd, self._fd = self._fd, None
         if fd is not None:
             os.close(fd)
+        self._close_capability()
 
     def __enter__(self) -> "ProcessLock":
         self.acquire()
@@ -234,7 +264,7 @@ class ProcessLock:
         self.release()
 
 
-def _recorded_pid(path: Path) -> int | None:
+def _recorded_pid(fd: int) -> int | None:
     """The pid the lock file names, if it names one.
 
     Diagnostic only. A lock file with no readable pid still means exactly one
@@ -242,8 +272,9 @@ def _recorded_pid(path: Path) -> int | None:
     instead of guessing.
     """
     try:
-        text = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeError):
+        raw = os.pread(fd, len("pid=") + MAX_PID_DIGITS + 2, 0)
+        text = raw.decode("utf-8")
+    except OSError, UnicodeError:
         # This file is never evidence of ownership -- flock is.  A read or
         # decode failure therefore cannot replace the lock-conflict fact.
         return None
@@ -393,7 +424,7 @@ class DashboardService:
         server_factory: Any = None,
         context: Any = None,
         pid: int | None = None,
-        lock: "ProcessLock | None" = None,
+        lock: Callable[[ManagedFileLease], "ProcessLock"] | None = None,
         write_descriptor: Callable[[Path, EntryDescriptor], Path] | None = None,
     ):
         # There is deliberately no address parameter. Refusing a value that
@@ -412,10 +443,11 @@ class DashboardService:
         self._server_factory = server_factory
         self._context = context
         self._pid = pid
-        self._lock = lock if lock is not None else ProcessLock(
-            state_dir / LOCK_NAME
-        )
+        self._lock_factory = lock
+        self._lock: ProcessLock | None = None
+        self._managed_state: ManagedStateLease | None = None
         self._write_descriptor_fn = write_descriptor or write_entry_descriptor
+        self._managed_descriptor = write_descriptor is None
         self._server: Any = None
         self._serving = False
         self._serving_thread: Any = None
@@ -461,7 +493,11 @@ class DashboardService:
 
     @property
     def lock_held(self) -> bool:
-        return self._lock.acquired
+        return self._lock is not None and self._lock.acquired
+
+    @property
+    def managed_state(self) -> ManagedStateLease | None:
+        return self._managed_state
 
     @property
     def server(self) -> Any:
@@ -492,43 +528,54 @@ class DashboardService:
         # arbitration -- it is idempotent, and it contains nothing a
         # competing instance could misread. Every *decision* follows the
         # lock.
-        self._state_dir.mkdir(mode=0o700, exist_ok=True)
-        # ... and the directory's mode is *enforced*, not merely requested:
-        # ``mkdir``'s mode only applies to a directory it creates, so a
-        # directory an earlier instance (or an untidy restore) left behind
-        # keeps whatever mode it had. The state directory is a managed path
-        # -- directory 0700 -- and this process will not take write
-        # authority over one that is wider than that. Enforcement happens
-        # before the lock: a directory this process cannot even write a
-        # lock file into must be fixed before the lock is asked for, and a
-        # chmod that fails aborts the start here -- no lock, no port, no
-        # descriptor, nothing to roll back. Only the directory itself is
-        # touched; user files under it are not this system's to rewrite.
-        os.chmod(self._state_dir, 0o700)
-        self._lock.acquire()
+        rollback = ResumableRollback()
+        self._managed_state = ManagedStateDirectory.acquire(self._state_dir)
+        state_owner = object()
+
+        def close_state() -> bool | None:
+            state = self._managed_state
+            if state is None:
+                return True
+            lock = self._lock
+            if self._server is not None or (lock is not None and lock.acquired):
+                return False
+            closed = state.close()
+            if closed is not False:
+                self._managed_state = None
+            return closed
+
+        rollback.own(state_owner, close_state)
         try:
+            lock_file = self._managed_state.open_regular(
+                PurePath(LOCK_NAME),
+                access="read_write",
+                create=True,
+                role="process lock",
+            )
+            rollback.own(lock_file)
+            factory = self._lock_factory or ProcessLock
+            self._lock = factory(lock_file)
+
+            def close_lock() -> bool | None:
+                if self._server is not None:
+                    return False
+                self._lock.release()
+                return True
+
+            rollback.own(self._lock, close_lock)
+            # A successfully constructed lock factory owns the lease.
+            rollback.transfer(lock_file)
+            self._lock.acquire()
             self._bind()
-        except BaseException:
-            self._lock.release()
-            raise
-        try:
-            return self._write_descriptor()
+            server_owner = object()
+            rollback.own(server_owner, self._release_server)
+            descriptor = self._write_descriptor()
         except BaseException as exc:
-            # The undo is steps of its own, and the socket goes before the
-            # lock: ``close()`` runs the same confirmed order and keeps the
-            # progress bits, so a step that refuses here leaves the rest
-            # exactly where a later close() picks it up.
-            try:
-                self.close()
-            except BaseException as rollback_exc:
-                # The undo itself refused: the socket and the lock are still
-                # this service's, each at the last step that actually
-                # succeeded. The caller is waiting to learn why the start
-                # failed, so the start failure is the one that propagates --
-                # the refused undo step rides with it as its cause, never in
-                # front of it.
-                raise exc from rollback_exc
-            raise
+            rollback.raise_failure(exc)
+        rollback.transfer(server_owner)
+        rollback.transfer(self._lock)
+        rollback.transfer(state_owner)
+        return descriptor
 
     def _bind(self) -> None:
         factory = self._server_factory
@@ -566,7 +613,13 @@ class DashboardService:
             pid=self._pid,
             port=self.port,
         )
-        self._write_descriptor_fn(self._state_dir, descriptor)
+        if self._managed_descriptor:
+            assert self._managed_state is not None
+            self._managed_state.replace_bytes(
+                PurePath(DESCRIPTOR_NAME), descriptor.to_json().encode("utf-8")
+            )
+        else:
+            self._write_descriptor_fn(self._state_dir, descriptor)
         self._descriptor = descriptor
         return descriptor
 
@@ -626,7 +679,11 @@ class DashboardService:
         """
         self._release_server()
         self._forget_descriptor()
-        self._lock.release()
+        if self._lock is not None:
+            self._lock.release()
+        if self._managed_state is not None:
+            self._managed_state.close()
+            self._managed_state = None
 
     # -- internals --------------------------------------------------------
 
@@ -701,11 +758,16 @@ class DashboardService:
     def _forget_descriptor(self) -> None:
         if self._descriptor is None:
             return
-        path = self._state_dir / DESCRIPTOR_NAME
-        try:
-            path.unlink()
-        except FileNotFoundError:
-            pass
+        if self._managed_state is not None:
+            self._managed_state.unlink_regular(
+                PurePath(DESCRIPTOR_NAME), missing_ok=True
+            )
+        else:
+            path = self._state_dir / DESCRIPTOR_NAME
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                pass
         # Only a file that is really gone is forgotten: a permission or
         # filesystem error keeps the reference, so the next close() retries
         # the deletion instead of releasing the lock on top of a descriptor
@@ -726,9 +788,7 @@ def _new_thread(target: Callable[[], None]) -> Any:
     Daemon and named here rather than at the call site: a Dashboard thread
     has one shape, and the name is what shows up in a stack dump.
     """
-    return threading.Thread(
-        target=target, name="dashboard-http", daemon=True
-    )
+    return threading.Thread(target=target, name="dashboard-http", daemon=True)
 
 
 def _default_server_factory(address: tuple[str, int], handler: Any) -> Any:
