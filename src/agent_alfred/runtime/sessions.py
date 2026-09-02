@@ -40,7 +40,6 @@ from agent_alfred.messages import (
     message_plain_text,
 )
 from agent_alfred.redact import Redactor
-from agent_alfred.run_phases import IN_FLIGHT_RUN_PHASES
 from agent_alfred.runtime.cursor import (
     MalformedCursor,
     parse_cursor_position_int,
@@ -50,6 +49,10 @@ from agent_alfred.runtime.cursor import (
 )
 from agent_alfred.runtime.cursor import (
     encode_cursor as _encode_cursor_shared,
+)
+from agent_alfred.runtime.run_queries import (
+    has_inflight_chat_run,
+    page_recorded_chat_run_keys,
 )
 
 _CURSOR_VERSION = 2
@@ -283,7 +286,12 @@ def open_session(
     remaining = page_size
 
     if in_runs_segment:
-        keys = _page_run_keys(conn, session_id, runs_position, remaining + 1)
+        keys = page_recorded_chat_run_keys(
+            conn,
+            session_id=session_id,
+            position=runs_position,
+            count=remaining + 1,
+        )
         taken = keys[:remaining]
         for activity_revision, run_id in taken:
             messages.extend(_run_messages(conn, run_id, redactor))
@@ -300,8 +308,11 @@ def open_session(
                 title_max_chars,
                 runs_pending=False,
             )
-        if _has_inflight_chat_run(
-            conn, session_id, runs_position, recording_failed_run_ids
+        if has_inflight_chat_run(
+            conn,
+            session_id=session_id,
+            position=runs_position,
+            recording_failed_run_ids=recording_failed_run_ids,
         ):
             # The runs segment is not closed for this view: a chat Run that
             # will still enter the session record is in flight beyond the
@@ -349,60 +360,6 @@ def _runs_cursor(session_id: str, position: tuple[int, str] | None) -> str:
         payload["ar"] = position[0]
         payload["r"] = position[1]
     return _encode_cursor(payload)
-
-
-def _runs_beyond_clause() -> str:
-    """The shared keyset predicate over the (activity_revision, run_id) sort
-    key, bound to three parameters: (position_ar, position_ar, position_r)."""
-    return (
-        "AND (runs.activity_revision > ?"
-        " OR (runs.activity_revision = ? AND runs.run_id > ?))\n"
-    )
-
-
-def _has_inflight_chat_run(
-    conn,
-    session_id: str,
-    position: tuple[int, str] | None,
-    recording_failed_run_ids: frozenset[str],
-) -> bool:
-    """True while a chat Run that will still enter the session record is in
-    flight beyond the cursor position.
-
-    The recording lease (#30) keeps exactly one Run unrecorded at a time and
-    its messages, phase flip, and revision land in one finalize transaction,
-    so an unrecorded chat Run sits in phase accepted/running with no
-    agent_log rows and always sorts beyond every recorded key. A Run the
-    authoritative projection reports recording-failed never produces messages
-    and therefore releases the segment instead of blocking it forever.
-    """
-    sql = """
-        SELECT 1 FROM runs
-        WHERE runs.session_id = ?
-          AND runs.purpose = 'chat'
-          AND runs.phase IN (?, ?)
-          {failed}
-          {beyond}
-        LIMIT 1
-    """
-    params: list = [session_id, *IN_FLIGHT_RUN_PHASES]
-    failed_clause = ""
-    if recording_failed_run_ids:
-        marks = ", ".join("?" for _ in recording_failed_run_ids)
-        failed_clause = f"AND runs.run_id NOT IN ({marks})\n"
-        params.extend(sorted(recording_failed_run_ids))
-    beyond_clause = ""
-    if position is not None:
-        # Named after the clause's own parameter order, so the three bindings
-        # cannot be silently transposed: the shared predicate reads the sort
-        # key twice and the tiebreaker once.
-        position_ar, position_r = position
-        beyond_clause = _runs_beyond_clause()
-        params.extend([position_ar, position_ar, position_r])
-    row = conn.execute(
-        sql.format(failed=failed_clause, beyond=beyond_clause), params
-    ).fetchone()
-    return row is not None
 
 
 def _historic_tail(
@@ -480,39 +437,6 @@ def _created_at(conn, session_id: str) -> str:
         "SELECT created_at FROM sessions WHERE session_id = ?", (session_id,)
     ).fetchone()
     return "" if row is None else row[0]
-
-
-def _page_run_keys(
-    conn, session_id: str, position: tuple[int, str] | None, count: int
-) -> list[tuple[int, str]]:
-    """Chat Runs of this Session that already carry messages, keyset paged.
-
-    Runs are only written into the message pair at finalize, in the same
-    transaction that stamps activity_revision, so an in-flight Run has no
-    messages and no key -- it is held out of this segment by the wait cursor
-    (:func:`_has_inflight_chat_run`) instead of being mistaken for exhaustion.
-    The agent_log unique index guarantees at most one pair per Run.
-    """
-    sql = """
-        SELECT runs.activity_revision, runs.run_id FROM runs
-        WHERE runs.session_id = ?
-          AND runs.purpose = 'chat'
-          AND EXISTS (
-            SELECT 1 FROM agent_log WHERE agent_log.run_id = runs.run_id
-          )
-          {keyset}
-        ORDER BY runs.activity_revision ASC, runs.run_id ASC
-        LIMIT ?
-    """
-    if position is None:
-        rows = conn.execute(sql.format(keyset=""), (session_id, count)).fetchall()
-    else:
-        position_ar, position_r = position
-        rows = conn.execute(
-            sql.format(keyset=_runs_beyond_clause()),
-            (session_id, position_ar, position_ar, position_r, count),
-        ).fetchall()
-    return [(row[0], row[1]) for row in rows]
 
 
 def _run_messages(

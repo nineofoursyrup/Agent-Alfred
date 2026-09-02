@@ -7,6 +7,10 @@ from typing import get_type_hints
 
 import pytest
 
+from agent_alfred.evals.deterministic._state_wire_test_helpers import (
+    NO_PROJECTION,
+    recording_snapshot_wire,
+)
 from agent_alfred.gateway.web.state import (
     ActiveRunView,
     RunStateSnapshot,
@@ -28,8 +32,6 @@ class _EqualToPending:
     def __eq__(self, other: object) -> bool:
         return other == "pending"
 
-
-_NO_PROJECTION = object()
 
 
 def test_runtime_and_wire_views_reuse_domain_recording_states() -> None:
@@ -134,7 +136,7 @@ def test_runtime_unrecorded_terminal_state_is_preserved_in_the_web_view(
 
 
 def test_nullable_wire_fields_accept_null() -> None:
-    wire = _wire_payload()
+    wire = recording_snapshot_wire()
     active = wire["active_run"]
     assert isinstance(active, dict)
     wire["recording_state"] = None
@@ -160,7 +162,7 @@ def test_every_authoritative_recording_state_crosses_the_wire(state: str) -> Non
 
 @pytest.mark.parametrize("state", ["pending", "failed"])
 def test_every_unrecorded_terminal_state_crosses_the_wire(state: object) -> None:
-    wire = _wire_payload(projection_state=state)
+    wire = recording_snapshot_wire(projection_state=state)
 
     rebuilt = snapshot_from_payload(wire)
 
@@ -177,7 +179,7 @@ def test_every_unrecorded_terminal_state_crosses_the_wire(state: object) -> None
 def test_wire_rejects_invalid_nullable_recording_states(
     target: str, state: object
 ) -> None:
-    wire = _wire_payload()
+    wire = recording_snapshot_wire()
     if target == "top-level":
         wire["recording_state"] = state
     else:
@@ -202,7 +204,7 @@ def test_wire_rejects_invalid_nullable_recording_states(
     ],
 )
 def test_wire_rejects_invalid_unrecorded_terminal_states(state: object) -> None:
-    wire = _wire_payload(projection_state=state)
+    wire = recording_snapshot_wire(projection_state=state)
 
     error = (
         "unrecorded_terminal_projection"
@@ -263,8 +265,8 @@ def _runtime_recording_snapshot(state: object) -> RuntimeSnapshot:
 
 
 def _wire_for_recording(state: str) -> dict[str, object]:
-    wire = _wire_payload(
-        projection_state=state if state in ("pending", "failed") else _NO_PROJECTION
+    wire = recording_snapshot_wire(
+        projection_state=state if state in ("pending", "failed") else NO_PROJECTION
     )
     active = wire["active_run"]
     assert isinstance(active, dict)
@@ -275,58 +277,4 @@ def _wire_for_recording(state: str) -> dict[str, object]:
     active["phase"] = "finished"
     active["outcome"] = "completed"
     active["recording_state"] = state
-    return wire
-
-
-def _wire_payload(*, projection_state: object = _NO_PROJECTION) -> dict[str, object]:
-    active = {
-        "run_id": "run-1",
-        "purpose": "chat",
-        "gateway": "web",
-        "phase": "running",
-        "outcome": None,
-        "session_id": "session-1",
-        "prompt_preview": "hello",
-        "started_at": "2026-01-01T00:00:00Z",
-        "current_step": 1,
-        "recording_state": None,
-    }
-    projection = None
-    if projection_state is not _NO_PROJECTION:
-        projection = {
-            "run_id": "run-1",
-            "purpose": "chat",
-            "outcome": "completed",
-            "reply_preview": "done",
-            "error": None,
-            "recording_state": projection_state,
-            "session_id": "session-1",
-            "prompt_preview": "hello",
-        }
-        if projection_state is ...:
-            del projection["recording_state"]
-    wire = {
-        "process_instance_id": "process-1",
-        "state_revision": 1,
-        "coordinator_state": "running",
-        "active_run": active,
-        "step": {
-            "step_index": 1,
-            "attempts": [],
-            "attempts_truncated": False,
-        },
-        "recording_state": None,
-        "session_valid": True,
-        "unrecorded_terminal_projection": projection,
-    }
-    if type(projection_state) is str and projection_state in ("pending", "failed"):
-        active["phase"] = "finished"
-        active["outcome"] = "completed"
-        active["recording_state"] = projection_state
-        wire["coordinator_state"] = (
-            "recording_failed"
-            if projection_state == "failed"
-            else "recording_pending"
-        )
-        wire["recording_state"] = projection_state
     return wire

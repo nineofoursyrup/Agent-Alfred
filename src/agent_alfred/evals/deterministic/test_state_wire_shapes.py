@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import pytest
 
+from agent_alfred.evals.deterministic._state_wire_test_helpers import (
+    shaped_snapshot_wire,
+)
 from agent_alfred.gateway.web.state import snapshot_from_payload, snapshot_payload
 
 
@@ -19,7 +22,7 @@ from agent_alfred.gateway.web.state import snapshot_from_payload, snapshot_paylo
 def test_snapshot_wire_rejects_non_string_required_fields(
     target: str, field: str, value: object
 ) -> None:
-    wire = _wire_payload()
+    wire = shaped_snapshot_wire()
     if target == "active":
         active = wire["active_run"]
         assert isinstance(active, dict)
@@ -41,7 +44,7 @@ def test_snapshot_wire_rejects_non_string_required_fields(
     ],
 )
 def test_snapshot_wire_requires_exact_objects(target: str, value: object) -> None:
-    wire = _wire_payload(with_step=True, with_projection=True)
+    wire = shaped_snapshot_wire(with_step=True, with_projection=True)
 
     if target == "top":
         candidate = value
@@ -67,7 +70,7 @@ def test_snapshot_wire_requires_exact_objects(target: str, value: object) -> Non
     ],
 )
 def test_snapshot_wire_rejects_missing_fields(target: str, field: str) -> None:
-    wire = _wire_payload(with_step=True, with_projection=True)
+    wire = shaped_snapshot_wire(with_step=True, with_projection=True)
     document = wire if target == "top" else wire[target]
     assert isinstance(document, dict)
     del document[field]
@@ -81,7 +84,7 @@ def test_snapshot_wire_rejects_missing_fields(target: str, field: str) -> None:
     ["top", "active_run", "step", "unrecorded_terminal_projection"],
 )
 def test_snapshot_wire_rejects_extra_fields(target: str) -> None:
-    wire = _wire_payload(with_step=True, with_projection=True)
+    wire = shaped_snapshot_wire(with_step=True, with_projection=True)
     document = wire if target == "top" else wire[target]
     assert isinstance(document, dict)
     document["invented"] = "value"
@@ -92,7 +95,7 @@ def test_snapshot_wire_rejects_extra_fields(target: str) -> None:
 
 @pytest.mark.parametrize("value", [None, {}, (), "attempts"])
 def test_snapshot_wire_requires_attempts_to_be_an_exact_list(value: object) -> None:
-    wire = _wire_payload(with_step=True)
+    wire = shaped_snapshot_wire(with_step=True)
     step = wire["step"]
     assert isinstance(step, dict)
     step["attempts"] = value
@@ -148,7 +151,7 @@ def test_snapshot_wire_requires_attempts_to_be_an_exact_list(value: object) -> N
 def test_snapshot_wire_rejects_invalid_string_and_nullable_string_fields(
     target: str, field: str, value: object
 ) -> None:
-    wire = _wire_payload(with_projection=True)
+    wire = shaped_snapshot_wire(with_projection=True)
     document = wire[target]
     assert isinstance(document, dict)
     document[field] = value
@@ -158,13 +161,13 @@ def test_snapshot_wire_rejects_invalid_string_and_nullable_string_fields(
 
 
 def test_snapshot_wire_valid_closed_document_round_trips() -> None:
-    wire = _wire_payload(with_step=True, with_projection=True)
+    wire = shaped_snapshot_wire(with_step=True, with_projection=True)
 
     assert snapshot_payload(snapshot_from_payload(wire)) == wire
 
 
 def test_snapshot_wire_nullable_metadata_strings_round_trip_as_null() -> None:
-    wire = _wire_payload(with_step=True, with_projection=True)
+    wire = shaped_snapshot_wire(with_step=True, with_projection=True)
     active = wire["active_run"]
     projection = wire["unrecorded_terminal_projection"]
     step = wire["step"]
@@ -183,67 +186,3 @@ def test_snapshot_wire_nullable_metadata_strings_round_trip_as_null() -> None:
         attempt[field] = None
 
     assert snapshot_payload(snapshot_from_payload(wire)) == wire
-
-
-def _wire_payload(
-    *, with_step: bool = False, with_projection: bool = False
-) -> dict[str, object]:
-    wire = {
-        "process_instance_id": "process-1",
-        "state_revision": 1,
-        "coordinator_state": "running",
-        "active_run": {
-            "run_id": "run-1",
-            "purpose": "chat",
-            "gateway": "web",
-            "phase": "running",
-            "outcome": None,
-            "session_id": "session-1",
-            "prompt_preview": "hello",
-            "started_at": "2026-01-01T00:00:00Z",
-            "current_step": 1,
-            "recording_state": None,
-        },
-        "step": (
-            {
-                "step_index": 1,
-                "attempts": [
-                    {
-                        "attempt_id": "attempt-1",
-                        "outcome": "committed",
-                        "stop_reason": "end_turn",
-                        "error_code": None,
-                        "duration_ms": 5,
-                    }
-                ],
-                "attempts_truncated": False,
-            }
-            if with_step
-            else None
-        ),
-        "recording_state": None,
-        "session_valid": True,
-        "unrecorded_terminal_projection": (
-            {
-                "run_id": "run-1",
-                "purpose": "chat",
-                "outcome": "completed",
-                "reply_preview": "done",
-                "error": None,
-                "recording_state": "pending",
-                "session_id": "session-1",
-                "prompt_preview": "hello",
-            }
-            if with_projection
-            else None
-        ),
-    }
-    if with_projection:
-        wire["coordinator_state"] = "recording_pending"
-        wire["recording_state"] = "pending"
-        active = wire["active_run"]
-        assert isinstance(active, dict)
-        active["phase"] = "finished"
-        active["outcome"] = "completed"
-        active["recording_state"] = "pending"
-    return wire

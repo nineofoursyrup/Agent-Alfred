@@ -6,6 +6,10 @@ from typing import get_type_hints
 
 import pytest
 
+from agent_alfred.evals.deterministic._state_wire_test_helpers import (
+    NO_PROJECTION,
+    outcome_snapshot_wire,
+)
 from agent_alfred.events import RunOutcome as EventOutcome
 from agent_alfred.gateway.web.state import (
     ActiveRunView,
@@ -33,8 +37,6 @@ from agent_alfred.runtime.snapshot import (
     parse_run_phase as snapshot_parse_run_phase,
 )
 from agent_alfred.schema import OUTCOMES, PHASES
-
-_NO_PROJECTION = object()
 
 
 class LiteralImpostor:
@@ -84,7 +86,7 @@ def test_persisted_run_views_reuse_lifecycle_types() -> None:
 
 @pytest.mark.parametrize("outcome", RUN_OUTCOMES)
 def test_every_run_outcome_round_trips_through_the_wire(outcome: RunOutcome) -> None:
-    wire = _wire_payload(
+    wire = outcome_snapshot_wire(
         active_outcome=outcome,
         projection_outcome=outcome,
         active_phase="finished",
@@ -96,7 +98,7 @@ def test_every_run_outcome_round_trips_through_the_wire(outcome: RunOutcome) -> 
 
 @pytest.mark.parametrize("phase", ["accepted", "running"])
 def test_an_active_nonterminal_run_may_have_no_outcome(phase: RunPhase) -> None:
-    wire = _wire_payload(
+    wire = outcome_snapshot_wire(
         active_outcome=None, active_phase=phase, coordinator_state=phase
     )
 
@@ -111,7 +113,7 @@ def test_an_active_nonterminal_run_may_have_no_outcome(phase: RunPhase) -> None:
 def test_wire_rejects_an_outcome_before_the_run_is_finished(
     phase: RunPhase, outcome: RunOutcome
 ) -> None:
-    wire = _wire_payload(active_outcome=outcome, active_phase=phase)
+    wire = outcome_snapshot_wire(active_outcome=outcome, active_phase=phase)
 
     with pytest.raises(ValueError, match="run lifecycle"):
         snapshot_from_payload(wire)
@@ -203,7 +205,7 @@ def test_every_coordinator_lifecycle_state_has_a_valid_wire_form(
     phase: RunPhase | None, coordinator_state: CoordinatorState
 ) -> None:
     if phase is None:
-        wire = _wire_payload(active_outcome=None)
+        wire = outcome_snapshot_wire(active_outcome=None)
         wire["coordinator_state"] = "idle"
         wire["active_run"] = None
         wire["step"] = None
@@ -212,14 +214,14 @@ def test_every_coordinator_lifecycle_state_has_a_valid_wire_form(
         assert snapshot_payload(snapshot_from_payload(wire)) == wire
         return
     outcome = "completed" if phase == "finished" else None
-    wire = _wire_payload(
+    wire = outcome_snapshot_wire(
         active_outcome=outcome,
         active_phase=phase,
         coordinator_state=coordinator_state,
         projection_outcome=(
             outcome
             if coordinator_state in ("recording_pending", "recording_failed")
-            else _NO_PROJECTION
+            else NO_PROJECTION
         ),
     )
 
@@ -260,7 +262,7 @@ def test_every_coordinator_lifecycle_state_has_a_valid_wire_form(
 def test_wire_rejects_invalid_lifecycle_literals(
     field: str, value: object, error: str
 ) -> None:
-    wire = _wire_payload(active_outcome=None)
+    wire = outcome_snapshot_wire(active_outcome=None)
     if field == "phase":
         active = wire["active_run"]
         assert isinstance(active, dict)
@@ -274,7 +276,7 @@ def test_wire_rejects_invalid_lifecycle_literals(
 
 @pytest.mark.parametrize("field", ["phase", "coordinator_state"])
 def test_wire_requires_lifecycle_keys(field: str) -> None:
-    wire = _wire_payload(active_outcome=None)
+    wire = outcome_snapshot_wire(active_outcome=None)
     if field == "phase":
         active = wire["active_run"]
         assert isinstance(active, dict)
@@ -315,80 +317,12 @@ def test_wire_rejects_invalid_run_outcomes(
         kwargs.update(active_outcome=outcome, active_phase="finished")
     else:
         kwargs["projection_outcome"] = outcome
-    wire = _wire_payload(**kwargs)
+    wire = outcome_snapshot_wire(**kwargs)
 
     with pytest.raises(ValueError, match=error):
         snapshot_from_payload(wire)
 
 
-def _wire_payload(
-    *,
-    active_outcome: object,
-    projection_outcome: object = _NO_PROJECTION,
-    active_phase: object = "running",
-    coordinator_state: object = "running",
-) -> dict[str, object]:
-    active = {
-        "run_id": "run-1",
-        "purpose": "chat",
-        "gateway": "web",
-        "phase": active_phase,
-        "outcome": active_outcome,
-        "session_id": "session-1",
-        "prompt_preview": "hello",
-        "started_at": "2026-01-01T00:00:00Z",
-        "current_step": 1,
-        "recording_state": None,
-    }
-    if active_outcome is ...:
-        del active["outcome"]
-    projection = None
-    if projection_outcome is not _NO_PROJECTION:
-        projection = {
-            "run_id": "run-1",
-            "purpose": "chat",
-            "outcome": projection_outcome,
-            "reply_preview": "done",
-            "error": None,
-            "recording_state": "pending",
-            "session_id": "session-1",
-            "prompt_preview": "hello",
-        }
-        if projection_outcome is ...:
-            del projection["outcome"]
-    if active_phase == "accepted":
-        active["started_at"] = None
-        active["current_step"] = None
-    recording_state = None
-    if active_phase == "finished":
-        recording_state = (
-            "failed"
-            if coordinator_state == "recording_failed"
-            else "pending"
-            if projection is not None
-            else "recorded"
-        )
-        active["recording_state"] = recording_state
-    if projection is not None and coordinator_state == "recording_failed":
-        projection["recording_state"] = "failed"
-    return {
-        "process_instance_id": "process-1",
-        "state_revision": 1,
-        "coordinator_state": coordinator_state,
-        "active_run": active,
-        "step": (
-            None
-            if active["current_step"] is None
-            else {
-                "step_index": active["current_step"],
-                "attempts": [],
-                "attempts_truncated": False,
-            }
-        ),
-        "recording_state": recording_state,
-        "session_valid": True,
-        "unrecorded_terminal_projection": projection,
-    }
 
 
 def _active_run_summary(

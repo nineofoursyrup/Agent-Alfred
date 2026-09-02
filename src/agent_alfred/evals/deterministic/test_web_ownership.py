@@ -10,6 +10,31 @@ from agent_alfred.gateway.web.lifecycle import (
 )
 
 
+def test_file_database_does_not_depend_on_wiring_reexport(
+    monkeypatch, tmp_path
+) -> None:
+    from agent_alfred import wiring
+    from agent_alfred.evals.deterministic._web_startup_test_helpers import (
+        file_database,
+        record_managed_state_acquires,
+    )
+    from agent_alfred.managed_state import ManagedStateDirectory
+
+    def wrong_owner(_state):
+        raise AssertionError("startup helper borrowed the wiring re-export")
+
+    monkeypatch.setattr(wiring, "open_database", wrong_owner)
+    acquired_paths = record_managed_state_acquires(monkeypatch)
+    state = ManagedStateDirectory.acquire(tmp_path)
+    try:
+        conn = file_database(state)
+        conn.execute("SELECT 1").fetchone()
+        assert acquired_paths == [tmp_path]
+        conn.close()
+    finally:
+        state.close()
+
+
 def test_a_host_that_will_not_stop_keeps_its_database_and_its_lock(tmp_path) -> None:
     """A refused Host close is not a licence to close everything.
 

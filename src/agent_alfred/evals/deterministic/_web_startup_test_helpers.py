@@ -2,13 +2,13 @@
 
 from pathlib import Path, PurePath
 
+from agent_alfred.database import open_database
+from agent_alfred.managed_state import ManagedStateLease
 from agent_alfred.model import ScriptedModel, ScriptedModelFactory
 
 
-def file_database(state):
+def file_database(state: ManagedStateLease):
     """Open the production database in the supplied state directory."""
-    from agent_alfred.wiring import open_database
-
     return open_database(state)
 
 

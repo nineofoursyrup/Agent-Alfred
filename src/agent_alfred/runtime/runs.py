@@ -47,7 +47,8 @@ from agent_alfred.runtime.cursor import (
 from agent_alfred.runtime.cursor import (
     encode_cursor as _encode_cursor,
 )
-from agent_alfred.runtime.sessions import SessionNotFound, _has_inflight_chat_run
+from agent_alfred.runtime.run_queries import has_inflight_chat_run
+from agent_alfred.runtime.sessions import SessionNotFound
 
 _CURSOR_VERSION = 1
 _MAINBAR_CURSOR_VERSION = 3
@@ -654,8 +655,11 @@ def mainbar_pairs(
     remaining = limit
     if (
         not in_runs_segment
-        and _has_inflight_chat_run(
-            conn, session_id, None, recording_failed_run_ids
+        and has_inflight_chat_run(
+            conn,
+            session_id=session_id,
+            position=None,
+            recording_failed_run_ids=recording_failed_run_ids,
         )
     ):
         return MainBarPage(
@@ -670,8 +674,11 @@ def mainbar_pairs(
     if pending_watermark is not None:
         if (
             pending_upper_watermark is None
-            and _has_inflight_chat_run(
-                conn, session_id, None, recording_failed_run_ids
+            and has_inflight_chat_run(
+                conn,
+                session_id=session_id,
+                position=None,
+                recording_failed_run_ids=recording_failed_run_ids,
             )
         ):
             # Do not expose a partially settled cohort. A second pending Run
@@ -702,8 +709,11 @@ def mainbar_pairs(
         remaining -= len(taken)
         if len(rows) > len(taken):
             last = taken[-1]
-            still_pending = _has_inflight_chat_run(
-                conn, session_id, None, recording_failed_run_ids
+            still_pending = has_inflight_chat_run(
+                conn,
+                session_id=session_id,
+                position=None,
+                recording_failed_run_ids=recording_failed_run_ids,
             )
             return MainBarPage(
                 items=tuple(items),
@@ -717,8 +727,11 @@ def mainbar_pairs(
                 ),
                 runs_pending=still_pending,
             )
-        if _has_inflight_chat_run(
-            conn, session_id, None, recording_failed_run_ids
+        if has_inflight_chat_run(
+            conn,
+            session_id=session_id,
+            position=None,
+            recording_failed_run_ids=recording_failed_run_ids,
         ):
             return MainBarPage(
                 items=tuple(items),
@@ -743,8 +756,11 @@ def mainbar_pairs(
             last = taken[-1]
             runs_position = (last.activity_revision, last.run_id)
         if len(rows) > len(taken):
-            if _has_inflight_chat_run(
-                conn, session_id, None, recording_failed_run_ids
+            if has_inflight_chat_run(
+                conn,
+                session_id=session_id,
+                position=None,
+                recording_failed_run_ids=recording_failed_run_ids,
             ):
                 return MainBarPage(
                     items=tuple(items),
@@ -762,8 +778,11 @@ def mainbar_pairs(
                     session_id, runs_position
                 ),
             )
-        if _has_inflight_chat_run(
-            conn, session_id, None, recording_failed_run_ids
+        if has_inflight_chat_run(
+            conn,
+            session_id=session_id,
+            position=None,
+            recording_failed_run_ids=recording_failed_run_ids,
         ):
             return MainBarPage(
                 items=tuple(items),

@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import pytest
 
+from agent_alfred.evals.deterministic._state_wire_test_helpers import (
+    relation_running_snapshot_wire,
+)
 from agent_alfred.gateway.web.progress import StepProjection
 from agent_alfred.gateway.web.state import (
     build_snapshot,
@@ -17,32 +20,8 @@ from agent_alfred.runtime.snapshot import (
 )
 
 
-def _running_wire() -> dict[str, object]:
-    return {
-        "process_instance_id": "process-1",
-        "state_revision": 1,
-        "coordinator_state": "running",
-        "active_run": {
-            "run_id": "run-1",
-            "purpose": "chat",
-            "gateway": "web",
-            "phase": "running",
-            "outcome": None,
-            "session_id": "session-1",
-            "prompt_preview": "hello",
-            "started_at": "2026-01-01T00:00:00Z",
-            "current_step": None,
-            "recording_state": None,
-        },
-        "step": None,
-        "recording_state": None,
-        "session_valid": True,
-        "unrecorded_terminal_projection": None,
-    }
-
-
 def test_wire_rejects_idle_with_an_active_run() -> None:
-    wire = _running_wire()
+    wire = relation_running_snapshot_wire()
     wire["coordinator_state"] = "idle"
 
     with pytest.raises(ValueError, match="idle snapshot"):
@@ -162,7 +141,7 @@ def test_wire_rejects_projection_presence_outside_the_real_transitions(
 def test_wire_rejects_a_step_that_is_not_the_active_runs_current_step(
     current_step: int | None, step_index: int
 ) -> None:
-    wire = _running_wire()
+    wire = relation_running_snapshot_wire()
     active = wire["active_run"]
     assert isinstance(active, dict)
     active["current_step"] = current_step
@@ -177,7 +156,7 @@ def test_wire_rejects_a_step_that_is_not_the_active_runs_current_step(
 
 
 def test_wire_rejects_a_step_without_an_active_run() -> None:
-    wire = _running_wire()
+    wire = relation_running_snapshot_wire()
     wire["active_run"] = None
     wire["step"] = {
         "step_index": 0,
@@ -228,7 +207,7 @@ def test_build_snapshot_rejects_running_without_a_start_time() -> None:
 
 @pytest.mark.parametrize("seam", ["wire", "build"])
 def test_running_requires_a_non_empty_start_time(seam: str) -> None:
-    wire = _running_wire()
+    wire = relation_running_snapshot_wire()
     active = wire["active_run"]
     assert isinstance(active, dict)
     active["started_at"] = ""
@@ -549,7 +528,7 @@ def test_unstarted_terminal_rejects_current_step_and_step_projection(
 
 
 def test_wire_rejects_current_step_without_its_projection() -> None:
-    wire = _running_wire()
+    wire = relation_running_snapshot_wire()
     active = wire["active_run"]
     assert isinstance(active, dict)
     active["current_step"] = 3
@@ -653,7 +632,7 @@ def test_every_real_lifecycle_snapshot_round_trips(
 
 
 def test_running_snapshot_with_matching_step_round_trips() -> None:
-    wire = _running_wire()
+    wire = relation_running_snapshot_wire()
     active = wire["active_run"]
     assert isinstance(active, dict)
     active["current_step"] = 3
@@ -724,7 +703,7 @@ def _lifecycle_wire(
     projection_recording: str | None,
     session_valid: bool = True,
 ) -> dict[str, object]:
-    wire = _running_wire()
+    wire = relation_running_snapshot_wire()
     wire["coordinator_state"] = state
     wire["session_valid"] = session_valid
     if active_phase is None:
