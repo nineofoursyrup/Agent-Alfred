@@ -4150,3 +4150,298 @@ def test_a_trailing_transient_seq_is_malformed_not_ahead() -> None:
     assert replay_ids(drain_connection(handle)) == []
     # The transient never entered the ring and never got an id:.
     assert len(harness.broker._ring) == 2
+
+
+# --- Task 02: connection work stays outside publication --------------------
+
+
+class _FatalThreadProbeQueue(ConnectionQueue):
+    broker: SSEBroker | None = None
+    close_threads: list[str] = []
+    closed = threading.Event()
+
+    def request_close(self, *, retry_ms: int | None = None) -> None:
+        name = threading.current_thread().name
+        type(self).close_threads.append(name)
+        if name == "fatal-emitter":
+            raise AssertionError("fatal publish touched a connection queue")
+        broker = type(self).broker
+        assert broker is not None
+        publication_free = broker._lock.acquire(blocking=False)  # noqa: SLF001
+        assert publication_free, "fatal sweep held the publication lock"
+        broker._lock.release()  # noqa: SLF001
+        registry_free = broker._registry_lock.acquire(blocking=False)  # noqa: SLF001
+        assert registry_free, "fatal sweep held the registry lock"
+        broker._registry_lock.release()  # noqa: SLF001
+        super().request_close(retry_ms=retry_ms)
+        type(self).closed.set()
+
+
+def test_ring_failure_never_touches_connection_queue_under_fanout_publish_lock(
+    monkeypatch,
+) -> None:
+    """A ring failure only latches/wakes; the dispatcher owns the sweep."""
+    monkeypatch.setattr(broker_module, "ConnectionQueue", _FatalThreadProbeQueue)
+    _FatalThreadProbeQueue.close_threads = []
+    _FatalThreadProbeQueue.closed = threading.Event()
+    ring = _BrokenRing()
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _sid: "valid",
+        ring=ring,
+        spawn=RealThreadSpawner().spawn,
+    )
+    broker.start()
+    _FatalThreadProbeQueue.broker = broker
+    first = broker.connect(connection=FakeConnection())
+    second = broker.connect(connection=FakeConnection())
+    fanout = FanOutSink([broker], process_instance_id=INSTANCE)
+    emitted = threading.Event()
+
+    def emit() -> None:
+        fanout.emit(RunStarted(purpose="chat"))
+        emitted.set()
+
+    emitter = threading.Thread(target=emit, name="fatal-emitter", daemon=True)
+    emitter.start()
+    assert emitted.wait(5.0), "fatal emitter did not leave publication"
+    assert _FatalThreadProbeQueue.closed.wait(5.0), "dispatcher never swept fatal"
+    emitter.join(timeout=5.0)
+    assert "fatal-emitter" not in _FatalThreadProbeQueue.close_threads
+    assert first.finished.wait(5.0)
+    assert second.finished.wait(5.0)
+    assert first.queue.close_requested is True
+    assert second.queue.close_requested is True
+    assert len(_FatalThreadProbeQueue.close_threads) == 2
+    fanout.emit(StepStarted(step_index=1))
+    assert len(_FatalThreadProbeQueue.close_threads) == 2
+
+
+class _SlowOfferProbeQueue(ConnectionQueue):
+    broker: SSEBroker | None = None
+    entered = threading.Event()
+    release = threading.Event()
+    blocked_once = False
+    publication_lock_seen = False
+    delivered = threading.Event()
+    offer_count = 0
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.seen_seqs: list[int | None] = []
+
+    def offer(self, item, **kwargs):
+        if not type(self).blocked_once:
+            type(self).blocked_once = True
+            broker = type(self).broker
+            assert broker is not None
+            acquired = broker._lock.acquire(blocking=False)  # noqa: SLF001
+            if not acquired:
+                type(self).publication_lock_seen = True
+                raise AssertionError("dispatcher held broker lock while offering")
+            broker._lock.release()  # noqa: SLF001
+            registry_acquired = broker._registry_lock.acquire(  # noqa: SLF001
+                blocking=False
+            )
+            if not registry_acquired:
+                type(self).publication_lock_seen = True
+                raise AssertionError("dispatcher held registry lock while offering")
+            broker._registry_lock.release()  # noqa: SLF001
+            type(self).entered.set()
+            type(self).release.wait(5.0)
+        outcome = super().offer(item, **kwargs)
+        self.seen_seqs.append(item.seq)
+        type(self).offer_count += 1
+        if type(self).offer_count == 4:
+            type(self).delivered.set()
+        return outcome
+
+
+def test_slow_connection_queue_cannot_block_next_fanout_publish_through_broker_lock(
+    monkeypatch,
+) -> None:
+    """A slow dispatcher offer cannot reverse-block a later FanOut commit."""
+    monkeypatch.setattr(broker_module, "ConnectionQueue", _SlowOfferProbeQueue)
+    _SlowOfferProbeQueue.entered = threading.Event()
+    _SlowOfferProbeQueue.release = threading.Event()
+    _SlowOfferProbeQueue.blocked_once = False
+    _SlowOfferProbeQueue.publication_lock_seen = False
+    _SlowOfferProbeQueue.delivered = threading.Event()
+    _SlowOfferProbeQueue.offer_count = 0
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _sid: "valid",
+        spawn=RealThreadSpawner().spawn,
+    )
+    _SlowOfferProbeQueue.broker = broker
+    broker.start()
+    first = broker.connect(connection=FakeConnection())
+    second = broker.connect(connection=FakeConnection())
+    fanout = FanOutSink([broker], process_instance_id=INSTANCE)
+    fanout.emit(RunStarted(purpose="chat"))
+    assert _SlowOfferProbeQueue.entered.wait(5.0), "dispatcher missed offer boundary"
+    published = threading.Event()
+
+    def emit_second() -> None:
+        fanout.emit(StepStarted(step_index=1))
+        published.set()
+
+    emitter = threading.Thread(target=emit_second, daemon=True)
+    emitter.start()
+    try:
+        assert published.wait(5.0), "next publish waited for the slow connection"
+        assert _SlowOfferProbeQueue.publication_lock_seen is False
+    finally:
+        _SlowOfferProbeQueue.release.set()
+        emitter.join(timeout=5.0)
+    assert _SlowOfferProbeQueue.delivered.wait(5.0)
+    assert first.queue.seen_seqs == [1, 2]
+    assert second.queue.seen_seqs == [1, 2]
+    assert first.finished.is_set() is False
+    assert second.finished.is_set() is False
+    assert broker.close(timeout=5.0) is True
+
+
+def test_ingress_exception_uses_the_same_dispatcher_owned_fatal_sweep(
+    monkeypatch,
+) -> None:
+    """A broken ingress is process-fatal; an ordinary refusal is not."""
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _sid: "valid",
+        spawn=RealThreadSpawner().spawn,
+    )
+    broker.start()
+    handle = broker.connect(connection=FakeConnection())
+    capture, fanout = _capture_fanout(broker)
+    failure = RuntimeError("ingress owner failed")
+
+    def fail_offer(_item):
+        raise failure
+
+    monkeypatch.setattr(broker._ingress, "offer", fail_offer)  # noqa: SLF001
+    fanout.emit(RunStarted(purpose="chat"))
+
+    assert handle.finished.wait(5.0), "fatal ingress did not retire the stream"
+    assert broker._fatal is failure  # noqa: SLF001
+    notices = [
+        event
+        for event in capture.events
+        if getattr(event.payload, "code", None) == "sink_disabled"
+    ]
+    assert len(notices) == 1
+
+
+@pytest.mark.parametrize("connection_count", [0, 1, 3])
+def test_state_patch_ingress_exception_latches_one_dispatcher_owned_fatal(
+    monkeypatch,
+    connection_count: int,
+) -> None:
+    """Patch ingress failure uses the same O(1) fatal boundary as events."""
+    monkeypatch.setattr(broker_module, "ConnectionQueue", _FatalThreadProbeQueue)
+    _FatalThreadProbeQueue.close_threads = []
+    _FatalThreadProbeQueue.closed = threading.Event()
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _sid: "valid",
+        spawn=RealThreadSpawner().spawn,
+    )
+    _FatalThreadProbeQueue.broker = broker
+    broker.start()
+    handles = [
+        broker.connect(connection=FakeConnection())
+        for _ in range(connection_count)
+    ]
+    failure = RuntimeError("state patch ingress owner failed")
+    real_put_kick = broker._ingress.put_kick  # noqa: SLF001
+    kicks: list[None] = []
+
+    def fail_offer(_item):
+        raise failure
+
+    def count_kick() -> None:
+        kicks.append(None)
+        real_put_kick()
+
+    monkeypatch.setattr(broker._ingress, "offer", fail_offer)  # noqa: SLF001
+    monkeypatch.setattr(broker._ingress, "put_kick", count_kick)  # noqa: SLF001
+    raised: list[BaseException] = []
+
+    def publish() -> None:
+        try:
+            broker.publish_state_patch(runtime_snapshot(state_revision=1))
+        except BaseException as exc:
+            raised.append(exc)
+
+    publisher = threading.Thread(target=publish, name="fatal-emitter", daemon=True)
+    publisher.start()
+    publisher.join(timeout=5.0)
+
+    assert raised == [failure]
+    assert broker._fatal is failure  # noqa: SLF001
+    assert broker._stopping is True  # noqa: SLF001
+    assert kicks == [None]
+    assert "fatal-emitter" not in _FatalThreadProbeQueue.close_threads
+    for handle in handles:
+        assert handle.finished.wait(5.0), "dispatcher did not retire a stream"
+        assert handle.queue.close_requested is True
+    assert len(_FatalThreadProbeQueue.close_threads) == connection_count
+
+    # Every ingress-facing public entry now refuses without revisiting the
+    # broken ingress, replacing the first reason, or sweeping again.
+    capture, fanout = _capture_fanout(broker)
+    fanout.emit(RunStarted(purpose="chat"))
+    refused = broker.connect(connection=FakeConnection())
+    assert refused.finished.is_set()
+    assert broker.publish_state_patch(runtime_snapshot(state_revision=2)) is False
+    assert broker._fatal is failure  # noqa: SLF001
+    assert kicks == [None]
+    assert len(_FatalThreadProbeQueue.close_threads) == connection_count
+    notices = [
+        event
+        for event in capture.events
+        if getattr(event.payload, "code", None) == "sink_disabled"
+    ]
+    assert len(notices) == 1
+
+
+class _LockCheckingQueue(ConnectionQueue):
+    broker: SSEBroker | None = None
+    offers = 0
+
+    def offer(self, item, **kwargs):
+        broker = type(self).broker
+        assert broker is not None
+        acquired = broker._lock.acquire(blocking=False)  # noqa: SLF001
+        assert acquired, "connection offer ran under the broker registry lock"
+        broker._lock.release()  # noqa: SLF001
+        registry_acquired = broker._registry_lock.acquire(  # noqa: SLF001
+            blocking=False
+        )
+        assert registry_acquired, "connection offer ran under the registry lock"
+        broker._registry_lock.release()  # noqa: SLF001
+        type(self).offers += 1
+        return super().offer(item, **kwargs)
+
+
+def test_domain_and_patch_delivery_offer_outside_the_broker_registry_lock(
+    monkeypatch,
+) -> None:
+    """Both dispatcher payload families obey the same fixed lock order."""
+    monkeypatch.setattr(broker_module, "ConnectionQueue", _LockCheckingQueue)
+    _LockCheckingQueue.offers = 0
+    harness = Harness()
+    _LockCheckingQueue.broker = harness.broker
+    handle = harness.connect()
+    drain_connection(handle)
+
+    harness.emit(RunStarted(purpose="chat"))
+    harness.deliver()
+    assert harness.broker.publish_state_patch(runtime_snapshot(state_revision=1))
+    harness.deliver()
+
+    assert _LockCheckingQueue.offers == 2

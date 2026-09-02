@@ -382,16 +382,15 @@ class _ConnectStartup:
             handle = self.handle
             registration_open = False
             if handle is not None:
-                with broker._lock:
-                    if self.registration_open:
-                        # A dispatcher may already have captured this registered
-                        # handle. Mark its queue first so such a stale bounded
-                        # offer is refused instead of retaining a frame after the
-                        # startup owner drains the queue below.
-                        handle.queue.request_close()
+                with broker._registry_lock:
                     if handle in broker._connections:
                         broker._connections.remove(handle)
                     registration_open = self.registration_open
+                if self.registration_open:
+                    # A dispatcher may already have captured this registered
+                    # handle. Mark its queue without holding the registry lock,
+                    # so a stale bounded offer is refused.
+                    handle.queue.request_close()
             try:
                 if handle is not None:
                     if self.startup_reservation is not None:
@@ -409,7 +408,7 @@ class _ConnectStartup:
                 if handle is not None:
                     handle.finished.set()
                 if registration_open:
-                    with broker._lock:
+                    with broker._registry_lock:
                         broker._registrations -= 1
                         self.registration_open = False
 
@@ -461,7 +460,11 @@ class SSEBroker:
         self._clock = clock or SystemClock()
         self._spawn = spawn or _spawn_thread
         self._ingress = _Ingress(budget=ingress_budget)
+        # Publication facts and connection membership are separate lock
+        # domains. The only cross-domain order is publication -> registry;
+        # neither domain is held while entering a connection queue.
         self._lock = threading.Lock()
+        self._registry_lock = threading.Lock()
         self._projection_boundary: AbstractContextManager[object] | None = None
         self._connections: list[ConnectionHandle] = []
         self._ingress_dropped = 0
@@ -608,7 +611,7 @@ class SSEBroker:
         """
         item: PreparedFrames = prepared  # type: ignore[assignment]
         kick = False
-        ring_failure: BaseException | None = None
+        commit_failure: BaseException | None = None
         ring_result = None
         retired_release: Callable[[], None] | None = None
         try:
@@ -658,9 +661,16 @@ class SSEBroker:
                     # event is not offered to an ingress whose dispatcher is
                     # about to be declared dead; the fatal state is published
                     # below, once this critical section has been left.
-                    ring_failure = exc
+                    commit_failure = exc
                 else:
-                    if not self._ingress.offer(_PublishedEvent(event.seq, item)):
+                    try:
+                        offered = self._ingress.offer(
+                            _PublishedEvent(event.seq, item)
+                        )
+                    except Exception as exc:
+                        commit_failure = exc
+                        offered = True
+                    if not offered:
                         if item.replayable or item.must_deliver:
                             # Ingress overflow costs liveness, never
                             # recoverability: the fact is already in the ring,
@@ -675,7 +685,7 @@ class SSEBroker:
         finally:
             if ring_result is not None:
                 retired_release = ring_result.release_retired
-        if ring_failure is not None:
+        if commit_failure is not None:
             # The fatal handler is deliberately NOT called from here:
             # commit runs inside the FanOut's publish critical section, and
             # a handler that publishes its own notice would re-enter that
@@ -683,10 +693,10 @@ class SSEBroker:
             # the typed refusal below is what makes the FanOut move this
             # sink to its process-wide disabled set and say
             # ``sink_disabled`` exactly once, to every healthy sink.
-            self._publish_fatal(ring_failure)
+            self._publish_fatal(commit_failure)
             raise ProcessFatalSinkError(
-                "the replay ring is down; this sink cannot deliver"
-            ) from ring_failure
+                "the broker publication machinery is down; this sink cannot deliver"
+            ) from commit_failure
         if kick:
             self._ingress.put_kick()
         # FanOut invokes this immediately after leaving its unique publish
@@ -761,9 +771,10 @@ class SSEBroker:
                 return True
             self._stopping = True
             dispatcher = self._dispatcher
-            handles = tuple(self._connections)
             stop_sent = self._stop_sent
             queues_stopped = self._queues_stopped
+        with self._registry_lock:
+            handles = tuple(self._connections)
         deadline = time.monotonic() + timeout
         if dispatcher is not None and not stop_sent:
             # The stop sentinel is queued behind everything already pending,
@@ -801,7 +812,7 @@ class SSEBroker:
         # writing. A registered handle whose thread is still ``None`` is a
         # registration the writer has not reached; it counts as undrained
         # rather than as a writer that already left.
-        with self._lock:
+        with self._registry_lock:
             current = tuple(self._connections)
             registrations = self._registrations
         drained = dispatcher is None or not dispatcher.is_alive()
@@ -900,7 +911,7 @@ class SSEBroker:
                 acquisition.abort(self)
                 raise
             acquisition.startup_reservation = None
-            with self._lock:
+            with self._registry_lock:
                 self._registrations -= 1
                 acquisition.registration_open = False
             acquisition.transferred = True
@@ -1134,29 +1145,47 @@ class SSEBroker:
                             # ring's explicit gap verdict instead.
                             refusal_reason = "replay_unavailable"
                             break
-                    startup_reservation = handle.queue.reserve_startup_prefix(
-                        built, guard
-                    )
-                    if startup_reservation is None:
-                        refusal_reason = "startup_capacity"
-                        break
-                    acquisition.startup_reservation = startup_reservation
-                    del built
-                    handle.verdict = verdict
-                    handle.ingress_seen = self._ingress_dropped
-                    handle.published_through = published_through
-                    # Registered at the current disconnect generation: everything
-                    # published so far is either in this opening stream or behind
-                    # the published boundary above, so a later sweep must not
-                    # close it.
-                    handle.generation = self._disconnect_generation
-                    handle.registered_monotonic = self._clock.monotonic()
-                    self._connections.append(handle)
-                    # The fence goes up with the registration and comes down only
-                    # when the writer thread exists: in between, a close must see
-                    # a registration it may not report around.
-                    self._registrations += 1
-                    acquisition.registration_open = True
+                # The queue admission may take its own lock. It happens while
+                # the handle is still private, never under either Broker lock;
+                # the publication epoch below decides whether it can transfer.
+                startup_reservation = handle.queue.reserve_startup_prefix(
+                    built, guard
+                )
+                if startup_reservation is None:
+                    refusal_reason = "startup_capacity"
+                    break
+                retry_capture = False
+                boundary = (
+                    nullcontext()
+                    if self._projection_boundary is None
+                    else self._projection_boundary
+                )
+                with boundary, self._lock:
+                    if self._stopping or self._closed:
+                        refusal_reason = "broker_closing"
+                    elif self._state_epoch != epoch:
+                        retry_capture = True
+                    else:
+                        acquisition.startup_reservation = startup_reservation
+                        del built
+                        handle.verdict = verdict
+                        handle.ingress_seen = self._ingress_dropped
+                        handle.published_through = published_through
+                        # Registered at the current disconnect generation:
+                        # everything published so far is either in this opening
+                        # stream or behind the published boundary above.
+                        handle.generation = self._disconnect_generation
+                        handle.registered_monotonic = self._clock.monotonic()
+                        with self._registry_lock:
+                            self._connections.append(handle)
+                            # This fence falls only after the writer exists.
+                            self._registrations += 1
+                            acquisition.registration_open = True
+                if refusal_reason is not None or retry_capture:
+                    startup_reservation.cancel()
+                    if retry_capture:
+                        continue
+                    break
                 break
             else:
                 # The world moved during every bounded encoding lap. Registering
@@ -1227,11 +1256,10 @@ class SSEBroker:
                 raise
 
         try:
-            with self._lock:
-                return source.build_and_reserve_startup(
-                    fetch,
-                    continue_when_closing=progress.event_seq is not None,
-                )
+            return source.build_and_reserve_startup(
+                fetch,
+                continue_when_closing=progress.event_seq is not None,
+            )
         except Exception:
             if ring_failure is not None:
                 # The callback may publish a domain notice through FanOut,
@@ -1247,7 +1275,7 @@ class SSEBroker:
         truthfully answer True: one of these connects may still start a
         writer.
         """
-        with self._lock:
+        with self._registry_lock:
             return self._registrations
 
     def _run_writer(
@@ -1267,13 +1295,13 @@ class SSEBroker:
             handle.finished.set()
 
     def unregister(self, handle: ConnectionHandle) -> None:
-        with self._lock:
+        with self._registry_lock:
             if handle in self._connections:
                 self._connections.remove(handle)
 
     @property
     def connections(self) -> tuple[ConnectionHandle, ...]:
-        with self._lock:
+        with self._registry_lock:
             return tuple(self._connections)
 
     def publish_state_patch(self, snapshot: RuntimeSnapshot) -> bool:
@@ -1333,6 +1361,7 @@ class SSEBroker:
         """
         for _ in range(_MAX_PATCH_CAPTURES):
             kick = False
+            offer_failure: Exception | None = None
             with self._lock:
                 if self._stopping or self._closed or self._fatal is not None:
                     return False
@@ -1373,10 +1402,20 @@ class SSEBroker:
                     continue
                 self._latest = snapshot
                 self._state_epoch += 1
-                offered = self._ingress.offer(patch)
-                if not offered:
+                try:
+                    offered = self._ingress.offer(patch)
+                except Exception as exc:
+                    # Latch only after leaving this non-reentrant publication
+                    # lock. The fatal transition wakes its dispatcher owner;
+                    # this caller never walks the registry or a queue.
+                    offer_failure = exc
+                    offered = False
+                if not offered and offer_failure is None:
                     self._disconnect_generation += 1
                     kick = self._arm_kick_locked()
+            if offer_failure is not None:
+                self._publish_fatal(offer_failure)
+                raise offer_failure
             if kick:
                 self._ingress.put_kick()
             # The answer is about the *patch* -- queued or refused -- not about
@@ -1466,9 +1505,9 @@ class SSEBroker:
             raise
 
     def _publish_fatal(
-        self, exc: BaseException
+        self, exc: BaseException, *, wake_dispatcher: bool = True
     ) -> Callable[[BaseException], None] | None:
-        """Publish the fatal state and stop every existing stream.
+        """Latch fatal state and wake the dispatcher in constant time.
 
         The fatal state and ``_stopping`` land in one critical section, so
         no reader can see one without the other. Asking the connections to
@@ -1480,15 +1519,16 @@ class SSEBroker:
         exactly once; ``connect`` and state patches refuse for the same
         reason.
         """
+        first = False
         with self._lock:
             if self._fatal is not None:
                 return None
             self._fatal = exc
             self._stopping = True
-            handles = tuple(self._connections)
             handler = self._on_fatal
-        for handle in handles:
-            handle.queue.request_close()
+            first = True
+        if first and wake_dispatcher:
+            self._ingress.put_kick()
         return handler
 
     def _enter_fatal(self, exc: BaseException) -> None:
@@ -1502,7 +1542,8 @@ class SSEBroker:
         fatal state through :meth:`_publish_fatal` and lets the FanOut's
         process-fatal handling say ``sink_disabled`` instead.
         """
-        handler = self._publish_fatal(exc)
+        handler = self._publish_fatal(exc, wake_dispatcher=False)
+        self._sweep_fatal_connections()
         if handler is not None:
             handler(exc)
 
@@ -1513,8 +1554,8 @@ class SSEBroker:
         fan-out without a thread: the behaviour under test is the fan-out,
         not the scheduling of it. Before fanning out it sweeps stale
         disconnect generations -- an O(1) check under the lock, doing real
-        work only after an overflow. A kick returns True after its sweep,
-        which ends the dispatcher loop; the stop sentinel returns False.
+        work only after an overflow. A fatal kick sweeps and ends the loop;
+        an ordinary overflow kick continues it. The stop sentinel ends it.
         """
         try:
             item = self._ingress.take(timeout=timeout)
@@ -1528,7 +1569,13 @@ class SSEBroker:
             # sweep's target, so a generation raised after the kick was
             # queued is still swept by *this* take, not left for a kick
             # that will never come.
+            self._sweep_fatal_connections()
             self._sweep_stale_generations(clear_kick=True)
+            return self._fatal is None
+        # A process-fatal publication may be queued behind already admitted
+        # data. Retire that bounded backlog without delivering it; the fatal
+        # kick behind it owns the eventual sweep and dispatcher exit.
+        if self._fatal is not None:
             return True
         self._sweep_stale_generations()
         self._fan_out(item)
@@ -1557,27 +1604,39 @@ class SSEBroker:
                 self._kick_pending = False
             if generation == self._swept_generation:
                 return
-            handles = tuple(self._connections)
             self._swept_generation = generation
+        with self._registry_lock:
+            handles = tuple(self._connections)
         for handle in handles:
             if handle.generation < generation:
                 handle.queue.request_close()
 
-    def _fan_out(self, item: Any) -> None:
-        """Hand one ingress item to every connection, atomically.
+    def _sweep_fatal_connections(self) -> None:
+        """Ask every pre-fatal connection to stop, outside Broker locks."""
+        with self._lock:
+            if self._fatal is None:
+                return
+        with self._registry_lock:
+            handles = tuple(self._connections)
+        for handle in handles:
+            handle.queue.request_close()
 
-        The delivery runs inside the same critical section registration
-        takes. Doing it in two steps -- snapshot the connections, release,
-        then offer -- lets a connection register in between and be handed an
-        item its replay had already covered, or miss one its replay did not.
-        The cost of holding the lock is bounded: an offer is O(1), copies
-        nothing and does no IO. Everything that is not a bounded reference
-        hand-out -- the database question of whether each distinct Session
-        represented by the connections still exists, and the encoding of a
-        patch per distinct session-validity answer -- happens *before* the
-        critical section (ADR-0015: prepare outside, commit inside).
+    def _fan_out(self, item: Any) -> None:
+        """Capture a delivery plan, then offer it outside Broker locks.
+
+        Registration is linearized with publication: a handle registered
+        before this item's commit records its published boundary and is
+        skipped when appropriate; one registered afterwards is absent from
+        this immutable plan. Writer exit unregisters only after closing its
+        connection, while an aborted startup marks its queue before draining
+        it, so a captured stale handle cannot retain live work. Those facts
+        let the dispatcher release both Broker locks before Session lookup,
+        patch encoding, queue offer, or close request.
         """
         with self._lock:
+            if self._fatal is not None:
+                return
+        with self._registry_lock:
             handles = tuple(self._connections)
         if isinstance(item, _BroadcastPatch):
             validity_by_session: dict[str | None, SessionValidity] = {}
@@ -1610,14 +1669,13 @@ class SSEBroker:
                     )
                     variants[session_valid] = frame
                 offers.append((handle, frame))
-            with self._lock:
-                for handle, frame in offers:
-                    handle.queue.offer(frame)
+            for handle, frame in offers:
+                handle.queue.offer(frame)
             return
         with self._lock:
             dropped = self._ingress_dropped
-            for handle in handles:
-                self._deliver_event(handle, item, dropped)
+        for handle in handles:
+            self._deliver_event(handle, item, dropped)
 
     def _deliver_event(
         self,
