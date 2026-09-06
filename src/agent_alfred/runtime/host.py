@@ -9,6 +9,7 @@ import uuid
 from collections import deque
 from collections.abc import Callable
 from dataclasses import replace
+from pathlib import Path
 
 from agent_alfred import schema
 from agent_alfred.clock import Clock, format_instant
@@ -1148,6 +1149,11 @@ class RuntimeHost:
                 event.set()
 
     # -- public session read side (ADR-0027); callers never write SQL --
+
+    def read_run_evidence(self, run_id: str, *, trace_root: Path) -> dict | None:
+        from agent_alfred.runtime.evidence import read_evidence
+
+        return read_evidence(self._store, self._redactor, run_id, trace_root)
 
     def list_sessions(
         self,

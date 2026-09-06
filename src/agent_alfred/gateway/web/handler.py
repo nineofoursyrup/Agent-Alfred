@@ -25,6 +25,7 @@ from typing import Any
 from urllib.parse import parse_qs, unquote, urlsplit
 
 from agent_alfred.gateway.web.api import DashboardApi
+from agent_alfred.gateway.web.assets import PAGE_POLICY, page_asset
 from agent_alfred.gateway.web.broker import StreamAdmissionRejected
 from agent_alfred.gateway.web.connection import SocketConnection
 from agent_alfred.gateway.web.guard import (
@@ -258,9 +259,27 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._send(500, {"code": "internal_error"})
 
     def _route_get(self, path: str) -> None:
+        asset = page_asset(path)
+        if asset is not None:
+            body, content_type = asset
+            self.send_response(200)
+            for name, value in BASE_HEADERS:
+                if name == "Content-Security-Policy":
+                    value = PAGE_POLICY
+                self.send_header(name, value)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            if self.command != "HEAD":
+                self.wfile.write(body)
+            return
         context = self._context
         api = context.api
         params = self._params()
+        if path == "/api/run-evidence":
+            status, payload = api.run_evidence(params)
+            self._send(status, payload)
+            return
         if path == ENTRY_PATH:
             # The bootstrap: the instance and the process CSRF token. A
             # cross-origin page cannot read this -- we never send

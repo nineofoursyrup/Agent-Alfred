@@ -33,3 +33,7 @@ usage.jsonl
 
 # OS
 .DS_Store
+
+# Dashboard development tools and browser evidence
+node_modules/
+output/playwright/

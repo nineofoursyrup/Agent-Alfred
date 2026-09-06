@@ -397,6 +397,7 @@ def build_dashboard(
         lock=lock,
         pid=pid,
         construction_rollback=construction_rollback,
+        trace_root=trace_root,
     )
 
 

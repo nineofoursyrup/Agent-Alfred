@@ -1,0 +1,268 @@
+:root {
+  font-family:
+    system-ui,
+    -apple-system,
+    "PingFang SC",
+    sans-serif;
+  color: #28372f;
+  background: #f6f5f0;
+  font-size: 15px;
+  line-height: 1.6;
+  color-scheme: light;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+body.modal-open {
+  height: 100dvh;
+  overflow: hidden;
+}
+button {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+textarea {
+  min-width: 0;
+}
+.card > a {
+  display: inline-block;
+  margin: 10px 0 0 12px;
+}
+.card[data-highlighted="true"] {
+  border: 2px solid #567f62;
+}
+.card[data-highlighted="true"]::before {
+  content: "已定位运行";
+  display: block;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.attempt {
+  padding: 12px;
+  border-top: 1px solid #d3ddcf;
+}
+.attempt.aborted {
+  border: 1px dashed #839486;
+  background: #f4f2ec;
+}
+.attempt.aborted > summary {
+  text-decoration: line-through;
+}
+select {
+  border: 1px solid #b6c3b9;
+  border-radius: 7px;
+  padding: 7px 28px 7px 10px;
+  background: #fff;
+}
+#mainbar #connection {
+  position: static;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  max-width: none;
+}
+button,
+textarea,
+select {
+  font: inherit;
+}
+button,
+a,
+select {
+  touch-action: manipulation;
+}
+button {
+  cursor: pointer;
+  border: 1px solid #b6c3b9;
+  border-radius: 8px;
+  padding: 0.45rem 0.9rem;
+  color: inherit;
+  background: #fff;
+}
+button:hover {
+  background: #edf3eb;
+}
+button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+a {
+  color: #245d42;
+  text-underline-offset: 4px;
+}
+button:focus-visible,
+a:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid #4f7e68;
+  outline-offset: 3px;
+}
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 5vw;
+  border-bottom: 1px solid #d9dfd6;
+}
+.brand {
+  font-family: Georgia, serif;
+  font-size: 26px;
+  text-decoration: none;
+}
+.brand span {
+  font-family: system-ui;
+  font-size: 12px;
+  margin-left: 14px;
+  letter-spacing: 0.12em;
+}
+nav {
+  display: flex;
+  gap: 26px;
+}
+nav a[aria-current="page"] {
+  font-weight: 700;
+}
+main {
+  max-width: 1080px;
+  margin: 42px auto;
+  padding: 0 28px calc(var(--mainbar-height, 280px) + 30px);
+}
+h1 {
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+h2 {
+  font-size: 19px;
+}
+.muted {
+  color: #67756a;
+}
+.card {
+  padding: 20px;
+  margin: 16px 0;
+  border: 1px solid #d3ddcf;
+  background: #fff;
+  border-radius: 12px;
+}
+#mainbar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(100%, 960px);
+  background: #fff;
+  border: 1px solid #c6d2c5;
+  border-radius: 16px 16px 0 0;
+  padding: 16px 22px;
+  box-shadow: 0 -6px 24px #2030200a;
+}
+.bar-heading {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.bar-heading span {
+  margin-right: auto;
+}
+#compose {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  margin-top: 12px;
+}
+#compose label {
+  position: absolute;
+  left: -10000px;
+}
+textarea {
+  resize: vertical;
+  width: 100%;
+  border: 1px solid #bdcaba;
+  border-radius: 9px;
+  padding: 12px;
+  max-height: 180px;
+}
+#send {
+  background: #275b40;
+  color: white;
+}
+#conversation {
+  max-height: 48vh;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+#error:empty {
+  display: none;
+}
+#error {
+  color: #7c402c;
+}
+#connection {
+  position: fixed;
+  bottom: 220px;
+  right: 24px;
+  max-width: 440px;
+  background: #f1eee0;
+  border-radius: 8px;
+  padding: 0 16px;
+  z-index: 2;
+}
+#connection:empty {
+  display: none;
+}
+.sr-only {
+  position: absolute;
+  clip-path: inset(50%);
+  height: 1px;
+  width: 1px;
+  overflow: hidden;
+}
+@media (max-width: 640px) {
+  .site-header {
+    padding: 16px;
+  }
+  main {
+    padding: 0 16px calc(var(--mainbar-height, 280px) + 30px);
+    margin-top: 24px;
+  }
+  .brand span {
+    display: none;
+  }
+  #mainbar {
+    padding: 14px;
+    border-radius: 12px 12px 0 0;
+  }
+  .bar-heading {
+    flex-wrap: wrap;
+  }
+  #mainbar.expanded {
+    inset: 0;
+    transform: none;
+    width: 100%;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 5;
+  }
+  #mainbar.expanded #conversation {
+    flex: 1;
+    max-height: none;
+  }
+  #mainbar.expanded #compose {
+    margin-top: auto;
+  }
+  #connection {
+    left: 16px;
+    right: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}
