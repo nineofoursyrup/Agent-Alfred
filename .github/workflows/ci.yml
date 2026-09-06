@@ -37,3 +37,21 @@ jobs:
 
       - name: Offline deterministic tests
         run: uv run pytest
+
+      - name: Install Node for Dashboard checks
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install Dashboard test tools
+        run: npm ci --ignore-scripts
+
+      - name: Dashboard typecheck
+        run: npm run typecheck
+
+      - name: Install test browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Offline Dashboard browser tests
+        run: npm run test:browser

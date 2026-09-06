@@ -148,8 +148,10 @@ class DashboardRuntime:
         spawn: SpawnThread | None = None,
         rollback_step_timeout: float | None = ROLLBACK_STEP_TIMEOUT_S,
         construction_rollback: RollbackSlot | None = None,
+        trace_root: Path | None = None,
     ):
         self._state_dir = state_dir
+        self._trace_root = trace_root or state_dir / "traces"
         self._assemble = assemble
         self._port = port
         # Minted here rather than by the Host because the descriptor is
@@ -402,7 +404,7 @@ class DashboardRuntime:
                 # the API is built on it directly: every member it needs --
                 # the reads, the snapshot and the mutation gate's authority --
                 # is answered by the one object that owns the facts.
-                api=DashboardApi(facade=host),
+                api=DashboardApi(facade=host, trace_root=self._trace_root),
                 broker=broker,
                 instance_id=self._instance_id,
             )

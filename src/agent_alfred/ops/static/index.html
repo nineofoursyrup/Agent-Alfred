@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Agent Alfred</title>
+    <link rel="stylesheet" href="/assets/app.css" />
+    <script type="module" src="/assets/app.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/inbox">Alfred<span>本地助手</span></a>
+      <nav aria-label="主导航">
+        <a href="/inbox">收件箱</a><a href="/runs">运行</a>
+      </nav>
+    </header>
+    <main id="page"></main>
+    <section id="mainbar" aria-label="MainBar">
+      <aside id="connection" aria-label="本标签页连接状态"></aside>
+      <section id="busy" aria-label="当前运行" hidden></section>
+      <div class="bar-heading">
+        <span id="session-name">尚未选择会话</span
+        ><button id="new-session">新建会话</button
+        ><button id="toggle" aria-expanded="false" aria-controls="conversation">
+          展开对话
+        </button>
+      </div>
+      <section id="conversation" aria-label="主对话" hidden>
+        <h2>主对话</h2>
+        <button id="older" hidden>更早的消息</button>
+        <div id="messages"></div>
+      </section>
+      <p id="error" role="status"></p>
+      <form id="compose">
+        <label for="message">消息</label
+        ><textarea
+          id="message"
+          rows="2"
+          placeholder="写下你的消息…"
+          disabled
+        ></textarea
+        ><button id="send" disabled>发送</button>
+      </form>
+    </section>
+    <div
+      id="announcements"
+      class="sr-only"
+      role="status"
+      aria-live="polite"
+    ></div>
+    <div id="alerts" class="sr-only" role="alert"></div>
+  </body>
+</html>

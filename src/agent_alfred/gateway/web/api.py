@@ -20,6 +20,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from functools import wraps
 from html import escape
+from pathlib import Path
 from typing import Any, Protocol
 from urllib.parse import quote
 
@@ -103,6 +104,8 @@ class DashboardFacade(Protocol):
     """The narrow slice of the Host the API is allowed to touch."""
 
     def create_session(self) -> str: ...
+
+    def read_run_evidence(self, run_id: str, *, trace_root: Path) -> dict | None: ...
 
     def submit(self, request: SubmitRequest) -> SubmitResult: ...
 
@@ -339,14 +342,29 @@ class DashboardApi:
     """The API surface. Stateless: the Host owns every fact it reads."""
 
     def __init__(
-        self, *, facade: DashboardFacade, gate: "MutationGate | None" = None
+        self, *, facade: DashboardFacade, gate: "MutationGate | None" = None,
+        trace_root: Path | None = None,
     ):
         self._facade = facade
+        self._trace_root = trace_root
         # One gate per process, shared by every write route. Injected so a
         # test can drive two writes at once without a socket.
         self._gate = gate if gate is not None else MutationGate(facade)
 
     # -- writes ------------------------------------------------------------
+
+    @_map_read_errors
+    def run_evidence(self, params: dict[str, str]) -> tuple[int, Any]:
+        if "run_id" not in params:
+            return 400, {"code": "missing_run_id"}
+        if self._trace_root is None:
+            return 503, {"code": "evidence_unavailable"}
+        result = self._facade.read_run_evidence(
+            params["run_id"], trace_root=self._trace_root
+        )
+        if result is None:
+            return 404, {"code": "unknown_run"}
+        return 200, result
 
     def create_session(self) -> CreateSessionResult:
         # The id is minted by the server and never taken from the client: a
