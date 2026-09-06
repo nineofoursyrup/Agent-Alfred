@@ -122,6 +122,8 @@ export function runsPage(root, progress, navigate) {
         node("p", outcomeLabel(run)),
         node("small", `${run.gateway} · ${run.accepted_at}`),
       );
+      if (run.admission_state === "unconfirmed")
+        card.append(node("p", "准入未确认"));
       const open = node("a", "查看运行");
       open.href = `/runs/${encodeURIComponent(run.run_id)}?filter=${run.filter}`;
       card.append(open);

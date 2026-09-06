@@ -49,10 +49,37 @@ for (const fails of [false, true])
         .getByRole("button", { name: "继续此会话", exact: true })
         .click();
       await other.getByRole("textbox", { name: "消息" }).fill("第二标签页草稿");
+      const initialRuns = await (await page.request.get(`${origin}/api/runs?filter=all`)).json();
+      expect(initialRuns.runs).toEqual([]);
+      expect(initialRuns.non_terminal).toBeNull();
+      let allowSend;
+      const held = new Promise(resolve => {allowSend = resolve;});
+      let entered;
+      const requestHeld = new Promise(resolve => {entered = resolve;});
+      await other.route("**/api/runs", async route => {
+        entered();
+        await held;
+        await route.continue();
+      }, {times:1});
+      const uiConflict = other.waitForResponse(response => response.url().endsWith("/api/runs") && response.request().method() === "POST");
+      await other.getByRole("button", {name:"发送",exact:true}).click();
+      await requestHeld;
+      const accepted = page.waitForResponse(response => response.url().endsWith("/api/runs") && response.status() === 202);
       await page.getByRole("button", { name: "展开对话", exact: true }).click();
       await page.getByRole("textbox", { name: "消息" }).fill("保存窗口测试");
       await page.getByRole("button", { name: "发送", exact: true }).click();
+      const acceptedRun = (await (await accepted).json()).run_id;
       await waitFor("pending");
+      allowSend();
+      const rejected = await uiConflict;
+      expect(rejected.status()).toBe(409);
+      expect((await rejected.json()).code).toBe("run_in_progress");
+      await expect(other.getByRole("textbox", {name:"消息"})).toHaveValue("第二标签页草稿");
+      await expect(other.getByRole("button", {name:"发送",exact:true})).toBeDisabled();
+      const pendingRuns = await (await page.request.get(`${origin}/api/runs?filter=all`)).json();
+      expect(pendingRuns.runs).toEqual([]);
+      expect(pendingRuns.non_terminal.run_id).toBe(acceptedRun);
+      await expect(other.getByRole("region", {name:"主对话"})).not.toContainText("受控失败");
       await expect(page.getByRole("region", { name: "主对话" })).toContainText(
         "离线模型回复",
       );
@@ -109,6 +136,10 @@ for (const fails of [false, true])
         });
         expect(response).toBe(503);
       }
+      const finalRuns = await (await page.request.get(`${origin}/api/runs?filter=all`)).json();
+      const allRuns = [...finalRuns.runs, ...(finalRuns.non_terminal ? [finalRuns.non_terminal] : [])];
+      expect(allRuns.map(run => run.run_id)).toEqual([acceptedRun]);
+      expect(allRuns.some(run => run.outcome === "failed")).toBe(false);
       await other.close();
     } finally {
       server.stdin.end("stop\n");

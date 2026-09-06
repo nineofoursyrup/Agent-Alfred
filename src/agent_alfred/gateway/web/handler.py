@@ -262,7 +262,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
         asset = page_asset(path)
         if asset is not None:
             body, content_type = asset
+            if getattr(self, "_request_body_pending", False):
+                self.close_connection = True
             self.send_response(200)
+            if getattr(self, "_request_body_pending", False):
+                self.send_header("Connection", "close")
             for name, value in BASE_HEADERS:
                 if name == "Content-Security-Policy":
                     value = PAGE_POLICY

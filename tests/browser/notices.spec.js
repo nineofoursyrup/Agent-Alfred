@@ -54,3 +54,38 @@ for (const [reason, cause] of Object.entries(causes))
       await expect(notice).toBeHidden();
     });
   }
+
+test("announcements throttle continuous changes without starvation and deduplicate repeats", async ({page}) => {
+  const session = await controlledTransport(page);
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
+  await page.evaluate(() => {
+    const status = document.getElementById("announcements");
+    window.announced = [];
+    new MutationObserver(() => window.announced.push(status.textContent)).observe(status, {childList:true});
+  });
+  const status = page.locator("#announcements");
+  const patch = (revision, stage) => emit(page, "state_patch", state(session, revision, {
+    coordinator_state:stage,
+    active_run:stage === "idle" ? null : run(session, {phase:stage === "accepted" ? "accepted" : "running", run_id:`r${revision}`}),
+  }));
+  await patch(1,"accepted");
+  await page.clock.runFor(200);
+  await patch(2,"running");
+  await page.clock.runFor(200);
+  await expect(status).toHaveText("运行中");
+  await patch(3,"accepted");
+  await page.clock.runFor(200);
+  await patch(4,"idle");
+  await page.clock.runFor(200);
+  await expect(status).toHaveText("就绪");
+  await patch(5,"idle");
+  await page.clock.runFor(800);
+  expect(await page.evaluate(() => window.announced)).toEqual(["运行中","就绪"]);
+  for (const [revision, stage, text] of [[6,"accepted","已接受"],[7,"running","运行中"],[8,"accepted","已接受"]]) {
+    await patch(revision,stage);
+    await page.clock.runFor(400);
+    await expect(status).toHaveText(text);
+  }
+  expect(await page.evaluate(() => window.announced)).toEqual(["运行中","就绪","已接受","运行中","已接受"]);
+});

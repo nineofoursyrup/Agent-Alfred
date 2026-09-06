@@ -1,4 +1,5 @@
 import { node, textBlocks } from "./dom.js";
+import { outcomeLabel } from "./runs.js";
 /** @typedef {Record<string, any>} Wire */
 
 /** Every paginator keeps its own opaque cursor and single in-flight request. */
@@ -124,7 +125,7 @@ function showSession(root, session, resume) {
             `${run.gateway === "cli" ? "CLI" : run.gateway === "web" ? "Web" : run.gateway} · ${run.accepted_at}`,
           ),
         );
-        row.append(node("p", run.outcome || "运行中"));
+        row.append(node("p", outcomeLabel(run)));
         if (run.reply_preview !== null)
           row.append(node("p", run.reply_preview));
         const link = node("a", "查看运行");

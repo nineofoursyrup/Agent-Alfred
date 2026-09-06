@@ -1,0 +1,63 @@
+import {spawn} from "node:child_process";
+import {once} from "node:events";
+import {createInterface} from "node:readline";
+import {test,expect} from "@playwright/test";
+
+test("one real UI flow reaches 202, Step, Attempt, deltas and one reply across pages and reload", async ({page}) => {
+  const port = Number(process.env.ALFRED_BROWSER_TEST_PORT || 17736) + 4;
+  const server = spawn(".venv/bin/python", ["-B","-c","import sys; sys.path.insert(0, 'tests/browser'); from recording_server import stream_flow; stream_flow(int(sys.argv[1]))",String(port)]);
+  let stderr = "";
+  server.stderr.on("data", data => {stderr += data;});
+  const seen = new Set(), waiters = new Map();
+  const lines = createInterface({input:server.stdout});
+  lines.on("line", line => {seen.add(line);waiters.get(line)?.();});
+  const waitFor = line => seen.has(line)?Promise.resolve():new Promise(resolve=>waiters.set(line,resolve));
+  try {
+    await Promise.race([waitFor("ready"),once(server,"exit").then(()=>{throw new Error(stderr);})]);
+    const origin = `http://127.0.0.1:${port}`;
+    const streams = [];
+    page.on("request", request => {if(new URL(request.url()).pathname==="/api/events")streams.push(request.url());});
+    await page.goto(origin);
+    await page.getByRole("button",{name:"新建会话",exact:true}).click();
+    await expect(page.getByRole("textbox",{name:"消息"})).toBeEnabled();
+    await page.getByRole("button",{name:"展开对话",exact:true}).click();
+    await page.getByRole("textbox",{name:"消息"}).fill("完整发送闭环的问题");
+    const accepted = page.waitForResponse(response=>response.url().endsWith("/api/runs") && response.request().method()==="POST");
+    await page.getByRole("button",{name:"发送",exact:true}).click();
+    const response = await accepted;
+    expect(response.status()).toBe(202);
+    const {run_id} = await response.json();
+    await waitFor("delta-emitted");
+    const chat = page.getByRole("region",{name:"主对话"});
+    await expect(chat.getByText("正在流入的临时片段",{exact:true})).toHaveCount(1);
+    await expect(chat.getByText("流式流程的唯一正式回复",{exact:true})).toHaveCount(0);
+    const connections = streams.length;
+    await page.getByRole("link",{name:"查看当前运行",exact:true}).click();
+    const detail = page.getByRole("region",{name:"运行过程"});
+    await expect(detail.getByRole("heading",{name:"Step 0",exact:true})).toBeVisible();
+    await expect(detail.locator("details > summary")).toContainText("Attempt");
+    await expect(detail).toContainText("attempt.started");
+    await expect(chat.getByText("正在流入的临时片段",{exact:true})).toHaveCount(1);
+    await page.getByRole("link",{name:"收件箱",exact:true}).click();
+    expect(streams.length).toBe(connections);
+    server.stdin.write("record\n");
+    await expect(chat.getByText("流式流程的唯一正式回复",{exact:true})).toHaveCount(1);
+    await expect(chat).toContainText("已保存");
+    await expect(chat.getByText("正在流入的临时片段",{exact:true})).toHaveCount(0);
+    await page.getByRole("link",{name:"运行",exact:true}).click();
+    await expect(chat.getByText("流式流程的唯一正式回复",{exact:true})).toHaveCount(1);
+    await page.getByRole("link",{name:"收件箱",exact:true}).click();
+    await expect(chat.getByText("完整发送闭环的问题",{exact:true})).toHaveCount(1);
+    expect(streams.length).toBe(connections);
+    await page.reload();
+    await expect(chat.getByText("流式流程的唯一正式回复",{exact:true})).toHaveCount(1);
+    await expect(chat.getByText("完整发送闭环的问题",{exact:true})).toHaveCount(1);
+    const runs = await (await page.request.get(`${origin}/api/runs?filter=all`)).json();
+    expect(runs.runs.map(run=>run.run_id)).toEqual([run_id]);
+  } finally {
+    server.stdin.end("stop\n");
+    if(server.exitCode === null) await once(server,"exit");
+    lines.close();
+    expect(server.exitCode,stderr).toBe(0);
+  }
+});

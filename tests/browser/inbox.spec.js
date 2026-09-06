@@ -204,3 +204,24 @@ test("pending settlement cannot rewind an already loaded historic cursor", async
   await expect(chat.getByText("历史 31", {exact:true})).toHaveCount(1);
   expect(seen.at(-1)).toBe("31");
 });
+
+test("inbox Run outcomes reuse distinct terminal wording independent of recording state", async ({page}) => {
+  await page.route("**/api/sessions?*", route => route.fulfill({json:{sessions:[{session_id:"outcomes",title:"终态会话",created_at:"today"}],next_cursor:null}}));
+  await page.route("**/api/sessions/messages?*", route => route.fulfill({json:{messages:[],next_cursor:null}}));
+  const outcomes = [
+    ["completed","today","回复完成"],
+    ["max_steps","today","受控停止"],
+    ["failed","today","受控失败"],
+    ["interrupted",null,"执行前中断"],
+    ["interrupted","today","运行终态无法确认"],
+  ];
+  await page.route("**/api/sessions/runs?*", route => route.fulfill({json:{runs:outcomes.map(([outcome,started_at],i) => ({run_id:`terminal-${i}`,phase:"finished",outcome,started_at,gateway:"cli",accepted_at:"today",reply_preview:null,recording_state:i===0?"failed":"recorded"})),next_cursor:null}}));
+  await page.goto("/");
+  await page.getByRole("button", {name:"终态会话",exact:true}).click();
+  const preview = page.getByRole("region", {name:"会话只读预览"});
+  for (const [i,[outcome,,label]] of outcomes.entries()) {
+    const row = preview.locator("article").filter({has:page.locator(`a[href*="terminal-${i}"]`)});
+    await expect(row.getByText(label,{exact:true})).toBeVisible();
+    await expect(row.getByText(outcome,{exact:true})).toHaveCount(0);
+  }
+});

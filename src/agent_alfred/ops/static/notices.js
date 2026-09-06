@@ -83,15 +83,18 @@ export class Announcer {
   constructor(container) {
     this.container = container;
     this.last = "";
+    this.pending = "";
     this.timer = 0;
   }
   /** @param {string} message */
   say(message) {
-    if (message === this.last) return;
-    this.last = message;
-    clearTimeout(this.timer);
+    this.pending = message;
+    if (this.timer || message === this.last) return;
     this.timer = window.setTimeout(() => {
-      this.container.textContent = message;
+      this.timer = 0;
+      if (this.pending === this.last) return;
+      this.last = this.pending;
+      this.container.textContent = this.last;
     }, 400);
   }
 }
