@@ -16,8 +16,15 @@ from typing import Protocol
 
 from agent_alfred import schema
 from agent_alfred.clock import Clock, format_instant
-from agent_alfred.events import EventEnvelope, FanOutSink, RunStarted
-from agent_alfred.loop.assistant import Assistant
+from agent_alfred.events import (
+    EventEnvelope,
+    EventPayload,
+    FanOutSink,
+    RunStarted,
+    SequencedEvent,
+    StepStarted,
+)
+from agent_alfred.loop.assistant import Assistant, AssistantEvents
 from agent_alfred.loop.budget import RunBudget
 from agent_alfred.messages import (
     Message,
@@ -34,11 +41,49 @@ from agent_alfred.settings import CONTROLLED_FAILURE_TEXT, Settings
 
 
 class ExecutionCoordinator(Protocol):
-    """The running transition execution may trigger on the coordinator."""
+    """The execution-lifecycle transitions owned by the coordinator."""
 
     def execution_mark_running(
         self, started_at: str
     ) -> ActiveRunSummary | None: ...
+
+    def execution_publish_step_started(
+        self,
+        fanout: FanOutSink,
+        payload: StepStarted,
+        envelope: EventEnvelope | None,
+    ) -> SequencedEvent: ...
+
+    def execution_mark_stopping(self) -> None:
+        """Close admission before a control exception releases its lease."""
+
+
+class _ExecutionEvents:
+    """Publish Steps through the Host-owned visibility boundary.
+
+    The FanOut remains the publication authority for domain events.  Only
+    ``step.started`` advances the bounded active-Run snapshot at the same
+    visibility boundary as its FanOut commit. All other events pass through
+    unchanged.
+    """
+
+    def __init__(
+        self, fanout: FanOutSink, coordinator: ExecutionCoordinator
+    ) -> None:
+        self._fanout = fanout
+        self._coordinator = coordinator
+
+    def emit(
+        self, payload: EventPayload, envelope: EventEnvelope | None = None
+    ) -> SequencedEvent:
+        if isinstance(payload, StepStarted):
+            return self._coordinator.execution_publish_step_started(
+                self._fanout, payload, envelope
+            )
+        return self._fanout.emit(payload, envelope)
+
+    def bind_origin(self, envelope: EventEnvelope | None) -> None:
+        self._fanout.bind_origin(envelope)
 
 
 # Process-control exceptions that keep unwinding after the Run is settled.
@@ -76,7 +121,7 @@ class _AttemptLedger:
         self,
         request: ModelRequest,
         *,
-        events: FanOutSink | None = None,
+        events: AssistantEvents | None = None,
         deadline: float | None = None,
     ) -> ModelResult:
         result = self._client.respond(request, events=events, deadline=deadline)
@@ -107,6 +152,7 @@ class RunExecutor:
         self._recorder = recorder
         self._coordinator = coordinator
         self._work_queue = work_queue
+        self._events: AssistantEvents = _ExecutionEvents(fanout, coordinator)
         self._stopped_by: BaseException | None = None
 
     @property
@@ -138,8 +184,11 @@ class RunExecutor:
         step_count = 0
         duration_ms = 0
         ledger = _AttemptLedger(item.client)
-        started_at = format_instant(self._clock.wall_utc())
         try:
+            # The clock is an injected collaborator and therefore belongs
+            # inside the same terminal ownership scope as every later Run
+            # step.  A BaseException here must still reach ``settle``.
+            started_at = format_instant(self._clock.wall_utc())
             with self._store.transaction() as conn:
                 revision = schema.allocate_activity_revision(conn)
                 schema.update_run_phase(
@@ -190,7 +239,7 @@ class RunExecutor:
                 ),
                 run_id=item.run_id,
                 session_id=item.session_id,
-                events=self._fanout,
+                events=self._events,
                 source=item.request.gateway,
                 overall_deadline_s=item.snapshot.overall_deadline_s,
             )
@@ -209,6 +258,10 @@ class RunExecutor:
         except _CONTROL_EXCEPTIONS as exc:
             # The process is going away. settle() runs from the finally, so
             # the Run is decided and the lease released before the unwind.
+            # Publish the doomed worker first: settle opens the admission
+            # lease before this frame reaches run_loop's outer exception
+            # handler, and accepting in that gap strands work in its queue.
+            self._coordinator.execution_mark_stopping()
             outcome = "interrupted"
             error = type(exc).__name__
             reply = None

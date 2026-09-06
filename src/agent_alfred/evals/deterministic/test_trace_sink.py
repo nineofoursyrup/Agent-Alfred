@@ -45,6 +45,7 @@ from agent_alfred.events import (
     StepStarted,
     UnsequencedEvent,
 )
+from agent_alfred.managed_state import ManagedPathSecurityError, ManagedStateDirectory
 from agent_alfred.messages import TextBlock, message_plain_text
 from agent_alfred.model import (
     AttemptRecord,
@@ -224,21 +225,18 @@ def test_zero_critical_sinks_make_the_barrier_incomplete() -> None:
 # --- failure modes stay fail-closed while the reply is still delivered ---
 
 
-def test_trace_sink_init_failure_fails_closed_but_keeps_serving_runs(tmp_path) -> None:
+def test_build_default_host_security_failure_closes_partial_managed_resources(
+    tmp_path,
+) -> None:
     # The traces root cannot be created: a *file* occupies the path.
     (tmp_path / "traces").write_text("not a directory", encoding="utf-8")
-    host = build_default_host(state_dir=tmp_path, factory=_scripted_factory(["pong"]))
-    host.start()
-    try:
-        submitted, result = _run_one(host)
-        assert result.outcome == "completed"
-        assert message_plain_text(result.reply) == "pong"
-        telemetry = _telemetry(host._conn, submitted.run_id)
-        assert telemetry["trace_incomplete"] is True
-        assert telemetry["trace_incomplete_reason"]
-        assert _bundles(tmp_path) == []
-    finally:
-        host.close()
+    with pytest.raises(ManagedPathSecurityError) as caught:
+        build_default_host(
+            state_dir=tmp_path, factory=_scripted_factory(["pong"])
+        )
+    assert caught.value.reason == "wrong_type"
+    assert caught.value.role == "managed directory"
+    assert (tmp_path / "traces").read_text(encoding="utf-8") == "not a directory"
 
 
 class CommitBoomSink:
@@ -337,6 +335,7 @@ def _emit_one(sink: RunBundleTraceSink, run_id: str, text: str = "hello") -> Non
     envelope = EventEnvelope(0.0, run_id, None, None, None, None)
     prepared = sink.prepare(
         UnsequencedEvent(
+            event_id="event-1",
             envelope=envelope,
             payload=RunStarted(purpose="chat", user_message=None),
             trace_policy="persist",
@@ -348,6 +347,7 @@ def _emit_one(sink: RunBundleTraceSink, run_id: str, text: str = "hello") -> Non
         SequencedEvent(
             seq=1,
             process_instance_id="proc-trace",
+            event_id="event-1",
             envelope=envelope,
             payload=RunStarted(purpose="chat", user_message=None),
             trace_policy="persist",
@@ -360,7 +360,7 @@ def _emit_one(sink: RunBundleTraceSink, run_id: str, text: str = "hello") -> Non
 def test_sink_publishes_bundle_for_the_derived_identity(tmp_path) -> None:
     wall = datetime(2026, 8, 28, 12, 34, 56, tzinfo=timezone.utc)
     sink = RunBundleTraceSink(
-        root=tmp_path / "traces",
+        root=ManagedStateDirectory.acquire_trace_root(tmp_path / "traces"),
         clock=FakeClock(wall=wall),
         process_instance_id="proc-trace",
     )
@@ -386,7 +386,7 @@ def test_sink_publishes_bundle_for_the_derived_identity(tmp_path) -> None:
 def test_sink_circuit_breaks_on_identity_collision(tmp_path) -> None:
     wall = datetime(2026, 8, 28, 12, 34, 56, tzinfo=timezone.utc)
     sink = RunBundleTraceSink(
-        root=tmp_path / "traces",
+        root=ManagedStateDirectory.acquire_trace_root(tmp_path / "traces"),
         clock=FakeClock(wall=wall),
         process_instance_id="proc-trace",
     )
@@ -417,6 +417,7 @@ def _commit(
     envelope = EventEnvelope(0.0, run_id, None, 0, None, None)
     prepared = sink.prepare(
         UnsequencedEvent(
+            event_id=f"event-{seq}",
             envelope=envelope,
             payload=payload,
             trace_policy=trace_policy,
@@ -428,6 +429,7 @@ def _commit(
         SequencedEvent(
             seq=seq,
             process_instance_id="proc-policy",
+            event_id=f"event-{seq}",
             envelope=envelope,
             payload=payload,
             trace_policy=trace_policy,
@@ -439,7 +441,7 @@ def _commit(
 def test_transient_events_never_enter_the_persistent_trace(tmp_path) -> None:
     wall = datetime(2026, 8, 28, 12, 34, 56, tzinfo=timezone.utc)
     sink = RunBundleTraceSink(
-        root=tmp_path / "traces",
+        root=ManagedStateDirectory.acquire_trace_root(tmp_path / "traces"),
         clock=FakeClock(wall=wall),
         process_instance_id="proc-policy",
     )
@@ -469,7 +471,7 @@ def test_transient_events_never_enter_the_persistent_trace(tmp_path) -> None:
 def test_a_transient_only_run_publishes_no_bundle(tmp_path) -> None:
     wall = datetime(2026, 8, 28, 12, 34, 56, tzinfo=timezone.utc)
     sink = RunBundleTraceSink(
-        root=tmp_path / "traces",
+        root=ManagedStateDirectory.acquire_trace_root(tmp_path / "traces"),
         clock=FakeClock(wall=wall),
         process_instance_id="proc-policy",
     )
@@ -610,7 +612,7 @@ class _ScriptedWrite:
 
 def _utc_sink(tmp_path: Path) -> RunBundleTraceSink:
     return RunBundleTraceSink(
-        root=tmp_path / "traces",
+        root=ManagedStateDirectory.acquire_trace_root(tmp_path / "traces"),
         clock=FakeClock(wall=datetime(2026, 8, 28, 12, 34, 56, tzinfo=timezone.utc)),
         process_instance_id="proc-write",
     )
@@ -893,17 +895,15 @@ def _wait_for_queued_barrier(sink: RunBundleTraceSink) -> None:
     the drain is blocked elsewhere (it holds no lock while writing)."""
     import agent_alfred.trace as trace_module
 
-    deadline = time.monotonic() + 2.0
-    while time.monotonic() < deadline:
-        with sink._wake:
-            queued = any(
+    with sink._wake:
+        queued = sink._wake.wait_for(
+            lambda: any(
                 isinstance(item, trace_module._WriteBarrier)
                 for item in sink._queue
-            )
-        if queued:
-            return
-        time.sleep(0.005)
-    raise AssertionError("the barrier was never enqueued")
+            ),
+            timeout=2.0,
+        )
+    assert queued, "the barrier was never enqueued"
 
 
 def test_commit_racing_the_barrier_seal_is_rejected_fail_closed(
@@ -1025,8 +1025,6 @@ def test_close_leaves_fd_ownership_to_the_drain_and_answers_queued_barriers(
     """close() must never close an fd the drain thread may hold, and a
     barrier still queued when the sink stops must fail fast with an honest
     reason instead of hanging for the full flush timeout."""
-    import agent_alfred.trace as trace_module
-
     real_write, real_close = os.write, os.close
     gate = threading.Event()
     first_line_reached = threading.Event()
@@ -1047,9 +1045,6 @@ def test_close_leaves_fd_ownership_to_the_drain_and_answers_queued_barriers(
 
     monkeypatch.setattr(os, "write", slow_first_write)
     monkeypatch.setattr(os, "close", counting_close)
-    monkeypatch.setattr(
-        trace_module, "_CLOSE_JOIN_TIMEOUT_S", 0.05, raising=False
-    )
     sink = _utc_sink(tmp_path)
     flush_box: dict[str, FlushResult] = {}
     try:
@@ -1064,10 +1059,13 @@ def test_close_leaves_fd_ownership_to_the_drain_and_answers_queued_barriers(
         flusher.start()
         _wait_for_queued_barrier(sink)
 
-        sink.close()  # its join times out while the drain is stuck on disk
+        assert sink.close(timeout=0.0) is False
 
         assert closed == [], (
             "close() must never close an fd the drain thread may hold"
+        )
+        assert sink._drain.is_alive(), (
+            "a timed-out close must report the still-live writer"
         )
         flusher.join(5.0)
         result = flush_box["result"]
@@ -1077,7 +1075,8 @@ def test_close_leaves_fd_ownership_to_the_drain_and_answers_queued_barriers(
         assert "flush_timeout" not in result.detail, result.detail
     finally:
         gate.set()
-        sink.close()
+        assert sink.close(timeout=2.0) is True
+        assert sink.close(timeout=0.0) is True
 
     sink._drain.join(2.0)
     assert closed == trace_fd, "the drain unwind closes the fd exactly once"

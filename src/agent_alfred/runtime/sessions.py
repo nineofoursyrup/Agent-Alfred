@@ -30,7 +30,6 @@ the same page again, and replaying it against another Session fails closed.
 from __future__ import annotations
 
 import json
-from base64 import urlsafe_b64decode, urlsafe_b64encode
 from dataclasses import dataclass
 from typing import Any
 
@@ -41,6 +40,20 @@ from agent_alfred.messages import (
     message_plain_text,
 )
 from agent_alfred.redact import Redactor
+from agent_alfred.runtime.cursor import (
+    MalformedCursor,
+    parse_cursor_position_int,
+)
+from agent_alfred.runtime.cursor import (
+    decode_cursor as _decode_cursor_shared,
+)
+from agent_alfred.runtime.cursor import (
+    encode_cursor as _encode_cursor,
+)
+from agent_alfred.runtime.run_queries import (
+    has_inflight_chat_run,
+    page_recorded_chat_run_keys,
+)
 
 _CURSOR_VERSION = 2
 _INBOX_KIND = "inbox"
@@ -48,15 +61,14 @@ _RUNS_SEGMENT = "runs"
 _HISTORIC_SEGMENT = "historic"
 # Chat Runs in these phases may still enter the session record (messages and
 # the phase flip commit in the same finalize transaction).
-_IN_FLIGHT_PHASES = ("accepted", "running")
 
 
 class SessionNotFound(ValueError):
     """The requested Session does not exist."""
 
 
-class MalformedCursor(ValueError):
-    """The cursor cannot be decoded or does not fit this read."""
+# ``MalformedCursor`` is the shared codec's exception, re-exported under this
+# module's name so a caller keeps one name for one failure.
 
 
 @dataclass(frozen=True)
@@ -71,6 +83,7 @@ class SessionSummary:
 class SessionInboxPage:
     sessions: tuple[SessionSummary, ...]
     next_cursor: str | None
+    non_terminal: SessionSummary | None = None
 
 
 @dataclass(frozen=True)
@@ -100,26 +113,14 @@ class SessionMessagesPage:
 
 
 # --- cursor codec -----------------------------------------------------------
-
-
-def _encode_cursor(payload: dict[str, Any]) -> str:
-    raw = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
-    return urlsafe_b64encode(raw.encode("utf-8")).decode("ascii")
+#
+# The envelope -- canonical JSON, URL-safe base64, the malformed exception --
+# is the shared codec's (``runtime.cursor``); this read owns only its
+# version, its segment kinds, and its Session binding.
 
 
 def _decode_cursor(cursor: str, kind: str) -> dict[str, Any]:
-    try:
-        raw = urlsafe_b64decode(cursor.encode("ascii")).decode("utf-8")
-        payload = json.loads(raw)
-    except Exception:
-        raise MalformedCursor("cursor is not a readable token") from None
-    if (
-        not isinstance(payload, dict)
-        or payload.get("v") != _CURSOR_VERSION
-        or payload.get("k") != kind
-    ):
-        raise MalformedCursor("cursor does not fit this read")
-    return payload
+    return _decode_cursor_shared(cursor, version=_CURSOR_VERSION, kind=kind)
 
 
 # --- inbox ------------------------------------------------------------------
@@ -129,30 +130,43 @@ def list_sessions(
     conn,
     *,
     limit: int,
+    redactor: Redactor,
     cursor: str | None = None,
-    redactor: Redactor | None = None,
     title_max_chars: int = 240,
 ) -> SessionInboxPage:
-    """The Session inbox: newest persistent activity first, keyset paged."""
+    """Page stable Sessions, returning the moving Session separately.
+
+    The caller serializes this read with the unique writer (RuntimeHost uses
+    RecordingStore.reading), so pin selection and page exclusion see the
+    same persistent state. No in-process revision is compared with the cursor.
+    """
     if limit < 1:
         raise ValueError("limit must be >= 1")
     position: int | None = None
     if cursor is not None:
         payload = _decode_cursor(cursor, _INBOX_KIND)
-        position = payload.get("ar")
-        if not isinstance(position, int) or position < 0:
-            raise MalformedCursor("cursor position is not an activity_revision")
+        position = parse_cursor_position_int(payload.get("ar"))
+    pinned = conn.execute(
+        """SELECT sessions.session_id, sessions.created_at, sessions.activity_revision
+           FROM sessions JOIN runs ON runs.session_id = sessions.session_id
+           WHERE runs.phase != 'finished'
+           ORDER BY runs.activity_revision DESC, runs.run_id DESC LIMIT 1"""
+    ).fetchone()
+    pinned_id = None if pinned is None else pinned[0]
     sql = (
         "SELECT session_id, created_at, activity_revision FROM sessions\n"
-        "  {where} ORDER BY activity_revision DESC LIMIT ?"
+        "  WHERE session_id IS NOT ? {beyond} ORDER BY activity_revision DESC LIMIT ?"
     )
-    where = "WHERE activity_revision < ? " if position is not None else ""
-    params: tuple = (position, limit + 1) if position is not None else (limit + 1,)
-    rows = conn.execute(sql.format(where=where), params).fetchall()
+    beyond = "AND activity_revision < ? " if position is not None else ""
+    params: tuple = (pinned_id,)
+    if position is not None:
+        params += (position,)
+    rows = conn.execute(sql.format(beyond=beyond), (*params, limit + 1)).fetchall()
     has_more = len(rows) > limit
     rows = rows[:limit]
-    summaries = tuple(
-        SessionSummary(
+    def summarize(row) -> SessionSummary:
+        session_id, created_at, revision = row
+        return SessionSummary(
             session_id=session_id,
             created_at=created_at,
             activity_revision=revision,
@@ -160,8 +174,7 @@ def list_sessions(
                 conn, session_id, created_at, redactor, title_max_chars
             ),
         )
-        for session_id, created_at, revision in rows
-    )
+    summaries = tuple(summarize(row) for row in rows)
     next_cursor = (
         _encode_cursor(
             {"v": _CURSOR_VERSION, "k": _INBOX_KIND, "ar": rows[-1][2]}
@@ -169,14 +182,17 @@ def list_sessions(
         if has_more and rows
         else None
     )
-    return SessionInboxPage(sessions=summaries, next_cursor=next_cursor)
+    return SessionInboxPage(
+        sessions=summaries, next_cursor=next_cursor,
+        non_terminal=None if pinned is None else summarize(pinned),
+    )
 
 
 def _session_title(
     conn,
     session_id: str,
     created_at: str,
-    redactor: Redactor | None,
+    redactor: Redactor,
     limit: int,
 ) -> str:
     """The #30 title contract: the earliest approved chat Run's prompt_preview
@@ -186,7 +202,7 @@ def _session_title(
     read; nothing is stored."""
     row = conn.execute(
         """SELECT prompt_preview FROM runs
-           WHERE session_id = ? AND purpose = 'chat'
+           WHERE session_id = ? AND purpose = 'chat' AND admission_state = 'admitted'
            ORDER BY activity_revision ASC, run_id ASC LIMIT 1""",
         (session_id,),
     ).fetchone()
@@ -198,9 +214,17 @@ def _session_title(
             # re-redacting on read is deliberate defense in depth under the
             # ADR-0003 central-redaction rule, and idempotent: a remembered
             # secret is replaced by "***", which no later pass can re-match.
-            if redactor is not None:
-                text = redactor.redact_text(text)
+            text = redactor.redact_text(text)
             return _limit_text(text, limit)
+        return f"新会话 · {created_at}"
+    any_run = conn.execute(
+        "SELECT 1 FROM runs WHERE session_id = ? LIMIT 1",
+        (session_id,),
+    ).fetchone()
+    if any_run is not None:
+        # Historic text is a title source only for sessions that predate the
+        # Run index entirely. A system Run is still a Run; using an unrelated
+        # old message would falsely present it as the first approved chat.
         return f"新会话 · {created_at}"
     try:
         row = conn.execute(
@@ -215,8 +239,7 @@ def _session_title(
             if text:
                 # Same read-side re-redaction: historic rows predate the
                 # central rule and are the one place a raw value can survive.
-                if redactor is not None:
-                    text = redactor.redact_text(text)
+                text = redactor.redact_text(text)
                 return _limit_text(text, limit)
     except Exception:
         pass
@@ -239,8 +262,8 @@ def open_session(
     *,
     session_id: str,
     page_size: int,
+    redactor: Redactor,
     cursor: str | None = None,
-    redactor: Redactor | None = None,
     title_max_chars: int = 240,
     recording_failed_run_ids: frozenset[str] = frozenset(),
 ) -> SessionMessagesPage:
@@ -256,12 +279,6 @@ def open_session(
     """
     if page_size < 1:
         raise ValueError("page_size must be >= 1")
-    exists = conn.execute(
-        "SELECT 1 FROM sessions WHERE session_id = ?", (session_id,)
-    ).fetchone()
-    if exists is None:
-        raise SessionNotFound(f"no such session: {session_id!r}")
-
     in_runs_segment = True
     runs_position: tuple[int, str] | None = None
     historic_position: int | None = None
@@ -273,26 +290,34 @@ def open_session(
             ar = payload.get("ar")
             run_key = payload.get("r")
             if ar is not None or run_key is not None:
-                if not isinstance(ar, int) or not isinstance(run_key, str):
+                if not isinstance(run_key, str):
                     raise MalformedCursor("runs cursor position is malformed")
-                runs_position = (ar, run_key)
+                runs_position = (parse_cursor_position_int(ar), run_key)
         elif segment == _HISTORIC_SEGMENT:
-            last_id = payload.get("id")
-            if not isinstance(last_id, int) or last_id < 0:
-                raise MalformedCursor("historic cursor position is malformed")
+            last_id = parse_cursor_position_int(payload.get("id"))
             in_runs_segment = False
             historic_position = last_id
         else:
             raise MalformedCursor("unknown cursor segment")
+    exists = conn.execute(
+        "SELECT 1 FROM sessions WHERE session_id = ?", (session_id,)
+    ).fetchone()
+    if exists is None:
+        raise SessionNotFound(f"no such session: {session_id!r}")
 
     messages: list[SessionMessage] = []
     remaining = page_size
 
     if in_runs_segment:
-        keys = _page_run_keys(conn, session_id, runs_position, remaining + 1)
+        keys = page_recorded_chat_run_keys(
+            conn,
+            session_id=session_id,
+            position=runs_position,
+            count=remaining + 1,
+        )
         taken = keys[:remaining]
         for activity_revision, run_id in taken:
-            messages.extend(_run_messages(conn, run_id))
+            messages.extend(_run_messages(conn, run_id, redactor))
             runs_position = (activity_revision, run_id)
             remaining -= 1
         if len(keys) > len(taken):
@@ -306,8 +331,11 @@ def open_session(
                 title_max_chars,
                 runs_pending=False,
             )
-        if _has_inflight_run(
-            conn, session_id, runs_position, recording_failed_run_ids
+        if has_inflight_chat_run(
+            conn,
+            session_id=session_id,
+            position=runs_position,
+            recording_failed_run_ids=recording_failed_run_ids,
         ):
             # The runs segment is not closed for this view: a chat Run that
             # will still enter the session record is in flight beyond the
@@ -325,7 +353,7 @@ def open_session(
         # Segment one is exhausted and safely closed; continue into segment two.
 
     next_cursor = _historic_tail(
-        conn, session_id, historic_position, messages, remaining
+        conn, session_id, historic_position, messages, remaining, redactor
     )
     return _page(
         conn,
@@ -357,66 +385,13 @@ def _runs_cursor(session_id: str, position: tuple[int, str] | None) -> str:
     return _encode_cursor(payload)
 
 
-def _runs_beyond_clause() -> str:
-    """The shared keyset predicate over the (activity_revision, run_id) sort
-    key, bound to three parameters: (position_ar, position_ar, position_r)."""
-    return (
-        "AND (runs.activity_revision > ?"
-        " OR (runs.activity_revision = ? AND runs.run_id > ?))\n"
-    )
-
-
-def _has_inflight_run(
-    conn,
-    session_id: str,
-    position: tuple[int, str] | None,
-    recording_failed_run_ids: frozenset[str],
-) -> bool:
-    """True while a chat Run that will still enter the session record is in
-    flight beyond the cursor position.
-
-    The recording lease (#30) keeps exactly one Run unrecorded at a time and
-    its messages, phase flip, and revision land in one finalize transaction,
-    so an unrecorded chat Run sits in phase accepted/running with no
-    agent_log rows and always sorts beyond every recorded key. A Run the
-    authoritative projection reports recording-failed never produces messages
-    and therefore releases the segment instead of blocking it forever.
-    """
-    sql = """
-        SELECT 1 FROM runs
-        WHERE runs.session_id = ?
-          AND runs.purpose = 'chat'
-          AND runs.phase IN (?, ?)
-          {failed}
-          {beyond}
-        LIMIT 1
-    """
-    params: list = [session_id, *_IN_FLIGHT_PHASES]
-    failed_clause = ""
-    if recording_failed_run_ids:
-        marks = ", ".join("?" for _ in recording_failed_run_ids)
-        failed_clause = f"AND runs.run_id NOT IN ({marks})\n"
-        params.extend(sorted(recording_failed_run_ids))
-    beyond_clause = ""
-    if position is not None:
-        # Named after the clause's own parameter order, so the three bindings
-        # cannot be silently transposed: the shared predicate reads the sort
-        # key twice and the tiebreaker once.
-        position_ar, position_r = position
-        beyond_clause = _runs_beyond_clause()
-        params.extend([position_ar, position_ar, position_r])
-    row = conn.execute(
-        sql.format(failed=failed_clause, beyond=beyond_clause), params
-    ).fetchone()
-    return row is not None
-
-
 def _historic_tail(
     conn,
     session_id: str,
     historic_position: int | None,
     messages: list[SessionMessage],
     remaining: int,
+    redactor: Redactor,
 ) -> str | None:
     """Fill the page from segment two and decide whether more of it remains.
 
@@ -431,7 +406,7 @@ def _historic_tail(
         )
         taken = rows[:remaining]
         for row in taken:
-            messages.append(_historic_message(row))
+            messages.append(_historic_message(row, redactor))
             historic_position = row[0]
         if len(rows) <= len(taken):
             return None
@@ -460,7 +435,7 @@ def _page(
     session_id: str,
     messages: list[SessionMessage],
     next_cursor: str | None,
-    redactor: Redactor | None,
+    redactor: Redactor,
     title_max_chars: int,
     *,
     runs_pending: bool = False,
@@ -487,40 +462,9 @@ def _created_at(conn, session_id: str) -> str:
     return "" if row is None else row[0]
 
 
-def _page_run_keys(
-    conn, session_id: str, position: tuple[int, str] | None, count: int
-) -> list[tuple[int, str]]:
-    """Chat Runs of this Session that already carry messages, keyset paged.
-
-    Runs are only written into the message pair at finalize, in the same
-    transaction that stamps activity_revision, so an in-flight Run has no
-    messages and no key -- it is held out of this segment by the wait cursor
-    (:func:`_has_inflight_run`) instead of being mistaken for exhaustion.
-    The agent_log unique index guarantees at most one pair per Run.
-    """
-    sql = """
-        SELECT runs.activity_revision, runs.run_id FROM runs
-        WHERE runs.session_id = ?
-          AND runs.purpose = 'chat'
-          AND EXISTS (
-            SELECT 1 FROM agent_log WHERE agent_log.run_id = runs.run_id
-          )
-          {keyset}
-        ORDER BY runs.activity_revision ASC, runs.run_id ASC
-        LIMIT ?
-    """
-    if position is None:
-        rows = conn.execute(sql.format(keyset=""), (session_id, count)).fetchall()
-    else:
-        position_ar, position_r = position
-        rows = conn.execute(
-            sql.format(keyset=_runs_beyond_clause()),
-            (session_id, position_ar, position_ar, position_r, count),
-        ).fetchall()
-    return [(row[0], row[1]) for row in rows]
-
-
-def _run_messages(conn, run_id: str) -> list[SessionMessage]:
+def _run_messages(
+    conn, run_id: str, redactor: Redactor
+) -> list[SessionMessage]:
     rows = conn.execute(
         """SELECT role, content, source, telemetry, created_at, run_id
            FROM agent_log WHERE run_id = ? ORDER BY id ASC""",
@@ -529,7 +473,7 @@ def _run_messages(conn, run_id: str) -> list[SessionMessage]:
     return [
         SessionMessage(
             role=role,
-            blocks=blocks_from_jsonable(json.loads(content)),
+            blocks=blocks_from_jsonable(_redacted_json(content, redactor)),
             source=source,
             created_at=created_at,
             run_id=run_id,
@@ -537,6 +481,20 @@ def _run_messages(conn, run_id: str) -> list[SessionMessage]:
         )
         for role, content, source, telemetry, created_at, run_id in rows
     ]
+
+
+def _redacted_json(content: str, redactor: Redactor) -> Any:
+    """The stored blocks, through the central redactor before they are shown.
+
+    The user message is written into the session record verbatim -- only the
+    assistant reply was redacted on the way in -- and historic rows predate
+    the central rule altogether. So this read is the one place a raw value
+    can reach a surface, and it is the last chance to stop it (ADR-0003).
+    Redacting the jsonable form rather than the blocks keeps one convergence
+    point: the same pass handles text, thinking and tool results.
+    """
+    parsed = json.loads(content)
+    return redactor.redact_jsonable(parsed)
 
 
 def _page_historic(conn, session_id: str, after_id: int | None, count: int):
@@ -553,12 +511,12 @@ def _page_historic(conn, session_id: str, after_id: int | None, count: int):
     ).fetchall()
 
 
-def _historic_message(row) -> SessionMessage:
+def _historic_message(row, redactor: Redactor) -> SessionMessage:
     row_id, role, content, source, telemetry, created_at, run_id = row
     del row_id
     return SessionMessage(
         role=role,
-        blocks=blocks_from_jsonable(json.loads(content)),
+        blocks=blocks_from_jsonable(_redacted_json(content, redactor)),
         source=source,
         created_at=created_at,
         run_id=run_id,

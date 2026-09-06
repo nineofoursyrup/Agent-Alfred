@@ -8,7 +8,8 @@ from collections.abc import Callable, Iterable
 from datetime import datetime
 from typing import NamedTuple
 
-from agent_alfred.outcomes import RUN_OUTCOMES
+from agent_alfred.outcomes import RUN_OUTCOMES, parse_run_outcome
+from agent_alfred.run_phases import RUN_PHASES as PHASES
 
 BUSY_TIMEOUT_MS = 5000
 # Highest first. One deletion may match several reasons; the stored
@@ -48,7 +49,6 @@ GATEWAYS = ("cli", "web")
 _GATEWAY_SQL = ", ".join(f"'{gateway}'" for gateway in GATEWAYS)
 PURPOSES = ("chat", "inference_probe")
 _PURPOSE_SQL = ", ".join(f"'{purpose}'" for purpose in PURPOSES)
-PHASES = ("accepted", "running", "finished")
 _PHASE_SQL = ", ".join(f"'{phase}'" for phase in PHASES)
 OUTCOMES = RUN_OUTCOMES
 _OUTCOME_SQL = ", ".join(f"'{outcome}'" for outcome in OUTCOMES)
@@ -1009,6 +1009,22 @@ def _apply_v3(conn: sqlite3.Connection) -> None:
     _backfill_sessions(conn)
 
 
+def _apply_v4(conn: sqlite3.Connection) -> None:
+    """Preserve v3 facts; absence of execution evidence is not a refusal."""
+    conn.execute(
+        """ALTER TABLE runs ADD COLUMN admission_state TEXT NOT NULL
+           DEFAULT 'unconfirmed' CHECK (
+             admission_state IN ('pending', 'admitted', 'rejected', 'unconfirmed')
+           )"""
+    )
+    conn.execute(
+        """UPDATE runs SET admission_state = 'admitted'
+           WHERE started_at IS NOT NULL OR phase = 'running'
+             OR telemetry IS NOT NULL
+             OR EXISTS (SELECT 1 FROM agent_log WHERE agent_log.run_id = runs.run_id)"""
+    )
+
+
 MIGRATIONS = (
     Migration(version=1, apply=_apply_v1, managed_objects=_V1_MANAGED_OBJECTS),
     # Renames and rebuilds only: every name it leaves behind is already v1's.
@@ -1018,6 +1034,7 @@ MIGRATIONS = (
         apply=_apply_v3,
         managed_objects=_V3_MANAGED_OBJECTS,
     ),
+    Migration(version=4, apply=_apply_v4, managed_objects=()),
 )
 MIGRATION_VERSIONS = tuple(migration.version for migration in MIGRATIONS)
 LATEST_MIGRATION_VERSION = MIGRATION_VERSIONS[-1]
@@ -1223,9 +1240,9 @@ def insert_accepted_run(
         """INSERT INTO runs (
              run_id, purpose, session_id, gateway, entry_surface_id,
              prompt_preview, phase, outcome, accepted_at, started_at,
-             finished_at, activity_revision, telemetry
+             finished_at, activity_revision, telemetry, admission_state
            ) VALUES (
-             ?, ?, ?, ?, ?, ?, 'accepted', NULL, ?, NULL, NULL, ?, NULL
+             ?, ?, ?, ?, ?, ?, 'accepted', NULL, ?, NULL, NULL, ?, NULL, 'pending'
            )""",
         (
             run_id,
@@ -1274,10 +1291,20 @@ def _check_transition(*, from_phase: str, to_phase: str, outcome: str | None) ->
             f"allowed from {from_phase!r}: {allowed}"
         )
     if to_phase == "finished":
-        if outcome not in OUTCOMES:
+        try:
+            terminal_outcome = parse_run_outcome(outcome)
+        except ValueError as exc:
             raise RunPhaseError(
                 f"phase 'finished' requires an outcome in "
                 f"{', '.join(OUTCOMES)}, got {outcome!r}"
+            ) from exc
+        if from_phase == "accepted" and terminal_outcome in (
+            "completed",
+            "max_steps",
+        ):
+            raise RunPhaseError(
+                f"an unstarted run cannot finish with execution outcome "
+                f"{terminal_outcome!r}"
             )
     elif outcome is not None:
         raise RunPhaseError(

@@ -5,13 +5,17 @@ from __future__ import annotations
 import json
 import queue
 import sqlite3
+import sys
 import threading
-import time
 
 import pytest
 
 from agent_alfred import schema
 from agent_alfred.clock import FakeClock
+from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+    claimed_monitoring_tool,
+)
+from agent_alfred.evals.deterministic._thread_test_helpers import EnteredEvent
 from agent_alfred.events import (
     BarrierFlushResult,
     CapturingSink,
@@ -20,6 +24,7 @@ from agent_alfred.events import (
     SequencedEvent,
     UnsequencedEvent,
 )
+from agent_alfred.gateway.web.api import DashboardApi
 from agent_alfred.loop.assistant import LoopResult
 from agent_alfred.messages import message_plain_text, text_message
 from agent_alfred.model import (
@@ -39,6 +44,36 @@ from agent_alfred.runtime.snapshot import (
 )
 from agent_alfred.runtime.work import WorkItem
 from agent_alfred.settings import MAX_STEPS_REACHED_TEXT, Settings
+from agent_alfred.wiring import build_default_host
+
+
+def _reject_handoff(_item):
+    raise RuntimeError("queue full")
+
+
+def test_build_default_host_close_releases_owned_connection_and_leases_once(
+    tmp_path, monkeypatch
+) -> None:
+    from agent_alfred import wiring as wiring_module
+
+    real_open_database = wiring_module.open_database
+    captured_connections = []
+
+    def capture_database(state, _rollback=None):
+        connection = real_open_database(state, _rollback=_rollback)
+        captured_connections.append(connection)
+        return connection
+
+    monkeypatch.setattr(wiring_module, "open_database", capture_database)
+    host = build_default_host(
+        state_dir=tmp_path / "state",
+        factory=ScriptedModelFactory(ScriptedModel(["unused"])),
+    )
+    conn = captured_connections[0]
+    assert host.close() is True
+    assert host.close() is True
+    with pytest.raises(sqlite3.ProgrammingError):
+        conn.execute("SELECT 1")
 
 
 class HoldingBarrierSink:
@@ -96,6 +131,8 @@ def _host(
     before_recording_commit: threading.Event | None = None,
     after_recorded_snapshot: threading.Event | None = None,
     before_recording_failed: threading.Event | None = None,
+    snapshot_provider=None,
+    factory=None,
 ) -> tuple[RuntimeHost, sqlite3.Connection, CapturingSink]:
     if conn is None:
         conn = sqlite3.connect(":memory:", check_same_thread=False)
@@ -106,7 +143,7 @@ def _host(
     model = ScriptedModel(script or ["pong"])
     host = RuntimeHost(
         conn=conn,
-        factory=ScriptedModelFactory(model),
+        factory=factory or ScriptedModelFactory(model),
         settings=settings or Settings(),
         clock=FakeClock(),
         fanout=fanout,
@@ -116,6 +153,7 @@ def _host(
         before_recording_commit=before_recording_commit,
         after_recorded_snapshot=after_recorded_snapshot,
         before_recording_failed=before_recording_failed,
+        snapshot_provider=snapshot_provider,
     )
     return host, conn, capture
 
@@ -207,8 +245,27 @@ def test_scripted_chat_run_records_one_message_pair_and_run_telemetry() -> None:
         host.close()
 
 
+def test_wait_consumes_the_complete_result_and_waiter_exactly_once() -> None:
+    host, _conn, _capture = _host(["pong"])
+    host.start()
+    try:
+        submitted = host.submit(SubmitRequest(message="ping"))
+        assert submitted.run_id is not None
+        result = host.wait(submitted.run_id)
+
+        assert result.outcome == "completed"
+        assert message_plain_text(result.reply) == "pong"
+        assert len(result.model_results) == 1
+        assert host._done == {}
+        assert host._results == {}
+        with pytest.raises(KeyError, match=submitted.run_id):
+            host.wait(submitted.run_id)
+    finally:
+        host.close()
+
+
 def test_second_submit_while_busy_is_409_and_does_not_insert_a_run() -> None:
-    hold = threading.Event()
+    hold = EnteredEvent()
     published: list[object] = []
     host, conn, _ = _host(["pong"], before_recording_commit=hold)
 
@@ -221,9 +278,8 @@ def test_second_submit_while_busy_is_409_and_does_not_insert_a_run() -> None:
     try:
         first = host.submit(SubmitRequest(message="one"))
         assert first.kind == "accepted"
-        _wait_until(
-            lambda: host.snapshot().coordinator_state == "recording_pending"
-        )
+        assert hold.entered.wait(2.0), "recording gate was not reached"
+        assert host.snapshot().coordinator_state == "recording_pending"
         projection = host.snapshot().unrecorded_terminal_projection
         assert projection is not None
         assert projection.run_id == first.run_id
@@ -289,21 +345,666 @@ def test_accepted_persist_failure_does_not_return_accepted() -> None:
         host.close()
 
 
-def test_handoff_failure_finalizes_interrupted() -> None:
-    def boom(_item):
-        raise RuntimeError("queue full")
+def test_committed_acceptance_is_reconciled_when_commit_then_raises() -> None:
+    raw = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(raw)
 
-    host, conn, _ = _host(["pong"], publish_work=boom)
+    class CommitThenRaise:
+        def __init__(self):
+            self.armed = False
+
+        def commit(self):
+            raw.commit()
+            if self.armed:
+                self.armed = False
+                raise sqlite3.OperationalError("commit outcome was uncertain")
+
+        def __getattr__(self, name):
+            return getattr(raw, name)
+
+    uncertain = CommitThenRaise()
+    host, conn, _ = _host(["pong"], conn=uncertain)
+    host.start()
+    try:
+        uncertain.armed = True
+        first = host.submit(SubmitRequest(message="uncertain"))
+
+        assert first.kind == "admission_failed"
+        assert conn.execute(
+            "SELECT phase, outcome, started_at FROM runs"
+        ).fetchone() == ("finished", "interrupted", None)
+        assert conn.execute(
+            "SELECT COUNT(*) FROM runs WHERE phase = 'accepted'"
+        ).fetchone() == (0,)
+        assert host.snapshot().coordinator_state == "idle"
+        assert host._pending_handoff == set()
+
+        second = host.submit(SubmitRequest(message="next"))
+        assert second.kind == "accepted"
+        assert host.wait(second.run_id).outcome == "completed"
+    finally:
+        host.close()
+
+
+@pytest.mark.parametrize("failure_step", ("result", "release", "notify"))
+def test_recorder_cleanup_owner_survives_two_post_commit_failures(
+    failure_step: str,
+) -> None:
+    """Host close resumes settlement without notifying past a missing step."""
+    host, _conn, _ = _host(["pong"])
+    originals = {
+        "result": host.publish_run_result,
+        "release": host.recording_publish_recorded_then_release,
+        "notify": host.notify_run_done,
+    }
+    calls = 0
+    trace: list[str] = []
+
+    def wrap(step: str):
+        original = originals[step]
+
+        def invoke(*args):
+            nonlocal calls
+            trace.append(step)
+            if step == failure_step:
+                calls += 1
+                if calls <= 2:
+                    raise RuntimeError(f"{step} unavailable")
+            return original(*args)
+
+        return invoke
+
+    host.publish_run_result = wrap("result")
+    host.recording_publish_recorded_then_release = wrap("release")
+    host.notify_run_done = wrap("notify")
+    host.start()
+    submitted = host.submit(SubmitRequest(message="ping"))
+    assert submitted.kind == "accepted"
+    assert submitted.run_id is not None
+
+    assert host.close(timeout=2) is True
+    assert calls == 3
+    assert host.wait(submitted.run_id, timeout=0).outcome == "completed"
+    assert host.snapshot().coordinator_state == "idle"
+    if failure_step != "notify":
+        assert trace.index("notify") > max(
+            index for index, step in enumerate(trace) if step == failure_step
+        )
+    else:
+        assert trace[-1] == "notify"
+
+
+@pytest.mark.parametrize("edge", ("reconcile_return", "capture_return"))
+def test_recording_decision_return_edges_remain_host_reachable(
+    monkeypatch, edge: str
+) -> None:
+    """A committed decision survives before Python stores its return value."""
+    import dis
+
+    from agent_alfred.runtime.recording import RunRecorder
+
+    host, conn, _ = _host(["pong"])
+    if edge == "reconcile_return":
+        code = RunRecorder._reconcile_finalize.__code__
+        instructions = tuple(dis.get_instructions(code))
+        target = next(
+            instruction.offset
+            for index, instruction in enumerate(instructions[1:], 1)
+            if instruction.opname == "RETURN_VALUE"
+            and instructions[index - 1].opname == "LOAD_CONST"
+            and instructions[index - 1].argval is True
+        )
+    else:
+        code = RunRecorder.settle.__code__
+        instructions = tuple(dis.get_instructions(code))
+        capture_load = next(
+            index
+            for index, instruction in enumerate(instructions)
+            if instruction.opname == "LOAD_ATTR"
+            and instruction.argval == "capture_recording_decision"
+        )
+        capture_call = next(
+            index
+            for index, instruction in enumerate(
+                instructions[capture_load:], capture_load
+            )
+            if instruction.opname in {"CALL", "CALL_KW"}
+            and instructions[index + 1].opname == "POP_TOP"
+        )
+        target = instructions[capture_call + 1].offset
+    reached = threading.Event()
+    control = SystemExit("recording decision returned before publication")
+    worker_failures: list[BaseException] = []
+    monkeypatch.setattr(
+        threading,
+        "excepthook",
+        lambda args: worker_failures.append(args.exc_value),
+    )
+    host.start()
+    try:
+        with claimed_monitoring_tool(
+            f"recording-decision-{edge}-owner", local_codes=(code,)
+        ) as tool_id:
+
+            def interrupt_after_decision(actual_code, offset) -> None:
+                if actual_code is code and offset == target and not reached.is_set():
+                    reached.set()
+                    raise control
+
+            sys.monitoring.register_callback(
+                tool_id,
+                sys.monitoring.events.INSTRUCTION,
+                interrupt_after_decision,
+            )
+            sys.monitoring.set_local_events(
+                tool_id, code, sys.monitoring.events.INSTRUCTION
+            )
+            submitted = host.submit(
+                SubmitRequest(message="ping", wait_for_result=False)
+            )
+            assert submitted.kind == "accepted"
+            assert submitted.run_id is not None
+            assert reached.wait(2), "worker did not cross the decision return edge"
+
+        assert conn.execute(
+            "SELECT phase, outcome FROM runs WHERE run_id = ?",
+            (submitted.run_id,),
+        ).fetchone() == ("finished", "completed")
+        pending = host.snapshot()
+        assert pending.coordinator_state == "recording_pending"
+        assert pending.unrecorded_terminal_projection is not None
+
+        assert host.close(timeout=2) is True
+        assert host.snapshot().coordinator_state == "idle"
+        assert host.snapshot().unrecorded_terminal_projection is None
+        assert worker_failures == [control]
+    finally:
+        host.close(timeout=2)
+
+
+def test_handoff_failure_finalizes_interrupted() -> None:
+    host, conn, _ = _host(["pong"], publish_work=_reject_handoff)
     host.start()
     try:
         submitted = host.submit(SubmitRequest(message="ping"))
-        assert submitted.kind == "admission_failed"
+        assert submitted.kind == "handoff_failed"
         row = conn.execute("SELECT phase, outcome FROM runs").fetchone()
         assert row == ("finished", "interrupted")
         assert conn.execute("SELECT started_at FROM runs").fetchone() == (None,)
         assert conn.execute("SELECT COUNT(*) FROM agent_log").fetchone() == (0,)
     finally:
         host.close()
+
+
+def test_handoff_failures_discard_unreturnable_result_slots() -> None:
+    host, _conn, _ = _host(["must not execute"], publish_work=_reject_handoff)
+    host.start()
+    try:
+        for _ in range(3):
+            submitted = host.submit(SubmitRequest(message="ping"))
+
+            assert submitted.kind == "handoff_failed"
+            assert submitted.run_id is not None
+            assert submitted.run_id not in host._done
+            assert submitted.run_id not in host._results
+            assert host.snapshot().coordinator_state == "idle"
+
+        assert host._done == {}
+        assert host._results == {}
+    finally:
+        host.close()
+
+
+def test_handoff_and_finalize_failure_publish_consistent_terminal_state() -> None:
+    raw = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(raw)
+    fail_finalize = [True]
+    wrapped = _FailOn(
+        raw,
+        when=lambda sql: fail_finalize[0]
+        and sql.lstrip().upper().startswith("UPDATE RUNS")
+        and "FINISHED_AT" in sql.upper(),
+    )
+
+    host, conn, _ = _host(
+        ["must not execute"], conn=wrapped, publish_work=_reject_handoff
+    )
+    host.start()
+    try:
+        submitted = host.submit(SubmitRequest(message="ping"))
+        assert submitted.kind == "handoff_failed"
+        assert submitted.run_id is not None
+
+        row = conn.execute(
+            "SELECT run_id, session_id, phase, outcome, started_at FROM runs"
+        ).fetchone()
+        run_id, session_id, phase, outcome, started_at = row
+        assert run_id == submitted.run_id
+        assert session_id is not None
+        assert (phase, outcome, started_at) == ("accepted", None, None)
+        assert conn.execute("SELECT COUNT(*) FROM agent_log").fetchone() == (0,)
+
+        snap = host.snapshot()
+        assert snap.coordinator_state == "recording_failed"
+        assert snap.active_run is not None
+        assert snap.unrecorded_terminal_projection is not None
+        summary = snap.active_run
+        projection = snap.unrecorded_terminal_projection
+        assert (
+            summary.phase,
+            summary.outcome,
+            summary.recording_state,
+        ) == ("finished", "interrupted", "failed")
+        assert (
+            projection.outcome,
+            projection.recording_state,
+            projection.reply_text,
+            projection.error,
+        ) == ("interrupted", "failed", None, "handoff_failed")
+        assert summary.run_id == projection.run_id == run_id
+        assert summary.session_id == projection.session_id == session_id
+
+        refused = host.submit(SubmitRequest(message="still closed"))
+        assert refused.kind == "recording_unavailable"
+        assert refused.snapshot == snap
+        assert submitted.run_id not in host._done
+        assert submitted.run_id not in host._results
+    finally:
+        host.close()
+
+    fail_finalize[0] = False
+    recovered, _conn, _ = _host(["pong"], conn=raw)
+    recovered.start()
+    try:
+        stored = raw.execute(
+            "SELECT phase, outcome, started_at FROM runs WHERE run_id = ?",
+            (submitted.run_id,),
+        ).fetchone()
+        assert stored == ("finished", "interrupted", None)
+        assert recovered.snapshot().coordinator_state == "idle"
+    finally:
+        recovered.close()
+        raw.close()
+
+
+def test_unwaited_handoff_failure_still_publishes_and_notifies_without_a_slot(
+) -> None:
+    host, _conn, _ = _host(["must not execute"], publish_work=_reject_handoff)
+    published: list[str] = []
+    notified: list[str] = []
+    publish_run_result = host.publish_run_result
+    notify_run_done = host.notify_run_done
+
+    def track_result(run_id, result):
+        published.append(run_id)
+        publish_run_result(run_id, result)
+
+    def track_notification(run_id):
+        notified.append(run_id)
+        notify_run_done(run_id)
+
+    host.publish_run_result = track_result
+    host.notify_run_done = track_notification
+    host.start()
+    try:
+        submitted = host.submit(
+            SubmitRequest(message="ping", wait_for_result=False)
+        )
+
+        assert submitted.kind == "handoff_failed"
+        assert submitted.run_id is not None
+        assert published == [submitted.run_id]
+        assert notified == [submitted.run_id]
+        assert host._done == {}
+        assert host._results == {}
+    finally:
+        host.close()
+
+
+@pytest.mark.parametrize("failure_step", ("result", "notify"))
+def test_terminal_publication_failure_still_retires_handoff_ownership(
+    failure_step: str,
+) -> None:
+    host, _conn, _ = _host(["must not execute"], publish_work=_reject_handoff)
+    real_result = host.publish_run_result
+    real_notify = host.notify_run_done
+
+    def publish_result(run_id, result):
+        if failure_step == "result":
+            raise RuntimeError("result publication failed")
+        real_result(run_id, result)
+
+    def notify(run_id):
+        if failure_step == "notify":
+            raise RuntimeError("done notification failed")
+        real_notify(run_id)
+
+    host.publish_run_result = publish_result
+    host.notify_run_done = notify
+    host.start()
+
+    with pytest.raises(
+        RuntimeError, match="(?:result publication|done notification) failed"
+    ):
+        host.submit(SubmitRequest(message="ping"))
+
+    assert host._pending_handoff == set()
+    assert host._done == {}
+    assert host._results == {}
+    assert host.close(timeout=0.05) is True
+
+
+@pytest.mark.parametrize(
+    "control_type", (KeyboardInterrupt, SystemExit, GeneratorExit)
+)
+def test_close_fence_resumes_after_control_before_retirement(control_type) -> None:
+    host, conn, _ = _host(["must not execute"], publish_work=_reject_handoff)
+    complete = host.admission_complete_handoff
+    control = control_type("before fence retirement")
+    calls = 0
+
+    def interrupt_once(run_id):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise control
+        complete(run_id)
+
+    host.admission_complete_handoff = interrupt_once
+    host.start()
+    try:
+        with pytest.raises(control_type) as caught:
+            host.submit(SubmitRequest(message="ping"))
+
+        assert caught.value is control
+        assert calls == 2
+        assert conn.execute(
+            "SELECT phase, outcome, started_at FROM runs"
+        ).fetchone() == ("finished", "interrupted", None)
+        assert host._pending_handoff == set()
+        assert host._done == {}
+        assert host._results == {}
+        assert host.close(timeout=0.05) is True
+    finally:
+        host.close(timeout=0.05)
+
+
+def test_handoff_cleanup_owner_survives_two_retirement_failures() -> None:
+    """Host close can resume a fence that submit could not retire."""
+
+    host, _conn, _ = _host(["must not execute"], publish_work=_reject_handoff)
+    complete = host.admission_complete_handoff
+    attempts = 0
+
+    def fail_twice(run_id):
+        nonlocal attempts
+        attempts += 1
+        if attempts <= 2:
+            raise RuntimeError("fence retirement unavailable")
+        complete(run_id)
+
+    host.admission_complete_handoff = fail_twice
+    host.start()
+    try:
+        with pytest.raises(RuntimeError, match="fence retirement unavailable"):
+            host.submit(SubmitRequest(message="ping"))
+
+        assert attempts == 2
+        assert host._pending_handoff
+        assert host.close(timeout=0.05) is True
+        assert attempts == 3
+        assert host._pending_handoff == set()
+    finally:
+        host.admission_complete_handoff = complete
+        for run_id in tuple(host._pending_handoff):
+            complete(run_id)
+        host.close(timeout=0.05)
+
+
+@pytest.mark.parametrize(
+    "error_type", (RuntimeError, KeyboardInterrupt, SystemExit, GeneratorExit)
+)
+@pytest.mark.parametrize("after_retire", (False, True), ids=("before", "after"))
+def test_public_host_resumes_an_interrupted_successful_handoff_retirement(
+    error_type, after_retire: bool
+) -> None:
+    host, _conn, _ = _host(["pong"])
+    original = host.admission_publish_handoff
+    error = error_type("retire interrupted")
+
+    def interrupt_retire(item):
+        if after_retire:
+            original(item)
+        else:
+            # Publish the monotonic queue-cell decision, then interrupt before
+            # the public handoff seam can retire close()'s pending fence.
+            host._queue.publish(item, enqueue=True)
+        raise error
+
+    host.admission_publish_handoff = interrupt_retire
+    host.start()
+    with pytest.raises(error_type) as caught:
+        host.submit(SubmitRequest(message="ping"))
+    assert caught.value is error
+    assert host.close(timeout=0.2) is True
+    assert host._pending_handoff == set()
+    assert host._done == {}
+    assert host._results == {}
+
+
+@pytest.mark.parametrize(
+    "error_type", (RuntimeError, KeyboardInterrupt, SystemExit, GeneratorExit)
+)
+@pytest.mark.parametrize("after_release", (False, True), ids=("before", "after"))
+def test_public_host_resumes_an_interrupted_pre_handoff_release(
+    error_type, after_release: bool
+) -> None:
+    host, _conn, _ = _host([], factory=_BoomFactory())
+    original = host.admission_release
+    error = error_type("release interrupted")
+
+    def interrupt_release(run_id):
+        if after_release:
+            original(run_id)
+        raise error
+
+    host.admission_release = interrupt_release
+    host.start()
+    try:
+        if error_type is RuntimeError:
+            submitted = host.submit(SubmitRequest(message="ping"))
+            assert submitted.kind == "admission_failed"
+        else:
+            with pytest.raises(error_type) as caught:
+                host.submit(SubmitRequest(message="ping"))
+            assert caught.value is error
+        assert host.snapshot().coordinator_state == "idle"
+        assert host.close(timeout=0.2) is True
+        assert host._pending_handoff == set()
+        assert host._done == {}
+        assert host._results == {}
+    finally:
+        host.close(timeout=0.2)
+
+
+def test_control_after_reserve_cannot_leave_close_waiting_for_handoff() -> None:
+    """The reservation itself belongs to submit's cleanup scope.
+
+    A process-control exception may arrive after the coordinator has taken the
+    lease but before ``admission_reserve`` returns its tuple to admission. The
+    caller cannot observe that internal boundary; it can only require that the
+    failed submit relinquishes every owner and that close subsequently finishes.
+    """
+    host, _conn, _ = _host(["must not execute"])
+    real_reserve = host.admission_reserve
+    reserved = threading.Event()
+    release = threading.Event()
+    submit_finished = threading.Event()
+    control = KeyboardInterrupt("after reserve")
+    caught: list[BaseException] = []
+
+    def interrupt_after_reserve(*args, **kwargs):
+        real_reserve(*args, **kwargs)
+        reserved.set()
+        assert release.wait(2), "test did not release reserved admission"
+        raise control
+
+    host.admission_reserve = interrupt_after_reserve
+    host.start()
+
+    def submit() -> None:
+        try:
+            host.submit(SubmitRequest(message="ping"))
+        except BaseException as exc:  # noqa: BLE001 - asserted below
+            caught.append(exc)
+        finally:
+            submit_finished.set()
+
+    thread = threading.Thread(target=submit)
+    thread.start()
+    try:
+        assert reserved.wait(2), "submit did not reserve admission"
+        assert host.close(timeout=0) is False
+        release.set()
+        assert submit_finished.wait(2), "submit did not finish unwinding"
+        thread.join(2)
+
+        assert caught == [control]
+        assert host.close(timeout=0.2) is True
+    finally:
+        release.set()
+        thread.join(2)
+        host.close(timeout=0.2)
+
+
+def test_control_after_work_is_published_does_not_reclassify_it_unstarted() -> None:
+    """A publisher may be interrupted only after the worker owns the item."""
+    release_execution = threading.Event()
+    model = ScriptedModel(["pong"], gate=release_execution)
+    host, _conn, _ = _host(factory=ScriptedModelFactory(model))
+    publish = host.admission_publish_handoff
+    control = KeyboardInterrupt("after publication")
+
+    def interrupt_after_publication(item):
+        publish(item)
+        assert model.entered.wait(2), "published work did not reach execution"
+        raise control
+
+    host.admission_publish_handoff = interrupt_after_publication
+    host.start()
+    try:
+        with pytest.raises(KeyboardInterrupt) as caught:
+            host.submit(SubmitRequest(message="ping"))
+
+        assert caught.value is control
+        snapshot = host.snapshot()
+        assert snapshot.coordinator_state == "running"
+        assert snapshot.active_run is not None
+        assert snapshot.active_run.phase == "running"
+    finally:
+        release_execution.set()
+        host.close(timeout=0.2)
+
+
+def test_recovery_return_edge_keeps_a_worker_claimed_run_admitted() -> None:
+    """A recovered ``True`` is owned before Python can lose its return value.
+
+    The worker has physically claimed the published cell but is held before
+    execution can write ``running``. Process control lands at the actual
+    inner gap between recovery resolving ``True`` and the settlement slot
+    storing it. Recovery must already have transferred that fact; it cannot
+    ask the coordinator a second or third time.
+    """
+    import dis
+
+    from agent_alfred.runtime.host import _HandoffCell
+
+    host, conn, _ = _host(["pong"])
+    worker_claimed = threading.Event()
+    release_worker = threading.Event()
+    real_get = host._queue.get  # noqa: SLF001 - exact handoff seam under test
+    real_publish = host.admission_publish_handoff
+    real_recover = host.admission_recover_handoff
+    first_control = KeyboardInterrupt("first recovered result return")
+    pending_controls: list[BaseException] = [first_control]
+    recovery_calls = 0
+
+    def gated_get():
+        item = real_get()
+        if item is not None and not worker_claimed.is_set():
+            worker_claimed.set()
+            assert release_worker.wait(3.0), "test did not release claimed work"
+        return item
+
+    def publish_then_lose_return(item):
+        real_publish(item)
+        assert worker_claimed.wait(3.0), "worker did not claim the handoff cell"
+        raise RuntimeError("publish returned after its effect")
+
+    def count_recovery(run_id, *, settle):
+        nonlocal recovery_calls
+        recovery_calls += 1
+        return real_recover(run_id, settle=settle)
+
+    host._queue.get = gated_get  # type: ignore[method-assign]  # noqa: SLF001
+    host.admission_publish_handoff = publish_then_lose_return
+    host.admission_recover_handoff = count_recovery
+    code = _HandoffCell.recover.__code__
+    instructions = tuple(dis.get_instructions(code))
+    settle_load = next(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname.startswith("LOAD_FAST")
+        and instruction.argval == "settle"
+    )
+    settle_call = next(
+        index
+        for index, instruction in enumerate(
+            instructions[settle_load:], settle_load
+        )
+        if instruction.opname in {"CALL", "CALL_KW"}
+    )
+    target = instructions[settle_call + 1].offset
+    host.start()
+    try:
+        with claimed_monitoring_tool(
+            "admission-recovery-return-owner", local_codes=(code,)
+        ) as tool_id:
+
+            def interrupt_after_recovery_return(actual_code, offset) -> None:
+                if (
+                    actual_code is code
+                    and offset == target
+                    and pending_controls
+                ):
+                    raise pending_controls.pop(0)
+
+            sys.monitoring.register_callback(
+                tool_id,
+                sys.monitoring.events.INSTRUCTION,
+                interrupt_after_recovery_return,
+            )
+            sys.monitoring.set_local_events(
+                tool_id, code, sys.monitoring.events.INSTRUCTION
+            )
+            with pytest.raises(KeyboardInterrupt) as caught:
+                host.submit(SubmitRequest(message="first", wait_for_result=False))
+
+        assert caught.value is first_control
+        assert recovery_calls == 1
+        assert pending_controls == []
+        row = conn.execute(
+            "SELECT phase, outcome, started_at FROM runs ORDER BY accepted_at"
+        ).fetchone()
+        assert row == ("accepted", None, None)
+        refused = host.submit(
+            SubmitRequest(message="second", wait_for_result=False)
+        )
+        assert refused.kind == "run_in_progress"
+        assert conn.execute("SELECT COUNT(*) FROM runs").fetchone() == (1,)
+    finally:
+        release_worker.set()
+        host.close(timeout=1.0)
 
 
 def test_startup_recovery_marks_leftover_runs_interrupted() -> None:
@@ -379,6 +1080,15 @@ def test_inference_probe_persists_telemetry_without_messages() -> None:
         assert json.loads(row[4])["attempts"]
     finally:
         host.close()
+
+
+def test_a_system_submit_request_cannot_name_a_chat_session() -> None:
+    with pytest.raises(ValueError, match="system Run cannot name a Session"):
+        SubmitRequest(
+            message="probe",
+            purpose="inference_probe",
+            session_id="s1",
+        )
 
 
 def test_max_steps_run_records_the_controlled_message() -> None:
@@ -517,12 +1227,14 @@ def test_admission_and_execution_only_use_narrow_seams() -> None:
         assert "host" not in inspect.signature(cls.__init__).parameters, cls
     # The narrow seams exist and are the documented transitions.
     for method in (
+        "admission_observe",
         "admission_reserve",
-        "admission_mark_accepted",
         "admission_release",
         "admission_close_idle",
         "admission_fail_recording",
-        "publish_work_item",
+        "admission_discard_result_slot",
+        "admission_publish_handoff",
+        "admission_recover_handoff",
         "execution_mark_running",
     ):
         assert callable(getattr(RuntimeHost, method))
@@ -546,29 +1258,43 @@ class _FakeAdmissionCoordinator:
         self.state = "idle"
         self.done: dict[str, threading.Event] = {}
         self.fail_publish = False
+        self.reserved_summaries: dict[str, object] = {}
+        self.observe_calls = 0
+        self.cleanups = {}
 
-    def admission_reserve(self, run_id):
+    def admission_observe(self):
+        self.observe_calls += 1
+        if self.state == "recording_failed":
+            return "recording_unavailable", _fake_runtime_snapshot()
+        if self.state != "idle":
+            return "run_in_progress", _fake_runtime_snapshot()
+        return "admissible", _fake_runtime_snapshot()
+
+    def admission_reserve(self, run_id, summary, *, wait_for_result):
         if self.state == "recording_failed":
             return "recording_unavailable", _fake_runtime_snapshot()
         if self.state != "idle":
             return "run_in_progress", _fake_runtime_snapshot()
         self.state = "accepted"
-        self.done[run_id] = threading.Event()
+        if wait_for_result:
+            self.done[run_id] = threading.Event()
+        self.reserved_summaries[run_id] = summary
         self.calls.append(("reserve", run_id))
         return "reserved", _fake_runtime_snapshot()
-
-    def admission_mark_accepted(self, summary):
-        self.calls.append(("mark_accepted", summary.run_id, summary.phase))
-        return _fake_runtime_snapshot()
 
     def admission_release(self, run_id):
         self.state = "idle"
         self.done.pop(run_id, None)
+        self.reserved_summaries.pop(run_id, None)
         self.calls.append(("release", run_id))
 
-    def admission_close_idle(self):
+    def admission_recover_release(self, run_id):
+        self.admission_release(run_id)
+
+    def admission_close_idle(self, run_id):
         self.state = "idle"
-        self.calls.append(("close_idle",))
+        self.reserved_summaries.pop(run_id, None)
+        self.calls.append(("close_idle", run_id))
 
     def admission_fail_recording(self, fallback, projection):
         self.state = "recording_failed"
@@ -576,10 +1302,28 @@ class _FakeAdmissionCoordinator:
             ("fail_recording", projection.run_id, projection.recording_state)
         )
 
-    def publish_work_item(self, item):
+    def admission_discard_result_slot(self, run_id):
+        self.done.pop(run_id, None)
+        self.calls.append(("discard_result_slot", run_id))
+
+    def admission_publish_handoff(self, item):
         if self.fail_publish:
             raise RuntimeError("queue full")
         self.calls.append(("publish", item.run_id))
+
+    def admission_recover_handoff(self, run_id, *, settle):
+        self.calls.append(("recover_handoff", run_id))
+        settle(False)
+
+    def admission_complete_handoff(self, run_id):
+        self.calls.append(("complete_handoff", run_id))
+
+    def admission_retain_cleanup(self, run_id, owner):
+        return self.cleanups.setdefault(run_id, owner)
+
+    def admission_retire_cleanup(self, run_id, owner):
+        if self.cleanups.get(run_id) is owner:
+            self.cleanups.pop(run_id)
 
     def publish_run_result(self, run_id, result):
         self.calls.append(("result", run_id, result.outcome))
@@ -597,7 +1341,274 @@ class _BoomFactory:
         raise RuntimeError("no client")
 
 
-def _fake_admission(conn, *, factory=None, coordinator=None):
+@pytest.mark.parametrize(
+    "control_type", (KeyboardInterrupt, SystemExit, GeneratorExit)
+)
+@pytest.mark.parametrize("failure_stage", ("factory", "accepted_db", "publish"))
+def test_reserved_admission_releases_every_owner_before_control_escapes(
+    control_type, failure_stage: str
+) -> None:
+    control = control_type("stop")
+    raw = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(raw)
+    coordinator = _FakeAdmissionCoordinator()
+
+    class ControlFactory:
+        def create(self, snapshot):
+            del snapshot
+            raise control
+
+    class ControlConnection:
+        def execute(self, sql, parameters=()):
+            if failure_stage == "accepted_db" and "INSERT INTO runs" in sql:
+                raise control
+            return raw.execute(sql, parameters)
+
+        def __getattr__(self, name):
+            return getattr(raw, name)
+
+    factory = ControlFactory() if failure_stage == "factory" else None
+    database = ControlConnection() if failure_stage == "accepted_db" else raw
+    if failure_stage == "publish":
+        coordinator.admission_publish_handoff = lambda _item: (
+            _ for _ in ()
+        ).throw(control)
+    admission = _fake_admission(database, factory=factory, coordinator=coordinator)
+
+    with pytest.raises(control_type) as caught:
+        admission.submit(SubmitRequest(message="hello"))
+
+    assert caught.value is control
+    assert coordinator.state == "idle"
+    assert coordinator.done == {}
+    assert [call[0] for call in coordinator.calls][-1] in {
+        "release",
+        "complete_handoff",
+    }
+
+
+@pytest.mark.parametrize(
+    "control_type", (KeyboardInterrupt, SystemExit, GeneratorExit)
+)
+def test_interrupted_finalize_control_exhausts_terminal_cleanup_then_escapes(
+    control_type,
+) -> None:
+    control = control_type("stop")
+    raw = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(raw)
+
+    class ControlFinalize:
+        def execute(self, sql, parameters=()):
+            if (
+                sql.lstrip().upper().startswith("UPDATE")
+                and "FINISHED_AT" in sql.upper()
+            ):
+                raise control
+            return raw.execute(sql, parameters)
+
+        def __getattr__(self, name):
+            return getattr(raw, name)
+
+    coordinator = _FakeAdmissionCoordinator()
+    coordinator.fail_publish = True
+    admission = _fake_admission(ControlFinalize(), coordinator=coordinator)
+
+    with pytest.raises(control_type) as caught:
+        admission.submit(SubmitRequest(message="hello"))
+
+    assert caught.value is control
+    assert [call[0] for call in coordinator.calls] == [
+        "reserve",
+        "recover_handoff",
+        "fail_recording",
+        "result",
+        "notify",
+        "discard_result_slot",
+        "complete_handoff",
+    ]
+
+
+@pytest.mark.parametrize(
+    "control_type", (KeyboardInterrupt, SystemExit, GeneratorExit)
+)
+@pytest.mark.parametrize(
+    "failure_stage", ("factory", "accepted_db", "publish", "interrupted_db")
+)
+def test_public_host_unwinds_reserved_control_failures_before_close(
+    control_type, failure_stage: str
+) -> None:
+    control = control_type("stop")
+    raw = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(raw)
+
+    class ControlFactory:
+        def create(self, snapshot):
+            del snapshot
+            raise control
+
+    class ControlConnection:
+        def execute(self, sql, parameters=()):
+            upper = sql.lstrip().upper()
+            if failure_stage == "accepted_db" and "INSERT INTO RUNS" in upper:
+                raise control
+            if failure_stage == "interrupted_db" and (
+                upper.startswith("UPDATE") and "FINISHED_AT" in upper
+            ):
+                raise control
+            return raw.execute(sql, parameters)
+
+        def __getattr__(self, name):
+            return getattr(raw, name)
+
+    def publish(_item):
+        if failure_stage == "publish":
+            raise control
+        if failure_stage == "interrupted_db":
+            raise RuntimeError("handoff rejected")
+
+    host, _conn, _capture = _host(
+        ["unused"],
+        conn=ControlConnection(),
+        publish_work=publish,
+        factory=ControlFactory() if failure_stage == "factory" else None,
+    )
+    host.start()
+    try:
+        with pytest.raises(control_type) as caught:
+            host.submit(SubmitRequest(message="hello"))
+        assert caught.value is control
+        expected_state = (
+            "recording_failed" if failure_stage == "interrupted_db" else "idle"
+        )
+        assert host.snapshot().coordinator_state == expected_state
+        assert host.close(timeout=0.1) is True
+    finally:
+        host.close(timeout=0.1)
+
+
+@pytest.mark.parametrize(
+    "control_type", (KeyboardInterrupt, SystemExit, GeneratorExit)
+)
+def test_unstarted_finalize_resumes_before_control_escapes(control_type) -> None:
+    raw = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(raw)
+    control = control_type("finalize interrupted")
+
+    class InterruptFinalizeOnce:
+        def __init__(self):
+            self.armed = True
+
+        def execute(self, sql, parameters=()):
+            upper = sql.lstrip().upper()
+            if (
+                self.armed
+                and upper.startswith("UPDATE RUNS")
+                and "FINISHED_AT" in upper
+            ):
+                self.armed = False
+                raise control
+            return raw.execute(sql, parameters)
+
+        def __getattr__(self, name):
+            return getattr(raw, name)
+
+    host, conn, _ = _host(
+        ["must not execute"],
+        conn=InterruptFinalizeOnce(),
+        publish_work=_reject_handoff,
+    )
+    host.start()
+    try:
+        with pytest.raises(control_type) as caught:
+            host.submit(SubmitRequest(message="ping"))
+
+        assert caught.value is control
+        assert conn.execute(
+            "SELECT phase, outcome, started_at FROM runs"
+        ).fetchone() == ("finished", "interrupted", None)
+        assert host.snapshot().coordinator_state == "idle"
+        assert host._pending_handoff == set()
+        assert host._done == {}
+        assert host._results == {}
+        assert host.close(timeout=0.1) is True
+    finally:
+        host.close(timeout=0.1)
+
+
+def test_retried_close_idle_cannot_clear_a_successor_run() -> None:
+    release_model = threading.Event()
+    model = ScriptedModel(["pong"], gate=release_model)
+    host, _conn, _ = _host(factory=ScriptedModelFactory(model))
+    publish = host.admission_publish_handoff
+    close_idle = host.admission_close_idle
+    first_idle = threading.Event()
+    resume_first = threading.Event()
+    first_done = threading.Event()
+    first_failure = KeyboardInterrupt("after opening admission")
+    publish_calls = 0
+    close_calls = 0
+    failures: list[BaseException] = []
+
+    def reject_first_handoff(item):
+        nonlocal publish_calls
+        publish_calls += 1
+        if publish_calls == 1:
+            raise RuntimeError("first handoff rejected")
+        publish(item)
+
+    def interrupt_first_close(*args):
+        nonlocal close_calls
+        close_calls += 1
+        close_idle(*args)
+        if close_calls == 1:
+            first_idle.set()
+            assert resume_first.wait(2), "test did not resume first admission"
+            raise first_failure
+
+    host.admission_publish_handoff = reject_first_handoff
+    host.admission_close_idle = interrupt_first_close
+    host.start()
+
+    def submit_first() -> None:
+        try:
+            host.submit(SubmitRequest(message="first"))
+        except BaseException as exc:
+            failures.append(exc)
+        finally:
+            first_done.set()
+
+    thread = threading.Thread(target=submit_first)
+    thread.start()
+    try:
+        assert first_idle.wait(2), "first run did not reopen admission"
+        successor = host.submit(SubmitRequest(message="successor"))
+        assert successor.kind == "accepted"
+        assert model.entered.wait(2), "successor did not begin execution"
+        running = host.snapshot()
+        assert running.coordinator_state == "running"
+        assert running.active_run is not None
+        assert running.active_run.run_id == successor.run_id
+
+        resume_first.set()
+        assert first_done.wait(2), "first admission did not finish recovery"
+        thread.join(2)
+
+        after_retry = host.snapshot()
+        assert failures == [first_failure]
+        assert after_retry.coordinator_state == "running"
+        assert after_retry.active_run is not None
+        assert after_retry.active_run.run_id == successor.run_id
+        assert host.submit(SubmitRequest(message="third")).kind == "run_in_progress"
+    finally:
+        resume_first.set()
+        release_model.set()
+        thread.join(2)
+        host.close(timeout=0.2)
+
+
+def _fake_admission(
+    conn, *, factory=None, coordinator=None, snapshot_provider=None
+):
     if factory is None:
         factory = ScriptedModelFactory(ScriptedModel(["pong"]))
     if coordinator is None:
@@ -607,10 +1618,168 @@ def _fake_admission(conn, *, factory=None, coordinator=None):
         settings=Settings(),
         redactor=Redactor(()),
         factory=factory,
-        snapshot_provider=SettingsBackedSnapshotProvider(Settings()),
+        snapshot_provider=snapshot_provider
+        or SettingsBackedSnapshotProvider(Settings()),
         database=RecordingStore(conn, threading.Lock()),
         coordinator=coordinator,
     )
+
+
+class _ControlledSnapshotProvider:
+    def __init__(self, *, fail: bool = False, block: bool = False):
+        self._delegate = SettingsBackedSnapshotProvider(Settings())
+        self._fail = fail
+        self._block = block
+        self.entered = threading.Event()
+        self.release = threading.Event()
+        self.calls = 0
+
+    def capture(self, *, stream: bool = False):
+        self.calls += 1
+        self.entered.set()
+        if self._block:
+            self.release.wait()
+        if self._fail:
+            raise RuntimeError("injected capture failure")
+        return self._delegate.capture(stream=stream)
+
+
+def test_known_busy_admission_returns_without_waiting_for_capture() -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    coordinator = _FakeAdmissionCoordinator()
+    coordinator.state = "accepted"
+    provider = _ControlledSnapshotProvider(block=True)
+    admission = _fake_admission(
+        conn, coordinator=coordinator, snapshot_provider=provider
+    )
+    done = threading.Event()
+    outcomes: list = []
+
+    def submit() -> None:
+        outcomes.append(admission.submit(SubmitRequest(message="second")))
+        done.set()
+
+    worker = threading.Thread(target=submit)
+    worker.start()
+    try:
+        assert done.wait(0.5), "known-busy admission waited for configuration"
+        assert outcomes[0].kind == "run_in_progress"
+        assert provider.calls == 0
+    finally:
+        provider.release.set()
+        worker.join(2.0)
+
+
+def test_known_busy_admission_outranks_capture_failure() -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    coordinator = _FakeAdmissionCoordinator()
+    coordinator.state = "running"
+    provider = _ControlledSnapshotProvider(fail=True)
+    admission = _fake_admission(
+        conn, coordinator=coordinator, snapshot_provider=provider
+    )
+
+    result = admission.submit(SubmitRequest(message="second"))
+
+    assert result.kind == "run_in_progress"
+    assert provider.calls == 0
+
+
+def test_recording_failed_admission_outranks_capture_failure() -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    coordinator = _FakeAdmissionCoordinator()
+    coordinator.state = "recording_failed"
+    provider = _ControlledSnapshotProvider(fail=True)
+    admission = _fake_admission(
+        conn, coordinator=coordinator, snapshot_provider=provider
+    )
+
+    result = admission.submit(SubmitRequest(message="second"))
+
+    assert result.kind == "recording_unavailable"
+    assert provider.calls == 0
+
+
+def test_admission_reserves_again_after_capture_closes_the_idle_race() -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    coordinator = _FakeAdmissionCoordinator()
+
+    class _RacingProvider(_ControlledSnapshotProvider):
+        def capture(self, *, stream: bool = False):
+            captured = super().capture(stream=stream)
+            coordinator.state = "running"
+            return captured
+
+    provider = _RacingProvider()
+    admission = _fake_admission(
+        conn, coordinator=coordinator, snapshot_provider=provider
+    )
+
+    result = admission.submit(SubmitRequest(message="loser"))
+
+    assert result.kind == "run_in_progress"
+    assert provider.calls == 1
+    assert coordinator.observe_calls == 1
+    assert conn.execute("SELECT COUNT(*) FROM runs").fetchone() == (0,)
+
+
+def test_run_winning_during_another_capture_is_not_queued() -> None:
+    class _FirstCaptureBlocks:
+        def __init__(self):
+            self._delegate = SettingsBackedSnapshotProvider(Settings())
+            self._lock = threading.Lock()
+            self.calls = 0
+            self.first_entered = threading.Event()
+            self.release_first = threading.Event()
+
+        def capture(self, *, stream: bool = False):
+            with self._lock:
+                self.calls += 1
+                call = self.calls
+            if call == 1:
+                self.first_entered.set()
+                self.release_first.wait()
+            return self._delegate.capture(stream=stream)
+
+    provider = _FirstCaptureBlocks()
+    published: list[WorkItem] = []
+    host, conn, _capture = _host(
+        snapshot_provider=provider,
+        publish_work=published.append,
+    )
+    outcomes: list = []
+    host.start()
+
+    def submit_loser() -> None:
+        outcomes.append(host.submit(SubmitRequest(message="loser")))
+
+    loser = threading.Thread(target=submit_loser)
+    loser.start()
+    try:
+        assert provider.first_entered.wait(2.0)
+        winner = host.submit(SubmitRequest(message="winner"))
+        assert winner.kind == "accepted"
+        provider.release_first.set()
+        loser.join(2.0)
+
+        assert not loser.is_alive()
+        assert len(outcomes) == 1
+        assert outcomes[0].kind == "run_in_progress"
+        assert outcomes[0].snapshot is not None
+        assert outcomes[0].snapshot.active_run is not None
+        assert outcomes[0].snapshot.active_run.run_id == winner.run_id
+        assert provider.calls == 2
+        assert len(published) == 1
+        assert published[0].run_id == winner.run_id
+        assert conn.execute("SELECT COUNT(*) FROM runs").fetchone() == (1,)
+    finally:
+        provider.release_first.set()
+        loser.join(2.0)
+        host.close()
 
 
 def test_admission_submits_through_the_narrow_seams_without_a_host() -> None:
@@ -625,9 +1794,15 @@ def test_admission_submits_through_the_narrow_seams_without_a_host() -> None:
     assert result.run_id is not None
     assert [call[0] for call in coordinator.calls] == [
         "reserve",
-        "mark_accepted",
         "publish",
     ]
+    # The summary reached the coordinator with the reserve, fully formed:
+    # the lease and its busy card are one publication.
+    summary = coordinator.reserved_summaries[result.run_id]
+    assert summary.phase == "accepted"
+    assert summary.prompt_preview == "hello"
+    assert summary.session_id == result.session_id
+    assert result.session_id is not None
     row = conn.execute(
         "SELECT purpose, phase, prompt_preview FROM runs"
     ).fetchone()
@@ -670,7 +1845,13 @@ def test_admission_releases_the_lease_when_the_accepted_write_fails() -> None:
     result = admission.submit(SubmitRequest(message="hello"))
 
     assert result.kind == "admission_failed"
-    assert [call[0] for call in coordinator.calls] == ["reserve", "release"]
+    assert [call[0] for call in coordinator.calls] == [
+        "reserve",
+        "recover_handoff",
+        "release",
+        "discard_result_slot",
+        "complete_handoff",
+    ]
     assert conn.execute("SELECT COUNT(*) FROM runs").fetchone() == (0,)
 
 
@@ -683,14 +1864,16 @@ def test_unstarted_handoff_failure_finalizes_interrupted_through_seams() -> None
 
     result = admission.submit(SubmitRequest(message="hello"))
 
-    assert result.kind == "admission_failed"
+    assert result.kind == "handoff_failed"
     assert result.run_id is not None
     assert [call[0] for call in coordinator.calls] == [
         "reserve",
-        "mark_accepted",
+        "recover_handoff",
         "close_idle",
         "result",
         "notify",
+        "discard_result_slot",
+        "complete_handoff",
     ]
     row = conn.execute(
         "SELECT phase, outcome, started_at FROM runs"
@@ -713,13 +1896,15 @@ def test_unstarted_db_failure_fails_closed_through_seams() -> None:
 
     result = admission.submit(SubmitRequest(message="hello"))
 
-    assert result.kind == "admission_failed"
+    assert result.kind == "handoff_failed"
     assert [call[0] for call in coordinator.calls] == [
         "reserve",
-        "mark_accepted",
+        "recover_handoff",
         "fail_recording",
         "result",
         "notify",
+        "discard_result_slot",
+        "complete_handoff",
     ]
     assert coordinator.state == "recording_failed"
     fail_call = next(
@@ -728,12 +1913,171 @@ def test_unstarted_db_failure_fails_closed_through_seams() -> None:
     assert fail_call[2] == "failed", "the projection carries recording_state=failed"
 
 
+@pytest.mark.parametrize(
+    "control_type", (KeyboardInterrupt, SystemExit, GeneratorExit)
+)
+def test_late_handoff_recovery_control_dominates_earlier_ordinary_failures(
+    control_type, monkeypatch
+) -> None:
+    """Cleanup finishes, but a later process-control keeps its identity."""
+    control = control_type("stop recovery")
+
+    class FailingRecovery(_FakeAdmissionCoordinator):
+        def admission_recover_handoff(self, run_id, *, settle):
+            super().admission_recover_handoff(run_id, settle=settle)
+            raise RuntimeError("ordinary recovery failure")
+
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    coordinator = FailingRecovery()
+    coordinator.fail_publish = True
+    admission = _fake_admission(conn, coordinator=coordinator)
+
+    def interrupt_unstarted(item, *, acceptance_uncertain=False):
+        del acceptance_uncertain
+        coordinator.calls.append(("interrupt_unstarted", item.run_id))
+        raise control
+
+    monkeypatch.setattr(admission, "interrupt_unstarted", interrupt_unstarted)
+
+    with pytest.raises(control_type) as caught:
+        admission.submit(SubmitRequest(message="hello"))
+
+    assert caught.value is control
+    assert [call[0] for call in coordinator.calls] == [
+        "reserve",
+        "recover_handoff",
+        "interrupt_unstarted",
+        "discard_result_slot",
+        "complete_handoff",
+    ]
+
+
+def test_handoff_recovery_attempts_every_cleanup_and_preserves_first_error() -> None:
+    class FailingRecovery(_FakeAdmissionCoordinator):
+        def publish_run_result(self, run_id, result):
+            super().publish_run_result(run_id, result)
+            raise RuntimeError("first result failure")
+
+        def notify_run_done(self, run_id):
+            super().notify_run_done(run_id)
+            raise RuntimeError("later notification failure")
+
+        def admission_discard_result_slot(self, run_id):
+            super().admission_discard_result_slot(run_id)
+            raise RuntimeError("later discard failure")
+
+        def admission_complete_handoff(self, run_id):
+            super().admission_complete_handoff(run_id)
+            raise RuntimeError("later fence failure")
+
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    coordinator = FailingRecovery()
+    coordinator.fail_publish = True
+    admission = _fake_admission(conn, coordinator=coordinator)
+
+    with pytest.raises(RuntimeError, match="first result failure"):
+        admission.submit(SubmitRequest(message="hello"))
+
+    names = [call[0] for call in coordinator.calls]
+    assert names == [
+        "reserve",
+        "recover_handoff",
+        "close_idle",
+        "result",
+        "result",
+        "notify",
+        "notify",
+        "discard_result_slot",
+        "discard_result_slot",
+        "complete_handoff",
+        "complete_handoff",
+    ]
+
+
+@pytest.mark.parametrize("cleanup_type", (RuntimeError, KeyboardInterrupt))
+def test_ordinary_handoff_failure_exhausts_cleanup_before_cleanup_error_escapes(
+    cleanup_type,
+) -> None:
+    cleanup_error = cleanup_type("cleanup failed")
+
+    class FailingCleanup(_FakeAdmissionCoordinator):
+        def admission_discard_result_slot(self, run_id):
+            super().admission_discard_result_slot(run_id)
+            raise cleanup_error
+
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    coordinator = FailingCleanup()
+    coordinator.fail_publish = True
+    admission = _fake_admission(conn, coordinator=coordinator)
+
+    with pytest.raises(cleanup_type) as caught:
+        admission.submit(SubmitRequest(message="hello"))
+
+    assert caught.value is cleanup_error
+    assert [call[0] for call in coordinator.calls][-2:] == [
+        "discard_result_slot",
+        "complete_handoff",
+    ]
+
+
+@pytest.mark.parametrize("state_failure", ("close_idle", "fail_recording"))
+def test_handoff_recovery_publishes_terminal_notice_after_state_failure(
+    state_failure: str,
+) -> None:
+    class FailingState(_FakeAdmissionCoordinator):
+        def admission_close_idle(self, run_id):
+            super().admission_close_idle(run_id)
+            if state_failure == "close_idle":
+                raise RuntimeError("close idle failed first")
+
+        def admission_fail_recording(self, fallback, projection):
+            super().admission_fail_recording(fallback, projection)
+            if state_failure == "fail_recording":
+                raise RuntimeError("fail recording failed first")
+
+    raw = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(raw)
+    database = raw
+    if state_failure == "fail_recording":
+        database = _FailOn(
+            raw,
+            when=lambda sql: sql.lstrip().upper().startswith("UPDATE")
+            and "FINISHED_AT" in sql.upper(),
+        )
+    coordinator = FailingState()
+    coordinator.fail_publish = True
+    admission = _fake_admission(database, coordinator=coordinator)
+
+    with pytest.raises(RuntimeError, match="failed first"):
+        admission.submit(SubmitRequest(message="hello"))
+
+    names = [call[0] for call in coordinator.calls]
+    state_call = "close_idle" if state_failure == "close_idle" else "fail_recording"
+    assert names == [
+        "reserve",
+        "recover_handoff",
+        state_call,
+        state_call,
+        "result",
+        "notify",
+        "discard_result_slot",
+        "complete_handoff",
+    ]
+
+
 class _FakeExecutionCoordinator:
     def __init__(self):
         self.marked: list[str] = []
+        self.stopping = False
 
     def execution_mark_running(self, started_at: str):
         self.marked.append(started_at)
+
+    def execution_mark_stopping(self) -> None:
+        self.stopping = True
 
 
 class _FakeAssistant:
@@ -876,14 +2220,13 @@ def test_run_recorder_only_uses_narrow_seams() -> None:
 
 
 def test_unrecorded_projection_survives_every_rejection() -> None:
-    hold = threading.Event()
+    hold = EnteredEvent()
     host, _conn, _capture = _host(["pong"], before_recording_commit=hold)
     host.start()
     try:
         first = host.submit(SubmitRequest(message="one"))
-        _wait_until(
-            lambda: host.snapshot().coordinator_state == "recording_pending"
-        )
+        assert hold.entered.wait(2.0), "recording gate was not reached"
+        assert host.snapshot().coordinator_state == "recording_pending"
         for _ in range(3):
             rejected = host.submit(SubmitRequest(message="busy"))
             assert rejected.kind == "run_in_progress"
@@ -963,13 +2306,20 @@ class _FailOn:
         return getattr(self._inner, name)
 
 
-def _wait_until(predicate, timeout: float = 2.0) -> None:
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        if predicate():
-            return
-        time.sleep(0.01)
-    raise AssertionError("condition not met before timeout")
+class _FailFinalizeAndRollback(_FailOn):
+    """Poison the Store and publish exactly when rollback was attempted."""
+
+    def __init__(self, inner: sqlite3.Connection, rollback_attempted: threading.Event):
+        super().__init__(
+            inner,
+            when=lambda sql: sql.lstrip().upper().startswith("UPDATE")
+            and "finished_at" in sql,
+        )
+        self._rollback_attempted = rollback_attempted
+
+    def rollback(self):
+        self._rollback_attempted.set()
+        raise sqlite3.OperationalError("injected rollback failure")
 
 
 def test_recording_failed_snapshot_is_authoritative_before_503() -> None:
@@ -1007,14 +2357,13 @@ def test_recording_failed_snapshot_is_authoritative_before_503() -> None:
 
 
 def test_pending_to_recorded_has_no_idle_unrecorded_window() -> None:
-    after_recorded = threading.Event()
+    after_recorded = EnteredEvent()
     host, _conn, _ = _host(["pong"], after_recorded_snapshot=after_recorded)
     host.start()
     try:
         first = host.submit(SubmitRequest(message="one"))
-        _wait_until(
-            lambda: host.snapshot().active_run is not None
-            and host.snapshot().active_run.recording_state == "recorded"
+        assert after_recorded.entered.wait(2.0), (
+            "recorded snapshot gate was not reached"
         )
         snap = host.snapshot()
         assert snap.coordinator_state == "recording_pending"
@@ -1044,57 +2393,80 @@ def test_pending_to_failed_never_returns_503_with_pending_snapshot() -> None:
         when=lambda sql: sql.lstrip().upper().startswith("UPDATE")
         and "finished_at" in sql,
     )
-    before_failed = threading.Event()
+    before_failed = EnteredEvent()
     host, _conn, _ = _host(
         ["pong"], conn=wrapped, before_recording_failed=before_failed
     )
-    seen: list[tuple[str, str | None, str | None]] = []
-    stop = threading.Event()
-
-    def hammer() -> None:
-        while not stop.is_set():
-            result = host.submit(SubmitRequest(message="x"))
-            snap = result.snapshot or host.snapshot()
-            active = (
-                None
-                if snap.active_run is None
-                else snap.active_run.recording_state
-            )
-            proj = snap.unrecorded_terminal_projection
-            proj_state = None if proj is None else proj.recording_state
-            seen.append((result.kind, active, proj_state))
-            if result.kind == "recording_unavailable":
-                assert snap.coordinator_state == "recording_failed"
-                assert active == "failed"
-                assert proj_state == "failed"
-            time.sleep(0.005)
-
     host.start()
     try:
         first = host.submit(SubmitRequest(message="one"))
-        _wait_until(
-            lambda: host.snapshot().coordinator_state == "recording_pending"
+        assert before_failed.entered.wait(2.0), (
+            "recording-failed publication gate was not reached"
         )
-        worker = threading.Thread(target=hammer)
-        worker.start()
-        time.sleep(0.05)
+        pending = host.submit(SubmitRequest(message="while-pending"))
+        assert pending.kind == "run_in_progress"
+        assert pending.snapshot is not None
+        assert pending.snapshot.coordinator_state == "recording_pending"
         before_failed.set()
         host.wait(first.run_id)
-        time.sleep(0.05)
-        stop.set()
-        worker.join(timeout=2)
-        for kind, active, proj_state in seen:
-            if kind == "recording_unavailable":
-                assert active == "failed"
-                assert proj_state == "failed"
-            if kind == "accepted":
-                raise AssertionError("a second Run was admitted during recording")
+        failed = host.submit(SubmitRequest(message="after-failed"))
+        assert failed.kind == "recording_unavailable"
+        assert failed.snapshot is not None
+        assert failed.snapshot.coordinator_state == "recording_failed"
+        assert failed.snapshot.active_run is not None
+        assert failed.snapshot.active_run.recording_state == "failed"
+        assert failed.snapshot.unrecorded_terminal_projection is not None
+        assert (
+            failed.snapshot.unrecorded_terminal_projection.recording_state
+            == "failed"
+        )
         snap = host.snapshot()
         assert snap.coordinator_state == "recording_failed"
         assert snap.active_run is not None
         assert snap.active_run.recording_state == "failed"
     finally:
-        stop.set()
+        before_failed.set()
+        host.close()
+
+
+def test_poisoned_store_remains_409_until_recording_failed_is_published() -> None:
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    rollback_attempted = threading.Event()
+    before_failed = threading.Event()
+    wrapped = _FailFinalizeAndRollback(conn, rollback_attempted)
+    host, _conn, _ = _host(
+        ["pong"], conn=wrapped, before_recording_failed=before_failed
+    )
+    host.start()
+    try:
+        first = host.submit(SubmitRequest(message="one"))
+        assert first.kind == "accepted"
+        assert rollback_attempted.wait(timeout=2), "rollback was not attempted"
+
+        pending = host.snapshot()
+        assert pending.coordinator_state == "recording_pending"
+        assert pending.active_run is not None
+        assert pending.active_run.recording_state == "pending"
+        assert host._store.available is False
+
+        second = host.submit(SubmitRequest(message="two"))
+        assert second.kind == "run_in_progress"
+        assert second.snapshot is not None
+        assert second.snapshot.coordinator_state == "recording_pending"
+
+        created = DashboardApi(facade=host).create_session()
+        assert created.status == 409
+        assert created.code == "mutation_in_flight"
+        assert created.session_id is None
+
+        before_failed.set()
+        host.wait(first.run_id)
+        failed = host.submit(SubmitRequest(message="three"))
+        assert failed.kind == "recording_unavailable"
+        assert failed.snapshot is not None
+        assert failed.snapshot.coordinator_state == "recording_failed"
+    finally:
         before_failed.set()
         host.close()
 
@@ -1187,6 +2559,144 @@ def test_run_telemetry_aggregates_every_usage_field() -> None:
         assert log_tel == [(None,), (None,)]
     finally:
         host.close()
+
+
+@pytest.mark.parametrize("interrupt", [False, True], ids=["control", "return-edge"])
+def test_recorded_run_keeps_attempts_after_telemetry_return_interrupt(
+    interrupt: bool,
+) -> None:
+    """A lost serializer return cannot turn a known Attempt into an empty ledger."""
+    from contextlib import nullcontext
+
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_py_return_once,
+    )
+    from agent_alfred.messages import TextBlock
+    from agent_alfred.model import (
+        AttemptRecord,
+        ModelRef,
+        ModelResponse,
+        ModelResult,
+        Usage,
+    )
+    from agent_alfred.runtime.telemetry import serialize_run_telemetry
+
+    model_result = ModelResult(
+        attempts=(
+            AttemptRecord(
+                attempt_id="att-recorded",
+                streamed=False,
+                outcome="committed",
+                usage=Usage(total_input_tokens=11, output_tokens=7),
+            ),
+        ),
+        response=ModelResponse(
+            blocks=(TextBlock("pong"),),
+            stop_reason="end_turn",
+            model=ModelRef(endpoint_id="ep", model_id="m"),
+        ),
+        final_error=None,
+    )
+    host, conn, _ = _host([model_result])
+    boundary = (
+        interrupt_py_return_once(
+            "telemetry-return-ledger-test",
+            serialize_run_telemetry.__code__,
+            KeyboardInterrupt("telemetry return interrupted"),
+        )
+        if interrupt else nullcontext([False])
+    )
+    host.start()
+    try:
+        with boundary as armed:
+            submitted = host.submit(SubmitRequest(message="hello"))
+            assert submitted.kind == "accepted"
+            assert submitted.run_id is not None
+            result = host.wait(submitted.run_id, timeout=2)
+            assert not armed[0], "the serializer return injection was not reached"
+
+        assert result.outcome == "completed"
+        assert result.model_results == (model_result,)
+        row = conn.execute(
+            "SELECT phase, telemetry FROM runs WHERE run_id = ?",
+            (submitted.run_id,),
+        ).fetchone()
+        assert row is not None
+        assert row[0] == "finished"
+        attempts = json.loads(row[1])["attempts"]
+        recorded_usage = [
+            (
+                attempt["attempt_id"],
+                attempt["usage"]["total_input_tokens"],
+                attempt["usage"]["output_tokens"],
+            )
+            for attempt in attempts
+        ]
+        assert recorded_usage == [("att-recorded", 11, 7)], (
+            "a recorded Run omitted its known Attempt usage"
+        )
+    finally:
+        host.close(timeout=2)
+        conn.close()
+
+
+@pytest.mark.parametrize(
+    "failure_type", (RuntimeError, KeyboardInterrupt, SystemExit, GeneratorExit)
+)
+def test_unserializable_telemetry_keeps_the_reply_unrecorded(failure_type) -> None:
+    """Repeated serializer failures cannot commit a reply with missing accounts."""
+    from agent_alfred.runtime.telemetry import serialize_run_telemetry
+
+    code = serialize_run_telemetry.__code__
+    injected = threading.Event()
+
+    def interrupt(actual_code, offset, result):
+        del offset, result
+        if actual_code is code:
+            injected.set()
+            raise failure_type("telemetry return interrupted")
+
+    host, conn, _ = _host(["pong"])
+    host.start()
+    try:
+        with claimed_monitoring_tool(
+            "telemetry-recording-failure-test", local_codes=(code,)
+        ) as tool_id:
+            sys.monitoring.register_callback(
+                tool_id, sys.monitoring.events.PY_RETURN, interrupt
+            )
+            sys.monitoring.set_local_events(
+                tool_id, code, sys.monitoring.events.PY_RETURN
+            )
+            submitted = host.submit(SubmitRequest(message="hello"))
+            assert submitted.kind == "accepted"
+            assert submitted.run_id is not None
+            result = host.wait(submitted.run_id, timeout=2)
+            assert injected.is_set(), "the serializer injection was not reached"
+
+        assert result.outcome == "completed"
+        assert len(result.model_results[0].attempts) == 1
+        snapshot = host.snapshot()
+        assert snapshot.coordinator_state == "recording_failed"
+        projection = snapshot.unrecorded_terminal_projection
+        assert projection is not None
+        assert projection.run_id == submitted.run_id
+        assert projection.recording_state == "failed"
+        assert projection.reply_text == "pong"
+        assert conn.execute(
+            "SELECT phase, telemetry FROM runs WHERE run_id = ?",
+            (submitted.run_id,),
+        ).fetchone() == ("running", None)
+        assert conn.execute(
+            "SELECT COUNT(*) FROM agent_log WHERE run_id = ?",
+            (submitted.run_id,),
+        ).fetchone() == (0,)
+        assert host.submit(SubmitRequest(message="next")).kind == (
+            "recording_unavailable"
+        )
+    finally:
+        host.close(timeout=2)
+        conn.close()
 
 
 def test_events_none_and_inference_probe_still_record_usage() -> None:

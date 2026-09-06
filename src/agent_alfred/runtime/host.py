@@ -2,42 +2,63 @@
 
 from __future__ import annotations
 
-import queue
 import sqlite3
 import threading
 import time
 import uuid
+from collections import deque
 from collections.abc import Callable
 from dataclasses import replace
 
 from agent_alfred import schema
 from agent_alfred.clock import Clock, format_instant
-from agent_alfred.events import FanOutSink
+from agent_alfred.events import (
+    EventEnvelope,
+    FanOutSink,
+    Notice,
+    SequencedEvent,
+    StepStarted,
+)
 from agent_alfred.loop.assistant import Assistant, LoopResult
+from agent_alfred.managed_state import ManagedStateLease
 from agent_alfred.model import ModelClientFactory
 from agent_alfred.redact import Redactor
+from agent_alfred.resource_rollback import (
+    ResumableRollback,
+    thread_exit_confirmed,
+    thread_start_effect_happened,
+)
+from agent_alfred.runtime import replies, runs
 from agent_alfred.runtime import sessions as session_store
-from agent_alfred.runtime.admission import RunAdmission
+from agent_alfred.runtime.admission import AdmissionCleanupOwner, RunAdmission
 from agent_alfred.runtime.config import (
     ConfigSnapshotProvider,
     SettingsBackedSnapshotProvider,
 )
 from agent_alfred.runtime.execution import RunExecutor
-from agent_alfred.runtime.recording import RecordingStore, RunRecorder
+from agent_alfred.runtime.recording import (
+    RecordingStore,
+    RecordingUnavailable,
+    RunRecorder,
+)
 from agent_alfred.runtime.snapshot import (
     ActiveRunSummary,
     CoordinatorState,
     RunStateStore,
     RuntimeSnapshot,
     UnrecordedTerminalProjection,
+    is_unaddressable_unstarted_handoff_failure,
 )
 from agent_alfred.runtime.work import (
+    AdmissionObservationKind,
+    AdmissionRefusalKind,
     ReserveKind,
     SubmitKind,
     SubmitRequest,
     SubmitResult,
     WorkItem,
 )
+from agent_alfred.session_validity import SessionValidity
 from agent_alfred.settings import Settings
 
 __all__ = [
@@ -55,6 +76,171 @@ __all__ = [
 _WORKER_JOIN_TIMEOUT_S = 5.0
 
 
+class _HandoffCell:
+    """One queued handoff whose publication decision survives interruption."""
+
+    def __init__(self, run_id: str, store: RecordingStore) -> None:
+        self.run_id = run_id
+        self._store = store
+        self._lock = threading.Lock()
+        self._ready = threading.Event()
+        self._state = "pending"
+        self._item: WorkItem | None = None
+
+    def publish(self, item: WorkItem) -> None:
+        with self._lock:
+            if self._state != "pending":
+                raise RuntimeError(f"handoff {self.run_id!r} is not pending")
+            self._item = item
+            # The queue already owns this cell, but receive() cannot expose
+            # its work yet. This commit is the logical handoff decision; a
+            # lost return is reconciled from SQLite before any cancellation.
+            with self._store.transaction() as conn:
+                updated = conn.execute(
+                    """UPDATE runs SET admission_state = 'admitted'
+                       WHERE run_id = ? AND admission_state = 'pending'
+                         AND phase = 'accepted'""",
+                    (self.run_id,),
+                ).rowcount
+                if updated != 1:
+                    raise RuntimeError("handoff has no pending accepted Run")
+                conn.commit()
+            self._state = "published"
+            self._ready.set()
+
+    def recover(self, settle: Callable[[bool], None]) -> None:
+        """Resolve an interrupted publisher into a caller-reachable slot."""
+        with self._lock:
+            if self._state == "pending" and self._item is not None:
+                with self._store.reading() as conn:
+                    row = conn.execute(
+                        "SELECT admission_state FROM runs WHERE run_id = ?",
+                        (self.run_id,),
+                    ).fetchone()
+                if row == ("admitted",):
+                    self._state = "published"
+            published = self._state == "published"
+            if not published:
+                self._state = "cancelled"
+                self._item = None
+            # ``publish`` may have changed the state before an asynchronous
+            # exception skipped Event.set(). Recovery completes that step.
+            self._ready.set()
+            settle(published)
+
+    def receive(self) -> WorkItem | None:
+        self._ready.wait()
+        with self._lock:
+            return self._item if self._state == "published" else None
+
+
+class _HandoffQueue:
+    """Queue a cell first, then expose its item only after logical publish.
+
+    If an asynchronous exception lands after ``Queue.put`` has physically
+    inserted the cell, recovery resolves that same cell as cancelled and the
+    worker skips it. If logical publication already happened, recovery sees
+    the monotonic decision and leaves execution as the sole owner.
+    """
+
+    def __init__(self, store: RecordingStore) -> None:
+        self._store = store
+        self._queued: deque[_HandoffCell | WorkItem] = deque()
+        self._not_empty = threading.Condition()
+        self._cells_lock = threading.Lock()
+        self._cells: dict[str, _HandoffCell] = {}
+        # Stop is a monotonic queue fact, not an ordinary item. That makes a
+        # retry after an interrupted request idempotent while still letting
+        # get() drain every handoff already ahead of shutdown.
+        self._stop_requested = False
+
+    def reserve(self, run_id: str) -> None:
+        with self._cells_lock:
+            if run_id in self._cells:
+                raise RuntimeError(f"handoff {run_id!r} is already reserved")
+            self._cells[run_id] = _HandoffCell(run_id, self._store)
+
+    def publish(self, item: WorkItem, *, enqueue: bool) -> None:
+        with self._cells_lock:
+            cell = self._cells.get(item.run_id)
+        if cell is None:
+            raise RuntimeError(f"handoff {item.run_id!r} is not reserved")
+        if enqueue:
+            # The cell, not the WorkItem, enters the queue. A BaseException
+            # after this call therefore leaves a resolvable pending cell.
+            self.put_nowait(cell)
+        cell.publish(item)
+
+    def put_nowait(self, item: _HandoffCell | WorkItem) -> None:
+        """Append one item and wake the worker without Queue inheritance."""
+        if isinstance(item, WorkItem):
+            with self._cells_lock:
+                cell = self._cells.get(item.run_id)
+            if cell is None:
+                raise RuntimeError("work has no reserved handoff")
+            item = cell
+        with self._not_empty:
+            self._queued.append(item)
+            self._not_empty.notify()
+
+    def qsize(self) -> int:
+        """Return the current physical handoff count for diagnostics."""
+        with self._not_empty:
+            return len(self._queued)
+
+    def empty(self) -> bool:
+        """Return whether no physical handoff is currently queued."""
+        with self._not_empty:
+            return not self._queued
+
+    def recover(
+        self,
+        run_id: str,
+        *,
+        settle: Callable[[bool | None], None] | None = None,
+    ) -> None:
+        """Cancel pending work and optionally publish its monotonic owner."""
+        with self._cells_lock:
+            cell = self._cells.get(run_id)
+        if cell is None:
+            if settle is not None:
+                settle(None)
+            return
+        cell.recover(settle or (lambda _published: None))
+        # If publication was interrupted after enqueue but before its wakeup,
+        # recovery also completes that physical notification.
+        with self._not_empty:
+            self._not_empty.notify_all()
+
+    def retire(self, run_id: str) -> None:
+        with self._cells_lock:
+            self._cells.pop(run_id, None)
+
+    def request_stop(self) -> bool:
+        """Publish one idempotent stop fact and wake an empty-queue waiter."""
+        with self._not_empty:
+            if self._stop_requested:
+                # An earlier call may have been interrupted after publishing
+                # the fact but before its notification reached a waiter.
+                self._not_empty.notify_all()
+                return False
+            self._stop_requested = True
+            self._not_empty.notify_all()
+            return True
+
+    def get(self) -> WorkItem | None:
+        while True:
+            with self._not_empty:
+                while not self._queued:
+                    if self._stop_requested:
+                        return None
+                    self._not_empty.wait()
+                queued = self._queued.popleft()
+            item = queued.receive()
+            if item is not None:
+                return item
+
+
 class RuntimeHost:
     """Process-unique owner of seq, the write connection, and admission.
 
@@ -66,9 +252,11 @@ class RuntimeHost:
     - recorder: ``recording_enter_pending`` / ``recording_enter_failed`` /
       ``recording_publish_recorded_then_release`` / ``publish_run_result`` /
       ``notify_run_done`` plus a :class:`RecordingStore`;
-    - admission: ``admission_reserve`` / ``admission_mark_accepted`` /
+    - admission: ``admission_observe`` (side-effect-free preflight) /
+      ``admission_reserve`` (lease and busy card together) /
       ``admission_release`` / ``admission_close_idle`` /
-      ``admission_fail_recording`` / ``publish_work_item``;
+      ``admission_fail_recording`` / ``admission_discard_result_slot`` /
+      ``admission_publish_handoff``;
     - execution: ``execution_mark_running``.
 
     Each method below owns one state-machine invariant (authority before
@@ -92,6 +280,7 @@ class RuntimeHost:
         after_recorded_snapshot: threading.Event | None = None,
         before_recording_failed: threading.Event | None = None,
         snapshot_provider: ConfigSnapshotProvider | None = None,
+        snapshot_listener: Callable[[RuntimeSnapshot], None] | None = None,
     ):
         self._conn = conn
         self._factory = factory
@@ -102,8 +291,9 @@ class RuntimeHost:
         self._redactor = redactor or Redactor(secrets)
         self._fanout.bind_redactor(self._redactor)
         self._assistant = Assistant(clock=clock, settings=settings)
-        self._states = RunStateStore(process_instance_id)
+        self._states = RunStateStore(process_instance_id, listener=snapshot_listener)
         self._lock = threading.Lock()
+        self._fanout.bind_projection_boundary(self._lock)
         # Admission, execution and recording decisions move under self._lock.
         # The lifecycle below moves under its own lock, and the two are only
         # ever taken in this order (never the reverse), because a lifecycle
@@ -111,22 +301,38 @@ class RuntimeHost:
         # decision may wait on a lifecycle transition that waits for a Run.
         self._lifecycle = threading.Lock()
         # Signalled when the last Run admitted before close() began has
-        # reached the work queue -- or been given up on. Shares _lock: the
-        # handoff is an admission fact, and close() has to wait on it.
+        # reached the work queue -- or been given up on -- and whenever an
+        # ordinary mutation finishes. Both are admission facts under _lock
+        # that must settle before close() can release shared resources.
         self._handoff = threading.Condition(self._lock)
         self._pending_handoff: set[str] = set()
+        self._admission_cleanups: dict[str, AdmissionCleanupOwner] = {}
         self._db_lock = threading.Lock()
+        # A write from a door that is not ``submit`` -- a Session creation
+        # today, memory or settings tomorrow. It shares ``_lock`` with every
+        # admission decision, so "is a mutation in flight" and "is the lease
+        # held" are one question with one answer rather than two flags that
+        # can disagree for a moment.
+        self._mutating = False
         self._coord: CoordinatorState = "idle"
         self._active_summary: ActiveRunSummary | None = None
-        self._queue: queue.Queue[WorkItem | None] = queue.Queue()
+        self._store = RecordingStore(conn, self._db_lock)
+        self._queue = _HandoffQueue(self._store)
         self._done: dict[str, threading.Event] = {}
         self._results: dict[str, LoopResult] = {}
         self._started = False
+        self._worker_started: bool | None = False
         self._start_error: BaseException | None = None
+        # Monotonic once execution has received process control. It moves
+        # under the admission lock before recording can release the Run's
+        # lease, closing the otherwise-idle window before run_loop records
+        # the worker's terminal exception.
+        self._executor_stopping = False
         self._closing = False
         self._closed = False
         self._stop_sent = False
         self._fanout_closed = False
+        self._owned_resources: ResumableRollback | None = None
         self._publish_work = publish_work
         self._before_recording_commit = before_recording_commit
         self._after_recorded_snapshot = after_recorded_snapshot
@@ -134,7 +340,6 @@ class RuntimeHost:
         self._snapshot_provider = snapshot_provider or SettingsBackedSnapshotProvider(
             settings
         )
-        self._store = RecordingStore(conn, self._db_lock)
         self._recorder = RunRecorder(
             clock=clock,
             fanout=fanout,
@@ -192,7 +397,8 @@ class RuntimeHost:
         return self._start_error
 
     def snapshot(self) -> RuntimeSnapshot:
-        return self._states.get()
+        with self._lock:
+            return self._states.get()
 
     def start(self) -> None:
         """Bring the Host up exactly once.
@@ -227,16 +433,35 @@ class RuntimeHost:
                 ) from self._start_error
             try:
                 self.recover()
-                self._worker.start()
+                try:
+                    # Publish the unresolved concrete identity before start.
+                    # No close caller can observe it while _lifecycle is held;
+                    # either this frame or a later close resolves the same
+                    # native-handle fact before deciding whether to join it.
+                    self._worker_started = None
+                    self._worker.start()
+                except BaseException as failure:
+                    # The retained Thread's native handle distinguishes no
+                    # effect from CPython's handle-created/_started-unset
+                    # window. A real worker remains close-owned through both.
+                    try:
+                        started = thread_start_effect_happened(self._worker)
+                    except BaseException:
+                        # Keep the tri-state unresolved for close() to retry;
+                        # the recovery probe must not replace start's failure.
+                        raise failure
+                    self._worker_started = started
+                    raise failure
+                self._worker_started = True
+                self._started = True
             except BaseException as exc:  # noqa: BLE001 - recorded, then raised
                 # Honest state: a Host whose recovery or worker failed is
                 # not started, and it must never be mistaken for one.
                 self._start_error = exc
                 raise
-            self._started = True
 
     def close(self, timeout: float | None = None) -> bool:
-        """Stop taking work, let the worker finish, then release the sinks.
+        """Stop admission, finish mutations and the worker, then release sinks.
 
         Returns True only when the Host is fully closed.
 
@@ -246,7 +471,7 @@ class RuntimeHost:
         the ground out from under a Run that was still being recorded. The
         order here is the other way round -- refuse new work, let the
         in-flight Run finish, wait for the worker to actually stop, and only
-        then close the sinks, once.
+        then close the sinks to completion.
 
         A bounded wait that expires returns False and closes nothing: an
         honest "not yet closed" beats a FanOut pulled out from under a live
@@ -255,46 +480,121 @@ class RuntimeHost:
         deadline = time.monotonic() + (
             _WORKER_JOIN_TIMEOUT_S if timeout is None else timeout
         )
-        with self._lifecycle:
-            started = self._started
+        with self._lock, self._lifecycle:
+            # The same lock decides ordinary mutation admission. Once this
+            # fence lands, every prior mutation is either still counted by
+            # _mutating or has already finished; no later one can enter.
             self._closing = True
+            if self._worker_started is None:
+                self._worker_started = thread_start_effect_happened(
+                    self._worker
+                )
+            worker_started = self._worker_started
         # 1. Let every Run already admitted reach the queue. Admission is
         #    closed from here on, so this drains to zero -- and the stop
-        #    sentinel is only posted afterwards, which is what keeps an
-        #    accepted Run from being enqueued behind a sentinel nobody will
-        #    read. The flag is raised under _lifecycle and the drain observed
+        #    stop fact is only published afterwards, which is what keeps an
+        #    accepted Run from arriving after the worker has stopped. The
+        #    flag is raised under _lifecycle and the drain observed
         #    under _lock; admission_reserve holds _lock across the same pair,
-        #    so no Run can slip in between the two.
-        if not self._await_handoffs(deadline):
+        #    so no Run can slip in between the two. Ordinary mutations must
+        #    also finish before their database or other shared resources close.
+        if not self._await_handoffs_and_mutations(deadline):
             return False
         with self._lifecycle:
             if not self._stop_sent:
+                # The queue owns the monotonic stop effect. If this call is
+                # interrupted before the effect, retry publishes it; if it is
+                # interrupted afterwards, retry only re-notifies. The Host's
+                # completion bit therefore moves only after a definite return
+                # without risking duplicate physical sentinels.
+                self._queue.request_stop()
                 self._stop_sent = True
-                self._queue.put(None)
         # 2. Wait for the worker. Nothing downstream is torn down before it
         #    stops. It stays a daemon thread so a wedged model call cannot
         #    hold the interpreter open, but close() says so rather than
         #    letting the exit hide an unfinished finalizer.
-        if started:
-            self._worker.join(max(0.0, deadline - time.monotonic()))
-            if self._worker.is_alive():
+        if worker_started:
+            if not thread_exit_confirmed(
+                self._worker,
+                max(0.0, deadline - time.monotonic()),
+            ):
                 return False
+        # Settlement callbacks are owned by the recorder beyond the worker
+        # frame. They must finish before FanOut or the database can close, and
+        # before close() claims success for waiters that still need a result.
+        if not self._recorder.retry_pending_settlements():
+            return False
         with self._lifecycle:
             if not self._fanout_closed:
+                # The bit moves only behind a confirmed FanOut close. A sink
+                # that reports False is still draining; a sink that raises
+                # propagates that exception. Either way, the next close()
+                # asks the unfinished sink again. Setting the bit first would
+                # make that retry skip the FanOut entirely -- a Host reported
+                # closed with a sink nobody ever closed.
+                if not self._fanout.close(
+                    timeout=max(0.0, deadline - time.monotonic())
+                ):
+                    return False
                 self._fanout_closed = True
-                self._fanout.close()
+            if self._owned_resources is not None:
+                self._owned_resources.close()
             self._closed = True
         return True
 
-    def _await_handoffs(self, deadline: float) -> bool:
-        """Wait until no Run admitted before close() is still unpublished."""
-        with self._handoff:
-            while self._pending_handoff:
+    def attach_owned_resources(
+        self,
+        conn: sqlite3.Connection,
+        state: ManagedStateLease,
+        *,
+        source: ResumableRollback,
+    ) -> None:
+        """Transfer standalone resources from construction before start."""
+        with self._lifecycle:
+            if self._started or self._closing or self._owned_resources is not None:
+                raise RuntimeError(
+                    "owned resources must be attached exactly once before start"
+                )
+            owner = ResumableRollback()
+            self._owned_resources = owner
+            source.transfer_many_to(owner, (state, conn))
+
+    def _await_handoffs_and_mutations(self, deadline: float) -> bool:
+        """Finish pending Run handoffs and ordinary writes before teardown."""
+        while True:
+            if not self._retry_admission_cleanups():
+                return False
+            with self._handoff:
+                if not self._pending_handoff and not self._mutating:
+                    return True
+                # A cleanup owner may have arrived after the snapshot above.
+                # Retry it instead of sleeping through its notification.
+                if self._admission_cleanups:
+                    continue
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     return False
                 self._handoff.wait(remaining)
-        return True
+
+    def _retry_admission_cleanups(self) -> bool:
+        """Resume every abandoned submit whose owner reached this Host."""
+        with self._handoff:
+            cleanups = tuple(self._admission_cleanups.items())
+        complete = True
+        process_control: BaseException | None = None
+        for run_id, owner in cleanups:
+            owner_complete, error = owner.retry_all()
+            if error is not None and process_control is None and isinstance(
+                error, (KeyboardInterrupt, SystemExit, GeneratorExit)
+            ):
+                process_control = error
+            if owner_complete:
+                self.admission_retire_cleanup(run_id, owner)
+            else:
+                complete = False
+        if process_control is not None:
+            raise process_control
+        return complete
 
     def recover(self) -> None:
         self._recorder.recover()
@@ -302,220 +602,550 @@ class RuntimeHost:
     def create_session(self) -> str:
         session_id = uuid.uuid4().hex
         now = format_instant(self._clock.wall_utc())
-        with self._db_lock:
-            schema.insert_session(
-                self._conn, session_id=session_id, created_at=now
-            )
-            self._conn.commit()
+        with self._store.transaction() as conn:
+            schema.insert_session(conn, session_id=session_id, created_at=now)
+            conn.commit()
         return session_id
+
+    # -- the mutation gate's authority -------------------------------------
+    #
+    # These three are the whole interface the entry-side write gate needs,
+    # and they are deliberately not a lock object handed out to callers: the
+    # judgement has to be this Host's, taken under the same lock that
+    # decides admission, because a lease spans the whole Run while a plain
+    # write spans one call. A short lock around the call would answer "free"
+    # for the entire window in which a Run is still holding the lease.
+
+    def try_begin_mutation(self) -> str | None:
+        """Reserve the one mutation slot, or say why not. Never waits.
+
+        Returns ``None`` when the write may begin, and otherwise the reason
+        in the coordinator's own vocabulary, so the caller can say
+        something true rather than guessing from "no":
+
+        - ``recording_unavailable`` -- admission is *closed*, not busy.
+          After a recording failure nothing will be admitted until the
+          process restarts (ADR-0026), so calling that "busy" would send
+          the client back to try again in a moment.
+        - ``mutation_in_flight`` -- the gate is merely held: a Run has the
+          lease (``accepted``, ``running`` and ``recording_pending`` all
+          still hold it) or another write is inside it.
+        - ``admission_failed`` -- Host shutdown permanently closed the gate.
+        """
+        with self._lock:
+            if self._closing:
+                return "admission_failed"
+            if self._coord == "recording_failed":
+                return "recording_unavailable"
+            if self._mutating or self._coord != "idle":
+                return "mutation_in_flight"
+            if not self._store.available:
+                return "recording_unavailable"
+            self._mutating = True
+            return None
+
+    def end_mutation(self) -> None:
+        with self._handoff:
+            self._mutating = False
+            self._handoff.notify_all()
+
+    def mutation_in_flight(self) -> bool:
+        """Whether a write from another door is inside the gate right now."""
+        with self._lock:
+            return self._mutating
 
     # -- admission lease transitions (the only writer of these states) -----
 
-    def admission_reserve(self, run_id: str) -> tuple[ReserveKind, RuntimeSnapshot]:
-        """Atomically decide 409/503/reserve. The lease, once reserved, holds
-        until the recording settles: a second submit during recording_pending
-        gets ``run_in_progress``; a recording-failed coordinator answers
-        ``recording_unavailable``."""
+    def admission_observe(
+        self,
+    ) -> tuple[AdmissionObservationKind, RuntimeSnapshot]:
+        """Read the current admission result and its snapshot atomically.
+
+        This preflight never takes a lease. It only avoids doing configuration
+        I/O when the coordinator can already give an authoritative refusal;
+        an idle caller must still return through :meth:`admission_reserve`.
+        """
+        with self._lock:
+            snapshot = self._states.get()
+            refusal = self._admission_refusal_locked()
+            if refusal is not None:
+                return refusal, snapshot
+            return "admissible", snapshot
+
+    def _admission_refusal_locked(self) -> AdmissionRefusalKind | None:
+        """Return the current refusal while the caller holds ``_lock``."""
+        # A process-control exception is announced while its Run still owns
+        # the lease. Preserve that Run's ordinary 409 recording-pending
+        # contract; the announcement becomes the terminal refusal exactly
+        # when recording releases the coordinator to idle.
+        if self._executor_stopping and self._coord == "idle":
+            return "admission_failed"
+        if self._executor.stopped_by is not None:
+            return "admission_failed"
+        with self._lifecycle:
+            unstartable = self._start_error is not None or self._closing or self._closed
+        if unstartable:
+            return "admission_failed"
+        if self._coord == "recording_failed":
+            return "recording_unavailable"
+        if self._coord != "idle":
+            return "run_in_progress"
+        if not self._store.available:
+            return "recording_unavailable"
+        if self._mutating:
+            return "mutation_in_flight"
+        return None
+
+    def admission_reserve(
+        self,
+        run_id: str,
+        summary: ActiveRunSummary,
+        *,
+        wait_for_result: bool,
+    ) -> tuple[ReserveKind, RuntimeSnapshot]:
+        """Atomically decide 409/503/reserve -- and, on reserve, publish
+        the busy card in the same critical section.
+
+        The lease, once reserved, holds until the recording settles: a
+        second submit during recording_pending gets ``run_in_progress``; a
+        recording-failed coordinator answers ``recording_unavailable``.
+
+        ``summary`` is published with the lease or not at all. Reserving
+        here and publishing the card later would leave a window in which a
+        second submit is refused against a snapshot that still says "idle"
+        -- a 409 whose body claims nothing is running, from a coordinator
+        that is in fact busy. Every failure after the reserve takes both
+        back through :meth:`admission_release` or
+        :meth:`admission_close_idle`, so the card can never outlive the
+        lease it was published with."""
         # _lock is held across the _lifecycle read below on purpose. close()
         # raises its flag under _lifecycle and then waits for the pending set
         # under _lock, so holding _lock here is what makes the two orderings
         # safe: either this reserve sees the flag and refuses, or it lands
         # its Run in the pending set before close() can observe that set and
-        # post the stop sentinel. Lock order is _lock -> _lifecycle, never the
+        # publish the stop fact. Lock order is _lock -> _lifecycle, never the
         # reverse; no path takes _lifecycle and then _lock.
         with self._lock:
             snap = self._states.get()
-            if self._executor.stopped_by is not None:
-                # The execution thread unwound. Admitting a Run would accept
-                # work nobody is left to execute, so it is refused instead of
-                # left hanging in a queue with no reader.
-                return "admission_failed", snap
-            with self._lifecycle:
-                unstartable = (
-                    self._start_error is not None
-                    or self._closing
-                    or self._closed
-                )
-            if unstartable:
-                # Closing, closed, or never up: every one of them means this
-                # Host cannot promise the Run will run.
-                return "admission_failed", snap
-            if self._coord == "recording_failed":
-                return "recording_unavailable", snap
-            if self._coord != "idle":
-                return "run_in_progress", snap
+            refusal = self._admission_refusal_locked()
+            if refusal is not None:
+                return refusal, snap
             self._coord = "accepted"
             self._pending_handoff.add(run_id)
-            self._done[run_id] = threading.Event()
-            return "reserved", snap
-
-    def admission_mark_accepted(self, summary: ActiveRunSummary) -> RuntimeSnapshot:
-        with self._lock:
+            self._queue.reserve(run_id)
+            if wait_for_result:
+                self._done[run_id] = threading.Event()
+            # The safe busy card and the authoritative snapshot move under
+            # the same lock that takes the lease, so no refused submit can
+            # observe the one without the other.
             self._active_summary = summary
-            return self._states.replace(
-                coordinator_state="accepted", active_run=summary
+            snapshot = self._states.replace(
+                owner_run_id=run_id,
+                coordinator_state="accepted",
+                active_run=summary,
             )
+            return "reserved", snapshot
 
     def admission_release(self, run_id: str) -> None:
-        """Drop the lease after a failed admission; nothing was handed off.
+        """Take back the lease after a failed admission; nothing was handed
+        off. The busy card published with the lease goes with it: idle
+        coordinator, no active run, one authoritative replacement -- a card
+        that outlived the lease it was published with would keep telling
+        every reader a Run is running that nobody is running.
 
         A Run that failed before the handoff still has to leave the pending
         set, or close() would wait out its whole budget for a handoff that
         was never going to happen.
         """
+        self.admission_recover_release(run_id)
+
+    def admission_recover_release(self, run_id: str) -> None:
+        """Idempotently resume release after an interrupted public call."""
+        self._queue.recover(run_id)
+        self._queue.retire(run_id)
         with self._lock:
             self._done.pop(run_id, None)
+            self._results.pop(run_id, None)
             self._pending_handoff.discard(run_id)
             self._handoff.notify_all()
-            self._coord = "idle"
-            self._active_summary = None
-            # The authoritative snapshot moves under the same lock as the
-            # coordinator state, so no reader ever sees a snapshot that
-            # disagrees with the decision the coordinator has made.
-            self._states.replace(coordinator_state="idle", active_run=None)
-
-    def admission_close_idle(self) -> None:
-        """An unstarted run finalized interrupted; admission reopens."""
-        with self._lock:
-            self._coord = "idle"
-            self._active_summary = None
-            self._states.replace(
+            if self._active_summary is not None:
+                if self._active_summary.run_id != run_id:
+                    return
+            self._replace_terminal_state_locked(
+                owner_run_id=run_id,
                 coordinator_state="idle",
                 active_run=None,
                 unrecorded_terminal_projection=None,
             )
 
+    def admission_close_idle(self, run_id: str) -> None:
+        """Reopen only while the finalized unstarted run still owns admission."""
+        with self._lock:
+            if (
+                self._active_summary is not None
+                and self._active_summary.run_id != run_id
+            ):
+                return
+            self._replace_terminal_state_locked(
+                owner_run_id=run_id,
+                coordinator_state="idle",
+                active_run=None,
+                unrecorded_terminal_projection=None,
+            )
+
+    def admission_discard_result_slot(self, run_id: str) -> None:
+        """Atomically retire an admission result no caller can consume.
+
+        Admission calls this only after publishing the terminal result and
+        its done notification, once it knows submit will not return
+        ``accepted``. Accepted Runs retain the slot until :meth:`wait`
+        consumes it, while Web submissions never create one.
+        """
+        with self._lock:
+            self._results.pop(run_id, None)
+            self._done.pop(run_id, None)
+
+    def admission_recover_handoff(
+        self,
+        run_id: str,
+        *,
+        settle: Callable[[bool | None], None],
+    ) -> None:
+        """Resolve interrupted publication into the admission-owned slot.
+
+        ``True`` means the worker owns the published item, ``False`` means
+        the pending cell was cancelled, and ``None`` means execution may
+        already have retired the decision after durably marking the Run.
+        """
+        self._queue.recover(run_id, settle=settle)
+
+    def admission_complete_handoff(self, run_id: str) -> None:
+        """Retire a recovered handoff only after its outcome is visible."""
+        # An earlier decision read may have failed. Complete that same cell
+        # before retiring it; the retained cleanup owner retries on failure.
+        self._queue.recover(run_id)
+        self._queue.retire(run_id)
+        with self._handoff:
+            self._pending_handoff.discard(run_id)
+            self._handoff.notify_all()
+
+    def admission_retain_cleanup(
+        self, run_id: str, owner: AdmissionCleanupOwner
+    ) -> AdmissionCleanupOwner:
+        """Publish one cleanup owner before admission starts retiring it."""
+        with self._handoff:
+            retained = self._admission_cleanups.setdefault(run_id, owner)
+            self._handoff.notify_all()
+            return retained
+
+    def admission_retire_cleanup(
+        self, run_id: str, owner: AdmissionCleanupOwner
+    ) -> None:
+        """Retire only the same owner whose two cleanup branches settled."""
+        with self._handoff:
+            if self._admission_cleanups.get(run_id) is owner:
+                self._admission_cleanups.pop(run_id)
+            self._handoff.notify_all()
+
     def admission_fail_recording(
         self,
-        fallback: ActiveRunSummary,
+        summary: ActiveRunSummary,
         projection: UnrecordedTerminalProjection,
     ) -> None:
-        """recording_failed: keep the same projection, mark the summary failed,
-        and close admission. Ordering is the #30 contract: the failed state is
-        authoritative before anything answers 503."""
+        """Publish admission's terminal summary and projection, then close.
+
+        Admission owns the result of an unstarted handoff failure, including
+        the exceptional path where its interrupted finalize cannot commit.
+        Publishing that pair together keeps the active lifecycle and bounded
+        terminal projection as one fact before anything answers 503.
+        """
         with self._lock:
-            summary = self._active_summary or fallback
-            summary = replace(summary, recording_state="failed")
-            self._active_summary = summary
-            self._coord = "recording_failed"
-            self._states.replace(
+            current = self._states.get()
+            already_committed = (
+                current.coordinator_state == "recording_failed"
+                and current.active_run == summary
+                and current.unrecorded_terminal_projection == projection
+            )
+            if not already_committed and (
+                self._active_summary is None
+                or self._active_summary.run_id != summary.run_id
+            ):
+                # No owner is not this owner.  In particular, a delayed retry
+                # from an old failed admission may arrive after a successor
+                # has itself completed and released back to idle; it must not
+                # resurrect the old Run's failure card.
+                return
+            self._replace_terminal_state_locked(
+                owner_run_id=summary.run_id,
                 coordinator_state="recording_failed",
                 active_run=summary,
                 unrecorded_terminal_projection=projection,
             )
 
-    def publish_work_item(self, item: WorkItem) -> None:
-        """Hand a prepared work item to the single execution thread.
+    def admission_publish_handoff(self, item: WorkItem) -> None:
+        """Publish work and retire its close fence as one coordinator step.
 
-        The handoff is accounted for either way it ends -- enqueued or
-        refused -- so close() never waits on a Run that is no longer coming.
+        The queue cell records the publication decision before the worker can
+        observe a WorkItem. If this call is interrupted, the idempotent
+        recovery seam completes the decision and fence retirement.
         """
-        publisher = (
-            self._publish_work
-            if self._publish_work is not None
-            else self._queue.put_nowait
-        )
-        try:
-            publisher(item)
-        finally:
-            with self._handoff:
-                # discard, not a counter: an admission that fails before the
-                # handoff clears the same reservation through
-                # admission_release, and the two must not cancel out into a
-                # negative that hides a Run still in flight.
-                self._pending_handoff.discard(item.run_id)
-                self._handoff.notify_all()
+        if self._publish_work is not None:
+            self._publish_work(item)
+            self._queue.publish(item, enqueue=False)
+        else:
+            self._queue.publish(item, enqueue=True)
+        with self._handoff:
+            self._pending_handoff.discard(item.run_id)
+            self._handoff.notify_all()
 
     # -- execution transition ----------------------------------------------
 
     def execution_mark_running(self, started_at: str) -> ActiveRunSummary | None:
-        with self._lock:
-            self._coord = "running"
-            if self._active_summary is not None:
-                self._active_summary = replace(
-                    self._active_summary,
-                    phase="running",
-                    started_at=started_at,
+        run_id: str | None = None
+        try:
+            with self._lock:
+                self._coord = "running"
+                if self._active_summary is not None:
+                    run_id = self._active_summary.run_id
+                    self._active_summary = replace(
+                        self._active_summary,
+                        phase="running",
+                        started_at=started_at,
+                    )
+                summary = self._active_summary
+                # Same-lock snapshot replacement: the running state is never
+                # observable apart from the summary that describes it.
+                self._states.replace(
+                    owner_run_id=run_id,
+                    coordinator_state="running",
+                    active_run=summary,
                 )
+            return summary
+        finally:
+            if run_id is not None:
+                # The durable phase already says execution owns the Run.  A
+                # snapshot listener may interrupt the public transition, but
+                # it cannot retain admission's cell (and the client it owns)
+                # after execution has claimed the item.
+                self._queue.retire(run_id)
+
+    def execution_mark_stopping(self) -> None:
+        """Publish worker unavailability before its final lease release."""
+        with self._lock:
+            self._executor_stopping = True
+
+    def execution_publish_step_started(
+        self,
+        fanout: FanOutSink,
+        payload: StepStarted,
+        envelope: EventEnvelope | None,
+    ) -> SequencedEvent:
+        """Commit a Step and expose its projection as one observable fact."""
+
+        def project(published: SequencedEvent) -> None:
             summary = self._active_summary
-            # Same-lock snapshot replacement: the running state is never
-            # observable apart from the summary that describes it.
-            self._states.replace(coordinator_state="running", active_run=summary)
-        return summary
+            if (
+                self._coord != "running"
+                or summary is None
+                or summary.run_id != published.envelope.run_id
+            ):
+                return
+            self._active_summary = replace(
+                summary, current_step=published.payload.step_index
+            )
+            self._states.replace(
+                owner_run_id=published.envelope.run_id,
+                coordinator_state="running",
+                active_run=self._active_summary,
+            )
+
+        return fanout.emit_linearized(
+            payload,
+            envelope,
+            boundary=self._lock,
+            after_commit=project,
+        )
 
     # -- recording-settlement transitions -----------------------------------
 
-    def recording_enter_pending(
-        self, projection: UnrecordedTerminalProjection
+    def _replace_terminal_state_locked(
+        self,
+        *,
+        owner_run_id: str,
+        coordinator_state: CoordinatorState,
+        active_run: ActiveRunSummary | None,
+        unrecorded_terminal_projection: UnrecordedTerminalProjection | None,
     ) -> None:
-        """running -> recording_pending. The lease is NOT released here."""
-        with self._lock:
-            self._coord = "recording_pending"
-            if self._active_summary is not None:
-                self._active_summary = replace(
-                    self._active_summary,
-                    phase="finished",
-                    recording_state="pending",
-                )
+        """Commit or resume one owner-scoped terminal snapshot transition.
+
+        A matching current snapshot means an earlier call committed but may
+        have lost its listener return edge.  Resume that exact delivery -- do
+        not mint another revision.  A newer owner's absolute replacement has
+        already superseded the old token, so owner matching also makes an old
+        Run's retry harmless after a successor is admitted.
+        """
+        current = self._states.get()
+        if (
+            current.coordinator_state == coordinator_state
+            and current.active_run == active_run
+            and current.unrecorded_terminal_projection
+            == unrecorded_terminal_projection
+        ):
+            # The authoritative snapshot may have moved before an asynchronous
+            # exception interrupted Host's own mirror assignments.  Repair the
+            # mirrors before retrying the separately tracked listener delivery.
+            self._coord = coordinator_state
+            self._active_summary = active_run
+            self._states.resume_pending(owner_run_id)
+            return
+        try:
             self._states.replace(
+                owner_run_id=owner_run_id,
+                coordinator_state=coordinator_state,
+                active_run=active_run,
+                unrecorded_terminal_projection=(
+                    unrecorded_terminal_projection
+                ),
+            )
+        finally:
+            if self._states.get() is not current:
+                self._coord = coordinator_state
+                self._active_summary = active_run
+
+    def recording_enter_pending(self, projection: UnrecordedTerminalProjection) -> None:
+        """running -> recording_pending. The lease is NOT released here.
+
+        The terminal outcome already exists -- it is the projection's -- so
+        the finished summary copies it: a ``finished`` phase with an empty
+        outcome would be a snapshot that cannot say what the Run concluded,
+        precisely in the window (ADR-0026) where this projection is the only
+        place the conclusion exists.
+        """
+        # The resumable settlement owner already retains the WorkItem, even
+        # when execution failed before marking running. Retire only this
+        # handoff; its durable admitted decision remains available to recovery.
+        self._queue.retire(projection.run_id)
+        with self._lock:
+            if (
+                self._active_summary is None
+                or self._active_summary.run_id != projection.run_id
+            ):
+                return
+            pending = replace(
+                self._active_summary,
+                phase="finished",
+                recording_state="pending",
+                outcome=projection.outcome,
+            )
+            self._replace_terminal_state_locked(
+                owner_run_id=projection.run_id,
                 coordinator_state="recording_pending",
-                active_run=self._active_summary,
+                active_run=pending,
                 unrecorded_terminal_projection=projection,
             )
 
-    def recording_enter_failed(
-        self, projection: UnrecordedTerminalProjection
-    ) -> None:
-        """recording_pending -> recording_failed, keeping the same projection."""
+    def recording_enter_failed(self, projection: UnrecordedTerminalProjection) -> None:
+        """recording_pending -> recording_failed, keeping the same projection.
+
+        The same terminal outcome travels with it: the failure is a
+        recording_state badge, not a rewriting of what the Run concluded,
+        so the failed summary shows exactly what the pending one showed.
+        """
         if self._before_recording_failed is not None:
             self._before_recording_failed.wait()
         with self._lock:
+            if (
+                self._active_summary is None
+                or self._active_summary.run_id != projection.run_id
+            ):
+                return
             failed_projection = replace(projection, recording_state="failed")
             summary = self._active_summary
-            if summary is not None:
-                summary = replace(
-                    summary, recording_state="failed", phase="finished"
-                )
-                self._active_summary = summary
-            self._coord = "recording_failed"
-            self._states.replace(
+            summary = replace(
+                summary,
+                recording_state="failed",
+                phase="finished",
+                outcome=projection.outcome,
+            )
+            self._replace_terminal_state_locked(
+                owner_run_id=projection.run_id,
                 coordinator_state="recording_failed",
-                active_run=self._active_summary,
+                active_run=summary,
                 unrecorded_terminal_projection=failed_projection,
             )
 
-    def recording_publish_recorded_then_release(self) -> None:
+    def recording_publish_recorded_then_release(self, run_id: str) -> None:
         """Authority first, lease second: the recorded snapshot becomes
-        visible while admission is still closed, then the lease releases."""
-        with self._lock:
-            recorded = None
-            if self._active_summary is not None:
-                recorded = replace(
-                    self._active_summary, recording_state="recorded"
+        visible while admission is still closed, then the lease releases.
+
+        Both halves are owner-scoped. An interruption before the recorded
+        snapshot commits retains admission for retry; a listener failure after
+        commit still permits release. If an exception lands after the second half
+        and a successor is admitted before the caller retries, the old Run's
+        recovery observes the new owner and becomes a no-op instead of
+        marking or releasing the successor.
+        """
+        release_owned = False
+        try:
+            with self._lock:
+                summary = self._active_summary
+                if summary is None:
+                    if self._coord == "idle":
+                        self._replace_terminal_state_locked(
+                            owner_run_id=run_id,
+                            coordinator_state="idle",
+                            active_run=None,
+                            unrecorded_terminal_projection=None,
+                        )
+                    return
+                if summary.run_id != run_id:
+                    return
+                release_owned = True
+                recorded = replace(summary, recording_state="recorded")
+                self._replace_terminal_state_locked(
+                    owner_run_id=run_id,
+                    coordinator_state="recording_pending",
+                    active_run=recorded,
+                    unrecorded_terminal_projection=None,
                 )
-                self._active_summary = recorded
-            self._states.replace(
-                coordinator_state="recording_pending",
-                active_run=recorded,
-                unrecorded_terminal_projection=None,
-            )
-        if self._after_recorded_snapshot is not None:
-            self._after_recorded_snapshot.wait()
-        with self._lock:
-            self._coord = "idle"
-            self._active_summary = None
-            self._states.replace(coordinator_state="idle", active_run=None)
+            if self._after_recorded_snapshot is not None:
+                self._after_recorded_snapshot.wait()
+        finally:
+            if release_owned:
+                with self._lock:
+                    current = self._states.get()
+                    summary = current.active_run
+                    if summary is None:
+                        if current.coordinator_state == "idle":
+                            self._replace_terminal_state_locked(
+                                owner_run_id=run_id,
+                                coordinator_state="idle",
+                                active_run=None,
+                                unrecorded_terminal_projection=None,
+                            )
+                    elif (
+                        summary.run_id == run_id
+                        and summary.recording_state == "recorded"
+                    ):
+                        self._replace_terminal_state_locked(
+                            owner_run_id=run_id,
+                            coordinator_state="idle",
+                            active_run=None,
+                            unrecorded_terminal_projection=None,
+                        )
 
     def publish_run_result(self, run_id: str, result: LoopResult) -> None:
         # Only a run whose done event exists has a waiter; anything else
         # would leak an unreadable result entry.
-        if run_id in self._done:
-            self._results[run_id] = result
+        with self._lock:
+            if run_id in self._done:
+                self._results[run_id] = result
 
     def notify_run_done(self, run_id: str) -> None:
-        event = self._done.get(run_id)
-        if event is not None:
-            event.set()
+        with self._lock:
+            event = self._done.get(run_id)
+            if event is not None:
+                event.set()
 
     # -- public session read side (ADR-0027); callers never write SQL --
 
@@ -525,9 +1155,9 @@ class RuntimeHost:
         limit: int,
         cursor: str | None = None,
     ) -> session_store.SessionInboxPage:
-        with self._db_lock:
+        with self._store.reading() as conn:
             return session_store.list_sessions(
-                self._conn,
+                conn,
                 limit=limit,
                 cursor=cursor,
                 redactor=self._redactor,
@@ -543,16 +1173,10 @@ class RuntimeHost:
     ) -> session_store.SessionMessagesPage:
         # The authoritative failure projection decides whether an in-flight
         # Run can still produce messages (see runtime.sessions).
-        projection = self._states.get().unrecorded_terminal_projection
-        recording_failed: frozenset[str] = frozenset()
-        if (
-            projection is not None
-            and projection.recording_state == "failed"
-        ):
-            recording_failed = frozenset({projection.run_id})
-        with self._db_lock:
+        recording_failed = self._recording_failed_run_ids()
+        with self._store.reading() as conn:
             return session_store.open_session(
-                self._conn,
+                conn,
                 session_id=session_id,
                 page_size=page_size,
                 cursor=cursor,
@@ -561,13 +1185,167 @@ class RuntimeHost:
                 recording_failed_run_ids=recording_failed,
             )
 
+    def _recording_failed_run_ids(self) -> frozenset[str]:
+        """Run ids the authoritative in-process projection says cannot record."""
+        projection = self._states.get().unrecorded_terminal_projection
+        if projection is None or projection.recording_state != "failed":
+            return frozenset()
+        return frozenset({projection.run_id})
+
+    def _unaddressable_run_ids(self) -> frozenset[str]:
+        """Unexecuted failed-handoff ids that have no Web destination."""
+        snapshot = self._states.get()
+        if not is_unaddressable_unstarted_handoff_failure(snapshot):
+            return frozenset()
+        assert snapshot.active_run is not None
+        return frozenset({snapshot.active_run.run_id})
+
+    def session_exists(self, session_id: str | None) -> bool:
+        """Whether a Session row exists. A question, not a projection.
+
+        The Dashboard API asks this before admitting work for a named Session.
+        It is deliberately the cheapest possible read: the answer is a row
+        count, and no title, message or Run is derived from it. SSE uses the
+        closed transport-only result below so storage loss stays observable.
+        """
+        with self._store.reading() as conn:
+            if session_id is None:
+                return False
+            row = conn.execute(
+                "SELECT 1 FROM sessions WHERE session_id = ?", (session_id,)
+            ).fetchone()
+        return row is not None
+
+    def transport_session_validity(self, session_id: str | None) -> SessionValidity:
+        """Bounded Session truth for SSE startup and lifecycle patches.
+
+        Ordinary reads remain fail-closed through ``session_exists``. This
+        transport-only question preserves the closed unavailable result so
+        a new stream cannot acquire response ownership without Store proof.
+        """
+        if session_id is None:
+            return "invalid"
+        if not self._store.available:
+            return "unavailable"
+        try:
+            return "valid" if self.session_exists(session_id) else "invalid"
+        except RecordingUnavailable:
+            # Poison may land between the cheap availability check and the
+            # guarded read. It is unavailable without a second read.
+            return "unavailable"
+
+    def list_runs(
+        self,
+        *,
+        filter: str = "all",
+        limit: int = 25,
+        cursor: str | None = None,
+    ) -> runs.RunPage:
+        """The runs page: terminal Runs paged, the live Run pinned."""
+        recording_failed = self._unaddressable_run_ids()
+        with self._store.reading() as conn:
+            return runs.list_runs(
+                conn,
+                filter=filter,
+                limit=limit,
+                cursor=cursor,
+                redactor=self._redactor,
+                recording_failed_run_ids=recording_failed,
+            )
+
+    def locate_run(self, run_id: str, *, limit: int = 25) -> runs.RunPage | None:
+        """The page a deep link to one Run should open on."""
+        recording_failed = self._unaddressable_run_ids()
+        with self._store.reading() as conn:
+            return runs.locate_run(
+                conn,
+                run_id=run_id,
+                limit=limit,
+                redactor=self._redactor,
+                recording_failed_run_ids=recording_failed,
+            )
+
+    def list_session_chat_runs(
+        self,
+        *,
+        session_id: str,
+        limit: int,
+        cursor: str | None = None,
+    ) -> runs.SessionChatRunsPage:
+        """One Session's admitted chat Runs, keyset paged."""
+        recording_failed = self._unaddressable_run_ids()
+        with self._store.reading() as conn:
+            return runs.list_session_chat_runs(
+                conn,
+                session_id=session_id,
+                limit=limit,
+                cursor=cursor,
+                redactor=self._redactor,
+                reply_max_chars=self._settings.prompt_preview_max_chars,
+                recording_failed_run_ids=recording_failed,
+            )
+
+    def recover_reply(
+        self, *, process_instance_id: str, session_id: str, run_id: str,
+    ) -> replies.RecoveredReply:
+        """Recover formal reply text without changing Run or recording state."""
+        return replies.recover_reply(
+            self.snapshot(), self._store, self._redactor,
+            process_instance_id=process_instance_id,
+            session_id=session_id, run_id=run_id,
+        )
+
+    def mainbar_pairs(
+        self,
+        *,
+        session_id: str,
+        limit: int = runs.DEFAULT_MAINBAR_LIMIT,
+        cursor: str | None = None,
+    ) -> runs.MainBarPage:
+        """The MainBar's Run pairs and historic messages for one Session."""
+        recording_failed = self._recording_failed_run_ids()
+        with self._store.reading() as conn:
+            return runs.mainbar_pairs(
+                conn,
+                session_id=session_id,
+                limit=limit,
+                cursor=cursor,
+                redactor=self._redactor,
+                recording_failed_run_ids=recording_failed,
+            )
+
+    def note_sink_disabled(self, sink: str, stage: str) -> None:
+        """A transport reporting that it stopped working.
+
+        This is the one process-level fact a transport owns (#23 §9): the
+        dispatcher or the replay ring failing is not any single connection's
+        problem, so it is not a transport notice -- it is a domain notice,
+        like any other. It lands in the trace, it takes a seq, and every
+        browser is told, because a stream that silently stopped publishing
+        is worse than one that says so.
+        """
+        self._fanout.emit(
+            Notice(
+                level="error",
+                code="sink_disabled",
+                detail=(("sink", sink), ("stage", stage)),
+            )
+        )
+
     def submit(self, request: SubmitRequest) -> SubmitResult:
         return self._admission.submit(request)
 
     def wait(self, run_id: str, timeout: float = 60.0) -> LoopResult:
-        event = self._done.get(run_id)
+        with self._lock:
+            event = self._done.get(run_id)
         if event is None:
             raise KeyError(run_id)
         if not event.wait(timeout):
             raise TimeoutError(f"timed out waiting for run {run_id}")
-        return self._results[run_id]
+        with self._lock:
+            try:
+                return self._results.pop(run_id)
+            finally:
+                # Result and waiter are one single-consumer slot. Even two
+                # concurrent waits cannot leave the signalled Event behind.
+                self._done.pop(run_id, None)

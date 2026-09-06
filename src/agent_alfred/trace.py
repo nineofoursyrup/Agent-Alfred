@@ -34,21 +34,13 @@ Ownership rules that keep ADR-0015 true:
 
 from __future__ import annotations
 
-import ctypes
 import hashlib
 import json
-import os
-import re
-import shutil
-import stat
-import sys
 import threading
 from collections import deque
-from dataclasses import dataclass, field, is_dataclass
-from dataclasses import fields as dc_fields
+from dataclasses import dataclass, field
 from datetime import datetime
-from decimal import Decimal
-from pathlib import Path
+from pathlib import PurePath
 
 from agent_alfred.clock import Clock, format_instant
 from agent_alfred.events import (
@@ -57,15 +49,22 @@ from agent_alfred.events import (
     SequencedEvent,
     UnsequencedEvent,
 )
-from agent_alfred.messages import (
-    Message,
-    TextBlock,
-    ThinkingBlock,
-    ToolCallBlock,
-    ToolResultBlock,
-    blocks_to_jsonable,
+from agent_alfred.events import (
+    event_json_default as _json_default,
 )
-from agent_alfred.model import ModelError, ModelRef, Usage
+from agent_alfred.managed_state import (
+    ManagedDirectoryLease,
+    ManagedFileLease,
+    ManagedPathSecurityError,
+    ManagedTraceRoot,
+)
+from agent_alfred.resource_rollback import (
+    ConstructionOwner,
+    ResumableRollback,
+    RollbackSlot,
+    thread_exit_confirmed,
+    thread_start_effect_happened,
+)
 
 # Closed set of machine-judgeable causes. The barrier reason joins this with
 # the exception type name only -- never paths, never payloads.
@@ -106,213 +105,9 @@ class LateCommitRejected(RuntimeError):
     """
 
 
-class NoReplaceUnsupported(RuntimeError):
-    """This platform exposes no atomic no-replace rename for directories.
-
-    Publication fails closed instead of falling back to ``os.rename``: on the
-    platforms this runs on, a plain rename replaces an existing directory,
-    which would overwrite or merge a bundle that is not ours.
-    """
-
-
-# --- atomic no-replace publication (ADR-0017) ------------------------------
-#
-# Publication is the moment a bundle becomes recognizable. It has to be one
-# atomic, non-destructive step, and "does the target exist?" followed by a
-# rename is neither: the check and the rename are two steps with a window
-# between them, and a plain rename overwrites. These are the platform
-# primitives that make the rename itself refuse an existing target.
-
-_AT_FDCWD = -2
-_RENAME_NOREPLACE = 1  # Linux renameat2 flag
-_RENAME_EXCL = 0x0004  # macOS renamex_np flag
-
-
-def _platform_rename(platform: str):
-    """The no-replace rename this platform offers, or None.
-
-    Returns a callable taking encoded source and destination paths and
-    returning 0 on success or -1 with errno set -- the contract both
-    primitives share. Kept a pure lookup so the unsupported-platform path can
-    be exercised without having to run on one.
-    """
-    if platform == "darwin":
-        libc = _libc()
-        if libc is None or not hasattr(libc, "renamex_np"):
-            return None
-        libc.renamex_np.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint]
-        libc.renamex_np.restype = ctypes.c_int
-
-        def renamex(src: bytes, dst: bytes) -> int:
-            ctypes.set_errno(0)
-            return libc.renamex_np(src, dst, _RENAME_EXCL)
-
-        return renamex
-    if platform.startswith("linux"):
-        libc = _libc()
-        if libc is None or not hasattr(libc, "renameat2"):
-            return None
-        libc.renameat2.argtypes = [
-            ctypes.c_int,
-            ctypes.c_char_p,
-            ctypes.c_int,
-            ctypes.c_char_p,
-            ctypes.c_uint,
-        ]
-        libc.renameat2.restype = ctypes.c_int
-
-        def renameat2(src: bytes, dst: bytes) -> int:
-            ctypes.set_errno(0)
-            return libc.renameat2(
-                _AT_FDCWD, src, _AT_FDCWD, dst, _RENAME_NOREPLACE
-            )
-
-        return renameat2
-    return None
-
-
-def _libc():
-    """The process' C library, or None when it cannot be reached."""
-    try:
-        return ctypes.CDLL(None, use_errno=True)
-    except OSError:
-        return None
-
-
-def _rename_no_replace(staging: Path, target: Path) -> None:
-    """Publish ``staging`` as ``target`` in one atomic, non-destructive step.
-
-    Raises :class:`FileExistsError` when the target already exists -- empty,
-    non-empty, or created by another publisher a moment ago -- leaving both
-    paths exactly as they were; and :class:`NoReplaceUnsupported` where the
-    platform offers no primitive to ask the question. Paths never reach the
-    error text: the caller keeps its reasons in the closed set.
-    """
-    if staging.parent != target.parent:
-        raise ValueError(
-            "staging and target must live in the same directory to be renamed "
-            "within one filesystem"
-        )
-    rename = _platform_rename(sys.platform)
-    if rename is None:
-        raise NoReplaceUnsupported(
-            f"no atomic no-replace rename on platform {sys.platform!r}"
-        )
-    source = os.fsencode(staging)
-    destination = os.fsencode(target)
-    if rename(source, destination) != 0:
-        errno = ctypes.get_errno()
-        raise OSError(errno, os.strerror(errno), str(staging), None, str(target))
-
-
-# The exact shape the publisher writes into a staging directory. Reclamation
-# recognizes it and refuses anything else rather than deleting broadly.
-_STAGING_NAME = re.compile(r"\A\.staging-[0-9a-f]{32}\Z")
-# The file type is part of the shape, not a detail. A crash can leave the
-# entry set *incomplete* -- the publisher creates these one at a time -- but
-# it can never leave a managed name carrying a type the publisher does not
-# write. So reclamation validates the type of every entry that exists, and
-# demands no particular entry be present at all.
-_STAGING_FILE_ENTRIES = frozenset({"meta.json", "trace.jsonl"})
-_STAGING_DIR_ENTRIES = frozenset({"artifacts"})
-_STAGING_ENTRIES = _STAGING_FILE_ENTRIES | _STAGING_DIR_ENTRIES
-
-
-def _remove_staging(staging: Path) -> bool:
-    """Delete a staging directory this sink created but failed to publish.
-
-    ADR-0017: reclamation validates the exact managed shape first -- the name
-    pattern, a real directory rather than a symlink, only the entries the
-    publisher itself writes, and each of those carrying the type the
-    publisher gives it. Anything unrecognizable is left for the reclaimer,
-    because a broad recursive delete of a path this code did not shape is how
-    a crash leftover turns into data loss.
-
-    Raises ValueError on a shape this publisher does not produce; nothing is
-    deleted in that case.
-    """
-    if _STAGING_NAME.match(staging.name) is None:
-        raise ValueError(f"not a managed staging directory: {staging.name!r}")
-    if staging.is_symlink() or not staging.is_dir():
-        raise ValueError(f"not a managed staging directory: {staging.name!r}")
-    entries = sorted(path.name for path in staging.iterdir())
-    unexpected = [name for name in entries if name not in _STAGING_ENTRIES]
-    if unexpected:
-        raise ValueError(
-            f"unexpected entries in staging {staging.name!r}: {unexpected}"
-        )
-    for path in staging.iterdir():
-        # lstat, never stat, and a single one: a symlink is judged by being a
-        # symlink and refused, never followed and judged by what it points
-        # at, and the type is read once so it cannot change between checks.
-        mode = path.lstat().st_mode
-        if stat.S_ISLNK(mode):
-            raise ValueError(f"unexpected symlink in staging: {path.name!r}")
-        if path.name in _STAGING_DIR_ENTRIES:
-            if not stat.S_ISDIR(mode):
-                raise ValueError(f"staging entry {path.name!r} is not a directory")
-        elif path.name in _STAGING_FILE_ENTRIES:
-            if not stat.S_ISREG(mode):
-                raise ValueError(
-                    f"staging entry {path.name!r} is not a regular file"
-                )
-    shutil.rmtree(staging)
-    return True
-
-
-def _discard_staging(staged: Path | None) -> None:
-    """Clean up after a publish that created a staging directory and then
-    failed to rename it. A shape it does not recognize is left alone."""
-    if staged is None or not staged.exists():
-        return
-    try:
-        _remove_staging(staged)
-    except (ValueError, OSError):
-        pass
-
-
 def _storage_id(run_id: str) -> str:
     """ADR-0018: opaque run_id never enters a path; only its digest does."""
     return hashlib.sha256(run_id.encode("utf-8")).hexdigest()[:32]
-
-
-def _json_default(value: object) -> object:
-    if isinstance(value, Message):
-        return {"role": value.role, "blocks": blocks_to_jsonable(value.blocks)}
-    if isinstance(value, (TextBlock, ThinkingBlock, ToolCallBlock, ToolResultBlock)):
-        return blocks_to_jsonable([value])[0]
-    if isinstance(value, Usage):
-        cost = value.endpoint_reported_cost_usd
-        return {
-            "total_input_tokens": value.total_input_tokens,
-            "uncached_input_tokens": value.uncached_input_tokens,
-            "cache_read_tokens": value.cache_read_tokens,
-            "cache_write_tokens": value.cache_write_tokens,
-            "output_tokens": value.output_tokens,
-            "reasoning_tokens": value.reasoning_tokens,
-            "endpoint_reported_cost_usd": (
-                None if cost is None else format(cost, "f")
-            ),
-            "raw": value.raw,
-        }
-    if isinstance(value, ModelError):
-        return {
-            "retryable": value.retryable,
-            "status_code": value.status_code,
-            "body_excerpt": value.body_excerpt,
-            "attempt_id": value.attempt_id,
-            "code": value.code,
-        }
-    if isinstance(value, ModelRef):
-        return {"endpoint_id": value.endpoint_id, "model_id": value.model_id}
-    if isinstance(value, Decimal):
-        return format(value, "f")
-    if is_dataclass(value) and not isinstance(value, type):
-        return {
-            "_type": type(value).__name__,
-            **{f.name: getattr(value, f.name) for f in dc_fields(value)},
-        }
-    raise TypeError(f"unserializable trace payload part {type(value).__name__}")
 
 
 def _prepare_payload(payload: object) -> str:
@@ -348,41 +143,6 @@ def _compose_line(prepared_payload: str, event: SequencedEvent) -> str:
     return header[:-1] + ',"payload":' + prepared_payload + "}"
 
 
-_RETRYABLE_WRITE_ERRORS = (InterruptedError, BlockingIOError)
-
-
-def _write_all(fd: int, data: bytes) -> None:
-    """Write all of ``data``, following partial writes.
-
-    One call owns the single byte offset for one queue item's whole retry
-    lifecycle: a partial write advances the in-call offset, a retryable
-    interruption (EINTR/EAGAIN) resumes from it a bounded number of times,
-    and an unrecoverable error or an exhausted retry budget propagates. The
-    successfully written prefix is never resubmitted -- that is what keeps
-    every published record a contiguous prefix with no internal bad line
-    (ADR-0019).
-    """
-    view = memoryview(data)
-    retries_left = _WRITE_RETRIES
-    while view:
-        try:
-            written = os.write(fd, view)
-        except _RETRYABLE_WRITE_ERRORS:
-            if retries_left == 0:
-                raise
-            retries_left -= 1
-            continue
-        view = view[written:]
-
-
-def _fsync_dir(path: Path) -> None:
-    fd = os.open(path, os.O_RDONLY)
-    try:
-        os.fsync(fd)
-    finally:
-        os.close(fd)
-
-
 def _exception_detail(reason: str, exc: BaseException) -> str:
     """The one shape an exception may leave in a barrier's detail: the
     closed-set reason plus the exception's type name. Never its text -- that
@@ -390,34 +150,19 @@ def _exception_detail(reason: str, exc: BaseException) -> str:
     return f"{reason} {type(exc).__name__}"
 
 
-def _take_fd(bundle: _RunBundle) -> int | None:
-    """Drain-thread only: claim the bundle's fd, so the bundle no longer
-    references the one fd the drain is about to close. Callers may hold the
-    sink wake lock: it is only ever taken before this one, never after."""
-    with bundle.lock:
-        fd = bundle.trace_fd
-        bundle.trace_fd = None
-    return fd
-
-
-def _close_fds(fds: list[int]) -> None:
-    """Close every fd outside every lock (ADR-0015). A second close is not a
-    failure: the fd is already reclaimed and the drain owned it either way."""
-    for fd in fds:
-        try:
-            os.close(fd)
-        except OSError:
-            pass
-
-
 @dataclass
 class _RunBundle:
     run_id: str
-    run_dir: Path | None = None
-    trace_fd: int | None = None
+    run_dir: ManagedDirectoryLease | None = None
+    artifacts_dir: ManagedDirectoryLease | None = None
+    trace_file: ManagedFileLease | None = None
     dropped: int = 0
     broken: str | None = None
     first_error: str | None = None
+    cleanup_rollback: ResumableRollback | None = field(default=None, repr=False)
+    retirement_rollback: ResumableRollback | None = field(
+        default=None, repr=False
+    )
     # Set under the sink wake lock when a barrier scoped to this Run is
     # enqueued; from that moment commits for this Run fail closed.
     sealed: bool = False
@@ -425,6 +170,11 @@ class _RunBundle:
     # drain thread -- never across open/rename/write/fsync/close. Lock order:
     # the sink wake lock may be held while taking this one, never the reverse.
     lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
+
+    @property
+    def trace_fd(self) -> int | None:
+        """Test observation only; production operations stay on the lease."""
+        return None if self.trace_file is None else self.trace_file.fd
 
     def drop_if_broken(self) -> str | None:
         """Count one event as dropped when this Run is already broken and
@@ -448,6 +198,63 @@ class _RunBundle:
 
     def mark_broken_with_exception(self, reason: str, exc: BaseException) -> None:
         self.mark_broken(reason, _exception_detail(reason, exc))
+
+    def retain_cleanup(self, rollback: ResumableRollback) -> None:
+        """Keep an incomplete publication owner reachable from this Run."""
+        with self.lock:
+            self.cleanup_rollback = rollback
+
+    def retry_cleanup(self) -> tuple[bool, BaseException | None]:
+        """Retry retained construction cleanup without losing its progress."""
+        with self.lock:
+            rollback = self.cleanup_rollback
+        if rollback is None:
+            return True, None
+        complete = rollback.retry()
+        failure = rollback.process_control or next(iter(rollback.errors), None)
+        if not complete and failure is None:
+            failure = RuntimeError("trace publication cleanup incomplete")
+        if complete:
+            with self.lock:
+                if self.cleanup_rollback is rollback:
+                    self.cleanup_rollback = None
+        return complete, failure
+
+    def retry_resources(self) -> tuple[bool, BaseException | None]:
+        """Close trace -> artifacts -> run dir, then clear their references."""
+        with self.lock:
+            rollback = self.retirement_rollback
+            if rollback is None:
+                rollback = ResumableRollback()
+                # ResumableRollback runs newest first, so register dependencies
+                # in the reverse of the required close order.
+                for resource in (
+                    self.run_dir,
+                    self.artifacts_dir,
+                    self.trace_file,
+                ):
+                    if resource is not None:
+                        rollback.own(resource)
+                self.retirement_rollback = rollback
+        complete = rollback.retry()
+        failure = rollback.process_control or next(iter(rollback.errors), None)
+        if not complete and failure is None:
+            failure = RuntimeError("trace bundle resource cleanup incomplete")
+        if complete:
+            with self.lock:
+                if self.retirement_rollback is rollback:
+                    self.trace_file = None
+                    self.artifacts_dir = None
+                    self.run_dir = None
+                    self.retirement_rollback = None
+        return complete, failure
+
+    def retry_retirement(self) -> tuple[bool, BaseException | None]:
+        """Settle newer construction cleanup before long-lived resources."""
+        complete, failure = self.retry_cleanup()
+        if not complete:
+            return False, failure
+        return self.retry_resources()
 
 
 @dataclass(frozen=True)
@@ -494,8 +301,18 @@ class RunBundleTraceSink:
     name = "trace"
     flush_at_run_end = True
 
-    def __init__(self, *, root: Path, clock: Clock, process_instance_id: str):
-        self._root = root
+    def __init__(
+        self,
+        *,
+        root: ManagedTraceRoot,
+        clock: Clock,
+        process_instance_id: str,
+        _rollback: ResumableRollback | None = None,
+    ):
+        owner = ConstructionOwner(_rollback)
+        rollback = owner.rollback
+        rollback.own(root)
+        self._root_lease = root
         self._clock = clock
         self._process_instance_id = process_instance_id
         self._bundles: dict[str, _RunBundle] = {}
@@ -507,12 +324,65 @@ class RunBundleTraceSink:
         self._stopping = False
         # Fail fast at assembly: an unusable traces root must be discovered
         # before the Host serves Runs, not at the first flush.
-        root.mkdir(mode=0o700, parents=True, exist_ok=True)
-        root.chmod(0o700)
-        self._drain = threading.Thread(
-            target=self._drain_loop, name="trace-drain", daemon=True
-        )
-        self._drain.start()
+        drain_created = False
+        try:
+            self._drain = threading.Thread(
+                target=self._drain_loop, name="trace-drain", daemon=False
+            )
+            drain_created = True
+            # Construction has not published ``self`` yet, so rollback must
+            # own the concrete Thread before start can take effect. The drain
+            # step is newer than the root step and therefore settles first.
+            rollback.own(self._drain, self._rollback_unpublished_drain)
+            self._drain.start()
+            # Publish the aggregate owner before the parts it now owns retire,
+            # so no instant between this constructor's return and the caller's
+            # store leaves the drain and root without a reachable owner. The
+            # overlap is safe: every close below consumes what it releases.
+            owner.publish(self, parts=(self._drain, root), close=self.close)
+        except BaseException as exc:
+            if drain_created:
+                # A transfer may itself have taken effect before this exit.
+                # ``self`` still was not returned, so reclaim both resources
+                # directly instead of trusting a now-completed rollback step.
+                try:
+                    self._rollback_unpublished_drain()
+                except BaseException:
+                    # The original drain/root steps may already be marked
+                    # transferred. Publish a fresh aggregate owner before
+                    # retiring those stale records, so refusal remains
+                    # retryable without replacing ``exc``.
+                    retry_cleanup = self._rollback_unpublished_drain
+                    rollback.own(retry_cleanup, retry_cleanup)
+                # Direct settlement is now authoritative. Mark both aggregate
+                # steps complete; either cleanup succeeded, or the fresh
+                # retry owner above is now their sole authority.
+                rollback.transfer(self._drain)
+                rollback.transfer(root)
+                rollback.own(self, self.close)
+                rollback.transfer(self)
+            if _rollback is None:
+                rollback.raise_failure(exc)
+            raise
+
+    def _rollback_unpublished_drain(self) -> bool:
+        """Stop a start-effect drain whose sink constructor never returned.
+
+        The CPython native handle is authoritative even before the child has
+        published ``_started``. It closes the before/after-effect ambiguity
+        without an ``is_alive`` admission guess.
+        """
+        started = thread_start_effect_happened(self._drain)
+        if started:
+            with self._wake:
+                self._stopping = True
+                self._wake.notify_all()
+            thread_exit_confirmed(self._drain, None)
+        root = self._root_lease
+        if root is not None:
+            root.close()
+            self._root_lease = None
+        return True
 
     # -- two-phase publish (ADR-0015) -------------------------------------
 
@@ -575,6 +445,7 @@ class RunBundleTraceSink:
     # -- drain thread: the sole owner of fds and filesystem calls ----------
 
     def _drain_loop(self) -> None:
+        current_barrier: _WriteBarrier | None = None
         try:
             while True:
                 with self._wake:
@@ -582,14 +453,23 @@ class RunBundleTraceSink:
                         self._wake.wait()
                     if not self._queue:
                         return
+                    candidate = self._queue[0]
+                    if isinstance(candidate, _WriteBarrier):
+                        # Publish the drain-frame owner before removal. An
+                        # asynchronous exit after ``popleft`` can then answer
+                        # this barrier even though the shared queue no longer
+                        # reaches it.
+                        current_barrier = candidate
                     item = self._queue.popleft()
                 if isinstance(item, _WriteBarrier):
                     if item.done.is_set():
                         # Cancelled while queued by close(): its waiters were
                         # already answered with the honest reason; the drain
                         # only skips it.
+                        current_barrier = None
                         continue
                     self._process_barrier(item)
+                    current_barrier = None
                     continue
                 try:
                     self._write_item(item)
@@ -610,17 +490,20 @@ class RunBundleTraceSink:
                         bundle.mark_broken_with_exception(REASON_WRITE_FAILED, exc)
         finally:
             # The drain is the only thread that can answer a barrier, so its
-            # unwind answers the ones it still holds -- on a crash as much as
-            # on a clean stop. Otherwise their waiters hang for the whole
-            # flush budget and then report a timeout that never happened,
-            # which reads as a slow disk when the truth is a dead writer.
+            # unwind answers both the one this frame removed and the ones
+            # still queued -- on a crash as much as on a clean stop. Otherwise
+            # their waiters hang for the whole flush budget and then report a
+            # timeout that never happened, which reads as a slow disk when the
+            # truth is a dead writer.
             # Nothing holds a lock here: every raise inside the loop escapes
             # from _write_item, which runs outside both locks.
             with self._wake:
+                if current_barrier is not None and not current_barrier.done.is_set():
+                    current_barrier.answer(REASON_SINK_FAILED)
                 self._answer_queued_barriers_locked(REASON_SINK_FAILED)
             # The drain is the sole owner of every fd for the thread's whole
             # life, including its unwind: only it ever closes one.
-            self._release_remaining_fds()
+            self._retry_remaining_cleanup()
 
     def _write_item(self, item: _WriteItem) -> None:
         run_id = item.run_id
@@ -635,46 +518,53 @@ class RunBundleTraceSink:
         if bundle.drop_if_broken() is not None:
             return  # the Run is broken; the drop was counted under its lock
         with bundle.lock:
-            fd = bundle.trace_fd
-        if fd is None:
+            trace_file = bundle.trace_file
+        if trace_file is None:
             self._publish(bundle)  # staging I/O with no lock held
             with bundle.lock:
                 broken = bundle.broken
-                fd = bundle.trace_fd
+                trace_file = bundle.trace_file
             if broken is not None:
                 return  # the failed publish already counted this event
+        if trace_file is None:
+            raise AssertionError("published trace bundle has no trace capability")
         line = _compose_line(item.prepared, item.event) + "\n"
         data = line.encode("utf-8")
         try:
-            _write_all(fd, data)  # one byte offset across the item's retries
+            trace_file.write_all(data, retries=_WRITE_RETRIES)
         except Exception as exc:
             bundle.mark_broken_with_exception(REASON_WRITE_FAILED, exc)
 
     def _publish(self, bundle: _RunBundle) -> None:
         run_id = bundle.run_id
-        staged: Path | None = None
+        rollback = ResumableRollback()
+        staging: ManagedDirectoryLease | None = None
+        artifacts: ManagedDirectoryLease | None = None
+        date_lease: ManagedDirectoryLease | None = None
+        publication_failure: BaseException | None = None
         try:
             now: datetime = self._clock.wall_utc()
             storage_id = _storage_id(run_id)
-            date_dir = self._root / now.strftime("%Y-%m-%d")
+            date_lease = self._root_lease.ensure_directory(
+                PurePath(now.strftime("%Y-%m-%d")), _rollback=rollback
+            )
             dir_name = f"{now.strftime('%H%M%S')}Z-{storage_id}"
-            target = date_dir / dir_name
-            staging = date_dir / f"{_STAGING_PREFIX}{storage_id}"
-            if staging.exists():
-                # A leftover from a crashed publish is never reused (ADR-0017):
-                # reusing one would treat a previous crash's half-written
-                # bundle as a clean start. It belongs to the reclaimer.
+            staging_name = f"{_STAGING_PREFIX}{storage_id}"
+            try:
+                staging = date_lease.create_directory(
+                    PurePath(staging_name),
+                    role="bundle staging directory",
+                    _rollback=rollback,
+                )
+            except FileExistsError:
                 bundle.mark_broken(REASON_STAGING_LEFTOVER)
                 return
-            date_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
-            date_dir.chmod(0o700)
-            staging.mkdir(mode=0o700)
-            staging.chmod(0o700)
-            staged = staging
-            meta_fd = os.open(
-                staging / "meta.json",
-                os.O_WRONLY | os.O_CREAT | os.O_EXCL,
-                0o600,
+            meta_file = staging.open_regular(
+                PurePath("meta.json"),
+                access="exclusive_write",
+                create=True,
+                role="bundle metadata",
+                _rollback=rollback,
             )
             try:
                 meta = json.dumps(
@@ -687,26 +577,35 @@ class RunBundleTraceSink:
                     },
                     ensure_ascii=False,
                 ).encode("utf-8")
-                _write_all(meta_fd, meta)
-                os.fsync(meta_fd)
+                meta_file.write_all(meta, retries=_WRITE_RETRIES)
+                meta_file.fsync()
             finally:
-                os.close(meta_fd)
-            trace_fd = os.open(
-                staging / "trace.jsonl",
-                os.O_WRONLY | os.O_CREAT | os.O_EXCL,
-                0o600,
+                meta_file.close()
+                rollback.transfer(meta_file)
+            initial_trace = staging.open_regular(
+                PurePath("trace.jsonl"),
+                access="exclusive_write",
+                create=True,
+                role="bundle trace",
+                _rollback=rollback,
             )
-            os.fsync(trace_fd)
-            os.close(trace_fd)
-            (staging / "artifacts").mkdir(mode=0o700)
-            (staging / "artifacts").chmod(0o700)
-            _fsync_dir(staging)
+            try:
+                initial_trace.fsync()
+            finally:
+                initial_trace.close()
+                rollback.transfer(initial_trace)
+            artifacts = staging.create_directory(
+                PurePath("artifacts"),
+                role="bundle artifacts directory",
+                _rollback=rollback,
+            )
+            staging.fsync()
             try:
                 # Publication proper. The target's absence is deliberately
                 # not checked first: a check that ran before the rename would
                 # be a TOCTOU window, not exclusivity. The primitive refuses
                 # an existing target on its own, atomically.
-                _rename_no_replace(staging, target)
+                date_lease.rename_directory_no_replace(staging, PurePath(dir_name))
             except FileExistsError:
                 # Somebody already published a bundle under this Run's
                 # storage identity -- a concurrent publisher, or a directory
@@ -715,25 +614,79 @@ class RunBundleTraceSink:
                 # closed and the existing bundle is left exactly as found.
                 bundle.mark_broken(REASON_ID_COLLISION)
                 return
-            except NoReplaceUnsupported as exc:
-                # Fail closed: without the primitive, publishing would mean
-                # an overwriting rename, and a silently overwritten bundle is
-                # worse than an unpublished one.
+            except ManagedPathSecurityError as exc:
+                if exc.reason != "unsupported_nofollow":
+                    raise
                 bundle.mark_broken(REASON_NO_REPLACE_UNSUPPORTED)
-                del exc
                 return
-            _fsync_dir(date_dir)
-            bundle.run_dir = target
-            bundle.trace_fd = os.open(
-                target / "trace.jsonl", os.O_WRONLY | os.O_APPEND, 0o600
+            date_lease.fsync()
+            trace_file = staging.open_regular(
+                PurePath("trace.jsonl"),
+                access="append",
+                create=False,
+                role="bundle trace",
+                _rollback=rollback,
             )
+            with bundle.lock:
+                bundle.run_dir = staging
+                bundle.artifacts_dir = artifacts
+                bundle.trace_file = trace_file
+            # The bundle now reaches all three long-lived capabilities. Only
+            # after all stores have completed may this frame's construction
+            # owner retire them; an interruption during transfer therefore
+            # still leaves the bundle or the rollback able to close each one.
+            rollback.transfer(trace_file)
+            rollback.transfer(artifacts)
+            rollback.transfer(staging)
+            staging = None
+            artifacts = None
         except Exception as exc:
             bundle.mark_broken_with_exception(REASON_PUBLISH_FAILED, exc)
+        except BaseException as exc:
+            # Leave the active exception context before staging cleanup: its
+            # nested recovery must not capture this construction owner back.
+            publication_failure = exc
         finally:
-            # A staging directory this publish created and never renamed is
-            # debris of our own making; anything else is left to the
-            # reclaimer, which validates the shape before deleting.
-            _discard_staging(staged)
+            # A recognized pre-publication staging tree is this publisher's
+            # incomplete work. Remove it while the process lock excludes a
+            # second conforming publisher; malformed or already-renamed trees
+            # remain untouched for the startup reclaimer/operator.
+            staging_failure: BaseException | None = None
+            if staging is not None:
+                try:
+                    staging_cleanup = RollbackSlot()
+                    rollback.own(staging_cleanup)
+                    try:
+                        staging.remove_managed_staging()
+                    except BaseException as exc:
+                        # A tolerated removal failure may still own leases.
+                        # Keep their recovery ahead of older construction work.
+                        staging_cleanup.capture_failure(exc)
+                        raise
+                except (ManagedPathSecurityError, OSError, ValueError):
+                    pass
+                except BaseException as exc:
+                    staging_failure = exc
+            try:
+                # Until all three capabilities are installed on ``bundle``
+                # they remain locals owned by this frame. Rename changes a
+                # name, not ownership: later failures must still close them.
+                if not rollback.retry():
+                    bundle.retain_cleanup(rollback)
+                    cleanup_error = rollback.process_control or next(
+                        iter(rollback.errors),
+                        RuntimeError("trace publication cleanup incomplete"),
+                    )
+                    bundle.mark_broken_with_exception(
+                        REASON_PUBLISH_FAILED, cleanup_error
+                    )
+            finally:
+                # Preserve process control or an unexpected removal failure,
+                # but only after the construction owner is closed or retained.
+                if staging_failure is not None:
+                    raise staging_failure
+                if publication_failure is not None:
+                    raise publication_failure
 
     # -- flush barrier (ADR-0019) ------------------------------------------
 
@@ -782,58 +735,73 @@ class RunBundleTraceSink:
         # drain is the only thread that ever closes one.
         to_retire: list[_RunBundle] = []
         for bundle in barrier.bundles:
+            cleanup_complete, cleanup_error = bundle.retry_cleanup()
             with bundle.lock:
                 broken = bundle.broken
                 first_error = bundle.first_error
                 dropped += bundle.dropped
-                fd = bundle.trace_fd
+                trace_file = bundle.trace_file
+                artifacts = bundle.artifacts_dir
                 run_dir = bundle.run_dir
             if broken is not None:
                 details.append(first_error or broken)
-            elif fd is not None and run_dir is not None:
+            elif (
+                trace_file is not None
+                and artifacts is not None
+                and run_dir is not None
+            ):
                 # Only an unbroken bundle gets fsynced: a broken one has
                 # bytes on disk the barrier cannot vouch for, and fsyncing
                 # them would be polishing a damaged audit file. Skipping the
                 # fsync skips nothing else -- the fd below is still owned,
                 # still claimed, and still closed.
-                error = self._fsync_bundle(fd, run_dir)
+                error = self._fsync_bundle(trace_file, artifacts, run_dir)
                 if error is not None:
                     details.append(error)
-            to_retire.append(bundle)
-        # The writes are fsynced; now the drain releases each Run's fd and
-        # retires the bundle, so nothing is held until sink.close().
-        closed_fds: list[int] = []
+            if cleanup_error is not None:
+                details.append(
+                    _exception_detail(REASON_SINK_FAILED, cleanup_error)
+                )
+            if cleanup_complete:
+                resources_complete, close_error = bundle.retry_resources()
+                if close_error is not None:
+                    details.append(
+                        _exception_detail(REASON_SINK_FAILED, close_error)
+                    )
+                if resources_complete:
+                    to_retire.append(bundle)
+        # The writes are fsynced and every close result is durable. Only now
+        # may the map and termination record stop owning this bundle.
         with self._wake:
             for bundle in to_retire:
-                # Unpublished first: once the bundle is out of the map and
-                # recorded as terminated, no commit thread can reach it or
-                # the fd it referenced, so the close below cannot race a
-                # write and cannot close a number the OS has already handed
-                # to somebody else.
-                self._bundles.pop(bundle.run_id, None)
-                self._terminated.add(bundle.run_id)
-                # Claimed under the bundle's lock (wake -> bundle.lock only),
-                # so the bundle stops referencing the fd the drain is about
-                # to close and a second claim gets nothing.
-                claimed = _take_fd(bundle)
-                if claimed is not None:
-                    closed_fds.append(claimed)
-        _close_fds(closed_fds)
+                if self._bundles.get(bundle.run_id) is bundle:
+                    self._bundles.pop(bundle.run_id)
+                    self._terminated.add(bundle.run_id)
         barrier.answer(
             "; ".join(dict.fromkeys(details))[:200] if details else None, dropped
         )
 
-    def _fsync_bundle(self, fd: int, run_dir: Path) -> str | None:
+    def _fsync_bundle(
+        self,
+        trace_file: ManagedFileLease,
+        artifacts: ManagedDirectoryLease,
+        run_dir: ManagedDirectoryLease,
+    ) -> str | None:
         # ADR-0019 order: artifact files -> trace.jsonl -> artifacts/ -> Run dir.
         try:
-            os.fsync(fd)
-            _fsync_dir(run_dir / "artifacts")
-            _fsync_dir(run_dir)
+            trace_file.fsync()
+            artifacts.fsync()
+            run_dir.fsync()
             return None
         except Exception as exc:
             return _exception_detail(REASON_FSYNC_FAILED, exc)
 
-    def close(self) -> None:
+    def close(self, timeout: float | None = None) -> bool:
+        """Ask the drain to stop and report whether its thread has exited.
+
+        A timed-out join is retryable progress, not completion: the queue,
+        bundles and descriptors stay owned by the same drain until it exits.
+        """
         with self._wake:
             if not self._stopping:
                 self._stopping = True
@@ -844,11 +812,22 @@ class RunBundleTraceSink:
                 # written -- the queue and the fds stay with the drain.
                 self._answer_queued_barriers_locked(REASON_SINK_CLOSED)
                 self._wake.notify_all()
-        self._drain.join(timeout=_CLOSE_JOIN_TIMEOUT_S)
+        wait = _CLOSE_JOIN_TIMEOUT_S if timeout is None else max(0.0, timeout)
+        self._drain.join(timeout=wait)
         # No fd is closed here, even after a timed-out join: the drain thread
         # is the sole owner of every fd and may be inside os.write on one
-        # right now. It closes what remains when it unwinds; the OS reclaims
-        # anything else at process exit.
+        # right now. It closes what remains when it unwinds; as a non-daemon
+        # owner it cannot be silently abandoned during interpreter shutdown.
+        complete = not self._drain.is_alive()
+        cleanup_complete = complete and self._retry_remaining_cleanup()
+        if cleanup_complete and self._root_lease is not None:
+            self._root_lease.close()
+            self._root_lease = None
+        return cleanup_complete
+
+    def close_with_timeout(self, timeout: float | None = None) -> bool:
+        """TimedCloseSink capability used by FanOut without signature guessing."""
+        return self.close(timeout=timeout)
 
     def _answer_queued_barriers_locked(self, reason: str) -> None:
         """Answer every barrier still in the queue that nobody has answered
@@ -860,10 +839,20 @@ class RunBundleTraceSink:
             if isinstance(item, _WriteBarrier) and not item.done.is_set():
                 item.answer(reason)
 
-    def _release_remaining_fds(self) -> None:
-        """Drain-thread unwind: close what no barrier retired."""
+    def _retry_remaining_cleanup(self) -> bool:
+        """Retry retirement of bundles not yet removed by a barrier."""
         with self._wake:
-            bundles = list(self._bundles.values())
-            self._bundles.clear()
-        taken = [_take_fd(bundle) for bundle in bundles]
-        _close_fds([fd for fd in taken if fd is not None])
+            bundles = tuple(self._bundles.values())
+        complete = True
+        settled: list[_RunBundle] = []
+        for bundle in bundles:
+            bundle_complete, _failure = bundle.retry_retirement()
+            if bundle_complete:
+                settled.append(bundle)
+            else:
+                complete = False
+        with self._wake:
+            for bundle in settled:
+                if self._bundles.get(bundle.run_id) is bundle:
+                    self._bundles.pop(bundle.run_id, None)
+        return complete

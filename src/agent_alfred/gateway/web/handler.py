@@ -1,0 +1,457 @@
+"""The HTTP shroud: routes, headers, and the SSE stream. No logic.
+
+Everything a request *means* lives in :mod:`~agent_alfred.gateway.web.api`
+and :mod:`~agent_alfred.gateway.web.guard`; this module only turns bytes into
+a call and a call back into bytes. That split is deliberate: the defences and
+the contract are the parts worth testing, and neither needs a socket, while
+the parts that do need a socket are exactly the parts with no decisions in
+them.
+
+Two rules shape the response headers:
+
+- every response carries ``nosniff`` and a policy that forbids embedding, so
+  a response nobody asked for cannot be reinterpreted or framed;
+- ``Access-Control-Allow-Origin`` is never emitted, not even for a refused
+  request. Its absence is what stops a cross-origin ``EventSource`` from
+  reading the stream, and adding it "just for the error path" would remove
+  the whole Origin layer on the one path an attacker controls.
+"""
+
+from __future__ import annotations
+
+import json
+from http.server import BaseHTTPRequestHandler
+from typing import Any
+from urllib.parse import parse_qs, unquote, urlsplit
+
+from agent_alfred.gateway.web.api import DashboardApi
+from agent_alfred.gateway.web.broker import StreamAdmissionRejected
+from agent_alfred.gateway.web.connection import SocketConnection
+from agent_alfred.gateway.web.guard import (
+    AuthorizedRequest,
+    Rejection,
+    RequestGuard,
+)
+from agent_alfred.gateway.web.replay import CursorText
+from agent_alfred.resource_rollback import ResumableRollback
+from agent_alfred.runtime.recording import RecordingUnavailable
+
+EVENTS_PATH = "/api/events"
+ENTRY_PATH = "/api/entry"
+SESSIONS_PATH = "/api/sessions"
+# The one messages endpoint. A historic ``session_id`` is an arbitrary TEXT
+# value (ADR-0027): it cannot survive as a path segment, so it rides the
+# query string and is used verbatim -- see ``_route_get``.
+SESSION_MESSAGES_PATH = "/api/sessions/messages"
+SESSION_RUNS_PATH = "/api/sessions/runs"
+RUNS_PATH = "/api/runs"
+MAINBAR_PATH = "/api/mainbar"
+REPLY_PATH = "/api/reply"
+
+# Sent on every response. ``nosniff`` stops a browser from reinterpreting a
+# JSON body as something executable; the CSP forbids framing and every
+# subresource, which is the right policy for a service that serves an API
+# and nothing else.
+BASE_HEADERS: tuple[tuple[str, str], ...] = (
+    ("Cache-Control", "no-store"),
+    ("X-Content-Type-Options", "nosniff"),
+    ("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'"),
+    # A reverse proxy that buffers would hold an event stream hostage; this
+    # is the conventional way to tell one not to.
+    ("X-Accel-Buffering", "no"),
+)
+
+SSE_HEADERS: tuple[tuple[str, str], ...] = (
+    ("Content-Type", "text/event-stream; charset=utf-8"),
+    ("Connection", "keep-alive"),
+)
+
+__all__ = [
+    "DashboardHandler",
+    "HandlerContext",
+]
+
+
+class HandlerContext:
+    """What every request needs, assembled once after the bind succeeded.
+
+    The guard depends on the port, so it cannot exist before the bind -- one
+    more reason the descriptor is the last step of the lifecycle.
+    """
+
+    def __init__(
+        self,
+        *,
+        guard: RequestGuard,
+        api: DashboardApi,
+        broker: Any,
+        instance_id: str,
+    ):
+        self.guard = guard
+        self.api = api
+        self.broker = broker
+        self.instance_id = instance_id
+
+
+class DashboardHandler(BaseHTTPRequestHandler):
+    """One request. The process-wide context hangs off ``self.server``.
+
+    ``http.server`` instantiates the handler itself, once per connection, so
+    the context cannot be a constructor argument; attaching it to the server
+    is the idiomatic place, and the lifecycle guarantees it is set before the
+    socket can accept anything.
+    """
+
+    server_version = "AgentAlfredDashboard/0.1"
+    # HTTP/1.1 so the SSE response can be a plain stream; every other
+    # response therefore has to carry a Content-Length, which _send does.
+    protocol_version = "HTTP/1.1"
+
+    @property
+    def _context(self) -> HandlerContext:
+        return self.server.context  # type: ignore[attr-defined]
+
+    # -- plumbing ----------------------------------------------------------
+
+    def log_message(self, *args: object) -> None:
+        """Silence the default stderr log.
+
+        It writes one line per request from a handler thread, which is noise
+        in a terminal that is already running the CLI.
+        """
+
+    def send_error(
+        self,
+        code: int,
+        message: str | None = None,
+        explain: str | None = None,
+    ) -> None:
+        """Keep parser failures inside the dashboard response contract.
+
+        ``BaseHTTPRequestHandler`` calls this before ``command`` and ``path``
+        necessarily exist.  Those failures cannot pass through the request
+        guard, but they still need the headers promised for every response.
+        """
+        if code == 501 and getattr(self, "command", None):
+            self._handle(self.command)
+            return
+        del message, explain
+        self.close_connection = True
+        self._send(
+            code,
+            {"code": "bad_request"},
+            extra=(("Connection", "close"),),
+        )
+
+    def _send(
+        self,
+        status: int,
+        payload: Any = None,
+        *,
+        extra: tuple[tuple[str, str], ...] = (),
+    ) -> None:
+        body = b"" if payload is None else _dump(payload)
+        if getattr(self, "_request_body_pending", False):
+            self.close_connection = True
+            if not any(name.lower() == "connection" for name, _value in extra):
+                extra = (*extra, ("Connection", "close"))
+        self.send_response(status)
+        for name, value in BASE_HEADERS:
+            self.send_header(name, value)
+        for name, value in extra:
+            self.send_header(name, value)
+        if payload is not None:
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if body and getattr(self, "command", None) != "HEAD":
+            self.wfile.write(body)
+
+    def _reject(self, rejection) -> None:
+        self._send(
+            rejection.status, {"code": rejection.code, "detail": rejection.detail}
+        )
+
+    def _params(self) -> dict[str, str]:
+        query = urlsplit(self.path).query
+        return {
+            key: values[0]
+            for key, values in parse_qs(query, keep_blank_values=True).items()
+            if values
+        }
+
+    def _read_body(self, length: int) -> tuple[dict[str, Any] | None, str | None]:
+        body = self.rfile.read(length)
+        self._request_body_pending = False
+        if len(body) != length:
+            return None, "body_not_json"
+        try:
+            payload = json.loads(body.decode("utf-8"))
+        except (ValueError, UnicodeDecodeError):
+            return None, "body_not_json"
+        if not isinstance(payload, dict):
+            return None, "body_not_object"
+        return payload, None
+
+    # -- verbs -------------------------------------------------------------
+
+    def do_GET(self) -> None:  # noqa: N802 - http.server's own spelling
+        self._handle("GET")
+
+    def do_POST(self) -> None:  # noqa: N802
+        self._handle("POST")
+
+    def do_PUT(self) -> None:  # noqa: N802
+        self._handle("PUT")
+
+    def do_PATCH(self) -> None:  # noqa: N802
+        self._handle("PATCH")
+
+    def do_DELETE(self) -> None:  # noqa: N802
+        self._handle("DELETE")
+
+    def do_OPTIONS(self) -> None:  # noqa: N802
+        """No preflight is ever answered.
+
+        A cross-origin write needs a preflight to succeed, and succeeding is
+        precisely what must not happen. Refused explicitly rather than left
+        to fall through, so the answer is a decision and not an accident of
+        ``http.server``.
+        """
+        self._handle("OPTIONS")
+
+    def do_HEAD(self) -> None:  # noqa: N802
+        self._handle("HEAD")
+
+    def do_TRACE(self) -> None:  # noqa: N802
+        self._handle("TRACE")
+
+    def do_CONNECT(self) -> None:  # noqa: N802
+        self._handle("CONNECT")
+
+    def _handle(self, method: str) -> None:
+        context = self._context
+        authorization = context.guard.authorize(method=method, headers=self.headers)
+        self._request_body_pending = authorization.body_declared
+        if isinstance(authorization, Rejection):
+            self._reject(authorization)
+            return
+        if method == "OPTIONS":
+            self._send(405, {"code": "no_preflight"})
+            return
+        path = urlsplit(self.path).path
+        if path == EVENTS_PATH and method == "GET":
+            self._serve_events()
+            return
+        if path == EVENTS_PATH and method == "HEAD":
+            self._serve_events_head()
+            return
+        try:
+            if method in {"GET", "HEAD"}:
+                self._route_get(path)
+            else:
+                self._route_write(method, path, authorization)
+        except Exception:  # noqa: BLE001 - see below
+            # An unhandled error in one request must not take the process
+            # down or leak a traceback into a browser. 500 is the honest
+            # answer: something went wrong here, and nothing about what.
+            self._send(500, {"code": "internal_error"})
+
+    def _route_get(self, path: str) -> None:
+        context = self._context
+        api = context.api
+        params = self._params()
+        if path == ENTRY_PATH:
+            # The bootstrap: the instance and the process CSRF token. A
+            # cross-origin page cannot read this -- we never send
+            # Access-Control-Allow-Origin -- which is exactly why it is safe
+            # to hand the token out on a GET.
+            self._send(
+                200,
+                {
+                    "instance_id": context.instance_id,
+                    "csrf_token": context.guard.csrf_token,
+                },
+            )
+            return
+        if path == SESSIONS_PATH:
+            status, payload = api.session_inbox(params)
+            self._send(status, payload)
+            return
+        if path == REPLY_PATH:
+            status, payload = api.recover_reply(params)
+            self._send(status, payload)
+            return
+        if path == SESSION_MESSAGES_PATH:
+            # A historic session_id is an opaque value (ADR-0027): it may
+            # contain "/", "?", "#", "%" or anything else, so it is carried
+            # as one query parameter -- ``parse_qs`` with
+            # ``keep_blank_values`` percent-decodes it exactly once -- and
+            # passed on verbatim. Absent and empty are different facts: the
+            # empty string is a value the database may legitimately hold, so
+            # only a missing parameter is a bad request.
+            if "session_id" not in params:
+                self._send(400, {"code": "missing_session_id"})
+                return
+            status, payload = api.session_messages(params["session_id"], params)
+            self._send(status, payload)
+            return
+        if path == SESSION_RUNS_PATH:
+            status, payload = api.session_runs(params)
+            self._send(status, payload)
+            return
+        if path == RUNS_PATH:
+            status, payload = api.runs_page(params)
+            self._send(status, payload)
+            return
+        if path.startswith(RUNS_PATH + "/locate/"):
+            # The opaque identifier is the entire suffix, decoded once;
+            # encoded separators are data, not further routing structure.
+            run_id = unquote(path[len(RUNS_PATH) + len("/locate/") :])
+            status, payload = api.locate_run(run_id, params)
+            self._send(status, payload)
+            return
+        if path == MAINBAR_PATH:
+            status, payload = api.mainbar(params)
+            self._send(status, payload)
+            return
+        self._send(404, {"code": "not_found"})
+
+    def _route_write(
+        self, method: str, path: str, authorization: AuthorizedRequest
+    ) -> None:
+        context = self._context
+        if method != "POST":
+            self._send(405, {"code": "method_not_allowed"})
+            return
+        if path == SESSIONS_PATH:
+            assert authorization.body_length is not None
+            body, error = self._read_body(authorization.body_length)
+            if error is not None:
+                self._send(400, {"code": error})
+                return
+            assert body is not None
+            if body:
+                self._send(400, {"code": "unexpected_fields"})
+                return
+            result = context.api.create_session()
+            if result.session_id is None:
+                # Refused rather than queued. The API distinguishes a held
+                # gate (409) from recording-closed admission (503).
+                self._send(result.status, {"code": result.code})
+                return
+            self._send(result.status, {"session_id": result.session_id})
+            return
+        if path == RUNS_PATH:
+            assert authorization.body_length is not None
+            body, error = self._read_body(authorization.body_length)
+            if error is not None:
+                self._send(400, {"code": error})
+                return
+            assert body is not None
+            outcome = context.api.submit(body)
+            self._send(outcome.status, outcome.payload())
+            return
+        self._send(404, {"code": "not_found"})
+
+    # -- the stream --------------------------------------------------------
+
+    def _serve_events_head(self) -> None:
+        """Return the stream's current metadata without owning a stream."""
+        context = self._context
+        session_id = self._params().get("session_id")
+        try:
+            context.broker.preflight_session(session_id)
+        except RecordingUnavailable:
+            self._send(503, {"code": "recording_unavailable"})
+            return
+        except Exception:  # noqa: BLE001 - no detail crosses the HTTP boundary
+            self._send(500, {"code": "internal_error"})
+            return
+
+        body_pending = getattr(self, "_request_body_pending", False)
+        if body_pending:
+            self.close_connection = True
+        self.send_response(200)
+        for name, value in BASE_HEADERS:
+            self.send_header(name, value)
+        for name, value in SSE_HEADERS:
+            if body_pending and name.lower() == "connection":
+                continue
+            self.send_header(name, value)
+        if body_pending:
+            self.send_header("Connection", "close")
+        self.end_headers()
+
+    def _serve_events(self) -> None:
+        """Hand the socket to the broker and wait for the writer to end.
+
+        The handler thread does no writing: from here on the socket has
+        exactly one owner, the connection's writer thread. This thread only
+        holds the HTTP response open, and returns when the writer has closed
+        the peer -- which is the only way a stream ends.
+        """
+        context = self._context
+        session_id = self._params().get("session_id")
+        connection = SocketConnection(self.connection, self.wfile)
+        cursor = self.headers.get("last-event-id")
+        proof_owner = ResumableRollback()
+        try:
+            proof = context.broker.prepare_stream(
+                connection=connection,
+                cursor=CursorText(cursor) if cursor is not None else None,
+                session_id=session_id,
+                _rollback=proof_owner,
+            )
+        except RecordingUnavailable as exc:
+            if not proof_owner.retry():
+                proof_owner.raise_incomplete(exc)
+            self._send(503, {"code": "recording_unavailable"})
+            return
+        except StreamAdmissionRejected as rejection:
+            if not proof_owner.retry():
+                proof_owner.raise_incomplete(rejection)
+            self._send(rejection.status, {"code": rejection.code})
+            return
+        except Exception as exc:  # noqa: BLE001 - no detail crosses the HTTP boundary
+            if not proof_owner.retry():
+                proof_owner.raise_incomplete(exc)
+            self._send(500, {"code": "internal_error"})
+            return
+        except BaseException as exc:
+            proof_owner.raise_failure(exc)
+        try:
+            self.send_response(200)
+            for name, value in BASE_HEADERS:
+                self.send_header(name, value)
+            for name, value in SSE_HEADERS:
+                self.send_header(name, value)
+            self.end_headers()
+        except BaseException as exc:
+            if not proof_owner.retry():
+                proof_owner.raise_incomplete(exc)
+            self.close_connection = True
+            return
+        try:
+            handle = context.broker.start_stream(proof)
+            proof_owner.transfer(proof)
+        except BaseException as exc:
+            # ``start_stream`` revokes the proof if spawning fails. A second
+            # response is impossible after 200; closing is the only honest
+            # outcome, and no reservation or registration survives it.
+            handle = proof.transferred_handle()
+            if not proof_owner.retry():
+                proof_owner.raise_incomplete(exc)
+            if handle is None:
+                self.close_connection = True
+                return
+        # The writer closes the socket; this thread must not touch it again,
+        # so it only waits for the writer to say it is done.
+        handle.finished.wait()
+        self.close_connection = True
+
+
+def _dump(payload: Any) -> bytes:
+    return (
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    )

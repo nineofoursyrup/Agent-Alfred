@@ -7,7 +7,7 @@ import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from decimal import Decimal
-from typing import Any, Literal, Protocol
+from typing import Any, Literal, Protocol, cast, get_args
 
 from agent_alfred.messages import Block, Message, TextBlock
 
@@ -23,8 +23,35 @@ StopReason = Literal[
     "error",
     "unknown",
 ]
+STOP_REASONS: tuple[StopReason, ...] = get_args(StopReason)
+
+
+def parse_stop_reason(value: object) -> StopReason:
+    """Validate and narrow one model stop reason at a typed boundary."""
+    if type(value) is not str or value not in STOP_REASONS:
+        raise ValueError(f"invalid stop_reason: {value!r}")
+    return cast(StopReason, value)
 
 Retryable = Literal[True, False, "unknown"]
+AttemptOutcome = Literal["committed", "aborted"]
+
+ATTEMPT_COMMITTED: AttemptOutcome = "committed"
+ATTEMPT_ABORTED: AttemptOutcome = "aborted"
+ATTEMPT_OUTCOMES: tuple[AttemptOutcome, ...] = (
+    ATTEMPT_COMMITTED,
+    ATTEMPT_ABORTED,
+)
+
+
+def parse_attempt_outcome(value: object) -> AttemptOutcome:
+    """Validate and narrow one Attempt outcome crossing a wire boundary."""
+    if type(value) is not str:
+        raise ValueError(f"invalid attempt outcome: {value!r}")
+    if value == ATTEMPT_COMMITTED:
+        return ATTEMPT_COMMITTED
+    if value == ATTEMPT_ABORTED:
+        return ATTEMPT_ABORTED
+    raise ValueError(f"invalid attempt outcome: {value!r}")
 
 
 @dataclass(frozen=True)
@@ -58,7 +85,7 @@ class ModelError:
 class AttemptRecord:
     attempt_id: str
     streamed: bool
-    outcome: Literal["committed", "aborted"]
+    outcome: AttemptOutcome
     usage: Usage
     error: ModelError | None = None
 
@@ -68,6 +95,9 @@ class ModelResponse:
     blocks: tuple[Block, ...]
     stop_reason: StopReason
     model: ModelRef
+
+    def __post_init__(self) -> None:
+        parse_stop_reason(self.stop_reason)
 
 
 @dataclass(frozen=True)

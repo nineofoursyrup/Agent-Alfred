@@ -25,8 +25,6 @@ from agent_alfred.settings import (
 )
 from agent_alfred.wiring import build_default_host
 
-# --- environment layer -------------------------------------------------------
-
 
 def test_environment_overrides_reach_settings(monkeypatch) -> None:
     monkeypatch.setenv("AGENT_ALFRED_MAX_STEPS", "3")

@@ -4,18 +4,26 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from typing import Protocol
 
 from agent_alfred.clock import Clock
 from agent_alfred.events import (
     EventEnvelope,
-    FanOutSink,
+    EventPayload,
+    SequencedEvent,
     StepFinished,
     StepStarted,
 )
 from agent_alfred.loop.budget import RunBudget, StepBudgetExceeded
 from agent_alfred.memory.retrieval_gate import evaluate as evaluate_retrieval_gate
 from agent_alfred.messages import Message, TextBlock, text_message
-from agent_alfred.model import ModelClient, ModelRef, ModelRequest, ModelResult
+from agent_alfred.model import (
+    ModelClient,
+    ModelRef,
+    ModelRequest,
+    ModelResult,
+    StopReason,
+)
 from agent_alfred.outcomes import RunOutcome
 from agent_alfred.settings import (
     CONTROLLED_FAILURE_TEXT,
@@ -37,6 +45,16 @@ class LoopResult:
     model_results: tuple[ModelResult, ...] = field(default_factory=tuple)
 
 
+class AssistantEvents(Protocol):
+    """The event seam the loop actually uses."""
+
+    def emit(
+        self, payload: EventPayload, envelope: EventEnvelope | None = None
+    ) -> SequencedEvent: ...
+
+    def bind_origin(self, envelope: EventEnvelope | None) -> None: ...
+
+
 class Assistant:
     def __init__(self, *, clock: Clock, settings: Settings):
         self._clock = clock
@@ -52,7 +70,7 @@ class Assistant:
         model: ModelRef,
         run_id: str,
         session_id: str | None,
-        events: FanOutSink | None = None,
+        events: AssistantEvents | None = None,
         source: str = "cli",
         overall_deadline_s: float | None = None,
     ) -> LoopResult:
@@ -113,7 +131,7 @@ class Assistant:
                 messages=tuple(transcript),
                 max_tokens=self._settings.max_tokens,
             )
-            bind = getattr(events, "bind_origin", None) if events is not None else None
+            bind = events.bind_origin if events is not None else None
             if bind is not None:
                 bind(envelope)
             try:
@@ -131,7 +149,7 @@ class Assistant:
                 if bind is not None:
                     bind(None)
             results.append(model_result)
-            stop_reason = "error"
+            stop_reason: StopReason = "error"
             if model_result.response is not None:
                 stop_reason = model_result.response.stop_reason
                 reply = Message(
