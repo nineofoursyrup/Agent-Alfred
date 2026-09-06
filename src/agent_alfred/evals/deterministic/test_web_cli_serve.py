@@ -12,11 +12,11 @@ import threading
 import pytest
 
 from agent_alfred.clock import FakeClock
+from agent_alfred.database import open_database as file_database
 from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
     free_loopback_port,
 )
 from agent_alfred.evals.deterministic._web_startup_test_helpers import (
-    file_database,
     managed_process_lock,
     scripted_factory,
 )
@@ -39,7 +39,7 @@ class _RefusingRuntime:
     def start(self):
         raise self._error
 
-    def close(self):
+    def close(self, *, timeout: float | None = None):
         return True
 
 
@@ -301,8 +301,9 @@ def test_cli_initial_session_is_refused_while_a_web_run_owns_the_gate(
 
         def close(self, *args, **kwargs):
             assert run_admitted.is_set()
-            self.session_count_before_close = len(
-                self.host.list_sessions(limit=10, cursor=None).sessions
+            page = self.host.list_sessions(limit=10, cursor=None)
+            self.session_count_before_close = len(page.sessions) + int(
+                page.non_terminal is not None
             )
             run_gate.set()
             return super().close(*args, **kwargs)
@@ -393,7 +394,7 @@ class _ServeWaitRuntime:
     def start(self) -> None:
         return None
 
-    def close(self) -> bool:
+    def close(self, *, timeout: float | None = None) -> bool:
         self.close_calls += 1
         return True
 
@@ -437,7 +438,7 @@ class _CloseProgressRuntime:
         if self._start_error is not None:
             raise self._start_error
 
-    def close(self) -> bool:
+    def close(self, *, timeout: float | None = None) -> bool:
         self.close_calls += 1
         if self.close_calls >= 2:
             self.close_retried.set()
@@ -457,7 +458,7 @@ class _StartupRollbackErrorRuntime:
         self.calls.append("start")
         raise RuntimeError("bind refused")
 
-    def close(self) -> bool:
+    def close(self, *, timeout: float | None = None) -> bool:
         self.calls.append("close")
         raise RuntimeError("secret rollback payload")
 
@@ -497,7 +498,7 @@ def test_cli_maps_session_gate_unavailability_to_safe_failures() -> None:
         def start(self) -> None:
             return None
 
-        def close(self) -> bool:
+        def close(self, *, timeout: float | None = None) -> bool:
             self.closed = True
             return True
 
@@ -591,6 +592,38 @@ def test_repl_exit_advances_retryable_close_until_it_finishes(
     assert runtime.close_retried.is_set()
     assert runtime.close_calls == 3
     assert runtime.owns_runtime is False
+
+
+def test_cli_supplies_a_finite_budget_to_every_close_attempt(tmp_path) -> None:
+    """Retry count is meaningful only when each component wait is bounded."""
+    from agent_alfred.gateway import cli as cli_module
+
+    class Runtime(_ServeWaitRuntime):
+        def __init__(self) -> None:
+            super().__init__()
+            self.timeouts: list[float] = []
+
+        def close(self, *, timeout: float) -> bool:
+            self.close_calls += 1
+            self.timeouts.append(timeout)
+            return self.close_calls == 3
+
+    runtime = Runtime()
+    stop = threading.Event()
+    stop.set()
+
+    assert (
+        cli_module.serve_dashboard(
+            state_dir=tmp_path,
+            settings=Settings(),
+            out=io.StringIO(),
+            stop=stop,
+            build=lambda **kwargs: runtime,
+        )
+        == 0
+    )
+    assert runtime.timeouts == [cli_module._CLOSE_ATTEMPT_TIMEOUT_S] * 3
+    assert all(timeout > 0 for timeout in runtime.timeouts)
 
 
 def test_serve_interrupt_advances_retryable_close_until_it_finishes(tmp_path) -> None:
@@ -700,6 +733,56 @@ def test_serve_reports_start_failure_when_rollback_close_raises(
     assert runtime.calls == ["start", "close"]
 
 
+def test_announcement_failure_still_closes_the_started_runtime(tmp_path) -> None:
+    """Output is inside the runtime owner; a broken pipe cannot skip close."""
+    from agent_alfred.gateway import cli as cli_module
+
+    class BrokenOutput:
+        @staticmethod
+        def write(_text: str) -> None:
+            raise BrokenPipeError("announcement pipe closed")
+
+        @staticmethod
+        def flush() -> None:
+            raise AssertionError("a failed write must not reach flush")
+
+    runtime = _ServeWaitRuntime()
+    with pytest.raises(BrokenPipeError, match="announcement pipe closed"):
+        cli_module.serve_dashboard(
+            state_dir=tmp_path,
+            settings=Settings(),
+            out=BrokenOutput(),
+            stop=threading.Event(),
+            build=lambda **kwargs: runtime,
+        )
+
+    assert runtime.close_calls == 1
+
+
+def test_foreground_announcement_failure_still_closes_the_runtime() -> None:
+    """The foreground surface owns the runtime before it writes output."""
+    from agent_alfred.gateway import cli as cli_module
+
+    class BrokenOutput:
+        @staticmethod
+        def write(_text: str) -> None:
+            raise BrokenPipeError("foreground announcement pipe closed")
+
+        @staticmethod
+        def flush() -> None:
+            raise AssertionError("a failed write must not reach flush")
+
+    runtime = _CloseProgressRuntime([True])
+    args = type("Args", (), {"message": "unused"})()
+    with pytest.raises(BrokenPipeError, match="foreground announcement pipe"):
+        cli_module._chat_in_the_foreground(
+            runtime, args, Settings(), out=BrokenOutput()
+        )
+
+    assert runtime.close_calls == 1
+    assert runtime.owns_runtime is False
+
+
 @pytest.mark.parametrize(
     "control",
     [KeyboardInterrupt(), SystemExit("stop")],
@@ -712,22 +795,60 @@ def test_start_process_control_exceptions_keep_unwinding(
     from agent_alfred.gateway import cli as cli_module
 
     class Runtime:
+        def __init__(self) -> None:
+            self.close_calls = 0
+
         def start(self) -> None:
             raise control
 
-        @staticmethod
-        def close() -> bool:
-            raise AssertionError("control flow was swallowed")
+        def close(self, *, timeout: float | None = None) -> bool:
+            self.close_calls += 1
+            return True
 
+    runtime = Runtime()
     with pytest.raises(type(control)) as caught:
         cli_module.serve_dashboard(
             state_dir=tmp_path,
             settings=Settings(),
             out=io.StringIO(),
             stop=threading.Event(),
-            build=lambda **kwargs: Runtime(),
+            build=lambda **kwargs: runtime,
         )
     assert caught.value is control
+    assert runtime.close_calls == 1
+
+
+def test_start_control_keeps_priority_over_close_control(tmp_path) -> None:
+    """Cleanup advances, but cannot replace the process exit being handled."""
+    from agent_alfred.gateway import cli as cli_module
+
+    start_control = SystemExit("original stop")
+    close_control = KeyboardInterrupt("close interrupted")
+
+    class Runtime:
+        def __init__(self) -> None:
+            self.close_calls = 0
+
+        @staticmethod
+        def start() -> None:
+            raise start_control
+
+        def close(self, *, timeout: float | None = None) -> bool:
+            self.close_calls += 1
+            raise close_control
+
+    runtime = Runtime()
+    with pytest.raises(SystemExit) as caught:
+        cli_module.serve_dashboard(
+            state_dir=tmp_path,
+            settings=Settings(),
+            out=io.StringIO(),
+            stop=threading.Event(),
+            build=lambda **kwargs: runtime,
+        )
+
+    assert caught.value is start_control
+    assert runtime.close_calls == 1
 
 
 @pytest.mark.parametrize(
@@ -747,7 +868,7 @@ def test_rollback_process_control_exceptions_keep_unwinding(
             raise RuntimeError("bind refused")
 
         @staticmethod
-        def close() -> bool:
+        def close(*, timeout: float | None = None) -> bool:
             raise control
 
     out = io.StringIO()

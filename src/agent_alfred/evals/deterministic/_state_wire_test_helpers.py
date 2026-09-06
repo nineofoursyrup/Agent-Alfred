@@ -63,6 +63,20 @@ def only_attempt_in_snapshot_wire(
     return attempt
 
 
+def _unrecorded_terminal_projection_wire() -> dict[str, object]:
+    """Return a fresh valid projection for each caller's deliberate mutations."""
+    return {
+        "run_id": "run-1",
+        "purpose": "chat",
+        "outcome": "completed",
+        "reply_preview": "done",
+        "error": None,
+        "recording_state": "pending",
+        "session_id": "session-1",
+        "prompt_preview": "hello",
+    }
+
+
 def outcome_snapshot_wire(
     *,
     active_outcome: object,
@@ -80,16 +94,8 @@ def outcome_snapshot_wire(
         del active["outcome"]
     projection = None
     if projection_outcome is not NO_PROJECTION:
-        projection = {
-            "run_id": "run-1",
-            "purpose": "chat",
-            "outcome": projection_outcome,
-            "reply_preview": "done",
-            "error": None,
-            "recording_state": "pending",
-            "session_id": "session-1",
-            "prompt_preview": "hello",
-        }
+        projection = _unrecorded_terminal_projection_wire()
+        projection["outcome"] = projection_outcome
         if projection_outcome is ...:
             del projection["outcome"]
     if active_phase == "accepted":
@@ -134,16 +140,8 @@ def recording_snapshot_wire(
     step["attempts"] = []
     projection = None
     if projection_state is not NO_PROJECTION:
-        projection = {
-            "run_id": "run-1",
-            "purpose": "chat",
-            "outcome": "completed",
-            "reply_preview": "done",
-            "error": None,
-            "recording_state": projection_state,
-            "session_id": "session-1",
-            "prompt_preview": "hello",
-        }
+        projection = _unrecorded_terminal_projection_wire()
+        projection["recording_state"] = projection_state
         if projection_state is ...:
             del projection["recording_state"]
     wire["unrecorded_terminal_projection"] = projection
@@ -178,18 +176,7 @@ def shaped_snapshot_wire(
     if not with_step:
         wire["step"] = None
     wire["unrecorded_terminal_projection"] = (
-        {
-            "run_id": "run-1",
-            "purpose": "chat",
-            "outcome": "completed",
-            "reply_preview": "done",
-            "error": None,
-            "recording_state": "pending",
-            "session_id": "session-1",
-            "prompt_preview": "hello",
-        }
-        if with_projection
-        else None
+        _unrecorded_terminal_projection_wire() if with_projection else None
     )
     if with_projection:
         wire["coordinator_state"] = "recording_pending"

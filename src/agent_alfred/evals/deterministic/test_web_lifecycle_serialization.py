@@ -15,6 +15,38 @@ from agent_alfred.evals.deterministic._web_close_test_helpers import (
 # --- lifecycle state machine and lock -------------------------------------
 
 
+class _ObservableLifecycleLock:
+    """Observe a real lifecycle lock immediately before a blocked acquire."""
+
+    def __init__(self, delegate: Any) -> None:
+        self._delegate = delegate
+        self._state_lock = threading.Lock()
+        self._owner: int | None = None
+        self._depth = 0
+        self.contended = threading.Event()
+
+    def __enter__(self):
+        current = threading.get_ident()
+        with self._state_lock:
+            if self._owner not in (None, current):
+                self.contended.set()
+        self._delegate.acquire()
+        with self._state_lock:
+            self._owner = current
+            self._depth += 1
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        current = threading.get_ident()
+        with self._state_lock:
+            if self._owner != current:
+                raise RuntimeError("lifecycle lock released by a non-owner")
+            self._depth -= 1
+            if self._depth == 0:
+                self._owner = None
+            self._delegate.release()
+
+
 def test_the_lifecycle_is_observable_at_every_step(tmp_path) -> None:
     """The lifecycle is new -> starting -> running -> closing -> closed."""
     rig = DashboardCloseRig(tmp_path)
@@ -36,38 +68,68 @@ def test_a_failed_start_is_failed_and_a_stuck_close_is_closing(tmp_path) -> None
 
     stuck = DashboardCloseRig(tmp_path, host_results=(False, True))
     stuck.runtime.start()
-    assert stuck.runtime.close(timeout=0.0) is False
-    assert stuck.runtime.state == "closing"
-    assert stuck.runtime.close(timeout=0.0) is True
-    assert stuck.runtime.state == "closed"
+    try:
+        # Settle the serving predecessors and reach the Host's first refusal.
+        assert stuck.runtime.close(timeout=1.0) is False
+        assert stuck.host is not None
+        assert stuck.host.close_calls == 1
+        assert stuck.runtime.state == "closing"
+        assert stuck.runtime.close(timeout=0.0) is True
+        assert stuck.runtime.state == "closed"
+    finally:
+        stuck.runtime.close()
 
 
 def test_two_concurrent_starts_start_exactly_one_dashboard(tmp_path) -> None:
     """``start()`` is idempotent under concurrency, not just in sequence.
 
-    Both threads are released from the barrier at the same instant, so they
-    enter ``start()`` together. Only one of them may bind, open the database
-    and assemble a Host; the other waits for the descriptor the first one
-    published.
+    The first start parks in assembly while the observable lock reports the
+    second start really waiting behind it. Only one may bind, open the database
+    and assemble a Host; the other receives the descriptor it publishes.
     """
     rig = DashboardCloseRig(tmp_path)
-    rendezvous = threading.Barrier(2)
+    lifecycle_lock = _ObservableLifecycleLock(
+        rig.runtime._lifecycle_lock  # noqa: SLF001
+    )
+    rig.runtime._lifecycle_lock = lifecycle_lock  # noqa: SLF001
+    first_inside = threading.Event()
+    release_first = threading.Event()
+    first_done = threading.Event()
+    second_done = threading.Event()
     outcomes: list[Any] = []
     errors: list[BaseException] = []
 
-    def start_one() -> None:
-        rendezvous.wait()
+    def park_first(_rig: DashboardCloseRig) -> None:
+        first_inside.set()
+        release_first.wait()
+
+    rig.on_assemble = park_first
+
+    def start_one(done: threading.Event) -> None:
         try:
             outcomes.append(rig.runtime.start())
         except BaseException as exc:  # noqa: BLE001 - collected, not swallowed
             errors.append(exc)
+        finally:
+            done.set()
 
-    threads = [threading.Thread(target=start_one, daemon=True) for _ in range(2)]
-    for thread in threads:
-        thread.start()
-    for thread in threads:
+    first = threading.Thread(target=start_one, args=(first_done,), daemon=True)
+    second = threading.Thread(target=start_one, args=(second_done,), daemon=True)
+    first.start()
+    try:
+        assert first_inside.wait(10.0), "first start never reached assembly"
+        second.start()
+        assert lifecycle_lock.contended.wait(10.0), (
+            "second start never contended for the lifecycle lock"
+        )
+        assert second_done.is_set() is False
+    finally:
+        release_first.set()
+    for thread in (first, second):
         thread.join(timeout=10.0)
         assert not thread.is_alive()
+    assert first_done.is_set()
+    assert second_done.is_set()
 
     assert errors == []
     # One bind, one database, one Host -- and the same descriptor twice.
@@ -89,19 +151,21 @@ def test_a_close_cannot_run_inside_a_start(tmp_path) -> None:
     still needs, or bind a second time afterwards.
     """
     rig = DashboardCloseRig(tmp_path)
-    rendezvous = threading.Barrier(2)
-    met = threading.Event()
+    lifecycle_lock = _ObservableLifecycleLock(
+        rig.runtime._lifecycle_lock  # noqa: SLF001
+    )
+    rig.runtime._lifecycle_lock = lifecycle_lock  # noqa: SLF001
+    start_inside = threading.Event()
     proceed = threading.Event()
     start_outcome: list[Any] = []
     start_error: list[BaseException] = []
     close_outcome: list[Any] = []
 
     def park(_rig: DashboardCloseRig) -> None:
-        # Inside start(), holding the lifecycle lock. Meet the closer here so
-        # it is guaranteed to call close() while this thread still owns it.
-        rendezvous.wait()
-        met.set()
-        proceed.wait(timeout=10.0)
+        # Inside start(), holding the lifecycle lock. The test lock signals
+        # only after close has actually attempted the contended acquisition.
+        start_inside.set()
+        proceed.wait()
 
     rig.on_assemble = park
 
@@ -112,17 +176,20 @@ def test_a_close_cannot_run_inside_a_start(tmp_path) -> None:
             start_error.append(exc)
 
     def closer() -> None:
-        rendezvous.wait()
         close_outcome.append(rig.runtime.close())
 
     starter_thread = threading.Thread(target=starter, daemon=True)
     closer_thread = threading.Thread(target=closer, daemon=True)
-    closer_thread.start()
     starter_thread.start()
-    # Both parties have met: the closer is now calling close() against a lock
-    # the starter holds.
-    assert met.wait(timeout=10.0)
-    proceed.set()
+    try:
+        assert start_inside.wait(timeout=10.0), "start never reached assembly"
+        closer_thread.start()
+        assert lifecycle_lock.contended.wait(timeout=10.0), (
+            "close never contended for the lifecycle lock"
+        )
+        assert close_outcome == []
+    finally:
+        proceed.set()
     starter_thread.join(timeout=10.0)
     closer_thread.join(timeout=10.0)
     assert not starter_thread.is_alive()

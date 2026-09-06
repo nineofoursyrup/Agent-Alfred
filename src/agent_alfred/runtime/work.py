@@ -48,6 +48,10 @@ class SubmitRequest:
     # must opt out so private reply/attempt/usage payloads are never retained.
     wait_for_result: bool = True
 
+    def __post_init__(self) -> None:
+        if self.purpose != "chat" and self.session_id is not None:
+            raise ValueError("a system Run cannot name a Session")
+
 
 @dataclass(frozen=True)
 class SubmitResult:

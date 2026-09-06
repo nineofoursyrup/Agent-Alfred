@@ -2,11 +2,11 @@
 
 Everything here is a pure function. Serialization, UTF-8-safe splitting and
 frame construction all belong to the *prepare* half of ADR-0015: they are
-allowed to be slow, they do no IO, and they touch nothing shared. The only
-thing left for the commit half is :meth:`PreparedFrames.with_checkpoint`,
-which adds a bounded id line and shares the already-built frames by
-reference -- a commit that copies the payload would not be a short critical
-section.
+allowed to be slow, they do no IO, and they touch nothing shared. The commit
+half only binds bounded metadata through :meth:`PreparedFrames.with_sequence`
+and :meth:`PreparedFrames.with_checkpoint`; both share the already-built
+frames by reference -- a commit that copied the payload would not be a short
+critical section.
 
 The wire shape in one place:
 
@@ -83,16 +83,44 @@ STATE_PATCH = "state_patch"
 TransportNoticeCode = Literal["replay_gap", "deltas_dropped"]
 CurrentRunState = Literal["recoverable", "unrecoverable", "absent"]
 
+# An instance id is embedded verbatim in an SSE ``id:`` field and separated
+# from its sequence by ``:``. Keep that token to an explicit ASCII alphabet:
+# merely banning the delimiter would still admit line breaks and control
+# bytes that can mint extra SSE fields.
+_WIRE_PROCESS_INSTANCE_ID = re.compile(r"[A-Za-z0-9._~-]+")
+
+
+def validate_process_instance_id(value: object) -> str:
+    """Return one instance token, or refuse a value unsafe for an SSE field."""
+    if (
+        type(value) is not str
+        or _WIRE_PROCESS_INSTANCE_ID.fullmatch(value) is None
+    ):
+        raise ValueError("process_instance_id is outside its ASCII wire syntax")
+    return value
+
 # Room reserved in every chunk's budget for the id line that commit appends.
 # commit cannot know ``seq`` when the frames are prepared, so the budget
 # assumes the worst legal id line rather than discovering it later.
 _ID_LINE_RESERVE = 64
-# Longest UTF-8 encoding of one code point.
-_MAX_CHAR_BYTES = 4
+# Normal room for ``"seq":<integer>,`` in every physical domain-event frame.
+# The public 256-byte test boundary cannot hold all of it beside the frozen
+# digest/checkpoint metadata, so preparation scales this down only at that
+# deliberately constrained boundary and records the exact limit on its
+# immutable result. Commit fails closed instead of producing an oversized
+# record if the eventual sequence token does not fit.
+_SEQ_FIELD_RESERVE = 32
+_MIN_SEQ_FIELD_RESERVE = len(b'"seq":1,')
+# A live broker must reserve the full normal token while retaining the same
+# payload room the 256-byte codec boundary had before seq became wire data.
+# The smaller boundary remains useful for direct hard-limit/fail-closed tests,
+# but is not a sustainable stream configuration once publication advances.
+MIN_BROKER_FRAME_BYTES = MIN_FRAME_BYTES + _SEQ_FIELD_RESERVE
 
 _EMPTY = b""
 _NEWLINE = b"\n"
 _DATA_PREFIX = b"data: "
+_DOMAIN_FRAME_PREFIX = b"event: domain_event\ndata: {"
 
 
 @dataclass(frozen=True)
@@ -166,6 +194,7 @@ class WireFrameError(ValueError):
 
 @dataclass(frozen=True)
 class AssembledEvent:
+    seq: int
     event: str
     event_id: str
     payload: object
@@ -177,7 +206,8 @@ class AssembledEvent:
 class PreparedFrames:
     """One logical thing to write: the frames, and the cursor it advances.
 
-    ``seq`` is ``None`` for anything that is not a domain event -- transport
+    ``seq`` is temporarily ``None`` for an unbound domain-event template and
+    permanently ``None`` for anything that is not a domain event. Transport
     notices and state patches deliberately own no ``seq`` (CONTEXT.md: a
     connection-local notice that consumed a global seq would leave a hole in
     every *other* connection's sequence, and a hole is exactly the signal the
@@ -189,6 +219,9 @@ class PreparedFrames:
 
     seq: int | None
     frames: tuple[bytes, ...]
+    sequence_offset: int | None = None
+    sequence_field_limit: int = 0
+    sequence_field: bytes = b""
     id_line: bytes = b""
     byte_size: int = 0
     replayable: bool = False
@@ -211,19 +244,69 @@ class PreparedFrames:
         """
         last = len(self.frames) - 1
         return tuple(
-            frame + _NEWLINE + (self.id_line if i == last else b"") + _NEWLINE
+            self._wire_frame_body(frame)
+            + _NEWLINE
+            + (self.id_line if i == last else b"")
+            + _NEWLINE
             for i, frame in enumerate(self.frames)
         )
 
     def wire_bytes(self) -> bytes:
         return b"".join(self.wire_frames())
 
+    def wire_frame_cost(self, index: int) -> FrameCost:
+        """The exact encoded cost of one physical record."""
+        if index < 0 or index >= len(self.frames):
+            raise IndexError(index)
+        is_final = index + 1 == len(self.frames)
+        return FrameCost(
+            frames=1,
+            encoded_bytes=(
+                len(self.frames[index])
+                + len(self.sequence_field)
+                + 2
+                + (len(self.id_line) if is_final else 0)
+            ),
+        )
+
+    def _wire_frame_body(self, frame: bytes) -> bytes:
+        if not self.sequence_field:
+            return frame
+        offset = self.sequence_offset
+        if offset is None:
+            raise ValueError("sequence field has no insertion point")
+        return frame[:offset] + self.sequence_field + frame[offset:]
+
+    def with_sequence(self, seq: int) -> PreparedFrames:
+        """Bind publication order without copying any prepared payload."""
+        if seq < 1:
+            raise ValueError(f"domain-event seq must be >= 1, got {seq}")
+        if self.sequence_offset is None:
+            raise ValueError("only a domain-event frame can carry an event seq")
+        field = b'"seq":%d,' % seq
+        if len(field) > self.sequence_field_limit:
+            raise ValueError(
+                f"seq field is {len(field)} bytes, over the reserved "
+                f"{self.sequence_field_limit}"
+            )
+        return replace(
+            self,
+            seq=seq,
+            sequence_field=field,
+            byte_size=(
+                self.byte_size
+                + (len(field) - len(self.sequence_field)) * len(self.frames)
+            ),
+        )
+
     def with_checkpoint(
         self, seq: int, process_instance_id: str
-    ) -> "PreparedFrames":
+    ) -> PreparedFrames:
         """Attach the checkpoint. O(1): the frames are shared, not copied."""
+        process_instance_id = validate_process_instance_id(process_instance_id)
         if seq < 1:
             raise ValueError(f"checkpoint seq must be >= 1, got {seq}")
+        sequenced = self.with_sequence(seq)
         id_line = b"id: %s:%d\n" % (process_instance_id.encode("utf-8"), seq)
         if len(id_line) > _ID_LINE_RESERVE:
             raise ValueError(
@@ -231,10 +314,9 @@ class PreparedFrames:
                 f"{_ID_LINE_RESERVE}"
             )
         return replace(
-            self,
-            seq=seq,
+            sequenced,
             id_line=id_line,
-            byte_size=self.byte_size + len(id_line),
+            byte_size=sequenced.byte_size - len(sequenced.id_line) + len(id_line),
             must_deliver=True,
         )
 
@@ -243,6 +325,9 @@ def measured_frames(
     *,
     frames,
     seq: int | None = None,
+    sequence_offset: int | None = None,
+    sequence_field_limit: int = 0,
+    sequence_field: bytes = b"",
     id_line: bytes = b"",
     replayable: bool = False,
     must_deliver: bool = False,
@@ -257,9 +342,13 @@ def measured_frames(
     return PreparedFrames(
         seq=seq,
         frames=built,
+        sequence_offset=sequence_offset,
+        sequence_field_limit=sequence_field_limit,
+        sequence_field=sequence_field,
         id_line=id_line,
         byte_size=sum(len(frame) for frame in built)
         + 2 * len(built)
+        + len(sequence_field) * len(built)
         + len(id_line),
         replayable=replayable,
         must_deliver=must_deliver,
@@ -294,6 +383,7 @@ def reseed_frame(process_instance_id: str, seq: int) -> PreparedFrames:
     the one value for which the trailing-line rule is relaxed, because it is
     a boundary with no event under it rather than an event boundary.
     """
+    process_instance_id = validate_process_instance_id(process_instance_id)
     if seq < STARTUP_CHECKPOINT_SEQ:
         raise ValueError(
             f"reseed seq must be >= {STARTUP_CHECKPOINT_SEQ}, got {seq}"
@@ -335,7 +425,7 @@ def _utf8_safe_split(data: bytes, limit: int) -> tuple[bytes, ...]:
     UTF-8 at all -- the client cannot recover from that by concatenation, so
     the boundary retreats past continuation bytes (``10xxxxxx``) instead.
     """
-    if limit < _MAX_CHAR_BYTES:
+    if limit < 1:
         raise ValueError(f"frame budget {limit} leaves no room for one character")
     pieces: list[bytes] = []
     start = 0
@@ -354,6 +444,28 @@ def _utf8_safe_split(data: bytes, limit: int) -> tuple[bytes, ...]:
     return tuple(pieces)
 
 
+def _domain_header(
+    *,
+    event_name: str,
+    event_id: str,
+    chunk_index: int,
+    chunk_count: int,
+    event_sha256: str,
+) -> bytes:
+    """The exact metadata bytes used by both measurement and encoding."""
+    return (
+        '{"event":%s,"event_id":%s,"chunk_index":%d,"chunk_count":%d,'
+        '"event_sha256":%s,"payload":'
+        % (
+            _dump_json(event_name),
+            _dump_json(event_id),
+            chunk_index,
+            chunk_count,
+            _dump_json(event_sha256),
+        )
+    ).encode("utf-8")
+
+
 def _body_budget(
     *,
     sse_event: str,
@@ -362,27 +474,42 @@ def _body_budget(
     event_sha256: str,
     chunk_count: int,
     max_frame_bytes: int,
+    sequence_field_reserve: int,
 ) -> int:
     """How many payload bytes one frame may carry.
 
     ``chunk_count`` enters because the header it appears in is part of the
     frame: a three-digit count costs two bytes more than a one-digit one.
     """
-    head = (
-        '{"event":%s,"event_id":%s,"chunk_index":%d,"chunk_count":%d,'
-        '"event_sha256":%s,"payload":'
-    )
-    longest = head % (
-        _dump_json(event_name),
-        _dump_json(event_id),
-        chunk_count,
-        chunk_count,
-        _dump_json(event_sha256),
+    longest = _domain_header(
+        event_name=event_name,
+        event_id=event_id,
+        chunk_index=chunk_count,
+        chunk_count=chunk_count,
+        event_sha256=event_sha256,
     )
     fixed = len(b"event: ") + len(sse_event) + len(_NEWLINE)
-    fixed += len(_DATA_PREFIX) + len(longest.encode("utf-8")) + len(b"}")
-    fixed += 2 * len(_NEWLINE) + _ID_LINE_RESERVE
+    fixed += len(_DATA_PREFIX) + len(longest) + len(b"}")
+    fixed += 2 * len(_NEWLINE) + _ID_LINE_RESERVE + sequence_field_reserve
     return max_frame_bytes - fixed
+
+
+def _sequence_field_reserve(max_frame_bytes: int) -> int:
+    """Reserve normal seq room while preserving the frozen 256-byte edge."""
+    return min(
+        _SEQ_FIELD_RESERVE,
+        _MIN_SEQ_FIELD_RESERVE + max_frame_bytes - MIN_FRAME_BYTES,
+    )
+
+
+def validate_max_frame_bytes(value: int, *, minimum: int = MIN_FRAME_BYTES) -> None:
+    """Keep caller-specific sequence room inside the physical frame cap."""
+    if value < minimum:
+        raise ValueError(f"max_frame_bytes must be >= {minimum}, got {value}")
+    if value > MAX_FRAME_BYTES:
+        raise ValueError(
+            f"max_frame_bytes must be <= {MAX_FRAME_BYTES}, got {value}"
+        )
 
 
 def domain_event_frames(
@@ -396,16 +523,12 @@ def domain_event_frames(
     """Prepare one domain event. Pure: no IO, no shared state, may be slow.
 
     ``seq`` does not appear in the prepared bytes -- it does not exist yet
-    (ADR-0015 allocates it in the commit critical section). That is precisely
-    why the checkpoint rides in the ``id:`` line: it is the one part of the
-    frame commit can add without touching the payload. Transient frames
-    therefore carry no ``seq``; their order is the order they are written,
-    which is the publication order the ``seq`` records.
+    (ADR-0015 allocates it in the commit critical section). Each frame instead
+    carries the same insertion point; commit binds the small sequence token
+    while sharing every prepared payload byte by reference.
     """
-    if max_frame_bytes < MIN_FRAME_BYTES:
-        raise ValueError(
-            f"max_frame_bytes must be >= {MIN_FRAME_BYTES}, got {max_frame_bytes}"
-        )
+    validate_max_frame_bytes(max_frame_bytes)
+    sequence_field_reserve = _sequence_field_reserve(max_frame_bytes)
     body = _dump(payload)
     event_sha256 = hashlib.sha256(
         _dump({"event": event_name, "event_id": event_id, "payload": payload})
@@ -420,6 +543,7 @@ def domain_event_frames(
             event_sha256=event_sha256,
             chunk_count=count,
             max_frame_bytes=max_frame_bytes,
+            sequence_field_reserve=sequence_field_reserve,
         )
         chunks = _utf8_safe_split(body, budget)
         if len(chunks) == count:
@@ -433,6 +557,7 @@ def domain_event_frames(
             event_sha256=event_sha256,
             chunk_count=len(chunks),
             max_frame_bytes=max_frame_bytes,
+            sequence_field_reserve=sequence_field_reserve,
         )
         chunks = _utf8_safe_split(body, budget)
     frames = tuple(
@@ -440,23 +565,23 @@ def domain_event_frames(
         + DOMAIN_EVENT.encode()
         + _NEWLINE
         + _DATA_PREFIX
-        + (
-            '{"event":%s,"event_id":%s,"chunk_index":%d,"chunk_count":%d,'
-            '"event_sha256":%s,"payload":'
-            % (
-                _dump_json(event_name),
-                _dump_json(event_id),
-                index,
-                len(chunks),
-                _dump_json(event_sha256),
-            )
-        ).encode("utf-8")
+        + _domain_header(
+            event_name=event_name,
+            event_id=event_id,
+            chunk_index=index,
+            chunk_count=len(chunks),
+            event_sha256=event_sha256,
+        )
         + chunk
         + b"}"
         for index, chunk in enumerate(chunks)
     )
     return measured_frames(
-        frames=frames, replayable=replayable, must_deliver=replayable
+        frames=frames,
+        sequence_offset=len(_DOMAIN_FRAME_PREFIX),
+        sequence_field_limit=sequence_field_reserve,
+        replayable=replayable,
+        must_deliver=replayable,
     )
 
 
@@ -486,9 +611,26 @@ def _take_wire_integer(text: str, position: int) -> tuple[int, int]:
     return int(matched.group()), matched.end()
 
 
-def _parse_domain_data(
-    data: bytes,
-) -> tuple[str, bytes, str, bytes, int, int, str, bytes, bytes]:
+@dataclass(frozen=True, slots=True)
+class _DomainIdentity:
+    seq: int
+    event: str
+    event_token: bytes
+    event_id: str
+    event_id_token: bytes
+    chunk_count: int
+    event_sha256: str
+    digest_token: bytes
+
+
+@dataclass(frozen=True, slots=True)
+class _DomainChunk:
+    identity: _DomainIdentity
+    index: int
+    fragment: bytes
+
+
+def _parse_domain_data(data: bytes) -> _DomainChunk:
     try:
         text = data.decode("utf-8")
     except UnicodeDecodeError as exc:
@@ -501,7 +643,13 @@ def _parse_domain_data(
             raise WireFrameError("domain event data has an invalid shape")
         position += len(literal)
 
-    consume('{"event":')
+    if not text.startswith('{"seq":'):
+        raise WireFrameError("domain event seq is missing")
+    consume('{"seq":')
+    seq, position = _take_wire_integer(text, position)
+    if seq < 1:
+        raise WireFrameError("domain event seq must be a positive integer")
+    consume(',"event":')
     event, event_token, position = _take_json_string(text, position)
     consume(',"event_id":')
     event_id, event_id_token, position = _take_json_string(text, position)
@@ -517,16 +665,19 @@ def _parse_domain_data(
     if not text.endswith("}"):
         raise WireFrameError("domain event data has an invalid payload fragment")
     payload_fragment = text[position:-1].encode("utf-8")
-    return (
-        event,
-        event_token,
-        event_id,
-        event_id_token,
-        chunk_index,
-        chunk_count,
-        event_sha256,
-        digest_token,
-        payload_fragment,
+    return _DomainChunk(
+        identity=_DomainIdentity(
+            seq=seq,
+            event=event,
+            event_token=event_token,
+            event_id=event_id,
+            event_id_token=event_id_token,
+            chunk_count=chunk_count,
+            event_sha256=event_sha256,
+            digest_token=digest_token,
+        ),
+        index=chunk_index,
+        fragment=payload_fragment,
     )
 
 
@@ -546,7 +697,7 @@ def assemble_domain_event_wire_frames(
         raise WireFrameError("domain event exceeds the frame budget")
 
     total_bytes = 0
-    identity: tuple[str, bytes, str, bytes, int, str, bytes] | None = None
+    identity: _DomainIdentity | None = None
     payload_fragments: list[bytes] = []
     checkpoint: str | None = None
     for expected_index, record in enumerate(wire_records):
@@ -573,49 +724,31 @@ def assemble_domain_event_wire_frames(
                 or _WIRE_CHECKPOINT.fullmatch(lines[2]) is None
             ):
                 raise WireFrameError("checkpoint has an invalid wire shape")
-            checkpoint = lines[2][len(b"id: ") :].decode("utf-8")
+            try:
+                checkpoint = lines[2][len(b"id: ") :].decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise WireFrameError("checkpoint must be UTF-8") from exc
+            instance, _separator, _seq = checkpoint.partition(":")
+            try:
+                validate_process_instance_id(instance)
+            except ValueError as exc:
+                raise WireFrameError("checkpoint has an invalid wire shape") from exc
 
-        (
-            event,
-            event_token,
-            event_id,
-            event_id_token,
-            index,
-            count,
-            digest,
-            digest_token,
-            fragment,
-        ) = _parse_domain_data(lines[1][len(_DATA_PREFIX) :])
+        chunk = _parse_domain_data(lines[1][len(_DATA_PREFIX) :])
+        current_identity = chunk.identity
+        count = current_identity.chunk_count
         if count < 1 or count > budget.frames:
             raise WireFrameError("chunk_count is outside the frame budget")
-        if index != expected_index or index >= count:
+        if chunk.index != expected_index or chunk.index >= count:
             raise WireFrameError("chunk indexes must be consecutive and in range")
-        current_identity = (
-            event,
-            event_token,
-            event_id,
-            event_id_token,
-            count,
-            digest,
-            digest_token,
-        )
         if identity is None:
             identity = current_identity
         elif current_identity != identity:
             raise WireFrameError("domain event metadata changed between chunks")
-        payload_fragments.append(fragment)
+        payload_fragments.append(chunk.fragment)
 
     assert identity is not None
-    (
-        event,
-        _event_token,
-        event_id,
-        _event_id_token,
-        chunk_count,
-        event_sha256,
-        _digest_token,
-    ) = identity
-    if len(wire_records) != chunk_count:
+    if len(wire_records) != identity.chunk_count:
         raise WireFrameError("domain event is missing or has extra chunks")
     try:
         payload = json.loads(b"".join(payload_fragments).decode("utf-8"))
@@ -623,18 +756,23 @@ def assemble_domain_event_wire_frames(
         raise WireFrameError("assembled payload is not valid JSON") from exc
     try:
         canonical_event = _dump(
-            {"event": event, "event_id": event_id, "payload": payload}
+            {"event": identity.event, "event_id": identity.event_id, "payload": payload}
         )
     except UnicodeEncodeError as exc:
         raise WireFrameError("assembled event is not canonical UTF-8") from exc
     actual_digest = hashlib.sha256(canonical_event).hexdigest()
-    if actual_digest != event_sha256:
+    if actual_digest != identity.event_sha256:
         raise WireFrameError("event_sha256 does not match the assembled event")
+    if checkpoint is not None:
+        _instance, _separator, checkpoint_seq = checkpoint.rpartition(":")
+        if int(checkpoint_seq) != identity.seq:
+            raise WireFrameError("checkpoint seq does not match domain event seq")
     return AssembledEvent(
-        event=event,
-        event_id=event_id,
+        seq=identity.seq,
+        event=identity.event,
+        event_id=identity.event_id,
         payload=payload,
-        event_sha256=event_sha256,
+        event_sha256=identity.event_sha256,
         checkpoint=checkpoint,
     )
 

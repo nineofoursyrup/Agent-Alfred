@@ -17,7 +17,7 @@ from agent_alfred.gateway.web.lifecycle import (
     EntryDescriptor,
     ProcessLock,
 )
-from agent_alfred.gateway.web.server import DashboardRuntime
+from agent_alfred.gateway.web.server import DashboardRuntime, DatabaseOpener
 from agent_alfred.managed_state import (
     ManagedPathSecurityError,
     ManagedStateDirectory,
@@ -33,7 +33,11 @@ from agent_alfred.model import (
 )
 from agent_alfred.openai_compatible import OpenAICompatibleAdapter
 from agent_alfred.redact import Redactor
-from agent_alfred.resource_rollback import ResumableRollback, RollbackSlot
+from agent_alfred.resource_rollback import (
+    ConstructionOwner,
+    ResumableRollback,
+    RollbackSlot,
+)
 from agent_alfred.retry import RetryPolicy, SystemSleeper
 from agent_alfred.runtime.config import SettingsBackedSnapshotProvider
 from agent_alfred.runtime.host import RuntimeHost
@@ -143,40 +147,71 @@ def _trace_sink(
     trace_root: Path | ManagedTraceRoot | TraceRootRequest,
     clock: Clock,
     instance_id: str,
+    *,
+    _rollback: ResumableRollback | None = None,
 ) -> EventSink:
     """The production durability-critical sink, or an honest failure stub.
 
     Initialization failure must not remove durability from the barrier: the
     stub keeps the barrier critical and permanently incomplete instead of
     letting a Run claim a trace that was never written.
+
+    Trace initialization is the one construction step allowed to fail and let
+    the build continue, so its cleanup runs in a scope of its own: retrying
+    the caller's owner here would close the connection and the state lease the
+    Host is about to be handed, and mark them complete besides. Only the built
+    sink crosses into ``_rollback``, the caller's construction owner, and it
+    does so before this returns -- so one reachable owner spans this return
+    edge and the caller's store.
+
+    Either way this **consumes** the trace root: one already minted by the
+    caller is owned by this scope exactly like one acquired here, and a
+    failure closes it before the honest stub goes back. A root that outlived
+    the sink built on it would have no owner left to close it.
+
+    The scope is why this seam does not use :class:`ConstructionOwner`: that
+    is for a seam whose cleanup may reach the caller's own resources, and
+    this one must never.
     """
     acquired: ManagedTraceRoot | None = None
-    rollback = ResumableRollback()
+    scope = ResumableRollback()
     try:
         if isinstance(trace_root, tuple):
             state, relative = trace_root
-            acquired = state.ensure_trace_directory(relative)
+            acquired = state.ensure_trace_directory(relative, _rollback=scope)
         elif isinstance(trace_root, Path):
-            acquired = ManagedStateDirectory.acquire_trace_root(trace_root)
+            acquired = ManagedStateDirectory.acquire_trace_root(
+                trace_root, _rollback=scope
+            )
         else:
             acquired = trace_root
-        rollback.own(acquired)
-        return RunBundleTraceSink(
+        scope.own(acquired)
+        sink = RunBundleTraceSink(
             root=acquired,
             clock=clock,
             process_instance_id=instance_id,
-            _rollback=rollback,
+            _rollback=scope,
         )
+        if _rollback is not None:
+            # Own-before-release into the caller's owner. The sink is newer
+            # than whatever that owner already holds, so it takes the last
+            # position and reverse-order cleanup reaches it first -- which a
+            # transfer, landing it at the earliest position, would invert.
+            # The brief overlap closes nothing twice: ``close`` is idempotent
+            # and resumable, and both sides reach the same sink.
+            _rollback.own(sink, sink.close)
+            scope.transfer(sink)
+        return sink
     except ManagedPathSecurityError as exc:
-        rollback.raise_failure(exc)
+        scope.raise_failure(exc)
     except Exception as exc:
-        if not rollback.retry():
-            rollback.raise_incomplete(exc)
+        if not scope.retry():
+            scope.raise_incomplete(exc)
         return UnavailableTraceSink(
             detail=f"trace_sink_init_failed {type(exc).__name__}"
         )
     except BaseException as exc:
-        rollback.raise_failure(exc)
+        scope.raise_failure(exc)
 
 
 def build_host(
@@ -196,11 +231,14 @@ def build_host(
     instance_id = process_instance_id or uuid.uuid4().hex
     secrets = _secrets_from_env(settings)
     redactor = Redactor(secrets)
-    rollback = _rollback or ResumableRollback()
+    owner = ConstructionOwner(_rollback)
+    rollback = owner.rollback
     try:
         sinks: list[EventSink] = []
         if trace_root is not None:
-            trace_sink = _trace_sink(trace_root, clock, instance_id)
+            trace_sink = _trace_sink(
+                trace_root, clock, instance_id, _rollback=rollback
+            )
             sinks.append(trace_sink)
             rollback.own(trace_sink)
         for sink in extra_sinks:
@@ -224,10 +262,14 @@ def build_host(
             snapshot_provider=provider,
             snapshot_listener=snapshot_listener,
         )
-        rollback.transfer(fanout)
+        # The Host owns the FanOut from here; publishing the aggregate before
+        # its part retires keeps one reachable owner across this return edge
+        # and the caller's store. Both closes are resumable and idempotent, so
+        # the overlap can never close a sink twice.
+        owner.publish(host, parts=(fanout,))
         return host
     except BaseException as exc:
-        rollback.raise_failure(exc)
+        owner.fail(exc)
 
 
 def build_dashboard(
@@ -240,7 +282,7 @@ def build_dashboard(
     port: int = DEFAULT_PORT,
     extra_sinks: Sequence[EventSink] = (),
     instance_id: str | None = None,
-    open_database: Callable[[ManagedStateLease], sqlite3.Connection] | None = None,
+    open_database: DatabaseOpener | None = None,
     server_factory: Any = None,
     write_descriptor: Callable[[Path, EntryDescriptor], Path] | None = None,
     lock: Callable[[Any], ProcessLock] | None = None,
@@ -272,10 +314,12 @@ def build_dashboard(
     captured_state: list[ManagedStateLease] = []
     construction_rollback = RollbackSlot()
 
-    def dashboard_database(state: ManagedStateLease) -> sqlite3.Connection:
+    def dashboard_database(
+        state: ManagedStateLease, *, _rollback: ResumableRollback
+    ) -> sqlite3.Connection:
         captured_state[:] = [state]
         opener = open_database or globals()["open_database"]
-        return opener(state)
+        return opener(state, _rollback=_rollback)
 
     def assemble(
         conn: sqlite3.Connection, instance: str
@@ -333,8 +377,11 @@ def build_dashboard(
             # own, so it is reported where a process-level fact belongs: into
             # the trace, through the same notice every other sink failure uses.
             broker.bind_fatal_handler(note_dispatcher_fatal)
-            rollback.transfer(host)
-            construction_rollback.complete(rollback)
+            # The construction owner is *not* retired here: the assembled pair
+            # is still a return value nobody has stored. DashboardRuntime
+            # settles this slot only after both ``_host`` and ``_broker`` are
+            # published, so one reachable owner spans that edge -- including
+            # the interrupt point between those two stores.
             return host, broker
         except BaseException as exc:
             rollback.raise_failure(exc)
@@ -358,15 +405,27 @@ def build_default_host(
     state_dir: Path | None = None,
     settings: Settings | None = None,
     factory: ModelClientFactory | None = None,
+    _rollback: ResumableRollback | None = None,
 ) -> RuntimeHost:
+    """Build the standalone Host and everything it owns.
+
+    ``_rollback`` is a caller-established construction owner. A caller that
+    offers one keeps a reachable owner for the assembled Host across this
+    return edge and its own store; without one, the Host that reaches the
+    caller is its own sole owner, exactly as before.
+    """
     clock = SystemClock()
     settings = settings or load_settings()
     directory = state_dir or resolve_state_dir()
-    rollback = ResumableRollback()
+    owner = ConstructionOwner(_rollback)
+    rollback = owner.rollback
     try:
-        state = ManagedStateDirectory.acquire(directory)
+        state = ManagedStateDirectory.acquire(directory, _rollback=rollback)
+        # Idempotent: the seam already registered its result in this rollback.
+        # Re-stating it here keeps the construction owner correct for any
+        # substituted opener that does not take the owner it was offered.
         rollback.own(state)
-        conn = open_database(state)
+        conn = open_database(state, _rollback=rollback)
         rollback.own(conn)
         if factory is None:
             factory = OpenCodeGoFactory(clock=clock)
@@ -379,10 +438,8 @@ def build_default_host(
             _rollback=rollback,
         )
         rollback.own(host)
-        host.attach_owned_resources(conn, state)
+        host.attach_owned_resources(conn, state, source=rollback)
+        owner.publish(host)
     except BaseException as exc:
-        rollback.raise_failure(exc)
-    rollback.transfer(host)
-    rollback.transfer(conn)
-    rollback.transfer(state)
+        owner.fail(exc)
     return host

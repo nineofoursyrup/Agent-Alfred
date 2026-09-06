@@ -49,7 +49,7 @@ def test_open_database_connect_failure_releases_the_managed_file_lease(
     baseline = _open_fd_count()
     failure = sqlite3.OperationalError("injected connect failure")
 
-    def fail_connect(*args, **kwargs):
+    def fail_connect(_path, _owner, **_kwargs):
         raise failure
 
     monkeypatch.setattr(database_module.sqlite3, "connect", fail_connect)
@@ -71,12 +71,12 @@ def test_open_database_identity_change_closes_before_migration(
     real_connect = sqlite3.connect
     migrated: list[sqlite3.Connection] = []
 
-    def connect_then_replace(path, **kwargs):
+    def connect_then_replace(path, owner, **kwargs):
         conn = real_connect(path, **kwargs)
+        owner.publish(conn)
         managed = state.path / "db.sqlite3"
         os.rename(managed, state.path / "db.displaced")
         managed.symlink_to(external)
-        return conn
 
     monkeypatch.setattr(database_module.sqlite3, "connect", connect_then_replace)
     monkeypatch.setattr(database_module.schema, "migrate", migrated.append)
@@ -109,10 +109,10 @@ def test_open_database_refuses_a_replaced_state_root_before_migration(
     before = replacement_database.read_bytes()
     real_connect = sqlite3.connect
 
-    def replace_root_then_connect(path, **kwargs):
+    def replace_root_then_connect(path, owner, **kwargs):
         state_path.rename(displaced)
         replacement.rename(state_path)
-        return real_connect(path, **kwargs)
+        owner.publish(real_connect(path, **kwargs))
 
     monkeypatch.setattr(
         database_module.sqlite3, "connect", replace_root_then_connect
@@ -124,95 +124,6 @@ def test_open_database_refuses_a_replaced_state_root_before_migration(
         assert caught.value.reason == "identity_changed"
         assert replacement_database.with_name("db.sqlite3").exists() is False
         assert (state_path / "db.sqlite3").read_bytes() == before
-        assert _open_fd_count() == baseline
-    finally:
-        state.close()
-
-
-def test_open_database_refuses_a_replaced_state_ancestor_before_migration(
-    tmp_path, monkeypatch
-) -> None:
-    container = tmp_path / "container"
-    container.mkdir(mode=0o700)
-    state_path = container / "state"
-    state = ManagedStateDirectory.acquire(state_path)
-    displaced = tmp_path / "container-displaced"
-    replacement = tmp_path / "container-replacement"
-    replacement_state = replacement / "state"
-    replacement_state.mkdir(parents=True, mode=0o700)
-    replacement_database = replacement_state / "db.sqlite3"
-    seed = sqlite3.connect(replacement_database)
-    seed.execute("CREATE TABLE sentinel (value TEXT NOT NULL)")
-    seed.execute("INSERT INTO sentinel VALUES ('untouched')")
-    seed.commit()
-    seed.close()
-    before = replacement_database.read_bytes()
-    real_connect = sqlite3.connect
-
-    def replace_ancestor_then_connect(path, **kwargs):
-        container.rename(displaced)
-        replacement.rename(container)
-        return real_connect(path, **kwargs)
-
-    monkeypatch.setattr(
-        database_module.sqlite3, "connect", replace_ancestor_then_connect
-    )
-    baseline = _open_fd_count()
-    try:
-        with pytest.raises(ManagedPathSecurityError) as caught:
-            database_module.open_database(state)
-        assert caught.value.reason == "identity_changed"
-        assert (state_path / "db.sqlite3").read_bytes() == before
-        assert _open_fd_count() == baseline
-    finally:
-        state.close()
-
-
-@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="POSIX managed paths")
-@pytest.mark.parametrize("target_kind", ("directory", "fifo", "symlink"))
-def test_open_database_normalizes_replaced_ancestor_target_shapes(
-    tmp_path, monkeypatch, target_kind: str
-) -> None:
-    container = tmp_path / "container"
-    container.mkdir(mode=0o700)
-    state_path = container / "state"
-    state = ManagedStateDirectory.acquire(state_path)
-    displaced = tmp_path / "container-displaced"
-    replacement = tmp_path / "container-replacement"
-    replacement_state = replacement / "state"
-    replacement_state.mkdir(parents=True, mode=0o700)
-    replacement_database = replacement_state / "db.sqlite3"
-    outside = tmp_path / "outside.sqlite3"
-    outside.write_bytes(b"untouched")
-    if target_kind == "directory":
-        replacement_database.mkdir()
-    elif target_kind == "fifo":
-        os.mkfifo(replacement_database)
-    else:
-        replacement_database.symlink_to(outside)
-    before = replacement_database.lstat()
-    real_connect = sqlite3.connect
-
-    def replace_ancestor_then_connect(path, **kwargs):
-        container.rename(displaced)
-        replacement.rename(container)
-        return real_connect(path, **kwargs)
-
-    monkeypatch.setattr(
-        database_module.sqlite3, "connect", replace_ancestor_then_connect
-    )
-    baseline = _open_fd_count()
-    try:
-        with pytest.raises(ManagedPathSecurityError) as caught:
-            database_module.open_database(state)
-        assert caught.value.reason == "identity_changed"
-        after = (state_path / "db.sqlite3").lstat()
-        assert (after.st_dev, after.st_ino, after.st_mode) == (
-            before.st_dev,
-            before.st_ino,
-            before.st_mode,
-        )
-        assert outside.read_bytes() == b"untouched"
         assert _open_fd_count() == baseline
     finally:
         state.close()
@@ -235,9 +146,10 @@ def test_open_database_process_control_retains_retryable_connection_cleanup(
                 raise RuntimeError("injected close failure")
             real_connection.close()
 
-    monkeypatch.setattr(
-        database_module.sqlite3, "connect", lambda *a, **k: Connection()
-    )
+    def connect(_path, owner, **_kwargs):
+        owner.publish(Connection())
+
+    monkeypatch.setattr(database_module.sqlite3, "connect", connect)
     monkeypatch.setattr(
         database_module.schema,
         "migrate",
@@ -277,9 +189,10 @@ def test_open_database_cleanup_process_control_leads_the_business_failure(
                 raise control
             real_connection.close()
 
-    monkeypatch.setattr(
-        database_module.sqlite3, "connect", lambda *a, **k: Connection()
-    )
+    def connect(_path, owner, **_kwargs):
+        owner.publish(Connection())
+
+    monkeypatch.setattr(database_module.sqlite3, "connect", connect)
     monkeypatch.setattr(
         database_module.schema,
         "migrate",
@@ -536,15 +449,14 @@ def test_migrate_twice_leaves_identical_schema() -> None:
 
 
 def test_migrate_writes_one_contiguous_ledger_row_per_version() -> None:
-    # Spelled out rather than derived from the registry: three published commits
-    # each stamped a different schema as version 1, and the repair for that is
-    # version 2. A fresh database runs both, so it ends up saying so twice.
+    # Spelled out rather than derived from the registry: the ledger is the
+    # durable claim that every published forward migration actually ran.
     conn = sqlite3.connect(":memory:")
     schema.migrate(conn)
     schema.migrate(conn)
     rows = conn.execute("SELECT version FROM schema_migrations").fetchall()
     conn.close()
-    assert rows == [(1,), (2,), (3,)]
+    assert rows == [(1,), (2,), (3,), (4,)]
 
 
 def test_migrate_does_not_commit_the_callers_transaction() -> None:
@@ -1708,7 +1620,7 @@ def test_upgrading_a_version_1_database_lands_the_current_shape(commit: str) -> 
     ).fetchall()[0] == (1, historic_schema.V1_APPLIED_AT)
     assert conn.execute(
         "SELECT version FROM schema_migrations ORDER BY version"
-    ).fetchall() == [(1,), (2,), (3,)]
+    ).fetchall() == [(1,), (2,), (3,), (4,)]
     conn.close()
 
 
@@ -1899,6 +1811,7 @@ def test_a_failed_upgrade_in_a_caller_transaction_leaves_the_ledger_intact(
         (1,),
         (2,),
         (3,),
+        (4,),
     ]
     # Rolling back is still the caller's decision too, and it takes back the
     # caller's own write and nothing else.

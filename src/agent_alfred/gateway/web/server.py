@@ -71,7 +71,11 @@ from agent_alfred.gateway.web.lifecycle import (
     SpawnThread,
 )
 from agent_alfred.managed_state import ManagedStateLease
-from agent_alfred.resource_rollback import IncompleteRollback, ResumableRollback
+from agent_alfred.resource_rollback import (
+    IncompleteRollback,
+    ResumableRollback,
+    RollbackSlot,
+)
 from agent_alfred.runtime.host import RuntimeHost
 
 # What :class:`DashboardRuntime` needs from the outside to build a Host and a
@@ -81,14 +85,16 @@ from agent_alfred.runtime.host import RuntimeHost
 AssembleHost = Callable[[sqlite3.Connection, str], tuple[RuntimeHost, SSEBroker]]
 
 
-class ResumableConstructionRollback(Protocol):
-    """Narrow owner retained when host assembly cleanup is incomplete."""
+class DatabaseOpener(Protocol):
+    """Open the Dashboard database inside its caller-owned rollback."""
 
-    def retry(self) -> bool: ...
+    def __call__(
+        self,
+        state: ManagedStateLease,
+        *,
+        _rollback: ResumableRollback,
+    ) -> sqlite3.Connection: ...
 
-    def owns(self, owner: ResumableRollback) -> bool: ...
-
-    def capture_failure(self, failure: BaseException) -> None: ...
 
 # Where the Dashboard is in its one life. Closed and failed are both
 # terminal: neither is a state a Dashboard comes back from.
@@ -134,14 +140,14 @@ class DashboardRuntime:
         port: int = DEFAULT_PORT,
         instance_id: str | None = None,
         csrf_token: str | None = None,
-        open_database: Callable[[ManagedStateLease], sqlite3.Connection] | None = None,
+        open_database: DatabaseOpener | None = None,
         server_factory: Any = None,
         write_descriptor: Callable[[Path, EntryDescriptor], Path] | None = None,
         lock: Callable[[Any], ProcessLock] | None = None,
         pid: int | None = None,
         spawn: SpawnThread | None = None,
         rollback_step_timeout: float | None = ROLLBACK_STEP_TIMEOUT_S,
-        construction_rollback: ResumableConstructionRollback | None = None,
+        construction_rollback: RollbackSlot | None = None,
     ):
         self._state_dir = state_dir
         self._assemble = assemble
@@ -182,6 +188,7 @@ class DashboardRuntime:
         self._host: RuntimeHost | None = None
         self._broker: SSEBroker | None = None
         self._conn: sqlite3.Connection | None = None
+        self._database_owner: ResumableRollback | None = None
         self._thread: Any = None
         # One lock for the whole lifecycle: the check, the start, the state
         # it publishes and the close transitions. Re-entrant because the
@@ -362,8 +369,11 @@ class DashboardRuntime:
         #      line is reachable unless all three are held, so a second
         #      instance never migrates, recovers or writes. ``service.start``
         #      undoes its own steps.
-        descriptor = service.start()
+        descriptor = service.start(rollback_step_timeout=self._rollback_step_timeout)
         self._entry_owned = True
+        state = service.managed_state
+        assert state is not None
+        state.reclaim_stale_trace_staging()
         # 4. The database: opened (and migrated) only once this process is
         #    the one that owns the state directory.
         conn = self._open_conn()
@@ -371,8 +381,17 @@ class DashboardRuntime:
         # 5. The Host and the broker, around that one connection.
         host, broker = self._assemble(conn, self._instance_id)
         self._host, self._broker = host, broker
+        # Storing the pair is not yet owning it: the close path skips whatever
+        # is still marked stopped, so these bits are what make this runtime an
+        # effective owner. They fall first, and only then may the construction
+        # owner retire -- the overlap is safe because both closes are
+        # idempotent and resumable, an unowned Host is not.
         self._host_stopped = False
         self._broker_stopped = False
+        if self._construction_rollback is not None:
+            # Assembly kept its construction owner across the return edge
+            # above, and across every interrupt point between it and here.
+            self._construction_rollback.settle()
         # The guard depends on the port that was actually bound, which is
         # only knowable now, so the context is attached here -- still before
         # anything can be accepted.
@@ -441,9 +460,15 @@ class DashboardRuntime:
     def _open_conn(self) -> sqlite3.Connection:
         state = self._service.managed_state
         assert state is not None
+        owner = ResumableRollback()
+        self._database_owner = owner
         if self._open_database is not None:
-            return self._open_database(state)
-        return open_database(state)
+            conn = self._open_database(state, _rollback=owner)
+        else:
+            conn = open_database(state, _rollback=owner)
+        owner.own(conn)
+        self._conn = conn
+        return conn
 
     def _stop_all_locked(self, timeout: float | None) -> bool:
         """Run every step of the close that has not run yet.
@@ -511,9 +536,14 @@ class DashboardRuntime:
         database is still open.
         """
         if not self._db_closed:
-            conn = self._conn
-            if conn is not None:
-                conn.close()
+            owner = self._database_owner
+            if owner is not None:
+                owner.close()
+                self._database_owner = None
+            else:
+                conn = self._conn
+                if conn is not None:
+                    conn.close()
             self._db_closed = True
             self._conn = None
         if not self._entry_released:

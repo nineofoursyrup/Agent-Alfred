@@ -61,15 +61,16 @@ a forged cursor for an event that was too large to store would be answered
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from dataclasses import dataclass, field
-from typing import Literal, NewType
+from collections.abc import Callable, Iterator
+from dataclasses import dataclass, field, replace
+from typing import Literal, NewType, TypeVar
 
 from agent_alfred.gateway.web.frames import (
     STARTUP_CHECKPOINT_SEQ,
     FrameBudget,
     FrameCost,
     PreparedFrames,
+    validate_process_instance_id,
 )
 
 # The decided capacity table. Constructor defaults on purpose: these are not
@@ -95,6 +96,7 @@ MAX_CURSOR_SEQ_DIGITS = 640
 # The wire shape of a cursor. NewType so a bare string is not quietly
 # accepted where a parsed cursor is meant.
 CursorText = NewType("CursorText", str)
+_ReadValue = TypeVar("_ReadValue")
 
 
 @dataclass(frozen=True)
@@ -104,11 +106,20 @@ class AppendResult:
     _retired: _RetiredPrefix | None = field(
         default=None, repr=False, compare=False
     )
+    _acknowledge: Callable[[], None] | None = field(
+        default=None, repr=False, compare=False
+    )
 
     def release_retired(self) -> None:
         """Release displaced frame references after the publish lock."""
         if self._retired is not None:
             self._retired.release()
+        self.acknowledge_retired_transfer()
+
+    def acknowledge_retired_transfer(self) -> None:
+        """Confirm another durable owner now holds deferred retirement."""
+        if self._acknowledge is not None:
+            self._acknowledge()
 
 
 @dataclass(frozen=True)
@@ -170,6 +181,14 @@ class _EntryCell:
     entry: PreparedFrames | None
 
 
+class _ReplayIntervalChanged(RuntimeError):
+    """A lock-free reader crossed a completed ring publication."""
+
+
+class _ReplayReadUnavailable(RuntimeError):
+    """A lock-free reader encountered an in-flight or poisoned write."""
+
+
 class _RetiredPrefix:
     """A constant-size description of slots to release outside publication."""
 
@@ -181,7 +200,32 @@ class _RetiredPrefix:
         self._count = count
         self._through_seq = through_seq
         self._released = False
+        # ``dict.setdefault`` is the one atomic identity-CAS used to claim
+        # this owner. Unlike a Python ``Lock.__enter__`` it has no acquired-
+        # but-not-yet-protected bytecode window: an asynchronous exit after
+        # the C call can still identify and remove this caller's exact token.
+        self._release_claims: dict[str, object] = {}
         self._overwritten: _EntryCell | None = None
+
+    @property
+    def _release_in_progress(self) -> bool:
+        """Whether one caller currently owns physical cleanup."""
+        return not self._released and bool(self._release_claims)
+
+    @classmethod
+    def for_overwritten(
+        cls, owner: _IndexedEntries, cell: _EntryCell
+    ) -> _RetiredPrefix:
+        """Own one displaced stale cell without a logical prefix.
+
+        A deferred earlier cleanup may leave its cells in physical slots
+        after those entries have left the logical interval. Reusing one of
+        those slots still needs outside-publication cleanup even when this
+        append does not evict any of its own logical prefix.
+        """
+        retired = cls(owner, start=0, count=0, through_seq=0)
+        retired.hold_overwritten(cell)
+        return retired
 
     def hold_overwritten(self, cell: _EntryCell) -> None:
         """Keep a reused slot's old cell alive until outside publication."""
@@ -190,14 +234,31 @@ class _RetiredPrefix:
         self._overwritten = cell
 
     def release(self) -> None:
-        if self._released:
-            return
-        self._owner.release_retired(
-            self._start, self._count, self._through_seq
-        )
-        if self._overwritten is not None:
-            self._overwritten.entry = None
-        self._released = True
+        claim = object()
+        try:
+            if self._released:
+                return
+            owner = self._release_claims.setdefault("release", claim)
+            if owner is not claim:
+                raise RuntimeError(
+                    "retired replay cleanup is already in progress"
+                )
+            # A prior caller can complete between this caller's first read
+            # and its successful claim.
+            if self._released:
+                return
+            self._owner.release_retired(
+                self._start, self._count, self._through_seq
+            )
+            if self._overwritten is not None:
+                self._overwritten.entry = None
+            self._released = True
+        finally:
+            # The identity guard makes every bytecode exit after claim
+            # publication retryable without clearing another drainer's
+            # ownership. Physical work remains outside this state lock.
+            if self._release_claims.get("release") is claim:
+                self._release_claims.pop("release", None)
 
 
 class _IndexedEntries:
@@ -208,13 +269,21 @@ class _IndexedEntries:
     the just-appended event before its displaced prefix is retired.
     """
 
-    def __init__(self, max_entries: int):
+    def __init__(
+        self,
+        max_entries: int,
+        *,
+        retain_retired: Callable[[_RetiredPrefix], None] | None = None,
+        retain_overwritten: Callable[[_EntryCell], None] | None = None,
+    ):
         capacity = max_entries + 1
         self._entries: list[_EntryCell | None] = [None] * capacity
         self._frame_totals = [0] * capacity
         self._byte_totals = [0] * capacity
         self._head = 0
         self._size = 0
+        self._retain_retired = retain_retired
+        self._retain_overwritten = retain_overwritten
 
     def __bool__(self) -> bool:
         return self._size > 0
@@ -230,10 +299,24 @@ class _IndexedEntries:
         if index < 0:
             index += self._size
         if index < 0 or index >= self._size:
-            raise IndexError(index)
+            # A lock-free binary search may have chosen this index from an
+            # older size immediately before publication retired the interval.
+            # The ring-level generation check decides whether that movement
+            # is an ordinary unavailable replay or a same-generation bug.
+            raise _ReplayIntervalChanged(
+                "replay size changed during an indexed read"
+            )
         cell = self._entries[self._slot(index)]
-        assert cell is not None and cell.entry is not None
-        return cell.entry
+        if cell is None:
+            raise _ReplayIntervalChanged("replay slot was retired during a read")
+        # Read the entry reference exactly once. Cleanup may clear the cell
+        # after this load, but this local reference then owns the immutable
+        # PreparedFrames until the reader either returns it or observes the
+        # changed generation and discards it.
+        entry = cell.entry
+        if entry is None:
+            raise _ReplayIntervalChanged("replay cell was retired during a read")
+        return entry
 
     def append(
         self, entry: PreparedFrames, cumulative: FrameCost
@@ -242,6 +325,14 @@ class _IndexedEntries:
             raise RuntimeError("replay ring exceeded its physical frame bound")
         slot = self._slot(self._size)
         overwritten = self._entries[slot]
+        if (
+            overwritten is not None
+            and overwritten.entry is not None
+            and self._retain_overwritten is not None
+        ):
+            # Ownership precedes the physical slot replacement. A control
+            # exit after this point cannot make the old cell unreachable.
+            self._retain_overwritten(overwritten)
         self._entries[slot] = _EntryCell(entry)
         self._frame_totals[slot] = cumulative.frames
         self._byte_totals[slot] = cumulative.encoded_bytes
@@ -270,17 +361,6 @@ class _IndexedEntries:
             else 0,
         )
 
-    def contains_seq(self, seq: int) -> bool:
-        low = 0
-        high = self._size
-        while low < high:
-            middle = (low + high) // 2
-            if self[middle].seq < seq:
-                low = middle + 1
-            else:
-                high = middle
-        return low < self._size and self[low].seq == seq
-
     def entry_at_seq(self, seq: int) -> PreparedFrames | None:
         """Return the retained entry with exactly ``seq``, if any."""
         index = self.first_after(seq - 1)
@@ -308,9 +388,14 @@ class _IndexedEntries:
             return None
         start = self._head
         through_seq = self[count - 1].seq
+        retired = _RetiredPrefix(self, start, count, through_seq)
+        if self._retain_retired is not None:
+            # Publish cleanup ownership before publishing the new logical
+            # head/size. This closes the drop-return-to-caller assignment gap.
+            self._retain_retired(retired)
         self._head = self._slot(count)
         self._size -= count
-        return _RetiredPrefix(self, start, count, through_seq)
+        return retired
 
     def clear(self) -> _RetiredPrefix | None:
         retired = self.drop_prefix(self._size)
@@ -328,11 +413,20 @@ class _IndexedEntries:
         """
         for offset in range(count):
             cell = self._entries[(start + offset) % len(self._entries)]
+            if cell is None:
+                continue
+            # Capture once: another outside-lock cleanup may release this
+            # exact cell after the load. The local keeps the immutable entry
+            # alive and every decision below belongs to that one snapshot.
+            entry = cell.entry
             if (
-                cell is not None
-                and cell.entry is not None
-                and cell.entry.seq is not None
-                and cell.entry.seq <= through_seq
+                entry is not None
+                and entry.seq is not None
+                and entry.seq <= through_seq
+                # Identity-CAS semantics: a cell that no longer contains our
+                # captured entry belongs to another cleanup state and must
+                # not be cleared by this one.
+                and cell.entry is entry
             ):
                 cell.entry = None
 
@@ -356,8 +450,7 @@ class _IndexedEntries:
 
 
 def format_cursor(process_instance_id: str, seq: int) -> CursorText:
-    if ":" in process_instance_id:
-        raise ValueError("process_instance_id may not contain ':'")
+    process_instance_id = validate_process_instance_id(process_instance_id)
     # Zero is the reserved startup boundary, not an event position, so it is
     # the one non-positive-of-events value this will write.
     if seq < STARTUP_CHECKPOINT_SEQ:
@@ -414,7 +507,11 @@ class ReplayRing:
         budget: FrameBudget = DEFAULT_BUDGET,
     ):
         self.budget = budget
-        self._entries = _IndexedEntries(budget.frames)
+        self._entries = _IndexedEntries(
+            budget.frames,
+            retain_retired=self._retain_write_retired,
+            retain_overwritten=self._retain_write_overwritten,
+        )
         self._usage = FrameCost(frames=0, encoded_bytes=0)
         # Monotonic totals make a displaced prefix discoverable by two
         # bounded index searches. ``_retained_base`` is the cumulative cost
@@ -447,13 +544,41 @@ class ReplayRing:
         # retained interval. A writer carries this O(1) token from selection
         # to the broker's publication-lock fence before sending anything.
         self._generation = 0
+        # An odd generation is a permanent fail-closed poison, not merely an
+        # in-flight marker. The original exception explains it, while these
+        # constant-size owners retain any prefix/cell logically retired before
+        # the write was interrupted. The broker obtains an idempotent callback
+        # and performs the potentially linear release outside publication locks.
+        self._write_failure: BaseException | None = None
+        self._write_retired: _RetiredPrefix | None = None
+        self._write_overwritten: _EntryCell | None = None
+        self._deferred_retired: dict[object, _RetiredPrefix] = {}
+        self._last_unacknowledged_retired: object | None = None
 
     # -- reads ------------------------------------------------------------
+
+    def _require_stable(self) -> int:
+        """Return an even read token, or refuse in-flight/poisoned state."""
+        generation = self._generation
+        if generation % 2:
+            raise _ReplayReadUnavailable(
+                "replay ring has an interrupted publication"
+            ) from self._write_failure
+        return generation
+
+    def _finish_read(self, generation: int, value: _ReadValue) -> _ReadValue:
+        """Publish a read only if it stayed within one even generation."""
+        if self._generation != generation or self._generation % 2:
+            raise _ReplayIntervalChanged(
+                "replay ring changed during a lock-free read"
+            )
+        return value
 
     @property
     def current_cost(self) -> FrameCost:
         """What the ring is holding right now, in both counted dimensions."""
-        return self._usage
+        generation = self._require_stable()
+        return self._finish_read(generation, self._usage)
 
     def replay_floor_seq(self) -> int:
         """The highest seq that is no longer replayable. Monotonic.
@@ -462,7 +587,8 @@ class ReplayRing:
         tells "no event was ever produced" apart from "events were produced
         and then walked over".
         """
-        return self._unrecoverable_floor
+        generation = self._require_stable()
+        return self._finish_read(generation, self._unrecoverable_floor)
 
     def high_water_seq(self) -> int:
         """The highest seq this ring has seen.
@@ -474,7 +600,8 @@ class ReplayRing:
         For "newest published, transient included", see
         :meth:`published_high_water_seq`.
         """
-        return self._high_water
+        generation = self._require_stable()
+        return self._finish_read(generation, self._high_water)
 
     def published_high_water_seq(self) -> int:
         """The newest domain-event seq this process has published.
@@ -485,7 +612,8 @@ class ReplayRing:
         answer is measured against, because a client holding a transient's
         seq on screen must not be told the process never sent it.
         """
-        return self._published_high_water
+        generation = self._require_stable()
+        return self._finish_read(generation, self._published_high_water)
 
     def latest_complete_seq(self) -> int | None:
         """The newest checkpoint this ring can actually reproduce.
@@ -499,7 +627,8 @@ class ReplayRing:
         :meth:`reseed_boundary_seq`, which is allowed to name a checkpoint
         this one has forgotten.
         """
-        return self._last_issued
+        generation = self._require_stable()
+        return self._finish_read(generation, self._last_issued)
 
     def reseed_boundary_seq(self) -> int | None:
         """The newest checkpoint this process has ever issued. Monotonic.
@@ -517,16 +646,21 @@ class ReplayRing:
         :data:`~agent_alfred.gateway.web.frames.STARTUP_CHECKPOINT_SEQ` is
         planted instead.
         """
-        return self._reseed_boundary
+        generation = self._require_stable()
+        return self._finish_read(generation, self._reseed_boundary)
 
     def oldest_seq(self) -> int | None:
-        return self._entries[0].seq if self._entries else None
+        generation = self._require_stable()
+        oldest = self._entries[0].seq if self._entries else None
+        return self._finish_read(generation, oldest)
 
     def emitted_any(self) -> bool:
-        return self._emitted_any
+        generation = self._require_stable()
+        return self._finish_read(generation, self._emitted_any)
 
     def __len__(self) -> int:
-        return len(self._entries)
+        generation = self._require_stable()
+        return self._finish_read(generation, len(self._entries))
 
     def entries_after(self, cursor_seq: int) -> tuple[PreparedFrames, ...] | None:
         """Every replayable entry in ``(cursor_seq, high_water]``.
@@ -534,9 +668,13 @@ class ReplayRing:
         ``None`` means the cursor is unusable -- never a shorter list, which
         is what keeps a gap from degrading into a silent hole.
         """
+        generation = self._require_stable()
         if self.classify_seq(cursor_seq) != "valid":
-            return None
-        return tuple(entry for entry in self._entries if entry.seq > cursor_seq)
+            return self._finish_read(generation, None)
+        entries = tuple(
+            entry for entry in self._entries if entry.seq > cursor_seq
+        )
+        return self._finish_read(generation, entries)
 
     def bounded_entries_after(
         self,
@@ -556,28 +694,37 @@ class ReplayRing:
         slice deliberately carries that seq without carrying its ``id:``.
         """
         generation = self._generation
+        if generation % 2:
+            return ReplayBatch(kind="unavailable")
         if isinstance(progress, int):
             progress = ReplayProgress(completed_seq=progress)
         if through_seq is None or (
             progress.event_seq is None
             and progress.completed_seq >= through_seq
         ):
+            if generation != self._generation or self._generation % 2:
+                return ReplayBatch(kind="unavailable")
             return ReplayBatch(kind="complete")
-        if progress.event_seq is None:
-            if self.classify_seq(progress.completed_seq) != "valid":
+        try:
+            if progress.event_seq is None:
+                if self.classify_seq(progress.completed_seq) != "valid":
+                    return ReplayBatch(kind="unavailable")
+                index = self._entries.first_after(progress.completed_seq)
+                if index >= len(self._entries):
+                    return ReplayBatch(kind="unavailable")
+                entry = self._entries[index]
+                start = 0
+            else:
+                entry = self._entries.entry_at_seq(progress.event_seq)
+                if entry is None:
+                    # The writer released the preceding slice before this fetch;
+                    # eviction is therefore allowed to reclaim the logical event.
+                    return ReplayBatch(kind="unavailable")
+                start = progress.next_frame_index
+        except (_ReplayIntervalChanged, _ReplayReadUnavailable):
+            if generation != self._generation or self._generation % 2:
                 return ReplayBatch(kind="unavailable")
-            index = self._entries.first_after(progress.completed_seq)
-            if index >= len(self._entries):
-                return ReplayBatch(kind="unavailable")
-            entry = self._entries[index]
-            start = 0
-        else:
-            entry = self._entries.entry_at_seq(progress.event_seq)
-            if entry is None:
-                # The writer released the preceding slice before this fetch;
-                # eviction is therefore allowed to reclaim the logical event.
-                return ReplayBatch(kind="unavailable")
-            start = progress.next_frame_index
+            raise
         if entry.seq is None or entry.seq > through_seq:
             return ReplayBatch(kind="unavailable")
         if start < 0 or start >= len(entry.frames):
@@ -586,13 +733,7 @@ class ReplayRing:
         end = start
         selected_cost = FrameCost(frames=0, encoded_bytes=0)
         while end < len(entry.frames):
-            is_final = end + 1 == len(entry.frames)
-            frame_cost = FrameCost(
-                frames=1,
-                encoded_bytes=len(entry.frames[end])
-                + 2
-                + (len(entry.id_line) if is_final else 0),
-            )
+            frame_cost = entry.wire_frame_cost(end)
             projected = selected_cost + frame_cost
             if not budget.fits(projected):
                 break
@@ -601,6 +742,8 @@ class ReplayRing:
         if end == start:
             # One physical SSE record (including a final id line, if this is
             # the last one) cannot be split without changing its wire bytes.
+            if generation != self._generation or self._generation % 2:
+                return ReplayBatch(kind="unavailable")
             return ReplayBatch(kind="oversized")
 
         final = end == len(entry.frames)
@@ -609,13 +752,11 @@ class ReplayRing:
         sliced = (
             entry
             if start == 0 and final
-            else PreparedFrames(
-                seq=entry.seq,
+            else replace(
+                entry,
                 frames=entry.frames[start:end],
                 id_line=entry.id_line if final else b"",
                 byte_size=selected_cost.encoded_bytes,
-                replayable=entry.replayable,
-                must_deliver=entry.must_deliver,
             )
         )
         next_progress = (
@@ -627,7 +768,7 @@ class ReplayRing:
                 next_frame_index=end,
             )
         )
-        if generation != self._generation:
+        if generation != self._generation or self._generation % 2:
             return ReplayBatch(kind="unavailable")
         return ReplayBatch(
             kind="batch",
@@ -647,6 +788,7 @@ class ReplayRing:
         return (
             batch.kind == "batch"
             and batch._ring_generation is not None
+            and batch._ring_generation % 2 == 0
             and batch._ring_generation == self._generation
         )
 
@@ -662,21 +804,22 @@ class ReplayRing:
         scan is bounded by the ring's fixed physical-frame capacity and runs
         only while a connection registers, never on event publication.
         """
+        generation = self._require_stable()
         if isinstance(progress, int):
             progress = ReplayProgress(completed_seq=progress)
         if through_seq is None:
-            return FrameCost(0, 0)
+            return self._finish_read(generation, FrameCost(0, 0))
         if progress.event_seq is None:
             if progress.completed_seq >= through_seq:
-                return FrameCost(0, 0)
+                return self._finish_read(generation, FrameCost(0, 0))
             if self.classify_seq(progress.completed_seq) != "valid":
-                return None
+                return self._finish_read(generation, None)
             index = self._entries.first_after(progress.completed_seq)
             start = 0
         else:
             entry = self._entries.entry_at_seq(progress.event_seq)
             if entry is None:
-                return None
+                return self._finish_read(generation, None)
             index = self._entries.first_after(progress.event_seq - 1)
             start = progress.next_frame_index
 
@@ -688,21 +831,20 @@ class ReplayRing:
                 break
             frame_start = start if not found else 0
             if frame_start < 0 or frame_start >= len(entry.frames):
-                return None
+                return self._finish_read(generation, None)
             for frame_index in range(frame_start, len(entry.frames)):
-                is_final = frame_index + 1 == len(entry.frames)
                 maximum_bytes = max(
                     maximum_bytes,
-                    len(entry.frames[frame_index])
-                    + 2
-                    + (len(entry.id_line) if is_final else 0),
+                    entry.wire_frame_cost(frame_index).encoded_bytes,
                 )
                 found = True
             index += 1
             start = 0
         if not found:
-            return None
-        return FrameCost(frames=1, encoded_bytes=maximum_bytes)
+            return self._finish_read(generation, None)
+        return self._finish_read(
+            generation, FrameCost(frames=1, encoded_bytes=maximum_bytes)
+        )
 
     def classify_seq(self, seq: int) -> SeqVerdict:
         """Close a cursor's position into one of the four decided reasons.
@@ -733,13 +875,14 @@ class ReplayRing:
         event consumed is precisely the arithmetic predecessor that is not a
         checkpoint.
         """
+        generation = self._require_stable()
         if not isinstance(seq, int) or isinstance(seq, bool):
-            return "malformed"
-        if seq > self._published_high_water:
-            return "ahead"
-        if seq < self._unrecoverable_floor:
-            return "too_old"
-        if seq == STARTUP_CHECKPOINT_SEQ:
+            verdict: SeqVerdict = "malformed"
+        elif seq > self._published_high_water:
+            verdict = "ahead"
+        elif seq < self._unrecoverable_floor:
+            verdict = "too_old"
+        elif seq == STARTUP_CHECKPOINT_SEQ:
             # The transport startup boundary before the first domain event
             # (ADR-0013, 修订 2026-08-30: a boundary, not an event
             # checkpoint). Valid exactly while the ring has lost nothing --
@@ -748,16 +891,18 @@ class ReplayRing:
             # already called it ``too_old``, which is the honest answer:
             # this process cannot prove what happened between there and
             # here.
-            return "valid"
-        if self._entries.contains_seq(seq):
-            return "valid"
+            verdict = "valid"
+        elif self._entries.entry_at_seq(seq) is not None:
+            verdict = "valid"
         # The one edge that is usable with nothing under it: a checkpoint
         # this process issued and then dropped, whose whole tail is still
         # here. A floor of zero is not it -- it means nothing was ever
         # dropped, so a zero cursor is a client that has received nothing.
-        if seq == self._evicted_floor and self._evicted_floor > 0:
-            return "valid"
-        return "malformed"
+        elif seq == self._evicted_floor and self._evicted_floor > 0:
+            verdict = "valid"
+        else:
+            verdict = "malformed"
+        return self._finish_read(generation, verdict)
 
     # -- writes ------------------------------------------------------------
 
@@ -798,6 +943,10 @@ class ReplayRing:
         A transient passes ``entry=None``: the published high water moves
         and nothing is stored -- no entry, no checkpoint, no floor.
         """
+        if self._generation % 2:
+            raise RuntimeError(
+                "replay ring has an interrupted publication"
+            ) from self._write_failure
         if seq <= self._published_high_water:
             raise ValueError(
                 "seq must increase: got "
@@ -808,35 +957,107 @@ class ReplayRing:
                 f"entry seq {entry.seq} does not match published seq {seq}"
             )
         self._generation += 1
-        self._published_high_water = seq
-        if entry is None:
-            return AppendResult(accepted=False)
-        self._high_water = entry.seq
-        self._emitted_any = True
-        cost = entry.ingress_cost()
-        if not entry.frames or not self.budget.fits(cost):
-            retired = self._clear()
-            self._unrecoverable_floor = entry.seq
-            return self._finish_append(
-                AppendResult(
-                    accepted=False, ring_cleared=True, _retired=retired
-                ),
-                defer_retired_release,
-            )
-        self._cumulative_cost = self._cumulative_cost + cost
-        overwritten = self._entries.append(entry, self._cumulative_cost)
-        self._last_issued = entry.seq
-        self._reseed_boundary = entry.seq
-        self._usage = self._usage + cost
-        retired = self._evict_while_over_budget()
-        if overwritten is not None:
-            if retired is None:
-                raise RuntimeError("replay slot reused without retiring a prefix")
-            retired.hold_overwritten(overwritten)
-        return self._finish_append(
-            AppendResult(accepted=True, _retired=retired),
-            defer_retired_release,
+        try:
+            self._published_high_water = seq
+            if entry is None:
+                result = AppendResult(accepted=False)
+            else:
+                self._high_water = entry.seq
+                self._emitted_any = True
+                cost = entry.ingress_cost()
+                if not entry.frames or not self.budget.fits(cost):
+                    retired = self._clear()
+                    self._unrecoverable_floor = entry.seq
+                    result = AppendResult(
+                        accepted=False, ring_cleared=True, _retired=retired
+                    )
+                else:
+                    self._cumulative_cost = self._cumulative_cost + cost
+                    overwritten = self._entries.append(
+                        entry, self._cumulative_cost
+                    )
+                    self._write_overwritten = overwritten
+                    self._last_issued = entry.seq
+                    self._reseed_boundary = entry.seq
+                    self._usage = self._usage + cost
+                    retired = self._evict_while_over_budget()
+                    if overwritten is not None:
+                        if retired is None:
+                            retired = _RetiredPrefix.for_overwritten(
+                                self._entries, overwritten
+                            )
+                        else:
+                            retired.hold_overwritten(overwritten)
+                        self._write_retired = retired
+                        self._write_overwritten = None
+                    result = AppendResult(accepted=True, _retired=retired)
+            result = self._finish_append(result, defer_retired_release)
+            # Every deferred retired prefix now has two owners: the returned
+            # result and this ring-side backup. The caller clears the backup
+            # only after registering its own durable cleanup ledger entry.
+            # Thus an after-effect exception at the method-return boundary
+            # cannot erase the last path to up to the full ring budget.
+            self._write_failure = None
+            self._write_retired = None
+            self._write_overwritten = None
+        except BaseException as exc:  # noqa: BLE001
+            self._write_failure = exc
+            raise
+        else:
+            self._generation += 1
+            return result
+
+    def poisoned_cleanup(self) -> Callable[[], None] | None:
+        """Return the retained interrupted-write cleanup without dropping it."""
+        retired = self._write_retired
+        overwritten = self._write_overwritten
+        deferred = tuple(self._deferred_retired.items())
+        if retired is None and overwritten is None and not deferred:
+            return None
+
+        def release() -> None:
+            if retired is not None:
+                retired.release()
+            if overwritten is not None:
+                overwritten.entry = None
+            released_ids = {id(retired)} if retired is not None else set()
+            for _token, deferred_retired in deferred:
+                if id(deferred_retired) not in released_ids:
+                    deferred_retired.release()
+                    released_ids.add(id(deferred_retired))
+            if self._write_retired is retired:
+                self._write_retired = None
+            if self._write_overwritten is overwritten:
+                self._write_overwritten = None
+            for token, deferred_retired in deferred:
+                if self._deferred_retired.get(token) is deferred_retired:
+                    del self._deferred_retired[token]
+            if self._last_unacknowledged_retired not in self._deferred_retired:
+                self._last_unacknowledged_retired = None
+
+        return release
+
+    def has_pending_cleanup(self) -> bool:
+        """Whether this ring still owns any retired frame references.
+
+        This constant-time fact is the close-time source of truth. Broker
+        bookkeeping may explain *why* a callback is owed, but a control exit
+        between ``observe_published`` and that bookkeeping cannot make the
+        ring's own durable owner disappear from shutdown's completion check.
+        """
+        return (
+            self._write_retired is not None
+            or self._write_overwritten is not None
+            or bool(self._deferred_retired)
         )
+
+    def _retain_write_retired(self, retired: _RetiredPrefix) -> None:
+        """Own a prefix before its logical removal is published."""
+        self._write_retired = retired
+
+    def _retain_write_overwritten(self, overwritten: _EntryCell) -> None:
+        """Own a stale cell before its physical slot is replaced."""
+        self._write_overwritten = overwritten
 
     def _evict_while_over_budget(self) -> _RetiredPrefix | None:
         if self.budget.fits(self._usage):
@@ -857,6 +1078,7 @@ class ReplayRing:
         dropped = self._entries[drop_count - 1]
         self._retained_base = self._entries.cumulative_cost_at(drop_count - 1)
         retired = self._entries.drop_prefix(drop_count)
+        self._write_retired = retired
         self._usage = self._cumulative_cost - self._retained_base
 
         # Both boundaries are monotonic: the last removed logical event is
@@ -881,15 +1103,28 @@ class ReplayRing:
         and the gap is reported every time it comes back.
         """
         retired = self._entries.clear()
+        self._write_retired = retired
         self._last_issued = None
         self._usage = FrameCost(frames=0, encoded_bytes=0)
         self._retained_base = self._cumulative_cost
         return retired
 
-    @staticmethod
     def _finish_append(
-        result: AppendResult, defer_retired_release: bool
+        self, result: AppendResult, defer_retired_release: bool
     ) -> AppendResult:
+        retired = result._retired
+        if defer_retired_release and retired is not None:
+            token = object()
+            self._deferred_retired[token] = retired
+            self._last_unacknowledged_retired = token
+
+            def acknowledge() -> None:
+                if self._deferred_retired.get(token) is retired:
+                    del self._deferred_retired[token]
+                if self._last_unacknowledged_retired is token:
+                    self._last_unacknowledged_retired = None
+
+            return replace(result, _acknowledge=acknowledge)
         if not defer_retired_release:
             result.release_retired()
         return result
@@ -910,29 +1145,58 @@ def classify_cursor(
     ``too_old`` is the mechanism by which a gap is reported at all, and the
     only thing worse than a stale boundary is no boundary.
     """
+    # This helper returns one compound fact: verdict, reseed boundary and
+    # (optionally) the exact replay tail.  Fencing each constituent read is
+    # not enough because a writer may complete between two individually
+    # valid calls.  Carry one outer seqlock token across the whole decision.
+    generation = ring._require_stable()
     reseed = ring.reseed_boundary_seq()
     if reseed is None:
         reseed = STARTUP_CHECKPOINT_SEQ
     if cursor is None:
-        return CursorVerdict(kind="absent", reseed_seq=reseed)
+        return ring._finish_read(
+            generation, CursorVerdict(kind="absent", reseed_seq=reseed)
+        )
     seq, reason = parse_cursor(cursor, process_instance_id)
     if reason is not None:
-        return CursorVerdict(
-            kind="gap", reseed_seq=reseed, reason=reason, requested_seq=seq
+        return ring._finish_read(
+            generation,
+            CursorVerdict(
+                kind="gap",
+                reseed_seq=reseed,
+                reason=reason,
+                requested_seq=seq,
+            ),
         )
     assert seq is not None  # parse_cursor returns both or neither
     verdict = ring.classify_seq(seq)
     if verdict != "valid":
-        return CursorVerdict(
-            kind="gap",
-            reseed_seq=reseed,
-            reason=verdict,
-            requested_seq=seq,
+        return ring._finish_read(
+            generation,
+            CursorVerdict(
+                kind="gap",
+                reseed_seq=reseed,
+                reason=verdict,
+                requested_seq=seq,
+            ),
         )
     entries = ring.entries_after(seq) if include_entries else ()
+    if entries is None:
+        # A cursor classified valid in this same generation cannot lose its
+        # interval.  A concurrent writer is reported by the generation fence;
+        # same-generation None is structural corruption, never a valid empty
+        # replay silently manufactured by ``or ()``.
+        ring._finish_read(generation, None)
+        raise RuntimeError("valid replay cursor lost its retained interval")
     # The nearest complete checkpoint strictly before the first replayed
     # frame is the cursor itself: it named a complete event boundary, which
     # is exactly what "checkpoint" means.
-    return CursorVerdict(
-        kind="valid", entries=entries or (), reseed_seq=seq, requested_seq=seq
+    return ring._finish_read(
+        generation,
+        CursorVerdict(
+            kind="valid",
+            entries=entries,
+            reseed_seq=seq,
+            requested_seq=seq,
+        ),
     )

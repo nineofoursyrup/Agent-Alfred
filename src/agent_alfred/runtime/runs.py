@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, replace
-from typing import Any, NamedTuple, TypeAlias
+from typing import Any, Literal, NamedTuple, TypeAlias
 
 from agent_alfred.messages import Message, blocks_from_jsonable, message_plain_text
 from agent_alfred.outcomes import RunOutcome
@@ -70,6 +70,7 @@ DEFAULT_RUN_PAGE_SIZE = 25
 DEFAULT_MAINBAR_LIMIT = 25
 
 _TERMINAL_PHASE = TERMINAL_RUN_PHASE
+AdmissionState = Literal["pending", "admitted", "rejected", "unconfirmed"]
 
 
 class UnknownRunFilter(ValueError):
@@ -109,6 +110,7 @@ class RunSummary:
     started_at: str | None
     finished_at: str | None
     activity_revision: int
+    admission_state: AdmissionState = "unconfirmed"
 
     def __post_init__(self) -> None:
         phase, outcome = parse_run_lifecycle_pair(self.phase, self.outcome)
@@ -179,6 +181,7 @@ class SessionChatRun:
     """
 
     run_id: str
+    gateway: str
     phase: RunPhase
     outcome: RunOutcome | None
     accepted_at: str
@@ -307,7 +310,7 @@ def _mainbar_pending_cursor(
 
 _COLUMNS = """run_id, purpose, session_id, gateway, entry_surface_id,
               prompt_preview, phase, outcome, accepted_at, started_at,
-              finished_at, activity_revision"""
+              finished_at, activity_revision, admission_state"""
 
 
 class _RunRow(NamedTuple):
@@ -323,6 +326,7 @@ class _RunRow(NamedTuple):
     started_at: str | None
     finished_at: str | None
     activity_revision: int
+    admission_state: AdmissionState
 
 
 def _row_to_summary(raw_row) -> RunSummary:
@@ -345,6 +349,7 @@ def _row_to_summary(raw_row) -> RunSummary:
         started_at=row.started_at,
         finished_at=row.finished_at,
         activity_revision=row.activity_revision,
+        admission_state=row.admission_state,
     )
 
 
@@ -497,7 +502,7 @@ def locate_run(
     # the target itself. Bounded either way: a deep link into the ten
     # thousandth Run still returns one page, not ten thousand rows.
     excluded, excluded_params = _excluded_runs_clause(recording_failed_run_ids)
-    older = conn.execute(
+    newer_rows = conn.execute(
         f"SELECT {_COLUMNS} FROM runs\n"
         "  WHERE phase = ? "
         + purpose_clause
@@ -515,7 +520,7 @@ def locate_run(
             max(0, limit - 1),
         ),
     ).fetchall()
-    runs = [_redact_summary(_row_to_summary(r), redactor) for r in reversed(older)]
+    runs = [_redact_summary(_row_to_summary(r), redactor) for r in reversed(newer_rows)]
     runs.append(_redact_summary(summary, redactor))
     # The cursor sits on the target, so continuing from here walks forward
     # into whatever came after it -- and never repeats it.
@@ -727,11 +732,16 @@ def mainbar_pairs(
                 ),
                 runs_pending=still_pending,
             )
-        if has_inflight_chat_run(
+        still_pending = has_inflight_chat_run(
             conn,
             session_id=session_id,
             position=None,
             recording_failed_run_ids=recording_failed_run_ids,
+        )
+        # A later Run may have recorded while this fixed cohort was paged.
+        # Preserve the old suffix until the next cohort is drained as well.
+        if still_pending or _mainbar_catchup_rows(
+            conn, session_id, upper_watermark, _activity_watermark(conn), None, 1
         ):
             return MainBarPage(
                 items=tuple(items),
@@ -741,7 +751,7 @@ def mainbar_pairs(
                     runs_position=pending_runs_position,
                     historic_position=historic_position,
                 ),
-                runs_pending=True,
+                runs_pending=still_pending,
             )
         in_runs_segment = pending_runs_position is not None
         runs_position = pending_runs_position
@@ -988,6 +998,7 @@ DEFAULT_REPLY_PREVIEW_CHARS = 240
 
 class _SessionChatRunRow(NamedTuple):
     run_id: str
+    gateway: str
     phase: object
     outcome: object
     accepted_at: str
@@ -1044,10 +1055,12 @@ def list_session_chat_runs(
         params += (position[0], position[0], position[1])
     params += (limit + 1,)
     rows = conn.execute(
-        "SELECT runs.run_id, runs.phase, runs.outcome, runs.accepted_at,\n"
+        "SELECT runs.run_id, runs.gateway, runs.phase, runs.outcome,\n"
+        "       runs.accepted_at,\n"
         "       runs.started_at, runs.finished_at, runs.activity_revision\n"
         "  FROM runs\n"
         "  WHERE runs.session_id = ? AND runs.purpose = 'chat'\n"
+        "    AND runs.admission_state = 'admitted'\n"
         f"  {excluded}\n"
         f"  {beyond}"
         "  ORDER BY runs.activity_revision DESC, runs.run_id DESC LIMIT ?",
@@ -1061,6 +1074,7 @@ def list_session_chat_runs(
         entries_list.append(
             SessionChatRun(
                 run_id=row.run_id,
+                gateway=row.gateway,
                 phase=phase,
                 outcome=outcome,
                 accepted_at=row.accepted_at,

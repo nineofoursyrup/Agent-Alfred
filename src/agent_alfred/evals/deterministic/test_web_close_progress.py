@@ -41,6 +41,7 @@ import pytest
 
 from agent_alfred import schema
 from agent_alfred.clock import FakeClock
+from agent_alfred.database import open_database as file_database
 from agent_alfred.evals.deterministic._web_broker_test_helpers import GatedThreads
 from agent_alfred.evals.deterministic._web_close_test_helpers import (
     CloseTrackingConnection,
@@ -85,7 +86,6 @@ def test_dashboard_success_and_rollback_balance_managed_lease_fds(
         free_loopback_port,
     )
     from agent_alfred.evals.deterministic._web_startup_test_helpers import (
-        file_database,
         scripted_factory,
     )
     from agent_alfred.wiring import build_dashboard
@@ -260,8 +260,9 @@ class _RealBrokerRig:
         self.lock = RecordingProcessLock(lease, self.trace)
         return self.lock
 
-    def _open_database(self, directory):
+    def _open_database(self, directory, *, _rollback):
         del directory
+        _rollback.own(self.conn)
         return self.conn
 
     def _assemble(self, conn, instance_id):
@@ -341,26 +342,28 @@ def test_a_descriptor_that_refuses_deletion_keeps_the_tail_pending(
 ) -> None:
     """The entry is withdrawn only when the file is really gone.
 
-    A ``_forget_descriptor()`` that dropped its reference before ``unlink()``
+    A ``_forget_descriptor()`` that dropped its reference before unlink
     succeeded turned the first failure into a permanent one: the next close
-    deleted nothing and released the lock on top of a descriptor that still
-    named this process -- and a browser still reading it would knock on a
-    dead port. The reference survives a failed unlink, so the retry deletes
-    the file for real, releases the lock exactly once, and only then is the
-    runtime ``closed``.
+    removed nothing and released the lock on top of a descriptor that still
+    named this process -- and a browser still reading it would knock on a dead
+    port. The reference survives a failed unlink, so the retry removes the
+    public name, releases the lock exactly once, and only then is the runtime
+    ``closed``.
     """
     rig = RefusableTailRig(tmp_path)
     rig.runtime.start()
     attempts = {"count": 0}
-    real_unlink = os.unlink
+    from agent_alfred import managed_state as managed_module
 
-    def refusing_unlink(path, *, dir_fd=None):
+    real_unlink = managed_module.os.unlink
+
+    def refusing_unlink(path, *args, **kwargs):
         if path == DESCRIPTOR_NAME and attempts["count"] == 0:
             attempts["count"] += 1
             raise PermissionError(1, "Operation not permitted", path)
-        return real_unlink(path, dir_fd=dir_fd)
+        return real_unlink(path, *args, **kwargs)
 
-    monkeypatch.setattr("agent_alfred.managed_state.os.unlink", refusing_unlink)
+    monkeypatch.setattr(managed_module.os, "unlink", refusing_unlink)
     with pytest.raises(ManagedPathSecurityError) as caught:
         rig.runtime.close()
     assert caught.value.reason == "permission_denied"
@@ -455,21 +458,22 @@ class _RealHostFanOutRig:
         self.lock = RecordingProcessLock(lease, self.trace)
         return self.lock
 
-    def _server_factory(self, address, handler):
+    def _server_factory(self, address, handler, owner):
         self.trace.append("bind")
-        return RecordingServer(address, handler)
+        owner.publish(RecordingServer(address, handler))
 
     def _write_descriptor(self, directory, descriptor):
         self.trace.append("write_descriptor")
         return write_entry_descriptor(directory, descriptor)
 
-    def _open_database(self, directory):
+    def _open_database(self, directory, *, _rollback):
         del directory
         self.trace.append("open_db")
         self.conn = sqlite3.connect(
             ":memory:", check_same_thread=False, factory=_SpyCloseConnection
         )
         self.conn._trace = self.trace
+        _rollback.own(self.conn)
         schema.migrate(self.conn)
         return self.conn
 

@@ -21,14 +21,18 @@ from __future__ import annotations
 import queue
 import socket
 import threading
+import time
 from collections import deque
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal, Protocol
 
 from agent_alfred.clock import Clock
 from agent_alfred.gateway.web import frames
+from agent_alfred.gateway.web._fifo import FifoNode, FifoState
+from agent_alfred.gateway.web._fifo import reverse_nodes as _reverse_connection_nodes
 from agent_alfred.gateway.web.replay import ReplayBatch, ReplayProgress
+from agent_alfred.resource_rollback import ResumableRollback, RollbackSlot
 
 # The decided capacity table: frames *and* encoded bytes, counted together.
 DEFAULT_BUDGET = frames.FrameBudget(frames=512, encoded_bytes=8 * 1024 * 1024)
@@ -68,13 +72,14 @@ class SocketConnection:
     """Owns the socket: it writes, it flushes, it is the only closer.
 
     Two locks, because two things must never wait on each other. The write
-    lock serialises blocking writes between writers; the close lock owns the
-    closed state and the shutdown. A writer wedged inside ``write``/``flush``
-    holds the write lock -- so the close path, whose whole job is to unblock
-    that writer, takes the *close* lock only: it marks the connection closed
-    atomically and then shuts the socket down, which is what makes the
-    blocked send fail instead of waiting for the writer to release a lock it
-    cannot release.
+    lock serialises blocking writes between writers; the close condition owns
+    one shutdown claim and the confirmed-closed state. A writer wedged inside
+    ``write``/``flush`` holds the write lock -- so the close path, whose whole
+    job is to unblock that writer, takes the *close* lock only: it claims the
+    shutdown atomically, performs it outside the lock, and publishes closed
+    only after the descriptor effect returns. That shutdown makes the blocked
+    send fail instead of waiting for the writer to release a lock it cannot
+    release.
 
     For the same reason close never flushes: a flush on a socket whose peer
     stopped reading is exactly the block this close exists to break.
@@ -89,6 +94,8 @@ class SocketConnection:
         self._wfile = wfile
         self._write_lock = lock or threading.Lock()
         self._close_lock = threading.Lock()
+        self._close_condition = threading.Condition(self._close_lock)
+        self._close_claim: object | None = None
         self._closed = False
 
     def write(self, data: bytes) -> None:
@@ -97,17 +104,33 @@ class SocketConnection:
             self._wfile.flush()
 
     def close(self) -> None:
-        with self._close_lock:
-            if self._closed:
-                return
-            self._closed = True
-        # Past this point this thread owns the shutdown; nobody else can
-        # reach it, and a second close returns above.
+        claim = object()
+        owns_claim = False
         try:
-            self._sock.shutdown(socket.SHUT_RDWR)
-        except OSError:
-            pass
-        self._sock.close()
+            with self._close_condition:
+                while self._close_claim is not None and not self._closed:
+                    self._close_condition.wait()
+                if self._closed:
+                    return
+                # Mark the local recovery responsibility before publishing
+                # the shared claim: an exit on either side of the assignment
+                # can then only clear this exact token, never another closer's.
+                owns_claim = True
+                self._close_claim = claim
+            try:
+                self._sock.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+            self._sock.close()
+            with self._close_condition:
+                if self._close_claim is claim:
+                    self._closed = True
+        finally:
+            if owns_claim:
+                with self._close_condition:
+                    if self._close_claim is claim:
+                        self._close_claim = None
+                        self._close_condition.notify_all()
 
 
 @dataclass(frozen=True)
@@ -127,12 +150,50 @@ class OfferOutcome:
     kind: Literal["accepted", "dropped", "overflowed"]
 
 
+_ConnectionValue = frames.PreparedFrames | CloseConnection | StopWriter
+
+
+@dataclass(frozen=True, slots=True)
+class _ConnectionQueueState(FifoState[_ConnectionValue]):
+    """Membership, budgets and control ownership published by one store."""
+
+    prefix_usage: frames.FrameCost
+    replay_usage: frames.FrameCost
+    startup_guard: frames.FrameCost
+    dropped: int
+    closing: bool
+    stop_requested: bool
+
+
+def _connection_item_cost(item: _ConnectionValue) -> frames.FrameCost:
+    if isinstance(item, frames.PreparedFrames):
+        return item.ingress_cost()
+    return frames.FrameCost(frames=0, encoded_bytes=0)
+
+
+def _append_connection_items(
+    back: FifoNode[_ConnectionValue] | None,
+    items: Sequence[_ConnectionValue],
+) -> FifoNode[_ConnectionValue] | None:
+    """Append a short ordered batch to the persistent reverse list."""
+    for item in items:
+        back = FifoNode(
+            item=item,
+            cost=_connection_item_cost(item),
+            next=back,
+        )
+    return back
+
+
 class ConnectionQueue:
     """The per-connection bounded queue. Frames and encoded bytes, both counted.
 
-    The underlying queue is unbounded on purpose: the capacity that matters is
+    The persistent FIFO is unbounded on purpose: the capacity that matters is
     ours, counted in the two units the decision named, and a sentinel that
-    closes the connection must never be refused for want of room.
+    closes the connection must never be refused for want of room. Producers
+    build an immutable replacement and publish membership, accounting, drop
+    debt and control ownership with one assignment. The sole consumer rotates
+    the reverse list outside the producer condition, preserving O(1) offers.
     """
 
     def __init__(
@@ -141,25 +202,33 @@ class ConnectionQueue:
         budget: frames.FrameBudget = DEFAULT_BUDGET,
     ):
         self.budget = budget
-        self._items: queue.SimpleQueue = queue.SimpleQueue()
-        self._lock = threading.Lock()
-        self._usage = frames.FrameCost(frames=0, encoded_bytes=0)
-        self._prefix_usage = frames.FrameCost(frames=0, encoded_bytes=0)
-        self._replay_usage = frames.FrameCost(frames=0, encoded_bytes=0)
-        self._startup_guard = frames.FrameCost(frames=0, encoded_bytes=0)
-        self._dropped = 0
-        self._closing = False
+        self._condition = threading.Condition(threading.Lock())
+        self._consumer_lock = threading.Lock()
+        zero = frames.FrameCost(frames=0, encoded_bytes=0)
+        self._state = _ConnectionQueueState(
+            front=None,
+            back=None,
+            rotation=None,
+            size=0,
+            usage=zero,
+            prefix_usage=zero,
+            replay_usage=zero,
+            startup_guard=zero,
+            dropped=0,
+            closing=False,
+            stop_requested=False,
+        )
 
     @property
     def close_requested(self) -> bool:
-        with self._lock:
-            return self._closing
+        with self._condition:
+            return self._state.closing
 
     @property
     def current_cost(self) -> frames.FrameCost:
         """What this queue is holding right now, in both counted units."""
-        with self._lock:
-            return self._usage
+        with self._condition:
+            return self._state.usage
 
     @property
     def current_frames(self) -> int:
@@ -205,10 +274,11 @@ class ConnectionQueue:
                 "ingress_dropped requires recover_dropped=True"
             )
         cost = item.ingress_cost()
-        with self._lock:
-            if self._closing:
+        with self._condition:
+            state = self._state
+            if state.closing:
                 return OfferOutcome(kind="dropped")
-            dropped = self._dropped + ingress_dropped
+            dropped = state.dropped + ingress_dropped
             notice = (
                 frames.deltas_dropped_notice(dropped)
                 if recover_dropped and dropped
@@ -219,55 +289,115 @@ class ConnectionQueue:
                 if notice is not None
                 else frames.FrameCost(frames=0, encoded_bytes=0)
             )
-            admitted = self._usage + notice_cost + cost
+            admitted = state.usage + notice_cost + cost
             protected = frames.FrameCost(
                 frames=max(
-                    self._startup_guard.frames - self._replay_usage.frames,
+                    state.startup_guard.frames - state.replay_usage.frames,
                     0,
                 ),
                 encoded_bytes=max(
-                    self._startup_guard.encoded_bytes
-                    - self._replay_usage.encoded_bytes,
+                    state.startup_guard.encoded_bytes
+                    - state.replay_usage.encoded_bytes,
                     0,
                 ),
             )
             projected = admitted + protected
             if self.budget.fits(projected):
-                if notice is not None:
-                    self._items.put(notice)
-                self._items.put(item)
-                self._usage = admitted
-                if notice is not None:
-                    self._dropped = 0
-                return OfferOutcome(kind="accepted")
-            if item.replayable or item.must_deliver:
-                self._closing = True
-                self._items.put(
-                    CloseConnection(retry_ms=frames.BACKOFF_RETRY_MS)
+                entries: tuple[_ConnectionValue, ...] = (
+                    (notice, item) if notice is not None else (item,)
                 )
-                return OfferOutcome(kind="overflowed")
-            if recover_dropped:
-                self._dropped += 1
-            return OfferOutcome(kind="dropped")
+                replacement = replace(
+                    state,
+                    back=_append_connection_items(state.back, entries),
+                    size=state.size + len(entries),
+                    usage=admitted,
+                    dropped=0 if notice is not None else state.dropped,
+                )
+                outcome = OfferOutcome(kind="accepted")
+            elif item.replayable or item.must_deliver:
+                closing = CloseConnection(retry_ms=frames.BACKOFF_RETRY_MS)
+                replacement = replace(
+                    state,
+                    back=_append_connection_items(state.back, (closing,)),
+                    size=state.size + 1,
+                    closing=True,
+                )
+                outcome = OfferOutcome(kind="overflowed")
+            else:
+                replacement = replace(
+                    state,
+                    dropped=state.dropped + int(recover_dropped),
+                )
+                outcome = OfferOutcome(kind="dropped")
+            self._state = replacement
+            if replacement.size > state.size:
+                self._condition.notify()
+            return outcome
 
     def request_close(self, *, retry_ms: int | None = None) -> None:
         """Ask the writer thread to hang up. Never closes anything here."""
-        with self._lock:
-            if self._closing:
+        with self._condition:
+            state = self._state
+            if state.closing:
+                # The state may have committed immediately before its notify
+                # edge was interrupted. Retrying only the wake-up is safe.
+                self._condition.notify()
                 return
-            self._closing = True
-            self._items.put(CloseConnection(retry_ms=retry_ms))
+            closing = CloseConnection(retry_ms=retry_ms)
+            self._state = replace(
+                state,
+                back=_append_connection_items(state.back, (closing,)),
+                size=state.size + 1,
+                closing=True,
+            )
+            self._condition.notify()
 
     def stop(self) -> None:
-        self._items.put(StopWriter())
+        with self._condition:
+            state = self._state
+            if state.stop_requested:
+                self._condition.notify()
+                return
+            stop = StopWriter()
+            self._state = replace(
+                state,
+                back=_append_connection_items(state.back, (stop,)),
+                size=state.size + 1,
+                stop_requested=True,
+            )
+            self._condition.notify()
 
     def take(self, timeout: float):
         """Take the next item, or raise ``queue.Empty`` after ``timeout``."""
-        item = self._items.get(timeout=timeout)
-        if isinstance(item, frames.PreparedFrames):
-            with self._lock:
-                self._usage = self._usage - item.ingress_cost()
-        return item
+        if timeout < 0:
+            raise ValueError("timeout must be a non-negative number")
+        deadline = time.monotonic() + timeout
+        with self._consumer_lock:
+            while True:
+                rotation = None
+                with self._condition:
+                    while self._state.size == 0:
+                        remaining = deadline - time.monotonic()
+                        if remaining <= 0:
+                            raise queue.Empty
+                        self._condition.wait(remaining)
+                    state = self._state
+                    if state.front is not None:
+                        front = state.front
+                        self._state = state.pop_front()
+                        return front.item
+                    if state.rotation is None:
+                        rotation = state.back
+                        self._state = state.begin_rotation()
+                    else:
+                        rotation = state.rotation
+
+                front = _reverse_connection_nodes(rotation)
+                with self._condition:
+                    state = self._state
+                    self._state = state.finish_rotation(rotation, front)
+                del state
+                del rotation
 
     def reserve_startup_prefix(
         self,
@@ -275,29 +405,41 @@ class ConnectionQueue:
         guard: frames.FrameCost,
     ) -> StartupPrefixReservation | None:
         """Atomically admit the fixed prefix and frozen-replay protection."""
-        with self._lock:
-            entries = tuple(startup)
-            cost = frames.FrameCost(frames=0, encoded_bytes=0)
-            for item in entries:
-                cost = cost + item.ingress_cost()
-            projected = self._usage + cost + guard
-            if self._closing or not self.budget.fits(projected):
+        entries = tuple(startup)
+        cost = frames.FrameCost(frames=0, encoded_bytes=0)
+        for item in entries:
+            cost = cost + item.ingress_cost()
+        with self._condition:
+            state = self._state
+            projected = state.usage + cost + guard
+            if state.closing or not self.budget.fits(projected):
                 return None
-            self._usage = self._usage + cost
-            self._prefix_usage = self._prefix_usage + cost
-            self._startup_guard = guard
+            self._state = replace(
+                state,
+                usage=state.usage + cost,
+                prefix_usage=state.prefix_usage + cost,
+                startup_guard=guard,
+            )
         return StartupPrefixReservation(self, entries)
 
     def _release_startup_prefix(self, cost: frames.FrameCost) -> None:
-        with self._lock:
-            self._usage = self._usage - cost
-            self._prefix_usage = self._prefix_usage - cost
+        with self._condition:
+            state = self._state
+            self._state = replace(
+                state,
+                usage=state.usage - cost,
+                prefix_usage=state.prefix_usage - cost,
+            )
 
     def _cancel_startup_prefix(self, cost: frames.FrameCost) -> None:
-        with self._lock:
-            self._usage = self._usage - cost
-            self._prefix_usage = self._prefix_usage - cost
-            self._startup_guard = frames.FrameCost(0, 0)
+        with self._condition:
+            state = self._state
+            self._state = replace(
+                state,
+                usage=state.usage - cost,
+                prefix_usage=state.prefix_usage - cost,
+                startup_guard=frames.FrameCost(0, 0),
+            )
 
     def build_and_reserve_startup(
         self,
@@ -312,13 +454,17 @@ class ConnectionQueue:
         queue critical section, so a live offer cannot make the chosen slice
         stale between those steps.
         """
-        with self._lock:
-            if self._closing and not continue_when_closing:
-                self._startup_guard = frames.FrameCost(0, 0)
+        with self._condition:
+            state = self._state
+            if state.closing and not continue_when_closing:
+                self._state = replace(
+                    state,
+                    startup_guard=frames.FrameCost(0, 0),
+                )
                 return ReplayBatch(kind="unavailable")
-            remaining_frames = self.budget.frames - self._usage.frames
+            remaining_frames = self.budget.frames - state.usage.frames
             remaining_bytes = (
-                self.budget.encoded_bytes - self._usage.encoded_bytes
+                self.budget.encoded_bytes - state.usage.encoded_bytes
             )
             if remaining_frames < 1 or remaining_bytes < 1:
                 return ReplayBatch(kind="unavailable")
@@ -329,43 +475,65 @@ class ConnectionQueue:
                 )
             )
             if batch.kind == "batch":
-                projected = self._usage + batch.cost
+                projected = state.usage + batch.cost
                 if not self.budget.fits(projected):
                     raise RuntimeError("startup builder exceeded remaining budget")
-                self._usage = projected
-                self._replay_usage = self._replay_usage + batch.cost
+                replacement = replace(
+                    state,
+                    usage=projected,
+                    replay_usage=state.replay_usage + batch.cost,
+                )
             else:
-                self._startup_guard = frames.FrameCost(0, 0)
+                replacement = replace(
+                    state,
+                    startup_guard=frames.FrameCost(0, 0),
+                )
+            self._state = replacement
             return batch
 
     def release_startup(self, cost: frames.FrameCost) -> None:
         """Release a replay batch immediately after its final frame is written."""
-        with self._lock:
-            self._usage = self._usage - cost
-            self._replay_usage = self._replay_usage - cost
+        with self._condition:
+            state = self._state
+            self._state = replace(
+                state,
+                usage=state.usage - cost,
+                replay_usage=state.replay_usage - cost,
+            )
 
     def cancel_startup(
         self, cost: frames.FrameCost = frames.FrameCost(0, 0)
     ) -> None:
         """Release a writer's final local slice and its priority guard."""
-        with self._lock:
-            self._usage = self._usage - cost
-            self._replay_usage = self._replay_usage - cost
-            self._startup_guard = frames.FrameCost(0, 0)
+        with self._condition:
+            state = self._state
+            self._state = replace(
+                state,
+                usage=state.usage - cost,
+                replay_usage=state.replay_usage - cost,
+                startup_guard=frames.FrameCost(0, 0),
+            )
 
     def finish(self) -> None:
         """Revoke admission and release every reference the dead writer owned."""
-        with self._lock:
-            self._closing = True
-            while True:
-                try:
-                    self._items.get_nowait()
-                except queue.Empty:
-                    break
-            self._usage = frames.FrameCost(0, 0)
-            self._prefix_usage = frames.FrameCost(0, 0)
-            self._replay_usage = frames.FrameCost(0, 0)
-            self._startup_guard = frames.FrameCost(0, 0)
+        with self._condition:
+            state = self._state
+            zero = frames.FrameCost(0, 0)
+            self._state = replace(
+                state,
+                front=None,
+                back=None,
+                rotation=None,
+                size=0,
+                usage=zero,
+                prefix_usage=zero,
+                replay_usage=zero,
+                startup_guard=zero,
+                dropped=0,
+                closing=True,
+                stop_requested=True,
+            )
+            self._condition.notify_all()
 
 
 class StartupPrefixReservation:
@@ -472,6 +640,19 @@ class ConnectionWriter:
         self._startup_replay = startup_replay
         self._last_write = clock.monotonic()
         self.failure: BaseException | None = None
+        self._cleanup_lock = threading.Lock()
+        self._cleanup = RollbackSlot()
+        connection_owner = ResumableRollback()
+        connection_owner.own(connection, lambda: self._connection.close())
+        source_owner = ResumableRollback()
+        source_owner.own(source, lambda: self._source.finish())
+        startup_owner = ResumableRollback()
+        startup_owner.own(self, self._cancel_startup)
+        # Independent owners let a queue failure coexist with a socket close.
+        # Reverse registration preserves startup -> queue -> connection order.
+        self._cleanup.begin(connection_owner)
+        self._cleanup.begin(source_owner)
+        self._cleanup.begin(startup_owner)
 
     def stop(self) -> None:
         """Ask the thread to return. Safe from any thread."""
@@ -559,12 +740,36 @@ class ConnectionWriter:
             # here would only print a traceback for a browser that left.
             self.failure = exc
         finally:
-            if self._startup_reservation is not None:
-                self._startup_reservation.cancel()
-                self._startup_reservation = None
-            self._startup_replay = None
-            self._source.finish()
-            self._connection.close()
+            self.cleanup()
+
+    @property
+    def cleanup_complete(self) -> bool:
+        """Whether every resource branch has returned successfully."""
+        with self._cleanup_lock:
+            return self._cleanup.settled
+
+    def cleanup(self) -> bool:
+        """Resume all independent writer resources without hiding refusal."""
+        with self._cleanup_lock:
+            try:
+                complete = self._cleanup.retry()
+            except BaseException as exc:  # noqa: BLE001 - broker retains owner
+                if self.failure is None:
+                    self.failure = exc
+                return False
+            if not complete and self.failure is None:
+                self.failure = self._cleanup.process_control or next(
+                    iter(self._cleanup.errors),
+                    RuntimeError("writer cleanup remains incomplete"),
+                )
+            return complete
+
+    def _cancel_startup(self) -> None:
+        reservation = self._startup_reservation
+        if reservation is not None:
+            reservation.cancel()
+            self._startup_reservation = None
+        self._startup_replay = None
 
     def _maybe_heartbeat(self) -> None:
         now = self._clock.monotonic()

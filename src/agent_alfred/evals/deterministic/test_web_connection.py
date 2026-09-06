@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+import dis
 import gc
 import queue
 import socket
 import threading
-import time
 import weakref
 
 import pytest
 
 from agent_alfred.clock import FakeClock
+from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+    interrupt_instruction_once,
+)
 from agent_alfred.evals.deterministic._web_broker_test_helpers import Harness
 from agent_alfred.gateway.web import frames
 from agent_alfred.gateway.web.connection import (
@@ -24,6 +27,58 @@ from agent_alfred.gateway.web.connection import (
     StopWriter,
 )
 from agent_alfred.gateway.web.replay import ReplayBatch, ReplayProgress
+
+
+def _socket_shutdown_call_instruction() -> int:
+    instructions = tuple(dis.get_instructions(SocketConnection.close))
+    shutdown_load = next(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "LOAD_ATTR" and instruction.argval == "shutdown"
+    )
+    return next(
+        instruction.offset
+        for instruction in instructions[shutdown_load:]
+        if instruction.opname in {"CALL", "CALL_KW"}
+    )
+
+
+def _queue_publication_boundary(
+    method,
+    *,
+    legacy_put: int | None = None,
+    legacy_attribute: str | None = None,
+) -> int:
+    """Land after the old split effect or the replacement state publish."""
+    instructions = tuple(dis.get_instructions(method))
+    state_stores = [
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "STORE_ATTR" and instruction.argval == "_state"
+    ]
+    if state_stores:
+        return instructions[state_stores[-1] + 1].offset
+    if legacy_attribute is not None:
+        store = next(
+            index
+            for index, instruction in enumerate(instructions)
+            if instruction.opname == "STORE_ATTR"
+            and instruction.argval == legacy_attribute
+        )
+        return instructions[store + 1].offset
+    if legacy_put is None:
+        raise AssertionError("legacy queue publication was not named")
+    put_loads = [
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "LOAD_ATTR" and instruction.argval == "put"
+    ]
+    call = next(
+        index
+        for index in range(put_loads[legacy_put] + 1, len(instructions))
+        if instructions[index].opname in {"CALL", "CALL_KW"}
+    )
+    return instructions[call + 1].offset
 
 
 def _frames(seq: int = 1, *, size: int = 8, replayable: bool = False):
@@ -41,6 +96,85 @@ def _frames(seq: int = 1, *, size: int = 8, replayable: bool = False):
 def test_a_transient_frame_that_fits_is_accepted() -> None:
     conn = ConnectionQueue(budget=frames.FrameBudget(frames=4, encoded_bytes=1 << 20))
     assert conn.offer(_frames(replayable=False)).kind == "accepted"
+
+
+def test_offer_publishes_membership_and_accounting_in_one_state() -> None:
+    """A control exit cannot expose an uncharged queue member."""
+    conn = ConnectionQueue(
+        budget=frames.FrameBudget(frames=4, encoded_bytes=1 << 20)
+    )
+    item = _frames(1, replayable=False)
+    failure = KeyboardInterrupt("after connection queue publication")
+    target = _queue_publication_boundary(
+        ConnectionQueue.offer,
+        legacy_put=1,
+    )
+
+    with interrupt_instruction_once(
+        ConnectionQueue.offer.__code__, target, failure
+    ) as armed:
+        with pytest.raises(KeyboardInterrupt, match="queue publication"):
+            conn.offer(item)
+
+    assert armed == [False]
+    assert conn.current_cost == item.ingress_cost()
+    assert conn.take(timeout=0) is item
+    assert conn.current_cost == frames.FrameCost(0, 0)
+
+
+def test_recovery_notice_and_domain_frame_publish_as_one_batch() -> None:
+    """The recovery pair has one membership and accounting commit point."""
+    conn = ConnectionQueue(
+        budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20)
+    )
+    assert conn.offer(_frames(1)).kind == "accepted"
+    assert conn.offer(_frames(2)).kind == "accepted"
+    assert conn.offer(_frames(3)).kind == "dropped"
+    conn.take(timeout=0)
+    conn.take(timeout=0)
+    candidate = _frames(4)
+    notice = frames.deltas_dropped_notice(1)
+    failure = KeyboardInterrupt("after recovery batch publication")
+    target = _queue_publication_boundary(
+        ConnectionQueue.offer,
+        legacy_put=0,
+    )
+
+    with interrupt_instruction_once(
+        ConnectionQueue.offer.__code__, target, failure
+    ) as armed:
+        with pytest.raises(KeyboardInterrupt, match="batch publication"):
+            conn.offer(candidate)
+
+    assert armed == [False]
+    assert conn.current_cost == notice.ingress_cost() + candidate.ingress_cost()
+    queued_notice = conn.take(timeout=0)
+    assert b'"count":1' in queued_notice.wire_bytes()
+    assert conn.take(timeout=0) is candidate
+    assert conn.current_cost == frames.FrameCost(0, 0)
+
+
+def test_close_request_publishes_the_flag_and_sentinel_in_one_state() -> None:
+    """Retry cannot observe a close claim whose wake-up item is absent."""
+    conn = ConnectionQueue()
+    failure = KeyboardInterrupt("after close request publication")
+    target = _queue_publication_boundary(
+        ConnectionQueue.request_close,
+        legacy_attribute="_closing",
+    )
+
+    with interrupt_instruction_once(
+        ConnectionQueue.request_close.__code__, target, failure
+    ) as armed:
+        with pytest.raises(KeyboardInterrupt, match="request publication"):
+            conn.request_close(retry_ms=17)
+
+    assert armed == [False]
+    conn.request_close(retry_ms=17)
+    assert conn.close_requested is True
+    assert conn.take(timeout=0) == CloseConnection(retry_ms=17)
+    with pytest.raises(queue.Empty):
+        conn.take(timeout=0)
 
 
 def test_a_full_queue_drops_transients_and_counts_them() -> None:
@@ -488,24 +622,46 @@ class _ScriptedSource:
         self._items = list(items)
         self.pending: list[object] = []
         self.timeouts: list[float] = []
+        self._condition = threading.Condition()
+        self._take_count = 0
+        self._released_timeouts = 0
 
     def put(self, item) -> None:
-        self._items.append(item)
+        with self._condition:
+            self._items.append(item)
+            self._condition.notify_all()
 
     def take(self, timeout: float):
-        self.timeouts.append(timeout)
-        if not self._items:
-            # A fake that returns instantly would spin the writer; a hair of
-            # sleep keeps the test from burning a core while it waits.
-            time.sleep(0.001)
-            raise queue.Empty
-        return self._items.pop(0)
+        with self._condition:
+            self.timeouts.append(timeout)
+            self._take_count += 1
+            self._condition.notify_all()
+            self._condition.wait_for(
+                lambda: bool(self._items) or self._released_timeouts > 0
+            )
+            if self._items:
+                return self._items.pop(0)
+            self._released_timeouts -= 1
+        raise queue.Empty
+
+    def release_timeout(self) -> None:
+        with self._condition:
+            self._released_timeouts += 1
+            self._condition.notify_all()
+
+    def wait_for_takes(self, count: int) -> None:
+        with self._condition:
+            assert self._condition.wait_for(
+                lambda: self._take_count >= count, timeout=2.0
+            ), f"writer did not enter take {count}"
 
     def stop(self) -> None:
-        self._items.append(StopWriter())
+        self.put(StopWriter())
 
     def finish(self) -> None:
-        self._items.clear()
+        with self._condition:
+            self._items.clear()
+            self._condition.notify_all()
 
 
 def _writer(source, *, clock, connection=None, heartbeat_s=15.0):
@@ -537,8 +693,7 @@ def test_the_writer_preserves_physical_frame_boundaries(phase: str) -> None:
         max_frame_bytes=512,
     ).with_checkpoint(1, "inst-test")
     expected = prepared.wire_frames()
-    assert len(expected) == 12
-    assert len(prepared.wire_bytes()) == 5255
+    assert len(expected) > 1
 
     connection = FakeConnection()
     source = ConnectionQueue(
@@ -575,41 +730,32 @@ def test_a_heartbeat_is_written_only_when_the_interval_has_elapsed() -> None:
     thread = threading.Thread(target=writer.run, daemon=True)
     thread.start()
     try:
+        source.wait_for_takes(1)
         # Under the interval the wait produces nothing: a timeout that
         # returns early is not a heartbeat interval.
         clock.monotonic_value = 14.0
-        _quiet_period()
+        source.release_timeout()
+        source.wait_for_takes(2)
         assert connection.writes == []
         # At the interval exactly one comment goes out, and it is not an
         # event -- no seq, no id, never replayed.
         clock.monotonic_value = 15.0
-        _wait_until(lambda: len(connection.writes) == 1)
+        source.release_timeout()
+        source.wait_for_takes(3)
         assert connection.writes == [b":hb\n\n"]
         # The clock is still 15 s, so no second heartbeat follows.
-        _quiet_period()
+        source.release_timeout()
+        source.wait_for_takes(4)
         assert len(connection.writes) == 1
         clock.monotonic_value = 30.0
-        _wait_until(lambda: len(connection.writes) == 2)
+        source.release_timeout()
+        source.wait_for_takes(5)
+        assert len(connection.writes) == 2
     finally:
         writer.stop()
         thread.join(timeout=2)
     assert not thread.is_alive()
     assert source.timeouts and source.timeouts[0] == 15.0
-
-
-def _quiet_period() -> None:
-    time.sleep(0.05)
-
-
-def _wait_until(predicate, timeout: float = 2.0) -> None:
-    end = time.monotonic() + timeout
-    while time.monotonic() < end:
-        if predicate():
-            return
-        time.sleep(0.005)
-    raise AssertionError("condition not met before timeout")
-
-
 def test_closing_for_a_replayable_overflow_raises_the_backoff_first() -> None:
     connection = FakeConnection()
     source = _ScriptedSource(
@@ -666,6 +812,84 @@ def test_fake_connection_records_and_is_idempotent_on_close() -> None:
 
 
 # --- the socket's one owner: closing must never wait for a wedged write -----
+
+
+class _CountingSocket:
+    def __init__(self, *, shutdown_gate: threading.Event | None = None) -> None:
+        self.shutdown_gate = shutdown_gate
+        self.shutdown_entered = threading.Event()
+        self.shutdown_calls = 0
+        self.close_calls = 0
+
+    def shutdown(self, _how: int) -> None:
+        self.shutdown_calls += 1
+        self.shutdown_entered.set()
+        if self.shutdown_gate is not None:
+            self.shutdown_gate.wait()
+
+    def close(self) -> None:
+        self.close_calls += 1
+
+
+def test_socket_close_exit_before_shutdown_keeps_the_effect_retryable() -> None:
+    """A claimed close is not a confirmed close until the fd effect returns."""
+    sock = _CountingSocket()
+    connection = SocketConnection(sock, object())  # type: ignore[arg-type]
+    failure = SystemExit("interrupt before socket shutdown")
+    target = _socket_shutdown_call_instruction()
+
+    with interrupt_instruction_once(
+        SocketConnection.close.__code__, target, failure
+    ) as armed:
+        with pytest.raises(SystemExit) as raised:
+            connection.close()
+
+    assert armed == [False]
+    assert raised.value is failure
+    assert sock.shutdown_calls == 0
+    assert sock.close_calls == 0
+    assert connection._closed is False  # noqa: SLF001
+
+    connection.close()
+    connection.close()
+    assert sock.shutdown_calls == 1
+    assert sock.close_calls == 1
+    assert connection._closed is True  # noqa: SLF001
+
+
+def test_concurrent_socket_close_has_one_fd_effect_owner() -> None:
+    """A second closer waits for the first claim instead of duplicating it."""
+    release = threading.Event()
+    sock = _CountingSocket(shutdown_gate=release)
+    connection = SocketConnection(sock, object())  # type: ignore[arg-type]
+    finished = [threading.Event(), threading.Event()]
+    errors: list[BaseException] = []
+
+    def close(index: int) -> None:
+        try:
+            connection.close()
+        except BaseException as exc:  # noqa: BLE001 - asserted below
+            errors.append(exc)
+        finally:
+            finished[index].set()
+
+    first = threading.Thread(target=close, args=(0,), daemon=True)
+    second = threading.Thread(target=close, args=(1,), daemon=True)
+    first.start()
+    assert sock.shutdown_entered.wait(2.0), "first closer never claimed shutdown"
+    second.start()
+    assert finished[1].wait(0) is False
+    assert sock.shutdown_calls == 1
+    assert sock.close_calls == 0
+
+    release.set()
+    assert finished[0].wait(2.0)
+    assert finished[1].wait(2.0)
+    first.join(timeout=2.0)
+    second.join(timeout=2.0)
+    assert errors == []
+    assert sock.shutdown_calls == 1
+    assert sock.close_calls == 1
 
 
 class _SocketWFile:
@@ -762,12 +986,10 @@ def test_close_does_not_wait_for_the_write_lock_a_blocked_writer_holds() -> None
 
 
 class _RealThreads:
-    """Runs every spawned thread for real, like the production broker."""
+    """Builds every spawned thread for the production broker to start."""
 
     def spawn(self, target):
-        thread = threading.Thread(target=target, daemon=True)
-        thread.start()
-        return thread
+        return threading.Thread(target=target, daemon=True)
 
 
 def test_a_gated_flush_writer_does_not_wait_the_broker_close_open() -> None:

@@ -9,6 +9,7 @@ nobody is listening on.
 
 from __future__ import annotations
 
+import dis
 import errno
 import fcntl
 import json
@@ -23,11 +24,19 @@ from pathlib import Path, PurePath
 
 import pytest
 
+from agent_alfred import resource_rollback as resource_rollback_module
+from agent_alfred.database import open_database as file_database
+from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+    interrupt_instruction_once,
+    interrupt_py_return_once,
+)
+from agent_alfred.evals.deterministic._thread_test_helpers import (
+    ProbeInterruptedUnstartedThread,
+)
 from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
     free_loopback_port,
 )
 from agent_alfred.evals.deterministic._web_startup_test_helpers import (
-    file_database,
     managed_process_lock,
     scripted_factory,
 )
@@ -45,7 +54,163 @@ from agent_alfred.gateway.web.lifecycle import (
     write_entry_descriptor,
 )
 from agent_alfred.managed_state import ManagedPathSecurityError, ManagedStateDirectory
+from agent_alfred.resource_rollback import BackgroundCloseStep
 from agent_alfred.wiring import build_dashboard
+
+
+def _start_serving_start_boundary(*, after_effect: bool) -> int:
+    instructions = tuple(dis.get_instructions(DashboardService.start_serving))
+    start_load = next(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "LOAD_ATTR" and instruction.argval == "start"
+    )
+    call = next(
+        index
+        for index, instruction in enumerate(instructions[start_load:], start_load)
+        if instruction.opname in {"CALL", "CALL_KW"}
+    )
+    return instructions[call + int(after_effect)].offset
+
+
+@pytest.mark.parametrize(
+    "failure_type", [RuntimeError, KeyboardInterrupt, SystemExit, GeneratorExit]
+)
+def test_process_lock_release_retries_its_owned_state_until_closed(
+    failure_type: type[BaseException],
+) -> None:
+    failure = failure_type("state close interrupted before effect")
+
+    class Lease:
+        path = Path("unused-lock")
+
+        def close(self) -> None:
+            pass
+
+    class State:
+        attempts = 0
+        closed = False
+
+        def close(self) -> None:
+            self.attempts += 1
+            if self.attempts == 1:
+                raise failure
+            self.closed = True
+
+    state = State()
+    lock = ProcessLock(Lease(), owned_state=state)
+    with pytest.raises(failure_type) as caught:
+        lock.release()
+    assert caught.value is failure
+    assert not state.closed
+
+    lock.release()
+    assert state.closed
+    assert state.attempts == 2
+    lock.release()
+    assert state.attempts == 2
+
+
+def test_process_lock_release_retains_the_flock_fd_until_close_is_confirmed(
+    tmp_path,
+) -> None:
+    """A release-edge interruption must not turn a held flock anonymous."""
+    state = ManagedStateDirectory.acquire(tmp_path / "state")
+    lease = state.open_regular(
+        PurePath(LOCK_NAME),
+        access="read_write",
+        create=True,
+        role="process lock",
+    )
+    lock = ProcessLock(lease, owned_state=state)
+    lock.acquire()
+    descriptor = lock._fd  # noqa: SLF001 - exact ownership oracle
+    assert descriptor is not None
+    code = ProcessLock.release.__code__
+    instructions = tuple(dis.get_instructions(code))
+    cleared = next(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "STORE_ATTR" and instruction.argval == "_fd"
+    )
+    offset = instructions[cleared + 1].offset
+    control = SystemExit("flock identity cleared before close")
+    try:
+        with interrupt_instruction_once(code, offset, control) as armed:
+            with pytest.raises(SystemExit) as caught:
+                lock.release()
+
+        assert armed == [False]
+        assert caught.value is control
+        lock.release()
+        with pytest.raises(OSError) as closed:
+            os.fstat(descriptor)
+        assert closed.value.errno == errno.EBADF
+    finally:
+        try:
+            os.close(descriptor)
+        except OSError as exc:
+            if exc.errno != errno.EBADF:
+                raise
+
+
+def _background_close_start_boundary(*, after_effect: bool) -> int:
+    instructions = tuple(dis.get_instructions(BackgroundCloseStep.complete))
+    start_load = next(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "LOAD_ATTR" and instruction.argval == "start"
+    )
+    call = next(
+        index
+        for index, instruction in enumerate(instructions[start_load:], start_load)
+        if instruction.opname in {"CALL", "CALL_KW"}
+    )
+    return instructions[call + int(after_effect)].offset
+
+
+def _server_close_return_boundary() -> int:
+    """Locate the first instruction after the background close answers."""
+    instructions = tuple(dis.get_instructions(DashboardService._release_server))
+    owner = next(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "LOAD_ATTR"
+        and instruction.argval == "_server_close"
+    )
+    call = next(
+        index
+        for index, instruction in enumerate(instructions[owner:], owner)
+        if instruction.opname in {"CALL", "CALL_KW"}
+    )
+    return instructions[call + 1].offset
+
+
+def _process_lock_acquire_boundary(boundary: str) -> int:
+    """Locate a post-flock or pre-publication ownership boundary."""
+    instructions = tuple(dis.get_instructions(ProcessLock.acquire))
+    if boundary == "after_flock":
+        flock_load = next(
+            index
+            for index, instruction in enumerate(instructions)
+            if instruction.opname == "LOAD_ATTR"
+            and instruction.argval == "flock"
+        )
+        call = next(
+            index
+            for index, instruction in enumerate(
+                instructions[flock_load:], flock_load
+            )
+            if instruction.opname in {"CALL", "CALL_KW"}
+        )
+        return instructions[call + 1].offset
+    assert boundary == "before_publish"
+    return next(
+        instruction.offset
+        for instruction in instructions
+        if instruction.opname == "STORE_ATTR"
+        and instruction.argval == "_fd_owner"
+    )
 
 
 @pytest.mark.parametrize(
@@ -318,6 +483,39 @@ def test_dashboard_refuses_symlink_state_dir_before_lock_bind_or_descriptor(
     assert not (target / DESCRIPTOR_NAME).exists()
 
 
+def test_server_factory_publishes_before_its_py_return(tmp_path) -> None:
+    """A bound server remains closeable when its factory return is cut off."""
+    created: list[_RecordingServer] = []
+
+    def factory(address, handler, owner=None):
+        server = _RecordingServer(address, handler)
+        created.append(server)
+        if owner is not None:
+            owner.publish(server)
+        return server
+
+    service = DashboardService(
+        state_dir=tmp_path,
+        handler=_Handler,
+        instance_id="inst-server-factory-return",
+        port=DEFAULT_PORT,
+        server_factory=factory,
+    )
+    failure = SystemExit("server factory return interrupted")
+
+    with interrupt_py_return_once(
+        "owned-server-factory-return", factory.__code__, failure
+    ) as armed:
+        with pytest.raises(SystemExit) as caught:
+            service.start()
+
+    assert armed == [False]
+    assert caught.value is failure
+    assert len(created) == 1
+    assert created[0].closed is True
+    assert service.lock_held is False
+
+
 def test_dashboard_refuses_foreign_owned_state_dir_before_lock_bind_or_descriptor(
     tmp_path, monkeypatch
 ) -> None:
@@ -343,13 +541,19 @@ def test_dashboard_rechecks_mode_and_identity_after_tightening(
     before_open = threading.Event()
     swapped = threading.Event()
     replacement_before: list[os.stat_result] = []
+    worker_errors: list[BaseException] = []
 
     def replace_root() -> None:
-        before_open.wait()
-        state.rename(displaced)
-        state.mkdir(mode=0o755)
-        replacement_before.append(state.stat())
-        swapped.set()
+        try:
+            if not before_open.wait(5.0):
+                raise AssertionError("state-root open boundary was never reached")
+            state.rename(displaced)
+            state.mkdir(mode=0o755)
+            replacement_before.append(state.stat())
+        except BaseException as exc:  # preserve failures from the worker thread
+            worker_errors.append(exc)
+        finally:
+            swapped.set()
 
     worker = threading.Thread(target=replace_root)
     worker.start()
@@ -361,13 +565,19 @@ def test_dashboard_rechecks_mode_and_identity_after_tightening(
             and not swapped.is_set()
         ):
             before_open.set()
-            swapped.wait()
+            assert swapped.wait(5.0), "state-root replacement did not finish"
         return real_open(path, flags, *args, **kwargs)
 
     monkeypatch.setattr("agent_alfred.managed_state.os.open", swap_before_open)
-    with pytest.raises(ManagedPathSecurityError) as caught:
-        _service(state).start()
-    worker.join()
+    try:
+        with pytest.raises(ManagedPathSecurityError) as caught:
+            _service(state).start()
+    finally:
+        before_open.set()
+        swapped.set()
+        worker.join(timeout=5.0)
+        assert not worker.is_alive(), "state-root replacement worker did not exit"
+        assert worker_errors == []
     assert caught.value.reason == "identity_changed"
     replacement_after = state.stat()
     before = replacement_before[0]
@@ -395,15 +605,21 @@ def test_dashboard_does_not_tighten_name_replaced_after_open(
     before_tighten = threading.Event()
     swapped = threading.Event()
     replacement_before: list[os.stat_result] = []
+    worker_errors: list[BaseException] = []
     real_stat = os.stat
     root_stat_calls = 0
 
     def replace_root() -> None:
-        before_tighten.wait()
-        state.rename(displaced)
-        state.mkdir(mode=0o755)
-        replacement_before.append(state.stat())
-        swapped.set()
+        try:
+            if not before_tighten.wait(5.0):
+                raise AssertionError("state-root tighten boundary was never reached")
+            state.rename(displaced)
+            state.mkdir(mode=0o755)
+            replacement_before.append(state.stat())
+        except BaseException as exc:  # preserve failures from the worker thread
+            worker_errors.append(exc)
+        finally:
+            swapped.set()
 
     worker = threading.Thread(target=replace_root)
     worker.start()
@@ -414,13 +630,19 @@ def test_dashboard_does_not_tighten_name_replaced_after_open(
             root_stat_calls += 1
             if root_stat_calls == 2:
                 before_tighten.set()
-                swapped.wait()
+                assert swapped.wait(5.0), "state-root replacement did not finish"
         return real_stat(path, *args, **kwargs)
 
     monkeypatch.setattr("agent_alfred.managed_state.os.stat", stat_after_open)
-    with pytest.raises(ManagedPathSecurityError) as caught:
-        _service(state).start()
-    worker.join()
+    try:
+        with pytest.raises(ManagedPathSecurityError) as caught:
+            _service(state).start()
+    finally:
+        before_tighten.set()
+        swapped.set()
+        worker.join(timeout=5.0)
+        assert not worker.is_alive(), "state-root replacement worker did not exit"
+        assert worker_errors == []
     assert caught.value.reason == "identity_changed"
     after = state.stat()
     before = replacement_before[0]
@@ -616,6 +838,112 @@ def test_a_lock_is_exclusive_within_one_process(tmp_path) -> None:
     second.acquire()
     assert second.acquired is True
     second.release()
+
+
+@pytest.mark.parametrize(
+    "boundary", ("after_flock", "before_publish")
+)
+def test_process_lock_control_exit_releases_the_unpublished_flock(
+    tmp_path, monkeypatch, boundary: str
+) -> None:
+    """A held flock cannot outlive the capability that failed to publish it."""
+    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
+    from agent_alfred.managed_state import ManagedFileLease
+
+    socket.getfqdn()
+    baseline = _open_fd_count()
+    real_duplicate = ManagedFileLease.duplicate_fd
+    duplicate_fd: int | None = None
+
+    def remember_duplicate(lease: ManagedFileLease, *, _rollback):
+        nonlocal duplicate_fd
+        result = real_duplicate(lease, _rollback=_rollback)
+        if duplicate_fd is None and lease.path.name == LOCK_NAME:
+            duplicate_fd = result.fd
+        return result
+
+    monkeypatch.setattr(ManagedFileLease, "duplicate_fd", remember_duplicate)
+    failure = KeyboardInterrupt(f"process lock {boundary} interrupted")
+    lock = managed_process_lock(tmp_path)
+    successor: ProcessLock | None = None
+    target = _process_lock_acquire_boundary(boundary)
+
+    try:
+        with interrupt_instruction_once(
+            ProcessLock.acquire.__code__, target, failure
+        ) as armed:
+            with pytest.raises(KeyboardInterrupt) as raised:
+                lock.acquire()
+        assert armed == [False]
+        assert raised.value is failure
+        assert lock.acquired is False
+        lock.release()
+
+        monkeypatch.setattr(
+            ManagedFileLease, "duplicate_fd", real_duplicate
+        )
+        successor = managed_process_lock(tmp_path)
+        successor.acquire()
+        assert successor.acquired is True
+        successor.release()
+        assert _open_fd_count() == baseline
+    finally:
+        if successor is not None:
+            successor.release()
+        lock.release()
+        if duplicate_fd is not None:
+            try:
+                os.close(duplicate_fd)
+            except OSError as exc:
+                if exc.errno != errno.EBADF:
+                    raise
+
+
+def test_process_lock_duplicate_return_edge_releases_the_owned_descriptor(
+    tmp_path, monkeypatch
+) -> None:
+    """The lock's rollback is reachable before ``duplicate_fd`` returns."""
+    from agent_alfred import managed_state as managed_module
+    from agent_alfred.managed_state import ManagedFileLease
+
+    real_dup = managed_module.os.dup
+    duplicated: list[int] = []
+
+    def record_dup(fd: int) -> int:
+        result = real_dup(fd)
+        duplicated.append(result)
+        return result
+
+    monkeypatch.setattr(managed_module.os, "dup", record_dup)
+    lock = managed_process_lock(tmp_path)
+    duplicated.clear()
+    failure = SystemExit("duplicate returned before ProcessLock could own it")
+    code = ManagedFileLease.duplicate_fd.__code__
+    target = next(
+        instruction.offset
+        for instruction in dis.get_instructions(code)
+        if instruction.opname == "RETURN_VALUE"
+    )
+    try:
+        with interrupt_instruction_once(code, target, failure) as armed:
+            with pytest.raises(SystemExit) as raised:
+                lock.acquire()
+
+        assert armed == [False]
+        assert raised.value is failure
+        assert duplicated
+        with pytest.raises(OSError) as closed:
+            os.fstat(duplicated[-1])
+        assert closed.value.errno == errno.EBADF
+    finally:
+        lock.release()
+        for descriptor in duplicated:
+            try:
+                real_close = managed_module.os.close
+                real_close(descriptor)
+            except OSError as exc:
+                if exc.errno != errno.EBADF:
+                    raise
 
 
 def test_a_lock_file_left_by_a_dead_holder_does_not_block(tmp_path) -> None:
@@ -844,11 +1172,11 @@ def test_dashboard_lock_rollback_never_closes_a_reused_duplicate(
     lock_verifications = 0
     close_failed = False
 
-    def remember_duplicate(lease):
+    def remember_duplicate(lease, *, _rollback):
         nonlocal duplicate_fd
-        result = real_duplicate(lease)
+        result = real_duplicate(lease, _rollback=_rollback)
         if lease.path.name == LOCK_NAME:
-            duplicate_fd = result
+            duplicate_fd = result.fd
         return result
 
     def refuse_post_flock(lease):
@@ -1243,6 +1571,33 @@ def test_dashboard_owns_an_uncertain_descriptor_replace_result(
     assert _open_fd_count() == baseline
 
 
+def test_dashboard_descriptor_return_edge_keeps_the_published_file_owned(
+    tmp_path,
+) -> None:
+    """A managed descriptor cannot exist without a reachable removal owner."""
+    state = tmp_path / "state"
+    service = _service(state, port=free_loopback_port())
+    failure = SystemExit("descriptor returned before Dashboard published it")
+    code = DashboardService._write_descriptor.__code__
+    target = next(
+        instruction.offset
+        for instruction in dis.get_instructions(code)
+        if instruction.opname == "STORE_ATTR"
+        and instruction.argval == "_descriptor"
+    )
+    try:
+        with interrupt_instruction_once(code, target, failure) as armed:
+            with pytest.raises(SystemExit) as raised:
+                service.start()
+
+        assert armed == [False]
+        assert raised.value is failure
+        assert not (state / DESCRIPTOR_NAME).exists()
+        assert service.lock_held is False
+    finally:
+        service.close()
+
+
 
 @pytest.mark.parametrize("failure_point", ("constructor", "acquire"))
 def test_lock_factory_failure_closes_child_and_state_leases_once(
@@ -1496,9 +1851,9 @@ def test_dashboard_rollback_never_double_closes_a_reused_state_fd(
 ) -> None:
     captured_state = []
 
-    def capture_database(state):
+    def capture_database(state, *, _rollback):
         captured_state.append(state)
-        return file_database(state)
+        return file_database(state, _rollback=_rollback)
 
     dashboard = build_dashboard(
         state_dir=tmp_path / "dashboard-close",
@@ -1646,6 +2001,46 @@ def test_start_locks_then_binds_then_describes(tmp_path) -> None:
     on_disk = read_entry_descriptor(tmp_path)
     assert on_disk == descriptor
     service.close()
+
+
+def test_bind_keeps_the_server_owned_before_its_attribute_store(tmp_path) -> None:
+    """A bound server cannot escape between factory return and publication."""
+    created: list[_RecordingServer] = []
+
+    def bind(address, handler, owner):
+        server = _RecordingServer(address, handler)
+        created.append(server)
+        owner.publish(server)
+        return server
+
+    service = DashboardService(
+        state_dir=tmp_path,
+        handler=_Handler,
+        instance_id="inst-bind-owner",
+        port=free_loopback_port(),
+        server_factory=bind,
+    )
+    code = DashboardService._bind.__code__
+    target = next(
+        instruction.offset
+        for instruction in dis.get_instructions(code)
+        if instruction.opname == "STORE_ATTR" and instruction.argval == "_server"
+    )
+    control = SystemExit("bound server returned before it had an owner")
+    try:
+        with interrupt_instruction_once(code, target, control) as armed:
+            with pytest.raises(SystemExit) as caught:
+                service.start()
+
+        assert armed == [False]
+        assert caught.value is control
+        assert len(created) == 1
+        assert created[0].closed is True
+        assert service.server is None
+        assert service.lock_held is False
+        assert read_entry_descriptor(tmp_path) is None
+    finally:
+        service.close()
 
 
 def test_the_descriptor_names_instance_pid_and_port(tmp_path) -> None:
@@ -1948,7 +2343,20 @@ def test_an_entry_descriptor_refuses_non_exact_or_out_of_range_integers(
         read_entry_descriptor(tmp_path)
 
 
-@pytest.mark.parametrize("instance_id", (None, True, 7, "", "bad:instance"))
+@pytest.mark.parametrize(
+    "instance_id",
+    (
+        None,
+        True,
+        7,
+        "",
+        "bad:instance",
+        "line\nfeed",
+        "carriage\rreturn",
+        "nul\0byte",
+        "snowman-☃",
+    ),
+)
 def test_an_entry_descriptor_requires_a_shaped_string_instance_id(
     tmp_path, instance_id: object
 ) -> None:
@@ -2008,6 +2416,58 @@ def test_a_missing_descriptor_reads_as_none(tmp_path) -> None:
 # --- the descriptor write itself ------------------------------------------
 
 
+def test_descriptor_writer_owns_the_raw_fd_before_its_local_store(
+    tmp_path, monkeypatch
+) -> None:
+    """An interrupted ``open`` return cannot strand the temporary descriptor."""
+    from agent_alfred.gateway.web import lifecycle as lifecycle_module
+
+    real_open = lifecycle_module.os.open
+    real_close = lifecycle_module.os.close
+    opened: list[int] = []
+
+    def open_descriptor(*args, **kwargs):
+        fd = real_open(*args, **kwargs)
+        opened.append(fd)
+        return fd
+
+    monkeypatch.setattr(lifecycle_module.os, "open", open_descriptor)
+    code = write_entry_descriptor.__code__
+    instructions = tuple(dis.get_instructions(code))
+    load = next(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "LOAD_ATTR" and instruction.argval == "open"
+    )
+    call = next(
+        index
+        for index, instruction in enumerate(instructions[load:], load)
+        if instruction.opname in {"CALL", "CALL_KW", "CALL_FUNCTION_EX"}
+    )
+    control = SystemExit("descriptor fd returned before it had an owner")
+    temporary = tmp_path / f".{DESCRIPTOR_NAME}.{os.getpid()}.tmp"
+    try:
+        with interrupt_instruction_once(
+            code, instructions[call + 1].offset, control
+        ) as armed:
+            with pytest.raises(SystemExit) as caught:
+                write_entry_descriptor(tmp_path, EntryDescriptor("lost", 3, 4))
+
+        assert armed == [False]
+        assert caught.value is control
+        assert len(opened) == 1
+        with pytest.raises(OSError):
+            os.fstat(opened[0])
+        assert temporary.exists() is False
+    finally:
+        for fd in opened:
+            try:
+                real_close(fd)
+            except OSError:
+                pass
+        temporary.unlink(missing_ok=True)
+
+
 def test_the_descriptor_is_written_atomically_and_leaves_no_debris(
     tmp_path,
 ) -> None:
@@ -2029,6 +2489,47 @@ def test_a_failed_descriptor_write_leaves_the_previous_one_intact(
     with pytest.raises(OSError):
         write_entry_descriptor(tmp_path, EntryDescriptor("lost", 3, 4))
     assert read_entry_descriptor(tmp_path) == EntryDescriptor("kept", 1, 2)
+
+
+def test_descriptor_cleanup_failure_retains_a_retryable_owner(
+    tmp_path, monkeypatch
+) -> None:
+    from agent_alfred.resource_rollback import IncompleteRollback
+
+    previous = EntryDescriptor("kept", 1, 2)
+    replacement = EntryDescriptor("replacement", 3, 4)
+    write_entry_descriptor(tmp_path, previous)
+    temporary = tmp_path / f".{DESCRIPTOR_NAME}.{os.getpid()}.tmp"
+    write_failure = OSError("cannot sync descriptor")
+    cleanup_failure = PermissionError("temporary deletion denied")
+    real_unlink = os.unlink
+
+    def fail_sync(fd):
+        raise write_failure
+
+    def deny_temporary_unlink(path, *args, **kwargs):
+        if path == temporary:
+            raise cleanup_failure
+        return real_unlink(path, *args, **kwargs)
+
+    with monkeypatch.context() as patched:
+        patched.setattr(os, "fsync", fail_sync)
+        patched.setattr(os, "unlink", deny_temporary_unlink)
+        with pytest.raises(OSError) as caught:
+            write_entry_descriptor(tmp_path, replacement)
+
+        assert caught.value is write_failure
+        cleanup = caught.value.__cause__
+        assert isinstance(cleanup, IncompleteRollback)
+        assert temporary.exists()
+        assert read_entry_descriptor(tmp_path) == previous
+        assert cleanup.retry() is False
+
+    assert cleanup.retry() is True
+    assert not temporary.exists()
+    assert cleanup.retry() is True
+    write_entry_descriptor(tmp_path, replacement)
+    assert read_entry_descriptor(tmp_path) == replacement
 
 
 def test_the_state_directory_files_are_private(tmp_path) -> None:
@@ -2156,6 +2657,283 @@ def test_serving_without_start_is_refused(tmp_path) -> None:
         service.start_serving()
 
 
+def test_start_serving_after_effect_exit_keeps_the_live_thread_owned(
+    tmp_path,
+) -> None:
+    """A started loop is stopped before its descriptor and flock are released."""
+    failure = KeyboardInterrupt("serving publication interrupted after start")
+    threads: list[threading.Thread] = []
+
+    class GatedServingServer(_RecordingServer):
+        def __init__(self, address, handler):
+            super().__init__(address, handler)
+            self.entered = threading.Event()
+            self.stop = threading.Event()
+            self.exited = threading.Event()
+            self.shutdown_calls = 0
+
+        def serve_forever(self) -> None:
+            self.entered.set()
+            try:
+                self.stop.wait()
+            finally:
+                self.exited.set()
+
+        def shutdown(self) -> None:
+            self.shutdown_calls += 1
+            self.shut_down = True
+            self.stop.set()
+
+    def spawn(target):
+        thread = threading.Thread(target=target, daemon=True)
+        threads.append(thread)
+        return thread
+
+    service = DashboardService(
+        state_dir=tmp_path,
+        handler=_Handler,
+        instance_id="inst-lifecycle",
+        port=free_loopback_port(),
+        server_factory=GatedServingServer,
+    )
+    service.start()
+    server = service.server
+    target = _start_serving_start_boundary(after_effect=True)
+
+    try:
+        with interrupt_instruction_once(
+            DashboardService.start_serving.__code__, target, failure
+        ) as armed:
+            with pytest.raises(KeyboardInterrupt) as raised:
+                service.start_serving(spawn=spawn)
+        assert armed == [False]
+        assert raised.value is failure
+        assert server.entered.wait(2.0), "started serving target never entered"
+
+        service.close()
+
+        assert server.shutdown_calls == 1
+        assert server.exited.wait(0), "close released ownership before loop exit"
+        assert server.closed is True
+        assert service.descriptor is None
+        assert read_entry_descriptor(tmp_path) is None
+        assert service.lock_held is False
+    finally:
+        server.stop.set()
+        for thread in threads:
+            thread.join(timeout=2.0)
+        service.close()
+
+
+def test_start_serving_before_effect_exit_discards_the_unstarted_owner(
+    tmp_path,
+) -> None:
+    """An interrupted start call does not turn an unstarted Thread into a loop."""
+    failure = KeyboardInterrupt("serving interrupted before thread start")
+    threads: list[threading.Thread] = []
+
+    def spawn(target):
+        thread = threading.Thread(target=target, daemon=True)
+        threads.append(thread)
+        return thread
+
+    service = _service(tmp_path, port=free_loopback_port())
+    service.start()
+    server = service.server
+    target = _start_serving_start_boundary(after_effect=False)
+
+    with interrupt_instruction_once(
+        DashboardService.start_serving.__code__, target, failure
+    ) as armed:
+        with pytest.raises(KeyboardInterrupt) as raised:
+            service.start_serving(spawn=spawn)
+
+    assert armed == [False]
+    assert raised.value is failure
+    assert len(threads) == 1
+    assert threads[0].ident is None
+    service.close()
+    assert server.shut_down is False
+    assert server.closed is True
+    assert service.descriptor is None
+    assert read_entry_descriptor(tmp_path) is None
+    assert service.lock_held is False
+
+
+@pytest.mark.parametrize("after_effect", (False, True), ids=("before", "after"))
+def test_background_close_start_exit_keeps_only_a_started_thread_owner(
+    after_effect: bool,
+) -> None:
+    """Before-effect refusal may retry; after-effect keeps the first worker."""
+    step = BackgroundCloseStep("dashboard-close-start-boundary")
+    failure = KeyboardInterrupt(f"background close start {after_effect=}")
+    entered = threading.Event()
+    release = threading.Event()
+    exited = threading.Event()
+    calls = 0
+
+    def action() -> None:
+        nonlocal calls
+        calls += 1
+        entered.set()
+        try:
+            release.wait()
+        finally:
+            exited.set()
+
+    target = _background_close_start_boundary(after_effect=after_effect)
+    try:
+        with interrupt_instruction_once(
+            BackgroundCloseStep.complete.__code__, target, failure
+        ) as armed:
+            with pytest.raises(KeyboardInterrupt) as raised:
+                step.complete(action, timeout=0)
+        assert armed == [False]
+        assert raised.value is failure
+        if after_effect:
+            assert entered.wait(2.0), "started close action never entered"
+            assert step.thread is not None
+            assert step.thread.daemon is True
+            assert step.complete(action, timeout=0) is False
+        else:
+            assert step.thread is None
+            assert calls == 0
+            assert step.complete(action, timeout=0) is False
+            assert entered.wait(2.0), "retry never started close action"
+            assert step.thread is not None
+            assert step.thread.daemon is True
+
+        assert calls == 1
+        release.set()
+        assert exited.wait(2.0), "close action never exited"
+        assert step.complete(action, timeout=2.0) is True
+        assert calls == 1
+    finally:
+        release.set()
+        thread = step.thread
+        if thread is not None and thread.ident is not None:
+            thread.join(timeout=2.0)
+
+
+def test_background_close_retries_an_interrupted_unstarted_probe(
+    monkeypatch,
+) -> None:
+    """A second probe retires the unstarted worker and permits a retry."""
+    start_failure = RuntimeError("background worker did not start")
+    probe_failure = KeyboardInterrupt("background start probe interrupted")
+    first = ProbeInterruptedUnstartedThread(
+        start_failure=start_failure,
+        probe_failure=probe_failure,
+        name="unstarted-background-close",
+    )
+    real_thread = threading.Thread
+    created = 0
+
+    def spawn(*, target, name, daemon):
+        nonlocal created
+        created += 1
+        if created == 1:
+            return first
+        return real_thread(target=target, name=name, daemon=daemon)
+
+    monkeypatch.setattr(resource_rollback_module.threading, "Thread", spawn)
+    step = BackgroundCloseStep("retry-background-close")
+    entered = threading.Event()
+    release = threading.Event()
+
+    def action() -> None:
+        entered.set()
+        release.wait()
+
+    try:
+        with pytest.raises(RuntimeError) as raised:
+            step.complete(action, timeout=0)
+        assert raised.value is start_failure
+        assert first.probe_calls == 1
+        assert step.thread is first
+
+        assert step.complete(action, timeout=0) is False
+        assert first.probe_calls == 2
+        assert entered.wait(2.0), "retry did not replace the unstarted worker"
+        release.set()
+        assert step.complete(action, timeout=2.0) is True
+        assert created == 2
+    finally:
+        release.set()
+        thread = step.thread
+        if thread is not None and thread.ident is not None:
+            thread.join(timeout=2.0)
+
+
+def test_background_close_observes_published_completion_after_py_return_exit(
+) -> None:
+    """A completed non-repeatable action is not invoked again after return."""
+
+    class PublishedClose:
+        def __init__(self) -> None:
+            self.calls = 0
+            self.done = False
+
+        def __call__(self) -> None:
+            self.calls += 1
+            self.done = True
+
+        def close_completed(self) -> bool:
+            return self.done
+
+    step = BackgroundCloseStep("dashboard-close-return-boundary")
+    action = PublishedClose()
+    failure = SystemExit("background close return interrupted")
+
+    with interrupt_py_return_once(
+        "background-close-return-test", action.__call__.__code__, failure
+    ) as armed:
+        with pytest.raises(SystemExit) as raised:
+            step.complete(action, timeout=2.0)
+
+    assert armed == [False]
+    assert raised.value is failure
+    assert action.calls == 1
+    assert step.complete(action, timeout=2.0) is True
+    assert action.calls == 1
+
+
+def test_background_close_reobserves_an_interrupted_completion_probe() -> None:
+    """An ambiguous observation cannot make a completed action run again."""
+
+    class PublishedClose:
+        def __init__(self) -> None:
+            self.calls = 0
+            self.done = False
+            self.failure = RuntimeError("close returned ambiguously")
+
+        def __call__(self) -> None:
+            self.calls += 1
+            self.done = True
+            raise self.failure
+
+        def close_completed(self) -> bool:
+            return self.done
+
+    step = BackgroundCloseStep("dashboard-close-observation-boundary")
+    action = PublishedClose()
+    probe_failure = SystemExit("completion probe return interrupted")
+
+    with interrupt_py_return_once(
+        "background-close-probe-return",
+        action.close_completed.__code__,
+        probe_failure,
+    ) as armed:
+        with pytest.raises(RuntimeError) as caught:
+            step.complete(action, timeout=2.0)
+
+    assert armed == [False]
+    assert caught.value is action.failure
+    assert action.calls == 1
+    assert step.complete(action, timeout=2.0) is True
+    assert action.calls == 1
+
+
 def test_the_serving_thread_is_a_daemon(tmp_path) -> None:
     service = _service(tmp_path, port=free_loopback_port())
     service.start()
@@ -2222,9 +3000,9 @@ def test_an_invalid_service_port_is_refused_without_side_effects(
         def acquire(self) -> None:
             side_effects.append("lock")
 
-    def bind(address, handler):
+    def bind(address, handler, owner):
         side_effects.append("bind")
-        return _RecordingServer(address, handler)
+        owner.publish(_RecordingServer(address, handler))
 
     def write(directory: Path, descriptor: EntryDescriptor) -> Path:
         side_effects.append("write")
@@ -2276,8 +3054,9 @@ class _RefusingServer(_RecordingServer):
 
 
 def _refusing_service(tmp_path, **failures) -> DashboardService:
-    def factory(address, handler):
-        return _RefusingServer(address, handler, **failures)
+    def factory(address, handler, owner):
+        server = _RefusingServer(address, handler, **failures)
+        owner.publish(server)
 
     return DashboardService(
         state_dir=tmp_path,
@@ -2317,6 +3096,32 @@ def test_a_failed_server_close_keeps_the_server_until_the_socket_is_closed(
     assert server.closed is True
     assert service.lock_held is False
     assert read_entry_descriptor(tmp_path) is None
+
+
+def test_server_close_return_edge_does_not_repeat_a_successful_close(
+    tmp_path,
+) -> None:
+    """The background step owns success before its caller can be interrupted."""
+    service = _refusing_service(tmp_path)
+    service.start()
+    server = service.server
+    control = SystemExit("socket closed before outer progress bit")
+
+    with interrupt_instruction_once(
+        DashboardService._release_server.__code__,
+        _server_close_return_boundary(),
+        control,
+    ) as armed:
+        with pytest.raises(SystemExit) as caught:
+            service.stop_serving()
+
+    assert armed == [False]
+    assert caught.value is control
+    assert server.close_calls == 1
+    assert service.server is server
+    assert service.stop_serving() is True
+    assert server.close_calls == 1
+    service.close()
 
 
 def test_a_failed_shutdown_keeps_the_server_and_retries(tmp_path) -> None:
@@ -2402,28 +3207,31 @@ def test_the_default_port_is_the_decided_one() -> None:
 def test_a_descriptor_that_refuses_deletion_keeps_the_reference(
     tmp_path, monkeypatch
 ) -> None:
-    """A failed unlink forgets nothing.
+    """A failed namespace removal forgets nothing.
 
     The descriptor names a port this process is about to stop answering, so
-    "forget" may only ever forget a file that is really gone. An unlink that
-    loses to a permission error must leave the reference, the file and the
-    lock exactly where they were, so the next close() deletes the file for
-    real and only then drops the lock. Clearing the reference first would
+    "forget" may only ever forget a public name that is really gone. A safe
+    quarantine rename that loses to a permission error must leave the
+    reference, the file and the lock exactly where they were, so the next
+    close() removes the public name and only then drops the lock. Clearing the
+    reference first would
     make the first failure permanent: the retry would delete nothing and
     release the lock on top of a stale descriptor.
     """
     service = _service(tmp_path, port=free_loopback_port())
     service.start()
     attempts = {"count": 0}
-    real_unlink = os.unlink
+    from agent_alfred import managed_state as managed_module
 
-    def refusing_unlink(path, *, dir_fd=None):
-        if path == DESCRIPTOR_NAME and attempts["count"] == 0:
+    real_unlink = managed_module.os.unlink
+
+    def refusing_unlink(name, *, dir_fd=None):
+        if name == DESCRIPTOR_NAME and attempts["count"] == 0:
             attempts["count"] += 1
-            raise PermissionError(1, "Operation not permitted", path)
-        return real_unlink(path, dir_fd=dir_fd)
+            raise PermissionError(1, "Operation not permitted", name)
+        return real_unlink(name, dir_fd=dir_fd)
 
-    monkeypatch.setattr("agent_alfred.managed_state.os.unlink", refusing_unlink)
+    monkeypatch.setattr(managed_module.os, "unlink", refusing_unlink)
     with pytest.raises(ManagedPathSecurityError) as caught:
         service.close()
     assert caught.value.reason == "permission_denied"

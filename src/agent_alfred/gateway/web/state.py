@@ -593,6 +593,12 @@ def apply_state_patch(
     # "Reply finished but unsaved" is a fact the client must keep showing
     # until the database says otherwise. A pending patch that would replace
     # a settled state is therefore refused, not applied and then corrected.
-    if _is_pending(patch) and _is_settled(current):
+    if (
+        _is_pending(patch)
+        and _is_settled(current)
+        and current.active_run is not None
+        and patch.active_run is not None
+        and current.active_run.run_id == patch.active_run.run_id
+    ):
         raise StatePatchRejected("pending_over_terminal")
     return patch

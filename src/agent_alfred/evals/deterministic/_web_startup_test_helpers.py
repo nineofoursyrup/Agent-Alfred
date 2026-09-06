@@ -2,14 +2,7 @@
 
 from pathlib import Path, PurePath
 
-from agent_alfred.database import open_database
-from agent_alfred.managed_state import ManagedStateLease
 from agent_alfred.model import ScriptedModel, ScriptedModelFactory
-
-
-def file_database(state: ManagedStateLease):
-    """Open the production database in the supplied state directory."""
-    return open_database(state)
 
 
 def scripted_factory(script=None):
@@ -42,9 +35,9 @@ def record_managed_state_acquires(monkeypatch) -> list[Path]:
     paths: list[Path] = []
     real = ManagedStateDirectory.acquire.__func__
 
-    def recording(cls, path):
+    def recording(cls, path, _rollback=None):
         paths.append(Path(path))
-        return real(cls, path)
+        return real(cls, path, _rollback=_rollback)
 
     monkeypatch.setattr(
         ManagedStateDirectory, "acquire", classmethod(recording)

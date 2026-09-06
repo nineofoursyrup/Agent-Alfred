@@ -19,16 +19,22 @@ docstring; none of them sleeps through a real timeout.
 
 from __future__ import annotations
 
+import dis
+import inspect
 import os
-import queue
 import sqlite3
 import threading
-import time
 
 import pytest
 
 from agent_alfred import schema
 from agent_alfred.clock import FakeClock
+from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+    interrupt_instruction_once,
+)
+from agent_alfred.evals.deterministic._thread_test_helpers import (
+    ProbeInterruptedUnstartedThread,
+)
 from agent_alfred.events import (
     BarrierFlushResult,
     BestEffortFlushResult,
@@ -42,12 +48,69 @@ from agent_alfred.events import (
 )
 from agent_alfred.managed_state import ManagedStateDirectory
 from agent_alfred.model import ScriptedModel, ScriptedModelFactory
+from agent_alfred.resource_rollback import (
+    thread_exit_confirmed,
+    thread_start_effect_happened,
+)
 from agent_alfred.runtime import host as host_module
 from agent_alfred.runtime.host import RuntimeHost, SubmitRequest
 from agent_alfred.settings import Settings
 from agent_alfred.trace import RunBundleTraceSink
 
 CLOSE_GRACE_S = 5.0
+
+
+
+
+def _worker_start_instruction(*, after_effect: bool) -> int:
+    instructions = tuple(dis.get_instructions(RuntimeHost.start))
+    start_load = next(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "LOAD_ATTR" and instruction.argval == "start"
+    )
+    call = next(
+        index
+        for index, instruction in enumerate(instructions[start_load:], start_load)
+        if instruction.opname in {"CALL", "CALL_KW"}
+    )
+    return instructions[call + int(after_effect)].offset
+
+
+def _native_thread_creation_boundary() -> int:
+    """Land after CPython created the handle but before `_started.wait()`."""
+    instructions = tuple(dis.get_instructions(threading.Thread.start))
+    native_start = next(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "LOAD_GLOBAL"
+        and instruction.argval == "_start_joinable_thread"
+    )
+    call = next(
+        index
+        for index in range(native_start + 1, len(instructions))
+        if instructions[index].opname in {"CALL", "CALL_KW"}
+    )
+    return instructions[call + 1].offset
+
+
+def _worker_started_publication_instruction() -> int:
+    """Locate the ownership publication after ``Thread.start`` returned."""
+    source, first_line = inspect.getsourcelines(RuntimeHost.start)
+    publication_line = first_line + max(
+        index
+        for index, text in enumerate(source)
+        if "self._worker_started = True" in text
+    )
+    matches = [
+        instruction.offset
+        for instruction in dis.get_instructions(RuntimeHost.start)
+        if instruction.opname == "STORE_ATTR"
+        and instruction.argval == "_worker_started"
+        and instruction.positions.lineno == publication_line
+    ]
+    assert len(matches) == 1
+    return matches[0]
 
 
 def _host(
@@ -142,29 +205,42 @@ class _BlockingBarrierSink:
         self.closed += 1
 
 
-class _SentinelCountingQueue(queue.Queue):
-    """Counts the stop sentinels the Host posts to its work queue."""
+class _SentinelCountingQueue(host_module._HandoffQueue):
+    """Counts the logical stop effects the Host posts to its work queue."""
 
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, store) -> None:
+        super().__init__(store)
         self.sentinels = 0
-        self.items: list[object] = []
 
-    def put(self, item, block=True, timeout=None):  # type: ignore[override]
-        if item is None:
+    def request_stop(self) -> bool:
+        requested = super().request_stop()
+        if requested:
             self.sentinels += 1
-        else:
-            self.items.append(item)
-        return super().put(item, block=block, timeout=timeout)
+        return requested
 
 
-def _wait_until(predicate, timeout: float = 2.0) -> None:
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        if predicate():
-            return
-        time.sleep(0.005)
-    raise AssertionError("condition not met before timeout")
+class _StopRequestInterrupted(BaseException):
+    """An asynchronous-looking control-flow exit with stable identity."""
+
+
+class _InterruptingStopQueue(_SentinelCountingQueue):
+    """Raise once immediately before or after the logical stop effect."""
+
+    def __init__(
+        self, store, *, after_effect: bool, failure: _StopRequestInterrupted
+    ) -> None:
+        super().__init__(store)
+        self.after_effect = after_effect
+        self.failure = failure
+        self.request_calls = 0
+
+    def request_stop(self) -> bool:
+        self.request_calls += 1
+        if self.request_calls == 1:
+            if self.after_effect:
+                super().request_stop()
+            raise self.failure
+        return super().request_stop()
 
 
 def _run_worker_alive() -> bool:
@@ -238,7 +314,7 @@ def test_repeat_start_during_an_active_run_leaves_the_index_untouched() -> None:
         )
         assert submitted.kind == "accepted"
         assert model.entered.wait(2.0), "the worker must reach the model"
-        _wait_until(lambda: host.snapshot().coordinator_state == "running")
+        assert host.snapshot().coordinator_state == "running"
 
         row_sql = """SELECT phase, outcome, started_at, finished_at,
                             activity_revision, telemetry
@@ -353,6 +429,158 @@ def test_worker_start_failure_leaves_the_host_honestly_unstarted() -> None:
     assert calls == [1]
 
 
+def test_start_probe_detects_a_native_thread_before_started_is_published() -> None:
+    """The CPython native-handle window is already a start effect."""
+    bootstrap_entered = threading.Event()
+    release_bootstrap = threading.Event()
+    target_ran = threading.Event()
+
+    class PausedBootstrapThread(threading.Thread):
+        def _bootstrap_inner(self) -> None:
+            bootstrap_entered.set()
+            release_bootstrap.wait()
+            super()._bootstrap_inner()
+
+    worker = PausedBootstrapThread(target=target_ran.set, daemon=True)
+    failure = KeyboardInterrupt("native thread created before _started")
+    target = _native_thread_creation_boundary()
+
+    try:
+        with interrupt_instruction_once(
+            threading.Thread.start.__code__, target, failure
+        ) as armed:
+            with pytest.raises(KeyboardInterrupt) as raised:
+                worker.start()
+        assert armed == [False]
+        assert raised.value is failure
+        assert bootstrap_entered.wait(2.0), "native thread never bootstrapped"
+        assert worker._started.is_set() is False
+        assert worker._os_thread_handle.ident != 0
+
+        assert thread_start_effect_happened(worker) is True
+        assert thread_exit_confirmed(worker, timeout=0) is False
+    finally:
+        release_bootstrap.set()
+        assert thread_exit_confirmed(worker, timeout=2.0) is True
+    assert target_ran.is_set()
+
+
+def test_host_close_retries_an_interrupted_unstarted_worker_probe() -> None:
+    """An unresolved start refusal cannot strand Host close forever."""
+    host, _conn, _capture, _model = _host(["pong"])
+    worker = ProbeInterruptedUnstartedThread(
+        start_failure=RuntimeError("host worker did not start"),
+        probe_failure=KeyboardInterrupt("host start probe interrupted"),
+        name="unstarted-run-worker",
+    )
+    host._worker = worker  # type: ignore[assignment]
+
+    with pytest.raises(RuntimeError) as raised:
+        host.start()
+    assert raised.value is worker.start_failure
+    assert host.started is False
+    assert worker.probe_calls == 1
+
+    assert host.close(timeout=2.0) is True
+    assert worker.probe_calls == 2
+    assert host.closed is True
+
+
+@pytest.mark.parametrize("after_effect", (False, True), ids=("before", "after"))
+def test_worker_start_exit_keeps_the_real_worker_owned_until_close(
+    after_effect: bool,
+) -> None:
+    """A start-effect worker cannot outlive closed FanOut/database owners."""
+    host, conn, _capture, _model = _host(["pong"])
+    failure = KeyboardInterrupt(f"worker start {after_effect=}")
+    entered = threading.Event()
+    release = threading.Event()
+    exited = threading.Event()
+
+    def gated_worker() -> None:
+        entered.set()
+        release.wait()
+        exited.set()
+
+    worker = threading.Thread(
+        target=gated_worker, name="run-worker-start-boundary", daemon=True
+    )
+    host._worker = worker  # type: ignore[assignment]
+    target = _worker_start_instruction(after_effect=after_effect)
+
+    try:
+        with interrupt_instruction_once(
+            RuntimeHost.start.__code__, target, failure
+        ) as armed:
+            with pytest.raises(KeyboardInterrupt) as raised:
+                host.start()
+        assert armed == [False]
+        assert raised.value is failure
+        assert host.started is False
+        assert host.start_error is failure
+        if not after_effect:
+            assert worker.ident is None
+            assert host.close(timeout=0) is True
+            return
+
+        assert entered.wait(2.0), "real worker target never entered"
+        assert host.close(timeout=0) is False
+        assert host._fanout_closed is False  # noqa: SLF001
+        assert exited.is_set() is False
+        release.set()
+        assert exited.wait(2.0), "owned worker never exited"
+        assert host.close(timeout=2.0) is True
+    finally:
+        release.set()
+        if worker.ident is not None:
+            worker.join(timeout=2.0)
+        host.close(timeout=2.0)
+        conn.close()
+
+
+def test_worker_start_store_exit_keeps_the_real_worker_owned_until_close() -> None:
+    """A returned Thread.start effect is owned before its final publication."""
+    host, conn, _capture, _model = _host(["pong"])
+    failure = KeyboardInterrupt("worker start ownership publication interrupted")
+    entered = threading.Event()
+    release = threading.Event()
+    exited = threading.Event()
+
+    def gated_worker() -> None:
+        entered.set()
+        release.wait()
+        exited.set()
+
+    worker = threading.Thread(
+        target=gated_worker, name="run-worker-store-boundary", daemon=True
+    )
+    host._worker = worker  # type: ignore[assignment]
+    target = _worker_started_publication_instruction()
+
+    try:
+        with interrupt_instruction_once(
+            RuntimeHost.start.__code__, target, failure
+        ) as armed:
+            with pytest.raises(KeyboardInterrupt) as raised:
+                host.start()
+        assert armed == [False]
+        assert raised.value is failure
+        assert entered.wait(2.0), "real worker target never entered"
+        assert host.started is False
+        assert host.start_error is failure
+        assert host.close(timeout=0) is False
+        assert host._fanout_closed is False  # noqa: SLF001
+        assert exited.is_set() is False
+        release.set()
+        assert exited.wait(2.0), "owned worker never exited"
+        assert host.close(timeout=2.0) is True
+    finally:
+        release.set()
+        worker.join(timeout=2.0)
+        host.close(timeout=2.0)
+        conn.close()
+
+
 def test_start_after_close_is_refused() -> None:
     host, _conn, _capture, _model = _host(["pong"])
     host.start()
@@ -419,7 +647,7 @@ def test_default_close_timeout_is_bounded_and_honest(monkeypatch) -> None:
 def test_close_is_idempotent_and_concurrent_close_tears_down_once() -> None:
     sink = _BlockingBarrierSink()
     host, _conn, _capture, _model = _host(["pong"], extra_sinks=[sink])
-    counting = _SentinelCountingQueue()
+    counting = _SentinelCountingQueue(host._store)
     host._queue = counting  # type: ignore[assignment]
     host._executor._work_queue = counting  # type: ignore[assignment]
     host.start()
@@ -433,7 +661,7 @@ def test_close_is_idempotent_and_concurrent_close_tears_down_once() -> None:
 
     sink2 = _BlockingBarrierSink()
     second, _conn2, _capture2, _model2 = _host(["pong"], extra_sinks=[sink2])
-    counting2 = _SentinelCountingQueue()
+    counting2 = _SentinelCountingQueue(second._store)
     second._queue = counting2  # type: ignore[assignment]
     second._executor._work_queue = counting2  # type: ignore[assignment]
     second.start()
@@ -460,6 +688,53 @@ def test_close_is_idempotent_and_concurrent_close_tears_down_once() -> None:
         assert counting2.sentinels == 1
     finally:
         second.close()
+
+
+@pytest.mark.parametrize("after_effect", (False, True), ids=("before", "after"))
+def test_interrupted_stop_request_remains_owned_and_retryable(
+    after_effect: bool,
+) -> None:
+    """A stop request has one durable owner across either exit boundary.
+
+    Raising the Host's completion flag before the queue call orphaned the
+    worker after a before-effect exit. Moving that flag after the call alone
+    would make an after-effect exit retry by appending a second sentinel. The
+    queue must instead own one idempotent logical stop fact: the first close
+    propagates the exact control-flow exception and the second completes the
+    same request without leaving another item behind the exited worker.
+    """
+    sink = _BlockingBarrierSink()
+    host, _conn, _capture, _model = _host(["pong"], extra_sinks=[sink])
+    failure = _StopRequestInterrupted(f"stop request {after_effect=}")
+    work = _InterruptingStopQueue(
+        host._store, after_effect=after_effect, failure=failure
+    )
+    host._queue = work  # type: ignore[assignment]
+    host._executor._work_queue = work  # type: ignore[assignment]
+    host.start()
+    try:
+        with pytest.raises(_StopRequestInterrupted) as raised:
+            host.close(timeout=CLOSE_GRACE_S)
+        assert raised.value is failure
+        assert host.closed is False
+        assert host._stop_sent is False  # noqa: SLF001
+        assert sink.closed == 0
+        assert work.request_calls == 1
+        assert work.sentinels == int(after_effect)
+
+        assert host.close(timeout=CLOSE_GRACE_S) is True
+        assert host._worker.is_alive() is False  # noqa: SLF001
+        assert work.request_calls == 2
+        assert work.sentinels == 1, "the logical stop effect occurs exactly once"
+        assert work.qsize() == 0, "no duplicate physical sentinel is left behind"
+        assert sink.closed == 1
+
+        assert host.close(timeout=CLOSE_GRACE_S) is True
+        assert work.request_calls == 2
+        assert work.sentinels == 1
+        assert sink.closed == 1
+    finally:
+        host.close(timeout=CLOSE_GRACE_S)
 
 
 def test_close_racing_submit_never_orphans_a_work_item() -> None:
@@ -719,7 +994,7 @@ def test_keyboard_interrupt_produces_a_terminal_run_and_releases_the_lease() -> 
             (submitted.run_id,),
         ).fetchone()
         assert row == ("finished", "interrupted"), "the Run is decided, not abandoned"
-        _wait_until(lambda: host.snapshot().coordinator_state == "idle")
+        assert host.snapshot().coordinator_state == "idle"
         again = host.submit(SubmitRequest(message="again"))
         assert again.kind == "accepted", (
             "the lease is released, not held as run_in_progress forever"

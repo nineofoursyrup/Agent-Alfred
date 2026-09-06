@@ -72,6 +72,8 @@ class UnrecordedTerminalProjection:
     recording_state: UnrecordedTerminalState
     session_id: str | None
     prompt_preview: str | None
+    # A safe display marker is not complete reply content (ADR-0029).
+    reply_withheld: bool = False
 
     def __post_init__(self) -> None:
         parse_recording_state(self.recording_state, unrecorded_terminal=True)
@@ -87,6 +89,22 @@ class RuntimeSnapshot:
 
     def __post_init__(self) -> None:
         parse_coordinator_state(self.coordinator_state)
+
+
+@dataclass(frozen=True)
+class _PendingDelivery:
+    """One committed snapshot whose listener return is still uncertain."""
+
+    owner_run_id: str
+    snapshot: RuntimeSnapshot
+
+
+@dataclass(frozen=True)
+class _StoreState:
+    """Atomically published snapshot plus its listener-delivery debt."""
+
+    snapshot: RuntimeSnapshot
+    pending_delivery: _PendingDelivery | None
 
 
 def is_unaddressable_unstarted_handoff_failure(
@@ -136,27 +154,31 @@ class RunStateStore:
     ):
         self._lock = threading.Lock()
         self._listener = listener
-        self._snapshot = RuntimeSnapshot(
-            process_instance_id=process_instance_id,
-            state_revision=0,
-            coordinator_state="idle",
-            active_run=None,
-            unrecorded_terminal_projection=None,
+        self._state = _StoreState(
+            snapshot=RuntimeSnapshot(
+                process_instance_id=process_instance_id,
+                state_revision=0,
+                coordinator_state="idle",
+                active_run=None,
+                unrecorded_terminal_projection=None,
+            ),
+            pending_delivery=None,
         )
 
     def get(self) -> RuntimeSnapshot:
         with self._lock:
-            return self._snapshot
+            return self._state.snapshot
 
     def replace(
         self,
         *,
+        owner_run_id: str,
         coordinator_state: CoordinatorState | None = None,
         active_run: object = _UNSET,
         unrecorded_terminal_projection: object = _UNSET,
     ) -> RuntimeSnapshot:
         with self._lock:
-            current = self._snapshot
+            current = self._state.snapshot
             kwargs: dict = {"state_revision": current.state_revision + 1}
             if coordinator_state is not None:
                 kwargs["coordinator_state"] = coordinator_state
@@ -166,8 +188,7 @@ class RunStateStore:
                 kwargs["unrecorded_terminal_projection"] = (
                     unrecorded_terminal_projection
                 )
-            self._snapshot = _dc_replace(current, **kwargs)
-            snapshot = self._snapshot
+            snapshot = _dc_replace(current, **kwargs)
             if self._listener is not None:
                 # Called after the authoritative snapshot has moved and while
                 # still holding the lock. The order is the contract (#30):
@@ -177,5 +198,39 @@ class RunStateStore:
                 #
                 # The listener must therefore be bounded and do no IO -- it
                 # enqueues; it does not write to a socket.
+                delivery = _PendingDelivery(owner_run_id, snapshot)
+                # A newer absolute snapshot supersedes an older undelivered
+                # one.  Keeping only this token prevents a later recovery
+                # from publishing an obsolete state after its replacement.
+                published = _StoreState(snapshot, delivery)
+                self._state = published
                 self._listener(snapshot)
-            return self._snapshot
+                if self._state is published:
+                    self._state = _StoreState(snapshot, None)
+            else:
+                self._state = _StoreState(snapshot, None)
+            return self._state.snapshot
+
+    def resume_pending(self, owner_run_id: str) -> bool:
+        """Retry this Run's current listener delivery without a new revision.
+
+        ``replace`` commits the immutable snapshot before invoking its
+        listener.  If a ``BaseException`` loses the listener's return edge,
+        the token remains here.  Recovery may replay only the same owner's
+        still-current absolute snapshot; a successor's replacement
+        supersedes the token and makes an old retry a no-op.
+        """
+        with self._lock:
+            current = self._state
+            delivery = current.pending_delivery
+            if (
+                delivery is None
+                or delivery.owner_run_id != owner_run_id
+                or delivery.snapshot is not current.snapshot
+            ):
+                return False
+            if self._listener is not None:
+                self._listener(delivery.snapshot)
+            if self._state is current:
+                self._state = _StoreState(current.snapshot, None)
+            return True

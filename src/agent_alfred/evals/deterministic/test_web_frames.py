@@ -31,6 +31,21 @@ def test_the_reseed_frame_is_a_dataless_id_frame() -> None:
     assert b"event" not in wire
 
 
+@pytest.mark.parametrize(
+    "process_instance_id",
+    ("line\nfeed", "carriage\rreturn", "nul\0byte", "contains:colon", "snowman-☃"),
+)
+@pytest.mark.parametrize("producer", ("reseed", "checkpoint"))
+def test_an_sse_id_refuses_an_instance_outside_its_ascii_wire_syntax(
+    process_instance_id: str, producer: str
+) -> None:
+    with pytest.raises(ValueError, match="process_instance_id"):
+        if producer == "reseed":
+            frames.reseed_frame(process_instance_id, 7)
+        else:
+            _domain().with_checkpoint(7, process_instance_id)
+
+
 def test_heartbeat_is_a_comment_not_an_event() -> None:
     wire = _wire(frames.heartbeat_frame())
     assert wire == b":hb\n\n"
@@ -43,14 +58,14 @@ def test_heartbeat_is_a_comment_not_an_event() -> None:
 # --- domain events ---------------------------------------------------------
 
 
-def _domain(*, text: str = "hello", **kwargs) -> frames.PreparedFrames:
+def _domain(*, text: str = "hello", seq: int = 1, **kwargs) -> frames.PreparedFrames:
     kwargs.setdefault("replayable", True)
     return frames.domain_event_frames(
         event_name="block.delta",
         payload={"text": text},
         event_id="eid-1",
         **kwargs,
-    )
+    ).with_sequence(seq)
 
 
 def test_a_small_event_is_one_frame_carrying_the_checkpoint() -> None:
@@ -85,18 +100,32 @@ def test_maximum_checkpoint_reserve_keeps_every_wire_record_within_limit() -> No
     assert max(map(len, prepared.wire_frames())) <= 256
 
 
+def test_minimum_frame_limit_refuses_a_seq_token_that_no_longer_fits() -> None:
+    prepared = frames.domain_event_frames(
+        event_name="e",
+        payload="x" * 92,
+        event_id="i",
+        replayable=True,
+        max_frame_bytes=256,
+    )
+
+    assert max(map(len, prepared.with_sequence(9).wire_frames())) <= 256
+    with pytest.raises(ValueError, match="over the reserved 8"):
+        prepared.with_sequence(10)
+
+
 def test_small_event_wire_digest_and_checkpoint_bytes_are_stable() -> None:
     wire = _domain().with_checkpoint(9, "inst").wire_bytes()
     assert wire == (
         b"event: domain_event\n"
-        b'data: {"event":"block.delta","event_id":"eid-1",'
+        b'data: {"seq":9,"event":"block.delta","event_id":"eid-1",'
         b'"chunk_index":0,"chunk_count":1,'
         b'"event_sha256":"22da99b10adb62dfa04c2b163118496bab1f366f8787cfed02c40e1ecb025515",'
         b'"payload":{"text":"hello"}}\n'
         b"id: inst:9\n\n"
     )
     assert hashlib.sha256(wire).hexdigest() == (
-        "93b9a79406b9ecb6d72152cbd10cbb0e968d42480c97b1f7cca5a7cac1924b26"
+        "1e244626595949fbbff9c2e0af903c64f33646363717891eecdb07a79e92f6a5"
     )
 
 
@@ -188,6 +217,7 @@ def test_reference_assembler_commits_complete_digest_verified_event_once() -> No
     )
 
     assert assembled == frames.AssembledEvent(
+        seq=9,
         event="block.delta",
         event_id="eid-1",
         payload={"text": "中文é\U0001f600" * 500},
@@ -196,6 +226,51 @@ def test_reference_assembler_commits_complete_digest_verified_event_once() -> No
         ),
         checkpoint="inst:9",
     )
+
+
+def test_reference_assembler_requires_a_positive_domain_event_seq() -> None:
+    [record] = _domain().wire_frames()
+    missing = (record.replace(b'{"seq":1,', b"{", 1),)
+    zero = (record.replace(b'"seq":1', b'"seq":0', 1),)
+
+    with pytest.raises(frames.WireFrameError, match="seq is missing"):
+        frames.assemble_domain_event_wire_frames(
+            missing, budget=_assembly_budget(missing)
+        )
+    with pytest.raises(frames.WireFrameError, match="positive integer"):
+        frames.assemble_domain_event_wire_frames(zero, budget=_assembly_budget(zero))
+
+
+def test_reference_assembler_rejects_seq_drift_between_chunks() -> None:
+    records = _chunked_wire()
+    changed = records[1].replace(b'"seq":8', b'"seq":9', 1)
+    candidate = (records[0], changed, *records[2:])
+
+    with pytest.raises(frames.WireFrameError, match="metadata changed"):
+        frames.assemble_domain_event_wire_frames(
+            candidate, budget=_assembly_budget(candidate)
+        )
+
+
+def test_reference_assembler_rejects_checkpoint_seq_mismatch() -> None:
+    records = _domain().with_checkpoint(2, "inst").wire_frames()
+    candidate = (records[0].replace(b"id: inst:2", b"id: inst:3", 1),)
+
+    with pytest.raises(frames.WireFrameError, match="checkpoint seq"):
+        frames.assemble_domain_event_wire_frames(
+            candidate, budget=_assembly_budget(candidate)
+        )
+
+
+def test_reference_assembler_normalizes_non_utf8_checkpoint_to_wire_error() -> None:
+    [record] = _domain().with_checkpoint(2, "inst").wire_frames()
+    candidate = (record.replace(b"id: inst:2", b"id: \xff:2", 1),)
+
+    with pytest.raises(frames.WireFrameError) as caught:
+        frames.assemble_domain_event_wire_frames(
+            candidate, budget=_assembly_budget(candidate)
+        )
+    assert isinstance(caught.value.__cause__, UnicodeDecodeError)
 
 
 def _assembly_budget(
@@ -208,6 +283,8 @@ def _assembly_budget(
 
 
 def _assemble(prepared: frames.PreparedFrames) -> frames.AssembledEvent:
+    if prepared.sequence_offset is not None and prepared.seq is None:
+        prepared = prepared.with_sequence(1)
     records = prepared.wire_frames()
     return frames.assemble_domain_event_wire_frames(
         records, budget=_assembly_budget(records)
@@ -410,10 +487,10 @@ def test_digest_overhead_is_included_in_frame_hard_limit() -> None:
         payload="x" * 8000,
         event_id="i",
         replayable=True,
-        max_frame_bytes=256,
+        max_frame_bytes=288,
     ).with_checkpoint(1, "p" * 57)
     assert len(prepared.frames) > 1
-    assert max(map(len, prepared.wire_frames())) <= 256
+    assert max(map(len, prepared.wire_frames())) <= 288
 
     production = frames.domain_event_frames(
         event_name="e",
@@ -432,7 +509,7 @@ def test_digest_does_not_move_checkpoint_off_last_wire_record() -> None:
         payload="x" * 8000,
         event_id="i",
         replayable=True,
-        max_frame_bytes=256,
+        max_frame_bytes=288,
     ).with_checkpoint(1, "inst").wire_frames()
     assert all(b"\nid: " not in record for record in records[:-1])
     assert records[-1].endswith(b"\nid: inst:1\n\n")
@@ -558,6 +635,17 @@ def test_a_frame_that_cannot_hold_one_character_is_refused() -> None:
         )
 
 
+def test_domain_frames_reject_a_budget_above_the_physical_frame_limit() -> None:
+    with pytest.raises(ValueError, match="max_frame_bytes must be <= 1048576"):
+        frames.domain_event_frames(
+            event_name="run.started",
+            payload={"purpose": "chat"},
+            event_id="e",
+            replayable=True,
+            max_frame_bytes=1_048_577,
+        )
+
+
 def test_byte_size_matches_the_bytes_actually_written() -> None:
     prepared = _domain(text="z" * 4096, max_frame_bytes=1024).with_checkpoint(
         4, "inst"
@@ -565,13 +653,23 @@ def test_byte_size_matches_the_bytes_actually_written() -> None:
     assert prepared.byte_size == len(prepared.wire_bytes())
 
 
-def test_adding_the_checkpoint_shares_the_frames_and_stays_constant_cost() -> None:
-    prepared = _domain(text="q" * 4096, max_frame_bytes=1024)
-    identified = prepared.with_checkpoint(5, "inst")
+def test_binding_sequence_and_checkpoint_shares_the_prepared_frames() -> None:
+    prepared = frames.domain_event_frames(
+        event_name="block.delta",
+        payload={"text": "q" * 4096},
+        event_id="eid-1",
+        replayable=True,
+        max_frame_bytes=1024,
+    )
+    sequenced = prepared.with_sequence(5)
+    identified = sequenced.with_checkpoint(5, "inst")
     # The commit step must not copy the payload: the prepared frames are
-    # shared by reference and only the small id line is added.
+    # shared by reference and only bounded sequence/checkpoint metadata moves.
+    assert sequenced.frames is prepared.frames
     assert identified.frames is prepared.frames
+    assert sequenced.seq == 5
     assert identified.seq == 5
+    assert sequenced.byte_size == len(sequenced.wire_bytes())
 
 
 def test_a_checkpoint_longer_than_the_reserved_room_is_refused() -> None:

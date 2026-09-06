@@ -185,7 +185,7 @@ def test_public_persisted_run_models_reject_impossible_lifecycle_pairs(
             prompt_preview="hello",
         )
     else:
-        kwargs.update(reply_preview=None, reply_source=None)
+        kwargs.update(gateway="web", reply_preview=None, reply_source=None)
 
     with pytest.raises(ValueError, match="run lifecycle"):
         model(**kwargs)

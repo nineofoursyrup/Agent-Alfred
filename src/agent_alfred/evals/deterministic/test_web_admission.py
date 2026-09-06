@@ -6,6 +6,8 @@ import socket
 import sqlite3
 import threading
 
+import pytest
+
 from agent_alfred import schema
 from agent_alfred.evals.deterministic._web_runtime_test_helpers import (
     FailFinalizeWhen,
@@ -13,9 +15,11 @@ from agent_alfred.evals.deterministic._web_runtime_test_helpers import (
     build_runtime_host,
     call_within,
     dashboard_api,
-    wait_until,
+    wait_for_state,
 )
 from agent_alfred.gateway.web.api import DashboardApi, MutationGate
+from agent_alfred.managed_state import ManagedStateDirectory
+from agent_alfred.resource_rollback import ResumableRollback
 from agent_alfred.runtime.work import SubmitRequest
 
 # --- the mutation gate covers the whole admission lease -------------------
@@ -124,13 +128,74 @@ def test_a_run_does_not_queue_behind_session_validation_during_a_write() -> None
         host.close()
 
 
+def test_host_close_retains_resources_until_a_session_mutation_finishes(
+    tmp_path,
+) -> None:
+    database = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(database)
+    blocked = _BlockingCommit(database)
+    host, _conn = build_runtime_host(["unused"], conn=blocked)
+    owner = ResumableRollback()
+    owner.own(blocked)
+    state = ManagedStateDirectory.acquire(tmp_path, _rollback=owner)
+    api = dashboard_api(host)
+    created: dict = {}
+    errors: list[BaseException] = []
+
+    def create_session() -> None:
+        try:
+            created["value"] = api.create_session()
+        except BaseException as exc:
+            errors.append(exc)
+
+    creator = threading.Thread(target=create_session)
+    try:
+        host.attach_owned_resources(blocked, state, source=owner)
+        # Session creation does not need a Run worker. Keep it unstarted so
+        # a worker's independent exit cannot mask a missing mutation wait.
+        blocked.arm()
+        creator.start()
+        assert blocked.entered.wait(2.0), "the Session mutation never reached commit"
+
+        assert host.close(timeout=0) is False
+        assert database.execute("SELECT 1").fetchone() == (1,)
+
+        blocked.release()
+        creator.join(2.0)
+        assert not creator.is_alive()
+        assert errors == []
+        assert created["value"].status == 201
+        assert host.close(timeout=2.0) is True
+        with pytest.raises(sqlite3.ProgrammingError):
+            database.execute("SELECT 1")
+    finally:
+        blocked.release()
+        if creator.ident is not None:
+            creator.join(2.0)
+        host.close(timeout=2.0)
+        owner.close()
+
+
+def test_a_closed_host_refuses_new_session_mutations() -> None:
+    host, database = build_runtime_host(["unused"])
+    try:
+        assert host.close(timeout=2.0) is True
+        created = dashboard_api(host).create_session()
+        assert (created.status, created.code) == (503, "admission_failed")
+        assert created.session_id is None
+        assert _session_rows(database) == []
+    finally:
+        host.close(timeout=2.0)
+        database.close()
+
+
 def test_a_session_write_while_a_run_is_running_is_refused_at_once() -> None:
     gate = threading.Event()
     host, conn = build_runtime_host(["pong"], gate=gate)
     host.start()
     try:
         result, _session_id = _start_run(host)
-        wait_until(lambda: host.snapshot().coordinator_state == "running")
+        wait_for_state(host, "running")
         before = _session_rows(conn)
         returned, created = call_within(dashboard_api(host).create_session, seconds=5.0)
         # Returned rather than waited: the Run is not going anywhere until
@@ -160,7 +225,7 @@ def test_a_session_write_while_the_recording_is_pending_is_refused() -> None:
     host.start()
     try:
         result, _session_id = _start_run(host)
-        wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
+        wait_for_state(host, "recording_pending")
         before = _session_rows(conn)
         returned, created = call_within(dashboard_api(host).create_session, seconds=5.0)
         assert returned is True
@@ -181,10 +246,10 @@ def test_a_session_write_is_accepted_once_the_lease_is_released() -> None:
     host.start()
     try:
         result, _session_id = _start_run(host)
-        wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
+        wait_for_state(host, "recording_pending")
         latch.release()
         host.wait(result.run_id)
-        wait_until(lambda: host.snapshot().coordinator_state == "idle")
+        wait_for_state(host, "idle")
         before = _session_rows(conn)
         created = dashboard_api(host).create_session()
         assert created.session_id is not None
@@ -211,10 +276,10 @@ def test_a_session_write_is_refused_after_recording_failed() -> None:
         latch.arm()
         first = api.submit({"message": "a-q", "session_id": session_id})
         assert first.status == 202
-        wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
+        wait_for_state(host, "recording_pending")
         flag["armed"] = True
         latch.release()
-        wait_until(lambda: host.snapshot().coordinator_state == "recording_failed")
+        wait_for_state(host, "recording_failed")
         # A Run is still refused as a Run would be, and a plain write is
         # refused too: the lease never came back.
         failed = api.submit({"message": "again", "session_id": session_id})

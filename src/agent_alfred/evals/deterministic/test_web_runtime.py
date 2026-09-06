@@ -35,7 +35,7 @@ from agent_alfred.evals.deterministic._web_runtime_test_helpers import (
     dashboard_api,
     refused,
     snapshot_patch,
-    wait_until,
+    wait_for_state,
 )
 from agent_alfred.events import CapturingSink
 from agent_alfred.gateway.web.api import (
@@ -44,7 +44,9 @@ from agent_alfred.gateway.web.api import (
     busy_summary_from,
 )
 from agent_alfred.gateway.web.broker import SSEBroker
-from agent_alfred.gateway.web.connection import FakeConnection
+from agent_alfred.gateway.web.connection import CloseConnection, FakeConnection
+from agent_alfred.gateway.web.frames import FrameBudget
+from agent_alfred.gateway.web.replay import CursorText, ReplayRing
 from agent_alfred.gateway.web.state import (
     SNAPSHOT_TEXT_LIMIT,
     apply_state_patch,
@@ -56,7 +58,11 @@ from agent_alfred.messages import message_plain_text
 from agent_alfred.redact import Redactor
 from agent_alfred.runtime.cursor import encode_cursor
 from agent_alfred.runtime.recording import RecordingUnavailable
-from agent_alfred.runtime.snapshot import RuntimeSnapshot
+from agent_alfred.runtime.snapshot import (
+    ActiveRunSummary,
+    RuntimeSnapshot,
+    UnrecordedTerminalProjection,
+)
 from agent_alfred.settings import CONTROLLED_FAILURE_TEXT
 
 INSTANCE = "proc-runtime"
@@ -267,12 +273,19 @@ def test_finalizer_rollback_failure_keeps_the_sse_terminal_projection_recoverabl
     prefix = "x" * (SNAPSHOT_TEXT_LIMIT - 5)
     raw_reply = f"{prefix}{_REDACTION_CANARY} and raw tail"
     broker = _wired_broker()
+    failed_patch_published = threading.Event()
+
+    def publish_snapshot(snapshot):
+        broker.publish_state_patch(snapshot)
+        if snapshot.coordinator_state == "recording_failed":
+            failed_patch_published.set()
+
     host, _database = build_runtime_host(
         [raw_reply],
         conn=conn,
         before_recording_commit=latch,
         extra_sinks=[broker],
-        snapshot_listener=broker.publish_state_patch,
+        snapshot_listener=publish_snapshot,
         redactor=Redactor((_REDACTION_CANARY,)),
     )
     broker.bind_session_check(host.transport_session_validity)
@@ -291,7 +304,8 @@ def test_finalizer_rollback_failure_keeps_the_sse_terminal_projection_recoverabl
         conn.fail_next_commit = True
         conn.fail_next_rollback = True
         latch.release()
-        wait_until(lambda: host.snapshot().coordinator_state == "recording_failed")
+        wait_for_state(host, "recording_failed")
+        assert failed_patch_published.wait(2.0), "failed patch was not published"
         while broker.deliver_next(timeout=0):
             pass
 
@@ -373,7 +387,7 @@ def test_a_real_submit_answers_202_with_its_run_id() -> None:
         assert outcome.status == 202
         assert outcome.run_id
         assert outcome.session_id == session_id
-        wait_until(lambda: host.snapshot().coordinator_state == "idle")
+        wait_for_state(host, "idle")
     finally:
         host.close()
 
@@ -422,7 +436,7 @@ def test_pre_execution_failure_finalizes_and_keeps_the_worker_serving() -> None:
 
         assert first.status == 202
         assert first.run_id is not None
-        wait_until(lambda: host.snapshot().coordinator_state == "idle")
+        wait_for_state(host, "idle")
         while broker.deliver_next(timeout=0):
             pass
 
@@ -469,7 +483,7 @@ def test_pre_execution_failure_finalizes_and_keeps_the_worker_serving() -> None:
 
         assert second.status == 202
         assert second.run_id is not None
-        wait_until(lambda: host.snapshot().coordinator_state == "idle")
+        wait_for_state(host, "idle")
         assert inner.execute(
             "SELECT phase, outcome FROM runs WHERE run_id = ?", (second.run_id,)
         ).fetchone() == ("finished", "completed")
@@ -494,7 +508,7 @@ def test_a_second_submit_while_one_runs_is_409_with_the_busy_card() -> None:
         assert host._done == {}
         assert host._results == {}
         # The model is inside its round trip, so the Run is genuinely running.
-        wait_until(lambda: host.snapshot().coordinator_state == "running")
+        wait_for_state(host, "running")
         second = api.submit({"message": "second", "session_id": session_id})
         assert second.status == 409
         assert second.code == "run_in_progress"
@@ -503,7 +517,7 @@ def test_a_second_submit_while_one_runs_is_409_with_the_busy_card() -> None:
         assert second.busy.stage == "运行中"
         assert second.busy.gateway == "web"
         gate.set()
-        wait_until(lambda: host.snapshot().coordinator_state == "idle")
+        wait_for_state(host, "idle")
     finally:
         gate.set()
         host.close()
@@ -564,7 +578,7 @@ def test_published_step_is_the_same_fact_in_http_busy_and_sse_snapshot() -> None
     finally:
         gate.set()
         if first.run_id:
-            wait_until(lambda: host.snapshot().coordinator_state == "idle")
+            wait_for_state(host, "idle")
         broker.close(timeout=1.0)
         host.close()
 
@@ -608,7 +622,7 @@ def test_committed_step_is_already_authoritative_for_http_and_sse() -> None:
         step_started.release()
         gate.set()
         if first is not None and first.run_id:
-            wait_until(lambda: host.snapshot().coordinator_state == "idle")
+            wait_for_state(host, "idle")
         broker.close(timeout=1.0)
         host.close()
 
@@ -623,7 +637,7 @@ def test_busy_web_submit_keeps_authoritative_409_when_capture_would_fail() -> No
         api = dashboard_api(host)
         first = api.submit({"message": "first", "session_id": session_id})
         assert first.status == 202
-        wait_until(lambda: host.snapshot().coordinator_state == "running")
+        wait_for_state(host, "running")
         provider.fail = True
 
         second = api.submit({"message": "second", "session_id": session_id})
@@ -637,7 +651,7 @@ def test_busy_web_submit_keeps_authoritative_409_when_capture_would_fail() -> No
     finally:
         gate.set()
         if first.run_id:
-            wait_until(lambda: host.snapshot().coordinator_state == "idle")
+            wait_for_state(host, "idle")
         host.close()
 
 
@@ -656,12 +670,12 @@ def test_recording_pending_is_409_and_the_card_says_saving() -> None:
         api = dashboard_api(host)
         first = api.submit({"message": "first", "session_id": session_id})
         assert first.status == 202
-        wait_until(lambda: host.snapshot().coordinator_state == "idle")
+        wait_for_state(host, "idle")
 
         latch.arm()
         second = api.submit({"message": "second", "session_id": session_id})
         assert second.status == 202
-        wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
+        wait_for_state(host, "recording_pending")
 
         third = api.submit({"message": "third", "session_id": session_id})
         assert third.status == 409
@@ -692,13 +706,11 @@ def test_the_recorded_snapshot_is_authoritative_before_the_lease_opens() -> None
         assert first.status == 202
         # Paused after the recorded snapshot was published and before the
         # lease was let go -- the exact window the ordering is about.
-        wait_until(
-            lambda: (
-                host.snapshot().coordinator_state == "recording_pending"
-                and host.snapshot().active_run is not None
-                and host.snapshot().active_run.recording_state == "recorded"
-            )
-        )
+        assert latch.entered.wait(5.0), "recorded boundary was not reached"
+        recorded_snapshot = host.snapshot()
+        assert recorded_snapshot.coordinator_state == "recording_pending"
+        assert recorded_snapshot.active_run is not None
+        assert recorded_snapshot.active_run.recording_state == "recorded"
         # The lease is still held, so the next submit does not get in; and it
         # is refused against a snapshot that already says "recorded", not one
         # still describing the previous terminal state.
@@ -706,7 +718,7 @@ def test_the_recorded_snapshot_is_authoritative_before_the_lease_opens() -> None
     finally:
         latch.release()
         if first.run_id:
-            wait_until(lambda: host.snapshot().coordinator_state == "idle")
+            wait_for_state(host, "idle")
         host.close()
 
 
@@ -730,18 +742,18 @@ def test_recording_failed_answers_503_and_only_then() -> None:
         api = dashboard_api(host)
         first = api.submit({"message": "a-q", "session_id": session_id})
         assert first.status == 202
-        wait_until(lambda: host.snapshot().coordinator_state == "idle")
+        wait_for_state(host, "idle")
 
         latch.arm()
         second = api.submit({"message": "b-q", "session_id": session_id})
         assert second.status == 202
-        wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
+        wait_for_state(host, "recording_pending")
         # Still pending, so still a 409 -- the 503 is not available yet.
         assert api.submit({"message": "c-q", "session_id": session_id}).status == 409
 
         flag["armed"] = True
         latch.release()
-        wait_until(lambda: host.snapshot().coordinator_state == "recording_failed")
+        wait_for_state(host, "recording_failed")
         # Only now, and from here on.
         failed = api.submit({"message": "d-q", "session_id": session_id})
         assert failed.status == 503
@@ -772,10 +784,10 @@ def test_recording_failed_web_submit_keeps_503_when_capture_would_fail() -> None
         api = dashboard_api(host)
         first = api.submit({"message": "first", "session_id": session_id})
         assert first.status == 202
-        wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
+        wait_for_state(host, "recording_pending")
         flag["armed"] = True
         latch.release()
-        wait_until(lambda: host.snapshot().coordinator_state == "recording_failed")
+        wait_for_state(host, "recording_failed")
         provider.fail = True
         assert host._done == {}
         assert host._results == {}
@@ -834,12 +846,56 @@ def test_a_failed_handoff_never_answers_202() -> None:
         assert outcome.run_id is None
         # The Run was finalized interrupted and admission reopened rather
         # than left dangling on a Run nobody will execute.
-        wait_until(lambda: host.snapshot().coordinator_state == "idle")
+        wait_for_state(host, "idle")
         assert conn.execute(
             "SELECT phase, outcome, started_at FROM runs"
         ).fetchone() == ("finished", "interrupted", None)
     finally:
         host.close()
+
+
+def test_close_waits_for_failed_handoff_terminal_publication() -> None:
+    entered = threading.Event()
+    release = threading.Event()
+    inner = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(inner)
+
+    class BlockingFinalize:
+        def execute(self, sql, parameters=()):
+            if "UPDATE runs SET phase = ?" in sql:
+                entered.set()
+                assert release.wait(3.0)
+            return inner.execute(sql, parameters)
+
+        def __getattr__(self, name):
+            return getattr(inner, name)
+
+    def explode(_item):
+        raise RuntimeError("handoff refused")
+
+    host, _conn = build_runtime_host(
+        conn=BlockingFinalize(), publish_work=explode
+    )
+    host.start()
+    session_id = host.create_session()
+    outcomes = []
+    submitter = threading.Thread(
+        target=lambda: outcomes.append(
+            dashboard_api(host).submit(
+                {"message": "hello", "session_id": session_id}
+            )
+        )
+    )
+    submitter.start()
+    assert entered.wait(3.0)
+    try:
+        assert host.close(timeout=1.0) is False
+    finally:
+        release.set()
+        submitter.join(3.0)
+    assert not submitter.is_alive()
+    assert outcomes[0].status == 503
+    assert host.close(timeout=3.0) is True
 
 
 def test_a_failed_handoff_and_interrupted_finalize_still_answers_503(
@@ -1028,6 +1084,414 @@ def _wired_broker(**kwargs) -> SSEBroker:
     )
 
 
+class _InterruptIdlePatchBeforeBroker:
+    """Lose one terminal patch before the real broker sees it."""
+
+    def __init__(
+        self,
+        broker: SSEBroker,
+        *,
+        armed_after: str,
+        exception_type: type[BaseException] = KeyboardInterrupt,
+    ) -> None:
+        self._broker = broker
+        self._armed_after = armed_after
+        self._exception_type = exception_type
+        self._armed = False
+        self._raised = False
+        self.interrupted = threading.Event()
+        self.resumed = threading.Event()
+        self.idle_calls = 0
+
+    def __call__(self, snapshot: RuntimeSnapshot) -> bool:
+        if snapshot.coordinator_state == self._armed_after:
+            self._armed = True
+        if (
+            self._armed
+            and snapshot.coordinator_state == "idle"
+        ):
+            self.idle_calls += 1
+            if not self._raised:
+                self._raised = True
+                self.interrupted.set()
+                raise self._exception_type(
+                    "idle patch interrupted before broker"
+                )
+            self.resumed.set()
+        return self._broker.publish_state_patch(snapshot)
+
+
+class _ListenerBaseException(BaseException):
+    """Non-control BaseException used at the snapshot-listener boundary."""
+
+
+class _InterruptIdlePatchAfterBroker:
+    """Publish one terminal patch, then lose the listener's return edge."""
+
+    def __init__(self, broker: SSEBroker) -> None:
+        self._broker = broker
+        self._armed = False
+        self._raised = False
+        self.interrupted = threading.Event()
+        self.resumed = threading.Event()
+        self.idle_calls = 0
+
+    def __call__(self, snapshot: RuntimeSnapshot) -> bool:
+        if snapshot.coordinator_state == "recording_pending":
+            self._armed = True
+        result = self._broker.publish_state_patch(snapshot)
+        if self._armed and snapshot.coordinator_state == "idle":
+            self.idle_calls += 1
+            if not self._raised:
+                self._raised = True
+                self.interrupted.set()
+                raise KeyboardInterrupt("idle patch committed before interruption")
+            self.resumed.set()
+        return result
+
+
+def _assert_broker_reconnect_matches_host_idle(
+    broker: SSEBroker,
+    host,
+    *,
+    session_id: str,
+) -> None:
+    authoritative = host.snapshot()
+    latest = broker._latest
+    opening = _startup_patch(
+        broker.connect(connection=FakeConnection(), session_id=session_id)
+    )
+    assert authoritative.coordinator_state == "idle"
+    assert (
+        latest.coordinator_state,
+        latest.state_revision,
+        opening["coordinator_state"],
+        opening["state_revision"],
+    ) == (
+        "idle",
+        authoritative.state_revision,
+        "idle",
+        authoritative.state_revision,
+    ), "a missed terminal patch must be reconciled into broker authority"
+
+
+@pytest.mark.parametrize(
+    "exception_type",
+    (KeyboardInterrupt, SystemExit, _ListenerBaseException),
+)
+def test_terminal_idle_patch_before_broker_is_resumed(
+    exception_type: type[BaseException],
+) -> None:
+    broker = _wired_broker()
+    listener = _InterruptIdlePatchBeforeBroker(
+        broker,
+        armed_after="recording_pending",
+        exception_type=exception_type,
+    )
+    host, _conn = build_runtime_host(
+        ["pong"],
+        extra_sinks=[broker],
+        snapshot_listener=listener,
+    )
+    broker.bind_session_check(host.transport_session_validity)
+    host.start()
+    try:
+        session_id = host.create_session()
+        submitted = host.submit(_request(message="hello", session_id=session_id))
+        assert submitted.kind == "accepted"
+        assert submitted.run_id is not None
+        assert listener.interrupted.wait(5.0), "idle patch was not interrupted"
+        assert host.wait(submitted.run_id, timeout=5.0).outcome == "completed"
+        assert listener.resumed.is_set(), "idle patch was not retried"
+        assert listener.idle_calls == 2
+
+        _assert_broker_reconnect_matches_host_idle(
+            broker,
+            host,
+            session_id=session_id,
+        )
+    finally:
+        broker.close(timeout=1.0)
+        host.close()
+
+
+def test_terminal_idle_patch_after_broker_is_deduplicated_on_resume(
+    monkeypatch,
+) -> None:
+    broker = _wired_broker()
+    listener = _InterruptIdlePatchAfterBroker(broker)
+    offered_patches: list[RuntimeSnapshot] = []
+    offer = broker._ingress.offer
+
+    def count_patch_offer(item):
+        snapshot = getattr(item, "snapshot", None)
+        if snapshot is not None:
+            offered_patches.append(snapshot)
+        return offer(item)
+
+    monkeypatch.setattr(broker._ingress, "offer", count_patch_offer)
+    host, _conn = build_runtime_host(
+        ["pong"],
+        extra_sinks=[broker],
+        snapshot_listener=listener,
+    )
+    broker.bind_session_check(host.transport_session_validity)
+    host.start()
+    try:
+        session_id = host.create_session()
+        live = broker.connect(
+            connection=FakeConnection(),
+            session_id=session_id,
+        )
+        drain_connection(live)
+        submitted = host.submit(_request(message="hello", session_id=session_id))
+        assert submitted.kind == "accepted"
+        assert submitted.run_id is not None
+        assert listener.interrupted.wait(5.0), "idle patch was not interrupted"
+        assert host.wait(submitted.run_id, timeout=5.0).outcome == "completed"
+        assert listener.resumed.is_set(), "idle patch was not retried"
+        assert listener.idle_calls == 2
+
+        while broker.deliver_next(timeout=0):
+            pass
+        authoritative = host.snapshot()
+        delivered = drain_connection(live)
+        assert sum(
+            snapshot == authoritative for snapshot in offered_patches
+        ) == 1, "an uncertain but committed idle patch entered ingress twice"
+        assert sum(
+            isinstance(item, CloseConnection) for item in delivered
+        ) == 1, "uncertain delivery must make the old connection reconnect"
+        _assert_broker_reconnect_matches_host_idle(
+            broker,
+            host,
+            session_id=session_id,
+        )
+    finally:
+        broker.close(timeout=1.0)
+        host.close()
+
+
+def test_unstarted_idle_patch_before_broker_is_resumed(monkeypatch) -> None:
+    broker = _wired_broker()
+    listener = _InterruptIdlePatchBeforeBroker(broker, armed_after="accepted")
+    host, _conn = build_runtime_host(
+        ["pong"],
+        extra_sinks=[broker],
+        snapshot_listener=listener,
+    )
+    publish_handoff = host.admission_publish_handoff
+    rejected_run_ids: list[str] = []
+    interruption = KeyboardInterrupt("handoff rejected")
+
+    def reject_first_handoff(item) -> None:
+        if not rejected_run_ids:
+            rejected_run_ids.append(item.run_id)
+            raise interruption
+        publish_handoff(item)
+
+    broker.bind_session_check(host.transport_session_validity)
+    host.start()
+    monkeypatch.setattr(host, "admission_publish_handoff", reject_first_handoff)
+    try:
+        session_id = host.create_session()
+        with pytest.raises(KeyboardInterrupt) as caught:
+            host.submit(_request(message="hello", session_id=session_id))
+        assert caught.value is interruption
+        assert rejected_run_ids
+        assert listener.interrupted.wait(5.0), "idle patch was not interrupted"
+        assert listener.resumed.is_set(), "idle patch was not retried"
+        assert listener.idle_calls == 2
+
+        _assert_broker_reconnect_matches_host_idle(
+            broker,
+            host,
+            session_id=session_id,
+        )
+    finally:
+        broker.close(timeout=1.0)
+        host.close()
+
+
+def test_stale_admission_failure_retry_cannot_revive_an_old_run() -> None:
+    broker = _wired_broker()
+    host, _conn = build_runtime_host(
+        ["pong"],
+        extra_sinks=[broker],
+        snapshot_listener=broker.publish_state_patch,
+    )
+    broker.bind_session_check(host.transport_session_validity)
+    host.start()
+    try:
+        session_id = host.create_session()
+        old_run_id = "run-old-admission-failure"
+        accepted = ActiveRunSummary(
+            run_id=old_run_id,
+            purpose="chat",
+            gateway="web",
+            phase="accepted",
+            session_id=session_id,
+            prompt_preview="old",
+            started_at=None,
+            recording_state=None,
+        )
+        failed = ActiveRunSummary(
+            run_id=old_run_id,
+            purpose="chat",
+            gateway="web",
+            phase="finished",
+            session_id=session_id,
+            prompt_preview="old",
+            started_at=None,
+            recording_state="failed",
+            outcome="interrupted",
+        )
+        projection = UnrecordedTerminalProjection(
+            run_id=old_run_id,
+            purpose="chat",
+            outcome="interrupted",
+            reply_text=None,
+            error="handoff_failed",
+            recording_state="failed",
+            session_id=session_id,
+            prompt_preview="old",
+        )
+        reserved, _snapshot = host.admission_reserve(
+            old_run_id,
+            accepted,
+            wait_for_result=False,
+        )
+        assert reserved == "reserved"
+        host.admission_fail_recording(failed, projection)
+        assert host.snapshot().coordinator_state == "recording_failed"
+        host.admission_recover_release(old_run_id)
+        assert host.snapshot().coordinator_state == "idle"
+
+        successor = host.submit(
+            _request(message="successor", session_id=session_id)
+        )
+        assert successor.kind == "accepted"
+        assert successor.run_id is not None
+        assert host.wait(successor.run_id, timeout=5.0).outcome == "completed"
+        while broker.deliver_next(timeout=0):
+            pass
+        authoritative = host.snapshot()
+        latest = broker._latest
+        assert authoritative.coordinator_state == "idle"
+        assert latest == authoritative
+
+        host.admission_fail_recording(failed, projection)
+
+        assert host.snapshot() is authoritative
+        assert broker._latest is latest
+        assert broker.deliver_next(timeout=0) is False
+        _assert_broker_reconnect_matches_host_idle(
+            broker,
+            host,
+            session_id=session_id,
+        )
+    finally:
+        broker.close(timeout=1.0)
+        host.close()
+
+
+@pytest.mark.parametrize("failed", [False, True])
+@pytest.mark.parametrize("cursor", [None, CursorText("malformed")])
+def test_reconnect_recovers_complete_reply_without_repairing_the_process_gap(
+    failed, cursor,
+) -> None:
+    latch = SelectiveLatch()
+    latch.arm()
+    text = "正文" * 3000
+    flag = {"armed": False}
+    database = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(database)
+    wrapped = FailFinalizeWhen(database, flag, "finished_at")
+    broker = _wired_broker(ring=ReplayRing(budget=FrameBudget(1, 1 << 20)))
+    host, conn = build_runtime_host(
+        [text], conn=wrapped, extra_sinks=[broker],
+        snapshot_listener=broker.publish_state_patch, before_recording_commit=latch,
+    )
+    host.start()
+    try:
+        submitted = host.submit(_request(message="hello", session_id=None))
+        assert latch.entered.wait(2)
+        if failed:
+            flag["armed"] = True
+            latch.release()
+            host.wait(submitted.run_id)
+        before = host.snapshot()
+        opening = drain_connection(broker.connect(
+            connection=FakeConnection(), session_id=submitted.session_id, cursor=cursor,
+        ))
+        patch = _patch_from_items(opening)
+        assert patch["unrecorded_terminal_projection"]["reply_preview"] == (
+            text[:1999] + "…"
+        )
+        assert all(b"event: domain_event" not in item.wire_bytes() for item in opening)
+        identity = {
+            "process_instance_id": host.process_instance_id,
+            "session_id": submitted.session_id, "run_id": submitted.run_id,
+        }
+        assert DashboardApi(facade=host).recover_reply(identity) == (
+            200, {**identity, "reply_text": text},
+        )
+        assert host.snapshot() == before
+        after = drain_connection(broker.connect(
+            connection=FakeConnection(), session_id=submitted.session_id, cursor=cursor,
+        ))
+        assert _patch_from_items(after) == patch
+        if cursor is not None:
+            for items in (opening, after):
+                assert any(
+                    b'"current_run_state":"unrecoverable"' in item.wire_bytes()
+                    for item in items
+                )
+    finally:
+        flag["armed"] = False
+        latch.release()
+        host.close()
+        conn.close()
+
+
+def test_delayed_http_reply_is_content_not_a_pending_patch_over_recorded() -> None:
+    saving, recorded = SelectiveLatch(), SelectiveLatch()
+    saving.arm()
+    recorded.arm()
+    broker = _wired_broker()
+    host, conn = build_runtime_host(
+        extra_sinks=[broker], snapshot_listener=broker.publish_state_patch,
+        before_recording_commit=saving, after_recorded_snapshot=recorded,
+    )
+    host.start()
+    try:
+        submitted = host.submit(_request(message="hello", session_id=None))
+        assert saving.entered.wait(2)
+        pending = snapshot_from_payload(_startup_patch(broker.connect(
+            connection=FakeConnection(), session_id=submitted.session_id,
+        )))
+        status, delayed_body = DashboardApi(facade=host).recover_reply({
+            "process_instance_id": host.process_instance_id,
+            "session_id": submitted.session_id, "run_id": submitted.run_id,
+        })
+        saving.release()
+        assert recorded.entered.wait(2)
+        current = apply_state_patch(pending, snapshot_from_payload(_startup_patch(
+            broker.connect(connection=FakeConnection(), session_id=submitted.session_id)
+        )))
+        assert current.active_run.recording_state == "recorded"
+        assert status == 200 and delayed_body["reply_text"] == "pong"
+        # A delayed body has no lifecycle fields and cannot enter the patch seam.
+        with pytest.raises(ValueError):
+            snapshot_from_payload(delayed_body)
+        assert refused(pending, current) == "revision_regression"
+    finally:
+        saving.release()
+        recorded.release()
+        host.close()
+        conn.close()
+
+
 def test_unrecorded_terminal_reply_is_redacted_before_bounding_on_all_patches(
 ) -> None:
     """The pending and failed browser views never contain reply secrets.
@@ -1171,7 +1635,7 @@ def test_pending_snapshot_keeps_unrecorded_terminal_outcome() -> None:
         latch.arm()
         submitted = host.submit(_request(message="hello", session_id=None))
         assert submitted.kind == "accepted"
-        wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
+        wait_for_state(host, "recording_pending")
         snap = host.snapshot()
         projection = snap.unrecorded_terminal_projection
         assert projection is not None
@@ -1214,7 +1678,7 @@ def test_startup_patch_keeps_last_step_and_attempt_summary() -> None:
         session_id = host.create_session()
         submitted = host.submit(_request(message="hello", session_id=session_id))
         assert submitted.kind == "accepted"
-        wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
+        wait_for_state(host, "recording_pending")
         handle = broker.connect(connection=FakeConnection(), session_id=session_id)
         patch = _startup_patch(handle)
         steps = [
@@ -1284,7 +1748,7 @@ def test_a_new_run_is_accepted_without_inheriting_the_previous_step() -> None:
         api = dashboard_api(host)
         first = api.submit({"message": "first", "session_id": session_id})
         assert first.status == 202
-        wait_until(lambda: host.snapshot().coordinator_state == "idle")
+        wait_for_state(host, "idle")
 
         gate.clear()
         step_started.published.clear()
@@ -1310,7 +1774,7 @@ def test_a_new_run_is_accepted_without_inheriting_the_previous_step() -> None:
     finally:
         gate.set()
         if second is not None and second.run_id:
-            wait_until(lambda: host.snapshot().coordinator_state == "idle")
+            wait_for_state(host, "idle")
         host.close()
 
 
@@ -1341,7 +1805,7 @@ def test_failed_snapshot_keeps_same_terminal_state() -> None:
         session_id = host.create_session()
         submitted = host.submit(_request(message="hello", session_id=session_id))
         assert submitted.kind == "accepted"
-        wait_until(lambda: host.snapshot().coordinator_state == "recording_pending")
+        wait_for_state(host, "recording_pending")
         pending = _startup_patch(
             broker.connect(connection=FakeConnection(), session_id=session_id)
         )
@@ -1353,7 +1817,7 @@ def test_failed_snapshot_keeps_same_terminal_state() -> None:
         flag["armed"] = True
         latch.release()
         host.wait(submitted.run_id)
-        wait_until(lambda: host.snapshot().coordinator_state == "recording_failed")
+        wait_for_state(host, "recording_failed")
         failed = _startup_patch(
             broker.connect(connection=FakeConnection(), session_id=session_id)
         )
@@ -1382,7 +1846,8 @@ def test_old_run_progress_stops_masquerading_after_recorded() -> None:
     recorded→idle 的既有清理路径一起消失——后续重连读到的是干净的
     idle 快照，而不是旧 Run 的进度。
     """
-    after_recorded = threading.Event()
+    after_recorded = SelectiveLatch()
+    after_recorded.arm()
     broker = _wired_broker()
     host, _conn = build_runtime_host(
         extra_sinks=[broker],
@@ -1394,12 +1859,12 @@ def test_old_run_progress_stops_masquerading_after_recorded() -> None:
         session_id = host.create_session()
         submitted = host.submit(_request(message="hello", session_id=session_id))
         assert submitted.kind == "accepted"
-        wait_until(
-            lambda: (
-                host.snapshot().active_run is not None
-                and host.snapshot().active_run.recording_state == "recorded"
-            )
+        assert after_recorded.entered.wait(5.0), (
+            "recorded snapshot boundary was not reached"
         )
+        recorded_snapshot = host.snapshot()
+        assert recorded_snapshot.active_run is not None
+        assert recorded_snapshot.active_run.recording_state == "recorded"
         recorded = _startup_patch(
             broker.connect(connection=FakeConnection(), session_id=session_id)
         )
@@ -1407,8 +1872,8 @@ def test_old_run_progress_stops_masquerading_after_recorded() -> None:
         assert recorded["active_run"]["recording_state"] == "recorded"
         assert recorded["step"] is not None
 
-        after_recorded.set()
-        wait_until(lambda: host.snapshot().coordinator_state == "idle")
+        after_recorded.release()
+        wait_for_state(host, "idle")
         idle = _startup_patch(
             broker.connect(connection=FakeConnection(), session_id=session_id)
         )
@@ -1417,7 +1882,7 @@ def test_old_run_progress_stops_masquerading_after_recorded() -> None:
         assert idle["step"] is None
         assert idle["unrecorded_terminal_projection"] is None
     finally:
-        after_recorded.set()
+        after_recorded.release()
         broker.close(timeout=1.0)
         host.close()
 
@@ -1487,6 +1952,12 @@ def test_a_pending_patch_cannot_overwrite_a_settled_state() -> None:
     assert refused(snapshot_patch(revision=6, pending=True), current) == (
         "pending_over_terminal"
     )
+
+
+def test_a_new_runs_pending_patch_replaces_the_previous_runs_recorded_state() -> None:
+    current = snapshot_patch(revision=10, run_id="previous-run")
+    pending = snapshot_patch(revision=20, pending=True, run_id="new-run")
+    assert apply_state_patch(current, pending) == pending
 
 
 def test_a_repeated_revision_is_refused_whatever_its_payload() -> None:
@@ -1644,6 +2115,7 @@ def test_a_submit_holding_the_lease_publishes_the_busy_card_with_it() -> None:
         payload = card.to_json()
         assert payload["purpose"] == "chat"
         assert payload["gateway"] == "web"
+        assert card.stage == "已接受"
         assert payload["stage"] == "已接受"
         assert payload["prompt_preview"] == "first"
         assert payload["current_step"] is None
@@ -1738,7 +2210,7 @@ def test_dashboard_runs_do_not_retain_unconsumed_in_memory_results() -> None:
                 {"message": f"message-{index}", "session_id": session_id}
             )
             assert outcome.status == 202
-            wait_until(lambda: host.snapshot().coordinator_state == "idle")
+            wait_for_state(host, "idle")
 
         assert conn.execute(
             "SELECT COUNT(*) FROM runs WHERE phase = 'finished'"
@@ -1806,7 +2278,7 @@ def test_a_directly_injected_host_reads_sessions_runs_and_the_mainbar() -> None:
         session_id = api.create_session().session_id
         outcome = api.submit({"message": "hello", "session_id": session_id})
         assert outcome.status == 202
-        wait_until(lambda: host.snapshot().coordinator_state == "idle")
+        wait_for_state(host, "idle")
 
         # The inbox serves the Session; the title is the earliest chat
         # Run's prompt preview.
@@ -1885,13 +2357,13 @@ def test_the_gate_spans_the_whole_lease_on_the_real_host() -> None:
         session_id = api.create_session().session_id
         outcome = api.submit({"message": "first", "session_id": session_id})
         assert outcome.status == 202
-        wait_until(lambda: host.snapshot().coordinator_state == "running")
+        wait_for_state(host, "running")
         # The lease is held, so the gate's authority refuses a write...
         assert host.try_begin_mutation() == "mutation_in_flight"
         # ...and the refusal left no hold behind: the Run owns the gate.
         assert host.mutation_in_flight() is False
         gate.set()
-        wait_until(lambda: host.snapshot().coordinator_state == "idle")
+        wait_for_state(host, "idle")
         # The lease is back, so the gate opens again for the next write.
         assert host.try_begin_mutation() is None
         host.end_mutation()

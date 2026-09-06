@@ -408,3 +408,43 @@ def test_headers_are_matched_without_regard_to_case() -> None:
     # worse, accept a differently-cased look-alike from others.
     mixed = {key.upper(): value for key, value in _valid_write().items()}
     assert _guard().check(method="POST", headers=_Headers(mixed)) is None
+
+
+class _RepeatedHeaders(_Headers):
+    def __init__(self, raw: dict[str, str], repeated: dict[str, list[str]]):
+        super().__init__(raw)
+        self.repeated = repeated
+
+    def get_all(self, name: str):
+        return self.repeated.get(name.lower())
+
+
+@pytest.mark.parametrize("method", ("GET", "OPTIONS", "TRACE"))
+def test_nonwrite_authorization_reports_a_declared_unconsumed_body(method) -> None:
+    result = _guard().authorize(
+        method=method,
+        headers=_headers(host="localhost", **{"content-length": "12"}),
+    )
+    assert isinstance(result, AuthorizedRequest)
+    assert result.body_length is None
+    assert result.body_declared is True
+
+
+def test_transfer_encoding_and_repeated_lengths_fail_closed() -> None:
+    transfer = _guard().authorize(
+        method="GET",
+        headers=_headers(host="localhost", **{"transfer-encoding": "chunked"}),
+    )
+    repeated = _guard().authorize(
+        method="GET",
+        headers=_RepeatedHeaders(
+            {"host": "localhost", "content-length": "2"},
+            {"content-length": ["2", "2"]},
+        ),
+    )
+    assert isinstance(transfer, Rejection)
+    assert transfer.code == "unsupported_transfer_encoding"
+    assert transfer.body_declared is True
+    assert isinstance(repeated, Rejection)
+    assert repeated.code == "conflicting_content_length"
+    assert repeated.body_declared is True

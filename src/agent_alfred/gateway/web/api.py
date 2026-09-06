@@ -19,12 +19,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import wraps
+from html import escape
 from typing import Any, Protocol
 from urllib.parse import quote
 
 from agent_alfred.runtime import runs
 from agent_alfred.runtime.cursor import MalformedCursor
 from agent_alfred.runtime.recording import RecordingUnavailable
+from agent_alfred.runtime.replies import (
+    RecoveredReply,
+    ReplyContextExpired,
+    ReplyUnavailable,
+)
 from agent_alfred.runtime.sessions import (
     SessionInboxPage,
     SessionMessagesPage,
@@ -137,6 +143,10 @@ class DashboardFacade(Protocol):
         self, *, session_id: str, limit: int, cursor: str | None
     ) -> Any: ...
 
+    def recover_reply(
+        self, *, process_instance_id: str, session_id: str, run_id: str,
+    ) -> RecoveredReply: ...
+
 
 @dataclass(frozen=True)
 class SubmitOutcome:
@@ -157,7 +167,7 @@ class SubmitOutcome:
         if self.code is not None:
             body["code"] = self.code
         if self.busy is not None:
-            body["busy"] = self.busy.to_json()
+            body["active_run_summary"] = self.busy.to_json()
         return body
 
 
@@ -168,9 +178,11 @@ class BusySummary:
 
     The field set is a whitelist, not a projection of the Run row: purpose,
     Gateway, start time, the nullable current Step, an optional redacted and
-    length-limited prompt preview, and a same-origin navigation target. A
-    second copy of this card with different fields is how "busy" would become
-    two different states that look the same on screen.
+    length-limited prompt preview, and a same-origin navigation target. The
+    display-only stage is derived alongside that shape and included because
+    the recording-pending adjudication requires the safe label ``正在保存``.
+    A second copy of this card with different fields is how "busy" would
+    become two different states that look the same on screen.
     """
 
     purpose: str
@@ -183,9 +195,10 @@ class BusySummary:
     filter: str
 
     def to_json(self) -> dict[str, Any]:
-        # The whitelist is exactly the seven fields the decision names. The
-        # run id and the shelf are not two more fields -- they are parts of
-        # the one navigation target, which is where the client reads them.
+        # ``stage`` is safe presentation state derived by this same renderer;
+        # it is carried because the later recording-pending ruling explicitly
+        # requires its label. The run id and shelf remain parts of the one
+        # navigation target rather than separate fields.
         return {
             "purpose": self.purpose,
             "gateway": self.gateway,
@@ -341,10 +354,12 @@ class DashboardApi:
         # pick would let two Sessions collide into one.
         session_id, reason = self._gate.create_session()
         if session_id is None:
-            # A held gate is a short-lived conflict; a recording-failed Host
-            # has closed admission and is genuinely unavailable (ADR-0026).
+            # A held gate is a short-lived conflict; shutdown or a recording
+            # failure has permanently closed admission for this Host.
             # Preserve the authority's code and distinguish those two facts.
-            status = 503 if reason == "recording_unavailable" else 409
+            status = (
+                503 if reason in {"recording_unavailable", "admission_failed"} else 409
+            )
             return CreateSessionResult(status=status, code=reason)
         return CreateSessionResult(status=201, session_id=session_id)
 
@@ -366,6 +381,8 @@ class DashboardApi:
             return SubmitOutcome(status=400, code="missing_session_id")
         if session_id is not None and not isinstance(session_id, str):
             return SubmitOutcome(status=400, code="bad_session_id")
+        if purpose != "chat" and session_id is not None:
+            return SubmitOutcome(status=400, code="unexpected_session_id")
         refusal = self._gate.preflight_submit()
         if refusal is not None:
             return self._outcome(refusal)
@@ -491,6 +508,32 @@ class DashboardApi:
             return 404, {"code": "unknown_session"}
         return 200, _session_runs_payload(page)
 
+    def recover_reply(self, params: dict[str, str]) -> tuple[int, Any]:
+        """GET /api/reply: identity plus full text, never a recording receipt.
+
+        409 asks the caller to synchronize with the new process. 503 permits
+        a later content read without changing Run or recording state. Missing
+        identity fields are 400; empty opaque Session/Run IDs remain values.
+        """
+        for field in ("process_instance_id", "session_id", "run_id"):
+            if field not in params:
+                return 400, {"code": f"missing_{field}"}
+        try:
+            reply = self._facade.recover_reply(
+                process_instance_id=params["process_instance_id"],
+                session_id=params["session_id"], run_id=params["run_id"],
+            )
+        except ReplyContextExpired:
+            return 409, {"code": "reply_context_expired"}
+        except ReplyUnavailable:
+            return 503, {"code": "reply_unavailable"}
+        return 200, {
+            "process_instance_id": reply.process_instance_id,
+            "session_id": reply.session_id,
+            "run_id": reply.run_id,
+            "reply_text": reply.reply_text,
+        }
+
     @_map_read_errors
     def mainbar(self, params: dict[str, str]) -> tuple[int, Any]:
         # The MainBar answers one Session, named by the query parameter like
@@ -534,16 +577,19 @@ def _page_size(params: dict[str, str], key: str) -> int:
 
 
 def _inbox_payload(page: SessionInboxPage) -> dict[str, Any]:
+    def summary_json(summary):
+        return {
+            "session_id": summary.session_id,
+            "created_at": summary.created_at,
+            "activity_revision": summary.activity_revision,
+            "title": summary.title,
+        }
+
     return {
-        "sessions": [
-            {
-                "session_id": summary.session_id,
-                "created_at": summary.created_at,
-                "activity_revision": summary.activity_revision,
-                "title": summary.title,
-            }
-            for summary in page.sessions
-        ],
+        "sessions": [summary_json(summary) for summary in page.sessions],
+        "non_terminal": (
+            None if page.non_terminal is None else summary_json(page.non_terminal)
+        ),
         "next_cursor": page.next_cursor,
     }
 
@@ -609,9 +655,19 @@ def _runs_payload(page) -> dict[str, Any]:
 def _run_json(run) -> dict[str, Any]:
     return {
         "run_id": run.run_id,
-        "purpose": run.purpose,
+        # Purpose is display text on this HTTP surface. Escaping at the server
+        # edge keeps future, unknown values visible without delegating markup
+        # safety to every browser renderer; today's closed values are unchanged.
+        "purpose": escape(run.purpose, quote=True),
         "filter": run.filter,
         "purpose_known": run.purpose_known,
+        "admission_state": run.admission_state,
+        "admission_label": {
+            "pending": "准入处理中",
+            "admitted": "已获准",
+            "rejected": "未获准",
+            "unconfirmed": "准入未确认",
+        }[run.admission_state],
         "session_id": run.session_id,
         "gateway": run.gateway,
         "entry_surface_id": run.entry_surface_id,
@@ -670,6 +726,7 @@ def _session_runs_payload(page) -> dict[str, Any]:
         "runs": [
             {
                 "run_id": run.run_id,
+                "gateway": run.gateway,
                 "phase": run.phase,
                 "outcome": run.outcome,
                 "accepted_at": run.accepted_at,

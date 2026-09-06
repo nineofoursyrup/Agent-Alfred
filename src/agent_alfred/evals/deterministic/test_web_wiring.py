@@ -50,7 +50,7 @@ def _factory() -> ScriptedModelFactory:
     return ScriptedModelFactory(ScriptedModel(["pong"]))
 
 
-def _database(state) -> sqlite3.Connection:
+def _database(state, *, _rollback) -> sqlite3.Connection:
     """The production database seam, on a real file in the state directory.
 
     A file rather than ``:memory:`` so that "the database appeared after the
@@ -58,7 +58,7 @@ def _database(state) -> sqlite3.Connection:
     """
     from agent_alfred.wiring import open_database
 
-    return open_database(state)
+    return open_database(state, _rollback=_rollback)
 
 
 def test_dashboard_derives_canonical_trace_from_one_state_root_lease(
@@ -142,17 +142,6 @@ def test_trace_initialization_io_failure_keeps_dashboard_runs_available(
     assert {thread.ident for thread in threading.enumerate()} == baseline_threads
 
 
-def _wait_until(predicate, timeout: float = 5.0) -> None:
-    import time
-
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        if predicate():
-            return
-        time.sleep(0.01)
-    raise AssertionError("condition not met before timeout")
-
-
 def test_build_dashboard_gives_the_host_and_the_broker_one_identity(tmp_path) -> None:
     dashboard = build_dashboard(
         state_dir=tmp_path,
@@ -195,7 +184,7 @@ def test_the_broker_sees_events_and_patches_from_the_real_host(tmp_path) -> None
         assert result.kind == "accepted"
         host.wait(result.run_id)
         # The broker is an event sink: the Run's events reached the ring.
-        _wait_until(lambda: dashboard.broker._ring.high_water_seq() >= 2)
+        assert dashboard.broker._ring.high_water_seq() >= 2
         # And it is the snapshot listener: the authoritative state moved
         # under it, in order.
         assert dashboard.broker._latest.state_revision >= 1
@@ -219,13 +208,26 @@ def test_a_second_instance_on_the_same_state_dir_is_refused(tmp_path) -> None:
     outcomes: list[int] = []
     errors = io.StringIO()
 
+    class AnnouncedOutput(io.StringIO):
+        def __init__(self) -> None:
+            super().__init__()
+            self.ready = threading.Event()
+
+        def write(self, text: str) -> int:
+            written = super().write(text)
+            if text.startswith("dashboard on "):
+                self.ready.set()
+            return written
+
+    announced = AnnouncedOutput()
+
     def run() -> None:
         outcomes.append(
             serve_dashboard(
                 state_dir=tmp_path,
                 settings=Settings(),
                 port=free_loopback_port(),
-                out=io.StringIO(),
+                out=announced,
                 stop=stop,
             )
         )
@@ -233,7 +235,8 @@ def test_a_second_instance_on_the_same_state_dir_is_refused(tmp_path) -> None:
     thread = threading.Thread(target=run, daemon=True)
     thread.start()
     try:
-        _wait_until(lambda: (tmp_path / DESCRIPTOR_NAME).exists())
+        assert announced.ready.wait(5.0), "first Dashboard was not announced"
+        assert (tmp_path / DESCRIPTOR_NAME).exists()
         # A second instance, same state directory, different port: the port
         # is not the problem and changing it would not help.
         second = serve_dashboard(
@@ -435,8 +438,13 @@ def test_session_commit_failure_is_500_and_the_next_http_write_is_clean(
 
     connection: list[FailNextSessionCommit] = []
 
-    def failing_database(directory: Path) -> FailNextSessionCommit:
-        wrapped = FailNextSessionCommit(_database(directory))
+    def failing_database(
+        directory: Path, *, _rollback
+    ) -> FailNextSessionCommit:
+        inner = _database(directory, _rollback=_rollback)
+        wrapped = FailNextSessionCommit(inner)
+        _rollback.own(wrapped)
+        _rollback.transfer(inner)
         connection.append(wrapped)
         return wrapped
 

@@ -49,6 +49,11 @@ from agent_alfred.settings import (
 # is incomplete. Three attempts let the resumable state machine advance
 # without turning a permanently refusing component into an unbounded loop.
 _CLOSE_PROGRESS_ATTEMPTS = 3
+# Each runtime call may wait on several retained component owners. A concrete
+# per-step budget keeps every attempt finite while still allowing later calls
+# to resume the same shutdown work.
+_CLOSE_ATTEMPT_TIMEOUT_S = 2.0
+_PROCESS_CONTROL = (KeyboardInterrupt, SystemExit, GeneratorExit)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -277,10 +282,11 @@ def _build_runtime(
 def _start_or_report(runtime: Any, out: TextIO) -> int | None:
     """Start the Dashboard, or say why it did not come up.
 
-    Both surfaces answer a refused start the same way: name the reason,
-    advance its retryable rollback, and return a failure. A silent fallback
-    to "chat without a Dashboard" would hide a held lock or a taken port --
-    and those are precisely the two situations the user has to hear about.
+    Both surfaces answer a refused start the same way: name the reason and
+    return a failure. Their outer ownership boundary advances the retryable
+    close even if starting or writing this report is interrupted. A silent
+    fallback to "chat without a Dashboard" would hide a held lock or a taken
+    port -- precisely the two situations the user has to hear about.
     """
     try:
         runtime.start()
@@ -296,7 +302,6 @@ def _start_or_report(runtime: Any, out: TextIO) -> int | None:
         else:
             out.write(f"dashboard unavailable: {exc}\n")
         out.flush()
-        _close_runtime(runtime, out)
         return 1
     return None
 
@@ -314,7 +319,7 @@ def _close_runtime(runtime: Any, out: TextIO) -> bool:
     """
     for _attempt in range(_CLOSE_PROGRESS_ATTEMPTS):
         try:
-            close_complete = runtime.close()
+            close_complete = runtime.close(timeout=_CLOSE_ATTEMPT_TIMEOUT_S)
         except Exception:
             out.write(
                 "dashboard shutdown incomplete after close error; "
@@ -330,6 +335,17 @@ def _close_runtime(runtime: Any, out: TextIO) -> bool:
     )
     out.flush()
     return False
+
+
+def _close_runtime_preserving_control(runtime: Any, out: TextIO) -> bool:
+    """Close in a ``finally`` without replacing active process control."""
+    active_failure = sys.exception()
+    try:
+        return _close_runtime(runtime, out)
+    except BaseException:
+        if isinstance(active_failure, _PROCESS_CONTROL):
+            raise active_failure
+        raise
 
 
 def _announce(descriptor: EntryDescriptor, out: TextIO) -> None:
@@ -356,28 +372,30 @@ def _chat_in_the_foreground(
     closed after the last one -- in reverse order, so the socket, the
     descriptor and the lock are all released before this function returns.
     """
-    failure = _start_or_report(runtime, out)
-    if failure is not None:
-        return failure
-    host = runtime.host
-    _announce(runtime.descriptor, out)
+    failure: int | None = None
     result = 1
     try:
-        created = DashboardApi(facade=host).create_session()
-        if created.session_id is None:
-            _print_session_creation_failure(created.code, out)
-        elif args.message is not None:
-            result = _one_shot(
-                host,
-                args.message,
-                created.session_id,
-                out,
-                stream=settings.stream,
-            )
-        else:
-            result = _repl(host, created.session_id, stream=settings.stream)
+        failure = _start_or_report(runtime, out)
+        if failure is None:
+            host = runtime.host
+            _announce(runtime.descriptor, out)
+            created = DashboardApi(facade=host).create_session()
+            if created.session_id is None:
+                _print_session_creation_failure(created.code, out)
+            elif args.message is not None:
+                result = _one_shot(
+                    host,
+                    args.message,
+                    created.session_id,
+                    out,
+                    stream=settings.stream,
+                )
+            else:
+                result = _repl(host, created.session_id, stream=settings.stream)
     finally:
-        close_complete = _close_runtime(runtime, out)
+        close_complete = _close_runtime_preserving_control(runtime, out)
+    if failure is not None:
+        return failure
     return result if close_complete else 1
 
 
@@ -412,17 +430,20 @@ def serve_dashboard(
         port=DEFAULT_PORT if port is None else port,
         factory=factory,
     )
-    failure = _start_or_report(runtime, stream)
+    failure: int | None = None
+    try:
+        failure = _start_or_report(runtime, stream)
+        if failure is None:
+            _announce(runtime.descriptor, stream)
+            try:
+                waiter = stop if stop is not None else threading.Event()
+                waiter.wait()
+            except KeyboardInterrupt:
+                pass
+    finally:
+        close_complete = _close_runtime_preserving_control(runtime, stream)
     if failure is not None:
         return failure
-    _announce(runtime.descriptor, stream)
-    try:
-        waiter = stop if stop is not None else threading.Event()
-        waiter.wait()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        close_complete = _close_runtime(runtime, stream)
     return 0 if close_complete else 1
 
 

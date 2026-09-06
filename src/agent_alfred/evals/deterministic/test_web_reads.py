@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
+from base64 import urlsafe_b64encode
 
 import pytest
 
@@ -50,7 +51,7 @@ def _assert_redaction_canary_absent(value) -> None:
         pytest.fail("browser read leaked the redaction canary", pytrace=False)
 
 
-def _v3_database() -> sqlite3.Connection:
+def _current_database() -> sqlite3.Connection:
     conn = sqlite3.connect(":memory:", check_same_thread=False)
     schema.migrate(conn)
     return conn
@@ -98,7 +99,7 @@ def _host_over(
 
 
 def _fresh_host(script: list[str] | None = None) -> RuntimeHost:
-    return _host_over(_v3_database(), script)
+    return _host_over(_current_database(), script)
 
 
 def _run(host: RuntimeHost, message: str, session_id: str | None = None, **kw):
@@ -112,32 +113,42 @@ def _insert_run(
     run_id: str,
     *,
     purpose: str = "chat",
+    gateway: str = "web",
     phase: str = "accepted",
     outcome: str | None = None,
     session_id: str | None = None,
+    ignore_check_constraints: bool = False,
 ) -> None:
     with host._db_lock:  # noqa: SLF001 - seeding is setup, not assertion
         conn = host._conn  # noqa: SLF001
-        revision = schema.allocate_activity_revision(conn)
-        conn.execute(
-            """INSERT INTO runs (
-                 run_id, purpose, session_id, gateway, entry_surface_id,
-                 prompt_preview, phase, outcome, accepted_at, started_at,
-                 finished_at, activity_revision, telemetry
-               ) VALUES (?, ?, ?, 'web', NULL, ?, ?, ?, ?, NULL, ?, ?, NULL)""",
-            (
-                run_id,
-                purpose,
-                session_id,
-                f"preview {run_id}",
-                phase,
-                outcome,
-                _TS,
-                _TS if phase == "finished" else None,
-                revision,
-            ),
-        )
-        conn.commit()
+        if ignore_check_constraints:
+            conn.execute("PRAGMA ignore_check_constraints = ON")
+        try:
+            revision = schema.allocate_activity_revision(conn)
+            conn.execute(
+                """INSERT INTO runs (
+                     run_id, purpose, session_id, gateway, entry_surface_id,
+                     prompt_preview, phase, outcome, accepted_at, started_at,
+                     finished_at, activity_revision, telemetry, admission_state
+                   ) VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL, ?, ?, NULL,
+                             'admitted')""",
+                (
+                    run_id,
+                    purpose,
+                    session_id,
+                    gateway,
+                    f"preview {run_id}",
+                    phase,
+                    outcome,
+                    _TS,
+                    _TS if phase == "finished" else None,
+                    revision,
+                ),
+            )
+            conn.commit()
+        finally:
+            if ignore_check_constraints:
+                conn.execute("PRAGMA ignore_check_constraints = OFF")
 
 
 def _seed_historic(
@@ -202,24 +213,24 @@ def test_a_purpose_is_filed_by_the_server_not_the_client(
     assert classify_purpose(purpose) == (expected_shelf, known)
 
 
-def test_an_unknown_purpose_is_still_returned_verbatim() -> None:
-    """Escaping, not hiding.
-
-    The value is reported exactly as stored so the client can render it
-    safely; a client that showed nothing would be concealing a Run.
-    """
+def test_the_read_model_preserves_an_unknown_purpose_for_server_rendering() -> None:
+    """The transport-neutral row retains the value the HTTP edge must escape."""
     host = _fresh_host()
     host.start()
     try:
         _insert_run(
-            host, "r-unknown", purpose="inference_probe", phase="finished",
+            host,
+            "r-unknown",
+            purpose="something_added_by_a_newer_migration",
+            phase="finished",
             outcome="completed",
+            ignore_check_constraints=True,
         )
         page = host.list_runs(filter="system")
         assert [run.run_id for run in page.runs] == ["r-unknown"]
-        assert page.runs[0].purpose == "inference_probe"
+        assert page.runs[0].purpose == "something_added_by_a_newer_migration"
         assert page.runs[0].filter == "system"
-        assert page.runs[0].purpose_known is True
+        assert page.runs[0].purpose_known is False
     finally:
         host.close()
 
@@ -383,6 +394,27 @@ def test_a_malformed_cursor_is_refused_not_restarted() -> None:
             host.list_runs(filter="all", cursor="not-a-cursor")
     finally:
         host.close()
+
+
+@pytest.mark.parametrize(
+    "run_id,expected_status", [("r1", 200), ("\ud800", 400), ("\udfff", 400)],
+)
+def test_runs_api_refuses_cursor_text_that_cannot_be_canonicalized(
+    run_id, expected_status,
+) -> None:
+    payload = {"v": 1, "k": "runs", "ar": 7, "r": run_id}
+    raw = json.dumps(payload, ensure_ascii=True, separators=(",", ":")).encode("ascii")
+    cursor = urlsafe_b64encode(raw).decode("ascii")
+    conn = _current_database()
+    host = _host_over(conn)
+    try:
+        status, response = DashboardApi(facade=host).runs_page({"cursor": cursor})
+        assert status == expected_status
+        if expected_status == 400:
+            assert response == {"code": "malformed_cursor"}
+    finally:
+        host.close()
+        conn.close()
 
 
 def test_an_unknown_filter_is_refused() -> None:
@@ -1108,6 +1140,98 @@ def test_mainbar_catches_multiple_pending_runs_after_a_recorded_page() -> None:
         host.close()
 
 
+@pytest.mark.parametrize("record_before_drain_finishes", [False, True])
+def test_mainbar_keeps_a_pending_run_recorded_during_catchup_paging(
+    record_before_drain_finishes,
+) -> None:
+    """A Run observed pending cannot fall between catch-up and old pages."""
+    latch = _FinalizerLatch()
+    latch.release.set()
+    session_id = "s-mainbar-many"
+    host = _historic_host(
+        {session_id: ["旧消息"]},
+        script=["old", "one", "two", "three", "later"],
+        before_recording_commit=latch,
+    )
+    host.start()
+    try:
+        old = _run(host, "old", session_id)
+        latch.reached.clear()
+        latch.release.clear()
+        one = host.submit(SubmitRequest(message="one", session_id=session_id))
+        assert one.kind == "accepted"
+        assert latch.reached.wait(2.0), "first recording pause was not reached"
+        assert host.snapshot().coordinator_state == "recording_pending"
+        api = DashboardApi(facade=host)
+        status, first = api.mainbar({"session_id": session_id, "limit": "1"})
+        assert status == 200
+        assert [item["run_id"] for item in first["items"]] == [old.run_id]
+        assert first["runs_pending"] is True
+        assert first["next_cursor"] is not None
+
+        latch.release.set()
+        host.wait(one.run_id)
+        two = _run(host, "two", session_id)
+        three = _run(host, "three", session_id)
+        status, upper = api.mainbar({
+            "session_id": session_id, "limit": "1",
+            "cursor": first["next_cursor"],
+        })
+        assert status == 200
+        assert [item["run_id"] for item in upper["items"]] == [three.run_id]
+        assert upper["next_cursor"] is not None
+
+        latch.reached.clear()
+        latch.release.clear()
+        later = host.submit(SubmitRequest(message="later", session_id=session_id))
+        assert later.kind == "accepted"
+        assert latch.reached.wait(2.0), "later recording pause was not reached"
+        assert host.snapshot().coordinator_state == "recording_pending"
+        status, middle = api.mainbar({
+            "session_id": session_id, "limit": "1",
+            "cursor": upper["next_cursor"],
+        })
+        assert status == 200
+        assert [item["run_id"] for item in middle["items"]] == [two.run_id]
+        assert middle["runs_pending"] is True
+        assert middle["next_cursor"] is not None
+        if record_before_drain_finishes:
+            latch.release.set()
+            host.wait(later.run_id)
+
+        status, tail = api.mainbar({
+            "session_id": session_id, "limit": "1",
+            "cursor": middle["next_cursor"],
+        })
+        assert status == 200
+        assert [item["run_id"] for item in tail["items"]] == [one.run_id]
+        if not record_before_drain_finishes:
+            latch.release.set()
+            host.wait(later.run_id)
+        status, latest = api.mainbar({"session_id": session_id, "limit": "1"})
+        assert status == 200
+        assert [item["run_id"] for item in latest["items"]] == [later.run_id]
+
+        seen = [*first["items"], *upper["items"], *middle["items"], *tail["items"]]
+        cursor = tail["next_cursor"]
+        for _page in range(8):
+            if cursor is None:
+                break
+            status, page = api.mainbar({
+                "session_id": session_id, "limit": "1", "cursor": cursor,
+            })
+            assert status == 200
+            seen.extend(page["items"])
+            cursor = page["next_cursor"]
+        assert cursor is None, "finite fixture did not finish paging"
+        assert [item.get("run_id") for item in seen] == [
+            old.run_id, three.run_id, two.run_id, one.run_id, later.run_id, None,
+        ]
+    finally:
+        latch.release.set()
+        host.close()
+
+
 def test_mainbar_reopens_a_historic_cursor_without_repeating_historic() -> None:
     latch = _FinalizerLatch()
     host = _historic_host(
@@ -1444,7 +1568,7 @@ def test_a_session_with_both_old_and_new_pages_across_both_segments() -> None:
 )
 def test_browser_read_stores_require_the_central_redactor(read, kwargs) -> None:
     """A new browser read cannot silently opt out of the last secret gate."""
-    conn = _v3_database()
+    conn = _current_database()
     host = _host_over(conn)
     try:
         session_id = host.create_session()
@@ -1468,7 +1592,7 @@ def test_message_bodies_go_through_the_central_redactor() -> None:
     doing their own redaction is how one of them ends up leaking.
     """
     host = _host_over(
-        _v3_database(),
+        _current_database(),
         [f"reply contains {_REDACTION_CANARY}"],
         redactor=Redactor((_REDACTION_CANARY,)),
     )
@@ -1589,7 +1713,7 @@ class _ExplodingRedactor(Redactor):
 
 
 def test_redactor_failure_never_returns_browser_visible_raw_content() -> None:
-    conn = _v3_database()
+    conn = _current_database()
     host = _host_over(conn, redactor=_ExplodingRedactor())
     try:
         session_id = host.create_session()
@@ -1687,6 +1811,19 @@ def test_the_shared_codec_refuses_undecodable_and_foreign_tokens() -> None:
                 version=1,
                 kind="runs",
             )
+
+
+@pytest.mark.parametrize("suffix", ("!", "$$$$", "\n", "="))
+def test_the_shared_codec_refuses_noncanonical_trailing_bytes(suffix: str) -> None:
+    from agent_alfred.runtime.cursor import (
+        MalformedCursor,
+        decode_cursor,
+        encode_cursor,
+    )
+
+    token = encode_cursor({"v": 1, "k": "runs", "ar": 7, "r": "r1"})
+    with pytest.raises(MalformedCursor):
+        decode_cursor(token + suffix, version=1, kind="runs")
 
 
 @pytest.mark.parametrize("activity_revision", [True, False])
@@ -2067,6 +2204,56 @@ def test_a_session_messages_cursor_is_bound_to_its_session() -> None:
 # --- one Session's chat Runs -------------------------------------------------
 
 
+def test_session_chat_runs_keep_each_admitted_runs_gateway_without_a_reply(
+) -> None:
+    """Gateway is the Run's entry fact, even before any reply exists.
+
+    Startup recovery can finish a Run without recording an assistant row, and
+    accepted/running Runs have no reply yet.  Their origins must therefore
+    come from each Run row rather than the nullable reply ``source``.
+    """
+    host = _fresh_host()
+    session_id = host.create_session()
+    _insert_run(
+        host,
+        "web-recovered",
+        gateway="web",
+        phase="running",
+        session_id=session_id,
+    )
+    host.start()
+    try:
+        _insert_run(
+            host,
+            "cli-accepted",
+            gateway="cli",
+            phase="accepted",
+            session_id=session_id,
+        )
+        _insert_run(
+            host,
+            "cli-running",
+            gateway="cli",
+            phase="running",
+            session_id=session_id,
+        )
+
+        page = host.list_session_chat_runs(session_id=session_id, limit=10)
+        by_id = {run.run_id: run for run in page.runs}
+
+        assert by_id["cli-accepted"].gateway == "cli"
+        assert by_id["cli-accepted"].phase == "accepted"
+        assert by_id["cli-running"].gateway == "cli"
+        assert by_id["cli-running"].phase == "running"
+        assert by_id["web-recovered"].gateway == "web"
+        assert by_id["web-recovered"].phase == "finished"
+        assert by_id["web-recovered"].outcome == "interrupted"
+        assert all(run.reply_preview is None for run in by_id.values())
+        assert all(run.reply_source is None for run in by_id.values())
+    finally:
+        host.close()
+
+
 def test_a_sessions_chat_runs_page_independently_by_session() -> None:
     """The Session group's run list answers one Session and no other.
 
@@ -2128,7 +2315,7 @@ def test_a_sessions_chat_runs_page_independently_by_session() -> None:
 def test_a_sessions_chat_runs_group_takes_only_admitted_chat_runs() -> None:
     """A Run's shelf is decided by the server, and this group is chat only.
 
-    Accepted, running and finished chat Runs are all admitted and all appear;
+    The seeded accepted, running and finished chat Runs are admitted and appear;
     a system Run has its own shelf (the runs page) and never leaks in here.
     """
     host = _fresh_host()

@@ -74,9 +74,9 @@ def test_an_injected_factory_is_given_the_loopback_and_nothing_else(tmp_path) ->
     """
     seen: list[tuple] = []
 
-    def factory(address, handler):
+    def factory(address, handler, owner):
         seen.append(address)
-        return _FakeServer()
+        owner.publish(_FakeServer())
 
     service = _service(tmp_path, port=17717, server_factory=factory)
     try:

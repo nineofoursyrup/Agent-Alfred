@@ -17,18 +17,25 @@ another chance to collide.
 
 from __future__ import annotations
 
+import dis
 import json
+import select
 import socket
 import sqlite3
+import struct
+import sys
 import time
 from dataclasses import replace
 from io import BytesIO
 from typing import Any
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 import pytest
 
 from agent_alfred import schema
+from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+    claimed_monitoring_tool,
+)
 from agent_alfred.evals.deterministic._web_runtime_test_helpers import (
     FailFinalizeWhen,
     build_runtime_host,
@@ -36,6 +43,8 @@ from agent_alfred.evals.deterministic._web_runtime_test_helpers import (
 from agent_alfred.events import EventEnvelope, FanOutSink, RunStarted, SequencedEvent
 from agent_alfred.gateway.web import broker as broker_module
 from agent_alfred.gateway.web import frames
+from agent_alfred.gateway.web import guard as guard_module
+from agent_alfred.gateway.web import lifecycle as lifecycle_module
 from agent_alfred.gateway.web.api import DashboardApi
 from agent_alfred.gateway.web.broker import SSEBroker
 from agent_alfred.gateway.web.guard import CSRF_HEADER, RequestGuard
@@ -52,6 +61,65 @@ from agent_alfred.runtime.work import SubmitResult
 
 INSTANCE = "inst-http"
 _TIMEOUT = 3.0
+
+
+@pytest.mark.parametrize(
+    "session_id,run_id", [("", ""), ("session/a?b#c%+中文", "run/a?b#c%+中文")],
+)
+def test_reply_recovery_wire_preserves_opaque_identity(server, session_id, run_id):
+    from agent_alfred.runtime.work import SubmitRequest
+
+    host, conn = build_runtime_host()
+    host.start()
+    server.reset(facade=host)
+    try:
+        submitted = host.submit(SubmitRequest(message="hello"))
+        host.wait(submitted.run_id)
+        # Historic IDs are arbitrary TEXT. Seed their original values directly.
+        conn.execute("UPDATE sessions SET session_id = ?", (session_id,))
+        conn.execute("UPDATE runs SET session_id = ?, run_id = ?", (session_id, run_id))
+        conn.execute(
+            "UPDATE agent_log SET session_id = ?, run_id = ?", (session_id, run_id),
+        )
+        conn.commit()
+        identity = {
+            "process_instance_id": host.process_instance_id,
+            "session_id": session_id, "run_id": run_id,
+        }
+        head, body = _request(
+            server.port, _get(server.port, "/api/reply?" + urlencode(identity)),
+        )
+        assert head.startswith(b"HTTP/1.1 200")
+        assert json.loads(body) == {**identity, "reply_text": "pong"}
+    finally:
+        host.close()
+        conn.close()
+
+
+def test_reply_recovery_wire_returns_a_whole_body_above_the_sse_frame_limit(server):
+    text = "文" * 400_000 + " end"
+    host, conn = build_runtime_host([text])
+    host.start()
+    server.reset(facade=host)
+    try:
+        from agent_alfred.runtime.work import SubmitRequest
+
+        submitted = host.submit(SubmitRequest(message="hello"))
+        host.wait(submitted.run_id)
+        identity = {
+            "process_instance_id": host.process_instance_id,
+            "session_id": submitted.session_id, "run_id": submitted.run_id,
+        }
+        head, body = _request(
+            server.port, _get(server.port, "/api/reply?" + urlencode(identity)),
+        )
+        assert head.startswith(b"HTTP/1.1 200")
+        assert json.loads(body) == {**identity, "reply_text": text}
+        assert b"Cache-Control: no-store" in head
+        _assert_no_cross_origin_permission(head)
+    finally:
+        host.close()
+        conn.close()
 
 
 def _snapshot(
@@ -188,19 +256,36 @@ class _Facade:
         return SessionChatRunsPage(session_id=session_id, runs=(), next_cursor=None)
 
 
-def _free_port() -> int:
-    probe = socket.socket()
-    try:
-        probe.bind((DEFAULT_HOST, 0))
-        return int(probe.getsockname()[1])
-    finally:
-        probe.close()
-
-
 class _Server:
     def __init__(self, tmp_path, *, connection_budget=None, facade=None):
-        self.port = _free_port()
-        self.broker = SSEBroker(
+        self.bind_calls = 0
+        self.service = DashboardService(
+            state_dir=tmp_path,
+            handler=DashboardHandler,
+            instance_id=INSTANCE,
+            port=lifecycle_module.DEFAULT_PORT,
+            server_factory=self._bind_ephemeral_loopback,
+        )
+        self.service.start()
+        self.port = self.service.port
+        self.guard = RequestGuard(port=self.port, csrf_token="token-from-process")
+        self.broker = self._new_broker(connection_budget)
+        self.fanout = FanOutSink([self.broker], process_instance_id=INSTANCE)
+        self.facade = _Facade() if facade is None else facade
+        self.service.attach_context(self._context())
+        self.thread = self.service.start_serving()
+
+    def _bind_ephemeral_loopback(self, address, handler, owner):
+        """Make the module's sole bind choose an available kernel port."""
+        assert address[0] == DEFAULT_HOST
+        self.bind_calls += 1
+        lifecycle_module._default_server_factory(  # noqa: SLF001
+            (DEFAULT_HOST, 0), handler, owner
+        )
+
+    @staticmethod
+    def _new_broker(connection_budget=None) -> SSEBroker:
+        broker = SSEBroker(
             process_instance_id=INSTANCE,
             snapshot=_snapshot(),
             session_is_valid=lambda _session_id: "valid",
@@ -211,28 +296,27 @@ class _Server:
                 else {"connection_budget": connection_budget}
             ),
         )
-        # The dispatcher runs before the socket exists, so an event published
-        # while a stream is open reaches that stream rather than waiting for
-        # the next connection to replay it.
-        self.broker.start()
-        self.fanout = FanOutSink([self.broker], process_instance_id=INSTANCE)
-        self.guard = RequestGuard(port=self.port, csrf_token="token-from-process")
-        self.facade = _Facade() if facade is None else facade
-        context = HandlerContext(
+        # Start dispatch before publishing this broker into the shared server
+        # context, so every request observes a broker ready for live events.
+        broker.start()
+        return broker
+
+    def _context(self) -> HandlerContext:
+        return HandlerContext(
             guard=self.guard,
             api=DashboardApi(facade=self.facade),
             broker=self.broker,
             instance_id=INSTANCE,
         )
-        self.service = DashboardService(
-            state_dir=tmp_path,
-            handler=DashboardHandler,
-            context=context,
-            instance_id=INSTANCE,
-                port=self.port,
-        )
-        self.service.start()
-        self.thread = self.service.start_serving()
+
+    def reset(self, *, connection_budget=None, facade=None) -> None:
+        """Replace test state without rebinding the module's loopback socket."""
+        if not self.broker.close(timeout=2.0):
+            raise RuntimeError("previous test broker did not close")
+        self.broker = self._new_broker(connection_budget)
+        self.fanout = FanOutSink([self.broker], process_instance_id=INSTANCE)
+        self.facade = _Facade() if facade is None else facade
+        self.service.attach_context(self._context())
 
     def emit(self, run_id: str) -> SequencedEvent:
         return self.fanout.emit(
@@ -252,13 +336,19 @@ class _Server:
         self.broker.close(timeout=2.0)
 
 
-@pytest.fixture()
-def server(tmp_path):
-    instance = _Server(tmp_path)
+@pytest.fixture(scope="module")
+def _bound_server(tmp_path_factory):
+    instance = _Server(tmp_path_factory.mktemp("web-http-wire"))
     try:
         yield instance
     finally:
         instance.close()
+
+
+@pytest.fixture()
+def server(_bound_server):
+    _bound_server.reset()
+    return _bound_server
 
 
 # --- raw HTTP helpers -------------------------------------------------------
@@ -327,6 +417,63 @@ def _request(port: int, raw: bytes) -> tuple[bytes, bytes]:
         sock.close()
 
 
+@pytest.mark.parametrize(
+    "partial",
+    (
+        b"HTTP/1.1 200 OK\r\n",
+        b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nab",
+    ),
+    ids=("headers", "body"),
+)
+def test_keep_alive_response_reader_rejects_premature_eof(partial: bytes) -> None:
+    class TruncatedSocket:
+        def __init__(self) -> None:
+            self.chunks = iter((partial, b""))
+
+        def recv(self, size: int) -> bytes:
+            assert size > 0
+            return next(self.chunks)
+
+    with pytest.raises(EOFError, match="incomplete HTTP response"):
+        _read_response_from_socket(TruncatedSocket())
+
+
+def _read_response_from_socket(
+    sock: socket.socket, buffered: bytes = b""
+) -> tuple[bytes, bytes, bytes]:
+    """Read one keep-alive response and preserve bytes of the next one."""
+    data = buffered
+    while b"\r\n\r\n" not in data:
+        chunk = sock.recv(65536)
+        if not chunk:
+            raise EOFError("incomplete HTTP response headers")
+        data += chunk
+    head, _, rest = data.partition(b"\r\n\r\n")
+    length = int(_headers_of(head).get("content-length", "0"))
+    while len(rest) < length:
+        chunk = sock.recv(65536)
+        if not chunk:
+            raise EOFError("incomplete HTTP response body")
+        rest += chunk
+    return head, rest[:length], rest[length:]
+
+
+def _read_to_eof(sock: socket.socket, already: bytes = b"") -> bytes:
+    """Read a response whose contract requires the server to close.
+
+    The socket timeout is only a failing deadlock bound.  Successful return
+    requires the peer's EOF, so elapsed silence can never prove that a second
+    response was absent.
+    """
+    sock.settimeout(_TIMEOUT)
+    buffer = already
+    while True:
+        data = sock.recv(65536)
+        if not data:
+            return buffer
+        buffer += data
+
+
 def _read_until(
     sock: socket.socket,
     predicate,
@@ -350,23 +497,19 @@ def _read_until(
     return buffer
 
 
-def _read_stream(
-    sock: socket.socket, predicate, timeout: float = _TIMEOUT
-) -> bytes:
-    """Read stream bytes from a socket whose headers are already consumed.
-
-    No head/body split is applied here: the terminator was read by whoever
-    consumed the headers, so splitting again would treat the whole stream as
-    a header and report an empty body forever.
-    """
-    return _read_until(sock, predicate, timeout=timeout)
-
-
 def _get(port: int, path: str, extra: str = "", host: str | None = None) -> bytes:
     host_header = host if host is not None else f"localhost:{port}"
     return (
         f"GET {path} HTTP/1.1\r\n"
         f"Host: {host_header}\r\n"
+        f"Connection: close\r\n{extra}\r\n"
+    ).encode()
+
+
+def _head(port: int, path: str, extra: str = "") -> bytes:
+    return (
+        f"HEAD {path} HTTP/1.1\r\n"
+        f"Host: localhost:{port}\r\n"
         f"Connection: close\r\n{extra}\r\n"
     ).encode()
 
@@ -438,6 +581,45 @@ def test_pagination_routes_share_the_ascii_decimal_boundary_on_the_wire(
     assert server.facade.read_limits == [(route, expected)]
 
 
+def test_unknown_purpose_is_server_escaped_on_the_real_http_wire(
+    server, monkeypatch
+) -> None:
+    from agent_alfred.runtime.runs import RunPage, RunSummary
+
+    unsafe = "future-<>&\"'"
+    page = RunPage(
+        filter="system",
+        runs=(
+            RunSummary(
+                run_id="r-future",
+                purpose=unsafe,
+                filter="system",
+                purpose_known=False,
+                session_id=None,
+                gateway="cli",
+                entry_surface_id=None,
+                prompt_preview=None,
+                phase="finished",
+                outcome="completed",
+                accepted_at="2026-09-05T12:00:00Z",
+                started_at="2026-09-05T12:00:00Z",
+                finished_at="2026-09-05T12:00:01Z",
+                activity_revision=7,
+            ),
+        ),
+        non_terminal=None,
+        next_cursor=None,
+    )
+    monkeypatch.setattr(server.facade, "list_runs", lambda **_kwargs: page)
+
+    head, body = _request(server.port, _get(server.port, "/api/runs?filter=system"))
+    [run] = json.loads(body)["runs"]
+
+    assert head.startswith(b"HTTP/1.1 200")
+    assert run["purpose"] == "future-&lt;&gt;&amp;&quot;&#x27;"
+    assert run["purpose_known"] is False
+
+
 def test_an_unknown_read_failure_remains_an_internal_error_on_the_wire(
     server, monkeypatch
 ) -> None:
@@ -481,7 +663,7 @@ def _open_stream(
 ) -> bytes:
     """Open the stream and read until it has settled.
 
-    ``until_events`` counts domain events; ``None`` waits only for the
+    ``until_events`` counts complete replayable events; ``None`` waits for the
     snapshot, which is the right stopping point for a connection that has
     nothing to catch up on.
     """
@@ -491,12 +673,13 @@ def _open_stream(
     return _raw_stream(
         server,
         extra,
-        lambda body: body.count(b"event: domain_event") >= until_events,
+        # The first complete id is the re-seed; only later ids are events.
+        lambda body: len(_ids_from(body)) >= until_events + 1,
     )[1]
 
 
 def _ids_from(body: bytes) -> list[int]:
-    """Every ``id:`` line on the wire, in order.
+    """Every ``id:`` line in complete SSE records, in wire order.
 
     The first one is the re-seed -- the dataless frame that keeps the cursor
     alive -- and the rest are the checkpoints of complete events. Reading
@@ -504,7 +687,8 @@ def _ids_from(body: bytes) -> list[int]:
     """
     return [
         int(line.split(b":")[-1])
-        for line in body.split(b"\n")
+        for record in body.split(b"\n\n")[:-1]
+        for line in record.split(b"\n")
         if line.startswith(b"id: ")
     ]
 
@@ -513,7 +697,10 @@ def test_the_stream_opens_with_retry_then_reseed_then_the_snapshot(server) -> No
     first = server.emit("r1")
     second = server.emit("r2")
     third = server.emit("r3")
-    head, body = _raw_stream(server, "", lambda data: b"event: state_patch" in data)
+    head, body = _raw_stream(
+        server, "",
+        lambda data: b"event: state_patch" in data.rpartition(b"\n\n")[0],
+    )
 
     assert b"200" in head.split(b"\r\n")[0]
     assert _headers_of(head)["content-type"].startswith("text/event-stream")
@@ -538,10 +725,10 @@ def test_events_published_while_a_stream_is_open_reach_it(server) -> None:
     sock = _connect(server.port)
     try:
         sock.sendall(_get(server.port, "/api/events"))
-        _read_stream(sock, lambda data: b"event: state_patch" in data)
+        _read_until(sock, lambda data: b"event: state_patch" in data)
         events = [server.emit(f"live-{index}") for index in range(3)]
-        body = _read_stream(
-            sock, lambda data: data.count(b"event: domain_event") >= 3
+        body = _read_until(
+            sock, lambda data: _ids_from(data) == [event.seq for event in events]
         )
     finally:
         sock.close()
@@ -580,7 +767,8 @@ def test_a_reconnect_sends_its_cursor_and_gets_only_the_tail(server) -> None:
 def test_an_unusable_cursor_is_reported_as_a_gap_not_a_silent_resume(server) -> None:
     server.emit("r1")
     _head, body = _raw_stream(
-        server, "Last-Event-ID: garbage\r\n", lambda data: b"replay_gap" in data
+        server, "Last-Event-ID: garbage\r\n",
+        lambda data: b"replay_gap" in data.rpartition(b"\n\n")[0],
     )
     assert b'"code":"replay_gap"' in body
     assert b'"gap_reason":"malformed"' in body
@@ -713,15 +901,11 @@ def test_an_unverifiable_session_is_refused_before_stream_ownership(
     assert server.broker.registrations_in_flight == 0
 
 
-def test_startup_budget_refusal_is_json_before_sse_headers(tmp_path) -> None:
-    server = _Server(
-        tmp_path,
+def test_startup_budget_refusal_is_json_before_sse_headers(server) -> None:
+    server.reset(
         connection_budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20),
     )
-    try:
-        head, body = _request(server.port, _get(server.port, "/api/events"))
-    finally:
-        server.close()
+    head, body = _request(server.port, _get(server.port, "/api/events"))
 
     assert head.startswith(b"HTTP/1.1 503")
     assert _headers_of(head)["content-type"] == "application/json; charset=utf-8"
@@ -730,27 +914,141 @@ def test_startup_budget_refusal_is_json_before_sse_headers(tmp_path) -> None:
     assert server.broker.registrations_in_flight == 0
 
 
+def test_handler_exposes_an_incomplete_pre_header_stream_rollback() -> None:
+    """No HTTP error is emitted while its prepared-stream cleanup is pending."""
+    from types import SimpleNamespace
+
+    from agent_alfred.resource_rollback import IncompleteRollback
+    from agent_alfred.runtime.recording import RecordingUnavailable
+
+    failure = RecordingUnavailable("injected recording refusal")
+    may_finish = False
+
+    class Broker:
+        def prepare_stream(self, *, _rollback, **kwargs):
+            del kwargs
+            token = object()
+            _rollback.own(token, lambda: may_finish)
+            raise failure
+
+    handler = object.__new__(DashboardHandler)
+    handler.server = SimpleNamespace(context=SimpleNamespace(broker=Broker()))
+    handler.path = "/api/events"
+    handler.headers = {}
+    handler.connection = object()
+    handler.wfile = BytesIO()
+    handler.close_connection = False
+    sent: list[tuple[int, dict[str, str]]] = []
+    handler._send = lambda status, payload: sent.append((status, payload))
+
+    with pytest.raises(RecordingUnavailable) as caught:
+        handler._serve_events()
+
+    cleanup = caught.value.__cause__
+    assert isinstance(cleanup, IncompleteRollback)
+    assert sent == []
+    may_finish = True
+    assert cleanup.retry() is True
+
+
+def test_handler_recovers_a_transferred_handle_at_its_return_edge() -> None:
+    """The HTTP owner waits rather than reclaiming a writer-owned socket."""
+    from types import SimpleNamespace
+
+    class Finished:
+        waited = False
+
+        def wait(self) -> None:
+            self.waited = True
+
+    finished = Finished()
+    handle = SimpleNamespace(finished=finished)
+    acquisition = SimpleNamespace(transferred=False)
+    proof = SimpleNamespace(
+        _broker=None,
+        _acquisition=acquisition,
+        _handle=handle,
+        transferred_handle=lambda: handle if acquisition.transferred else None,
+    )
+
+    class Broker:
+        def prepare_stream(self, *, _rollback, **kwargs):
+            del kwargs
+            proof._broker = self
+            _rollback.own(proof, lambda: True)
+            return proof
+
+        def start_stream(self, offered_proof):
+            assert offered_proof is proof
+            acquisition.transferred = True
+            return handle
+
+    broker = Broker()
+    handler = object.__new__(DashboardHandler)
+    handler.server = SimpleNamespace(context=SimpleNamespace(broker=broker))
+    handler.path = "/api/events"
+    handler.headers = {}
+    handler.connection = object()
+    handler.wfile = BytesIO()
+    handler.close_connection = False
+    handler.send_response = lambda _status: None
+    handler.send_header = lambda _name, _value: None
+    handler.end_headers = lambda: None
+
+    code = DashboardHandler._serve_events.__code__
+    target = next(
+        instruction.offset
+        for instruction in dis.get_instructions(code)
+        if instruction.opname == "STORE_FAST" and instruction.argval == "handle"
+    )
+    armed = [True]
+    control = SystemExit("stream handle returned before its local store")
+    with claimed_monitoring_tool(
+        "handler-stream-return-owner", local_codes=(code,)
+    ) as tool_id:
+
+        def interrupt(actual_code, actual_offset):
+            if armed[0] and actual_code is code and actual_offset == target:
+                armed[0] = False
+                raise control
+
+        sys.monitoring.register_callback(
+            tool_id, sys.monitoring.events.INSTRUCTION, interrupt
+        )
+        sys.monitoring.set_local_events(
+            tool_id, code, sys.monitoring.events.INSTRUCTION
+        )
+        handler._serve_events()
+
+    assert armed == [False]
+    assert finished.waited is True
+    assert handler.close_connection is True
+
+
 def test_capture_exhaustion_is_json_before_sse_headers(
-    tmp_path, monkeypatch
+    server, monkeypatch
 ) -> None:
-    server = _Server(tmp_path)
     captures = 0
+    advancing = False
     real_encoder = broker_module._patch_frames
 
     def advancing_encoder(snapshot, step, session_valid):
-        nonlocal captures
+        nonlocal captures, advancing
+        if advancing:
+            return real_encoder(snapshot, step, session_valid)
         captures += 1
         encoded = real_encoder(snapshot, step, session_valid)
-        server.broker.publish_state_patch(
-            replace(_snapshot(), state_revision=captures)
-        )
+        advancing = True
+        try:
+            server.broker.publish_state_patch(
+                replace(_snapshot(), state_revision=captures)
+            )
+        finally:
+            advancing = False
         return encoded
 
     monkeypatch.setattr(broker_module, "_patch_frames", advancing_encoder)
-    try:
-        head, body = _request(server.port, _get(server.port, "/api/events"))
-    finally:
-        server.close()
+    head, body = _request(server.port, _get(server.port, "/api/events"))
 
     assert captures == broker_module._MAX_PATCH_CAPTURES
     assert head.startswith(b"HTTP/1.1 503")
@@ -810,6 +1108,78 @@ def test_a_foreign_origin_is_refused(server) -> None:
     assert b"origin_not_allowed" in body
 
 
+@pytest.mark.parametrize(
+    ("host", "origin", "status", "code"),
+    (
+        ("evil.example", "http://evil.example", 400, "host_not_allowed"),
+        (None, "http://evil.example", 403, "origin_not_allowed"),
+    ),
+)
+def test_connect_is_guarded_and_uses_the_common_response_headers(
+    server,
+    host: str | None,
+    origin: str,
+    status: int,
+    code: str,
+) -> None:
+    host_header = host if host is not None else f"localhost:{server.port}"
+    raw = (
+        "CONNECT /api/entry HTTP/1.1\r\n"
+        f"Host: {host_header}\r\n"
+        f"Origin: {origin}\r\n"
+        "Connection: close\r\n\r\n"
+    ).encode()
+
+    head, body = _request(server.port, raw)
+
+    assert head.startswith(f"HTTP/1.1 {status}".encode())
+    assert json.loads(body)["code"] == code
+    headers = _headers_of(head)
+    assert headers["cache-control"] == "no-store"
+    assert headers["x-content-type-options"] == "nosniff"
+    assert headers["content-security-policy"] == (
+        "default-src 'none'; frame-ancestors 'none'"
+    )
+    assert headers["x-accel-buffering"] == "no"
+    _assert_no_cross_origin_permission(head)
+
+
+@pytest.mark.parametrize(
+    ("host", "status", "code"),
+    (
+        ("rebound.evil.example", 400, "host_not_allowed"),
+        (None, 405, "method_not_allowed"),
+    ),
+)
+def test_extension_methods_cannot_bypass_the_guard_or_common_headers(
+    server, host: str | None, status: int, code: str
+) -> None:
+    host_header = host if host is not None else f"localhost:{server.port}"
+    raw = (
+        "PROPFIND /api/entry HTTP/1.1\r\n"
+        f"Host: {host_header}\r\n"
+        "Origin: https://evil.example\r\n"
+        "Connection: close\r\n\r\n"
+    ).encode()
+    if host is None:
+        raw = raw.replace(
+            b"Origin: https://evil.example\r\n", b""
+        )
+
+    head, body = _request(server.port, raw)
+
+    assert head.startswith(f"HTTP/1.1 {status}".encode())
+    assert json.loads(body)["code"] == code
+    headers = _headers_of(head)
+    assert headers["cache-control"] == "no-store"
+    assert headers["x-content-type-options"] == "nosniff"
+    assert headers["content-security-policy"] == (
+        "default-src 'none'; frame-ancestors 'none'"
+    )
+    assert headers["x-accel-buffering"] == "no"
+    _assert_no_cross_origin_permission(head)
+
+
 def test_no_response_ever_grants_cross_origin_access(server) -> None:
     """The one header whose absence is the defence.
 
@@ -862,6 +1232,37 @@ def test_a_write_with_the_token_is_accepted(server) -> None:
     _assert_no_cross_origin_permission(head)
 
 
+@pytest.mark.parametrize("comparison_fails", [False, True])
+def test_token_comparison_type_error_is_a_wire_rejection(
+    server, monkeypatch, comparison_fails: bool,
+) -> None:
+    """An unavailable comparison refuses the write without losing its response."""
+    compared: list[tuple[str, str]] = []
+    real_compare = guard_module.hmac.compare_digest
+
+    def compare_token(actual: str, expected: str) -> bool:
+        compared.append((actual, expected))
+        if comparison_fails:
+            raise TypeError("injected token comparison failure")
+        return real_compare(actual, expected)
+
+    monkeypatch.setattr(guard_module.hmac, "compare_digest", compare_token)
+    head, body = _post_runs(
+        server, b'{"message":"hi","session_id":"session-from-server"}',
+    )
+    token = server.guard.csrf_token
+    assert compared == [(token, token)], "comparison injection was not reached"
+    if comparison_fails:
+        assert head.startswith(b"HTTP/1.1 403")
+        assert json.loads(body)["code"] == "csrf_rejected"
+        assert server.facade.submitted == []
+    else:
+        assert head.startswith(b"HTTP/1.1 202")
+        assert json.loads(body)["run_id"] == "run-on-wire"
+        assert len(server.facade.submitted) == 1
+    _assert_no_cross_origin_permission(head)
+
+
 def test_a_running_run_is_a_real_http_409(server) -> None:
     snapshot = _snapshot(coordinator_state="running", active_run=_active())
     server.facade.submit_result = SubmitResult(
@@ -895,7 +1296,8 @@ def test_recording_pending_is_a_real_http_409_with_saving_stage(server) -> None:
     assert head.startswith(b"HTTP/1.1 409")
     payload = json.loads(body)
     assert payload["code"] == "run_in_progress"
-    assert payload["busy"]["stage"] == "正在保存"
+    assert payload["active_run_summary"]["stage"] == "正在保存"
+    assert "busy" not in payload
     _assert_no_cross_origin_permission(head)
 
 
@@ -917,7 +1319,7 @@ def test_recording_failed_is_a_real_http_503(server) -> None:
     assert head.startswith(b"HTTP/1.1 503")
     payload = json.loads(body)
     assert payload["code"] == "recording_unavailable"
-    assert payload["busy"]["navigation"] == {
+    assert payload["active_run_summary"]["navigation"] == {
         "href": "/runs/run-already-active?filter=chat",
         "run_id": "run-already-active",
         "filter": "chat",
@@ -951,7 +1353,7 @@ def test_handoff_failed_is_a_real_http_503_without_a_run_id(server) -> None:
 
 
 def test_handoff_finalize_double_failure_never_leaks_its_id_on_later_http_refusal(
-    tmp_path,
+    server,
 ) -> None:
     flag = {"armed": False}
     database = sqlite3.connect(":memory:", check_same_thread=False)
@@ -963,7 +1365,7 @@ def test_handoff_finalize_double_failure_never_leaks_its_id_on_later_http_refusa
 
     host, conn = build_runtime_host(conn=wrapped, publish_work=refuse_handoff)
     host.start()
-    server = _Server(tmp_path, facade=host)
+    server.reset(facade=host)
     try:
         session_id = host.create_session()
         flag["armed"] = True
@@ -1007,7 +1409,6 @@ def test_handoff_finalize_double_failure_never_leaks_its_id_on_later_http_refusa
             else:
                 assert read_head.startswith(b"HTTP/1.1 200")
     finally:
-        server.close()
         host.close()
 
 
@@ -1030,7 +1431,7 @@ def test_known_and_raced_busy_are_the_same_json_on_a_real_socket(server) -> None
     known = json.loads(known_body)
     assert raced_head.startswith(b"HTTP/1.1 409")
     assert known_head.startswith(b"HTTP/1.1 409")
-    assert raced["busy"] == known["busy"] == {
+    assert raced["active_run_summary"] == known["active_run_summary"] == {
         "purpose": "chat",
         "gateway": "web",
         "started_at": "2026-08-31T08:00:00Z",
@@ -1229,13 +1630,15 @@ def test_invalid_content_lengths_are_closed_json_answers_on_the_wire(
 def test_the_http_parser_preserves_leading_zero_body_boundaries(
     server, length: str, status: int, code: str | None
 ) -> None:
+    declared = 1_048_576 if status == 201 else 1_048_577
+    request_body = b"{}" + b" " * (declared - 2) if status == 201 else b""
     raw = (
         f"POST /api/sessions HTTP/1.1\r\n"
         f"Host: localhost:{server.port}\r\n"
         f"Content-Type: application/json\r\n"
         f"{CSRF_HEADER}: {server.guard.csrf_token}\r\n"
         f"Content-Length: {length}\r\n\r\n"
-    ).encode()
+    ).encode() + request_body
 
     head, body = _request(server.port, raw)
 
@@ -1287,6 +1690,40 @@ def test_every_response_carries_the_hardening_headers(server) -> None:
     assert headers["cache-control"] == "no-store"
 
 
+@pytest.mark.parametrize(
+    ("raw", "status"),
+    (
+        (b"GET / HTTP/1.1 EXTRA\r\nConnection: keep-alive\r\n\r\n", 400),
+        (b"GET /" + (b"a" * 65537) + b" HTTP/1.1\r\n\r\n", 414),
+        (
+            b"GET / HTTP/1.1\r\n"
+            + b"X-Too-Large: "
+            + (b"a" * 65537)
+            + b"\r\n\r\n",
+            431,
+        ),
+    ),
+)
+def test_parser_level_errors_use_the_hardened_json_response(
+    server, raw: bytes, status: int
+) -> None:
+    head, body = _request(server.port, raw)
+
+    assert head.startswith(f"HTTP/1.1 {status}".encode())
+    assert json.loads(body) == {"code": "bad_request"}
+    headers = _headers_of(head)
+    assert headers["content-type"] == "application/json; charset=utf-8"
+    assert headers["content-length"] == str(len(body))
+    assert headers["connection"] == "close"
+    assert headers["cache-control"] == "no-store"
+    assert headers["x-content-type-options"] == "nosniff"
+    assert headers["content-security-policy"] == (
+        "default-src 'none'; frame-ancestors 'none'"
+    )
+    assert headers["x-accel-buffering"] == "no"
+    _assert_no_cross_origin_permission(head)
+
+
 # --- the entry endpoint and 404 ---------------------------------------------
 
 
@@ -1309,6 +1746,357 @@ def test_creating_a_session_returns_a_server_signed_id(server) -> None:
     head, body = _request(server.port, raw)
     assert b"201" in head.split(b"\r\n")[0]
     assert b'"session_id":"session-from-server"' in body
+
+
+@pytest.mark.parametrize("method", ["PUT", "PATCH", "DELETE"])
+@pytest.mark.parametrize(
+    ("path", "payload"),
+    [
+        ("/api/sessions", b"{}"),
+        ("/api/runs", b'{"message":"x","session_id":"s"}'),
+    ],
+)
+def test_only_post_may_reach_write_facades(
+    server, method: str, path: str, payload: bytes
+) -> None:
+    raw = (
+        f"{method} {path} HTTP/1.1\r\n"
+        f"Host: localhost:{server.port}\r\n"
+        "Content-Type: application/json\r\n"
+        f"{CSRF_HEADER}: {server.guard.csrf_token}\r\n"
+        f"Content-Length: {len(payload)}\r\n\r\n"
+    ).encode() + payload
+
+    head, body = _request(server.port, raw)
+
+    assert head.startswith(b"HTTP/1.1 405")
+    assert json.loads(body) == {"code": "method_not_allowed"}
+    assert server.facade.created_sessions == []
+    assert server.facade.submitted == []
+    _assert_no_cross_origin_permission(head)
+
+
+@pytest.mark.parametrize(
+    ("payload", "code"),
+    [(b"not-json", "body_not_json"), (b"[]", "body_not_object")],
+)
+def test_session_creation_validates_its_declared_body_before_the_facade(
+    server, payload: bytes, code: str
+) -> None:
+    raw = (
+        "POST /api/sessions HTTP/1.1\r\n"
+        f"Host: localhost:{server.port}\r\n"
+        "Content-Type: application/json\r\n"
+        f"{CSRF_HEADER}: {server.guard.csrf_token}\r\n"
+        f"Content-Length: {len(payload)}\r\n\r\n"
+    ).encode() + payload
+
+    head, body = _request(server.port, raw)
+
+    assert head.startswith(b"HTTP/1.1 400")
+    assert json.loads(body) == {"code": code}
+    assert server.facade.created_sessions == []
+
+
+def test_session_body_is_consumed_before_the_next_keepalive_request(server) -> None:
+    first = (
+        "POST /api/sessions HTTP/1.1\r\n"
+        f"Host: localhost:{server.port}\r\n"
+        "Content-Type: application/json\r\n"
+        f"{CSRF_HEADER}: {server.guard.csrf_token}\r\n"
+        "Content-Length: 2\r\n\r\n{}"
+    ).encode()
+    second = _get(server.port, "/api/entry", extra="Connection: close\r\n")
+    sock = _connect(server.port)
+    try:
+        sock.sendall(first + second)
+        first_head, _first_body, buffered = _read_response_from_socket(sock)
+        second_head, _second_body, _ = _read_response_from_socket(sock, buffered)
+    finally:
+        sock.close()
+
+    assert first_head.startswith(b"HTTP/1.1 201")
+    assert second_head.startswith(b"HTTP/1.1 200")
+
+
+@pytest.mark.parametrize("payload", (b"{}", b"{"))
+def test_a_short_declared_body_is_rejected_before_session_creation(
+    server, payload: bytes
+) -> None:
+    raw = (
+        "POST /api/sessions HTTP/1.1\r\n"
+        f"Host: localhost:{server.port}\r\n"
+        "Content-Type: application/json\r\n"
+        f"{CSRF_HEADER}: {server.guard.csrf_token}\r\n"
+        "Content-Length: 10\r\n\r\n"
+    ).encode() + payload
+    sock = _connect(server.port)
+    try:
+        sock.sendall(raw)
+        sock.shutdown(socket.SHUT_WR)
+        head, body, _ = _read_response_from_socket(sock)
+    finally:
+        sock.close()
+
+    assert head.startswith(b"HTTP/1.1 400")
+    assert json.loads(body) == {"code": "body_not_json"}
+    _assert_no_cross_origin_permission(head)
+    assert server.facade.created_sessions == []
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "extra", "declared_length", "expected_status"),
+    [
+        ("PUT", "/api/sessions", "", 64, 405),
+        ("POST", "/api/sessions", "", 1_048_577, 413),
+        ("POST", "/api/unknown", "", 64, 404),
+        ("POST", "/api/sessions", "X-Agent-Alfred-CSRF: wrong\r\n", 64, 403),
+    ],
+)
+def test_early_write_response_closes_before_body_can_frame_a_second_request(
+    server,
+    method: str,
+    path: str,
+    extra: str,
+    declared_length: int,
+    expected_status: int,
+) -> None:
+    embedded = _get(server.port, "/api/entry", extra="Connection: close\r\n")
+    csrf = "wrong" if extra else server.guard.csrf_token
+    raw = (
+        f"{method} {path} HTTP/1.1\r\n"
+        f"Host: localhost:{server.port}\r\n"
+        "Content-Type: application/json\r\n"
+        f"{CSRF_HEADER}: {csrf}\r\n"
+        f"Content-Length: {declared_length}\r\n\r\n"
+    ).encode() + embedded
+    sock = _connect(server.port)
+    try:
+        sock.sendall(raw)
+        received = _read_to_eof(sock)
+    finally:
+        sock.close()
+
+    assert received.startswith(f"HTTP/1.1 {expected_status}".encode())
+    assert received.count(b"HTTP/1.1 ") == 1
+    assert _headers_of(received.partition(b"\r\n\r\n")[0])["connection"] == "close"
+    assert server.facade.created_sessions == []
+    assert server.facade.submitted == []
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "extra", "expected_status"),
+    [
+        ("GET", "/api/entry", "", 200),
+        ("GET", "/api/unknown", "", 404),
+        ("HEAD", "/api/events", "", 200),
+        ("OPTIONS", "/api/entry", "", 405),
+        ("OPTIONS", "/api/entry", "Origin: https://evil.example\r\n", 403),
+        ("TRACE", "/api/entry", "", 405),
+    ],
+)
+def test_unconsumed_body_on_any_method_closes_before_an_embedded_request(
+    server, method: str, path: str, extra: str, expected_status: int
+) -> None:
+    embedded = _get(server.port, "/api/entry", extra="Connection: close\r\n")
+    raw = (
+        f"{method} {path} HTTP/1.1\r\n"
+        f"Host: localhost:{server.port}\r\n"
+        f"{extra}"
+        f"Content-Length: {len(embedded)}\r\n\r\n"
+    ).encode() + embedded
+    sock = _connect(server.port)
+    try:
+        sock.sendall(raw)
+        received = _read_to_eof(sock)
+    finally:
+        sock.close()
+
+    assert received.startswith(f"HTTP/1.1 {expected_status}".encode())
+    assert received.count(b"HTTP/1.1 ") == 1
+    assert _headers_of(received.partition(b"\r\n\r\n")[0])["connection"] == "close"
+    _assert_no_cross_origin_permission(received)
+    assert server.facade.created_sessions == []
+    assert server.facade.submitted == []
+
+
+def test_head_matches_get_metadata_and_preserves_the_next_response(server) -> None:
+    raw = (
+        "HEAD /api/entry HTTP/1.1\r\n"
+        f"Host: localhost:{server.port}\r\n\r\n"
+        "GET /api/entry HTTP/1.1\r\n"
+        f"Host: localhost:{server.port}\r\n"
+        "Connection: close\r\n\r\n"
+    ).encode()
+    sock = _connect(server.port)
+    try:
+        sock.sendall(raw)
+        received = _read_until(sock, lambda data: data.count(b"\r\n\r\n") >= 2)
+        first_head, separator, next_response = received.partition(b"\r\n\r\n")
+        second_head, second_body, trailing = _read_response_from_socket(
+            sock, next_response
+        )
+    finally:
+        sock.close()
+
+    assert separator
+    assert first_head.startswith(b"HTTP/1.1 200")
+    assert next_response.startswith(b"HTTP/1.1 200")
+    assert second_head.startswith(b"HTTP/1.1 200")
+    assert _headers_of(first_head)["content-length"] == _headers_of(second_head)[
+        "content-length"
+    ]
+    assert json.loads(second_body)["instance_id"] == INSTANCE
+    assert trailing == b""
+
+
+@pytest.mark.parametrize(
+    ("path", "expected_status"),
+    [
+        ("/api/sessions", 200),
+        ("/api/nonsense", 404),
+    ],
+)
+def test_head_reuses_each_ordinary_get_route(
+    server, path: str, expected_status: int
+) -> None:
+    head, head_body = _request(server.port, _head(server.port, path))
+    get_head, get_body = _request(server.port, _get(server.port, path))
+
+    assert head.startswith(f"HTTP/1.1 {expected_status}".encode())
+    assert get_head.startswith(f"HTTP/1.1 {expected_status}".encode())
+    assert head_body == b""
+    assert _headers_of(head)["content-length"] == _headers_of(get_head)[
+        "content-length"
+    ]
+    assert _headers_of(head)["content-type"] == _headers_of(get_head)[
+        "content-type"
+    ]
+    assert json.loads(get_body)
+
+
+def test_events_head_returns_sse_headers_without_owning_a_stream(
+    server, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    prepare_calls = 0
+    start_calls = 0
+
+    def reject_prepare(**_kwargs):
+        nonlocal prepare_calls
+        prepare_calls += 1
+        raise AssertionError("HEAD must not prepare a stream")
+
+    def reject_start(_proof):
+        nonlocal start_calls
+        start_calls += 1
+        raise AssertionError("HEAD must not start a writer")
+
+    monkeypatch.setattr(server.broker, "prepare_stream", reject_prepare)
+    monkeypatch.setattr(server.broker, "start_stream", reject_start)
+    raw = (
+        "HEAD /api/events HTTP/1.1\r\n"
+        f"Host: localhost:{server.port}\r\n\r\n"
+        "GET /api/entry HTTP/1.1\r\n"
+        f"Host: localhost:{server.port}\r\n"
+        "Connection: close\r\n\r\n"
+    ).encode()
+
+    sock = _connect(server.port)
+    try:
+        sock.sendall(raw)
+        received = _read_until(sock, lambda data: data.count(b"\r\n\r\n") >= 2)
+        first_head, separator, next_response = received.partition(b"\r\n\r\n")
+        second_head, second_body, trailing = _read_response_from_socket(
+            sock, next_response
+        )
+    finally:
+        sock.close()
+
+    assert separator
+    assert first_head.startswith(b"HTTP/1.1 200")
+    assert _headers_of(first_head)["content-type"].startswith("text/event-stream")
+    assert "content-length" not in _headers_of(first_head)
+    assert next_response.startswith(b"HTTP/1.1 200")
+    assert second_head.startswith(b"HTTP/1.1 200")
+    assert json.loads(second_body)["instance_id"] == INSTANCE
+    assert trailing == b""
+    assert prepare_calls == 0
+    assert start_calls == 0
+    assert server.broker.connections == ()
+    assert server.broker.registrations_in_flight == 0
+
+
+def test_events_head_preserves_session_preflight_failure_metadata(
+    server, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    prepare_calls = 0
+    start_calls = 0
+    real_prepare = server.broker.prepare_stream
+    real_start = server.broker.start_stream
+
+    def observe_prepare(**kwargs):
+        nonlocal prepare_calls
+        prepare_calls += 1
+        return real_prepare(**kwargs)
+
+    def observe_start(proof):
+        nonlocal start_calls
+        start_calls += 1
+        return real_start(proof)
+
+    monkeypatch.setattr(server.broker, "prepare_stream", observe_prepare)
+    monkeypatch.setattr(server.broker, "start_stream", observe_start)
+    server.broker.bind_session_check(lambda _session_id: "unavailable")
+
+    head, head_body = _request(
+        server.port,
+        _head(server.port, "/api/events?session_id=not-recorded"),
+    )
+    assert prepare_calls == 0
+    assert start_calls == 0
+
+    get_head, get_body = _request(
+        server.port,
+        _get(server.port, "/api/events?session_id=not-recorded"),
+    )
+
+    assert head.startswith(b"HTTP/1.1 503")
+    assert get_head.startswith(b"HTTP/1.1 503")
+    assert head_body == b""
+    assert _headers_of(head)["content-length"] == _headers_of(get_head)[
+        "content-length"
+    ]
+    assert _headers_of(head)["content-type"] == _headers_of(get_head)[
+        "content-type"
+    ]
+    assert json.loads(get_body) == {"code": "recording_unavailable"}
+    assert prepare_calls == 1
+    assert start_calls == 0
+    assert server.broker.connections == ()
+    assert server.broker.registrations_in_flight == 0
+
+
+@pytest.mark.parametrize(
+    ("headers", "code"),
+    [
+        ("Transfer-Encoding: chunked\r\n", "unsupported_transfer_encoding"),
+        ("Content-Length: 2\r\nContent-Length: 2\r\n", "conflicting_content_length"),
+        ("Content-Length: 2\r\nContent-Length: 3\r\n", "conflicting_content_length"),
+    ],
+)
+def test_ambiguous_request_framing_is_rejected_and_closed(
+    server, headers, code
+) -> None:
+    raw = (
+        "GET /api/entry HTTP/1.1\r\n"
+        f"Host: localhost:{server.port}\r\n"
+        f"{headers}\r\n"
+    ).encode()
+    head, body = _request(server.port, raw)
+    assert head.startswith(b"HTTP/1.1 400")
+    assert json.loads(body)["code"] == code
+    assert _headers_of(head)["connection"] == "close"
+    _assert_no_cross_origin_permission(head)
 
 
 def test_recording_unavailable_refuses_session_creation_on_the_wire(server) -> None:
@@ -1336,16 +2124,8 @@ def test_an_unknown_path_is_a_json_404(server) -> None:
 
 
 def test_the_server_binds_only_loopback(server) -> None:
+    assert server.bind_calls == 1
     assert server.service.server.server_address[0] == DEFAULT_HOST
-    # Nothing else is even listening: a connection attempt to the same port
-    # on any other local address must not reach this server.
-    other = socket.socket()
-    other.settimeout(0.5)
-    try:
-        other.bind((DEFAULT_HOST, 0))
-        assert other.getsockname()[1] != server.port
-    finally:
-        other.close()
 
 
 def test_a_closed_stream_lets_the_handler_thread_go(server) -> None:
@@ -1358,20 +2138,24 @@ def test_a_closed_stream_lets_the_handler_thread_go(server) -> None:
     sock = _connect(server.port)
     try:
         sock.sendall(_get(server.port, "/api/events"))
-        _read_stream(sock, lambda data: b"event: state_patch" in data)
+        _read_until(sock, lambda data: b"event: state_patch" in data)
         assert len(server.broker.connections) == 1
+        handle = server.broker.connections[0]
+        # Force a reset rather than relying on an arbitrary number of writes
+        # to discover an ordinary FIN. The server-side descriptor becoming
+        # readable is the kernel's deterministic acknowledgement of it.
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
     finally:
         sock.close()
-    sock.close()
+    readable, _, _ = select.select(
+        [handle.connection._sock], [], [], _TIMEOUT  # noqa: SLF001
+    )
+    assert readable, "server socket did not observe the peer reset"
     # The writer only learns the peer is gone when it next writes to it --
     # that is what the heartbeat is for, and it is why an idle connection
     # thread cannot be left blocked on get() forever.
-    deadline = time.monotonic() + _TIMEOUT
-    while time.monotonic() < deadline:
-        server.emit(f"probe-{time.monotonic()}")
-        if not server.broker.connections:
-            break
-        time.sleep(0.02)
+    server.emit("closed-peer-probe")
+    assert handle.finished.wait(_TIMEOUT), "writer did not retire the reset peer"
     assert server.broker.connections == ()
 
 
@@ -1402,6 +2186,38 @@ def test_the_cursor_round_trips_through_a_real_socket(server) -> None:
     reseed, *again = _ids_from(_open_stream(server, f"{INSTANCE}:2", until_events=3))
     assert again == [3, 4, 5]
     assert [event.seq for event in events] == [1, 2, 3, 4, 5]
+
+
+@pytest.mark.parametrize(
+    ("run_id", "encoded_id"),
+    [
+        ("run space", "run%20space"),
+        ("run 中文", "run%20%E4%B8%AD%E6%96%87"),
+        ("run/a?b#c", "run%2Fa%3Fb%23c"),
+        ("run%2Fid", "run%252Fid"),
+    ],
+)
+def test_run_deep_link_percent_decodes_the_opaque_id_exactly_once(
+    server, monkeypatch, run_id, encoded_id
+) -> None:
+    from agent_alfred.runtime.runs import RunPage
+
+    located_ids = []
+
+    def locate(requested_id: str, *, limit: int):
+        located_ids.append(requested_id)
+        if requested_id != run_id:
+            return None
+        return RunPage(filter="chat", runs=(), non_terminal=None, next_cursor=None)
+
+    monkeypatch.setattr(server.facade, "locate_run", locate)
+    head, body = _request(
+        server.port, _get(server.port, "/api/runs/locate/" + encoded_id)
+    )
+
+    assert head.startswith(b"HTTP/1.1 200")
+    assert json.loads(body)["filter"] == "chat"
+    assert located_ids == [run_id]
 
 
 # --- the historic-session reads: an opaque id on the query string ----------

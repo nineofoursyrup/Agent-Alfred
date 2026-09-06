@@ -2,24 +2,38 @@
 
 from __future__ import annotations
 
+import dis
 import gc
 import inspect
 import json
 import queue
 import re
+import sys
 import threading
 import time
 import weakref
+from collections.abc import Iterator
+from contextlib import contextmanager, nullcontext
 from dataclasses import replace
+from types import CodeType
 from typing import get_args
 
 import pytest
 
+from agent_alfred import events as events_module
 from agent_alfred.clock import FakeClock
+from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+    claimed_monitoring_tool,
+    interrupt_instruction_once,
+)
+from agent_alfred.evals.deterministic._thread_test_helpers import (
+    ProbeInterruptedUnstartedThread,
+)
 from agent_alfred.evals.deterministic._web_broker_test_helpers import (
     GatedThreads,
     GatedWriteConnection,
     Harness,
+    ObservedConnection,
     RealThreadSpawner,
     _NoThreads,
     cursor_for,
@@ -38,6 +52,7 @@ from agent_alfred.events import (
     EventEnvelope,
     FanOutSink,
     Notice,
+    ProcessFatalSinkError,
     RunFinished,
     RunStarted,
     SequencedEvent,
@@ -67,7 +82,7 @@ from agent_alfred.gateway.web.progress import (
     RunProgress,
     StepProjection,
 )
-from agent_alfred.gateway.web.replay import ReplayBatch, ReplayRing
+from agent_alfred.gateway.web.replay import AppendResult, ReplayBatch, ReplayRing
 from agent_alfred.gateway.web.state import SNAPSHOT_TEXT_LIMIT
 from agent_alfred.runtime.snapshot import (
     ActiveRunSummary,
@@ -77,6 +92,149 @@ from agent_alfred.runtime.snapshot import (
 from agent_alfred.session_validity import SessionValidity
 
 INSTANCE = "inst-test"
+
+
+
+
+@contextmanager
+def _signal_then_gate_broker_instructions(
+    code: CodeType,
+    signal_offset: int,
+    gate_offset: int,
+) -> Iterator[
+    tuple[list[bool], threading.Event, threading.Event, threading.Event]
+]:
+    """Signal one instruction, then park the same thread at a later one."""
+    armed = [True, True]
+    signaled = threading.Event()
+    gated = threading.Event()
+    release = threading.Event()
+
+    with claimed_monitoring_tool(
+        "broker-boundary-gate", local_codes=(code,)
+    ) as tool_id:
+
+        def monitor(actual_code: CodeType, actual_offset: int) -> None:
+            if actual_code is not code:
+                return
+            if armed[0] and actual_offset == signal_offset:
+                armed[0] = False
+                signaled.set()
+                return
+            if armed[1] and actual_offset == gate_offset:
+                armed[1] = False
+                gated.set()
+                release.wait()
+
+        sys.monitoring.register_callback(
+            tool_id, sys.monitoring.events.INSTRUCTION, monitor
+        )
+        sys.monitoring.set_local_events(
+            tool_id, code, sys.monitoring.events.INSTRUCTION
+        )
+        try:
+            yield armed, signaled, gated, release
+        finally:
+            release.set()
+
+
+def _instruction_for_broker_line(
+    function, needle: str, *, opname: str
+) -> int:
+    source, first_line = inspect.getsourcelines(function)
+    line = first_line + next(
+        index for index, text in enumerate(source) if needle in text
+    )
+    return next(
+        instruction.offset
+        for instruction in dis.get_instructions(function)
+        if instruction.opname == opname
+        and instruction.positions.lineno == line
+    )
+
+
+def _stream_transfer_instruction(boundary: str) -> int:
+    """Locate one ownership publication edge in ``start_stream``."""
+    instructions = tuple(dis.get_instructions(SSEBroker.start_stream))
+    if boundary in {
+        "spawn_call",
+        "spawn_return",
+        "registration_call",
+        "registration_return",
+    }:
+        attribute = (
+            "_spawn"
+            if boundary.startswith("spawn")
+            else "_finish_stream_registration"
+        )
+        load = next(
+            index
+            for index, instruction in enumerate(instructions)
+            if instruction.opname == "LOAD_ATTR"
+            and instruction.argval == attribute
+        )
+        call = next(
+            index
+            for index, instruction in enumerate(instructions[load:], load)
+            if instruction.opname in {"CALL", "CALL_KW"}
+        )
+        return instructions[
+            call if boundary.endswith("call") else call + 1
+        ].offset
+    if boundary == "return":
+        transferred = next(
+            index
+            for index, instruction in enumerate(instructions)
+            if instruction.opname == "STORE_ATTR"
+            and instruction.argval == "transferred"
+        )
+        return next(
+            instruction.offset
+            for instruction in instructions[transferred + 1 :]
+            if instruction.opname == "RETURN_VALUE"
+        )
+    attribute, side = boundary.rsplit("_", 1)
+    store = next(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "STORE_ATTR"
+        and instruction.argval == attribute
+    )
+    if side == "before":
+        return instructions[store].offset
+    assert side == "after"
+    return instructions[store + 1].offset
+
+
+def _dispatcher_start_instruction(
+    *, after_effect: bool
+) -> tuple[CodeType, int]:
+    """Locate the default dispatcher's real ``Thread.start`` boundary."""
+    for function in (SSEBroker.start, broker_module._spawn_thread):
+        instructions = tuple(dis.get_instructions(function))
+        start_load = next(
+            (
+                index
+                for index, instruction in enumerate(instructions)
+                if instruction.opname == "LOAD_ATTR"
+                and instruction.argval == "start"
+            ),
+            None,
+        )
+        if start_load is None:
+            continue
+        call = next(
+            index
+            for index, instruction in enumerate(
+                instructions[start_load:], start_load
+            )
+            if instruction.opname in {"CALL", "CALL_KW"}
+        )
+        return function.__code__, instructions[
+            call + int(after_effect)
+        ].offset
+    raise AssertionError("default dispatcher has no Thread.start boundary")
+
 
 # --- connect and reconnect -------------------------------------------------
 
@@ -97,9 +255,33 @@ def test_startup_replay_fetch_has_no_semantically_dead_budget_parameter() -> Non
     )
 
 
+def test_broker_refuses_a_frame_limit_without_normal_sequence_room() -> None:
+    with pytest.raises(ValueError, match="max_frame_bytes must be >= 288"):
+        Harness(max_frame_bytes=287)
+
+
+def test_broker_rejects_a_budget_above_the_physical_frame_limit() -> None:
+    with pytest.raises(ValueError, match="max_frame_bytes must be <= 1048576"):
+        SSEBroker(
+            process_instance_id="inst",
+            snapshot=runtime_snapshot(),
+            max_frame_bytes=1_048_577,
+        )
+
+
 def test_a_preflight_proof_is_the_only_session_fact_used_to_open_the_stream() -> None:
     answers = iter(("valid", "unavailable"))
     queries: list[str | None] = []
+
+    class WriteObservedConnection(FakeConnection):
+        def __init__(self) -> None:
+            super().__init__()
+            self.startup_written = threading.Event()
+
+        def write(self, data: bytes) -> None:
+            super().write(data)
+            if b"event: state_patch" in data:
+                self.startup_written.set()
 
     def validity(session_id: str | None):
         queries.append(session_id)
@@ -112,18 +294,23 @@ def test_a_preflight_proof_is_the_only_session_fact_used_to_open_the_stream() ->
     )
     proof = broker.preflight_session("s1")
 
-    connection = FakeConnection()
-    handle = broker.connect(
-        connection=connection,
-        session_id="s1",
-        admission=proof,
-    )
+    connection = WriteObservedConnection()
+    try:
+        handle = broker.connect(
+            connection=connection,
+            session_id="s1",
+            admission=proof,
+        )
 
-    assert queries == ["s1"]
-    assert handle.session_valid is True
-    assert connection.writes[0] == b"retry: 1000\n\n"
-    assert connection.writes[1].startswith(b"id: inst-test:")
-    assert b"event: state_patch" in connection.writes[2]
+        assert queries == ["s1"]
+        assert handle.session_valid is True
+        assert connection.startup_written.wait(2.0), "startup snapshot was not sent"
+        assert connection.writes[0] == b"retry: 1000\n\n"
+        assert connection.writes[1].startswith(b"id: inst-test:")
+        assert b"event: state_patch" in connection.writes[2]
+    finally:
+        assert broker.close(timeout=2.0) is True
+    assert handle.finished.is_set(), "the test retained its stream writer"
 
 
 def test_a_full_admission_is_transferred_once_without_rechecking_session() -> None:
@@ -150,6 +337,176 @@ def test_a_full_admission_is_transferred_once_without_rechecking_session() -> No
         broker.start_stream(proof)
 
 
+def test_connect_owns_a_prepared_stream_before_its_proof_store() -> None:
+    """A lost proof cannot leave a registration that blocks close forever."""
+    failure = KeyboardInterrupt("prepared proof returned before caller store")
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _session_id: "valid",
+        spawn=_NoThreads().spawn,
+    )
+    connection = FakeConnection()
+    code = SSEBroker.connect.__code__
+    target = next(
+        instruction.offset
+        for instruction in reversed(tuple(dis.get_instructions(code)))
+        if instruction.opname in {"STORE_FAST", "STORE_DEREF"}
+        and instruction.argval == "proof"
+    )
+
+    with interrupt_instruction_once(code, target, failure) as armed:
+        with pytest.raises(KeyboardInterrupt) as raised:
+            broker.connect(connection=connection)
+
+    assert armed == [False]
+    assert raised.value is failure
+    assert connection.closed is True
+    assert broker.connections == ()
+    assert broker.registrations_in_flight == 0
+    assert broker.close(timeout=0) is True
+
+
+def test_broker_retains_a_lost_prepared_acquisition_until_abort_completes(
+    monkeypatch,
+) -> None:
+    """The registry owns cleanup when proof construction loses its return."""
+    failure = SystemExit("prepared acquisition returned before proof store")
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _session_id: "valid",
+        spawn=_NoThreads().spawn,
+    )
+    connection = FakeConnection()
+    real_request_close = ConnectionQueue.request_close
+    attempts = 0
+
+    def fail_twice(source):
+        nonlocal attempts
+        attempts += 1
+        if attempts <= 2:
+            raise RuntimeError("queue abort unavailable")
+        return real_request_close(source)
+
+    monkeypatch.setattr(ConnectionQueue, "request_close", fail_twice)
+    code = SSEBroker.prepare_stream.__code__
+    instructions = tuple(dis.get_instructions(code))
+    proof_store = next(
+        instruction.offset
+        for instruction in instructions
+        if instruction.opname in {"STORE_FAST", "STORE_DEREF"}
+        and instruction.argval == "proof"
+    )
+
+    with interrupt_instruction_once(code, proof_store, failure) as armed:
+        with pytest.raises(SystemExit) as caught:
+            broker.prepare_stream(connection=connection)
+
+    assert armed == [False]
+    assert caught.value is failure
+    assert broker.registrations_in_flight == 1
+    assert broker.close(timeout=0) is False
+    assert attempts == 2
+    assert broker.close(timeout=0) is True
+    assert attempts == 3
+    assert connection.closed is True
+    assert broker.connections == ()
+    assert broker.registrations_in_flight == 0
+
+
+def test_connect_does_not_reclose_a_writer_owned_connection_at_handle_store() -> None:
+    """After transfer, the registry/writer -- not ``connect`` -- owns the peer."""
+    control = SystemExit("writer handle returned before caller store")
+    write_entered = threading.Event()
+    release_write = threading.Event()
+    threads: list[threading.Thread] = []
+
+    class GatedConnection(FakeConnection):
+        def __init__(self) -> None:
+            super().__init__()
+            self.close_calls = 0
+
+        def write(self, data: bytes) -> None:
+            write_entered.set()
+            release_write.wait()
+            super().write(data)
+
+        def close(self) -> None:
+            self.close_calls += 1
+            super().close()
+
+    def spawn(target):
+        thread = threading.Thread(target=target, daemon=True)
+        threads.append(thread)
+        return thread
+
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _session_id: "valid",
+        spawn=spawn,
+    )
+    connection = GatedConnection()
+    code = SSEBroker.connect.__code__
+    target = next(
+        instruction.offset
+        for instruction in dis.get_instructions(code)
+        if instruction.opname == "STORE_FAST" and instruction.argval == "handle"
+    )
+    try:
+        with interrupt_instruction_once(code, target, control) as armed:
+            with pytest.raises(SystemExit) as caught:
+                broker.connect(connection=connection)
+
+        assert armed == [False]
+        assert caught.value is control
+        assert write_entered.wait(2.0), "transferred writer never reached the peer"
+        assert connection.close_calls == 0
+        assert len(broker.connections) == 1
+    finally:
+        release_write.set()
+        broker.close(timeout=2.0)
+        for thread in threads:
+            thread.join(timeout=2.0)
+
+
+def test_connect_exposes_an_incomplete_prepared_stream_rollback(
+    monkeypatch,
+) -> None:
+    """A refused admission cannot masquerade as fully cleaned up."""
+    from agent_alfred.gateway.web.broker import StreamAdmissionRejected
+    from agent_alfred.resource_rollback import IncompleteRollback
+
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _session_id: "valid",
+        spawn=_NoThreads().spawn,
+    )
+    connection = FakeConnection()
+    handle = object()
+    may_finish = False
+
+    def reject(*args, _rollback, **kwargs):
+        del args, kwargs
+        token = object()
+        _rollback.own(token, lambda: may_finish)
+        raise StreamAdmissionRejected("injected refusal", handle)
+
+    monkeypatch.setattr(broker, "prepare_stream", reject)
+    with pytest.raises(StreamAdmissionRejected) as caught:
+        broker.connect(connection=connection)
+
+    cleanup = caught.value.__cause__
+    assert isinstance(cleanup, IncompleteRollback)
+    assert cleanup.owner.errors == ()
+    assert connection.closed is False
+    may_finish = True
+    assert cleanup.retry() is True
+    connection.close()
+
+
 def test_a_writer_spawn_failure_revokes_the_prepared_admission_once() -> None:
     failure = RuntimeError("injected writer handoff failure")
     broker = SSEBroker(
@@ -174,6 +531,574 @@ def test_a_writer_spawn_failure_revokes_the_prepared_admission_once() -> None:
     assert broker.registrations_in_flight == 0
     broker.abort_stream(proof)
     assert handle.queue.current_cost == frames.FrameCost(0, 0)
+
+
+def test_writer_cleanup_failure_keeps_the_handle_owned_until_broker_retry(
+    monkeypatch,
+) -> None:
+    """A failing queue cleanup cannot skip the socket or fake completion."""
+    threads = _NoThreads()
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _session_id: "valid",
+        spawn=threads.spawn,
+    )
+    connection = FakeConnection()
+    proof = broker.prepare_stream(connection=connection)
+    handle = broker.start_stream(proof)
+    handle.queue.stop()
+    real_finish = handle.queue.finish
+    attempts = 0
+
+    def fail_twice():
+        nonlocal attempts
+        attempts += 1
+        if attempts <= 2:
+            raise RuntimeError("queue finish unavailable")
+        real_finish()
+
+    monkeypatch.setattr(handle.queue, "finish", fail_twice)
+    target_errors: list[BaseException] = []
+    try:
+        threads.targets[0]()
+    except BaseException as exc:  # noqa: BLE001 - pre-fix testimony
+        target_errors.append(exc)
+
+    assert attempts == 2
+    assert connection.closed is True
+    assert handle in broker.connections
+    assert handle.finished.is_set() is False
+    assert broker.close(timeout=0) is True
+    assert attempts == 3
+    assert handle.finished.is_set()
+    assert broker.connections == ()
+    assert target_errors == []
+
+
+@pytest.mark.parametrize(
+    "boundary",
+    [
+        "spawn_call",
+        "spawn_return",
+        "thread_before",
+        "thread_after",
+        "registration_call",
+        "registration_return",
+        "transferred_before",
+        "transferred_after",
+    ],
+)
+def test_start_stream_transfer_exit_revokes_the_prepared_admission(
+    boundary: str,
+) -> None:
+    """A post-spawn exit cannot orphan the registered pre-writer owner."""
+    failure = KeyboardInterrupt("writer transfer interrupted")
+    threads = _NoThreads()
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _session_id: "valid",
+        spawn=threads.spawn,
+    )
+    connection = FakeConnection()
+    proof = broker.prepare_stream(connection=connection)
+    handle = proof._handle
+    target = _stream_transfer_instruction(boundary)
+
+    with interrupt_instruction_once(
+        SSEBroker.start_stream.__code__, target, failure
+    ) as armed:
+        with pytest.raises(KeyboardInterrupt) as raised:
+            broker.start_stream(proof)
+
+    assert armed == [False]
+    assert raised.value is failure
+    assert connection.closed is True
+    assert handle.finished.is_set()
+    assert handle.queue.current_cost == frames.FrameCost(0, 0)
+    assert broker.connections == ()
+    assert broker.registrations_in_flight == 0
+    assert broker.close(timeout=0) is True
+    assert broker.close(timeout=0) is True
+
+
+def test_start_stream_return_exit_leaves_a_closeable_transferred_writer() -> None:
+    """The public return edge is after complete writer ownership transfer."""
+    failure = KeyboardInterrupt("start_stream return interrupted")
+    target_started = threading.Event()
+    target_finished = threading.Event()
+
+    def spawn(target):
+        def run() -> None:
+            target_started.set()
+            try:
+                target()
+            finally:
+                target_finished.set()
+
+        thread = threading.Thread(target=run, daemon=True)
+        return thread
+
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _session_id: "valid",
+        spawn=spawn,
+    )
+    connection = FakeConnection()
+    proof = broker.prepare_stream(connection=connection)
+    handle = proof._handle
+    target = _stream_transfer_instruction("return")
+
+    with interrupt_instruction_once(
+        SSEBroker.start_stream.__code__, target, failure
+    ) as armed:
+        with pytest.raises(KeyboardInterrupt) as raised:
+            broker.start_stream(proof)
+
+    assert armed == [False]
+    assert raised.value is failure
+    assert target_started.wait(2.0), "spawned writer never entered its target"
+    assert broker.registrations_in_flight == 0
+    assert broker.close(timeout=2.0) is True
+    assert target_finished.wait(0), "close returned before the writer target"
+    assert handle.finished.is_set()
+    assert handle.queue.current_cost == frames.FrameCost(0, 0)
+    assert connection.closed is True
+    assert broker.connections == ()
+    assert broker.close(timeout=0) is True
+
+
+def test_start_stream_start_after_effect_never_runs_an_aborted_writer() -> None:
+    """A started target waits until the caller commits its ownership transfer."""
+    failure = KeyboardInterrupt("start raised after starting writer target")
+    spawned = threading.Event()
+    release = threading.Event()
+    finished = threading.Event()
+    thread: threading.Thread | None = None
+
+    class StartThenFailThread:
+        def __init__(self, target) -> None:
+            nonlocal thread
+
+            def run() -> None:
+                spawned.set()
+                release.wait()
+                try:
+                    target()
+                finally:
+                    finished.set()
+
+            thread = threading.Thread(target=run, daemon=True)
+            self.thread = thread
+
+        def start(self) -> None:
+            self.thread.start()
+            assert spawned.wait(2.0), "spawned target never reached its gate"
+            raise failure
+
+        def join(self, timeout=None) -> None:
+            self.thread.join(timeout)
+
+        def is_alive(self) -> bool:
+            return self.thread.is_alive()
+
+    def spawn_unstarted(target):
+        return StartThenFailThread(target)
+
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _session_id: "valid",
+        spawn=spawn_unstarted,
+    )
+    connection = FakeConnection()
+    proof = broker.prepare_stream(connection=connection)
+    handle = proof._handle
+
+    try:
+        with pytest.raises(KeyboardInterrupt) as raised:
+            broker.start_stream(proof)
+        assert raised.value is failure
+        assert spawned.is_set(), "thread start after-effect was not reached"
+        assert thread is not None and thread.is_alive()
+        assert finished.is_set() is False
+        assert broker.close(timeout=0) is False
+        release.set()
+        assert finished.wait(0.5), "aborted writer target consumed the closed queue"
+        thread.join(timeout=2.0)
+        assert not thread.is_alive()
+        assert connection.writes == []
+        assert connection.closed is True
+        assert handle.finished.is_set()
+        assert handle.queue.current_cost == frames.FrameCost(0, 0)
+        assert broker.connections == ()
+        assert broker.registrations_in_flight == 0
+        assert broker.close(timeout=0) is True
+        assert broker.close(timeout=0) is True
+    finally:
+        release.set()
+        handle.queue.stop()
+        if thread is not None:
+            thread.join(timeout=2.0)
+        assert broker.close(timeout=2.0) is True
+
+
+@pytest.mark.parametrize("after_effect", [False, True], ids=["before", "native"])
+def test_close_owns_a_native_writer_before_started_is_published(
+    after_effect: bool,
+) -> None:
+    """The native creation effect is owned before the alive flag appears."""
+    bootstrap_entered = threading.Event()
+    release_bootstrap = threading.Event()
+    spawned: list[threading.Thread] = []
+    failure = KeyboardInterrupt("writer start interrupted at native boundary")
+
+    class PausedBootstrapThread(threading.Thread):
+        def _bootstrap_inner(self) -> None:
+            bootstrap_entered.set()
+            release_bootstrap.wait()
+            super()._bootstrap_inner()
+
+    def spawn(target):
+        thread = PausedBootstrapThread(target=target, daemon=True)
+        spawned.append(thread)
+        return thread
+
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _session_id: "valid",
+        spawn=spawn,
+    )
+    connection = FakeConnection()
+    proof = broker.prepare_stream(connection=connection)
+    if after_effect:
+        code = threading.Thread.start.__code__
+        native_call = _instruction_for_broker_line(
+            threading.Thread.start, "_start_joinable_thread(", opname="CALL_KW"
+        )
+        target = next(
+            instruction.offset
+            for instruction in dis.get_instructions(code)
+            if instruction.offset > native_call
+        )
+    else:
+        code = SSEBroker.start_stream.__code__
+        target = _instruction_for_broker_line(
+            SSEBroker.start_stream, "handle.thread.start()", opname="CALL"
+        )
+    try:
+        with interrupt_instruction_once(code, target, failure) as armed:
+            with pytest.raises(KeyboardInterrupt) as raised:
+                broker.start_stream(proof)
+        assert armed == [False]
+        assert raised.value is failure
+        assert len(spawned) == 1
+        thread = spawned[0]
+        if after_effect:
+            assert bootstrap_entered.wait(2.0), "native bootstrap was not reached"
+        assert bootstrap_entered.is_set() is after_effect
+        assert bool(thread._os_thread_handle.ident) is after_effect
+        assert thread.is_alive() is False
+        assert connection.writes == []
+        assert connection.closed is True
+        assert broker.close(timeout=0) is (not after_effect)
+    finally:
+        release_bootstrap.set()
+        for thread in spawned:
+            if thread._os_thread_handle.ident:
+                thread._os_thread_handle.join(2.0)
+                assert thread._os_thread_handle.is_done()
+        assert broker.close(timeout=2.0) is True
+    assert broker.close(timeout=0) is True
+
+
+def test_start_stream_abort_fences_a_dispatcher_that_captured_the_handle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Registration identity cannot decide whether a stale offer is safe."""
+    failure = KeyboardInterrupt("writer transfer interrupted after registration")
+    harness = Harness()
+    broker = harness.broker
+    connection = FakeConnection()
+    proof = broker.prepare_stream(connection=connection)
+    handle = proof._handle
+    harness.emit(RunStarted(purpose="chat"))
+    offer_entered = threading.Event()
+    release_offer = threading.Event()
+    delivery_done = threading.Event()
+    outcomes: list[OfferOutcome] = []
+    delivery_errors: list[BaseException] = []
+    real_offer = handle.queue.offer
+
+    def gated_offer(item, **kwargs):
+        offer_entered.set()
+        release_offer.wait()
+        outcome = real_offer(item, **kwargs)
+        outcomes.append(outcome)
+        return outcome
+
+    monkeypatch.setattr(handle.queue, "offer", gated_offer)
+
+    def deliver() -> None:
+        try:
+            assert broker.deliver_next(timeout=0)
+        except BaseException as exc:  # noqa: BLE001 - surfaced to the test thread
+            delivery_errors.append(exc)
+        finally:
+            delivery_done.set()
+
+    dispatcher = threading.Thread(target=deliver, daemon=True)
+    dispatcher.start()
+    assert offer_entered.wait(2.0), "dispatcher never captured the registered handle"
+    target = _stream_transfer_instruction("registration_return")
+
+    try:
+        with interrupt_instruction_once(
+            SSEBroker.start_stream.__code__, target, failure
+        ) as armed:
+            with pytest.raises(KeyboardInterrupt) as raised:
+                broker.start_stream(proof)
+        assert armed == [False]
+        assert raised.value is failure
+    finally:
+        release_offer.set()
+
+    assert delivery_done.wait(2.0), "captured dispatcher offer never settled"
+    dispatcher.join(timeout=0)
+    assert delivery_errors == []
+    assert [outcome.kind for outcome in outcomes] == ["dropped"]
+    assert handle.queue.close_requested is True
+    assert handle.queue.current_cost == frames.FrameCost(0, 0)
+    assert broker.connections == ()
+    assert broker.registrations_in_flight == 0
+    assert handle.finished.is_set()
+    assert connection.closed is True
+    assert broker.close(timeout=0) is True
+    assert broker.close(timeout=0) is True
+
+
+def test_close_waits_for_an_entered_aborted_stream_handoff() -> None:
+    """An entered target remains a close owner until its aborted branch exits."""
+    failure = KeyboardInterrupt("start interrupted after target entry")
+    target_finished = threading.Event()
+    spawned_thread: threading.Thread | None = None
+    handoff_claimed: threading.Event
+
+    class StartThenFailThread:
+        def __init__(self, target) -> None:
+            nonlocal spawned_thread
+
+            def run() -> None:
+                try:
+                    target()
+                finally:
+                    target_finished.set()
+
+            spawned_thread = threading.Thread(target=run, daemon=True)
+            self.thread = spawned_thread
+
+        def start(self) -> None:
+            self.thread.start()
+            assert handoff_claimed.wait(2.0), (
+                "spawned handoff never registered its close ownership"
+            )
+            raise failure
+
+        def join(self, timeout=None) -> None:
+            self.thread.join(timeout)
+
+        def is_alive(self) -> bool:
+            return self.thread.is_alive()
+
+    def spawn_unstarted(target):
+        return StartThenFailThread(target)
+
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _session_id: "valid",
+        spawn=spawn_unstarted,
+    )
+    connection = FakeConnection()
+    proof = broker.prepare_stream(connection=connection)
+    handle = proof._handle
+    instructions = tuple(
+        dis.get_instructions(SSEBroker._run_stream_handoff)  # noqa: SLF001
+    )
+    claim_boundary = next(
+        instruction.offset
+        for instruction in instructions
+        if instruction.opname == "LOAD_ATTR"
+        and instruction.argval == "ownership_lock"
+    )
+    ownership_read = next(
+        instruction.offset
+        for instruction in reversed(instructions)
+        if instruction.opname == "LOAD_ATTR"
+        and instruction.argval == "aborted"
+    )
+
+    with _signal_then_gate_broker_instructions(
+        SSEBroker._run_stream_handoff.__code__,  # noqa: SLF001
+        claim_boundary,
+        ownership_read,
+    ) as (armed, claimed, handoff_paused, release_handoff):
+        handoff_claimed = claimed
+        try:
+            with pytest.raises(KeyboardInterrupt) as raised:
+                broker.start_stream(proof)
+            assert raised.value is failure
+            assert handoff_paused.wait(2.0), (
+                "aborted handoff never reached the post-lock ownership read"
+            )
+            assert armed == [False, False]
+            assert target_finished.is_set() is False
+            assert handle.finished.is_set() is False
+            assert broker.connections == ()
+            assert broker.registrations_in_flight == 0
+            assert broker.close(timeout=0) is False
+        finally:
+            release_handoff.set()
+
+    assert target_finished.wait(2.0), "aborted handoff target never exited"
+    assert spawned_thread is not None
+    spawned_thread.join(timeout=2.0)
+    assert not spawned_thread.is_alive(), "aborted handoff thread never exited"
+    assert handle.finished.is_set()
+    assert connection.closed is True
+    assert broker.close(timeout=0) is True
+    assert broker.close(timeout=0) is True
+
+
+def test_close_reaps_a_dead_stream_handoff_tombstone() -> None:
+    """A target exit between finished and unregister cannot poison every close."""
+    failure = SystemExit("handoff unregister interrupted")
+    writer_entered = threading.Event()
+    target_finished = threading.Event()
+    target_failures: list[BaseException] = []
+
+    class WriteObservedConnection(FakeConnection):
+        def write(self, data: bytes) -> None:
+            super().write(data)
+            writer_entered.set()
+
+    def spawn(target):
+        def run() -> None:
+            try:
+                target()
+            except BaseException as exc:  # noqa: BLE001 - exact target testimony
+                target_failures.append(exc)
+            finally:
+                target_finished.set()
+
+        thread = threading.Thread(target=run, daemon=True)
+        return thread
+
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _session_id: "valid",
+        spawn=spawn,
+    )
+    connection = WriteObservedConnection()
+    proof = broker.prepare_stream(connection=connection)
+    handle = proof._handle
+    handoff_source, handoff_first_line = inspect.getsourcelines(
+        SSEBroker._run_stream_handoff  # noqa: SLF001
+    )
+    cleanup_line = handoff_first_line + next(
+        index
+        for index, text in enumerate(handoff_source)
+        if "_reap_stream_handoffs_locked" in text
+    )
+    handoff_instructions = tuple(
+        dis.get_instructions(SSEBroker._run_stream_handoff)  # noqa: SLF001
+    )
+    writer_call = next(
+        index
+        for index, instruction in enumerate(handoff_instructions)
+        if instruction.opname == "LOAD_ATTR"
+        and instruction.argval == "_run_writer"
+    )
+    target = next(
+        instruction.offset
+        for instruction in handoff_instructions[writer_call + 1 :]
+        if instruction.opname == "LOAD_ATTR"
+        and instruction.argval == "_reap_stream_handoffs_locked"
+        and instruction.positions.lineno == cleanup_line
+    )
+
+    with interrupt_instruction_once(
+        SSEBroker._run_stream_handoff.__code__,  # noqa: SLF001
+        target,
+        failure,
+    ) as armed:
+        broker.start_stream(proof)
+        assert writer_entered.wait(2.0), "writer never consumed its startup"
+        closed = broker.close(timeout=2.0)
+
+    assert armed == [False]
+    assert target_finished.wait(0), "close returned before the target exited"
+    assert target_failures == [failure]
+    assert handle.finished.is_set()
+    assert broker.connections == ()
+    assert broker.registrations_in_flight == 0
+    assert broker._active_stream_handoffs == {}  # noqa: SLF001
+    assert closed is True
+    assert broker.close(timeout=0) is True
+
+
+@pytest.mark.parametrize("pause_before_thread_exit", [False, True])
+def test_close_waits_for_thread_exit_after_writer_cleanup(
+    pause_before_thread_exit: bool,
+) -> None:
+    """A finished stream is not proof that its owning thread has exited."""
+    target_returned = threading.Event()
+    release_thread = threading.Event()
+    if not pause_before_thread_exit:
+        release_thread.set()
+
+    class DisconnectedConnection(FakeConnection):
+        def write(self, data: bytes) -> None:
+            super().write(data)
+            raise BrokenPipeError("test peer disconnected")
+
+    def spawn(target):
+        def run() -> None:
+            target()
+            target_returned.set()
+            release_thread.wait()
+
+        return threading.Thread(target=run, daemon=True)
+
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _session_id: "valid",
+        spawn=spawn,
+    )
+    connection = DisconnectedConnection()
+    handle = broker.connect(connection=connection)
+    try:
+        assert target_returned.wait(2.0), "writer target never returned"
+        assert connection.writes, "peer-disconnect injection was not reached"
+        assert connection.closed is True
+        assert handle.finished.is_set()
+        assert handle.thread is not None
+        if not pause_before_thread_exit:
+            handle.thread.join(2.0)
+        assert handle.thread.is_alive() is pause_before_thread_exit
+        assert broker.close(timeout=0) is (not pause_before_thread_exit)
+    finally:
+        release_thread.set()
+        if handle.thread is not None:
+            handle.thread.join(2.0)
+            assert not handle.thread.is_alive()
+        assert broker.close(timeout=2.0) is True
+    assert broker.close(timeout=0) is True
 
 
 def test_connect_closes_the_connection_when_session_validation_raises() -> None:
@@ -326,12 +1251,12 @@ class _ClassifyThenEvictRing(ReplayRing):
             id="frame-budget",
         ),
         pytest.param(
-            frames.FrameBudget(frames=64, encoded_bytes=1098),
+            frames.FrameBudget(frames=64, encoded_bytes=1114),
             frames.MAX_FRAME_BYTES,
             id="byte-budget",
         ),
         pytest.param(
-            frames.FrameBudget(frames=6, encoded_bytes=1 << 20),
+            frames.FrameBudget(frames=8, encoded_bytes=1 << 20),
             400,
             id="multi-frame-event",
         ),
@@ -395,7 +1320,10 @@ def test_commit_does_not_walk_a_large_evicted_replay_prefix(
     harness = Harness(ring=ring)
     payload = RunStarted(purpose="chat")
     prepared = frames.measured_frames(
-        frames=tuple(b"data: large" for _ in range(48)), replayable=True
+        frames=tuple(b"data: large" for _ in range(48)),
+        sequence_offset=0,
+        sequence_field_limit=32,
+        replayable=True,
     )
     harness.fanout._seq = 65
     monkeypatch.setattr(harness.broker, "prepare", lambda _event: prepared)
@@ -488,6 +1416,529 @@ def test_retirement_cleanup_failure_is_fatal_after_publish(
     assert secret not in json.dumps(capture.events, default=event_json_default)
 
 
+@pytest.mark.parametrize(
+    "failure",
+    (
+        pytest.param(
+            KeyboardInterrupt("offer interrupted before effect"),
+            id="KeyboardInterrupt",
+        ),
+        pytest.param(
+            SystemExit("offer interrupted before effect"),
+            id="SystemExit",
+        ),
+    ),
+)
+def test_ingress_before_effect_control_exit_forces_ordered_replay(
+    monkeypatch: pytest.MonkeyPatch,
+    failure: BaseException,
+) -> None:
+    """A ring-committed event cannot become a silent live-stream hole."""
+    harness = Harness()
+    old = harness.connect(cursor=cursor_for(0))
+    drain_connection(old)
+    real_offer = harness.broker._ingress.offer  # noqa: SLF001
+
+    def interrupt_before_offer(_item) -> bool:
+        raise failure
+
+    monkeypatch.setattr(
+        harness.broker._ingress, "offer", interrupt_before_offer  # noqa: SLF001
+    )
+    with pytest.raises(type(failure)) as raised:
+        harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    assert raised.value is failure, "the process-control exception changed identity"
+
+    monkeypatch.setattr(harness.broker._ingress, "offer", real_offer)  # noqa: SLF001
+    harness.emit(RunStarted(purpose="chat"), run_id="r2")
+    drain_dispatcher(harness)
+
+    assert old.queue.close_requested is True
+    assert replay_ids(drain_connection(old)) == [], (
+        "the old stream advanced past the ring-committed missing event"
+    )
+    reconnect = harness.connect(cursor=cursor_for(0))
+    assert replay_ids(drain_connection(reconnect)) == [1, 2]
+    assert harness.broker._fatal is None  # noqa: SLF001
+
+
+def test_ingress_after_effect_control_exit_neither_duplicates_nor_skips(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unknown offer effect is recovered by a generation, not a retry."""
+    harness = Harness()
+    old = harness.connect(cursor=cursor_for(0))
+    drain_connection(old)
+    real_offer = harness.broker._ingress.offer  # noqa: SLF001
+    failure = KeyboardInterrupt("offer interrupted after effect")
+
+    def interrupt_after_offer(item) -> bool:
+        assert real_offer(item) is True
+        raise failure
+
+    monkeypatch.setattr(
+        harness.broker._ingress, "offer", interrupt_after_offer  # noqa: SLF001
+    )
+    with pytest.raises(KeyboardInterrupt) as raised:
+        harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    assert raised.value is failure
+
+    # Register in the committed generation before the uncertain ingress item
+    # is consumed. Its opening replay owns seq 1, so the queued copy must be
+    # skipped; the old generation must be closed before it can see any later id.
+    reconnect = harness.connect(cursor=cursor_for(0))
+    opening = drain_connection(reconnect)
+    assert replay_ids(opening) == [1]
+    monkeypatch.setattr(harness.broker._ingress, "offer", real_offer)  # noqa: SLF001
+    harness.emit(RunStarted(purpose="chat"), run_id="r2")
+    drain_dispatcher(harness)
+
+    assert old.queue.close_requested is True
+    assert replay_ids(drain_connection(old)) == []
+    assert replay_ids(opening + drain_connection(reconnect)) == [1, 2]
+    assert harness.broker._fatal is None  # noqa: SLF001
+
+
+@pytest.mark.parametrize("effect", ["before", "after"])
+def test_ingress_control_exit_remains_authoritative_if_generation_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    effect: str,
+) -> None:
+    """A failed disconnect fence must fail closed without replacing ingress."""
+    harness = Harness()
+    old = harness.connect(cursor=cursor_for(0))
+    drain_connection(old)
+    original = KeyboardInterrupt("ingress interrupted first")
+    secondary = SystemExit("disconnect generation interrupted second")
+
+    class InterruptingGeneration(int):
+        def __add__(self, increment):
+            if effect == "after":
+                harness.broker._disconnect_generation = (  # noqa: SLF001
+                    int(self) + int(increment)
+                )
+            raise secondary
+
+    def fail_offer(_item) -> bool:
+        raise original
+
+    harness.broker._disconnect_generation = InterruptingGeneration(0)  # noqa: SLF001
+    monkeypatch.setattr(harness.broker._ingress, "offer", fail_offer)  # noqa: SLF001
+
+    with pytest.raises(KeyboardInterrupt) as raised:
+        harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    assert raised.value is original
+    assert harness.broker._fatal is original  # noqa: SLF001
+    assert harness.broker._stopping is True  # noqa: SLF001
+
+    with pytest.raises(ProcessFatalSinkError):
+        prepared = harness.broker.prepare(
+            UnsequencedEvent(
+                event_id="later",
+                envelope=EventEnvelope(0.0, "r2", None, None, None, None),
+                payload=RunStarted(purpose="chat"),
+                trace_policy="persist",
+                replayable=True,
+            )
+        )
+        harness.broker.commit(
+            prepared,
+            SequencedEvent(
+                seq=2,
+                process_instance_id=INSTANCE,
+                event_id="later",
+                envelope=EventEnvelope(0.0, "r2", None, None, None, None),
+                payload=RunStarted(purpose="chat"),
+                trace_policy="persist",
+                replayable=True,
+            ),
+        )
+    assert harness.broker.deliver_next(timeout=0) is False
+    assert old.queue.close_requested is True
+    assert replay_ids(drain_connection(old)) == []
+
+
+def test_interrupted_ingress_keeps_retired_cleanup_until_fanout_unlocks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The broker retains and settles ring cleanup outside publication locks."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    assert harness.broker.deliver_next(timeout=0) is True
+    retired = ring.entries_after(0)
+    assert retired is not None
+    retired_entry = retired[0]
+    retired_ref = weakref.ref(retired_entry)
+    del retired, retired_entry
+
+    real_release = ring._entries.release_retired  # noqa: SLF001
+    cleanup_entered = threading.Event()
+    release_cleanup = threading.Event()
+    cleanup_lock_checks: list[tuple[bool, bool]] = []
+
+    def gated_release(start: int, count: int, through_seq: int) -> None:
+        broker_unlocked = harness.broker._lock.acquire(blocking=False)  # noqa: SLF001
+        if broker_unlocked:
+            harness.broker._lock.release()  # noqa: SLF001
+        fanout_unlocked = harness.fanout._lock.acquire(blocking=False)  # noqa: SLF001
+        if fanout_unlocked:
+            harness.fanout._lock.release()  # noqa: SLF001
+        cleanup_lock_checks.append((broker_unlocked, fanout_unlocked))
+        cleanup_entered.set()
+        assert release_cleanup.wait(3.0), "test did not release retired cleanup"
+        real_release(start, count, through_seq)
+
+    monkeypatch.setattr(ring._entries, "release_retired", gated_release)  # noqa: SLF001
+    failure = KeyboardInterrupt("evicting offer interrupted")
+
+    def interrupt_before_offer(_item) -> bool:
+        raise failure
+
+    monkeypatch.setattr(
+        harness.broker._ingress, "offer", interrupt_before_offer  # noqa: SLF001
+    )
+    caught: list[BaseException] = []
+
+    def publish() -> None:
+        try:
+            harness.emit(RunStarted(purpose="chat"), run_id="r2")
+        except BaseException as exc:  # noqa: BLE001 - identity asserted below
+            caught.append(exc)
+
+    publisher = threading.Thread(target=publish, name="interrupted-publisher")
+    publisher.start()
+    assert cleanup_entered.wait(3.0), "ring cleanup ownership was stranded"
+    assert retired_ref() is not None, "cleanup escaped before its owner ran"
+    release_cleanup.set()
+    publisher.join(3.0)
+    assert not publisher.is_alive(), "interrupted publication never settled"
+
+    gc.collect()
+    assert caught == [failure]
+    assert cleanup_lock_checks == [(True, True)]
+    assert retired_ref() is None
+
+
+def test_interrupted_ingress_keeps_first_control_exit_when_kick_also_exits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A secondary wake-up interruption cannot replace the ingress cause."""
+    harness = Harness()
+    old = harness.connect(cursor=cursor_for(0))
+    drain_connection(old)
+    original = KeyboardInterrupt("ingress interrupted first")
+    secondary = SystemExit("kick interrupted second")
+
+    def fail_offer(_item) -> bool:
+        raise original
+
+    def fail_kick() -> None:
+        raise secondary
+
+    monkeypatch.setattr(harness.broker._ingress, "offer", fail_offer)  # noqa: SLF001
+    monkeypatch.setattr(harness.broker._ingress, "put_kick", fail_kick)  # noqa: SLF001
+
+    with pytest.raises(KeyboardInterrupt) as raised:
+        harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    assert raised.value is original
+
+    # The generation itself is durable wake-up debt. Even with no sentinel,
+    # the dispatcher's periodic path closes the old stream on its next check.
+    assert harness.broker.deliver_next(timeout=0) is False
+    assert old.queue.close_requested is True
+
+
+def test_interrupted_ingress_retries_cleanup_after_secondary_control_exit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Cleanup stays broker-owned when its first lock-free attempt exits."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    gated_threads = GatedThreads()
+    harness = Harness(ring=ring, spawn=gated_threads)
+    harness.broker.start()
+    harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    assert harness.broker.deliver_next(timeout=0) is True
+    retained = ring.entries_after(0)
+    assert retained is not None
+    retired_entry = retained[0]
+    retired_ref = weakref.ref(retired_entry)
+    del retained, retired_entry
+
+    real_release = ring._entries.release_retired  # noqa: SLF001
+    release_attempts = 0
+    cleanup_complete = threading.Event()
+    secondary = SystemExit("cleanup interrupted second")
+
+    def interrupt_cleanup_once(start: int, count: int, through_seq: int) -> None:
+        nonlocal release_attempts
+        release_attempts += 1
+        if release_attempts == 1:
+            raise secondary
+        real_release(start, count, through_seq)
+        cleanup_complete.set()
+
+    original = KeyboardInterrupt("ingress interrupted first")
+
+    def fail_offer(_item) -> bool:
+        raise original
+
+    monkeypatch.setattr(
+        ring._entries, "release_retired", interrupt_cleanup_once  # noqa: SLF001
+    )
+    monkeypatch.setattr(harness.broker._ingress, "offer", fail_offer)  # noqa: SLF001
+
+    with pytest.raises(KeyboardInterrupt) as raised:
+        harness.emit(RunStarted(purpose="chat"), run_id="r2")
+    assert raised.value is original
+    assert release_attempts == 1
+    assert retired_ref() is not None
+
+    # The first claimant requeued before fatal publication. Let the real
+    # dispatcher start only now: its first periodic boundary must claim the
+    # same owner exactly once, without a caller retrying publication.
+    gated_threads.open("_dispatch_loop")
+    assert cleanup_complete.wait(3.0), "dispatcher did not repay cleanup debt"
+    gated_threads.by_name["_dispatch_loop"].join(3.0)
+    gc.collect()
+    assert release_attempts == 2
+    assert retired_ref() is None
+
+
+def test_fatal_ingress_exception_still_releases_ring_retirement(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Process-fatal ingress failure cannot orphan an earlier ring cell."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    assert harness.broker.deliver_next(timeout=0) is True
+    retained = ring.entries_after(0)
+    assert retained is not None
+    retired_entry = retained[0]
+    retired_ref = weakref.ref(retired_entry)
+    del retained, retired_entry
+
+    real_release = ring._entries.release_retired  # noqa: SLF001
+    lock_checks: list[tuple[bool, bool]] = []
+
+    def checked_release(start: int, count: int, through_seq: int) -> None:
+        broker_unlocked = harness.broker._lock.acquire(blocking=False)  # noqa: SLF001
+        if broker_unlocked:
+            harness.broker._lock.release()  # noqa: SLF001
+        fanout_unlocked = harness.fanout._lock.acquire(blocking=False)  # noqa: SLF001
+        if fanout_unlocked:
+            harness.fanout._lock.release()  # noqa: SLF001
+        lock_checks.append((broker_unlocked, fanout_unlocked))
+        real_release(start, count, through_seq)
+
+    failure = RuntimeError("ingress failed after ring commit")
+    secondary = KeyboardInterrupt("fatal kick interrupted")
+
+    def fail_offer(_item) -> bool:
+        raise failure
+
+    def fail_fatal_kick() -> None:
+        raise secondary
+
+    monkeypatch.setattr(ring._entries, "release_retired", checked_release)  # noqa: SLF001
+    monkeypatch.setattr(harness.broker._ingress, "offer", fail_offer)  # noqa: SLF001
+    monkeypatch.setattr(harness.broker._ingress, "put_kick", fail_fatal_kick)  # noqa: SLF001
+
+    # The fatal ingress cause remains authoritative even when its wake-up
+    # edge encounters a later process-control exception.
+    harness.emit(RunStarted(purpose="chat"), run_id="r2")
+    gc.collect()
+
+    assert harness.broker._fatal is failure  # noqa: SLF001
+    assert lock_checks == [(True, True)]
+    assert retired_ref() is None
+
+
+def test_ingress_exception_latches_fatal_before_releasing_the_broker_lock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No connection can register between failed ingress and its fatal fence."""
+    harness = Harness()
+    broker = harness.broker
+    failure = RuntimeError("ingress failed after ring commit")
+    fatal_publish_entered = threading.Event()
+    release_fatal_publish = threading.Event()
+    publisher_done = threading.Event()
+    publisher_failures: list[BaseException] = []
+    real_publish_fatal = broker._publish_fatal  # noqa: SLF001
+
+    def fail_offer(_item) -> bool:
+        raise failure
+
+    def gated_publish_fatal(
+        exc: BaseException, *, wake_dispatcher: bool = True
+    ):
+        fatal_publish_entered.set()
+        assert release_fatal_publish.wait(3.0), "test did not release fatal publish"
+        return real_publish_fatal(exc, wake_dispatcher=wake_dispatcher)
+
+    def publish() -> None:
+        try:
+            harness.emit(RunStarted(purpose="chat"), run_id="r1")
+        except BaseException as exc:  # noqa: BLE001 - reported below
+            publisher_failures.append(exc)
+        finally:
+            publisher_done.set()
+
+    monkeypatch.setattr(broker._ingress, "offer", fail_offer)  # noqa: SLF001
+    monkeypatch.setattr(broker, "_publish_fatal", gated_publish_fatal)
+    publisher = threading.Thread(target=publish, name="fatal-ingress-publisher")
+    publisher.start()
+    assert fatal_publish_entered.wait(3.0), "publisher never left ingress failure"
+
+    try:
+        connection = FakeConnection()
+        refused = broker.connect(connection=connection)
+        assert refused.finished.is_set()
+        assert connection.closed is True
+        assert refused not in broker.connections
+        assert broker.publish_state_patch(runtime_snapshot(state_revision=1)) is False
+    finally:
+        release_fatal_publish.set()
+        publisher.join(3.0)
+    assert publisher_done.is_set()
+    assert publisher_failures == []
+    assert broker._fatal is failure  # noqa: SLF001
+
+
+def test_later_sibling_control_exit_cannot_skip_broker_ring_cleanup() -> None:
+    """A returned broker PostCommit survives a later sink's control exit."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    failure = KeyboardInterrupt("later sibling interrupted")
+
+    class InterruptingSibling(CapturingSink):
+        armed = False
+
+        def commit(self, prepared: object, event: SequencedEvent) -> None:
+            super().commit(prepared, event)
+            if self.armed:
+                raise failure
+
+    sibling = InterruptingSibling(name="sibling")
+    fanout = FanOutSink(
+        [harness.broker, sibling], process_instance_id=INSTANCE
+    )
+    envelope = EventEnvelope(0.0, "r1", None, None, None, None)
+    fanout.emit(RunStarted(purpose="chat"), envelope)
+    assert harness.broker.deliver_next(timeout=0) is True
+    retained = ring.entries_after(0)
+    assert retained is not None
+    retired_entry = retained[0]
+    retired_ref = weakref.ref(retired_entry)
+    del retained, retired_entry
+
+    sibling.armed = True
+    with pytest.raises(KeyboardInterrupt) as raised:
+        fanout.emit(RunStarted(purpose="chat"), envelope)
+    assert raised.value is failure
+    gc.collect()
+    assert retired_ref() is None
+    assert harness.broker._fatal is None  # noqa: SLF001
+
+    sibling.armed = False
+    fanout.emit(RunStarted(purpose="chat"), envelope)
+    assert [event.seq for event in sibling.events] == [1, 2, 3]
+
+
+def test_parallel_interrupted_commits_retain_distinct_cleanup_owners(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """One pending slot cannot overwrite another publisher's ring cleanup."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    harness.emit(RunStarted(purpose="chat"), run_id="seed")
+    assert harness.broker.deliver_next(timeout=0) is True
+    seeded = ring.entries_after(0)
+    assert seeded is not None
+    first_ref = weakref.ref(seeded[0])
+    del seeded
+
+    failures = {
+        "publisher-one": KeyboardInterrupt("first ingress interruption"),
+        "publisher-two": SystemExit("second ingress interruption"),
+    }
+
+    def fail_offer(_item) -> bool:
+        raise failures[threading.current_thread().name]
+
+    real_settle = harness.broker.settle_interrupted_commit
+    first_waiting = threading.Event()
+    both_waiting = threading.Event()
+    release_settlement = threading.Event()
+    waiting = 0
+    waiting_lock = threading.Lock()
+
+    def gated_settle(failure: BaseException):
+        nonlocal waiting
+        with waiting_lock:
+            waiting += 1
+            if waiting == 1:
+                first_waiting.set()
+            if waiting == 2:
+                both_waiting.set()
+        assert release_settlement.wait(3.0), "test did not release settlement"
+        return real_settle(failure)
+
+    monkeypatch.setattr(harness.broker._ingress, "offer", fail_offer)  # noqa: SLF001
+    monkeypatch.setattr(
+        harness.broker, "settle_interrupted_commit", gated_settle
+    )
+    caught: dict[str, BaseException] = {}
+
+    def publish(run_id: str) -> None:
+        try:
+            harness.emit(RunStarted(purpose="chat"), run_id=run_id)
+        except BaseException as exc:  # noqa: BLE001 - exact owners asserted
+            exc = exc.with_traceback(None)
+            caught[threading.current_thread().name] = exc
+
+    first = threading.Thread(
+        target=publish, args=("r1",), name="publisher-one"
+    )
+    first.start()
+    assert first_waiting.wait(3.0), "first publisher did not retain cleanup"
+    second_entry = ring.entries_after(1)
+    assert second_entry is not None
+    second_ref = weakref.ref(second_entry[0])
+    del second_entry
+
+    second = threading.Thread(
+        target=publish, args=("r2",), name="publisher-two"
+    )
+    second.start()
+    assert both_waiting.wait(3.0), "second publisher overwrote pending cleanup"
+    assert first_ref() is not None
+    assert second_ref() is not None
+
+    release_settlement.set()
+    first.join(3.0)
+    second.join(3.0)
+    assert not first.is_alive() and not second.is_alive()
+    gc.collect()
+
+    assert caught == failures
+    assert first_ref() is None
+    assert second_ref() is None
+    assert harness.broker._pending_commit_cleanup == {}  # noqa: SLF001
+
+
 def test_the_four_illegal_cursors_each_name_their_reason() -> None:
     harness = Harness(
         ring=ReplayRing(
@@ -538,6 +1989,84 @@ def test_the_gap_notice_distinguishes_no_run_from_unrecoverable_run() -> None:
     handle = harness.connect(cursor="garbage")
     assert b'"current_run_state":"unrecoverable"' in _wire_containing(
         handle, b"replay_gap"
+    )
+
+
+@pytest.mark.parametrize("recording_state", ["pending", "failed"])
+@pytest.mark.parametrize(
+    ("ring_frames", "expected_state"), [(1, "unrecoverable"), (4, "recoverable")]
+)
+def test_gap_recovery_boundary_survives_the_run_saving_phase(
+    recording_state, ring_frames, expected_state
+) -> None:
+    harness = Harness(
+        ring=ReplayRing(
+            budget=frames.FrameBudget(frames=ring_frames, encoded_bytes=1 << 20)
+        )
+    )
+    active = ActiveRunSummary(
+        run_id="r1",
+        purpose="chat",
+        gateway="web",
+        phase="running",
+        session_id=None,
+        prompt_preview="hi",
+        started_at="2026-01-01T00:00:00Z",
+        recording_state=None,
+    )
+    harness.broker.publish_state_patch(
+        runtime_snapshot(
+            state_revision=1, coordinator_state="running", active_run=active
+        )
+    )
+    harness.emit(RunStarted(purpose="chat"))
+    harness.emit(StepStarted(step_index=1))
+    expected = f'"current_run_state":"{expected_state}"'.encode()
+    assert expected in _wire_containing(
+        harness.connect(cursor="garbage"), b"replay_gap"
+    )
+
+    harness.emit(RunFinished(outcome="completed"))
+    harness.broker.publish_state_patch(
+        runtime_snapshot(
+            state_revision=2,
+            coordinator_state=f"recording_{recording_state}",
+            unrecorded_terminal_projection=UnrecordedTerminalProjection(
+                run_id="r1",
+                purpose="chat",
+                outcome="completed",
+                reply_text="done",
+                error=None,
+                recording_state=recording_state,
+                session_id=None,
+                prompt_preview="hi",
+            ),
+            active_run=replace(
+                active,
+                phase="finished",
+                outcome="completed",
+                recording_state=recording_state,
+            ),
+        )
+    )
+    assert expected in _wire_containing(
+        harness.connect(cursor="garbage"), b"replay_gap"
+    )
+
+    harness.broker.publish_state_patch(runtime_snapshot(state_revision=3))
+    assert b'"current_run_state":"absent"' in _wire_containing(
+        harness.connect(cursor="garbage"), b"replay_gap"
+    )
+    harness.broker.publish_state_patch(
+        runtime_snapshot(
+            state_revision=4,
+            coordinator_state="running",
+            active_run=replace(active, run_id="r2"),
+        )
+    )
+    harness.emit(RunStarted(purpose="chat"), run_id="r2")
+    assert b'"current_run_state":"recoverable"' in _wire_containing(
+        harness.connect(cursor="garbage"), b"replay_gap"
     )
 
 
@@ -967,6 +2496,15 @@ def test_ingress_drop_recovery_closes_before_admitting_replayable_alone() -> Non
     handle = harness.connect()
     drain_connection(handle)
 
+    # Establish one unit of ingress debt, then retire the older admitted
+    # transient. The replayable candidate published afterwards is the first
+    # item whose boundary may carry that debt.
+    harness.emit(BlockDelta(attempt_id="old", text="queued"), run_id="r1")
+    harness.emit(BlockDelta(attempt_id="missed", text="x"), run_id="r1")
+    assert harness.broker._ingress_dropped == 1
+    harness.deliver()
+    drain_connection(handle)
+
     event = harness.emit(
         AttemptStarted(attempt_id="new", streamed=True), run_id="r1"
     )
@@ -979,8 +2517,6 @@ def test_ingress_drop_recovery_closes_before_admitting_replayable_alone() -> Non
         encoded_bytes=candidate_cost.encoded_bytes,
     )
 
-    harness.emit(BlockDelta(attempt_id="missed", text="x"), run_id="r1")
-    assert harness.broker._ingress_dropped == 1
     harness.deliver()
 
     assert handle.queue.close_requested is True
@@ -1018,6 +2554,45 @@ def test_a_transient_missed_by_the_ingress_costs_liveness_only() -> None:
     )
 
 
+def test_ingress_drop_debt_stays_behind_older_admitted_events() -> None:
+    harness = Harness(ingress_budget=frames.FrameBudget(1, 1 << 20))
+    handle = harness.connect()
+    drain_connection(handle)
+
+    # The older replayable event is already admitted when this later
+    # transient overflows. Its debt must not travel backwards across that
+    # publication boundary: doing so would make a client discard an attempt
+    # that was never part of the loss interval.
+    harness.emit(
+        AttemptStarted(attempt_id="old", streamed=True),
+        run_id="r1",
+    )
+    harness.emit(
+        BlockDelta(attempt_id="old", text="missed"),
+        run_id="r1",
+    )
+    assert harness.broker._ingress_dropped == 1
+
+    harness.deliver()
+    harness.emit(
+        AttemptStarted(attempt_id="new", streamed=True),
+        run_id="r1",
+    )
+    harness.deliver()
+
+    payloads = [
+        _decode_patch(item.wire_bytes()) for item in drain_connection(handle)
+    ]
+    assert [payload.get("event") or payload.get("code") for payload in payloads] == [
+        "attempt.started",
+        "deltas_dropped",
+        "attempt.started",
+    ]
+    assert payloads[0]["payload"]["payload"]["attempt_id"] == "old"
+    assert payloads[1]["count"] == 1
+    assert payloads[2]["payload"]["payload"]["attempt_id"] == "new"
+
+
 def test_a_replayable_that_misses_the_ingress_closes_live_connections() -> None:
     harness = Harness(ingress_budget=frames.FrameBudget(1, 1 << 20))
     handle = harness.connect()
@@ -1031,9 +2606,31 @@ def test_a_replayable_that_misses_the_ingress_closes_live_connections() -> None:
     # closing, outside the publish path.
     harness.deliver()
     assert handle.queue.close_requested is True
+    closing = drain_connection(handle)
+    assert closing[-1] == CloseConnection(retry_ms=frames.BACKOFF_RETRY_MS)
     # A reconnect with the cursor recovers it exactly.
     fresh = harness.connect(cursor=cursor_for(event.seq - 1))
     assert replay_ids(drain_connection(fresh)) == [event.seq]
+
+
+def test_shared_ingress_overflow_writes_backoff_before_disconnect() -> None:
+    harness = Harness(ingress_budget=frames.FrameBudget(1, 1 << 20))
+    connection = FakeConnection()
+    handle = harness.connect(connection=connection)
+
+    harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    harness.emit(RunStarted(purpose="chat"), run_id="r2")
+    harness.deliver()
+
+    # Synchronously drive the production writer target: no scheduler timing is
+    # evidence, while the exact bytes and final close are.
+    harness.spawn.targets[-1]()
+
+    assert connection.written.endswith(
+        frames.retry_frame(frames.BACKOFF_RETRY_MS).wire_bytes()
+    )
+    assert connection.closed is True
+    assert handle.finished.is_set()
 
 
 def test_a_transport_notice_owns_no_seq_and_never_enters_the_ring() -> None:
@@ -1217,7 +2814,7 @@ def test_live_offers_cannot_steal_capacity_between_startup_slices() -> None:
     )
     budget = frames.FrameBudget(7, fixed_prefix_bytes + 650)
     harness = Harness(connection_budget=budget, max_frame_bytes=448)
-    event = harness.emit(RunStarted(purpose="x" * 100), run_id="r1")
+    event = harness.emit(RunStarted(purpose="x" * 80), run_id="r1")
     stored = harness.broker._ring.entries_after(0)
     assert stored is not None and len(stored[0].frames) == 3
     handle = harness.connect(cursor=cursor_for(0))
@@ -1276,7 +2873,7 @@ def test_startup_finishes_its_partial_checkpoint_before_overflow_backoff() -> No
         connection_budget=frames.FrameBudget(5, 1 << 20),
         max_frame_bytes=448,
     )
-    frozen = harness.emit(RunStarted(purpose="x" * 100), run_id="frozen")
+    frozen = harness.emit(RunStarted(purpose="x" * 75), run_id="frozen")
     harness.deliver()
     stored = harness.broker._ring.entries_after(0)
     assert stored is not None and len(stored[0].frames) == 3
@@ -1438,6 +3035,162 @@ def test_a_blocked_startup_replay_never_holds_more_than_its_frame_budget() -> No
         assert handle.queue.current_cost == frames.FrameCost(0, 0)
 
 
+def test_startup_replay_survives_retired_cell_cleanup_after_capture(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An in-flight ring reader owns the cell it already observed.
+
+    Publication may retire that cell and finish the linear cleanup after the
+    reader has loaded it but before the reader inspects its entry.  The stale
+    generation must become an ordinary unavailable replay, never an assertion
+    that poisons the broker.
+    """
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    harness.emit_many(2)
+    handle = harness.connect(cursor=cursor_for(0))
+    assert handle.writer is not None
+
+    captured = threading.Event()
+    resume = threading.Event()
+    cleanup_complete = threading.Event()
+    reader: threading.Thread | None = None
+    retired_slot = ring._entries._head
+
+    class PauseAfterCellCapture(list):
+        def __getitem__(self, index):
+            cell = super().__getitem__(index)
+            if (
+                threading.current_thread() is reader
+                and index == retired_slot
+                and not captured.is_set()
+            ):
+                captured.set()
+                assert resume.wait(2.0), "test did not resume the replay reader"
+            return cell
+
+    ring._entries._entries = PauseAfterCellCapture(ring._entries._entries)
+    original_release = ring._entries.release_retired
+
+    def observed_release(start: int, count: int, through_seq: int) -> None:
+        original_release(start, count, through_seq)
+        cleanup_complete.set()
+
+    monkeypatch.setattr(ring._entries, "release_retired", observed_release)
+    outcomes: list[bool] = []
+    failures: list[BaseException] = []
+
+    def read_startup() -> None:
+        try:
+            outcomes.append(handle.writer.deliver_startup(lambda _item: None))
+        except BaseException as exc:
+            failures.append(exc)
+
+    reader = threading.Thread(target=read_startup, name="startup-replay-reader")
+    reader.start()
+    try:
+        assert captured.wait(2.0), "reader never captured the soon-retired cell"
+        harness.emit(RunStarted(purpose="chat"), run_id="evicting-run")
+        assert cleanup_complete.is_set(), "publication did not finish cell cleanup"
+    finally:
+        resume.set()
+        reader.join(2.0)
+
+    assert not reader.is_alive()
+    assert failures == []
+    assert outcomes == [False]
+    assert harness.broker._fatal is None
+    assert handle.queue.current_cost == frames.FrameCost(0, 0)
+
+
+def test_startup_replay_treats_size_drift_during_index_lookup_as_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A binary-search index computed from an old ring size is not fatal."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=2, encoded_bytes=2048)
+    )
+    harness = Harness(ring=ring)
+    harness.emit_many(2)
+    assert len(ring) == 2
+    handle = harness.connect(cursor=cursor_for(0))
+    assert handle.writer is not None
+
+    indexed = threading.Event()
+    resume = threading.Event()
+    reader: threading.Thread | None = None
+    entries_type = type(ring._entries)
+    original_getitem = entries_type.__getitem__
+
+    def pause_before_revalidating_size(entries, index):
+        if threading.current_thread() is reader and not indexed.is_set():
+            indexed.set()
+            assert resume.wait(2.0), "test did not resume the replay reader"
+        return original_getitem(entries, index)
+
+    monkeypatch.setattr(
+        entries_type,
+        "__getitem__",
+        pause_before_revalidating_size,
+    )
+    outcomes: list[bool] = []
+    failures: list[BaseException] = []
+    delivered: list[PreparedFrames] = []
+
+    def read_startup() -> None:
+        try:
+            outcomes.append(handle.writer.deliver_startup(delivered.append))
+        except BaseException as exc:
+            failures.append(exc)
+
+    reader = threading.Thread(target=read_startup, name="startup-replay-reader")
+    reader.start()
+    try:
+        assert indexed.wait(2.0), (
+            "reader never reached its old-size index: "
+            f"outcomes={outcomes!r}, failures={failures!r}"
+        )
+        harness.emit(
+            RunStarted(
+                purpose="chat", user_message=user_message_with("x" * 4000)
+            ),
+            run_id="oversized-run",
+        )
+        assert len(ring) == 0, "oversized replayable event did not clear the ring"
+    finally:
+        resume.set()
+        reader.join(2.0)
+
+    assert not reader.is_alive()
+    assert failures == []
+    assert outcomes == [False]
+    assert delivered[-1].wire_bytes() == frames.retry_frame(
+        frames.BACKOFF_RETRY_MS
+    ).wire_bytes()
+    assert harness.broker._fatal is None
+    assert handle.queue.current_cost == frames.FrameCost(0, 0)
+
+
+def test_same_generation_replay_structure_failure_remains_process_fatal() -> None:
+    """Only a generation move can turn a structural fault into reconnect."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    harness.emit_many(2)
+    handle = harness.connect(cursor=cursor_for(0))
+    assert handle.writer is not None
+
+    ring._entries._entries[ring._entries._head] = None
+
+    with pytest.raises(RuntimeError, match="replay slot was retired") as raised:
+        handle.writer.deliver_startup(lambda _item: None)
+
+    assert harness.broker._fatal is raised.value
+
+
 def test_blocked_fixed_prefix_preserves_replay_guard_and_live_budget() -> None:
     """The real broker charges its prefix before the first socket write."""
 
@@ -1564,14 +3317,12 @@ def test_slow_startup_generations_release_written_and_unfetched_history() -> Non
 
     # A new connection from the last complete batch boundary observes the
     # gap explicitly and receives a fresh snapshot instead of a silent tail.
-    fresh = FakeConnection()
+    fresh = ObservedConnection()
     reconnected = harness.connect(
         connection=fresh,
         cursor=cursor_for(2),
     )
-    deadline = time.monotonic() + 2.0
-    while b"replay_gap" not in fresh.written and time.monotonic() < deadline:
-        time.sleep(0.001)
+    fresh.wait_for_bytes(b"replay_gap")
     reconnected.queue.stop()
     assert reconnected.finished.wait(2.0)
     assert b"replay_gap" in fresh.written
@@ -1700,12 +3451,9 @@ def test_live_large_event_overflow_reconnects_and_advances_once() -> None:
         max_frame_bytes=512,
         spawn=RealThreadSpawner(),
     )
-    old_connection = FakeConnection()
+    old_connection = ObservedConnection()
     old = harness.connect(connection=old_connection, cursor=cursor_for(0))
-    deadline = time.monotonic() + 2.0
-    while b"event: state_patch" not in old_connection.written:
-        assert time.monotonic() < deadline, "opening stream did not finish"
-        time.sleep(0.001)
+    old_connection.wait_for_bytes(b"event: state_patch")
     event = harness.emit(
         RunStarted(
             purpose="chat",
@@ -1724,14 +3472,11 @@ def test_live_large_event_overflow_reconnects_and_advances_once() -> None:
     )
     assert old_connection.closed is True
 
-    recovered_connection = FakeConnection()
+    recovered_connection = ObservedConnection()
     recovered = harness.connect(
         connection=recovered_connection, cursor=cursor_for(0)
     )
-    deadline = time.monotonic() + 2.0
-    while stored[0].id_line not in recovered_connection.written:
-        assert time.monotonic() < deadline, "large replay did not finish"
-        time.sleep(0.001)
+    recovered_connection.wait_for_bytes(stored[0].id_line)
     expected = stored[0].wire_bytes()
     start = recovered_connection.written.index(stored[0].wire_frames()[0])
     assert recovered_connection.written[start : start + len(expected)] == expected
@@ -1742,14 +3487,11 @@ def test_live_large_event_overflow_reconnects_and_advances_once() -> None:
     recovered.queue.stop()
     assert recovered.finished.wait(2.0)
 
-    caught_up_connection = FakeConnection()
+    caught_up_connection = ObservedConnection()
     caught_up = harness.connect(
         connection=caught_up_connection, cursor=cursor_for(event.seq)
     )
-    deadline = time.monotonic() + 2.0
-    while b"event: state_patch" not in caught_up_connection.written:
-        assert time.monotonic() < deadline, "caught-up opening did not finish"
-        time.sleep(0.001)
+    caught_up_connection.wait_for_bytes(b"event: state_patch")
     assert b"event: domain_event" not in caught_up_connection.written
     caught_up.queue.stop()
     assert caught_up.finished.wait(2.0)
@@ -2078,6 +3820,321 @@ def test_capacity_defaults_match_the_decided_table() -> None:
 # --- the named cost of the ingress's accounting ------------------------------
 
 
+def test_ingress_offer_keeps_queue_and_cost_atomic_across_base_exceptions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Before-effect offers charge nothing; after-effect offers charge once."""
+    before = Harness()
+    before_queue = before.broker._ingress._items  # noqa: SLF001
+
+    class InterruptBeforeOffer:
+        def put(self, item) -> None:
+            if isinstance(item, _PublishedEvent):
+                raise KeyboardInterrupt("offer interrupted before enqueue")
+            before_queue.put(item)
+
+        def offer(self, item) -> bool:
+            raise KeyboardInterrupt("offer interrupted before enqueue")
+
+        def __getattr__(self, name):
+            return getattr(before_queue, name)
+
+    monkeypatch.setattr(  # noqa: SLF001
+        before.broker._ingress,
+        "_items",
+        InterruptBeforeOffer(),
+    )
+    with pytest.raises(KeyboardInterrupt, match="before enqueue"):
+        before.emit(RunStarted(purpose="chat"))
+    assert before.broker._ingress.current_cost == frames.FrameCost(0, 0)
+    # The data offer had no effect. The one free item is the recovery kick
+    # owed by the already-committed ring generation, not phantom data/cost.
+    assert before.broker._ingress._items.qsize() == 1  # noqa: SLF001
+    assert before.broker.deliver_next(timeout=0) is True
+    assert before.broker._ingress._items.qsize() == 0  # noqa: SLF001
+
+    after = Harness()
+    after_queue = after.broker._ingress._items  # noqa: SLF001
+
+    class InterruptAfterOffer:
+        def put(self, item) -> None:
+            after_queue.put(item)
+            if isinstance(item, _PublishedEvent):
+                raise KeyboardInterrupt("offer interrupted after enqueue")
+
+        def offer(self, item) -> bool:
+            accepted = after_queue.offer(item)
+            if accepted:
+                raise KeyboardInterrupt("offer interrupted after enqueue")
+            return accepted
+
+        def __getattr__(self, name):
+            return getattr(after_queue, name)
+
+    monkeypatch.setattr(  # noqa: SLF001
+        after.broker._ingress,
+        "_items",
+        InterruptAfterOffer(),
+    )
+    with pytest.raises(KeyboardInterrupt, match="after enqueue"):
+        after.emit(RunStarted(purpose="chat"))
+    # One billed event plus the coalesced recovery kick: membership and cost
+    # committed together exactly once despite the lost return edge.
+    assert after.broker._ingress._items.qsize() == 2  # noqa: SLF001
+    assert after.broker._ingress.current_cost.frames == 1
+    assert after.broker.deliver_next(timeout=0) is True
+    assert after.broker._ingress.current_cost == frames.FrameCost(0, 0)
+    assert after.broker.deliver_next(timeout=0) is True
+    assert after.broker._ingress._items.qsize() == 0  # noqa: SLF001
+
+
+def test_ingress_take_keeps_cost_atomic_across_base_exceptions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Before-effect takes retain both facts; after-effect takes remove both."""
+    before = Harness()
+    before.emit(RunStarted(purpose="chat"))
+    before_queue = before.broker._ingress._items  # noqa: SLF001
+
+    class InterruptBeforeTake:
+        def get(self, *_args, **_kwargs):
+            raise KeyboardInterrupt("take interrupted before dequeue")
+
+        def __getattr__(self, name):
+            return getattr(before_queue, name)
+
+    monkeypatch.setattr(  # noqa: SLF001
+        before.broker._ingress,
+        "_items",
+        InterruptBeforeTake(),
+    )
+    with pytest.raises(KeyboardInterrupt, match="before dequeue"):
+        before.broker.deliver_next(timeout=0)
+    assert before.broker._ingress._items.qsize() == 1  # noqa: SLF001
+    assert before.broker._ingress.current_cost.frames == 1
+
+    after = Harness()
+    after.emit(RunStarted(purpose="chat"))
+    owned_queue = after.broker._ingress._items  # noqa: SLF001
+    interrupted = False
+
+    class TakeThenInterruptQueue:
+        def get(self, *args, **kwargs):
+            nonlocal interrupted
+            item = owned_queue.get(*args, **kwargs)
+            if isinstance(item, _PublishedEvent) and not interrupted:
+                interrupted = True
+                raise KeyboardInterrupt("take interrupted after dequeue")
+            return item
+
+        def __getattr__(self, name):
+            return getattr(owned_queue, name)
+
+    proxy = TakeThenInterruptQueue()
+    monkeypatch.setattr(after.broker._ingress, "_items", proxy)  # noqa: SLF001
+
+    with pytest.raises(KeyboardInterrupt, match="after dequeue"):
+        after.broker.deliver_next(timeout=0)
+    assert proxy.qsize() == 0
+    assert after.broker._ingress.current_cost == frames.FrameCost(0, 0)
+
+
+def test_ingress_take_clears_kick_ownership_after_the_dequeue_effect(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A consumed kick can be recreated when its sweep never ran."""
+    harness = Harness(
+        ingress_budget=frames.FrameBudget(frames=1, encoded_bytes=1)
+    )
+    broker = harness.broker
+    old = harness.connect()
+    drain_connection(old)
+    snapshot = runtime_snapshot(state_revision=1)
+    assert broker.publish_state_patch(snapshot) is False
+    owned_queue = broker._ingress._items  # noqa: SLF001
+    interrupted = False
+
+    class TakeThenInterruptQueue:
+        def get(self, *args, **kwargs):
+            nonlocal interrupted
+            item = owned_queue.get(*args, **kwargs)
+            if isinstance(item, _IngressKick) and not interrupted:
+                interrupted = True
+                raise KeyboardInterrupt("kick take interrupted after dequeue")
+            return item
+
+        def __getattr__(self, name):
+            return getattr(owned_queue, name)
+
+    proxy = TakeThenInterruptQueue()
+    monkeypatch.setattr(broker._ingress, "_items", proxy)  # noqa: SLF001
+
+    with pytest.raises(KeyboardInterrupt, match="after dequeue"):
+        broker.deliver_next(timeout=0)
+    assert proxy.qsize() == 0
+    assert broker.publish_state_patch(replace(snapshot)) is False
+    assert proxy.qsize() == 1
+    assert broker.deliver_next(timeout=0) is True
+    assert old.queue.close_requested is True
+
+
+def test_ingress_rotation_never_holds_the_producer_lock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A backlog reversal cannot make a concurrent commit cost O(backlog)."""
+    harness = Harness()
+    backlog = 32
+    for index in range(backlog):
+        harness.emit(RunStarted(purpose="chat"), run_id=f"r{index}")
+
+    entered_rotation = threading.Event()
+    release_rotation = threading.Event()
+    consumer_done = threading.Event()
+    producer_done = threading.Event()
+    failures: list[BaseException] = []
+    taken: list[_PublishedEvent] = []
+    real_reverse = broker_module._reverse_ingress_nodes
+
+    def gated_reverse(node):
+        entered_rotation.set()
+        assert release_rotation.wait(5.0), "test never released ingress rotation"
+        return real_reverse(node)
+
+    def consume_one() -> None:
+        try:
+            item = harness.broker._ingress.take(timeout=1.0)  # noqa: SLF001
+            assert isinstance(item, _PublishedEvent)
+            taken.append(item)
+        except BaseException as exc:
+            failures.append(exc)
+        finally:
+            consumer_done.set()
+
+    def publish_suffix() -> None:
+        try:
+            harness.emit(RunStarted(purpose="suffix"), run_id="suffix")
+        except BaseException as exc:
+            failures.append(exc)
+        finally:
+            producer_done.set()
+
+    monkeypatch.setattr(broker_module, "_reverse_ingress_nodes", gated_reverse)
+    consumer = threading.Thread(target=consume_one, daemon=True)
+    producer = threading.Thread(target=publish_suffix, daemon=True)
+    consumer.start()
+    try:
+        assert entered_rotation.wait(5.0), "consumer never began backlog rotation"
+        producer.start()
+        assert producer_done.wait(1.0), (
+            "producer waited for the consumer's O(N) backlog rotation"
+        )
+    finally:
+        release_rotation.set()
+    assert consumer_done.wait(5.0), "consumer never completed its rotation"
+    consumer.join()
+    producer.join()
+
+    while True:
+        try:
+            item = harness.broker._ingress.take(timeout=0)  # noqa: SLF001
+        except queue.Empty:
+            break
+        assert isinstance(item, _PublishedEvent)
+        taken.append(item)
+    assert failures == []
+    assert [item.published_seq for item in taken] == list(
+        range(1, backlog + 2)
+    )
+    assert harness.broker._ingress.current_cost == frames.FrameCost(0, 0)
+
+
+def test_retired_ingress_rotation_is_released_outside_the_producer_lock(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Dropping the old persistent prefix cannot make enqueue wait O(N)."""
+
+    class ObservableIngressNode:
+        __slots__ = ("__weakref__", "cost", "item", "next")
+
+        def __init__(self, *, item, cost, next) -> None:
+            self.item = item
+            self.cost = cost
+            self.next = next
+
+    monkeypatch.setattr(broker_module, "FifoNode", ObservableIngressNode)
+    harness = Harness()
+    harness.emit(RunStarted(purpose="chat"))
+    ingress = harness.broker._ingress  # noqa: SLF001
+    owned_queue = ingress._items  # noqa: SLF001
+    retired = owned_queue._state.back  # noqa: SLF001
+    assert retired is not None
+
+    released = threading.Event()
+    producer_lock_was_free: list[bool] = []
+
+    def observe_release(_reference) -> None:
+        acquired = owned_queue._condition.acquire(blocking=False)  # noqa: SLF001
+        producer_lock_was_free.append(acquired)
+        if acquired:
+            owned_queue._condition.release()  # noqa: SLF001
+        released.set()
+
+    retired_ref = weakref.ref(retired, observe_release)
+    del retired
+
+    item = ingress.take(timeout=0)
+
+    assert isinstance(item, _PublishedEvent)
+    assert released.wait(1.0), "retired ingress prefix remained referenced"
+    assert retired_ref() is None
+    assert producer_lock_was_free == [True]
+
+
+def test_ingress_rotation_interruption_retains_fifo_and_control_ownership(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failed local rotation leaves its complete source available to retry."""
+    harness = Harness()
+    ingress = harness.broker._ingress  # noqa: SLF001
+    published = harness.emit(RunStarted(purpose="chat"))
+    ingress.put_kick()
+    ingress.put_stop()
+    real_reverse = broker_module._reverse_ingress_nodes
+    first = True
+
+    def interrupt_first_rotation(node):
+        nonlocal first
+        if first:
+            first = False
+            raise KeyboardInterrupt("rotation interrupted before installation")
+        return real_reverse(node)
+
+    monkeypatch.setattr(
+        broker_module,
+        "_reverse_ingress_nodes",
+        interrupt_first_rotation,
+    )
+    with pytest.raises(KeyboardInterrupt, match="before installation"):
+        ingress.take(timeout=0)
+
+    assert ingress._items.qsize() == 3  # noqa: SLF001
+    assert ingress.current_cost.frames == 1
+    # Both controls are still owned while the prefix waits in ``rotation``.
+    ingress.put_kick()
+    ingress.put_stop()
+    assert ingress._items.qsize() == 3  # noqa: SLF001
+
+    data = ingress.take(timeout=0)
+    kick = ingress.take(timeout=0)
+    stop = ingress.take(timeout=0)
+    assert isinstance(data, _PublishedEvent)
+    assert data.published_seq == published.seq
+    assert isinstance(kick, _IngressKick)
+    assert isinstance(stop, _IngressStop)
+    assert ingress.current_cost == frames.FrameCost(0, 0)
+    assert ingress._items.qsize() == 0  # noqa: SLF001
+
+
 def test_the_ingress_count_returns_exactly_to_zero() -> None:
     harness = Harness()
     harness.emit(RunStarted(purpose="chat"), run_id="r1")
@@ -2107,7 +4164,6 @@ def test_close_is_idempotent_and_leaves_no_thread_running() -> None:
     def spawn(target):
         thread = threading.Thread(target=target, daemon=True)
         threads.append(thread)
-        thread.start()
         return thread
 
     broker = SSEBroker(
@@ -2126,11 +4182,723 @@ def test_close_is_idempotent_and_leaves_no_thread_running() -> None:
     assert connection.closed is True
 
 
+def test_dispatcher_factory_return_exit_retires_unstarted_thread() -> None:
+    """An interrupted factory return cannot publish a never-started thread."""
+    entered = threading.Event()
+    threads: list[threading.Thread] = []
+
+    def spawn(target):
+        def observed_target() -> None:
+            entered.set()
+            target()
+
+        thread = threading.Thread(target=observed_target, daemon=True)
+        threads.append(thread)
+        return thread
+
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _sid: "valid",
+        spawn=spawn,
+    )
+    code = SSEBroker.start.__code__
+    instructions = tuple(dis.get_instructions(code))
+    owner_store = next(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "STORE_ATTR"
+        and instruction.argval == "_dispatcher"
+    )
+    target = instructions[owner_store + 1].offset
+    control = SystemExit("dispatcher factory returned before start")
+    try:
+        with interrupt_instruction_once(code, target, control) as armed:
+            with pytest.raises(SystemExit) as caught:
+                broker.start()
+
+        assert armed == [False]
+        assert caught.value is control
+        assert entered.is_set() is False
+        assert broker.close(timeout=0) is True
+    finally:
+        broker._ingress.put_stop()  # noqa: SLF001
+        for thread in threads:
+            if thread.ident is not None:
+                thread.join(timeout=2.0)
+        broker.close(timeout=2.0)
+
+
+def test_custom_dispatcher_start_after_effect_keeps_thread_owned() -> None:
+    """The broker owns an injected thread before asking it to start."""
+    failure = KeyboardInterrupt("start raised after starting dispatcher")
+    entered = threading.Event()
+    release = threading.Event()
+    exited = threading.Event()
+    threads: list[threading.Thread] = []
+
+    class StartThenFailThread:
+        def __init__(self, target) -> None:
+            self.thread = threading.Thread(target=target, daemon=True)
+            threads.append(self.thread)
+
+        def start(self) -> None:
+            self.thread.start()
+            assert entered.wait(2.0), "dispatcher never entered its target"
+            raise failure
+
+        def join(self, timeout=None) -> None:
+            self.thread.join(timeout)
+
+        def is_alive(self) -> bool:
+            return self.thread.is_alive()
+
+    def spawn_unstarted(target):
+        return StartThenFailThread(target)
+
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _sid: "valid",
+        spawn=spawn_unstarted,
+    )
+    real_dispatch = broker._dispatch_loop  # noqa: SLF001
+
+    def gated_dispatch() -> None:
+        entered.set()
+        release.wait()
+        try:
+            real_dispatch()
+        finally:
+            exited.set()
+
+    broker._dispatch_loop = gated_dispatch  # type: ignore[method-assign]  # noqa: SLF001
+    try:
+        with pytest.raises(KeyboardInterrupt) as raised:
+            broker.start()
+
+        assert raised.value is failure
+        assert broker.close(timeout=0) is False
+        assert exited.is_set() is False
+        release.set()
+        assert exited.wait(2.0), "owned dispatcher never exited"
+        assert broker.close(timeout=2.0) is True
+    finally:
+        release.set()
+        broker._ingress.put_stop()  # noqa: SLF001
+        for thread in threads:
+            thread.join(timeout=2.0)
+        broker.close(timeout=2.0)
+
+
+def test_broker_close_retries_an_interrupted_unstarted_dispatcher_probe() -> None:
+    """An unresolved start refusal cannot strand broker close forever."""
+    dispatcher = ProbeInterruptedUnstartedThread(
+        start_failure=RuntimeError("dispatcher did not start"),
+        probe_failure=KeyboardInterrupt("dispatcher start probe interrupted"),
+        name="unstarted-sse-dispatch",
+    )
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _sid: "valid",
+        spawn=lambda _target: dispatcher,
+    )
+
+    with pytest.raises(RuntimeError) as raised:
+        broker.start()
+    assert raised.value is dispatcher.start_failure
+    assert dispatcher.probe_calls == 1
+
+    assert broker.close(timeout=0) is True
+    assert dispatcher.probe_calls == 2
+
+
+@pytest.mark.parametrize("after_effect", (False, True), ids=("before", "after"))
+def test_default_dispatcher_start_exit_keeps_its_real_thread_owned(
+    after_effect: bool,
+) -> None:
+    """A start-effect dispatcher must exit before broker close reports True."""
+    failure = KeyboardInterrupt(f"dispatcher start {after_effect=}")
+    entered = threading.Event()
+    release = threading.Event()
+    exited = threading.Event()
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _sid: "valid",
+    )
+    real_dispatch = broker._dispatch_loop  # noqa: SLF001
+
+    def gated_dispatch() -> None:
+        entered.set()
+        release.wait()
+        try:
+            real_dispatch()
+        finally:
+            exited.set()
+
+    broker._dispatch_loop = gated_dispatch  # type: ignore[method-assign]  # noqa: SLF001
+    code, target = _dispatcher_start_instruction(after_effect=after_effect)
+
+    try:
+        with interrupt_instruction_once(code, target, failure) as armed:
+            with pytest.raises(KeyboardInterrupt) as raised:
+                broker.start()
+        assert armed == [False]
+        assert raised.value is failure
+        if not after_effect:
+            assert entered.is_set() is False
+            assert broker.close(timeout=0) is True
+            return
+
+        assert entered.wait(2.0), "real dispatcher target never entered"
+        assert broker.close(timeout=0) is False
+        assert exited.is_set() is False
+        release.set()
+        assert exited.wait(2.0), "owned dispatcher never exited"
+        assert broker.close(timeout=2.0) is True
+    finally:
+        release.set()
+        # Old code loses the Thread identity and therefore never queues stop.
+        broker._ingress.put_stop()  # noqa: SLF001
+        exited.wait(2.0)
+        broker.close(timeout=2.0)
+
+
+def test_close_claims_registered_cleanup_while_postcommit_is_delayed() -> None:
+    """Registration, not a later callback, makes retirement drainable."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    harness.emit(RunStarted(purpose="chat"), run_id="seed")
+    assert harness.broker.deliver_next(timeout=0) is True
+    seeded = ring.entries_after(0)
+    assert seeded is not None
+    retired_ref = weakref.ref(seeded[0])
+    del seeded
+
+    after_commit_entered = threading.Event()
+    release_after_commit = threading.Event()
+    publish_done = threading.Event()
+
+    def gated_after_commit(_event: SequencedEvent) -> None:
+        after_commit_entered.set()
+        assert release_after_commit.wait(3.0), "test did not release after_commit"
+
+    def publish() -> None:
+        try:
+            harness.fanout.emit_linearized(
+                RunStarted(purpose="chat"),
+                EventEnvelope(0.0, "r1", None, None, None, None),
+                boundary=nullcontext(),
+                after_commit=gated_after_commit,
+            )
+        finally:
+            publish_done.set()
+
+    publisher = threading.Thread(target=publish, name="normal-cleanup-publisher")
+    publisher.start()
+    assert after_commit_entered.wait(3.0), "publisher never returned cleanup"
+    assert harness.fanout._lock.acquire(blocking=False)  # noqa: SLF001
+    harness.fanout._lock.release()  # noqa: SLF001
+
+    close_result = harness.broker.close(timeout=0)
+    try:
+        with harness.broker._commit_cleanup_lock:  # noqa: SLF001
+            debts = tuple(harness.broker._pending_commit_cleanup.values())  # noqa: SLF001
+            assert debts == ()
+        assert close_result is True
+        assert harness.broker._closed is True  # noqa: SLF001
+        assert publish_done.is_set() is False
+    finally:
+        release_after_commit.set()
+        publisher.join(3.0)
+    assert not publisher.is_alive()
+    assert publish_done.is_set()
+
+    assert harness.broker.close(timeout=0) is True
+    gc.collect()
+    assert retired_ref() is None
+    with harness.broker._commit_cleanup_lock:  # noqa: SLF001
+        assert harness.broker._pending_commit_cleanup == {}  # noqa: SLF001
+        assert harness.broker._returned_commit_cleanup == {}  # noqa: SLF001
+
+
+def test_close_recovers_a_normal_owner_whose_boundary_was_skipped() -> None:
+    """Shutdown can claim a registered owner on its first attempt."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    harness.emit(RunStarted(purpose="chat"), run_id="seed")
+    assert harness.broker.deliver_next(timeout=0) is True
+    seeded = ring.entries_after(0)
+    assert seeded is not None
+    retired_ref = weakref.ref(seeded[0])
+    del seeded
+
+    payload = RunStarted(purpose="chat")
+    envelope = EventEnvelope(0.0, "orphan", None, None, None, None)
+    prepared = harness.broker.prepare(
+        UnsequencedEvent(
+            event_id="orphan",
+            envelope=envelope,
+            payload=payload,
+            trace_policy="persist",
+            replayable=True,
+        )
+    )
+    post_commit = harness.broker.commit(
+        prepared,
+        SequencedEvent(
+            seq=2,
+            process_instance_id=INSTANCE,
+            event_id="orphan",
+            envelope=envelope,
+            payload=payload,
+            trace_policy="persist",
+            replayable=True,
+        ),
+    )
+    assert post_commit is not None
+
+    assert harness.broker.close(timeout=0) is True
+    gc.collect()
+    assert retired_ref() is None
+    with harness.broker._commit_cleanup_lock:  # noqa: SLF001
+        assert harness.broker._pending_commit_cleanup == {}  # noqa: SLF001
+
+
+def test_close_recovers_ring_owner_if_settlement_was_skipped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A poisoned ring stays visible until shutdown repays its own owner."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    harness.emit(RunStarted(purpose="chat"), run_id="seed")
+    assert harness.broker.deliver_next(timeout=0) is True
+    seeded = ring.entries_after(0)
+    assert seeded is not None
+    retired_ref = weakref.ref(seeded[0])
+    del seeded
+    failure = KeyboardInterrupt("ring failed before settlement")
+    real_drop = ring._entries.drop_prefix  # noqa: SLF001
+
+    def fail_after_drop(count: int):
+        real_drop(count)
+        raise failure
+
+    monkeypatch.setattr(ring._entries, "drop_prefix", fail_after_drop)  # noqa: SLF001
+    payload = RunStarted(purpose="chat")
+    envelope = EventEnvelope(0.0, "orphan", None, None, None, None)
+    prepared = harness.broker.prepare(
+        UnsequencedEvent(
+            event_id="orphan",
+            envelope=envelope,
+            payload=payload,
+            trace_policy="persist",
+            replayable=True,
+        )
+    )
+    with pytest.raises(KeyboardInterrupt) as raised:
+        harness.broker.commit(
+            prepared,
+            SequencedEvent(
+                seq=2,
+                process_instance_id=INSTANCE,
+                event_id="orphan",
+                envelope=envelope,
+                payload=payload,
+                trace_policy="persist",
+                replayable=True,
+            ),
+        )
+    assert raised.value is failure
+
+    assert harness.broker.close(timeout=0) is True
+    failure.__traceback__ = None
+    del raised
+    gc.collect()
+    assert retired_ref() is None
+    assert harness.broker._ring_cleanup_failure is None  # noqa: SLF001
+
+
+def test_close_waits_for_normal_ring_cleanup_in_progress(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Normal retirement remains ledger-owned throughout its lock-free call."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    harness.emit(RunStarted(purpose="chat"), run_id="seed")
+    assert harness.broker.deliver_next(timeout=0) is True
+
+    real_release = ring._entries.release_retired  # noqa: SLF001
+    cleanup_entered = threading.Event()
+    release_cleanup = threading.Event()
+    publish_done = threading.Event()
+    release_calls = 0
+
+    def gated_release(start: int, count: int, through_seq: int) -> None:
+        nonlocal release_calls
+        release_calls += 1
+        cleanup_entered.set()
+        assert release_cleanup.wait(3.0), "test did not release cleanup"
+        real_release(start, count, through_seq)
+
+    monkeypatch.setattr(
+        ring._entries, "release_retired", gated_release  # noqa: SLF001
+    )
+
+    def publish() -> None:
+        try:
+            harness.emit(RunStarted(purpose="chat"), run_id="r1")
+        finally:
+            publish_done.set()
+
+    publisher = threading.Thread(target=publish, name="normal-cleanup-publisher")
+    publisher.start()
+    assert cleanup_entered.wait(3.0), "publisher never began ring cleanup"
+
+    close_result = harness.broker.close(timeout=0)
+    try:
+        with harness.broker._commit_cleanup_lock:  # noqa: SLF001
+            debts = tuple(harness.broker._pending_commit_cleanup.values())  # noqa: SLF001
+            assert len(debts) == 1 and debts[0].in_progress is True
+        assert close_result is False
+        assert harness.broker._closed is False  # noqa: SLF001
+        assert publish_done.is_set() is False
+    finally:
+        release_cleanup.set()
+        publisher.join(3.0)
+    assert not publisher.is_alive()
+    assert publish_done.is_set()
+
+    assert harness.broker.close(timeout=0) is True
+    assert release_calls == 1
+    with harness.broker._commit_cleanup_lock:  # noqa: SLF001
+        assert harness.broker._pending_commit_cleanup == {}  # noqa: SLF001
+        assert harness.broker._returned_commit_cleanup == {}  # noqa: SLF001
+
+
+def test_close_waits_for_unsettled_and_requeued_commit_cleanup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """True means every ring cleanup owner has completed, not merely stopped."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    harness.emit(RunStarted(purpose="chat"), run_id="seed")
+    assert harness.broker.deliver_next(timeout=0) is True
+    seeded = ring.entries_after(0)
+    assert seeded is not None
+    retired_ref = weakref.ref(seeded[0])
+    del seeded
+
+    real_release = ring._entries.release_retired  # noqa: SLF001
+    release_attempts = 0
+    cleanup_failure = SystemExit("cleanup interrupted once")
+
+    def fail_cleanup_once(start: int, count: int, through_seq: int) -> None:
+        nonlocal release_attempts
+        release_attempts += 1
+        if release_attempts == 1:
+            raise cleanup_failure
+        real_release(start, count, through_seq)
+
+    ingress_failure = KeyboardInterrupt("ingress interrupted")
+
+    def fail_offer(_item) -> bool:
+        raise ingress_failure
+
+    real_settle = harness.broker.settle_interrupted_commit
+    settlement_entered = threading.Event()
+    release_settlement = threading.Event()
+
+    def gated_settlement(failure: BaseException):
+        settlement_entered.set()
+        assert release_settlement.wait(3.0), "test did not release settlement"
+        return real_settle(failure)
+
+    monkeypatch.setattr(
+        ring._entries, "release_retired", fail_cleanup_once  # noqa: SLF001
+    )
+    monkeypatch.setattr(harness.broker._ingress, "offer", fail_offer)  # noqa: SLF001
+    monkeypatch.setattr(
+        harness.broker, "settle_interrupted_commit", gated_settlement
+    )
+    caught: list[BaseException] = []
+
+    def publish() -> None:
+        try:
+            harness.emit(RunStarted(purpose="chat"), run_id="r1")
+        except BaseException as exc:  # noqa: BLE001 - identity asserted below
+            caught.append(exc)
+
+    publisher = threading.Thread(target=publish, name="cleanup-publisher")
+    publisher.start()
+    assert settlement_entered.wait(3.0), "publisher never retained cleanup"
+    fanout_unlocked = harness.fanout._lock.acquire(blocking=False)  # noqa: SLF001
+    assert fanout_unlocked, "settlement gate still held the FanOut lock"
+    harness.fanout._lock.release()  # noqa: SLF001
+    with harness.broker._commit_cleanup_lock:  # noqa: SLF001
+        debts = tuple(harness.broker._pending_commit_cleanup.values())  # noqa: SLF001
+    assert len(debts) == 1 and debts[0].ready is True
+
+    try:
+        assert harness.broker.close(timeout=0) is False
+        assert harness.broker._closed is False  # noqa: SLF001
+    finally:
+        release_settlement.set()
+        publisher.join(3.0)
+    assert not publisher.is_alive()
+    assert caught == [ingress_failure]
+    assert release_attempts == 1
+    assert retired_ref() is not None
+
+    assert harness.broker.close(timeout=0) is True
+    gc.collect()
+    debt = debts[0]
+    assert release_attempts == 2
+    assert retired_ref() is None
+    assert debt.completed is True
+    assert debt.in_progress is False
+    assert debt.ready is False
+    with harness.broker._commit_cleanup_lock:  # noqa: SLF001
+        assert harness.broker._pending_commit_cleanup == {}  # noqa: SLF001
+        assert harness.broker._returned_commit_cleanup == {}  # noqa: SLF001
+
+
+def test_close_waits_for_commit_cleanup_already_in_progress(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A cleanup claimed by FanOut still owns close completion until success."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    harness.emit(RunStarted(purpose="chat"), run_id="seed")
+    assert harness.broker.deliver_next(timeout=0) is True
+    seeded = ring.entries_after(0)
+    assert seeded is not None
+    retired_ref = weakref.ref(seeded[0])
+    del seeded
+
+    real_release = ring._entries.release_retired  # noqa: SLF001
+    cleanup_entered = threading.Event()
+    release_cleanup = threading.Event()
+    release_calls = 0
+    lock_checks: list[tuple[bool, bool]] = []
+
+    def gated_release(start: int, count: int, through_seq: int) -> None:
+        nonlocal release_calls
+        release_calls += 1
+        broker_unlocked = harness.broker._lock.acquire(blocking=False)  # noqa: SLF001
+        if broker_unlocked:
+            harness.broker._lock.release()  # noqa: SLF001
+        fanout_unlocked = harness.fanout._lock.acquire(blocking=False)  # noqa: SLF001
+        if fanout_unlocked:
+            harness.fanout._lock.release()  # noqa: SLF001
+        lock_checks.append((broker_unlocked, fanout_unlocked))
+        cleanup_entered.set()
+        assert release_cleanup.wait(3.0), "test did not release cleanup"
+        real_release(start, count, through_seq)
+
+    ingress_failure = KeyboardInterrupt("ingress interrupted")
+
+    def fail_offer(_item) -> bool:
+        raise ingress_failure
+
+    monkeypatch.setattr(
+        ring._entries, "release_retired", gated_release  # noqa: SLF001
+    )
+    monkeypatch.setattr(harness.broker._ingress, "offer", fail_offer)  # noqa: SLF001
+    caught: list[BaseException] = []
+
+    def publish() -> None:
+        try:
+            harness.emit(RunStarted(purpose="chat"), run_id="r1")
+        except BaseException as exc:  # noqa: BLE001 - identity asserted below
+            caught.append(exc)
+
+    publisher = threading.Thread(target=publish, name="cleanup-publisher")
+    publisher.start()
+    assert cleanup_entered.wait(3.0), "publisher never claimed cleanup"
+    with harness.broker._commit_cleanup_lock:  # noqa: SLF001
+        debts = tuple(harness.broker._pending_commit_cleanup.values())  # noqa: SLF001
+        assert len(debts) == 1 and debts[0].in_progress is True
+
+    try:
+        assert harness.broker.close(timeout=0) is False
+        assert harness.broker._closed is False  # noqa: SLF001
+    finally:
+        release_cleanup.set()
+        publisher.join(3.0)
+    assert not publisher.is_alive()
+    assert caught == [ingress_failure]
+
+    assert harness.broker.close(timeout=0) is True
+    gc.collect()
+    assert release_calls == 1
+    assert lock_checks == [(True, True)]
+    assert retired_ref() is None
+    with harness.broker._commit_cleanup_lock:  # noqa: SLF001
+        assert harness.broker._pending_commit_cleanup == {}  # noqa: SLF001
+        assert harness.broker._returned_commit_cleanup == {}  # noqa: SLF001
+
+
+def test_commit_cannot_register_new_cleanup_after_close_fence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Stopping and ring publication are ordered by the same broker lock."""
+    harness = Harness()
+    commit_entered = threading.Event()
+    release_commit = threading.Event()
+    publish_done = threading.Event()
+    real_commit = harness.broker.commit
+
+    def gated_commit(prepared: object, event: SequencedEvent):
+        commit_entered.set()
+        assert release_commit.wait(3.0), "test did not release publisher"
+        return real_commit(prepared, event)
+
+    monkeypatch.setattr(harness.broker, "commit", gated_commit)
+
+    def publish() -> None:
+        try:
+            harness.emit(RunStarted(purpose="chat"), run_id="too-late")
+        finally:
+            publish_done.set()
+
+    publisher = threading.Thread(target=publish, name="late-publisher")
+    publisher.start()
+    assert commit_entered.wait(3.0), "publisher never reached commit"
+
+    try:
+        assert harness.broker.close(timeout=0) is True
+        assert publish_done.is_set() is False
+    finally:
+        release_commit.set()
+        publisher.join(3.0)
+    assert not publisher.is_alive()
+    assert publish_done.is_set()
+    try:
+        assert harness.broker._ring.published_high_water_seq() == 0  # noqa: SLF001
+        assert harness.broker._ingress.current_cost == frames.FrameCost(0, 0)  # noqa: SLF001
+        with harness.broker._commit_cleanup_lock:  # noqa: SLF001
+            assert harness.broker._pending_commit_cleanup == {}  # noqa: SLF001
+    finally:
+        assert harness.broker.close(timeout=0) is True
+
+
+def test_concurrent_close_posts_one_owned_stop() -> None:
+    """Every closer may race at the call edge; the ingress owns one stop."""
+    harness = Harness()
+    broker = harness.broker
+    broker.start()
+    closers = 8
+    at_handoff = threading.Barrier(closers)
+    real_put_stop = broker._ingress.put_stop  # noqa: SLF001
+    outcomes: list[bool] = []
+    failures: list[BaseException] = []
+    finished = [threading.Event() for _ in range(closers)]
+
+    def gated_put_stop() -> None:
+        at_handoff.wait(timeout=5.0)
+        real_put_stop()
+
+    def close(index: int) -> None:
+        try:
+            outcomes.append(broker.close(timeout=1.0))
+        except BaseException as exc:
+            failures.append(exc)
+        finally:
+            finished[index].set()
+
+    broker._ingress.put_stop = gated_put_stop  # noqa: SLF001
+    threads = [
+        threading.Thread(target=close, args=(index,), daemon=True)
+        for index in range(closers)
+    ]
+    for thread in threads:
+        thread.start()
+    for done in finished:
+        assert done.wait(5.0), "a concurrent close never completed"
+    for thread in threads:
+        thread.join()
+
+    assert failures == []
+    assert outcomes == [True] * closers
+    assert broker._ingress._items.qsize() == 1  # noqa: SLF001
+    assert broker.deliver_next(timeout=0) is False
+    assert broker._ingress._items.qsize() == 0  # noqa: SLF001
+
+
+def test_stop_handoff_recovers_before_and_after_effect_exceptions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A close retry neither loses nor duplicates its one-shot stop."""
+    harness = Harness()
+    broker = harness.broker
+    broker.start()
+    owned_queue = broker._ingress._items  # noqa: SLF001
+    real_put_stop = broker._ingress.put_stop  # noqa: SLF001
+    before = True
+
+    def interrupt_before_effect() -> None:
+        nonlocal before
+        if before:
+            before = False
+            raise KeyboardInterrupt("stop interrupted before enqueue")
+        real_put_stop()
+
+    monkeypatch.setattr(
+        broker._ingress,  # noqa: SLF001
+        "put_stop",
+        interrupt_before_effect,
+    )
+    with pytest.raises(KeyboardInterrupt, match="before enqueue"):
+        broker.close(timeout=1.0)
+    assert owned_queue.qsize() == 0
+
+    class PutThenInterruptQueue:
+        interrupted = False
+
+        def put(self, item) -> None:
+            owned_queue.put(item)
+            if isinstance(item, _IngressStop) and not self.interrupted:
+                self.interrupted = True
+                raise KeyboardInterrupt("stop interrupted after enqueue")
+
+        def __getattr__(self, name):
+            return getattr(owned_queue, name)
+
+    proxy = PutThenInterruptQueue()
+    monkeypatch.setattr(broker._ingress, "_items", proxy)  # noqa: SLF001
+    with pytest.raises(KeyboardInterrupt, match="after enqueue"):
+        broker.close(timeout=1.0)
+    assert proxy.qsize() == 1
+    assert broker.close(timeout=1.0) is True
+    assert proxy.qsize() == 1
+    assert broker.deliver_next(timeout=0) is False
+    assert proxy.qsize() == 0
+
+
 def test_a_wedged_connection_does_not_hold_close_open() -> None:
+    entered = threading.Event()
+    release = threading.Event()
+
     class Stuck(FakeConnection):
         def write(self, data: bytes) -> None:
             del data
-            time.sleep(5)
+            entered.set()
+            release.wait()
 
     broker = SSEBroker(
         process_instance_id=INSTANCE,
@@ -2139,16 +4907,124 @@ def test_a_wedged_connection_does_not_hold_close_open() -> None:
     )
     broker.start()
     connection = Stuck()
-    broker.connect(connection=connection)
-    broker.publish_state_patch(runtime_snapshot(state_revision=1))
-    started = time.monotonic()
-    assert broker.close(timeout=0.3) is False
-    # Bounded, and the descriptor is released rather than left behind.
-    assert time.monotonic() - started < 2.0
-    assert connection.closed is True
+    handle = broker.connect(connection=connection)
+    try:
+        assert entered.wait(2.0), "writer did not enter its wedged write"
+        broker.publish_state_patch(runtime_snapshot(state_revision=1))
+        started = time.monotonic()
+        assert broker.close(timeout=0.3) is False
+        # Bounded, and the descriptor is released rather than left behind.
+        assert time.monotonic() - started < 2.0
+        assert connection.closed is True
+    finally:
+        release.set()
+        assert handle.finished.wait(2.0), "released writer did not exit"
+        assert broker.close(timeout=2.0) is True
+
+
+def test_a_blocking_connection_close_cannot_escape_the_broker_deadline() -> None:
+    """Socket interruption runs under a retained owner, never on the caller."""
+    write_entered = threading.Event()
+    release_write = threading.Event()
+    close_entered = threading.Event()
+    release_close = threading.Event()
+    close_returned = threading.Event()
+    outcomes: list[bool] = []
+
+    class BlockingClose(FakeConnection):
+        def write(self, data: bytes) -> None:
+            write_entered.set()
+            release_write.wait()
+            super().write(data)
+
+        def close(self) -> None:
+            close_entered.set()
+            release_write.set()
+            release_close.wait()
+            super().close()
+
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _sid: "valid",
+        spawn=RealThreadSpawner().spawn,
+    )
+    broker.start()
+    handle = broker.connect(connection=BlockingClose())
+    assert write_entered.wait(2.0), "writer never reached the blocked connection"
+
+    def close_broker() -> None:
+        try:
+            outcomes.append(broker.close(timeout=0))
+        finally:
+            close_returned.set()
+
+    closer = threading.Thread(target=close_broker, daemon=True)
+    closer.start()
+    try:
+        assert close_returned.wait(2.0), (
+            "broker close blocked past its zero-second deadline"
+        )
+        assert outcomes == [False]
+        assert close_entered.wait(2.0), "connection close owner never ran"
+        assert handle.finished.is_set() is False
+    finally:
+        release_write.set()
+        release_close.set()
+        closer.join(timeout=2.0)
+        broker._ingress.put_stop()  # noqa: SLF001
+        broker.close(timeout=2.0)
 
 
 # --- close() is a completion report, not an intention -----------------------
+
+
+def test_close_budget_covers_an_unstarted_stream_connection_cleanup() -> None:
+    entered = threading.Event()
+    release = threading.Event()
+    returned = threading.Event()
+    outcomes: list[bool] = []
+    errors: list[BaseException] = []
+
+    class HeldCloseConnection(FakeConnection):
+        def close(self) -> None:
+            entered.set()
+            assert release.wait(5.0), "the test must release connection cleanup"
+            super().close()
+
+    harness = Harness()
+    connection = HeldCloseConnection()
+    harness.broker.prepare_stream(connection=connection)
+    assert harness.broker.registrations_in_flight == 1
+
+    def close() -> None:
+        try:
+            outcomes.append(harness.broker.close(timeout=0))
+        except BaseException as exc:
+            errors.append(exc)
+        finally:
+            returned.set()
+
+    closer = threading.Thread(target=close)
+    closer.start()
+    try:
+        assert entered.wait(2.0), "connection cleanup never began"
+        assert returned.wait(2.0), "zero-budget close waited for the blocked socket"
+        closer.join(2.0)
+        assert errors == []
+        assert outcomes == [False]
+        assert not connection.closed
+        assert harness.broker.registrations_in_flight == 1
+
+        release.set()
+        assert harness.broker.close(timeout=2.0) is True
+        assert connection.closed
+        assert harness.broker.registrations_in_flight == 0
+        assert harness.broker.connections == ()
+    finally:
+        release.set()
+        closer.join(2.0)
+        harness.broker.close(timeout=2.0)
 
 
 def test_close_reports_false_until_every_thread_has_really_exited() -> None:
@@ -2213,7 +5089,6 @@ class _GatedSpawn:
         self.entered.set()
         self.release.wait()
         thread = threading.Thread(target=target, daemon=True)
-        thread.start()
         self.threads.append(thread)
         return thread
 
@@ -2347,13 +5222,12 @@ def test_one_connections_failure_does_not_touch_the_others() -> None:
             raise BrokenPipeError("gone")
 
     broken = Exploding()
-    healthy = FakeConnection()
+    healthy = ObservedConnection()
     threads: list[threading.Thread] = []
 
     def spawn(target):
         thread = threading.Thread(target=target, daemon=True)
         threads.append(thread)
-        thread.start()
         return thread
 
     broker = SSEBroker(
@@ -2378,7 +5252,7 @@ def test_one_connections_failure_does_not_touch_the_others() -> None:
                 node_id=None,
             ),
         )
-    time.sleep(0.3)
+    healthy.wait_for_bytes(b"id: inst-test:5\n")
     broker.close(timeout=2.0)
     # The healthy tab saw every event even though its neighbour died. The 0
     # is the re-seed: both connections connected to an empty ring, so both
@@ -2398,6 +5272,78 @@ def test_a_patch_is_broadcast_after_the_authoritative_snapshot_moves() -> None:
     # A connection that arrives afterwards is primed with the same revision.
     late = harness.connect()
     assert b'"state_revision":7' in _wire_containing(late, b"event: state_patch")
+
+
+def test_same_revision_identical_patch_recovery_does_not_offer_twice(
+    monkeypatch,
+) -> None:
+    harness = Harness()
+    offered = []
+    offer = harness.broker._ingress.offer  # noqa: SLF001
+
+    def count_offer(item):
+        offered.append(item)
+        return offer(item)
+
+    monkeypatch.setattr(harness.broker._ingress, "offer", count_offer)  # noqa: SLF001
+    snapshot = runtime_snapshot(state_revision=1)
+    recovered = replace(snapshot)
+    assert recovered == snapshot and recovered is not snapshot
+
+    harness.broker.publish_state_patch(snapshot)
+    harness.broker.publish_state_patch(recovered)
+
+    assert len(offered) == 1, "an identical recovery patch entered ingress twice"
+    assert harness.broker._latest == snapshot  # noqa: SLF001
+    assert harness.broker._fatal is None  # noqa: SLF001
+
+
+def test_same_revision_conflicting_patch_is_process_fatal(monkeypatch) -> None:
+    from agent_alfred.events import ProcessFatalSinkError
+
+    harness = Harness()
+    offered = []
+    reported: list[BaseException] = []
+    harness.broker.bind_fatal_handler(reported.append)
+    offer = harness.broker._ingress.offer  # noqa: SLF001
+
+    def count_offer(item):
+        offered.append(item)
+        return offer(item)
+
+    monkeypatch.setattr(harness.broker._ingress, "offer", count_offer)  # noqa: SLF001
+    original = runtime_snapshot(state_revision=1)
+    conflicting = runtime_snapshot(
+        state_revision=1,
+        coordinator_state="accepted",
+        active_run=ActiveRunSummary(
+            run_id="r-conflict",
+            purpose="chat",
+            gateway="web",
+            phase="accepted",
+            session_id="s1",
+            prompt_preview="conflict",
+            started_at=None,
+            recording_state=None,
+        ),
+    )
+    assert conflicting.state_revision == original.state_revision
+    assert conflicting != original
+    harness.broker.publish_state_patch(original)
+
+    with pytest.raises(ProcessFatalSinkError) as raised:
+        harness.broker.publish_state_patch(conflicting)
+
+    assert harness.broker._fatal is raised.value  # noqa: SLF001
+    assert harness.broker._stopping is True  # noqa: SLF001
+    assert harness.broker._latest == original  # noqa: SLF001
+    assert len(offered) == 1, "the conflicting patch must not enter ingress"
+    assert reported == [raised.value]
+
+    assert harness.broker.publish_state_patch(conflicting) is False
+    assert reported == [raised.value], "one fatal transition must report once"
+    assert harness.broker._latest == original  # noqa: SLF001
+    assert len(offered) == 1
 
 
 def test_an_undeliverable_patch_closes_the_connection() -> None:
@@ -2423,12 +5369,17 @@ def test_a_broker_without_a_session_source_refuses_to_guess() -> None:
     claiming a Session exists when nothing has been consulted.
     """
     broker = SSEBroker(process_instance_id=INSTANCE, snapshot=runtime_snapshot())
-    with pytest.raises(RuntimeError):
-        broker.connect(connection=FakeConnection())
-    broker.bind_session_check(
-        lambda session_id: "valid" if session_id is None else "invalid"
-    )
-    assert broker.connect(connection=FakeConnection()) is not None
+    try:
+        with pytest.raises(RuntimeError):
+            broker.connect(connection=FakeConnection())
+        broker.bind_session_check(
+            lambda session_id: "valid" if session_id is None else "invalid"
+        )
+        handle = broker.connect(connection=FakeConnection())
+        assert handle is not None
+    finally:
+        assert broker.close(timeout=2.0) is True
+    assert handle.finished.is_set(), "the test retained its stream writer"
 
 
 def test_the_dispatcher_stops_on_the_sentinel() -> None:
@@ -2738,6 +5689,48 @@ def test_a_fatal_commit_fails_instead_of_delivering_to_no_one(monkeypatch) -> No
             )
 
 
+def test_sequence_binding_exhaustion_is_a_process_fatal_refusal() -> None:
+    from agent_alfred.events import ProcessFatalSinkError
+
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _sid: "valid",
+    )
+    payload = RunStarted(purpose="chat")
+    envelope = EventEnvelope(
+        ts=0.0,
+        run_id="r1",
+        session_id=None,
+        step_index=None,
+        attempt_id=None,
+        node_id=None,
+    )
+    unsequenced = UnsequencedEvent(
+        event_id="sequence-exhaustion",
+        envelope=envelope,
+        payload=payload,
+        trace_policy="persist",
+        replayable=True,
+    )
+    prepared = broker.prepare(unsequenced)
+    sequenced = SequencedEvent(
+        seq=10**25,
+        process_instance_id=INSTANCE,
+        event_id=unsequenced.event_id,
+        envelope=envelope,
+        payload=payload,
+        trace_policy="persist",
+        replayable=True,
+    )
+
+    with pytest.raises(ProcessFatalSinkError, match="publication machinery"):
+        broker.commit(prepared, sequenced)
+
+    assert isinstance(broker._fatal, ValueError)  # noqa: SLF001
+    assert broker._stopping is True  # noqa: SLF001
+
+
 def test_the_fatal_refusal_is_typed_as_process_fatal(monkeypatch) -> None:
     """The refusal behind a dead dispatcher carries the process-fatal type.
 
@@ -3003,6 +5996,9 @@ def test_every_opening_ring_read_failure_is_process_fatal_before_admission(
     assert broker._stopping is True  # noqa: SLF001
     assert existing.queue.close_requested is True
     assert existing.finished.wait(5.0), "existing stream was not closed"
+    assert existing.thread is not None
+    existing.thread.join(timeout=2.0)
+    assert not existing.thread.is_alive(), "existing writer never exited"
     assert broker.connections == ()
     assert broker.registrations_in_flight == 0
     assert len(spawn.targets) == 1, "failed admission leaked writer ownership"
@@ -3073,6 +6069,9 @@ def test_a_startup_guard_read_failure_is_process_fatal_before_admission() -> Non
     assert broker._stopping is True  # noqa: SLF001
     assert existing.queue.close_requested is True
     assert existing.finished.wait(5.0), "existing stream was not closed"
+    assert existing.thread is not None
+    existing.thread.join(timeout=2.0)
+    assert not existing.thread.is_alive(), "existing writer never exited"
     assert broker.connections == ()
     assert broker.registrations_in_flight == 0
 
@@ -3123,6 +6122,10 @@ def test_a_writer_replay_read_failure_disables_the_process_sink(
     assert broker._stopping is True  # noqa: SLF001
     assert existing.queue.close_requested is True
     assert existing.finished.wait(5.0), "existing stream was not closed"
+    for handle in (existing, replaying):
+        assert handle.thread is not None
+        handle.thread.join(timeout=2.0)
+        assert not handle.thread.is_alive(), "fatal writer never exited"
     assert broker.connections == ()
 
     refused = broker.connect(connection=FakeConnection())
@@ -3197,6 +6200,878 @@ def test_a_broken_ring_is_a_process_fatal_not_a_run_local_error() -> None:
     assert runs == ["r1", "r2"], "the healthy sink keeps receiving events"
 
 
+def test_ring_cost_control_exit_poison_closes_old_stream_before_a_higher_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A half-written recovery source is fatal before another seq can pass."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=2, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    old = harness.connect()
+    drain_connection(old)
+    cost_entered = threading.Event()
+    release_cost = threading.Event()
+    failure = KeyboardInterrupt("ring cost interrupted")
+    real_cost = PreparedFrames.ingress_cost
+
+    def gated_cost(item: PreparedFrames) -> frames.FrameCost:
+        if item.seq == 1:
+            cost_entered.set()
+            assert release_cost.wait(3.0), "test did not release ring cost"
+            raise failure
+        return real_cost(item)
+
+    monkeypatch.setattr(PreparedFrames, "ingress_cost", gated_cost)
+    caught: list[BaseException] = []
+
+    def publish() -> None:
+        try:
+            harness.emit(RunStarted(purpose="chat"), run_id="r1")
+        except BaseException as exc:  # noqa: BLE001 - identity asserted below
+            caught.append(exc)
+
+    publisher = threading.Thread(target=publish, name="ring-cost-publisher")
+    publisher.start()
+    assert cost_entered.wait(3.0), "publisher never entered ring cost"
+    release_cost.set()
+    publisher.join(3.0)
+    assert not publisher.is_alive()
+
+    assert caught == [failure]
+    assert ring._generation % 2 == 1  # noqa: SLF001
+    assert harness.broker._fatal is failure  # noqa: SLF001
+    assert harness.broker._stopping is True  # noqa: SLF001
+
+    harness.emit(RunStarted(purpose="chat"), run_id="r2")
+    assert ring._generation % 2 == 1  # noqa: SLF001
+    assert harness.broker.deliver_next(timeout=0) is False
+    assert old.queue.close_requested is True
+    assert replay_ids(drain_connection(old)) == [], (
+        "the old stream must close before any id:2 can pass"
+    )
+
+
+@pytest.mark.parametrize("binding", ["with_sequence", "with_checkpoint"])
+def test_binding_control_exit_fails_broker_closed_before_the_ring(
+    monkeypatch: pytest.MonkeyPatch,
+    binding: str,
+) -> None:
+    """Every broker-specific binding after FanOut seq allocation is fatal."""
+    harness = Harness()
+    old = harness.connect()
+    drain_connection(old)
+    failure = SystemExit(f"{binding} interrupted")
+
+    def interrupt_binding(_item: PreparedFrames, *_args) -> PreparedFrames:
+        raise failure
+
+    monkeypatch.setattr(PreparedFrames, binding, interrupt_binding)
+
+    with pytest.raises(SystemExit) as raised:
+        harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    assert raised.value is failure
+    assert harness.broker._fatal is failure  # noqa: SLF001
+    assert harness.broker._stopping is True  # noqa: SLF001
+    assert harness.broker._ring.published_high_water_seq() == 0  # noqa: SLF001
+
+    harness.emit(RunStarted(purpose="chat"), run_id="r2")
+    assert harness.broker._ring.published_high_water_seq() == 0  # noqa: SLF001
+    assert harness.broker.deliver_next(timeout=0) is False
+    assert old.queue.close_requested is True
+    assert replay_ids(drain_connection(old)) == []
+
+
+@pytest.mark.parametrize(
+    "boundary", ["progress", "state_epoch", "run_event"],
+)
+@pytest.mark.parametrize(
+    "failure_type", [KeyboardInterrupt, RuntimeError],
+)
+def test_pre_ring_failure_fences_every_later_publication(
+    monkeypatch: pytest.MonkeyPatch,
+    boundary: str,
+    failure_type: type[BaseException],
+) -> None:
+    """Every post-seq broker mutation belongs to one fatal commit domain."""
+    harness = Harness()
+    broker = harness.broker
+    old = harness.connect()
+    drain_connection(old)
+    failure = failure_type(f"{boundary} failed before ring publication")
+    payload = RunStarted(purpose="chat")
+    envelope = EventEnvelope(
+        ts=0.0,
+        run_id="r1",
+        session_id=None,
+        step_index=None,
+        attempt_id=None,
+        node_id=None,
+    )
+    unsequenced = UnsequencedEvent(
+        event_id="pre-ring-failure",
+        envelope=envelope,
+        payload=payload,
+        trace_policy="persist",
+        replayable=True,
+    )
+    prepared = broker.prepare(unsequenced)
+    sequenced = SequencedEvent(
+        seq=1,
+        process_instance_id=INSTANCE,
+        event_id=unsequenced.event_id,
+        envelope=envelope,
+        payload=payload,
+        trace_policy="persist",
+        replayable=True,
+    )
+
+    if boundary == "progress":
+        real_observe = broker_module.progress_module.observe
+
+        def observe_then_fail(*args, **kwargs) -> None:
+            real_observe(*args, **kwargs)
+            raise failure
+
+        monkeypatch.setattr(
+            broker_module.progress_module, "observe", observe_then_fail
+        )
+    elif boundary == "state_epoch":
+
+        class InterruptingEpoch(int):
+            def __new__(cls):
+                return super().__new__(cls, 0)
+
+            def __add__(self, other):
+                del other
+                raise failure
+
+        broker._state_epoch = InterruptingEpoch()  # noqa: SLF001
+    else:
+        real_note = broker._note_run_event  # noqa: SLF001
+
+        def note_then_fail(event: SequencedEvent) -> None:
+            real_note(event)
+            raise failure
+
+        monkeypatch.setattr(broker, "_note_run_event", note_then_fail)
+
+    if isinstance(failure, Exception):
+        with pytest.raises(ProcessFatalSinkError) as raised:
+            broker.commit(prepared, sequenced)
+        assert raised.value.__cause__ is failure
+    else:
+        with pytest.raises(KeyboardInterrupt) as raised:
+            broker.commit(prepared, sequenced)
+        assert raised.value is failure
+
+    assert broker._fatal is failure  # noqa: SLF001
+    assert broker._stopping is True  # noqa: SLF001
+    assert broker._ring.published_high_water_seq() == 0  # noqa: SLF001
+    with pytest.raises(ProcessFatalSinkError):
+        broker.commit(prepared, replace(sequenced, seq=2))
+    assert broker._ring.published_high_water_seq() == 0  # noqa: SLF001
+
+    refused = broker.connect(connection=FakeConnection())
+    assert refused.finished.is_set()
+    assert broker.deliver_next(timeout=0) is False
+    assert old.queue.close_requested is True
+    assert replay_ids(drain_connection(old)) == []
+
+
+@pytest.mark.parametrize("retirement", ["evict", "clear"])
+def test_poisoned_eviction_cleanup_remains_owned_until_close_can_finish(
+    monkeypatch: pytest.MonkeyPatch,
+    retirement: str,
+) -> None:
+    """A control exit after logical eviction cannot orphan retired frames."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    harness.emit(RunStarted(purpose="chat"), run_id="seed")
+    assert harness.broker.deliver_next(timeout=0) is True
+    seeded = ring.entries_after(0)
+    assert seeded is not None
+    retired_ref = weakref.ref(seeded[0])
+    del seeded
+
+    if retirement == "clear":
+        ring.budget = frames.FrameBudget(frames=1, encoded_bytes=1)
+    failure = KeyboardInterrupt(f"{retirement} interrupted after retirement")
+    real_drop = ring._entries.drop_prefix  # noqa: SLF001
+
+    def interrupt_after_drop(count: int):
+        retired = real_drop(count)
+        assert retired is not None
+        raise failure
+
+    real_release = ring._entries.release_retired  # noqa: SLF001
+    cleanup_entered = threading.Event()
+    release_cleanup = threading.Event()
+    release_calls = 0
+    poisoned_lock_checks: list[tuple[bool, bool]] = []
+
+    def gated_release(start: int, count: int, through_seq: int) -> None:
+        nonlocal release_calls
+        release_calls += 1
+        broker_unlocked = harness.broker._lock.acquire(blocking=False)  # noqa: SLF001
+        if broker_unlocked:
+            harness.broker._lock.release()  # noqa: SLF001
+        fanout_unlocked = harness.fanout._lock.acquire(blocking=False)  # noqa: SLF001
+        if fanout_unlocked:
+            harness.fanout._lock.release()  # noqa: SLF001
+        poisoned_lock_checks.append((broker_unlocked, fanout_unlocked))
+        cleanup_entered.set()
+        assert release_cleanup.wait(3.0), "test did not release poisoned cleanup"
+        real_release(start, count, through_seq)
+
+    monkeypatch.setattr(
+        ring._entries, "drop_prefix", interrupt_after_drop  # noqa: SLF001
+    )
+    monkeypatch.setattr(
+        ring._entries, "release_retired", gated_release  # noqa: SLF001
+    )
+    caught: list[BaseException] = []
+
+    def publish() -> None:
+        try:
+            harness.emit(RunStarted(purpose="chat"), run_id="r1")
+        except BaseException as exc:  # noqa: BLE001 - identity asserted below
+            caught.append(exc)
+
+    publisher = threading.Thread(target=publish, name="poison-cleanup-publisher")
+    publisher.start()
+    assert cleanup_entered.wait(3.0), "poisoned retirement had no cleanup owner"
+
+    try:
+        assert harness.broker.close(timeout=0) is False
+        with harness.broker._lock:  # noqa: SLF001
+            assert harness.broker._ring_cleanup_failure is failure  # noqa: SLF001
+            assert harness.broker._ring_cleanup_in_progress is True  # noqa: SLF001
+    finally:
+        release_cleanup.set()
+        publisher.join(3.0)
+    assert not publisher.is_alive()
+    assert caught == [failure]
+
+    assert harness.broker.close(timeout=0) is True
+    # The asserted original control object owns the failing stack, whose
+    # `_evict_while_over_budget` frame legitimately held the dropped entry as
+    # a local. Clear only that diagnostic traceback before measuring whether
+    # the ring/cleanup ownership itself released the frame.
+    failure.__traceback__ = None
+    caught.clear()
+    gc.collect()
+    assert release_calls == 1
+    assert poisoned_lock_checks == [(True, True)]
+    assert retired_ref() is None
+    with harness.broker._lock:  # noqa: SLF001
+        assert harness.broker._ring_cleanup_failure is None  # noqa: SLF001
+        assert harness.broker._ring_cleanup_in_progress is False  # noqa: SLF001
+
+
+@pytest.mark.parametrize("owner", ["commit", "ring"])
+def test_cleanup_return_boundary_requeues_without_an_immortal_claim(
+    monkeypatch: pytest.MonkeyPatch,
+    owner: str,
+) -> None:
+    """Control after callback return leaves an identity-claimable retry."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    harness.emit(RunStarted(purpose="chat"), run_id="seed")
+    assert harness.broker.deliver_next(timeout=0) is True
+    seeded = ring.entries_after(0)
+    assert seeded is not None
+    retired_ref = weakref.ref(seeded[0])
+    del seeded
+
+    release_calls = 0
+    real_release = ring._entries.release_retired  # noqa: SLF001
+
+    def count_release(start: int, count: int, through_seq: int) -> None:
+        nonlocal release_calls
+        release_calls += 1
+        real_release(start, count, through_seq)
+
+    monkeypatch.setattr(ring._entries, "release_retired", count_release)  # noqa: SLF001
+    original = KeyboardInterrupt(f"{owner} publication interrupted")
+    secondary = SystemExit(f"{owner} cleanup return interrupted")
+    boundary_armed = True
+
+    def interrupt_return(actual_owner: str) -> None:
+        nonlocal boundary_armed
+        if actual_owner == owner and boundary_armed:
+            boundary_armed = False
+            raise secondary
+
+    monkeypatch.setattr(
+        harness.broker, "_cleanup_callback_returned", interrupt_return
+    )
+    if owner == "ring":
+        real_drop = ring._entries.drop_prefix  # noqa: SLF001
+
+        def fail_after_drop(count: int):
+            real_drop(count)
+            raise original
+
+        monkeypatch.setattr(ring._entries, "drop_prefix", fail_after_drop)  # noqa: SLF001
+    else:
+        original = secondary
+
+    with pytest.raises(type(original)) as raised:
+        harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    assert raised.value is original
+
+    if owner == "commit":
+        with harness.broker._commit_cleanup_lock:  # noqa: SLF001
+            debts = tuple(harness.broker._pending_commit_cleanup.values())  # noqa: SLF001
+            assert len(debts) == 1
+            assert debts[0].ready is True
+            assert debts[0].claim is None
+            assert debts[0].in_progress is False
+    else:
+        with harness.broker._lock:  # noqa: SLF001
+            assert harness.broker._ring_cleanup_failure is original  # noqa: SLF001
+            assert harness.broker._ring_cleanup_ready is True  # noqa: SLF001
+            assert harness.broker._ring_cleanup_claim is None  # noqa: SLF001
+            assert harness.broker._ring_cleanup_in_progress is False  # noqa: SLF001
+
+    assert harness.broker.close(timeout=0) is True
+    original.__traceback__ = None
+    secondary.__traceback__ = None
+    del raised
+    gc.collect()
+    assert release_calls == 1
+    assert retired_ref() is None
+
+
+def test_ring_return_after_effect_keeps_retirement_until_broker_owns_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The ring-side backup closes return-to-ledger ownership transfer."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    harness.emit(RunStarted(purpose="chat"), run_id="seed")
+    assert harness.broker.deliver_next(timeout=0) is True
+    seeded = ring.entries_after(0)
+    assert seeded is not None
+    retired_ref = weakref.ref(seeded[0])
+    del seeded
+
+    failure = SystemExit("observe returned then interrupted")
+    real_observe = ring.observe_published
+
+    def interrupt_after_return(
+        seq: int,
+        entry: PreparedFrames | None,
+        *,
+        defer_retired_release: bool = False,
+    ):
+        result = real_observe(
+            seq,
+            entry,
+            defer_retired_release=defer_retired_release,
+        )
+        if seq == 2:
+            raise failure
+        return result
+
+    real_release = ring._entries.release_retired  # noqa: SLF001
+    cleanup_entered = threading.Event()
+    release_cleanup = threading.Event()
+
+    def gated_release(start: int, count: int, through_seq: int) -> None:
+        cleanup_entered.set()
+        assert release_cleanup.wait(3.0), "test did not release backup cleanup"
+        real_release(start, count, through_seq)
+
+    monkeypatch.setattr(ring, "observe_published", interrupt_after_return)
+    monkeypatch.setattr(
+        ring._entries, "release_retired", gated_release  # noqa: SLF001
+    )
+    caught: list[BaseException] = []
+
+    def publish() -> None:
+        try:
+            harness.emit(RunStarted(purpose="chat"), run_id="r1")
+        except BaseException as exc:  # noqa: BLE001 - identity asserted below
+            caught.append(exc)
+
+    publisher = threading.Thread(target=publish, name="ring-return-publisher")
+    publisher.start()
+    assert cleanup_entered.wait(3.0), "ring return gap lost its backup owner"
+
+    try:
+        assert ring._generation % 2 == 0  # noqa: SLF001
+        assert harness.broker._fatal is failure  # noqa: SLF001
+        assert harness.broker.close(timeout=0) is False
+    finally:
+        release_cleanup.set()
+        publisher.join(3.0)
+    assert not publisher.is_alive()
+    assert caught == [failure]
+
+    assert harness.broker.close(timeout=0) is True
+    gc.collect()
+    assert retired_ref() is None
+    assert ring._deferred_retired == {}  # noqa: SLF001
+
+
+def test_ring_ack_after_effect_keeps_the_broker_cleanup_owner(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Broker ledger registration precedes the ring backup acknowledgement."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    harness.emit(RunStarted(purpose="chat"), run_id="seed")
+    assert harness.broker.deliver_next(timeout=0) is True
+    seeded = ring.entries_after(0)
+    assert seeded is not None
+    retired_ref = weakref.ref(seeded[0])
+    del seeded
+
+    failure = KeyboardInterrupt("retirement ack interrupted after effect")
+    real_ack = AppendResult.acknowledge_retired_transfer
+    interrupt_ack = True
+
+    def ack_then_interrupt(result: AppendResult) -> None:
+        nonlocal interrupt_ack
+        real_ack(result)
+        if result._retired is not None and interrupt_ack:  # noqa: SLF001
+            interrupt_ack = False
+            raise failure
+
+    real_release = ring._entries.release_retired  # noqa: SLF001
+    cleanup_entered = threading.Event()
+    release_cleanup = threading.Event()
+
+    def gated_release(start: int, count: int, through_seq: int) -> None:
+        cleanup_entered.set()
+        assert release_cleanup.wait(3.0), "test did not release ack cleanup"
+        real_release(start, count, through_seq)
+
+    monkeypatch.setattr(
+        AppendResult, "acknowledge_retired_transfer", ack_then_interrupt
+    )
+    monkeypatch.setattr(
+        ring._entries, "release_retired", gated_release  # noqa: SLF001
+    )
+    caught: list[BaseException] = []
+
+    def publish() -> None:
+        try:
+            harness.emit(RunStarted(purpose="chat"), run_id="r1")
+        except BaseException as exc:  # noqa: BLE001 - identity asserted below
+            caught.append(exc)
+
+    publisher = threading.Thread(target=publish, name="ring-ack-publisher")
+    publisher.start()
+    assert cleanup_entered.wait(3.0), "ack interruption lost broker cleanup"
+
+    try:
+        assert harness.broker._fatal is failure  # noqa: SLF001
+        assert ring._deferred_retired == {}  # noqa: SLF001
+        assert harness.broker.close(timeout=0) is False
+    finally:
+        release_cleanup.set()
+        publisher.join(3.0)
+    assert not publisher.is_alive()
+    assert caught == [failure]
+
+    assert harness.broker.close(timeout=0) is True
+    gc.collect()
+    assert retired_ref() is None
+
+
+def test_ring_backup_and_broker_debt_share_one_retirement_claim(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two durable references may not execute one physical release concurrently."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    harness.emit(RunStarted(purpose="chat"), run_id="seed")
+    assert harness.broker.deliver_next(timeout=0) is True
+
+    failure = KeyboardInterrupt("ring acknowledgement interrupted before effect")
+    real_ack = AppendResult.acknowledge_retired_transfer
+    ack_armed = True
+
+    def interrupt_ack_once(result: AppendResult) -> None:
+        nonlocal ack_armed
+        if ack_armed and result._retired is not None:  # noqa: SLF001
+            ack_armed = False
+            raise failure
+        real_ack(result)
+
+    monkeypatch.setattr(
+        AppendResult, "acknowledge_retired_transfer", interrupt_ack_once
+    )
+    real_release = ring._entries.release_retired  # noqa: SLF001
+    first_release_entered = threading.Event()
+    second_release_entered = threading.Event()
+    allow_release = threading.Event()
+    release_calls = 0
+    active_releases = 0
+    max_active_releases = 0
+    count_lock = threading.Lock()
+
+    def gated_release(start: int, count: int, through_seq: int) -> None:
+        nonlocal release_calls, active_releases, max_active_releases
+        with count_lock:
+            release_calls += 1
+            active_releases += 1
+            max_active_releases = max(max_active_releases, active_releases)
+            if release_calls == 1:
+                first_release_entered.set()
+            else:
+                second_release_entered.set()
+        try:
+            assert allow_release.wait(3.0), "test did not release retirement"
+            real_release(start, count, through_seq)
+        finally:
+            with count_lock:
+                active_releases -= 1
+
+    monkeypatch.setattr(ring._entries, "release_retired", gated_release)  # noqa: SLF001
+    publish_errors: list[BaseException] = []
+
+    def publish() -> None:
+        try:
+            harness.emit(RunStarted(purpose="chat"), run_id="r1")
+        except BaseException as exc:  # noqa: BLE001 - identity asserted below
+            publish_errors.append(exc)
+
+    publisher = threading.Thread(target=publish, name="ring-backup-release")
+    publisher.start()
+    assert first_release_entered.wait(3.0), "settlement never claimed ring backup"
+
+    close_results: list[bool] = []
+    close_done = threading.Event()
+
+    def close() -> None:
+        close_results.append(harness.broker.close(timeout=0))
+        close_done.set()
+
+    closer = threading.Thread(target=close, name="broker-debt-release")
+    closer.start()
+    try:
+        assert close_done.wait(1.0), (
+            "close entered the same physical release instead of reporting busy"
+        )
+        assert second_release_entered.is_set() is False
+        assert close_results == [False]
+    finally:
+        allow_release.set()
+        publisher.join(3.0)
+        closer.join(3.0)
+
+    assert not publisher.is_alive()
+    assert not closer.is_alive()
+    assert publish_errors == [failure]
+    assert release_calls == 1
+    assert max_active_releases == 1
+    assert harness.broker.close(timeout=0) is True
+
+
+@pytest.mark.parametrize("effect", ["before", "after"])
+@pytest.mark.parametrize("boundary", ["identity", "registration"])
+def test_cleanup_ledger_handoff_control_exit_keeps_a_claimable_owner(
+    monkeypatch: pytest.MonkeyPatch,
+    effect: str,
+    boundary: str,
+) -> None:
+    """Ring backup and broker ledger overlap across the registration return."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    harness.emit(RunStarted(purpose="chat"), run_id="seed")
+    assert harness.broker.deliver_next(timeout=0) is True
+    seeded = ring.entries_after(0)
+    assert seeded is not None
+    retired_ref = weakref.ref(seeded[0])
+    del seeded
+
+    broker = harness.broker
+    failure = SystemExit(
+        f"cleanup {boundary} interrupted {effect} effect"
+    )
+    if boundary == "identity":
+        real_get_ident = broker_module.threading.get_ident
+        interrupt_identity = True
+
+        def interrupt_get_ident() -> int:
+            nonlocal interrupt_identity
+            if interrupt_identity:
+                interrupt_identity = False
+                raise failure
+            return real_get_ident()
+
+        monkeypatch.setattr(
+            broker_module.threading, "get_ident", interrupt_get_ident
+        )
+    else:
+        real_retain = broker._retain_returned_commit_cleanup  # noqa: SLF001
+
+        def interrupt_registration(release_retired):
+            if effect == "before":
+                raise failure
+            real_retain(release_retired)
+            raise failure
+
+        monkeypatch.setattr(
+            broker, "_retain_returned_commit_cleanup", interrupt_registration
+        )
+
+    with pytest.raises(SystemExit) as raised:
+        harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    assert raised.value is failure
+    assert broker._fatal is failure  # noqa: SLF001
+    assert broker._stopping is True  # noqa: SLF001
+
+    failure.__traceback__ = None
+    del raised
+    gc.collect()
+    assert retired_ref() is None
+    assert ring._deferred_retired == {}  # noqa: SLF001
+    with broker._commit_cleanup_lock:  # noqa: SLF001
+        assert broker._pending_commit_cleanup == {}  # noqa: SLF001
+    assert broker.close(timeout=0) is True
+
+
+@pytest.mark.parametrize("effect", ["before", "after"])
+def test_post_commit_construction_control_exit_keeps_a_claimable_owner(
+    monkeypatch: pytest.MonkeyPatch,
+    effect: str,
+) -> None:
+    """A broker owner becomes settleable before PostCommit crosses its return."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    harness.emit(RunStarted(purpose="chat"), run_id="seed")
+    assert harness.broker.deliver_next(timeout=0) is True
+    seeded = ring.entries_after(0)
+    assert seeded is not None
+    retired_ref = weakref.ref(seeded[0])
+    del seeded
+
+    failure = KeyboardInterrupt(f"PostCommit interrupted {effect} effect")
+    real_post_commit = broker_module.PostCommit
+    interrupt_once = True
+
+    def interrupt_construction(*args, **kwargs):
+        nonlocal interrupt_once
+        if interrupt_once:
+            interrupt_once = False
+            if effect == "before":
+                raise failure
+            real_post_commit(*args, **kwargs)
+            raise failure
+        return real_post_commit(*args, **kwargs)
+
+    monkeypatch.setattr(broker_module, "PostCommit", interrupt_construction)
+
+    with pytest.raises(KeyboardInterrupt) as raised:
+        harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    assert raised.value is failure
+    assert harness.broker._fatal is failure  # noqa: SLF001
+    assert harness.broker._stopping is True  # noqa: SLF001
+
+    failure.__traceback__ = None
+    del raised
+    gc.collect()
+    assert retired_ref() is None
+    assert ring._deferred_retired == {}  # noqa: SLF001
+    with harness.broker._commit_cleanup_lock:  # noqa: SLF001
+        assert harness.broker._pending_commit_cleanup == {}  # noqa: SLF001
+    assert harness.broker.close(timeout=0) is True
+
+
+def test_commit_return_control_exit_claims_the_latest_normal_owner(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FanOut can settle a PostCommit lost after the sink returned it."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    harness.emit(RunStarted(purpose="chat"), run_id="seed")
+    assert harness.broker.deliver_next(timeout=0) is True
+    seeded = ring.entries_after(0)
+    assert seeded is not None
+    retired_ref = weakref.ref(seeded[0])
+    del seeded
+
+    failure = KeyboardInterrupt("commit returned before caller received PostCommit")
+    real_commit = harness.broker.commit
+
+    def return_then_interrupt(prepared: object, event: SequencedEvent):
+        post_commit = real_commit(prepared, event)
+        if event.seq == 2:
+            raise failure
+        return post_commit
+
+    monkeypatch.setattr(harness.broker, "commit", return_then_interrupt)
+
+    with pytest.raises(KeyboardInterrupt) as raised:
+        harness.emit(RunStarted(purpose="chat"), run_id="r1")
+    assert raised.value is failure
+
+    failure.__traceback__ = None
+    del raised
+    gc.collect()
+    assert retired_ref() is None
+    assert ring._deferred_retired == {}  # noqa: SLF001
+    with harness.broker._commit_cleanup_lock:  # noqa: SLF001
+        assert harness.broker._pending_commit_cleanup == {}  # noqa: SLF001
+    assert harness.broker.close(timeout=0) is True
+
+
+@pytest.mark.parametrize("boundary", ["store", "loop"])
+def test_fanout_async_exit_after_commit_effect_still_settles_owner(
+    monkeypatch: pytest.MonkeyPatch,
+    boundary: str,
+) -> None:
+    """Caller handoff exits cannot strand owners or skip a prepared sibling."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    tail = CapturingSink(name="tail")
+    fanout = FanOutSink(
+        [harness.broker, tail], process_instance_id=INSTANCE
+    )
+    envelope = EventEnvelope(0.0, "r1", None, None, None, None)
+    fanout.emit(RunStarted(purpose="chat"), envelope)
+    assert harness.broker.deliver_next(timeout=0) is True
+    seeded = ring.entries_after(0)
+    assert seeded is not None
+    retired_ref = weakref.ref(seeded[0])
+    del seeded
+
+    failure = KeyboardInterrupt(f"FanOut {boundary} boundary interrupted")
+    after_commit_seqs: list[int] = []
+    boundary_entered = threading.Event()
+    release_boundary = threading.Event()
+    armed = True
+    real_record = events_module._record_post_commit  # noqa: SLF001
+
+    def interrupt_record(actions, sink, action) -> None:
+        nonlocal armed
+        real_record(actions, sink, action)
+        if armed and sink is harness.broker:
+            armed = False
+            boundary_entered.set()
+            assert release_boundary.wait(3.0), "test did not release FanOut"
+            raise failure
+
+    def interrupt_loop() -> None:
+        nonlocal armed
+        if armed:
+            armed = False
+            boundary_entered.set()
+            assert release_boundary.wait(3.0), "test did not release FanOut"
+            raise failure
+
+    monkeypatch.setattr(
+        events_module,
+        "_record_post_commit" if boundary == "store" else "_finish_commit_iteration",
+        interrupt_record if boundary == "store" else interrupt_loop,
+    )
+    caught: list[BaseException] = []
+
+    def publish() -> None:
+        try:
+            fanout.emit_linearized(
+                RunStarted(purpose="chat"),
+                envelope,
+                boundary=nullcontext(),
+                after_commit=lambda event: after_commit_seqs.append(event.seq),
+            )
+        except BaseException as exc:  # noqa: BLE001 - identity asserted below
+            caught.append(exc)
+
+    publisher = threading.Thread(target=publish, name="fanout-boundary-publisher")
+    publisher.start()
+    assert boundary_entered.wait(3.0), "publisher never reached FanOut boundary"
+    with harness.broker._commit_cleanup_lock:  # noqa: SLF001
+        debts = tuple(harness.broker._pending_commit_cleanup.values())  # noqa: SLF001
+        assert len(debts) == 1 and debts[0].ready is True
+    release_boundary.set()
+    publisher.join(3.0)
+
+    assert not publisher.is_alive()
+    assert caught == [failure]
+    assert armed is False
+    assert after_commit_seqs == [2]
+    assert [event.seq for event in tail.events] == [1, 2]
+    failure.__traceback__ = None
+    caught.clear()
+    gc.collect()
+    assert retired_ref() is None
+    with harness.broker._commit_cleanup_lock:  # noqa: SLF001
+        assert harness.broker._pending_commit_cleanup == {}  # noqa: SLF001
+    assert harness.broker.close(timeout=0) is True
+
+
+def test_fanout_boundary_exit_cannot_skip_post_commit_settlement() -> None:
+    """An outer publication boundary exits before cleanup, but cannot strand it."""
+    ring = ReplayRing(
+        budget=frames.FrameBudget(frames=1, encoded_bytes=1 << 20)
+    )
+    harness = Harness(ring=ring)
+    tail = CapturingSink(name="tail")
+    fanout = FanOutSink(
+        [harness.broker, tail], process_instance_id=INSTANCE
+    )
+    envelope = EventEnvelope(0.0, "r1", None, None, None, None)
+    fanout.emit(RunStarted(purpose="chat"), envelope)
+    assert harness.broker.deliver_next(timeout=0) is True
+    seeded = ring.entries_after(0)
+    assert seeded is not None
+    retired_ref = weakref.ref(seeded[0])
+    del seeded
+    failure = SystemExit("publication boundary exit interrupted")
+    after_commit_seqs: list[int] = []
+
+    class InterruptingBoundary:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            del exc_type, exc, traceback
+            raise failure
+
+    with pytest.raises(SystemExit) as raised:
+        fanout.emit_linearized(
+            RunStarted(purpose="chat"),
+            envelope,
+            boundary=InterruptingBoundary(),
+            after_commit=lambda event: after_commit_seqs.append(event.seq),
+        )
+
+    assert raised.value is failure
+    assert after_commit_seqs == [2]
+    assert [event.seq for event in tail.events] == [1, 2]
+    failure.__traceback__ = None
+    del raised
+    gc.collect()
+    assert retired_ref() is None
+    with harness.broker._commit_cleanup_lock:  # noqa: SLF001
+        assert harness.broker._pending_commit_cleanup == {}  # noqa: SLF001
+    assert harness.broker.close(timeout=0) is True
+
+
 # --- overflow wakes the dispatcher once, not once per overflow --------------
 
 
@@ -3242,15 +7117,78 @@ def test_overflow_kicks_merge_and_stay_bounded() -> None:
     assert broker._ingress._items.qsize() <= 3  # noqa: SLF001
 
 
-def _deliver_ingress(harness) -> None:
-    """Drive the fan-out until the ingress is empty, like a dispatcher would.
+def test_event_overflow_survives_a_before_effect_kick_interruption(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The dispatcher rechecks committed generation debt without a retry owner."""
+    broker = SSEBroker(
+        process_instance_id=INSTANCE,
+        snapshot=runtime_snapshot(),
+        session_is_valid=lambda _sid: "valid",
+        ingress_budget=frames.FrameBudget(frames=1, encoded_bytes=1),
+        spawn=RealThreadSpawner().spawn,
+    )
+    fanout = FanOutSink([broker], process_instance_id=INSTANCE)
+    broker.start()
+    handle = broker.connect(connection=FakeConnection())
+    real_put_kick = broker._ingress.put_kick  # noqa: SLF001
+    attempts = 0
 
-    Delivering exactly one item would leave the boundary question unasked:
-    the ingress can hold several events behind a registration, and every
-    one of them is measured against the connection's boundary.
-    """
-    while harness.broker.deliver_next(timeout=0.2):
-        pass
+    def interrupt_first_kick() -> None:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise KeyboardInterrupt("event kick interrupted before enqueue")
+        real_put_kick()
+
+    monkeypatch.setattr(broker._ingress, "put_kick", interrupt_first_kick)  # noqa: SLF001
+    try:
+        with pytest.raises(KeyboardInterrupt, match="before enqueue"):
+            fanout.emit(RunStarted(purpose="chat"))
+        assert handle.finished.wait(2.0), (
+            "the dispatcher slept through committed disconnect generation debt"
+        )
+        assert handle.queue.close_requested is True
+    finally:
+        broker.close(timeout=2.0)
+
+
+def test_event_overflow_kicks_coalesce_after_effect_exceptions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Independent event publishers cannot accumulate after-effect kicks."""
+    harness = Harness(
+        ingress_budget=frames.FrameBudget(frames=1, encoded_bytes=1)
+    )
+    broker = harness.broker
+    old = harness.connect()
+    drain_connection(old)
+    owned_queue = broker._ingress._items  # noqa: SLF001
+
+    class PutThenInterruptQueue:
+        def __init__(self, failures: int) -> None:
+            self.failures = failures
+
+        def put(self, item) -> None:
+            owned_queue.put(item)
+            if isinstance(item, _IngressKick) and self.failures:
+                self.failures -= 1
+                raise KeyboardInterrupt("event kick interrupted after enqueue")
+
+        def __getattr__(self, name):
+            return getattr(owned_queue, name)
+
+    proxy = PutThenInterruptQueue(failures=4)
+    monkeypatch.setattr(broker._ingress, "_items", proxy)  # noqa: SLF001
+
+    for index in range(4):
+        with pytest.raises(KeyboardInterrupt, match="after enqueue"):
+            harness.emit(RunStarted(purpose="chat"), run_id=f"r{index}")
+
+    assert proxy.qsize() == 1, "after-effect event kicks grew without bound"
+    assert broker.deliver_next(timeout=0) is True
+    assert old.queue.close_requested is True
+    assert broker.deliver_next(timeout=0) is False
 
 
 # --- a transient's seq names its publication, not its delivery --------------
@@ -3273,12 +7211,12 @@ def test_a_transient_published_before_a_connection_registers_is_not_delivered() 
     # registration below happens after the publication.
     harness.emit(BlockDelta(attempt_id="a1", index=0, text="half an attempt"))
     handle = harness.connect()
-    _deliver_ingress(harness)
+    drain_dispatcher(harness)
     wire = b"".join(item.wire_bytes() for item in drain_connection(handle))
     assert b'"event":"block.delta"' not in wire
     # A transient published after the registration is live delivery.
     harness.emit(BlockDelta(attempt_id="a1", index=0, text="still going"))
-    _deliver_ingress(harness)
+    drain_dispatcher(harness)
     items = drain_connection(handle)
     wire = b"".join(item.wire_bytes() for item in items)
     assert b'"event":"block.delta"' in wire
@@ -3299,14 +7237,14 @@ def test_mixed_backlogs_respect_the_registration_boundary() -> None:
     harness.emit(RunStarted(purpose="chat"))  # seq 2, replayable
     harness.emit(BlockDelta(attempt_id="a1"))  # seq 3, transient
     handle = harness.connect()
-    _deliver_ingress(harness)
+    drain_dispatcher(harness)
     items = drain_connection(handle)
     assert replay_ids(items) == []
     wire = b"".join(item.wire_bytes() for item in items)
     assert b'"event":"block.delta"' not in wire
     harness.emit(BlockDelta(attempt_id="a1"))  # seq 4, transient
     harness.emit(RunStarted(purpose="chat"))  # seq 5, replayable
-    _deliver_ingress(harness)
+    drain_dispatcher(harness)
     items = drain_connection(handle)
     # Only the replayable event carries a checkpoint.
     assert replay_ids(items) == [5]
@@ -3328,7 +7266,7 @@ def test_a_reconnect_skips_preregistration_transients_too() -> None:
     harness.emit(RunStarted(purpose="chat"))  # seq 2
     harness.emit(BlockDelta(attempt_id="a1"))  # seq 3, still in ingress
     handle = harness.connect(cursor=cursor_for(1))
-    _deliver_ingress(harness)
+    drain_dispatcher(harness)
     items = drain_connection(handle)
     # The replay tail, exactly once, and no preregistration transient.
     assert replay_ids(items) == [2]
@@ -3361,6 +7299,54 @@ def test_a_domain_event_fan_out_never_queries_session_validity() -> None:
     assert b'"event":"run.started"' in wire
 
 
+def test_a_transient_domain_event_carries_its_publication_seq_on_the_wire() -> None:
+    harness = Harness()
+    handle = harness.connect()
+    drain_connection(handle)
+
+    event = harness.emit(BlockDelta(attempt_id="a1", text="hello"))
+    harness.deliver()
+
+    [item] = drain_connection(handle)
+    wire = item.wire_bytes()
+    payload = json.loads(wire.split(b"data: ", 1)[1].split(b"\n", 1)[0])
+    assert payload["seq"] == event.seq
+    assert b"\nid: " not in wire
+
+
+def test_a_replayable_domain_event_carries_the_same_seq_as_its_checkpoint() -> None:
+    harness = Harness()
+    handle = harness.connect()
+    drain_connection(handle)
+
+    event = harness.emit(RunStarted(purpose="chat"))
+    harness.deliver()
+
+    [item] = drain_connection(handle)
+    [wire] = item.wire_frames()
+    payload = json.loads(wire.split(b"data: ", 1)[1].split(b"\n", 1)[0])
+    assert payload["seq"] == event.seq
+    assert wire.endswith(b"id: %s:%d\n\n" % (INSTANCE.encode(), event.seq))
+
+
+def test_every_chunk_carries_one_seq_and_only_the_last_advances_the_cursor() -> None:
+    harness = Harness(max_frame_bytes=512)
+    handle = harness.connect()
+    drain_connection(handle)
+
+    event = harness.emit(
+        RunStarted(purpose="chat", user_message=user_message_with("x" * 4000))
+    )
+    harness.deliver()
+
+    [item] = drain_connection(handle)
+    wire = item.wire_frames()
+    assert len(wire) > 1
+    assert {_chunk_meta(record)["seq"] for record in wire} == {event.seq}
+    assert all(b"\nid: " not in record for record in wire[:-1])
+    assert wire[-1].endswith(b"id: %s:%d\n\n" % (INSTANCE.encode(), event.seq))
+
+
 def test_a_patch_fan_out_keeps_each_sessions_validity_view() -> None:
     """A patch still carries the database-backed fact for its connection."""
     harness = Harness()
@@ -3376,25 +7362,25 @@ def test_a_patch_fan_out_keeps_each_sessions_validity_view() -> None:
     assert _patch_payload(invalid)["session_valid"] is False
 
 
-def test_a_patch_queries_each_distinct_session_at_most_once() -> None:
-    """Tabs sharing one Session share its validity answer for this patch."""
+def test_patch_dispatch_uses_only_each_connections_preflight_validity() -> None:
+    """The dispatcher neither queries storage nor revises a proven verdict."""
     harness = Harness()
     first = harness.connect(session_id="s1")
     second = harness.connect(session_id="s1")
     other = harness.connect(session_id="gone")
     for handle in (first, second, other):
         drain_connection(handle)
-    queried: list[str | None] = []
 
-    def session_exists(session_id: str | None) -> SessionValidity:
-        queried.append(session_id)
-        return "valid" if session_id == "s1" else "invalid"
+    def unexpected_query(_session_id: str | None) -> SessionValidity:
+        raise AssertionError("state-patch dispatch queried Session storage")
 
-    harness.broker.bind_session_check(session_exists)
+    harness.broker.bind_session_check(unexpected_query)
     harness.broker.publish_state_patch(runtime_snapshot(state_revision=1))
     harness.deliver()
 
-    assert queried == ["s1", "gone"]
+    assert _patch_payload(first)["session_valid"] is True
+    assert _patch_payload(second)["session_valid"] is True
+    assert _patch_payload(other)["session_valid"] is False
 
 
 def test_a_patch_keeps_each_connections_last_proven_validity_when_unavailable(
@@ -3436,7 +7422,7 @@ class _GatedEncoder:
         with self.lock:
             self.encodings.append(session_valid)
         self.entered.set()
-        self.release.wait()
+        assert self.release.wait(5.0), "test never released the patch encoder"
         return self._real(snapshot, step, session_valid)
 
     def calls_for(self, session_valid: bool) -> int:
@@ -3445,34 +7431,47 @@ class _GatedEncoder:
 
 
 def test_patch_encoding_does_not_block_event_commits(monkeypatch) -> None:
-    """A slow patch is the dispatcher's problem, not the publish path's.
+    """A slow preparation runs before enqueue and outside the broker lock.
 
-    The dispatcher holds the broker lock while it fans out; encoding a
-    patch *inside* that critical section therefore charges every event
-    commit for one connection's serialization -- and a Run's own commit
-    waits behind a browser tab's payload size. Encoding happens before the
-    fan-out critical section, so a commit issued while an encoder is
-    parked goes straight through.
+    The dispatcher may only offer an already prepared frame. Preparation is
+    allowed to be slow, but its publisher cannot hold the commit lock while
+    it runs: a domain event committed while the encoder is parked must go
+    straight through.
     """
     encoder = _GatedEncoder(_patch_frames)
-    # Open while the connection registers -- its opening stream goes through
-    # the same encoder -- and cleared again so the patch fan-out below parks
-    # mid-encode.
+    # Startup uses the same encoder. Let that call finish, then arm the gate
+    # only for the patch publisher below.
     encoder.release.set()
     monkeypatch.setattr(broker_module, "_patch_frames", encoder)
     harness = Harness(spawn=RealThreadSpawner())
-    handle = harness.connect()
-    drain_connection(handle)
-    harness.broker.publish_state_patch(runtime_snapshot(state_revision=1))
+    connection = ObservedConnection()
+    handle = harness.connect(connection=connection)
+    try:
+        connection.wait_for_bytes(b"event: state_patch")
+    except BaseException:
+        assert harness.broker.close(timeout=2.0) is True
+        raise
+    encoder.entered.clear()
     encoder.release.clear()
-    dispatcher_done = threading.Event()
+    publish_done = threading.Event()
+    answers: list[bool] = []
+    errors: list[BaseException] = []
 
-    def drive() -> None:
-        harness.broker.deliver_next(timeout=2.0)
-        dispatcher_done.set()
+    def publish() -> None:
+        try:
+            answers.append(
+                harness.broker.publish_state_patch(
+                    runtime_snapshot(state_revision=1)
+                )
+            )
+        except BaseException as exc:
+            errors.append(exc)
+        finally:
+            publish_done.set()
 
-    dispatcher = threading.Thread(target=drive, daemon=True)
-    dispatcher.start()
+    emitter: threading.Thread | None = None
+    publisher = threading.Thread(target=publish, daemon=True)
+    publisher.start()
     try:
         assert encoder.entered.wait(2.0), "patch encoding never started"
         commit_done = threading.Event()
@@ -3488,9 +7487,16 @@ def test_patch_encoding_does_not_block_event_commits(monkeypatch) -> None:
         assert commit_done.wait(5.0), "commit waited for the patch encoding"
     finally:
         encoder.release.set()
-        dispatcher.join(timeout=5.0)
-        dispatcher_done.wait(2.0)
-    assert dispatcher_done.is_set()
+        publisher.join(timeout=5.0)
+        if emitter is not None:
+            emitter.join(timeout=5.0)
+            assert not emitter.is_alive(), "event publisher did not exit"
+        assert harness.broker.close(timeout=2.0) is True
+    assert not publisher.is_alive(), "patch publisher did not exit"
+    assert publish_done.is_set()
+    assert errors == []
+    assert answers == [True]
+    assert handle.finished.is_set(), "the test retained its stream writer"
 
 
 class _GatedCost:
@@ -3688,15 +7694,15 @@ def test_connection_never_regresses_to_stale_absolute_replacement(
     )
 
 
-def test_a_patch_is_encoded_once_per_session_validity(monkeypatch) -> None:
-    """One state, one encoding per distinct answer -- not per connection.
+def test_a_patch_is_prepared_once_per_session_validity_before_dispatch(
+    monkeypatch,
+) -> None:
+    """One state is fully encoded before the dispatcher receives it.
 
     A patch is absolute: what two valid connections receive differs in
     nothing, and what a valid and an invalid connection receive differs in
-    exactly one field. Encoding per connection would charge N-1 redundant
-    serializations -- with the broker lock held, under the old shape -- so
-    the fan-out encodes at most one frame per distinct session-validity
-    result and hands out references.
+    exactly one field. The publisher prepares those two immutable variants
+    once; dispatch only selects one and offers the shared reference.
     """
     encoder = _GatedEncoder(_patch_frames)
     # Released throughout: connect's opening stream goes through the same
@@ -3710,9 +7716,14 @@ def test_a_patch_is_encoded_once_per_session_validity(monkeypatch) -> None:
     harness.connect(session_id="not-s1")  # the invalid answer
     encoder.encodings.clear()
     harness.broker.publish_state_patch(runtime_snapshot(state_revision=2))
-    _deliver_ingress(harness)
     assert encoder.calls_for(True) == 1
     assert encoder.calls_for(False) == 1
+
+    def unexpected_encoding(*_args, **_kwargs):
+        raise AssertionError("dispatcher encoded a state patch")
+
+    monkeypatch.setattr(broker_module, "_patch_frames", unexpected_encoding)
+    drain_dispatcher(harness)
 
 
 def test_connect_encodes_its_startup_outside_the_lock(monkeypatch) -> None:
@@ -3725,18 +7736,33 @@ def test_connect_encodes_its_startup_outside_the_lock(monkeypatch) -> None:
     recaptures and re-encodes -- so the stream the client finally gets
     names the state that was authoritative *at registration*.
     """
-    encoder = _GatedEncoder(_patch_frames)
-    monkeypatch.setattr(broker_module, "_patch_frames", encoder)
+    real_encoder = _patch_frames
+    encoder_entered = threading.Event()
+    encoder_release = threading.Event()
+    encoder_lock = threading.Lock()
+    gate_claimed = False
+
+    def gate_only_the_first_startup(snapshot, step, session_valid):
+        nonlocal gate_claimed
+        with encoder_lock:
+            should_gate = not gate_claimed
+            gate_claimed = True
+        if should_gate:
+            encoder_entered.set()
+            assert encoder_release.wait(5.0), "test never released startup encoding"
+        return real_encoder(snapshot, step, session_valid)
+
+    monkeypatch.setattr(
+        broker_module, "_patch_frames", gate_only_the_first_startup
+    )
     harness = Harness(spawn=RealThreadSpawner())
     connect_done = threading.Event()
     descriptor: list[bytes] = []
 
     def do_connect() -> None:
-        connection = FakeConnection()
+        connection = ObservedConnection()
         handle = harness.broker.connect(connection=connection)
-        deadline = time.monotonic() + 2.0
-        while len(connection.writes) < 3 and time.monotonic() < deadline:
-            time.sleep(0.001)
+        connection.wait_for_count(3)
         descriptor.append(connection.written)
         handle.queue.stop()
         connect_done.set()
@@ -3744,7 +7770,7 @@ def test_connect_encodes_its_startup_outside_the_lock(monkeypatch) -> None:
     connector = threading.Thread(target=do_connect, daemon=True)
     connector.start()
     try:
-        assert encoder.entered.wait(2.0), "startup encoding never started"
+        assert encoder_entered.wait(2.0), "startup encoding never started"
         # While the startup is parked mid-encoding, the world moves: the
         # authoritative snapshot advances. A connect holding the lock here
         # would deadlock the publish; a connect that merely encoded outside
@@ -3753,7 +7779,7 @@ def test_connect_encodes_its_startup_outside_the_lock(monkeypatch) -> None:
             "publish waited for the startup encoding"
         )
     finally:
-        encoder.release.set()
+        encoder_release.set()
         assert connect_done.wait(5.0), "connect never finished"
         connector.join(timeout=5.0)
     wire = descriptor[0]
@@ -3778,20 +7804,27 @@ def test_connect_refuses_after_bounded_startup_recaptures(monkeypatch) -> None:
     connect_done = threading.Event()
     signals: queue.Queue[str] = queue.Queue()
     captures = 0
+    advancing = False
     answers = []
     errors: list[BaseException] = []
 
     def advancing_encoder(snapshot, step, session_valid):
-        nonlocal captures
+        nonlocal captures, advancing
+        if advancing:
+            return real_encoder(snapshot, step, session_valid)
         captures += 1
         if captures > broker_module._MAX_PATCH_CAPTURES:
             runaway.set()
             signals.put("runaway")
             release_runaway.wait(5.0)  # anti-hang only; cleanup releases it
         encoded = real_encoder(snapshot, step, session_valid)
-        harness.broker.publish_state_patch(
-            runtime_snapshot(state_revision=captures)
-        )
+        advancing = True
+        try:
+            harness.broker.publish_state_patch(
+                runtime_snapshot(state_revision=captures)
+            )
+        finally:
+            advancing = False
         return encoded
 
     monkeypatch.setattr(broker_module, "_patch_frames", advancing_encoder)
@@ -3995,7 +8028,295 @@ def test_patch_overflow_never_walks_the_connections_from_the_publisher() -> None
     assert late.queue.close_requested is False
 
 
+def test_patch_overflow_kick_handoff_resumes_after_base_exception(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failed kick handoff remains retryable by the same snapshot.
+
+    The authoritative revision and disconnect generation commit before the
+    lock-free wake-up.  If a ``BaseException`` lands before that wake-up has
+    any effect, the identical-revision recovery call must own another attempt;
+    otherwise the old connection waits forever for a kick that was never
+    queued.
+    """
+    harness = Harness(
+        ingress_budget=frames.FrameBudget(frames=1, encoded_bytes=1)
+    )
+    broker = harness.broker
+    old = harness.connect()
+    drain_connection(old)
+    real_put_kick = broker._ingress.put_kick  # noqa: SLF001
+    attempts = 0
+
+    def interrupt_first_kick() -> None:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise KeyboardInterrupt("kick handoff interrupted before enqueue")
+        real_put_kick()
+
+    monkeypatch.setattr(
+        broker._ingress,  # noqa: SLF001
+        "put_kick",
+        interrupt_first_kick,
+    )
+    snapshot = runtime_snapshot(state_revision=1)
+
+    with pytest.raises(KeyboardInterrupt, match="before enqueue"):
+        broker.publish_state_patch(snapshot)
+
+    assert broker._latest is snapshot  # noqa: SLF001
+    assert old.queue.close_requested is False
+    assert broker.publish_state_patch(replace(snapshot)) is False
+    assert attempts == 2, "the recovery publish inherited a phantom pending kick"
+    assert broker.deliver_next(timeout=0) is True, "the retry did not queue a kick"
+    assert old.queue.close_requested is True
+    assert broker.deliver_next(timeout=0) is False
+
+
+def test_patch_overflow_kick_handoff_coalesces_after_effect_exceptions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An exception after the queue effect cannot manufacture more kicks."""
+    harness = Harness(
+        ingress_budget=frames.FrameBudget(frames=1, encoded_bytes=1)
+    )
+    broker = harness.broker
+    old = harness.connect()
+    drain_connection(old)
+    owned_queue = broker._ingress._items  # noqa: SLF001
+
+    class PutThenInterruptQueue:
+        def __init__(self, failures: int) -> None:
+            self.failures = failures
+            self.kick_puts = 0
+
+        def put(self, item) -> None:
+            owned_queue.put(item)
+            if isinstance(item, _IngressKick):
+                self.kick_puts += 1
+                if self.failures:
+                    self.failures -= 1
+                    raise KeyboardInterrupt(
+                        "kick handoff interrupted after enqueue"
+                    )
+
+        def __getattr__(self, name):
+            return getattr(owned_queue, name)
+
+    proxy = PutThenInterruptQueue(failures=4)
+    monkeypatch.setattr(broker._ingress, "_items", proxy)  # noqa: SLF001
+    snapshot = runtime_snapshot(state_revision=1)
+
+    for _ in range(4):
+        with pytest.raises(KeyboardInterrupt, match="after enqueue"):
+            broker.publish_state_patch(replace(snapshot))
+
+    assert proxy.kick_puts == 4
+    assert proxy.qsize() == 1, "after-effect retries duplicated the kick"
+    assert broker.publish_state_patch(replace(snapshot)) is False
+    assert proxy.qsize() == 1
+    assert broker.deliver_next(timeout=0) is True
+    assert old.queue.close_requested is True
+    assert broker.deliver_next(timeout=0) is False
+
+
+def test_fatal_patch_kick_handoff_resumes_on_the_next_publish(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A latched fatal still owes its dispatcher a wake-up after interruption."""
+    harness = Harness()
+    broker = harness.broker
+    old = harness.connect()
+    drain_connection(old)
+    ingress_failure = RuntimeError("patch ingress failed")
+    real_put_kick = broker._ingress.put_kick  # noqa: SLF001
+    attempts = 0
+
+    def fail_offer(_item) -> bool:
+        raise ingress_failure
+
+    def interrupt_first_kick() -> None:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise KeyboardInterrupt("fatal kick interrupted before enqueue")
+        real_put_kick()
+
+    monkeypatch.setattr(broker._ingress, "offer", fail_offer)  # noqa: SLF001
+    monkeypatch.setattr(
+        broker._ingress,  # noqa: SLF001
+        "put_kick",
+        interrupt_first_kick,
+    )
+    snapshot = runtime_snapshot(state_revision=1)
+
+    with pytest.raises(KeyboardInterrupt, match="before enqueue"):
+        broker.publish_state_patch(snapshot)
+
+    assert broker._fatal is ingress_failure  # noqa: SLF001
+    assert old.queue.close_requested is False
+    assert broker.publish_state_patch(replace(snapshot)) is False
+    assert attempts == 2, "the latched fatal never repaid its wake-up debt"
+    assert broker.deliver_next(timeout=0) is False
+    assert old.queue.close_requested is True
+
+
 # --- capture exhaustion keeps the authority and owes the reconnect -----------
+
+
+def test_capture_exhaustion_cannot_replace_a_conflicting_same_revision(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The exhaustion close applies the ordinary revision conflict rule."""
+    harness = Harness()
+    broker = harness.broker
+    candidate = runtime_snapshot(state_revision=1)
+    winner = runtime_snapshot(
+        state_revision=1,
+        coordinator_state="accepted",
+        active_run=ActiveRunSummary(
+            run_id="r-winner",
+            purpose="chat",
+            gateway="web",
+            phase="accepted",
+            session_id=None,
+            prompt_preview="winner",
+            started_at=None,
+            recording_state=None,
+        ),
+    )
+    parked = threading.Event()
+    release = threading.Event()
+    finished = threading.Event()
+    real_cost = broker_module._patch_cost
+    answers: list[bool] = []
+    failures: list[BaseException] = []
+    reported: list[BaseException] = []
+
+    def gated_cost(snapshot, step) -> int:
+        if snapshot is candidate:
+            parked.set()
+            assert release.wait(5.0), "test never released the candidate encoder"
+        return real_cost(snapshot, step)
+
+    def publish_candidate() -> None:
+        try:
+            answers.append(broker.publish_state_patch(candidate))
+        except BaseException as exc:
+            failures.append(exc)
+        finally:
+            finished.set()
+
+    monkeypatch.setattr(broker_module, "_MAX_PATCH_CAPTURES", 1)
+    monkeypatch.setattr(broker_module, "_patch_cost", gated_cost)
+    broker.bind_fatal_handler(reported.append)
+    publisher = threading.Thread(target=publish_candidate, daemon=True)
+    publisher.start()
+    try:
+        assert parked.wait(5.0), "candidate never reached its only capture"
+        assert broker.publish_state_patch(winner) is True
+    finally:
+        release.set()
+    assert finished.wait(5.0), "exhausted candidate never completed"
+    publisher.join()
+
+    assert answers == []
+    assert len(failures) == 1
+    assert isinstance(failures[0], broker_module.ProcessFatalSinkError)
+    assert broker._latest is winner  # noqa: SLF001
+    assert broker._fatal is failures[0]  # noqa: SLF001
+    assert reported == failures
+
+
+def test_capture_exhaustion_treats_identical_same_revision_as_recovery(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An identical exhaustion loser reconnects without replacing authority."""
+    harness = Harness()
+    broker = harness.broker
+    old = harness.connect()
+    drain_connection(old)
+    candidate = runtime_snapshot(state_revision=1)
+    winner = replace(candidate)
+    parked = threading.Event()
+    release = threading.Event()
+    finished = threading.Event()
+    real_cost = broker_module._patch_cost
+    answers: list[bool] = []
+    failures: list[BaseException] = []
+
+    def gated_cost(snapshot, step) -> int:
+        if snapshot is candidate:
+            parked.set()
+            assert release.wait(5.0), "test never released the candidate encoder"
+        return real_cost(snapshot, step)
+
+    def publish_candidate() -> None:
+        try:
+            answers.append(broker.publish_state_patch(candidate))
+        except BaseException as exc:
+            failures.append(exc)
+        finally:
+            finished.set()
+
+    monkeypatch.setattr(broker_module, "_MAX_PATCH_CAPTURES", 1)
+    monkeypatch.setattr(broker_module, "_patch_cost", gated_cost)
+    publisher = threading.Thread(target=publish_candidate, daemon=True)
+    publisher.start()
+    try:
+        assert parked.wait(5.0), "candidate never reached its only capture"
+        assert broker.publish_state_patch(winner) is True
+    finally:
+        release.set()
+    assert finished.wait(5.0), "exhausted candidate never completed"
+    publisher.join()
+
+    assert failures == []
+    assert answers == [False]
+    assert broker._latest is winner  # noqa: SLF001
+    assert broker._fatal is None  # noqa: SLF001
+    assert broker._disconnect_generation == 1  # noqa: SLF001
+    drain_dispatcher(harness)
+    assert old.queue.close_requested is True
+
+
+def test_capture_exhaustion_kick_handoff_resumes_after_base_exception(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The bounded-exhaustion close owns the same resumable wake-up."""
+    harness = Harness()
+    broker = harness.broker
+    old = harness.connect()
+    drain_connection(old)
+    real_put_kick = broker._ingress.put_kick  # noqa: SLF001
+    attempts = 0
+
+    def interrupt_first_kick() -> None:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise KeyboardInterrupt("exhaustion kick interrupted before enqueue")
+        real_put_kick()
+
+    monkeypatch.setattr(broker_module, "_MAX_PATCH_CAPTURES", 0)
+    monkeypatch.setattr(
+        broker._ingress,  # noqa: SLF001
+        "put_kick",
+        interrupt_first_kick,
+    )
+    snapshot = runtime_snapshot(state_revision=1)
+
+    with pytest.raises(KeyboardInterrupt, match="before enqueue"):
+        broker.publish_state_patch(snapshot)
+
+    assert broker._latest is snapshot  # noqa: SLF001
+    assert old.queue.close_requested is False
+    assert broker.publish_state_patch(replace(snapshot)) is False
+    assert attempts == 2
+    assert broker.deliver_next(timeout=0) is True
+    assert old.queue.close_requested is True
+    assert broker.deliver_next(timeout=0) is False
 
 
 class _PerLapCost:
@@ -4232,6 +8553,40 @@ def test_a_trailing_transient_seq_is_malformed_not_ahead() -> None:
 # --- Task 02: connection work stays outside publication --------------------
 
 
+class _ThreadOwnedLock:
+    """Keep real lock contention while observing only this thread's ownership."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._local = threading.local()
+
+    def acquire(self, blocking=True, timeout=-1):
+        acquired = self._lock.acquire(blocking, timeout)
+        if acquired:
+            self._local.held = True
+        return acquired
+
+    def release(self) -> None:
+        self._local.held = False
+        self._lock.release()
+
+    def held_by_current_thread(self) -> bool:
+        return getattr(self._local, "held", False)
+
+    def __enter__(self):
+        self.acquire()
+        return self
+
+    def __exit__(self, *_exc) -> None:
+        self.release()
+
+
+def _observe_broker_lock_owners(broker: SSEBroker) -> None:
+    # Install before start/connect: no native thread can retain the old locks.
+    broker._lock = _ThreadOwnedLock()
+    broker._registry_lock = _ThreadOwnedLock()
+
+
 class _FatalThreadProbeQueue(ConnectionQueue):
     broker: SSEBroker | None = None
     close_threads: list[str] = []
@@ -4244,12 +8599,12 @@ class _FatalThreadProbeQueue(ConnectionQueue):
             raise AssertionError("fatal publish touched a connection queue")
         broker = type(self).broker
         assert broker is not None
-        publication_free = broker._lock.acquire(blocking=False)  # noqa: SLF001
-        assert publication_free, "fatal sweep held the publication lock"
-        broker._lock.release()  # noqa: SLF001
-        registry_free = broker._registry_lock.acquire(blocking=False)  # noqa: SLF001
-        assert registry_free, "fatal sweep held the registry lock"
-        broker._registry_lock.release()  # noqa: SLF001
+        assert not broker._lock.held_by_current_thread(), (
+            "fatal sweep held the publication lock"
+        )
+        assert not broker._registry_lock.held_by_current_thread(), (
+            "fatal sweep held the registry lock"
+        )
         super().request_close(retry_ms=retry_ms)
         type(self).closed.set()
 
@@ -4269,6 +8624,7 @@ def test_ring_failure_never_touches_connection_queue_under_fanout_publish_lock(
         ring=ring,
         spawn=RealThreadSpawner().spawn,
     )
+    _observe_broker_lock_owners(broker)
     broker.start()
     _FatalThreadProbeQueue.broker = broker
     first = broker.connect(connection=FakeConnection())
@@ -4313,18 +8669,12 @@ class _SlowOfferProbeQueue(ConnectionQueue):
             type(self).blocked_once = True
             broker = type(self).broker
             assert broker is not None
-            acquired = broker._lock.acquire(blocking=False)  # noqa: SLF001
-            if not acquired:
+            if broker._lock.held_by_current_thread():
                 type(self).publication_lock_seen = True
                 raise AssertionError("dispatcher held broker lock while offering")
-            broker._lock.release()  # noqa: SLF001
-            registry_acquired = broker._registry_lock.acquire(  # noqa: SLF001
-                blocking=False
-            )
-            if not registry_acquired:
+            if broker._registry_lock.held_by_current_thread():
                 type(self).publication_lock_seen = True
                 raise AssertionError("dispatcher held registry lock while offering")
-            broker._registry_lock.release()  # noqa: SLF001
             type(self).entered.set()
             type(self).release.wait(5.0)
         outcome = super().offer(item, **kwargs)
@@ -4352,6 +8702,7 @@ def test_slow_connection_queue_cannot_block_next_fanout_publish_through_broker_l
         session_is_valid=lambda _sid: "valid",
         spawn=RealThreadSpawner().spawn,
     )
+    _observe_broker_lock_owners(broker)
     _SlowOfferProbeQueue.broker = broker
     broker.start()
     first = broker.connect(connection=FakeConnection())
@@ -4427,7 +8778,10 @@ def test_state_patch_ingress_exception_latches_one_dispatcher_owned_fatal(
         session_is_valid=lambda _sid: "valid",
         spawn=RealThreadSpawner().spawn,
     )
+    _observe_broker_lock_owners(broker)
     _FatalThreadProbeQueue.broker = broker
+    reported: list[BaseException] = []
+    broker.bind_fatal_handler(reported.append)
     broker.start()
     handles = [
         broker.connect(connection=FakeConnection())
@@ -4461,6 +8815,9 @@ def test_state_patch_ingress_exception_latches_one_dispatcher_owned_fatal(
     assert raised == [failure]
     assert broker._fatal is failure  # noqa: SLF001
     assert broker._stopping is True  # noqa: SLF001
+    assert reported == [failure], (
+        "the first patch failure must report without a later domain event"
+    )
     assert kicks == [None]
     assert "fatal-emitter" not in _FatalThreadProbeQueue.close_threads
     for handle in handles:

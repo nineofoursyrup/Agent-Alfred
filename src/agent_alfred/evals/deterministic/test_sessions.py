@@ -12,12 +12,12 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
-import time
 
 import pytest
 
 from agent_alfred import schema
 from agent_alfred.clock import FakeClock
+from agent_alfred.evals.deterministic._thread_test_helpers import EnteredEvent
 from agent_alfred.events import CapturingSink, FanOutSink
 from agent_alfred.model import ScriptedModel, ScriptedModelFactory
 from agent_alfred.runtime.host import RuntimeHost, SubmitRequest
@@ -566,24 +566,18 @@ class _SelectiveLatch:
     def __init__(self):
         self._gate = threading.Event()
         self._gate.set()
+        self.entered = threading.Event()
 
     def arm(self) -> None:
+        self.entered.clear()
         self._gate.clear()
 
     def release(self) -> None:
         self._gate.set()
 
     def wait(self, timeout=None):
+        self.entered.set()
         return self._gate.wait(timeout)
-
-
-def _wait_until(predicate, timeout: float = 2.0) -> None:
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        if predicate():
-            return
-        time.sleep(0.01)
-    raise AssertionError("condition not met before timeout")
 
 
 def test_inflight_run_holds_the_runs_cursor_open() -> None:
@@ -603,9 +597,8 @@ def test_inflight_run_holds_the_runs_cursor_open() -> None:
         latch.arm()
         second = host.submit(SubmitRequest(message="b-q", session_id="s-race"))
         assert second.kind == "accepted"
-        _wait_until(
-            lambda: host.snapshot().coordinator_state == "recording_pending"
-        )
+        assert latch.entered.wait(2.0), "recording gate was not reached"
+        assert host.snapshot().coordinator_state == "recording_pending"
 
         page1 = host.open_session("s-race", page_size=1)
         assert [
@@ -665,9 +658,8 @@ def test_inflight_run_blocks_historic_until_it_settles() -> None:
         host.wait(first.run_id)
         latch.arm()
         second = host.submit(SubmitRequest(message="b-q", session_id="s-wait"))
-        _wait_until(
-            lambda: host.snapshot().coordinator_state == "recording_pending"
-        )
+        assert latch.entered.wait(2.0), "recording gate was not reached"
+        assert host.snapshot().coordinator_state == "recording_pending"
 
         page = host.open_session("s-wait", page_size=5)
         assert [
@@ -702,7 +694,7 @@ def test_inflight_run_blocks_historic_until_it_settles() -> None:
 
 def test_first_inflight_run_yields_an_empty_wait_page() -> None:
     conn = sqlite3.connect(":memory:", check_same_thread=False)
-    hold = threading.Event()
+    hold = EnteredEvent()
     host = _migrated_host(conn, script=["b-reply"], before_recording_commit=hold)
     host.start()
     try:
@@ -711,9 +703,8 @@ def test_first_inflight_run_yields_an_empty_wait_page() -> None:
             SubmitRequest(message="b-q", session_id=session_id)
         )
         assert submitted.kind == "accepted"
-        _wait_until(
-            lambda: host.snapshot().coordinator_state == "recording_pending"
-        )
+        assert hold.entered.wait(2.0), "recording gate was not reached"
+        assert host.snapshot().coordinator_state == "recording_pending"
         page = host.open_session(session_id, page_size=3)
         assert page.messages == ()
         assert page.next_cursor is not None, (
@@ -782,9 +773,8 @@ def test_recording_failed_run_releases_the_runs_segment() -> None:
         latch.arm()
         second = host.submit(SubmitRequest(message="b-q", session_id="s-fail"))
         assert second.kind == "accepted"
-        _wait_until(
-            lambda: host.snapshot().coordinator_state == "recording_pending"
-        )
+        assert latch.entered.wait(2.0), "recording gate was not reached"
+        assert host.snapshot().coordinator_state == "recording_pending"
         flag["armed"] = True
         latch.release()
         host.wait(second.run_id)
@@ -835,6 +825,14 @@ def test_open_session_cursor_is_bound_to_its_session() -> None:
 # --- #30: the Session title's source of truth --------------------------------
 
 
+def _inbox_session(host: RuntimeHost, session_id: str):
+    page = host.list_sessions(limit=10)
+    return next(
+        summary for summary in (page.non_terminal, *page.sessions)
+        if summary is not None and summary.session_id == session_id
+    )
+
+
 def _insert_chat_run(
     conn: sqlite3.Connection,
     *,
@@ -851,6 +849,11 @@ def _insert_chat_run(
         accepted_at=f"2026-08-28T00:00:{len(run_id):02d}Z",
         prompt_preview=prompt_preview,
     )
+    # This read fixture represents a successfully handed-off chat Run.
+    conn.execute(
+        "UPDATE runs SET admission_state = 'admitted' WHERE run_id = ?",
+        (run_id,),
+    )
     conn.commit()
 
 
@@ -866,10 +869,7 @@ def test_title_falls_back_to_created_at_when_the_earliest_preview_is_blank() -> 
             conn, run_id="blank-1", session_id="s-blank", prompt_preview=""
         )
         conn.commit()
-        page = host.list_sessions(limit=10)
-        summary = next(
-            s for s in page.sessions if s.session_id == "s-blank"
-        )
+        summary = _inbox_session(host, "s-blank")
         # A Run exists, so the historic user message is never the title; the
         # blank preview falls back to the created-at fallback.
         assert summary.title.startswith("新会话 · ")
@@ -892,10 +892,7 @@ def test_title_ignores_a_whitespace_only_preview() -> None:
             conn, run_id="space-1", session_id="s-space", prompt_preview="   "
         )
         conn.commit()
-        page = host.list_sessions(limit=10)
-        title = next(
-            s.title for s in page.sessions if s.session_id == "s-space"
-        )
+        title = _inbox_session(host, "s-space").title
         assert title.startswith("新会话 · ")
         assert "应被忽略的历史用户消息" not in title
     finally:
@@ -912,10 +909,7 @@ def test_title_treats_a_null_preview_like_a_blank_one() -> None:
             conn, run_id="null-1", session_id="s-null", prompt_preview=None
         )
         conn.commit()
-        page = host.list_sessions(limit=10)
-        title = next(
-            s.title for s in page.sessions if s.session_id == "s-null"
-        )
+        title = _inbox_session(host, "s-null").title
         assert title.startswith("新会话 · ")
         assert "null 预览时不得使用的历史用户消息" not in title
     finally:
@@ -941,10 +935,7 @@ def test_title_uses_the_earliest_approved_chat_run_preview() -> None:
             prompt_preview="更晚的预览",
         )
         conn.commit()
-        page = host.list_sessions(limit=10)
-        title = next(
-            s.title for s in page.sessions if s.session_id == "s-multi"
-        )
+        title = _inbox_session(host, "s-multi").title
         assert title == "最早的预览"
     finally:
         host.close()
@@ -968,10 +959,7 @@ def test_title_with_a_later_good_preview_but_blank_earliest_still_falls_back() -
             prompt_preview="后来的预览",
         )
         conn.commit()
-        page = host.list_sessions(limit=10)
-        title = next(
-            s.title for s in page.sessions if s.session_id == "s-order"
-        )
+        title = _inbox_session(host, "s-order").title
         assert title.startswith("新会话 · ")
         assert "后来的预览" not in title
     finally:
@@ -989,6 +977,30 @@ def test_title_without_any_run_still_uses_the_first_historic_user_message() -> N
             s.title for s in page.sessions if s.session_id == "s-legacy"
         )
         assert title == "首条历史用户消息"
+    finally:
+        host.close()
+
+
+def test_title_with_only_a_system_run_does_not_use_a_historic_message() -> None:
+    conn = _database_through_version(2)
+    _seed_historic(conn, "s-system", ["不得成为标题的旧消息", "旧回答"])
+    host = _migrated_host(conn)
+    host.start()
+    try:
+        schema.insert_accepted_run(
+            conn,
+            run_id="system-1",
+            purpose="inference_probe",
+            session_id="s-system",
+            gateway="cli",
+            accepted_at=_TS,
+        )
+        conn.commit()
+
+        summary = _inbox_session(host, "s-system")
+        assert summary.title == f"新会话 · {summary.created_at}"
+        assert "不得成为标题的旧消息" not in summary.title
+        assert host.open_session("s-system", page_size=10).title == summary.title
     finally:
         host.close()
 

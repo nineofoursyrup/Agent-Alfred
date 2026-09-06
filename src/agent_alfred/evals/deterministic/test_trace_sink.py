@@ -895,17 +895,15 @@ def _wait_for_queued_barrier(sink: RunBundleTraceSink) -> None:
     the drain is blocked elsewhere (it holds no lock while writing)."""
     import agent_alfred.trace as trace_module
 
-    deadline = time.monotonic() + 2.0
-    while time.monotonic() < deadline:
-        with sink._wake:
-            queued = any(
+    with sink._wake:
+        queued = sink._wake.wait_for(
+            lambda: any(
                 isinstance(item, trace_module._WriteBarrier)
                 for item in sink._queue
-            )
-        if queued:
-            return
-        time.sleep(0.005)
-    raise AssertionError("the barrier was never enqueued")
+            ),
+            timeout=2.0,
+        )
+    assert queued, "the barrier was never enqueued"
 
 
 def test_commit_racing_the_barrier_seal_is_rejected_fail_closed(

@@ -141,6 +141,7 @@ def test_a_run_spanning_an_unrecoverable_event_is_unrecoverable() -> None:
     harness.broker._run_start_seq["r1"] = 1
     harness.broker.publish_state_patch(
         runtime_snapshot(
+            state_revision=1,
             coordinator_state="running",
             active_run=ActiveRunSummary(
                 run_id="r1",

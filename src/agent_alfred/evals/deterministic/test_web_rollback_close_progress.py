@@ -80,13 +80,13 @@ class _StartFailureRig(DashboardCloseRig):
         self.server: _RefusingCloseServer | None = None
         super().__init__(tmp_path)
 
-    def _server_factory(self, address, handler):
+    def _server_factory(self, address, handler, owner):
         self.binds += 1
         self.trace.append("bind")
         self.server = _RefusingCloseServer(
             address, handler, self.trace, self._close_failures
         )
-        return self.server
+        owner.publish(self.server)
 
     def _write_descriptor(self, directory, descriptor):
         self.trace.append("write_descriptor")
@@ -104,25 +104,29 @@ def test_start_failure_keeps_runtime_closing_with_resources_owned(tmp_path) -> N
     riding as its cause.
     """
     rig = _StartFailureRig(tmp_path, close_failures=2)
-    with pytest.raises(RuntimeError) as caught:
-        rig.runtime.start()
+    try:
+        with pytest.raises(RuntimeError) as caught:
+            rig.runtime.start()
 
-    # The start failure is the one that propagates, never the rollback's.
-    assert caught.value is rig.start_error
-    cleanup = caught.value.__cause__
-    assert isinstance(cleanup, IncompleteRollback)
-    assert cleanup.failure is rig.start_error
-    assert cleanup.errors == (rig.server.close_error,)
-    # Retryable, not terminal: the undo has not finished.
-    assert rig.runtime.state == "closing"
-    # What was taken before the failure is still held, references and all.
-    assert rig.server is not None
-    assert rig.runtime.service.server is rig.server
-    assert rig.lock.acquired is True
-    assert rig.lock_is_held() is True
-    # Nothing was ever published: a start that failed mid-composition has
-    # no descriptor to retract, only resources to keep or give back.
-    assert read_entry_descriptor(tmp_path) is None
+        # The start failure is the one that propagates, never the rollback's.
+        assert caught.value is rig.start_error
+        cleanup = caught.value.__cause__
+        assert isinstance(cleanup, IncompleteRollback)
+        assert cleanup.failure is rig.start_error
+        assert cleanup.errors == (rig.server.close_error,)
+        # Retryable, not terminal: the undo has not finished.
+        assert rig.runtime.state == "closing"
+        # What was taken before the failure is still held, references and all.
+        assert rig.server is not None
+        assert rig.runtime.service.server is rig.server
+        assert rig.lock.acquired is True
+        assert rig.lock_is_held() is True
+        # Nothing was ever published: a start that failed mid-composition has
+        # no descriptor to retract, only resources to keep or give back.
+        assert read_entry_descriptor(tmp_path) is None
+    finally:
+        assert rig.runtime.close(timeout=2.0) is True
+    assert rig.lock.acquired is False, "the test retained its process lock"
 
 
 def test_process_lock_rejects_second_lock_until_socket_confirmed_closed(

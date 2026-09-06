@@ -6,10 +6,14 @@ import errno
 import os
 import socket
 import sqlite3
-import stat
+import threading
+from collections.abc import Callable
+from contextlib import contextmanager
+from pathlib import PurePath
 
 import pytest
 
+from agent_alfred.database import open_database as file_database
 from agent_alfred.evals.deterministic._managed_state_ownership_test_helpers import (
     build_standalone_host,
 )
@@ -18,6 +22,81 @@ from agent_alfred.evals.deterministic._web_startup_test_helpers import (
 )
 from agent_alfred.model import ScriptedModel, ScriptedModelFactory
 from agent_alfred.wiring import build_default_host
+
+
+class _CloseRecordingLease:
+    closed = False
+
+    def close(self) -> None:
+        self.closed = True
+
+
+def _record_thread_failure(
+    errors: list[BaseException], operation: Callable[[], None]
+) -> None:
+    try:
+        operation()
+    except BaseException as exc:  # noqa: BLE001 - asserted by the caller
+        errors.append(exc)
+
+
+def test_unlink_regular_detects_a_successor_after_open_verification(
+    tmp_path, monkeypatch
+) -> None:
+    """The public remover fails closed when its verified name is replaced."""
+    from agent_alfred import managed_state as managed_module
+    from agent_alfred.managed_state import ManagedPathSecurityError
+
+    state = managed_module.ManagedStateDirectory.acquire(tmp_path / "state")
+    state.replace_bytes(PurePath("victim"), b"owned")
+    target = state.path / "victim"
+    displaced = state.path / "victim.owned"
+    verified = threading.Event()
+    release = threading.Event()
+    real_managed_stat = managed_module._managed_stat
+    checks = 0
+
+    def gate_last_open_check(name, **kwargs):
+        nonlocal checks
+        observed = real_managed_stat(name, **kwargs)
+        if os.fspath(name) == "victim" and kwargs.get("role") == "managed file":
+            checks += 1
+            if checks == 3:
+                verified.set()
+                assert release.wait(3.0)
+        return observed
+
+    monkeypatch.setattr(managed_module, "_managed_stat", gate_last_open_check)
+    errors: list[BaseException] = []
+    worker = threading.Thread(
+        target=lambda: _record_thread_failure(
+            errors,
+            lambda: state.unlink_regular(PurePath("victim"), missing_ok=False),
+        )
+    )
+    worker.start()
+    try:
+        assert verified.wait(3.0), "unlink never completed capability verification"
+        target.rename(displaced)
+        target.write_bytes(b"successor")
+        target.chmod(0o600)
+        release.set()
+        worker.join(3.0)
+
+        assert not worker.is_alive()
+        assert len(errors) == 1
+        assert isinstance(errors[0], ManagedPathSecurityError)
+        assert errors[0].reason == "identity_changed"
+        assert target.read_bytes() == b"successor"
+        assert displaced.read_bytes() == b"owned"
+
+        state.replace_bytes(PurePath("ordinary"), b"delete me")
+        state.unlink_regular(PurePath("ordinary"), missing_ok=False)
+        assert (state.path / "ordinary").exists() is False
+    finally:
+        release.set()
+        worker.join(3.0)
+        state.close()
 
 
 def test_build_default_host_rejects_database_owner_drift_after_connect(
@@ -37,11 +116,11 @@ def test_build_default_host_rejects_database_owner_drift_after_connect(
     migration_calls = 0
     opened_connection = None
 
-    def connect_then_drift(*args, **kwargs):
+    def connect_then_drift(path, owner, **kwargs):
         nonlocal connected, opened_connection
-        opened_connection = real_connect(*args, **kwargs)
+        opened_connection = real_connect(path, **kwargs)
+        owner.publish(opened_connection)
         connected = True
-        return opened_connection
 
     def drift_owner(fd: int, *, role: str, path):
         observed = real_fstat(fd, role=role, path=path)
@@ -90,7 +169,7 @@ def test_build_default_host_closes_child_capability_when_parent_recheck_fails(
         elif child_was_minted and role != "SQLite database" and not refused:
             refused = True
             values = list(observed)
-            values[0] = stat.S_IFREG | 0o600
+            values[1] += 1
             return os.stat_result(values)
         return observed
 
@@ -121,6 +200,71 @@ def test_build_default_host_closes_trace_root_when_thread_construction_interrupt
         build_standalone_host(tmp_path / "state")
     assert caught.value is control
     assert _open_fd_count() == baseline
+
+
+@pytest.mark.parametrize("entry", ("state", "standalone"))
+def test_trace_root_wrapper_replaces_its_lease_in_the_offered_owner(
+    tmp_path, entry: str
+) -> None:
+    """The public wrapper, not its hidden lease, crosses the return edge."""
+    from agent_alfred.managed_state import ManagedStateDirectory
+    from agent_alfred.resource_rollback import ResumableRollback
+
+    owner = ResumableRollback()
+    state = None
+    root = None
+    try:
+        if entry == "state":
+            state = ManagedStateDirectory.acquire(tmp_path / "state")
+            root = state.ensure_trace_directory(
+                PurePath("traces"), _rollback=owner
+            )
+        else:
+            root = ManagedStateDirectory.acquire_trace_root(
+                tmp_path / "standalone-traces", _rollback=owner
+            )
+
+        owner.transfer(root)
+        assert owner.retry() is True
+        probe = root.ensure_directory(PurePath("still-live"))
+        probe.close()
+    finally:
+        if root is not None:
+            root.close()
+        owner.retry()
+        if state is not None:
+            state.close()
+
+
+def test_trace_sink_transfer_retires_the_old_trace_root_owner(tmp_path) -> None:
+    """A transferred aggregate cannot leave a hidden lease behind it."""
+    from agent_alfred.clock import FakeClock
+    from agent_alfred.managed_state import ManagedStateDirectory
+    from agent_alfred.resource_rollback import ResumableRollback
+    from agent_alfred.trace import RunBundleTraceSink
+
+    owner = ResumableRollback()
+    root = ManagedStateDirectory.acquire_trace_root(
+        tmp_path / "traces", _rollback=owner
+    )
+    sink = None
+    try:
+        sink = RunBundleTraceSink(
+            root=root,
+            clock=FakeClock(),
+            process_instance_id="trace-owner-test",
+            _rollback=owner,
+        )
+        owner.transfer(sink)
+        assert owner.retry() is True
+
+        probe = root.ensure_directory(PurePath("still-live"))
+        probe.close()
+    finally:
+        if sink is not None:
+            assert sink.close(timeout=2.0) is True
+        else:
+            owner.retry()
 
 
 def test_build_default_host_exposes_incomplete_ordinary_trace_cleanup(
@@ -163,66 +307,6 @@ def test_build_default_host_exposes_incomplete_ordinary_trace_cleanup(
     assert _open_fd_count() == baseline
 
 
-def test_build_default_host_closes_first_trace_dup_when_fence_derivation_fails(
-    tmp_path, monkeypatch
-) -> None:
-    from agent_alfred import managed_state as managed_module
-    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
-
-    baseline = _open_fd_count()
-    failure = RuntimeError("fence derivation failed")
-    real_fence = managed_module.ManagedDirectoryLease._fence_for_child
-
-    def fail_state_fence(self, *, role, path):
-        if path.name == "state":
-            raise failure
-        return real_fence(self, role=role, path=path)
-
-    monkeypatch.setattr(
-        managed_module.ManagedDirectoryLease,
-        "_fence_for_child",
-        fail_state_fence,
-    )
-    host = build_standalone_host(tmp_path / "state")
-    assert host.close() is True
-    assert _open_fd_count() == baseline
-
-
-def test_nested_directory_fence_handoff_closes_both_sides_after_close_failure(
-    tmp_path, monkeypatch
-) -> None:
-    """The atomic old-to-new fence handoff retains both owners on failure."""
-    from pathlib import PurePath
-
-    from agent_alfred import managed_state as managed_module
-    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
-
-    baseline = _open_fd_count()
-    failure = SystemExit(76)
-    real_close = managed_module._LexicalAncestorFence.close
-    close_calls = 0
-
-    def interrupt_first_close(fence):
-        nonlocal close_calls
-        close_calls += 1
-        if close_calls == 1:
-            raise failure
-        return real_close(fence)
-
-    monkeypatch.setattr(
-        managed_module._LexicalAncestorFence, "close", interrupt_first_close
-    )
-    state = managed_module.ManagedStateDirectory.acquire(tmp_path / "state")
-    try:
-        with pytest.raises(SystemExit) as caught:
-            state.ensure_directory(PurePath("first/second"))
-        assert caught.value is failure
-        assert close_calls >= 3
-    finally:
-        state.close()
-    assert _open_fd_count() == baseline
-
-
 def test_dashboard_closes_trace_root_when_drain_start_interrupts(
     tmp_path, monkeypatch
 ) -> None:
@@ -233,9 +317,6 @@ def test_dashboard_closes_trace_root_when_drain_start_interrupts(
     from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
     from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
         free_loopback_port,
-    )
-    from agent_alfred.evals.deterministic._web_startup_test_helpers import (
-        file_database,
     )
     from agent_alfred.wiring import build_dashboard
 
@@ -295,9 +376,6 @@ def test_dashboard_trace_init_waits_for_root_cleanup_before_downgrade(
     from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
         free_loopback_port,
     )
-    from agent_alfred.evals.deterministic._web_startup_test_helpers import (
-        file_database,
-    )
     from agent_alfred.resource_rollback import IncompleteRollback
     from agent_alfred.wiring import build_dashboard
 
@@ -351,9 +429,6 @@ def test_trace_root_is_owned_before_sink_constructor_accepts_it(
     from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
     from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
         free_loopback_port,
-    )
-    from agent_alfred.evals.deterministic._web_startup_test_helpers import (
-        file_database,
     )
     from agent_alfred.resource_rollback import IncompleteRollback
 
@@ -457,9 +532,6 @@ def test_dashboard_database_process_control_rolls_back_prior_resources(
     from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
         free_loopback_port,
     )
-    from agent_alfred.evals.deterministic._web_startup_test_helpers import (
-        file_database,
-    )
     from agent_alfred.wiring import build_dashboard
 
     socket.getfqdn()
@@ -472,7 +544,7 @@ def test_dashboard_database_process_control_rolls_back_prior_resources(
         factory=ScriptedModelFactory(ScriptedModel(["unused"])),
         clock=FakeClock(),
         port=port,
-        open_database=lambda state: (_ for _ in ()).throw(control),
+        open_database=lambda state, *, _rollback: (_ for _ in ()).throw(control),
     )
     with pytest.raises(SystemExit) as caught:
         dashboard.start()
@@ -549,9 +621,6 @@ def test_dashboard_retry_propagates_cleanup_control_and_resumes_exact_progress(
     from agent_alfred.clock import FakeClock
     from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
         free_loopback_port,
-    )
-    from agent_alfred.evals.deterministic._web_startup_test_helpers import (
-        file_database,
     )
     from agent_alfred.resource_rollback import IncompleteRollback
 
@@ -713,9 +782,6 @@ def test_dashboard_captures_rollback_owners_from_both_exception_branches(
     from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
         free_loopback_port,
     )
-    from agent_alfred.evals.deterministic._web_startup_test_helpers import (
-        file_database,
-    )
     from agent_alfred.resource_rollback import ResumableRollback
 
     socket.getfqdn()
@@ -788,9 +854,6 @@ def test_dashboard_nested_rollback_continues_independent_owner_and_exposes_slot(
     from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
     from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
         free_loopback_port,
-    )
-    from agent_alfred.evals.deterministic._web_startup_test_helpers import (
-        file_database,
     )
     from agent_alfred.resource_rollback import (
         IncompleteRollback,
@@ -1055,9 +1118,6 @@ def test_dashboard_shared_sibling_cleanup_advances_real_fd_once_per_close(
     from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
     from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
         free_loopback_port,
-    )
-    from agent_alfred.evals.deterministic._web_startup_test_helpers import (
-        file_database,
     )
     from agent_alfred.resource_rollback import ResumableRollback, RollbackSlot
 
@@ -1409,9 +1469,6 @@ def test_dashboard_does_not_restore_completed_shared_fd_handle(
     from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
         free_loopback_port,
     )
-    from agent_alfred.evals.deterministic._web_startup_test_helpers import (
-        file_database,
-    )
     from agent_alfred.resource_rollback import (
         IncompleteRollback,
         ResumableRollback,
@@ -1679,7 +1736,6 @@ def test_dashboard_resumes_typed_construction_owner_and_restores_cause(
         free_loopback_port,
     )
     from agent_alfred.evals.deterministic._web_startup_test_helpers import (
-        file_database,
         scripted_factory,
     )
     from agent_alfred.gateway.web.lifecycle import DESCRIPTOR_NAME
@@ -1702,8 +1758,8 @@ def test_dashboard_resumes_typed_construction_owner_and_restores_cause(
     connections: list[sqlite3.Connection] = []
     real_build_host = wiring_module.build_host
 
-    def open_database(state):
-        connection = file_database(state)
+    def open_database(state, *, _rollback):
+        connection = file_database(state, _rollback=_rollback)
         connections.append(connection)
         return connection
 
@@ -1778,8 +1834,8 @@ def test_build_default_host_attach_failure_closes_every_untransferred_resource(
     failure = RuntimeError("injected ownership transfer failure")
     real_attach = RuntimeHost.attach_owned_resources
 
-    def fail_attach(self, conn, state):
-        del self, conn, state
+    def fail_attach(self, conn, state, *, source):
+        del self, conn, state, source
         raise failure
 
     monkeypatch.setattr(RuntimeHost, "attach_owned_resources", fail_attach)
@@ -1798,6 +1854,292 @@ def test_build_default_host_attach_failure_closes_every_untransferred_resource(
     )
     assert host.close() is True
     assert _open_fd_count() == baseline
+
+
+def test_build_default_host_attach_publication_has_one_cleanup_owner(
+    tmp_path, monkeypatch
+) -> None:
+    """Publishing Host ownership cannot leave the outer rollback as a rival."""
+    import dis
+    import sys
+
+    from agent_alfred import wiring as wiring_module
+    from agent_alfred.clock import FakeClock
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        claimed_monitoring_tool,
+    )
+    from agent_alfred.events import FanOutSink
+    from agent_alfred.runtime.host import RuntimeHost
+
+    calls = {"host": 0, "connection": 0, "state": 0}
+    control = SystemExit("resource owner published before attach returned")
+
+    class State:
+        path = tmp_path / "state"
+
+        def close(self) -> None:
+            calls["state"] += 1
+
+    class Connection:
+        def close(self) -> None:
+            calls["connection"] += 1
+
+    state = State()
+    connection = Connection()
+
+    def build_runtime_host(**kwargs) -> RuntimeHost:
+        return RuntimeHost(
+            conn=kwargs["conn"],
+            factory=kwargs["factory"],
+            settings=kwargs["settings"],
+            clock=FakeClock(),
+            fanout=FanOutSink([], process_instance_id="proc-owned-resources"),
+            process_instance_id="proc-owned-resources",
+        )
+
+    real_close = RuntimeHost.close
+
+    def count_host_close(self, *args, **kwargs):
+        calls["host"] += 1
+        return real_close(self, *args, **kwargs)
+
+    monkeypatch.setattr(
+        wiring_module.ManagedStateDirectory,
+        "acquire",
+        classmethod(lambda cls, path, _rollback=None: state),
+    )
+    monkeypatch.setattr(
+        wiring_module, "open_database", lambda lease, _rollback=None: connection
+    )
+    monkeypatch.setattr(wiring_module, "build_host", build_runtime_host)
+    monkeypatch.setattr(RuntimeHost, "close", count_host_close)
+
+    code = RuntimeHost.attach_owned_resources.__code__
+    instructions = tuple(dis.get_instructions(code))
+    publication = next(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "STORE_ATTR"
+        and instruction.argval == "_owned_resources"
+    )
+    target = next(
+        instruction.offset
+        for instruction in instructions[publication + 1 :]
+        if instruction.opname == "RETURN_VALUE"
+    )
+    armed = True
+
+    with claimed_monitoring_tool(
+        "host-resource-owner-publication", local_codes=(code,)
+    ) as tool_id:
+
+        def interrupt(actual_code, actual_offset) -> None:
+            nonlocal armed
+            if armed and actual_code is code and actual_offset == target:
+                armed = False
+                raise control
+
+        sys.monitoring.register_callback(
+            tool_id, sys.monitoring.events.INSTRUCTION, interrupt
+        )
+        sys.monitoring.set_local_events(
+            tool_id, code, sys.monitoring.events.INSTRUCTION
+        )
+        with pytest.raises(SystemExit) as caught:
+            build_default_host(
+                state_dir=tmp_path / "state",
+                factory=ScriptedModelFactory(ScriptedModel(["unused"])),
+            )
+
+    assert armed is False
+    assert caught.value is control
+    assert calls == {"host": 1, "connection": 1, "state": 1}
+
+
+@pytest.mark.parametrize(
+    ("mutation", "occurrence"),
+    (("insert", 1), ("remove", 1), ("insert", 2), ("remove", 2)),
+    ids=(
+        "connection-after-destination",
+        "connection-after-source",
+        "state-after-destination",
+        "state-after-source",
+    ),
+)
+def test_rollback_handoff_interruption_keeps_one_shared_progress_step(
+    mutation: str, occurrence: int
+) -> None:
+    """Every partial handoff closes resources once in reverse order."""
+    import dis
+    import sys
+
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        claimed_monitoring_tool,
+    )
+    from agent_alfred.resource_rollback import ResumableRollback
+
+    trace: list[str] = []
+    state = object()
+    connection = object()
+    source = ResumableRollback()
+    source.own(state, lambda: trace.append("state"))
+    source.own(connection, lambda: trace.append("connection"))
+    target_owner = ResumableRollback()
+    control = SystemExit(f"handoff {mutation} interrupted")
+
+    code = ResumableRollback.transfer_many_to.__code__
+    instructions = tuple(dis.get_instructions(code))
+    method_load = next(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname in {"LOAD_ATTR", "LOAD_METHOD"}
+        and instruction.argval == mutation
+    )
+    call = next(
+        index
+        for index, instruction in enumerate(
+            instructions[method_load:], method_load
+        )
+        if instruction.opname in {"CALL", "CALL_KW"}
+    )
+    target = instructions[call + 1].offset
+    remaining = occurrence
+
+    with claimed_monitoring_tool(
+        "rollback-owner-handoff", local_codes=(code,)
+    ) as tool_id:
+
+        def interrupt(actual_code, actual_offset) -> None:
+            nonlocal remaining
+            if actual_code is not code or actual_offset != target:
+                return
+            remaining -= 1
+            if remaining == 0:
+                raise control
+
+        sys.monitoring.register_callback(
+            tool_id, sys.monitoring.events.INSTRUCTION, interrupt
+        )
+        sys.monitoring.set_local_events(
+            tool_id, code, sys.monitoring.events.INSTRUCTION
+        )
+        with pytest.raises(SystemExit) as caught:
+            source.transfer_many_to(target_owner, (state, connection))
+
+    assert remaining == 0
+    assert caught.value is control
+    target_owner.close()
+    source.close()
+    assert trace == ["connection", "state"]
+
+
+def test_transfer_rejects_a_resource_the_rollback_does_not_own() -> None:
+    from agent_alfred.resource_rollback import ResumableRollback
+
+    rollback = ResumableRollback()
+
+    with pytest.raises(RuntimeError, match="resource is not owned"):
+        rollback.transfer(object())
+
+
+def test_rollback_never_closes_an_older_dependency_past_a_newer_refusal() -> None:
+    """Strict reverse order pauses at the first cleanup step still pending."""
+    from agent_alfred.resource_rollback import ResumableRollback
+
+    trace: list[str] = []
+    newer_attempts = 0
+    rollback = ResumableRollback()
+    rollback.own(object(), lambda: trace.append("older"))
+
+    def close_newer() -> bool:
+        nonlocal newer_attempts
+        newer_attempts += 1
+        trace.append("newer")
+        return newer_attempts > 1
+
+    rollback.own(object(), close_newer)
+
+    assert rollback.retry() is False
+    assert trace == ["newer"]
+    assert rollback.retry() is True
+    assert trace == ["newer", "newer", "older"]
+
+
+def test_rollback_does_not_repeat_a_close_whose_result_store_was_interrupted() -> None:
+    """A successful close result is durable before Python can regain control."""
+    import dis
+    import sys
+
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        claimed_monitoring_tool,
+    )
+    from agent_alfred.resource_rollback import IncompleteRollback, ResumableRollback
+
+    calls = 0
+
+    def close() -> None:
+        nonlocal calls
+        calls += 1
+
+    rollback = ResumableRollback()
+    rollback.own(object(), close)
+    code = ResumableRollback.retry.__code__
+    target = next(
+        instruction.offset
+        for instruction in dis.get_instructions(code)
+        if instruction.opname == "STORE_FAST"
+        and instruction.argval in {"closed", "step_complete"}
+    )
+    control = SystemExit("close returned before progress was stored")
+    armed = True
+    with claimed_monitoring_tool(
+        "rollback-close-result", local_codes=(code,)
+    ) as tool_id:
+
+        def interrupt(actual_code, actual_offset) -> None:
+            nonlocal armed
+            if armed and actual_code is code and actual_offset == target:
+                armed = False
+                raise control
+
+        sys.monitoring.register_callback(
+            tool_id, sys.monitoring.events.INSTRUCTION, interrupt
+        )
+        sys.monitoring.set_local_events(
+            tool_id, code, sys.monitoring.events.INSTRUCTION
+        )
+        with pytest.raises(SystemExit) as caught:
+            rollback.retry_propagating()
+
+    assert armed is False
+    assert caught.value is control
+    cleanup = control.__cause__
+    assert isinstance(cleanup, IncompleteRollback)
+    assert calls == 1
+    assert cleanup.retry() is True
+    assert calls == 1
+
+
+def test_handoff_rejects_a_nonempty_target_before_either_owner_changes() -> None:
+    from agent_alfred.resource_rollback import ResumableRollback
+
+    trace: list[str] = []
+    older = object()
+    state = object()
+    connection = object()
+    target = ResumableRollback()
+    target.own(older, lambda: trace.append("older"))
+    source = ResumableRollback()
+    source.own(state, lambda: trace.append("state"))
+    source.own(connection, lambda: trace.append("connection"))
+
+    with pytest.raises(RuntimeError, match="target rollback must be empty"):
+        source.transfer_many_to(target, (state, connection))
+
+    source.close()
+    target.close()
+
+    assert trace == ["connection", "state", "older"]
 
 
 @pytest.mark.parametrize("connection_outcome", (False, RuntimeError("close failed")))
@@ -1833,9 +2175,11 @@ def test_build_default_host_construction_rollback_preserves_original_and_progres
     monkeypatch.setattr(
         wiring_module.ManagedStateDirectory,
         "acquire",
-        classmethod(lambda cls, path: state),
+        classmethod(lambda cls, path, _rollback=None: state),
     )
-    monkeypatch.setattr(wiring_module, "open_database", lambda lease: connection)
+    monkeypatch.setattr(
+        wiring_module, "open_database", lambda lease, _rollback=None: connection
+    )
     monkeypatch.setattr(
         wiring_module,
         "build_host",
@@ -1846,13 +2190,13 @@ def test_build_default_host_construction_rollback_preserves_original_and_progres
         build_default_host(
             state_dir=tmp_path / "state",
             factory=ScriptedModelFactory(ScriptedModel(["unused"])),
-        )
+    )
     assert caught.value is construction_failure
-    assert trace == ["connection.close", "state.close"]
+    assert trace == ["connection.close"]
     rollback = caught.value.__cause__
     assert rollback is not None
     assert rollback.retry() is True
-    assert trace == ["connection.close", "state.close", "connection.close"]
+    assert trace == ["connection.close", "connection.close", "state.close"]
 
 
 def test_build_default_host_default_factory_failure_is_inside_rollback_scope(
@@ -1900,11 +2244,10 @@ def test_build_default_host_cleanup_process_control_keeps_owner_reachable(
                 raise control
             self._connection.close()
 
-    monkeypatch.setattr(
-        database_module.sqlite3,
-        "connect",
-        lambda *args, **kwargs: Connection(real_connect(*args, **kwargs)),
-    )
+    def connect(path, owner, **kwargs):
+        owner.publish(Connection(real_connect(path, **kwargs)))
+
+    monkeypatch.setattr(database_module.sqlite3, "connect", connect)
     monkeypatch.setattr(
         wiring_module,
         "OpenCodeGoFactory",
@@ -2025,59 +2368,6 @@ def test_dashboard_assembly_cleanup_process_control_keeps_owner_reachable(
     assert _open_fd_count() == baseline
 
 
-def test_dashboard_refuses_a_replaced_state_ancestor_and_releases_everything(
-    tmp_path, monkeypatch
-) -> None:
-    from agent_alfred import database as database_module
-    from agent_alfred.clock import FakeClock
-    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
-    from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
-        free_loopback_port,
-    )
-    from agent_alfred.managed_state import ManagedPathSecurityError
-    from agent_alfred.wiring import build_dashboard
-
-    socket.getfqdn()
-    baseline = _open_fd_count()
-    container = tmp_path / "container"
-    container.mkdir(mode=0o700)
-    state_path = container / "state"
-    replacement = tmp_path / "container-replacement"
-    replacement_state = replacement / "state"
-    replacement_state.mkdir(parents=True, mode=0o700)
-    replacement_database = replacement_state / "db.sqlite3"
-    seed = sqlite3.connect(replacement_database)
-    seed.execute("CREATE TABLE sentinel (value TEXT NOT NULL)")
-    seed.execute("INSERT INTO sentinel VALUES ('untouched')")
-    seed.commit()
-    seed.close()
-    before = replacement_database.read_bytes()
-    displaced = tmp_path / "container-displaced"
-    real_connect = sqlite3.connect
-
-    def replace_ancestor_then_connect(path, **kwargs):
-        container.rename(displaced)
-        replacement.rename(container)
-        return real_connect(path, **kwargs)
-
-    monkeypatch.setattr(
-        database_module.sqlite3, "connect", replace_ancestor_then_connect
-    )
-    dashboard = build_dashboard(
-        state_dir=state_path,
-        factory=ScriptedModelFactory(ScriptedModel(["unused"])),
-        clock=FakeClock(),
-        port=free_loopback_port(),
-    )
-    with pytest.raises(ManagedPathSecurityError) as caught:
-        dashboard.start()
-    assert caught.value.reason == "identity_changed"
-    assert (state_path / "db.sqlite3").read_bytes() == before
-    assert dashboard.state == "failed"
-    assert dashboard.close() is True
-    assert _open_fd_count() == baseline
-
-
 @pytest.mark.parametrize("host_outcome", (False, RuntimeError("host close failed")))
 def test_build_default_host_attach_failure_retains_host_rollback_owner(
     tmp_path, monkeypatch, host_outcome
@@ -2100,8 +2390,8 @@ def test_build_default_host_attach_failure_retains_host_rollback_owner(
     class Host:
         close_calls = 0
 
-        def attach_owned_resources(self, conn, state):
-            del conn, state
+        def attach_owned_resources(self, conn, state, *, source):
+            del conn, state, source
             raise attach_failure
 
         def close(self):
@@ -2117,23 +2407,30 @@ def test_build_default_host_attach_failure_retains_host_rollback_owner(
     monkeypatch.setattr(
         wiring_module.ManagedStateDirectory,
         "acquire",
-        classmethod(lambda cls, path: State()),
+        classmethod(lambda cls, path, _rollback=None: State()),
     )
-    monkeypatch.setattr(wiring_module, "open_database", lambda lease: Connection())
+    monkeypatch.setattr(
+        wiring_module, "open_database", lambda lease, _rollback=None: Connection()
+    )
     monkeypatch.setattr(wiring_module, "build_host", lambda **kwargs: host)
 
     with pytest.raises(ValueError) as caught:
         build_default_host(
             state_dir=tmp_path / "state",
             factory=ScriptedModelFactory(ScriptedModel(["unused"])),
-        )
+    )
     assert caught.value is attach_failure
-    assert trace == ["host.close", "connection.close", "state.close"]
+    assert trace == ["host.close"]
     rollback = caught.value.__cause__
     assert rollback is not None
     assert rollback.retry() is True
     assert host.close_calls == 2
-    assert trace == ["host.close", "connection.close", "state.close", "host.close"]
+    assert trace == [
+        "host.close",
+        "host.close",
+        "connection.close",
+        "state.close",
+    ]
 
 
 @pytest.mark.parametrize("operation", ("fstat", "stat"))
@@ -2169,16 +2466,16 @@ def test_build_default_host_types_database_identity_permission_denials(
             raise OSError(failure_errno, os.strerror(failure_errno))
         return real_stat(path, *args, **kwargs)
 
-    def acquire_then_inject(cls, path):
+    def acquire_then_inject(cls, path, _rollback=None):
         lease = real_acquire(cls, path)
         if operation == "fstat":
             monkeypatch.setattr(managed_module.os, "fstat", deny_fstat)
         return lease
 
-    def connect_then_inject(*args, **kwargs):
-        connection = real_connect(*args, **kwargs)
+    def connect_then_inject(path, owner, **kwargs):
+        connection = real_connect(path, **kwargs)
+        owner.publish(connection)
         monkeypatch.setattr(managed_module.os, "stat", deny_stat)
-        return connection
 
     monkeypatch.setattr(
         managed_module.ManagedStateDirectory,
@@ -2230,7 +2527,7 @@ def test_child_rollback_retry_never_closes_a_reused_descriptor(
         elif child_seen and not parent_refused:
             parent_refused = True
             values = list(observed)
-            values[0] = stat.S_IFREG | 0o600
+            values[1] += 1
             return os.stat_result(values)
         return observed
 
@@ -2264,6 +2561,1711 @@ def test_child_rollback_retry_never_closes_a_reused_descriptor(
                 os.close(descriptor)
             except OSError:
                 pass
+
+
+def _return_offset(code, *, after: str | None = None, argval: str | None = None):
+    """The offset of the RETURN_VALUE a public seam hands its resource back on."""
+    import dis
+
+    instructions = tuple(dis.get_instructions(code))
+    start = 0
+    if after is not None:
+        start = next(
+            index
+            for index, instruction in enumerate(instructions)
+            if instruction.opname == after
+            and (argval is None or instruction.argval == argval)
+        )
+    return next(
+        instruction.offset
+        for instruction in instructions[start:]
+        if instruction.opname == "RETURN_VALUE"
+    )
+
+
+def test_state_lease_return_edge_keeps_one_reachable_capability_owner(
+    tmp_path,
+) -> None:
+    """``acquire`` hands its lease to an owner before its own return edge."""
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
+    from agent_alfred.managed_state import ManagedStateDirectory
+
+    baseline = _open_fd_count()
+    control = SystemExit("state lease returned to nobody")
+    code = ManagedStateDirectory.acquire.__func__.__code__
+    offset = _return_offset(code)
+
+    with interrupt_instruction_once(code, offset, control) as state:
+        with pytest.raises(SystemExit) as caught:
+            build_default_host(
+                state_dir=tmp_path / "state",
+                factory=ScriptedModelFactory(ScriptedModel(["unused"])),
+            )
+
+    assert state[0] is False
+    assert caught.value is control
+    assert _open_fd_count() == baseline
+
+
+@pytest.mark.parametrize("interrupt_initial_return", [False, True])
+def test_standalone_database_cleans_its_initial_file_return(
+    tmp_path, interrupt_initial_return,
+) -> None:
+    """A failed standalone opener releases its file and anchor descriptors."""
+    from agent_alfred import database as database_module
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_py_return_once,
+    )
+    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
+    from agent_alfred.managed_state import ManagedStateDirectory, ManagedStateLease
+
+    baseline = _open_fd_count()
+    state = ManagedStateDirectory.acquire(tmp_path / "state")
+    control = SystemExit("initial database file return interrupted")
+    try:
+        if interrupt_initial_return:
+            with interrupt_py_return_once(
+                "standalone-database-file-return",
+                ManagedStateLease.open_regular.__code__,
+                control,
+            ) as armed:
+                with pytest.raises(SystemExit) as caught:
+                    database_module.open_database(state)
+            assert armed == [False], "initial file return was not reached"
+            assert caught.value is control
+        else:
+            connection = database_module.open_database(state)
+            try:
+                assert connection.execute("SELECT 1").fetchone() == (1,)
+            finally:
+                connection.close()
+    finally:
+        state.close()
+    assert _open_fd_count() == baseline
+
+
+@pytest.mark.parametrize("interrupt_initial_return", [False, True])
+def test_standalone_directory_cleans_its_initial_duplicate_return(
+    tmp_path, interrupt_initial_return,
+) -> None:
+    """An interrupted directory opener releases its initial duplicate."""
+    from agent_alfred import managed_state as managed_module
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_py_return_once,
+    )
+    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
+
+    baseline = _open_fd_count()
+    state = managed_module.ManagedStateDirectory.acquire(tmp_path / "state")
+    control = SystemExit("initial directory duplicate return interrupted")
+    try:
+        if interrupt_initial_return:
+            with interrupt_py_return_once(
+                "standalone-directory-duplicate-return",
+                managed_module._managed_dup.__code__,
+                control,
+            ) as armed:
+                with pytest.raises(SystemExit) as caught:
+                    state.ensure_directory(PurePath("child"))
+            assert armed == [False], "initial duplicate return was not reached"
+            assert caught.value is control
+        else:
+            directory = state.ensure_directory(PurePath("child"))
+            try:
+                directory.verify_identity()
+            finally:
+                directory.close()
+    finally:
+        state.close()
+    assert _open_fd_count() == baseline
+
+
+@pytest.mark.parametrize("interrupt_initial_return", [False, True])
+def test_standalone_state_cleans_its_initial_parent_return(
+    tmp_path, interrupt_initial_return,
+) -> None:
+    """An interrupted state acquisition releases its initial parent FD."""
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_py_return_once,
+    )
+    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
+    from agent_alfred.managed_state import ManagedStateDirectory
+    from agent_alfred.resource_rollback import OwnedDescriptor
+
+    baseline = _open_fd_count()
+    control = SystemExit("initial state parent return interrupted")
+    if interrupt_initial_return:
+        with interrupt_py_return_once(
+            "standalone-state-parent-return",
+            OwnedDescriptor.open.__func__.__code__,
+            control,
+        ) as armed:
+            with pytest.raises(SystemExit) as caught:
+                ManagedStateDirectory.acquire(tmp_path / "state")
+        assert armed == [False], "initial parent return was not reached"
+        assert caught.value is control
+    else:
+        state = ManagedStateDirectory.acquire(tmp_path / "state")
+        try:
+            state.verify_identity()
+        finally:
+            state.close()
+    assert _open_fd_count() == baseline
+
+
+def test_database_return_edge_keeps_the_connection_owned(tmp_path) -> None:
+    """A connection that never reaches its caller is still closed once."""
+    from agent_alfred import database as database_module
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
+
+    baseline = _open_fd_count()
+    closes: list[int] = []
+    real_connect = database_module.sqlite3.connect
+
+    class CountingConnection(database_module.sqlite3.Connection):
+        def close(self) -> None:
+            closes.append(id(self))
+            super().close()
+
+    def counted_connect(path, owner, **kwargs):
+        owner.publish(real_connect(path, factory=CountingConnection, **kwargs))
+
+    database_module.sqlite3.connect = counted_connect
+    control = SystemExit("database connection returned to nobody")
+    code = database_module.open_database.__code__
+    offset = _return_offset(code)
+    try:
+        with interrupt_instruction_once(code, offset, control) as state:
+            with pytest.raises(SystemExit) as caught:
+                build_default_host(
+                    state_dir=tmp_path / "state",
+                    factory=ScriptedModelFactory(ScriptedModel(["unused"])),
+                )
+    finally:
+        database_module.sqlite3.connect = real_connect
+
+    assert state[0] is False
+    assert caught.value is control
+    assert len(closes) == 1, "the unreachable connection was closed twice"
+    assert _open_fd_count() == baseline
+
+
+def test_connection_token_owns_the_connection_before_its_return_edge(
+    tmp_path, monkeypatch
+) -> None:
+    """The path-fenced opener registers its result before handing it upward."""
+    from agent_alfred import database as database_module
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.managed_state import (
+        ManagedConnectionToken,
+        ManagedStateDirectory,
+    )
+
+    created = []
+
+    class Connection:
+        closed = False
+
+        def close(self) -> None:
+            self.closed = True
+
+    def connect(_path, owner, **_kwargs):
+        connection = Connection()
+        created.append(connection)
+        owner.publish(connection)
+
+    monkeypatch.setattr(database_module.sqlite3, "connect", connect)
+    state_lease = ManagedStateDirectory.acquire(tmp_path / "state")
+    control = SystemExit("connection escaped its path-fenced opener")
+    code = ManagedConnectionToken.connect.__code__
+    offset = _return_offset(code)
+    try:
+        with interrupt_instruction_once(code, offset, control) as armed:
+            with pytest.raises(SystemExit) as caught:
+                database_module.open_database(state_lease)
+
+        assert armed[0] is False
+        assert caught.value is control
+        assert len(created) == 1
+        assert created[0].closed is True
+    finally:
+        state_lease.close()
+
+
+def test_connection_token_owns_the_raw_result_before_its_store(
+    tmp_path, monkeypatch
+) -> None:
+    """The connection cannot escape between its opener call and local store."""
+    import dis
+
+    from agent_alfred import database as database_module
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.managed_state import (
+        ManagedConnectionToken,
+        ManagedStateDirectory,
+    )
+
+    created = []
+
+    class Connection:
+        closed = False
+
+        def close(self) -> None:
+            self.closed = True
+
+    def connect(_path, owner, **_kwargs):
+        connection = Connection()
+        created.append(connection)
+        owner.publish(connection)
+
+    monkeypatch.setattr(database_module.sqlite3, "connect", connect)
+    state_lease = ManagedStateDirectory.acquire(tmp_path / "state")
+    control = SystemExit("connection escaped before its local store")
+    code = ManagedConnectionToken.connect.__code__
+    instructions = tuple(dis.get_instructions(code))
+    store_index = next(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "STORE_FAST" and instruction.argval == "connection"
+    )
+    call_index = max(
+        index
+        for index, instruction in enumerate(instructions[:store_index])
+        if instruction.opname in {"CALL", "CALL_FUNCTION_EX"}
+    )
+    offset = instructions[call_index + 1].offset
+    try:
+        with interrupt_instruction_once(code, offset, control) as armed:
+            with pytest.raises(SystemExit) as caught:
+                database_module.open_database(state_lease)
+
+        assert armed[0] is False
+        assert caught.value is control
+        assert len(created) == 1
+        assert created[0].closed is True
+    finally:
+        state_lease.close()
+
+
+def test_owned_descriptor_factory_keeps_its_token_owned_at_return_edge() -> None:
+    """Every managed ``open``/``dup`` returns through one pre-owned token."""
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.resource_rollback import OwnedDescriptor, ResumableRollback
+
+    rollback = ResumableRollback()
+    control = SystemExit("owned descriptor returned to nobody")
+    code = OwnedDescriptor.open.__func__.__code__
+    offset = _return_offset(code)
+    minted = -1
+    try:
+        with interrupt_instruction_once(code, offset, control) as armed:
+            with pytest.raises(SystemExit) as caught:
+                OwnedDescriptor.open(rollback, os.devnull, os.O_RDONLY)
+
+        assert armed[0] is False
+        assert caught.value is control
+        owner = rollback._steps[-1].resource  # noqa: SLF001 - ownership assertion
+        assert isinstance(owner, OwnedDescriptor)
+        minted = owner.fd
+        assert minted >= 0
+        assert rollback.retry() is True
+        with pytest.raises(OSError) as closed:
+            os.fstat(minted)
+        assert closed.value.errno == errno.EBADF
+    finally:
+        if minted >= 0:
+            try:
+                os.close(minted)
+            except OSError as exc:
+                if exc.errno != errno.EBADF:
+                    raise
+
+
+def test_owned_descriptor_refuses_a_python_opener_before_its_py_return() -> None:
+    """A caller cannot capture a resource before its Python factory returns."""
+    import sys
+
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        claimed_monitoring_tool,
+    )
+    from agent_alfred.resource_rollback import OwnedDescriptor, ResumableRollback
+
+    rollback = ResumableRollback()
+    minted: list[int] = []
+
+    def open_descriptor() -> int:
+        descriptor = os.open(os.devnull, os.O_RDONLY)
+        minted.append(descriptor)
+        return descriptor
+
+    control = SystemExit("python opener reached its unowned return edge")
+    armed = True
+
+    def interrupt(code, offset, result) -> None:
+        del offset, result
+        nonlocal armed
+        if armed and code is open_descriptor.__code__:
+            armed = False
+            raise control
+
+    try:
+        with claimed_monitoring_tool(
+            "descriptor-python-opener", local_codes=(open_descriptor.__code__,)
+        ) as tool_id:
+            sys.monitoring.register_callback(
+                tool_id, sys.monitoring.events.PY_RETURN, interrupt
+            )
+            sys.monitoring.set_local_events(
+                tool_id, open_descriptor.__code__, sys.monitoring.events.PY_RETURN
+            )
+            with pytest.raises(TypeError):
+                OwnedDescriptor.open(rollback, open_descriptor, os.O_RDONLY)
+
+        assert armed is True
+        assert minted == []
+        assert rollback.retry() is True
+    finally:
+        for descriptor in minted:
+            try:
+                os.close(descriptor)
+            except OSError as exc:
+                if exc.errno != errno.EBADF:
+                    raise
+
+
+def test_owned_resource_factory_publishes_before_its_py_return() -> None:
+    """A Python factory must place its result in the pre-owned holder."""
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_py_return_once,
+    )
+    from agent_alfred.resource_rollback import OwnedResource, ResumableRollback
+
+    class Resource:
+        def __init__(self) -> None:
+            self.closed = False
+
+        def close(self) -> None:
+            self.closed = True
+
+    rollback = ResumableRollback()
+    created: list[Resource] = []
+
+    def create(owner=None):
+        resource = Resource()
+        created.append(resource)
+        if owner is not None:
+            owner.publish(resource)
+        return resource
+
+    failure = SystemExit("resource factory return interrupted")
+    with interrupt_py_return_once(
+        "owned-resource-factory-return", create.__code__, failure
+    ) as armed:
+        with pytest.raises(SystemExit) as caught:
+            OwnedResource.acquire(rollback, create)
+
+    assert armed == [False]
+    assert caught.value is failure
+    assert len(created) == 1
+    assert rollback.retry() is True
+    assert created[0].closed is True
+
+
+def test_connection_factory_publishes_before_its_py_return(tmp_path) -> None:
+    """The path-fenced factory leaves its connection in the caller's owner."""
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_py_return_once,
+    )
+    from agent_alfred.managed_state import ManagedStateDirectory
+    from agent_alfred.resource_rollback import ResumableRollback
+
+    class Connection:
+        def __init__(self) -> None:
+            self.closed = False
+
+        def close(self) -> None:
+            self.closed = True
+
+    state = ManagedStateDirectory.acquire(tmp_path / "state")
+    lease = state.open_regular(
+        PurePath("db.sqlite3"),
+        access="read_write",
+        create=True,
+        role="SQLite database",
+    )
+    token = lease.connection_token()
+    rollback = ResumableRollback()
+    created: list[Connection] = []
+
+    def connect(_path, owner=None, **_kwargs):
+        connection = Connection()
+        created.append(connection)
+        if owner is not None:
+            owner.publish(connection)
+        return connection
+
+    failure = SystemExit("connection factory return interrupted")
+    try:
+        with interrupt_py_return_once(
+            "owned-connection-factory-return", connect.__code__, failure
+        ) as armed:
+            with pytest.raises(SystemExit) as caught:
+                token.connect(connect, _rollback=rollback)
+
+        assert armed == [False]
+        assert caught.value is failure
+        assert len(created) == 1
+        assert rollback.retry() is True
+        assert created[0].closed is True
+    finally:
+        rollback.retry()
+        lease.close()
+        state.close()
+
+
+def test_owned_descriptor_factory_owns_the_raw_result_before_its_store() -> None:
+    """The descriptor cannot escape between its opener call and token store."""
+    import dis
+
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.resource_rollback import OwnedDescriptor, ResumableRollback
+
+    rollback = ResumableRollback()
+    control = SystemExit("raw descriptor escaped before its token store")
+    code = OwnedDescriptor.open.__func__.__code__
+    instructions = tuple(dis.get_instructions(code))
+    call_index = max(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "CALL"
+    )
+    offset = instructions[call_index + 1].offset
+    minted = -1
+    try:
+        with interrupt_instruction_once(code, offset, control) as armed:
+            with pytest.raises(SystemExit) as caught:
+                OwnedDescriptor.open(rollback, os.devnull, os.O_RDONLY)
+
+        assert armed[0] is False
+        assert caught.value is control
+        owner = rollback._steps[-1].resource  # noqa: SLF001 - ownership assertion
+        assert isinstance(owner, OwnedDescriptor)
+        minted = owner.fd
+        assert minted >= 0
+        assert rollback.retry() is True
+        with pytest.raises(OSError) as closed:
+            os.fstat(minted)
+        assert closed.value.errno == errno.EBADF
+    finally:
+        if minted >= 0:
+            try:
+                os.close(minted)
+            except OSError as exc:
+                if exc.errno != errno.EBADF:
+                    raise
+
+
+def test_owned_descriptor_close_has_no_interruptible_consume_before_close_gap() -> None:
+    """Consuming the token and attempting close expose no Python edge."""
+    import dis
+
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.resource_rollback import OwnedDescriptor, ResumableRollback
+
+    rollback = ResumableRollback()
+    descriptor = os.open(os.devnull, os.O_RDONLY)
+    owner = OwnedDescriptor(descriptor)
+    rollback.own(owner)
+    instructions = tuple(dis.get_instructions(OwnedDescriptor.close))
+    close_call = max(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname in {"CALL", "CALL_KW"}
+    )
+    offset = instructions[close_call + 1].offset
+    control = SystemExit("descriptor close returned before rollback progress")
+    try:
+        with interrupt_instruction_once(
+            OwnedDescriptor.close.__code__, offset, control,
+        ) as armed:
+            with pytest.raises(SystemExit) as caught:
+                rollback.retry_propagating()
+
+        assert armed[0] is False
+        assert caught.value is control
+        assert rollback.retry() is True
+        with pytest.raises(OSError) as closed:
+            os.fstat(descriptor)
+        assert closed.value.errno == errno.EBADF
+    finally:
+        try:
+            os.close(descriptor)
+        except OSError as exc:
+            if exc.errno != errno.EBADF:
+                raise
+
+
+def test_owned_resource_close_does_not_repeat_a_captured_success() -> None:
+    """A resource close result is owned before Python regains control."""
+    import dis
+
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.resource_rollback import OwnedResource, ResumableRollback
+
+    class Resource:
+        def __init__(self) -> None:
+            self.close_calls = 0
+
+        def close(self) -> None:
+            self.close_calls += 1
+
+    resource = Resource()
+    owner: OwnedResource[Resource] = OwnedResource()
+    owner.publish(resource)
+    rollback = ResumableRollback()
+    rollback.own(owner)
+    code = OwnedResource.close.__code__
+    instructions = tuple(dis.get_instructions(code))
+    capture_load = next(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "LOAD_GLOBAL"
+        and instruction.argval == "capture_call_result"
+    )
+    capture_call = next(
+        index
+        for index, instruction in enumerate(
+            instructions[capture_load:], capture_load
+        )
+        if instruction.opname in {"CALL", "CALL_KW"}
+    )
+    offset = instructions[capture_call + 1].offset
+    control = SystemExit("resource close returned before local progress")
+
+    with interrupt_instruction_once(code, offset, control) as armed:
+        with pytest.raises(SystemExit) as caught:
+            rollback.retry_propagating()
+
+    assert armed[0] is False
+    assert caught.value is control
+    assert resource.close_calls == 1
+    assert rollback.retry() is True
+    assert resource.close_calls == 1
+
+
+def test_rollback_step_observes_close_completion_after_its_py_return() -> None:
+    """A published close fact prevents replay after the callee return edge."""
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_py_return_once,
+    )
+    from agent_alfred.resource_rollback import ResumableRollback
+
+    class Resource:
+        def __init__(self) -> None:
+            self.close_calls = 0
+            self.closed = False
+
+        def close(self) -> None:
+            self.close_calls += 1
+            self.closed = True
+
+        def close_completed(self) -> bool:
+            return self.closed
+
+    resource = Resource()
+    rollback = ResumableRollback()
+    rollback.own(resource)
+    failure = SystemExit("rollback close return interrupted")
+
+    with interrupt_py_return_once(
+        "rollback-close-return", resource.close.__code__, failure
+    ) as armed:
+        with pytest.raises(SystemExit) as caught:
+            rollback.retry_propagating()
+
+    assert armed == [False]
+    assert caught.value is failure
+    assert resource.close_calls == 1
+    assert rollback.retry() is True
+    assert resource.close_calls == 1
+
+
+def test_owned_resource_observes_close_completion_after_its_py_return() -> None:
+    """The holder cannot make an already completed close repeat."""
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_py_return_once,
+    )
+    from agent_alfred.resource_rollback import OwnedResource, ResumableRollback
+
+    class Resource:
+        def __init__(self) -> None:
+            self.close_calls = 0
+            self.closed = False
+
+        def close(self) -> None:
+            self.close_calls += 1
+            self.closed = True
+
+        def close_completed(self) -> bool:
+            return self.closed
+
+    resource = Resource()
+    owner: OwnedResource[Resource] = OwnedResource()
+    owner.publish(resource)
+    rollback = ResumableRollback()
+    rollback.own(owner)
+    failure = SystemExit("owned close return interrupted")
+
+    with interrupt_py_return_once(
+        "owned-close-return", resource.close.__code__, failure
+    ) as armed:
+        with pytest.raises(SystemExit) as caught:
+            rollback.retry_propagating()
+
+    assert armed == [False]
+    assert caught.value is failure
+    assert resource.close_calls == 1
+    assert rollback.retry() is True
+    assert resource.close_calls == 1
+
+
+def test_managed_lease_close_retains_its_fd_across_the_clear_edge(tmp_path) -> None:
+    """A lease retry must still reach a descriptor whose first close was cut off."""
+    import dis
+
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.managed_state import ManagedFileLease
+
+    path = tmp_path / "state-file"
+    path.write_bytes(b"")
+    descriptor = os.open(path, os.O_RDONLY)
+    lease = ManagedFileLease(path, descriptor)
+    close_code = lease.close.__func__.__code__
+    instructions = tuple(dis.get_instructions(close_code))
+    cleared = next(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "STORE_ATTR" and instruction.argval == "_fd"
+    )
+    offset = instructions[cleared + 1].offset
+    control = SystemExit("managed lease identity cleared before close")
+    try:
+        with interrupt_instruction_once(close_code, offset, control) as armed:
+            with pytest.raises(SystemExit) as caught:
+                lease.close()
+
+        assert armed[0] is False
+        assert caught.value is control
+        lease.close()
+        with pytest.raises(OSError) as closed:
+            os.fstat(descriptor)
+        assert closed.value.errno == errno.EBADF
+    finally:
+        try:
+            os.close(descriptor)
+        except OSError as exc:
+            if exc.errno != errno.EBADF:
+                raise
+
+
+def test_staging_entry_return_edge_keeps_its_temporary_lease_owned(
+    tmp_path, monkeypatch
+) -> None:
+    """A staging entry is owned before it enters the local lease mapping."""
+    import dis
+
+    from agent_alfred import managed_state as managed_module
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.managed_state import ManagedStateDirectory
+
+    state = ManagedStateDirectory.acquire(tmp_path / "state")
+    staging_name = f".staging-{'a' * 32}"
+    staging = state.create_directory(
+        PurePath(staging_name), role="bundle staging directory"
+    )
+    meta = staging.path / "meta.json"
+    meta.write_bytes(b"{}")
+    meta.chmod(0o600)
+    opened = []
+
+    def open_regular(*args, _rollback=None, **kwargs):
+        del args, kwargs
+        lease = _CloseRecordingLease()
+        opened.append(lease)
+        if _rollback is not None:
+            _rollback.own(lease)
+        return lease
+
+    monkeypatch.setattr(
+        managed_module.ManagedDirectoryLease, "_open_regular", open_regular
+    )
+    control = SystemExit("staging entry escaped before its mapping store")
+    code = managed_module.ManagedDirectoryLease.remove_managed_staging.__code__
+    instructions = tuple(dis.get_instructions(code))
+    load_index = next(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.argval == "_open_regular"
+    )
+    store_index = next(
+        index
+        for index, instruction in enumerate(instructions[load_index:], load_index)
+        if instruction.opname == "STORE_SUBSCR"
+    )
+    call_index = max(
+        index
+        for index, instruction in enumerate(instructions[:store_index])
+        if instruction.opname in {"CALL", "CALL_FUNCTION_EX", "CALL_KW"}
+    )
+    offset = instructions[call_index + 1].offset
+    try:
+        with interrupt_instruction_once(code, offset, control) as armed:
+            with pytest.raises(SystemExit) as caught:
+                staging.remove_managed_staging()
+
+        assert armed[0] is False
+        assert caught.value is control
+        assert len(opened) == 1
+        assert opened[0].closed is True
+    finally:
+        staging.close()
+        state.close()
+
+
+def test_staging_reclaimer_owns_the_trace_root_before_its_local_store(
+    tmp_path, monkeypatch
+) -> None:
+    """Startup reclamation owns its trace-root lease across the call edge."""
+    import dis
+
+    from agent_alfred import managed_state as managed_module
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.managed_state import ManagedStateDirectory
+
+    state = ManagedStateDirectory.acquire(tmp_path / "state")
+    traces = state.path / "traces"
+    traces.mkdir(mode=0o700)
+    opened = []
+
+    def open_directory(*args, _rollback=None, **kwargs):
+        del args, kwargs
+        lease = _CloseRecordingLease()
+        opened.append(lease)
+        if _rollback is not None:
+            _rollback.own(lease)
+        return lease
+
+    monkeypatch.setattr(
+        managed_module.ManagedDirectoryLease, "_open_directory", open_directory
+    )
+    control = SystemExit("trace root escaped before its local store")
+    code = managed_module.ManagedDirectoryLease.reclaim_stale_trace_staging.__code__
+    instructions = tuple(dis.get_instructions(code))
+    store_index = next(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "STORE_FAST" and instruction.argval == "traces"
+    )
+    call_index = max(
+        index
+        for index, instruction in enumerate(instructions[:store_index])
+        if instruction.opname in {"CALL", "CALL_FUNCTION_EX", "CALL_KW"}
+    )
+    offset = instructions[call_index + 1].offset
+    try:
+        with interrupt_instruction_once(code, offset, control) as armed:
+            with pytest.raises(SystemExit) as caught:
+                state.reclaim_stale_trace_staging()
+
+        assert armed[0] is False
+        assert caught.value is control
+        assert len(opened) == 1
+        assert opened[0].closed is True
+    finally:
+        state.close()
+
+
+def test_staging_reclaimer_owns_a_date_lease_before_its_local_store(
+    tmp_path, monkeypatch
+) -> None:
+    """Each scanned date lease has an owner before the loop stores it."""
+    import dis
+
+    from agent_alfred import managed_state as managed_module
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.managed_state import ManagedStateDirectory
+
+    state = ManagedStateDirectory.acquire(tmp_path / "state")
+    traces = state.path / "traces"
+    traces.mkdir(mode=0o700)
+    (traces / "2026-09-05").mkdir(mode=0o700)
+    opened = []
+    real_open_directory = managed_module.ManagedDirectoryLease._open_directory
+
+    def open_directory(self, *args, role, _rollback=None, **kwargs):
+        if role != "trace date directory":
+            return real_open_directory(
+                self, *args, role=role, _rollback=_rollback, **kwargs
+            )
+        lease = _CloseRecordingLease()
+        opened.append(lease)
+        if _rollback is not None:
+            _rollback.own(lease)
+        return lease
+
+    monkeypatch.setattr(
+        managed_module.ManagedDirectoryLease, "_open_directory", open_directory
+    )
+    control = SystemExit("trace date escaped before its local store")
+    code = managed_module.ManagedDirectoryLease.reclaim_stale_trace_staging.__code__
+    instructions = tuple(dis.get_instructions(code))
+    store_index = max(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "STORE_FAST" and instruction.argval == "date"
+    )
+    call_index = max(
+        index
+        for index, instruction in enumerate(instructions[:store_index])
+        if instruction.opname in {"CALL", "CALL_FUNCTION_EX", "CALL_KW"}
+    )
+    offset = instructions[call_index + 1].offset
+    try:
+        with interrupt_instruction_once(code, offset, control) as armed:
+            with pytest.raises(SystemExit) as caught:
+                state.reclaim_stale_trace_staging()
+
+        assert armed[0] is False
+        assert caught.value is control
+        assert len(opened) == 1
+        assert opened[0].closed is True
+    finally:
+        state.close()
+
+
+def test_staging_reclaimer_owns_a_staging_lease_before_its_local_store(
+    tmp_path, monkeypatch
+) -> None:
+    """Each candidate staging lease has an owner before the loop stores it."""
+    import dis
+
+    from agent_alfred import managed_state as managed_module
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.managed_state import ManagedStateDirectory
+
+    state = ManagedStateDirectory.acquire(tmp_path / "state")
+    traces = state.path / "traces"
+    date = traces / "2026-09-05"
+    staging_name = f".staging-{'b' * 32}"
+    traces.mkdir(mode=0o700)
+    date.mkdir(mode=0o700)
+    (date / staging_name).mkdir(mode=0o700)
+    opened = []
+    real_open_directory = managed_module.ManagedDirectoryLease._open_directory
+
+    def open_directory(self, *args, role, _rollback=None, **kwargs):
+        if role != "bundle staging directory":
+            return real_open_directory(
+                self, *args, role=role, _rollback=_rollback, **kwargs
+            )
+        lease = _CloseRecordingLease()
+        opened.append(lease)
+        if _rollback is not None:
+            _rollback.own(lease)
+        return lease
+
+    monkeypatch.setattr(
+        managed_module.ManagedDirectoryLease, "_open_directory", open_directory
+    )
+    control = SystemExit("staging lease escaped before its local store")
+    code = managed_module.ManagedDirectoryLease.reclaim_stale_trace_staging.__code__
+    instructions = tuple(dis.get_instructions(code))
+    store_index = max(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "STORE_FAST" and instruction.argval == "staging"
+    )
+    call_index = max(
+        index
+        for index, instruction in enumerate(instructions[:store_index])
+        if instruction.opname in {"CALL", "CALL_FUNCTION_EX", "CALL_KW"}
+    )
+    offset = instructions[call_index + 1].offset
+    try:
+        with interrupt_instruction_once(code, offset, control) as armed:
+            with pytest.raises(SystemExit) as caught:
+                state.reclaim_stale_trace_staging()
+
+        assert armed[0] is False
+        assert caught.value is control
+        assert len(opened) == 1
+        assert opened[0].closed is True
+    finally:
+        state.close()
+
+
+def test_replace_bytes_owns_its_temporary_lease_before_the_local_store(
+    tmp_path, monkeypatch
+) -> None:
+    """Atomic replacement owns its temporary lease across the open call."""
+    import dis
+
+    from agent_alfred import managed_state as managed_module
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.managed_state import ManagedStateDirectory
+
+    state = ManagedStateDirectory.acquire(tmp_path / "state")
+    opened = []
+
+    def open_regular(*args, _rollback=None, **kwargs):
+        del args, kwargs
+        lease = _CloseRecordingLease()
+        opened.append(lease)
+        if _rollback is not None:
+            _rollback.own(lease)
+        return lease
+
+    monkeypatch.setattr(
+        managed_module.ManagedDirectoryLease, "open_regular", open_regular
+    )
+    control = SystemExit("replacement lease escaped before its local store")
+    code = managed_module.ManagedDirectoryLease.replace_bytes.__code__
+    instructions = tuple(dis.get_instructions(code))
+    store_index = max(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "STORE_FAST" and instruction.argval == "lease"
+    )
+    call_index = max(
+        index
+        for index, instruction in enumerate(instructions[:store_index])
+        if instruction.opname in {"CALL", "CALL_FUNCTION_EX", "CALL_KW"}
+    )
+    offset = instructions[call_index + 1].offset
+    try:
+        with interrupt_instruction_once(code, offset, control) as armed:
+            with pytest.raises(SystemExit) as caught:
+                state.replace_bytes(PurePath("entry.json"), b"{}")
+
+        assert armed[0] is False
+        assert caught.value is control
+        assert len(opened) == 1
+        assert opened[0].closed is True
+    finally:
+        state.close()
+
+
+def test_unlink_regular_owns_its_lease_before_the_local_store(
+    tmp_path, monkeypatch
+) -> None:
+    """Managed unlink owns the verified file lease across the open call."""
+    import dis
+
+    from agent_alfred import managed_state as managed_module
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.managed_state import ManagedStateDirectory
+
+    state = ManagedStateDirectory.acquire(tmp_path / "state")
+    victim = state.path / "victim"
+    victim.write_bytes(b"owned")
+    victim.chmod(0o600)
+    opened = []
+
+    def open_regular(*args, _rollback=None, **kwargs):
+        del args, kwargs
+        lease = _CloseRecordingLease()
+        opened.append(lease)
+        if _rollback is not None:
+            _rollback.own(lease)
+        return lease
+
+    monkeypatch.setattr(
+        managed_module.ManagedDirectoryLease, "_open_regular", open_regular
+    )
+    control = SystemExit("unlink lease escaped before its local store")
+    code = managed_module.ManagedDirectoryLease.unlink_regular.__code__
+    instructions = tuple(dis.get_instructions(code))
+    store_index = max(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "STORE_FAST" and instruction.argval == "lease"
+    )
+    call_index = max(
+        index
+        for index, instruction in enumerate(instructions[:store_index])
+        if instruction.opname in {"CALL", "CALL_FUNCTION_EX", "CALL_KW"}
+    )
+    offset = instructions[call_index + 1].offset
+    try:
+        with interrupt_instruction_once(code, offset, control) as armed:
+            with pytest.raises(SystemExit) as caught:
+                state.unlink_regular(PurePath("victim"), missing_ok=False)
+
+        assert armed[0] is False
+        assert caught.value is control
+        assert len(opened) == 1
+        assert opened[0].closed is True
+    finally:
+        state.close()
+
+
+def test_identity_guarded_unlink_owns_its_lease_before_the_local_store(
+    tmp_path, monkeypatch
+) -> None:
+    """Published-target rollback owns its lease across the verified open."""
+    import dis
+
+    from agent_alfred import managed_state as managed_module
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.managed_state import ManagedStateDirectory
+
+    state = ManagedStateDirectory.acquire(tmp_path / "state")
+    victim = state.path / "published"
+    victim.write_bytes(b"owned")
+    victim.chmod(0o600)
+    info = victim.stat()
+    opened = []
+
+    def open_regular(*args, _rollback=None, **kwargs):
+        del args, kwargs
+        lease = _CloseRecordingLease()
+        opened.append(lease)
+        if _rollback is not None:
+            _rollback.own(lease)
+        return lease
+
+    monkeypatch.setattr(
+        managed_module.ManagedDirectoryLease, "_open_regular", open_regular
+    )
+    control = SystemExit("identity-guarded lease escaped before its local store")
+    code = managed_module.ManagedDirectoryLease._unlink_regular_identity.__code__
+    instructions = tuple(dis.get_instructions(code))
+    store_index = max(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.opname == "STORE_FAST" and instruction.argval == "lease"
+    )
+    call_index = max(
+        index
+        for index, instruction in enumerate(instructions[:store_index])
+        if instruction.opname in {"CALL", "CALL_FUNCTION_EX", "CALL_KW"}
+    )
+    offset = instructions[call_index + 1].offset
+    try:
+        with interrupt_instruction_once(code, offset, control) as armed:
+            with pytest.raises(SystemExit) as caught:
+                state._unlink_regular_identity(
+                    PurePath("published"), (info.st_dev, info.st_ino)
+                )
+
+        assert armed[0] is False
+        assert caught.value is control
+        assert len(opened) == 1
+        assert opened[0].closed is True
+    finally:
+        state.close()
+
+
+def test_create_directory_interruption_before_mkdir_leaves_no_entry(
+    tmp_path,
+) -> None:
+    """An interruption before the mkdir call creates no child entry."""
+    import dis
+
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.managed_state import ManagedDirectoryLease, ManagedStateDirectory
+
+    state = ManagedStateDirectory.acquire(tmp_path / "state")
+    created = state.path / "new-child"
+    control = SystemExit("interrupted before the mkdir call")
+    code = ManagedDirectoryLease.create_directory.__code__
+    instructions = tuple(dis.get_instructions(code))
+    load_index = next(
+        index
+        for index, instruction in enumerate(instructions)
+        if instruction.argval == "mkdir"
+    )
+    call_index = next(
+        index
+        for index, instruction in enumerate(instructions[load_index:], load_index)
+        if instruction.opname in {"CALL", "CALL_FUNCTION_EX", "CALL_KW"}
+    )
+    offset = instructions[call_index + 1].offset
+    try:
+        with interrupt_instruction_once(code, offset, control) as armed:
+            with pytest.raises(SystemExit) as caught:
+                state.create_directory(PurePath("new-child"), role="test child")
+
+        assert armed[0] is False
+        assert caught.value is control
+        assert created.exists() is False
+    finally:
+        if created.exists():
+            created.rmdir()
+        state.close()
+
+
+def test_state_lease_retains_only_its_target_and_direct_parent_descriptors(
+    tmp_path,
+) -> None:
+    """The excluded local-adversary model needs no filesystem-root fence."""
+    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
+    from agent_alfred.managed_state import ManagedStateDirectory
+
+    parent = tmp_path / "one" / "two" / "three"
+    parent.mkdir(parents=True)
+    baseline = _open_fd_count()
+
+    state = ManagedStateDirectory.acquire(parent / "state")
+    try:
+        assert _open_fd_count() == baseline + 2
+    finally:
+        state.close()
+
+    assert _open_fd_count() == baseline
+
+
+def test_regular_capability_return_edge_keeps_both_descriptors_owned(
+    tmp_path,
+) -> None:
+    """A minted file capability is owned across the private mint return."""
+    from agent_alfred import managed_state as managed_module
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
+
+    baseline = _open_fd_count()
+    control = SystemExit("minted capability returned to nobody")
+    code = managed_module._mint_named_capability.__code__
+    offset = _return_offset(code)
+    minted = 0
+    closed: list[int] = []
+
+    real_open = managed_module.os.open
+    real_close = managed_module.os.close
+
+    def count_regular_open(*args, **kwargs):
+        nonlocal minted
+        fd = real_open(*args, **kwargs)
+        minted += 1
+        return fd
+
+    def record_close(fd: int) -> None:
+        closed.append(fd)
+        real_close(fd)
+
+    managed_module.os.open = count_regular_open
+    managed_module.os.close = record_close
+    try:
+        with interrupt_instruction_once(code, offset, control) as state:
+            # The state root is the first capability the standalone factory
+            # mints, so one armed return covers the deepest private seam.
+            with pytest.raises(SystemExit) as caught:
+                build_default_host(
+                    state_dir=tmp_path / "state",
+                    factory=ScriptedModelFactory(ScriptedModel(["unused"])),
+                )
+    finally:
+        managed_module.os.open = real_open
+        managed_module.os.close = real_close
+
+    assert state[0] is False
+    assert caught.value is control
+    assert minted > 0
+    assert len(closed) == len(set(closed)), "a descriptor was closed twice"
+    assert _open_fd_count() == baseline
+
+
+def test_trace_directory_return_edge_keeps_its_lease_owned(tmp_path) -> None:
+    """``ensure_directory`` hands the trace lease to a reachable owner."""
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
+    from agent_alfred.managed_state import ManagedStateLease
+
+    baseline = _open_fd_count()
+    control = SystemExit("trace lease returned to nobody")
+    code = ManagedStateLease.ensure_directory.__code__
+    offset = _return_offset(code)
+
+    with interrupt_instruction_once(code, offset, control) as state:
+        with pytest.raises(SystemExit) as caught:
+            build_default_host(
+                state_dir=tmp_path / "state",
+                factory=ScriptedModelFactory(ScriptedModel(["unused"])),
+            )
+
+    assert state[0] is False
+    assert caught.value is control
+    assert _open_fd_count() == baseline
+
+
+@contextmanager
+def _released_on_exit(module, name: str):
+    """Record every aggregate a seam builds and release the unreachable ones.
+
+    A construction owner that loses its aggregate leaks a non-daemon drain
+    thread as well as descriptors, so the recorded objects are closed after
+    the ownership assertion instead of being left to hang the interpreter.
+    """
+    real = getattr(module, name)
+    built: list = []
+
+    def record(*args, **kwargs):
+        instance = real(*args, **kwargs)
+        built.append(instance)
+        return instance
+
+    setattr(module, name, record)
+    try:
+        yield built
+    finally:
+        setattr(module, name, real)
+        for instance in built:
+            try:
+                instance.close()
+            except BaseException:  # noqa: BLE001 - best-effort test release
+                pass
+
+
+def test_trace_sink_return_edge_keeps_its_root_owned(tmp_path) -> None:
+    """The sink is owned by the construction rollback before it is returned."""
+    from agent_alfred import wiring as wiring_module
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
+
+    baseline = _open_fd_count()
+    control = SystemExit("trace sink returned to nobody")
+    code = wiring_module._trace_sink.__code__
+    offset = _return_offset(code, after="LOAD_GLOBAL", argval="RunBundleTraceSink")
+
+    with _released_on_exit(wiring_module, "RunBundleTraceSink"):
+        with interrupt_instruction_once(code, offset, control) as state:
+            with pytest.raises(SystemExit) as caught:
+                build_default_host(
+                    state_dir=tmp_path / "state",
+                    factory=ScriptedModelFactory(ScriptedModel(["unused"])),
+                )
+
+        assert state[0] is False
+        assert caught.value is control
+        assert _open_fd_count() == baseline
+
+
+def test_build_host_return_edge_keeps_the_host_owned(tmp_path) -> None:
+    """A Host that never reaches its caller is still closed exactly once."""
+    from agent_alfred import wiring as wiring_module
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
+    from agent_alfred.runtime.host import RuntimeHost
+
+    baseline = _open_fd_count()
+    control = SystemExit("host returned to nobody")
+    closes = 0
+    real_close = RuntimeHost.close
+
+    def count_close(self, *args, **kwargs):
+        nonlocal closes
+        closes += 1
+        return real_close(self, *args, **kwargs)
+
+    code = wiring_module.build_host.__code__
+    offset = _return_offset(code, after="STORE_FAST", argval="host")
+    RuntimeHost.close = count_close  # type: ignore[method-assign]
+    try:
+        with _released_on_exit(wiring_module, "RuntimeHost"):
+            with interrupt_instruction_once(code, offset, control) as state:
+                with pytest.raises(SystemExit) as caught:
+                    build_default_host(
+                        state_dir=tmp_path / "state",
+                        factory=ScriptedModelFactory(ScriptedModel(["unused"])),
+                    )
+
+            assert state[0] is False
+            assert caught.value is control
+            assert closes == 1, "the unreachable Host was not closed exactly once"
+            assert _open_fd_count() == baseline
+    finally:
+        RuntimeHost.close = real_close  # type: ignore[method-assign]
+
+
+def test_build_default_host_return_edge_keeps_the_host_owned(tmp_path) -> None:
+    """A caller-supplied construction owner spans the outermost return edge."""
+    from agent_alfred import wiring as wiring_module
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
+    from agent_alfred.resource_rollback import ResumableRollback
+
+    baseline = _open_fd_count()
+    control = SystemExit("standalone host returned to nobody")
+    code = wiring_module.build_default_host.__code__
+    offset = _return_offset(code)
+    owner = ResumableRollback()
+
+    with _released_on_exit(wiring_module, "RuntimeHost"):
+        with interrupt_instruction_once(code, offset, control) as state:
+            with pytest.raises(SystemExit) as caught:
+                build_default_host(
+                    state_dir=tmp_path / "state",
+                    factory=ScriptedModelFactory(ScriptedModel(["unused"])),
+                    _rollback=owner,
+                )
+
+        assert state[0] is False
+        assert caught.value is control
+        assert owner.retry() is True
+        assert _open_fd_count() == baseline
+
+
+def test_dashboard_assemble_return_edge_keeps_host_and_broker_owned(
+    tmp_path,
+) -> None:
+    """The construction owner is retired only after ``_host``/``_broker``."""
+    from agent_alfred import wiring as wiring_module
+    from agent_alfred.clock import FakeClock
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
+    from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
+        free_loopback_port,
+    )
+
+    socket.getfqdn()
+    baseline = _open_fd_count()
+    control = SystemExit("assembled runtime returned to nobody")
+    dashboard = wiring_module.build_dashboard(
+        state_dir=tmp_path / "state",
+        factory=ScriptedModelFactory(ScriptedModel(["unused"])),
+        clock=FakeClock(),
+        port=free_loopback_port(),
+        open_database=file_database,
+    )
+    code = dashboard._assemble.__code__
+    offset = _return_offset(code)
+
+    with _released_on_exit(wiring_module, "RuntimeHost"):
+        with interrupt_instruction_once(code, offset, control) as state:
+            with pytest.raises(SystemExit) as caught:
+                dashboard.start()
+
+        assert state[0] is False
+        assert caught.value is control
+        assert dashboard.close() is True
+        assert _open_fd_count() == baseline
+
+
+def test_trace_downgrade_keeps_the_callers_other_resources_owned(
+    tmp_path, monkeypatch
+) -> None:
+    """An ordinary trace failure downgrades the sink, not the whole build.
+
+    Trace initialization is the one construction step that is allowed to fail
+    and continue. Its cleanup scope must therefore stop at what it acquired:
+    retrying the caller's owner would close the connection and the state lease
+    the Host is about to be handed, and mark both complete so its own close
+    reports success over resources it never released.
+    """
+    import errno
+
+    from agent_alfred import managed_state as managed_module
+    from agent_alfred.wiring import UnavailableTraceSink
+
+    real_mkdir = managed_module.os.mkdir
+
+    def refuse_traces(name, mode=0o777, *, dir_fd=None):
+        if name == "traces":
+            raise OSError(errno.ENOSPC, "no space left on device")
+        return real_mkdir(name, mode, dir_fd=dir_fd)
+
+    monkeypatch.setattr(managed_module.os, "mkdir", refuse_traces)
+    host = build_default_host(
+        state_dir=tmp_path / "state",
+        factory=ScriptedModelFactory(ScriptedModel(["unused"])),
+    )
+    monkeypatch.setattr(managed_module.os, "mkdir", real_mkdir)
+    try:
+        assert any(
+            isinstance(sink, UnavailableTraceSink)
+            for sink in host._fanout._sinks  # noqa: SLF001 - degraded sink under test
+        )
+        # The write connection is the resource the caller still owns.
+        session_id = host.create_session()
+        assert session_id
+        owned = host._owned_resources  # noqa: SLF001 - ownership under test
+        assert owned is not None
+        assert [step.completed for step in owned._steps] == [False, False]  # noqa: SLF001
+    finally:
+        assert host.close(timeout=1.0) is True
+
+
+def test_dashboard_owns_the_assembled_pair_before_construction_retires(
+    tmp_path,
+) -> None:
+    """``settle()`` runs only once this runtime can actually close the pair.
+
+    ``_host_stopped``/``_broker_stopped`` start "stopped", and the close path
+    skips whichever is still set. Retiring the construction owner before those
+    bits fall would leave a Host -- and its non-daemon trace drain -- with no
+    owner on either side.
+    """
+    import dis
+
+    from agent_alfred import wiring as wiring_module
+    from agent_alfred.clock import FakeClock
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
+    from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
+        free_loopback_port,
+    )
+    from agent_alfred.gateway.web.server import DashboardRuntime
+
+    socket.getfqdn()
+    baseline = _open_fd_count()
+    control = SystemExit("construction owner retired before the runtime owned")
+    code = DashboardRuntime._start_locked.__code__
+    offset = next(
+        instruction.offset
+        for instruction in dis.get_instructions(code)
+        if instruction.opname == "STORE_ATTR"
+        and instruction.argval == "_host_stopped"
+    )
+    dashboard = wiring_module.build_dashboard(
+        state_dir=tmp_path / "state",
+        factory=ScriptedModelFactory(ScriptedModel(["unused"])),
+        clock=FakeClock(),
+        port=free_loopback_port(),
+        open_database=file_database,
+    )
+
+    with _released_on_exit(wiring_module, "RuntimeHost"):
+        with interrupt_instruction_once(code, offset, control) as state:
+            with pytest.raises(SystemExit) as caught:
+                dashboard.start()
+
+        assert state[0] is False
+        assert caught.value is control
+        assert dashboard.close() is True
+        assert _open_fd_count() == baseline
+
+
+def test_trace_sink_closes_before_the_resources_it_was_built_after(
+    tmp_path,
+) -> None:
+    """The handed-over sink is newer than the state lease, so it closes first."""
+    from pathlib import PurePath
+
+    from agent_alfred import wiring as wiring_module
+    from agent_alfred.clock import FakeClock
+    from agent_alfred.managed_state import ManagedStateDirectory
+    from agent_alfred.resource_rollback import ResumableRollback
+    from agent_alfred.trace import RunBundleTraceSink
+
+    trace: list[str] = []
+    real_close = RunBundleTraceSink.close
+
+    def note_close(self, timeout=None):
+        trace.append("sink")
+        return real_close(self, timeout)
+
+    rollback = ResumableRollback()
+    state = ManagedStateDirectory.acquire(tmp_path / "state", _rollback=rollback)
+    older = object()
+    rollback.own(older, lambda: trace.append("older"))
+    RunBundleTraceSink.close = note_close  # type: ignore[method-assign]
+    try:
+        sink = wiring_module._trace_sink(
+            (state, PurePath("traces")),
+            FakeClock(),
+            "proc-trace-order",
+            _rollback=rollback,
+        )
+        assert rollback.retry() is True
+    finally:
+        RunBundleTraceSink.close = real_close  # type: ignore[method-assign]
+        sink.close()
+        state.close()
+
+    assert trace[:2] == ["sink", "older"]
+
+
+def test_dashboard_state_return_edge_is_owned_before_the_runtime_store(
+    tmp_path, monkeypatch
+) -> None:
+    """Dashboard start owns the state lease before ``_managed_state`` stores it."""
+    import dis
+
+    from agent_alfred import managed_state as managed_module
+    from agent_alfred.clock import FakeClock
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
+    from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
+        free_loopback_port,
+    )
+    from agent_alfred.gateway.web.lifecycle import DashboardService
+    from agent_alfred.wiring import build_dashboard
+
+    baseline = _open_fd_count()
+    captured = []
+    real_acquire = managed_module.ManagedStateDirectory.acquire.__func__
+
+    def record_acquire(cls, path, *, _rollback=None):
+        lease = real_acquire(cls, path, _rollback=_rollback)
+        captured.append(lease)
+        return lease
+
+    monkeypatch.setattr(
+        managed_module.ManagedStateDirectory,
+        "acquire",
+        classmethod(record_acquire),
+    )
+    dashboard = build_dashboard(
+        state_dir=tmp_path / "state",
+        factory=ScriptedModelFactory(ScriptedModel(["unused"])),
+        clock=FakeClock(),
+        port=free_loopback_port(),
+        open_database=file_database,
+    )
+    control = SystemExit("state lease returned before Dashboard stored it")
+    code = DashboardService.start.__code__
+    target = next(
+        instruction.offset
+        for instruction in dis.get_instructions(code)
+        if instruction.opname == "STORE_ATTR"
+        and instruction.argval == "_managed_state"
+    )
+
+    try:
+        with interrupt_instruction_once(code, target, control) as state:
+            with pytest.raises(SystemExit) as caught:
+                dashboard.start()
+
+        assert state[0] is False
+        assert caught.value is control
+        assert dashboard.close() is True
+        assert _open_fd_count() == baseline
+    finally:
+        for lease in captured:
+            lease.close()
+
+
+def test_dashboard_database_return_edge_is_owned_before_the_runtime_store(
+    tmp_path, monkeypatch
+) -> None:
+    """Dashboard start owns its connection before ``_conn`` can miss the store."""
+    import dis
+
+    from agent_alfred import database as database_module
+    from agent_alfred.clock import FakeClock
+    from agent_alfred.evals.deterministic._monitoring_test_helpers import (
+        interrupt_instruction_once,
+    )
+    from agent_alfred.evals.deterministic._trace_test_helpers import _open_fd_count
+    from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
+        free_loopback_port,
+    )
+    from agent_alfred.gateway.web.server import DashboardRuntime
+    from agent_alfred.wiring import build_dashboard
+
+    # ``ThreadingHTTPServer`` resolves its server name on first construction;
+    # macOS keeps that resolver channel process-wide. Warm that unrelated
+    # one-time descriptor before measuring the construction rollback.
+    socket.getfqdn()
+    baseline = _open_fd_count()
+    connections = []
+    closes: list[int] = []
+    real_connect = database_module.sqlite3.connect
+
+    class CountingConnection(database_module.sqlite3.Connection):
+        def close(self) -> None:
+            closes.append(id(self))
+            super().close()
+
+    def counted_connect(path, owner, **kwargs):
+        owner.publish(real_connect(path, factory=CountingConnection, **kwargs))
+
+    def capture_database(state, _rollback=None):
+        connection = file_database(state, _rollback=_rollback)
+        connections.append(connection)
+        return connection
+
+    monkeypatch.setattr(database_module.sqlite3, "connect", counted_connect)
+    dashboard = build_dashboard(
+        state_dir=tmp_path / "state",
+        factory=ScriptedModelFactory(ScriptedModel(["unused"])),
+        clock=FakeClock(),
+        port=free_loopback_port(),
+        open_database=capture_database,
+    )
+    control = SystemExit("database returned before Dashboard stored it")
+    code = DashboardRuntime._start_locked.__code__
+    target = next(
+        instruction.offset
+        for instruction in dis.get_instructions(code)
+        if instruction.opname == "STORE_FAST" and instruction.argval == "conn"
+    )
+
+    try:
+        with interrupt_instruction_once(code, target, control) as state:
+            with pytest.raises(SystemExit) as caught:
+                dashboard.start()
+
+        assert state[0] is False
+        assert caught.value is control
+        assert dashboard.close() is True
+        assert closes == [id(connections[0])]
+        assert _open_fd_count() == baseline
+    finally:
+        for connection in connections:
+            connection.close()
 
 
 # --- environment layer -------------------------------------------------------

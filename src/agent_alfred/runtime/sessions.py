@@ -48,7 +48,7 @@ from agent_alfred.runtime.cursor import (
     decode_cursor as _decode_cursor_shared,
 )
 from agent_alfred.runtime.cursor import (
-    encode_cursor as _encode_cursor_shared,
+    encode_cursor as _encode_cursor,
 )
 from agent_alfred.runtime.run_queries import (
     has_inflight_chat_run,
@@ -83,6 +83,7 @@ class SessionSummary:
 class SessionInboxPage:
     sessions: tuple[SessionSummary, ...]
     next_cursor: str | None
+    non_terminal: SessionSummary | None = None
 
 
 @dataclass(frozen=True)
@@ -118,10 +119,6 @@ class SessionMessagesPage:
 # version, its segment kinds, and its Session binding.
 
 
-def _encode_cursor(payload: dict[str, Any]) -> str:
-    return _encode_cursor_shared(payload)
-
-
 def _decode_cursor(cursor: str, kind: str) -> dict[str, Any]:
     return _decode_cursor_shared(cursor, version=_CURSOR_VERSION, kind=kind)
 
@@ -137,24 +134,39 @@ def list_sessions(
     cursor: str | None = None,
     title_max_chars: int = 240,
 ) -> SessionInboxPage:
-    """The Session inbox: newest persistent activity first, keyset paged."""
+    """Page stable Sessions, returning the moving Session separately.
+
+    The caller serializes this read with the unique writer (RuntimeHost uses
+    RecordingStore.reading), so pin selection and page exclusion see the
+    same persistent state. No in-process revision is compared with the cursor.
+    """
     if limit < 1:
         raise ValueError("limit must be >= 1")
     position: int | None = None
     if cursor is not None:
         payload = _decode_cursor(cursor, _INBOX_KIND)
         position = parse_cursor_position_int(payload.get("ar"))
+    pinned = conn.execute(
+        """SELECT sessions.session_id, sessions.created_at, sessions.activity_revision
+           FROM sessions JOIN runs ON runs.session_id = sessions.session_id
+           WHERE runs.phase != 'finished'
+           ORDER BY runs.activity_revision DESC, runs.run_id DESC LIMIT 1"""
+    ).fetchone()
+    pinned_id = None if pinned is None else pinned[0]
     sql = (
         "SELECT session_id, created_at, activity_revision FROM sessions\n"
-        "  {where} ORDER BY activity_revision DESC LIMIT ?"
+        "  WHERE session_id IS NOT ? {beyond} ORDER BY activity_revision DESC LIMIT ?"
     )
-    where = "WHERE activity_revision < ? " if position is not None else ""
-    params: tuple = (position, limit + 1) if position is not None else (limit + 1,)
-    rows = conn.execute(sql.format(where=where), params).fetchall()
+    beyond = "AND activity_revision < ? " if position is not None else ""
+    params: tuple = (pinned_id,)
+    if position is not None:
+        params += (position,)
+    rows = conn.execute(sql.format(beyond=beyond), (*params, limit + 1)).fetchall()
     has_more = len(rows) > limit
     rows = rows[:limit]
-    summaries = tuple(
-        SessionSummary(
+    def summarize(row) -> SessionSummary:
+        session_id, created_at, revision = row
+        return SessionSummary(
             session_id=session_id,
             created_at=created_at,
             activity_revision=revision,
@@ -162,8 +174,7 @@ def list_sessions(
                 conn, session_id, created_at, redactor, title_max_chars
             ),
         )
-        for session_id, created_at, revision in rows
-    )
+    summaries = tuple(summarize(row) for row in rows)
     next_cursor = (
         _encode_cursor(
             {"v": _CURSOR_VERSION, "k": _INBOX_KIND, "ar": rows[-1][2]}
@@ -171,7 +182,10 @@ def list_sessions(
         if has_more and rows
         else None
     )
-    return SessionInboxPage(sessions=summaries, next_cursor=next_cursor)
+    return SessionInboxPage(
+        sessions=summaries, next_cursor=next_cursor,
+        non_terminal=None if pinned is None else summarize(pinned),
+    )
 
 
 def _session_title(
@@ -188,7 +202,7 @@ def _session_title(
     read; nothing is stored."""
     row = conn.execute(
         """SELECT prompt_preview FROM runs
-           WHERE session_id = ? AND purpose = 'chat'
+           WHERE session_id = ? AND purpose = 'chat' AND admission_state = 'admitted'
            ORDER BY activity_revision ASC, run_id ASC LIMIT 1""",
         (session_id,),
     ).fetchone()
@@ -202,6 +216,15 @@ def _session_title(
             # secret is replaced by "***", which no later pass can re-match.
             text = redactor.redact_text(text)
             return _limit_text(text, limit)
+        return f"新会话 · {created_at}"
+    any_run = conn.execute(
+        "SELECT 1 FROM runs WHERE session_id = ? LIMIT 1",
+        (session_id,),
+    ).fetchone()
+    if any_run is not None:
+        # Historic text is a title source only for sessions that predate the
+        # Run index entirely. A system Run is still a Run; using an unrelated
+        # old message would falsely present it as the first approved chat.
         return f"新会话 · {created_at}"
     try:
         row = conn.execute(

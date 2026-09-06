@@ -38,15 +38,25 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path, PurePath
 from typing import Any
 
+from agent_alfred.gateway.web.frames import validate_process_instance_id
 from agent_alfred.managed_state import (
     ManagedFileLease,
     ManagedStateDirectory,
     ManagedStateLease,
 )
-from agent_alfred.resource_rollback import OwnedDescriptor, ResumableRollback
+from agent_alfred.resource_rollback import (
+    BackgroundCloseStep,
+    OwnedDescriptor,
+    OwnedResource,
+    ResumableRollback,
+    RollbackSlot,
+    thread_exit_confirmed,
+    thread_start_effect_happened,
+)
 
 # The one and only bindable address. "Only listen locally" is one of four
 # independent defences (ADR-0014) and it is the one that shrinks the attack
@@ -76,64 +86,10 @@ MAX_PORT = 65_535
 # "cannot be created" from the factory raising, "cannot be started" from the
 # ``start()`` the caller performs itself.
 #
-# Unstarted on purpose, and that is the one way this differs from
-# :class:`~agent_alfred.gateway.web.broker.SSEBroker`'s same-shaped seam,
-# which starts the thread before returning. Both shapes are right where they
-# are: the broker wants a running thread, while a start-up step has to be
-# able to tell the two failures apart and therefore does the starting.
+# Unstarted on purpose, matching the broker seam: the construction owner must
+# publish the concrete thread before ``start()`` can make it live, so either
+# side of that effect has an explicit owner.
 SpawnThread = Callable[[Callable[[], None]], Any]
-
-
-class _BackgroundCloseStep:
-    """Run one blocking close action once, while its owner waits boundedly.
-
-    The worker is deliberately non-daemon and remains referenced until its
-    exit is joined. A timed-out caller therefore leaves one in-flight action
-    for the next close to resume waiting on; it never starts a duplicate.
-    Once a failed action has exited, its exception is re-raised on the owner
-    thread and a later close may retry that action from a fresh worker.
-    """
-
-    def __init__(self, name: str):
-        self._name = name
-        self._thread: threading.Thread | None = None
-        self._finished = threading.Event()
-        self._error: BaseException | None = None
-
-    def complete(self, action: Callable[[], None], timeout: float | None) -> bool:
-        deadline = (
-            None if timeout is None else time.monotonic() + max(0.0, timeout)
-        )
-        if self._thread is None:
-            self._finished.clear()
-            self._error = None
-
-            def run() -> None:
-                try:
-                    action()
-                except BaseException as exc:  # noqa: BLE001 - owner re-raises
-                    self._error = exc
-                finally:
-                    self._finished.set()
-
-            self._thread = threading.Thread(target=run, name=self._name)
-            self._thread.start()
-        if not self._finished.wait(self._remaining(deadline)):
-            return False
-        thread = self._thread
-        assert thread is not None
-        thread.join(self._remaining(deadline))
-        if thread.is_alive():
-            return False
-        error = self._error
-        self._thread = None
-        if error is not None:
-            raise error
-        return True
-
-    @staticmethod
-    def _remaining(deadline: float | None) -> float | None:
-        return None if deadline is None else max(0.0, deadline - time.monotonic())
 
 
 __all__ = [
@@ -199,6 +155,7 @@ class ProcessLock:
         self._lease = lease
         self._owned_state = owned_state
         self._fd: int | None = None
+        self._fd_owner: OwnedDescriptor | None = None
         self._closed = False
 
     @property
@@ -207,7 +164,8 @@ class ProcessLock:
 
     @property
     def acquired(self) -> bool:
-        return self._fd is not None
+        owner = self._fd_owner
+        return owner is not None and owner.fd >= 0
 
     def acquire(self) -> None:
         if self._fd is not None:
@@ -215,45 +173,59 @@ class ProcessLock:
         if self._closed:
             raise RuntimeError("a released ProcessLock capability cannot be reused")
         self._lease.verify_identity()
-        fd = self._lease.duplicate_fd()
         rollback = ResumableRollback()
-        descriptor = OwnedDescriptor(fd)
         capability = object()
         rollback.own(capability, self._close_capability)
-        rollback.own(descriptor)
+        descriptor: OwnedDescriptor | None = None
+        fd: int | None = None
         try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except OSError as exc:
-            if exc.errno not in (errno.EACCES, errno.EAGAIN):
-                rollback.raise_failure(exc)
-            holder_pid = _recorded_pid(fd)
-            failure = StateDirLocked(self._path, holder_pid)
-            failure.__cause__ = exc
-            rollback.raise_failure(failure)
-        try:
+            descriptor = self._lease.duplicate_fd(_rollback=rollback)
+            fd = descriptor.fd
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except OSError as exc:
+                if exc.errno not in (errno.EACCES, errno.EAGAIN):
+                    raise
+                holder_pid = _recorded_pid(fd)
+                raise StateDirLocked(self._path, holder_pid) from exc
             self._lease.write_lock_diagnostic(fd, b"pid=%d\n" % os.getpid())
+            # Publish the descriptor while rollback still owns it. A control
+            # exit before this STORE is rolled back; one after it leaves a
+            # reachable owner for release() instead of an anonymous flock.
+            self._fd_owner = descriptor
+            self._fd = fd
         except BaseException as exc:
-            # The lock is held either way; the pid is only a note. Undo the
-            # whole acquisition rather than report success on a half-done
-            # one -- closing the descriptor drops the flock with it.
+            if descriptor is not None and self._fd_owner is descriptor:
+                # Publication won the race with process control. The
+                # ProcessLock now owns both the descriptor and capability;
+                # its caller can release them without guessing at the effect.
+                raise
+            # The lock may be held even though its descriptor was never
+            # published. Undo the whole acquisition; closing the descriptor
+            # drops the flock with it.
             rollback.raise_failure(exc)
+        assert descriptor is not None
         rollback.transfer(descriptor)
         rollback.transfer(capability)
-        self._fd = fd
 
     def _close_capability(self) -> None:
         self._lease.close()
-        self._closed = True
         if self._owned_state is not None:
             self._owned_state.close()
             self._owned_state = None
+        self._closed = True
 
     def release(self) -> None:
         if self._closed:
             return
-        fd, self._fd = self._fd, None
-        if fd is not None:
-            os.close(fd)
+        owner = self._fd_owner
+        if owner is None and self._fd is not None:
+            owner = OwnedDescriptor(self._fd)
+            self._fd_owner = owner
+        if owner is not None:
+            owner.close()
+        self._fd = None
+        self._fd_owner = None
         self._close_capability()
 
     def __enter__(self) -> "ProcessLock":
@@ -297,13 +269,6 @@ def _recorded_pid(fd: int) -> int | None:
     return None
 
 
-def _validated_instance_id(value: object) -> str:
-    """One entry-instance boundary: exact string, non-empty and delimiter-free."""
-    if type(value) is not str or not value or ":" in value:
-        raise ValueError("instance_id has the wrong type or shape")
-    return value
-
-
 def _exact_int_in_range(value: object, minimum: int, maximum: int) -> int:
     """One entry-integer boundary: exact int, then domain range."""
     if type(value) is not int or not minimum <= value <= maximum:
@@ -325,7 +290,7 @@ class EntryDescriptor:
     port: int
 
     def __post_init__(self) -> None:
-        _validated_instance_id(self.instance_id)
+        validate_process_instance_id(self.instance_id)
         _exact_int_in_range(self.pid, MIN_PID, MAX_PID)
         _exact_int_in_range(self.port, MIN_PORT, MAX_PORT)
 
@@ -353,22 +318,41 @@ def write_entry_descriptor(directory: Path, descriptor: EntryDescriptor) -> Path
     """
     target = directory / DESCRIPTOR_NAME
     tmp = directory / f".{DESCRIPTOR_NAME}.{os.getpid()}.tmp"
-    fd = os.open(tmp, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            fd = -1
-            handle.write(descriptor.to_json())
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(tmp, target)
-    except BaseException:
-        if fd >= 0:
-            os.close(fd)
+    rollback = RollbackSlot()
+    temporary_rollback = ResumableRollback()
+    descriptor_rollback = ResumableRollback()
+    rollback.begin(temporary_rollback)
+    rollback.begin(descriptor_rollback)
+    temporary = object()
+
+    def discard_temporary() -> None:
         try:
             os.unlink(tmp)
-        except OSError:
+        except FileNotFoundError:
             pass
-        raise
+
+    temporary_rollback.own(temporary, discard_temporary)
+    try:
+        fd = OwnedDescriptor.open(
+            descriptor_rollback,
+            tmp,
+            os.O_CREAT | os.O_EXCL | os.O_WRONLY,
+            0o600,
+        )
+        remaining = memoryview(descriptor.to_json().encode("utf-8"))
+        while remaining:
+            written = os.write(fd.fd, remaining)
+            if written == 0:
+                raise OSError(errno.EIO, "zero-byte descriptor write")
+            remaining = remaining[written:]
+        os.fsync(fd.fd)
+        fd.close()
+        descriptor_rollback.transfer(fd)
+        os.replace(tmp, target)
+        temporary_rollback.transfer(temporary)
+    except BaseException as exc:
+        rollback.raise_failure(exc)
+    rollback.close()
     return target
 
 
@@ -431,7 +415,7 @@ class DashboardService:
         # was never accepted is stronger than validating one that was: no
         # caller -- and no injected server factory, the seam every test uses
         # to avoid a real socket -- can carry another address to the bind.
-        instance_id = _validated_instance_id(instance_id)
+        instance_id = validate_process_instance_id(instance_id)
         port = _exact_int_in_range(port, MIN_PORT, MAX_PORT)
         pid = _exact_int_in_range(
             os.getpid() if pid is None else pid, MIN_PID, MAX_PID
@@ -452,14 +436,15 @@ class DashboardService:
         self._serving = False
         self._serving_thread: Any = None
         self._descriptor: EntryDescriptor | None = None
+        self._descriptor_owned = False
         # The release's own progress: which of its steps have actually
         # succeeded. They live beside the references they are about, so a
         # close that resumes after a refusal picks up at the refused step
         # instead of re-running the whole list or skipping its remainder.
         self._server_shutdown_done = False
-        self._server_shutdown = _BackgroundCloseStep("dashboard-http-shutdown")
+        self._server_shutdown = BackgroundCloseStep("dashboard-http-shutdown")
         self._server_closed = False
-        self._server_close = _BackgroundCloseStep("dashboard-http-server-close")
+        self._server_close = BackgroundCloseStep("dashboard-http-server-close")
         self._thread_confirmed = False
 
     # -- reads ------------------------------------------------------------
@@ -505,7 +490,9 @@ class DashboardService:
 
     # -- lifecycle --------------------------------------------------------
 
-    def start(self) -> EntryDescriptor:
+    def start(
+        self, *, rollback_step_timeout: float | None = None,
+    ) -> EntryDescriptor:
         """Lock, then bind, then describe. Anything less is undone.
 
         This is the first third of start-up and deliberately nothing more:
@@ -529,8 +516,6 @@ class DashboardService:
         # competing instance could misread. Every *decision* follows the
         # lock.
         rollback = ResumableRollback()
-        self._managed_state = ManagedStateDirectory.acquire(self._state_dir)
-        state_owner = object()
 
         def close_state() -> bool | None:
             state = self._managed_state
@@ -544,13 +529,21 @@ class DashboardService:
                 self._managed_state = None
             return closed
 
-        rollback.own(state_owner, close_state)
+        rollback.own(close_state, close_state)
         try:
+            # The caller-owned rollback exists before acquisition.  The raw
+            # lease remains in it across acquire's RETURN and our STORE_ATTR;
+            # only after ``self`` can close it do we retire that raw step.
+            self._managed_state = ManagedStateDirectory.acquire(
+                self._state_dir, _rollback=rollback
+            )
+            rollback.transfer(self._managed_state)
             lock_file = self._managed_state.open_regular(
                 PurePath(LOCK_NAME),
                 access="read_write",
                 create=True,
                 role="process lock",
+                _rollback=rollback,
             )
             rollback.own(lock_file)
             factory = self._lock_factory or ProcessLock
@@ -566,29 +559,57 @@ class DashboardService:
             # A successfully constructed lock factory owns the lease.
             rollback.transfer(lock_file)
             self._lock.acquire()
-            self._bind()
-            server_owner = object()
-            rollback.own(server_owner, self._release_server)
+            release_server = partial(self._release_server, rollback_step_timeout)
+            rollback.own(release_server, release_server)
+            self._bind(rollback, release_server)
+            forget_descriptor = self._forget_descriptor
+            rollback.own(forget_descriptor, forget_descriptor)
             descriptor = self._write_descriptor()
         except BaseException as exc:
             rollback.raise_failure(exc)
-        rollback.transfer(server_owner)
+        rollback.transfer(release_server)
+        rollback.transfer(forget_descriptor)
         rollback.transfer(self._lock)
-        rollback.transfer(state_owner)
+        rollback.transfer(close_state)
         return descriptor
 
-    def _bind(self) -> None:
+    def _bind(
+        self, rollback: ResumableRollback, release_server: Callable[[], bool],
+    ) -> None:
         factory = self._server_factory
         if factory is None:
             factory = _default_server_factory
+
+        def close_bound(server: Any) -> bool:
+            if self._server is server:
+                return release_server()
+            if (
+                getattr(server, "_construction_pending", False)
+                and getattr(server, "socket", None) is None
+            ):
+                return True
+            # A factory may publish its socket before failing. Give the
+            # resumable service ownership before its bounded close begins.
+            self._server = server
+            return release_server()
+
         try:
-            self._server = factory(
-                (DEFAULT_HOST, self._requested_port), self._handler
+            server = OwnedResource.acquire(
+                rollback,
+                partial(
+                    _initialize_bound_server,
+                    factory,
+                    (DEFAULT_HOST, self._requested_port),
+                    self._handler,
+                ),
+                close=close_bound,
             )
         except OSError as exc:
             raise PortUnavailable(
                 DEFAULT_HOST, self._requested_port, _bind_error_reason(exc)
             ) from exc
+        self._server = server
+        rollback.transfer(server)
         # Attached before anything can be accepted, so a handler instance can
         # never find itself without the process-wide context it needs.
         if self._context is not None:
@@ -616,12 +637,19 @@ class DashboardService:
         if self._managed_descriptor:
             assert self._managed_state is not None
             self._managed_state.replace_bytes(
-                PurePath(DESCRIPTOR_NAME), descriptor.to_json().encode("utf-8")
+                PurePath(DESCRIPTOR_NAME),
+                descriptor.to_json().encode("utf-8"),
+                published=self._claim_descriptor,
             )
         else:
+            self._claim_descriptor()
             self._write_descriptor_fn(self._state_dir, descriptor)
         self._descriptor = descriptor
         return descriptor
+
+    def _claim_descriptor(self) -> None:
+        """Publish the cleanup owner while the atomic writer still owns rollback."""
+        self._descriptor_owned = True
 
     def start_serving(self, spawn: SpawnThread | None = None) -> Any:
         """Handle requests on a daemon thread; return it.
@@ -640,19 +668,18 @@ class DashboardService:
         failures of the last start-up step like any other, so the caller has
         to be able to reach them without crashing the interpreter.
 
-        ``_serving`` is set only after ``start()`` has returned, so a thread
-        that could not be created or started leaves it False. It is what
-        makes :meth:`stop_serving` call ``shutdown()``, and calling
-        ``shutdown()`` on a server whose loop never began waits forever --
-        which would turn a failed start into a hung process.
+        The Thread identity is retained *before* ``start()``. If an asynchronous
+        exit lands after the start effect but before ``_serving`` is published,
+        close can still distinguish the started Thread from a before-effect
+        refusal and must stop/join it before releasing the entry.
         """
         if self._server is None:
             raise RuntimeError("DashboardService.start() must precede serving")
         make = spawn if spawn is not None else _new_thread
         thread = make(self._server.serve_forever)
+        self._serving_thread = thread
         thread.start()
         self._serving = True
-        self._serving_thread = thread
         return thread
 
     def stop_serving(self, timeout: float | None = None) -> bool:
@@ -707,13 +734,24 @@ class DashboardService:
         fact about a thread, not about an intention.
 
         The stdlib requires ``shutdown()`` to run outside the serving thread.
-        Shutdown and socket close therefore use retained non-daemon worker
-        threads; the owner waits on their completion events with the current
-        sub-step's remaining deadline and always joins them before advancing.
+        Shutdown and socket close therefore use retained daemon workers; the
+        owner waits on their completion events with the current sub-step's
+        remaining deadline and always joins them before advancing. A blocked
+        system close stays owned for a later retry without holding process
+        exit open forever.
         """
         server = self._server
         if server is None:
             return True
+        thread = self._serving_thread
+        if thread is not None and not self._serving and not self._thread_confirmed:
+            # Resolve the native-handle fact, not ``_started``/``join(0)``:
+            # CPython creates the former before the child publishes the latter.
+            if thread_start_effect_happened(thread):
+                self._serving = True
+            else:
+                self._thread_confirmed = True
+                self._serving_thread = None
         if self._serving and not self._server_shutdown_done:
             # Only ever called once a serving loop was asked for.
             # ``shutdown()`` waits for that loop to observe the request, so
@@ -743,8 +781,7 @@ class DashboardService:
                     if deadline is None
                     else max(0.0, deadline - time.monotonic())
                 )
-                thread.join(remaining)
-                if thread.is_alive():
+                if not thread_exit_confirmed(thread, remaining):
                     return False
             self._thread_confirmed = True
         # Reached only when the socket is confirmed closed and the thread is
@@ -756,7 +793,7 @@ class DashboardService:
         return True
 
     def _forget_descriptor(self) -> None:
-        if self._descriptor is None:
+        if not self._descriptor_owned:
             return
         if self._managed_state is not None:
             self._managed_state.unlink_regular(
@@ -773,6 +810,7 @@ class DashboardService:
         # the deletion instead of releasing the lock on top of a descriptor
         # that still names this process.
         self._descriptor = None
+        self._descriptor_owned = False
 
     def __enter__(self) -> "DashboardService":
         self.start()
@@ -791,7 +829,26 @@ def _new_thread(target: Callable[[], None]) -> Any:
     return threading.Thread(target=target, name="dashboard-http", daemon=True)
 
 
-def _default_server_factory(address: tuple[str, int], handler: Any) -> Any:
+def _initialize_bound_server(
+    factory: Any,
+    address: tuple[str, int],
+    handler: Any,
+    owner: OwnedResource[Any],
+) -> None:
+    """Initialize a class or owner-aware function behind a published token."""
+    if isinstance(factory, type):
+        server = factory.__new__(factory)
+        server._construction_pending = True
+        owner.publish(server)
+        factory.__init__(server, address, handler)
+        server._construction_pending = False
+        return
+    factory(address, handler, owner)
+
+
+def _default_server_factory(
+    address: tuple[str, int], handler: Any, owner: OwnedResource[Any]
+) -> None:
     """``ThreadingHTTPServer`` with the flags this lifecycle depends on."""
     from http.server import ThreadingHTTPServer
 
@@ -813,4 +870,8 @@ def _default_server_factory(address: tuple[str, int], handler: Any) -> Any:
         # fails with EADDRINUSE -- which is exactly the failure that has to
         # reach the caller unchanged.
 
-    return _Server(address, handler)
+    server = _Server.__new__(_Server)
+    server._construction_pending = True
+    owner.publish(server)
+    _Server.__init__(server, address, handler)
+    server._construction_pending = False

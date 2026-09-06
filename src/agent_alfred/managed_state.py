@@ -8,11 +8,18 @@ import os
 import shlex
 import stat
 import sys
-from dataclasses import dataclass
+from datetime import date as calendar_date
+from functools import partial
 from pathlib import Path, PurePath
 from typing import Callable, Literal, TypeVar
 
-from agent_alfred.resource_rollback import OwnedDescriptor, ResumableRollback
+from agent_alfred.resource_rollback import (
+    ConstructionOwner,
+    OwnedDescriptor,
+    OwnedResource,
+    ResumableRollback,
+    RollbackSlot,
+)
 
 Reason = Literal[
     "symlink",
@@ -113,13 +120,84 @@ def _managed_fstat(fd: int, *, role: str, path: Path) -> os.stat_result:
         ) from exc
 
 
-def _managed_dup(fd: int, *, role: str, path: Path) -> int:
+def _managed_dup(
+    rollback: ResumableRollback, fd: int, *, role: str, path: Path
+) -> OwnedDescriptor:
     try:
-        return os.dup(fd)
+        return OwnedDescriptor.duplicate(rollback, fd)
     except OSError as exc:
         raise _translate_os_error(
             exc, role=role, path=path, operation="dup"
         ) from exc
+
+
+def _rename_no_replace(
+    source: str,
+    target: str,
+    *,
+    source_parent_fd: int,
+    target_parent_fd: int,
+    role: str,
+    path: Path,
+) -> None:
+    """Atomically rename one owned name without replacing an occupant."""
+    libc = ctypes.CDLL(None, use_errno=True)
+    source_bytes = os.fsencode(source)
+    target_bytes = os.fsencode(target)
+    if sys.platform == "darwin" and hasattr(libc, "renameatx_np"):
+        rename = libc.renameatx_np
+        rename.argtypes = [
+            ctypes.c_int,
+            ctypes.c_char_p,
+            ctypes.c_int,
+            ctypes.c_char_p,
+            ctypes.c_uint,
+        ]
+        rename.restype = ctypes.c_int
+        result = rename(
+            source_parent_fd,
+            source_bytes,
+            target_parent_fd,
+            target_bytes,
+            0x0004,
+        )
+    elif sys.platform.startswith("linux") and hasattr(libc, "renameat2"):
+        rename = libc.renameat2
+        rename.argtypes = [
+            ctypes.c_int,
+            ctypes.c_char_p,
+            ctypes.c_int,
+            ctypes.c_char_p,
+            ctypes.c_uint,
+        ]
+        rename.restype = ctypes.c_int
+        result = rename(
+            source_parent_fd,
+            source_bytes,
+            target_parent_fd,
+            target_bytes,
+            1,
+        )
+    else:
+        raise ManagedPathSecurityError(
+            reason="unsupported_nofollow", role=role, path=path
+        )
+    if result != 0:
+        error = ctypes.get_errno()
+        if error == errno_module.EEXIST:
+            raise FileExistsError(error, os.strerror(error), target)
+        raise OSError(error, os.strerror(error), target)
+
+
+def _staging_token(name: str) -> str | None:
+    if not name.startswith(".staging-"):
+        return None
+    token = name.removeprefix(".staging-")
+    if len(token) != 32 or any(
+        character not in "0123456789abcdef" for character in token
+    ):
+        return None
+    return token
 
 
 def _managed_stat(
@@ -137,111 +215,16 @@ def _managed_stat(
         ) from exc
 
 
-def _close_owned_descriptors(*descriptors: int | None) -> None:
-    """Attempt every owned close and retain the first failure."""
+def _close_descriptor_owners(owners: tuple[OwnedDescriptor, ...]) -> None:
+    """Close every token, retaining the first failure.
+
+    A token consumes its descriptor number on first close, so whichever owner
+    reaches it first closes it and any other finds nothing left to close.
+    """
     first_error: BaseException | None = None
-    for fd in descriptors:
-        if fd is None or fd < 0:
-            continue
+    for owner in owners:
         try:
-            os.close(fd)
-        except BaseException as exc:
-            if first_error is None:
-                first_error = exc
-    if first_error is not None:
-        raise first_error
-
-
-class _LexicalAncestorFence:
-    """Hold and revalidate every directory from filesystem root to a parent."""
-
-    def __init__(
-        self, descriptors: list[int], names: list[_LexicalName]
-    ) -> None:
-        if not descriptors or len(names) != len(descriptors) - 1:
-            raise ValueError("lexical ancestor fence shape is invalid")
-        self._descriptors = descriptors
-        self._names = names
-        self._closed = False
-
-    def verify(self, *, role: str, path: Path) -> None:
-        if self._closed:
-            raise RuntimeError("lexical ancestor fence is closed")
-        root = _managed_fstat(self._descriptors[0], role=role, path=path)
-        if not stat.S_ISDIR(root.st_mode):
-            raise ManagedPathSecurityError(
-                reason="identity_changed", role=role, path=path
-            )
-        for parent_fd, name, child_fd in zip(
-            self._descriptors[:-1],
-            self._names,
-            self._descriptors[1:],
-            strict=True,
-        ):
-            try:
-                named = _managed_stat(
-                    name.value, dir_fd=parent_fd, role=role, path=path
-                )
-            except OSError as exc:
-                raise ManagedPathSecurityError(
-                    reason="identity_changed",
-                    role=role,
-                    path=path,
-                    errno=exc.errno,
-                    operation="stat",
-                ) from exc
-            opened = _managed_fstat(child_fd, role=role, path=path)
-            if (
-                stat.S_ISLNK(named.st_mode)
-                or not stat.S_ISDIR(named.st_mode)
-                or not stat.S_ISDIR(opened.st_mode)
-                or (named.st_dev, named.st_ino)
-                != (opened.st_dev, opened.st_ino)
-            ):
-                raise ManagedPathSecurityError(
-                    reason="identity_changed", role=role, path=path
-                )
-
-    def extend(
-        self, *, name: _LexicalName, fd: int, role: str, path: Path
-    ):
-        descriptors: list[int] = []
-        try:
-            for descriptor in (*self._descriptors, fd):
-                descriptors.append(_managed_dup(descriptor, role=role, path=path))
-        except BaseException:
-            _close_owned_descriptors(*descriptors)
-            raise
-        return _LexicalAncestorFence(descriptors, [*self._names, name])
-
-    def close(self) -> None:
-        if self._closed:
-            return
-        descriptors, self._descriptors = self._descriptors, []
-        self._closed = True
-        _close_owned_descriptors(*descriptors)
-
-
-@dataclass
-class _LexicalName:
-    """Shared directory-entry name updated by an authorized rename."""
-
-    value: str
-
-
-def _close_capability(
-    fd: int,
-    anchor_fd: int | None,
-    ancestor_fence: _LexicalAncestorFence | None,
-) -> None:
-    first_error: BaseException | None = None
-    try:
-        _close_owned_descriptors(fd, anchor_fd)
-    except BaseException as exc:
-        first_error = exc
-    if ancestor_fence is not None:
-        try:
-            ancestor_fence.close()
+            owner.close()
         except BaseException as exc:
             if first_error is None:
                 first_error = exc
@@ -343,6 +326,7 @@ def _verify_fd(
 
 def _mint_named_capability(
     *,
+    rollback: ResumableRollback,
     parent_fd: int,
     name: str,
     path: Path,
@@ -352,9 +336,16 @@ def _mint_named_capability(
     expected_mode: int,
     create_mode: int = 0,
     expected_named_identity: tuple[int, int] | None = None,
+    identity_observer: Callable[[tuple[int, int]], None] | None = None,
     preflight: bool = True,
-) -> tuple[int, int]:
-    """Open, type, tighten, revalidate, and anchor one named capability."""
+) -> tuple[OwnedDescriptor, OwnedDescriptor]:
+    """Open, type, tighten, revalidate, and anchor one named capability.
+
+    ``rollback`` is the caller's owner, established before this call. Both
+    descriptors are owned there from the instant they exist and are handed
+    back as their own tokens, so neither this return edge nor the caller's
+    store can leave a minted capability without a reachable owner.
+    """
     nofollow = getattr(os, "O_NOFOLLOW", None)
     if nofollow is None:
         raise ManagedPathSecurityError(
@@ -383,8 +374,12 @@ def _mint_named_capability(
                     reason="wrong_owner", role=role, path=path
                 )
     try:
-        fd_owner = OwnedDescriptor(
-            os.open(name, flags | nofollow, create_mode, dir_fd=parent_fd)
+        fd_owner = OwnedDescriptor.open(
+            rollback,
+            name,
+            flags | nofollow,
+            create_mode,
+            dir_fd=parent_fd,
         )
     except FileNotFoundError:
         raise
@@ -406,11 +401,11 @@ def _mint_named_capability(
             symlink=is_link,
             observed_wrong_type=wrong_type,
         ) from exc
-    rollback = ResumableRollback()
-    rollback.own(fd_owner)
     try:
         opened = _managed_fstat(fd_owner.fd, role=role, path=path)
         identity = (opened.st_dev, opened.st_ino)
+        if identity_observer is not None:
+            identity_observer(identity)
         if not expected_type(opened.st_mode):
             raise ManagedPathSecurityError(
                 reason="wrong_type", role=role, path=path
@@ -418,6 +413,16 @@ def _mint_named_capability(
         try:
             named = _managed_stat(name, dir_fd=parent_fd, role=role, path=path)
         except OSError as exc:
+            translated = _translate_os_error(
+                exc,
+                role=role,
+                path=path,
+                operation="stat",
+                mode=expected_mode,
+                object_kind=object_kind,
+            )
+            if translated is not exc:
+                raise translated from exc
             raise ManagedPathSecurityError(
                 reason="identity_changed",
                 role=role,
@@ -453,15 +458,12 @@ def _mint_named_capability(
             path=path,
             expected_type=expected_type,
         )
-        anchor_owner = OwnedDescriptor(
-            _managed_dup(parent_fd, role=role, path=path)
+        anchor_owner = _managed_dup(
+            rollback, parent_fd, role=role, path=path
         )
-        rollback.own(anchor_owner)
     except BaseException as exc:
         rollback.raise_failure(exc)
-    rollback.transfer(fd_owner)
-    rollback.transfer(anchor_owner)
-    return fd_owner.fd, anchor_owner.fd
+    return fd_owner, anchor_owner
 
 
 def _write_all(fd: int, payload: bytes, *, retries: int = 0) -> None:
@@ -479,33 +481,92 @@ def _write_all(fd: int, payload: bytes, *, retries: int = 0) -> None:
         view = view[written:]
 
 
-@dataclass
-class ManagedFileLease:
-    path: Path
-    fd: int
-    _anchor_fd: int | None = None
-    _name: str | None = None
-    _role: str = "managed file"
-    _ancestor_fence: _LexicalAncestorFence | None = None
-    _closed: bool = False
+class _ManagedCapabilityLease:
+    """Shared descriptor ownership and identity contract for managed leases."""
+
+    def __init__(
+        self,
+        path: Path,
+        fd: int,
+        *,
+        role: str,
+        expected_type: Callable[[int], bool],
+        anchor_fd: int | None = None,
+        name: str | None = None,
+    ) -> None:
+        self.path = path
+        self._fd = fd
+        self._role = role
+        self._expected_type = expected_type
+        self._anchor_fd = anchor_fd
+        self._name = name
+        self._closed = False
+        self._descriptor_owners: tuple[OwnedDescriptor, ...] = ()
+
+    @property
+    def fd(self) -> int:
+        if self._closed:
+            raise RuntimeError(f"{self._role} lease is closed")
+        return self._fd
+
+    @property
+    def role(self) -> str:
+        return self._role
+
+    def adopt_descriptors(self, *owners: OwnedDescriptor) -> None:
+        """Close through the same tokens the construction rollback holds."""
+        self._descriptor_owners = owners
 
     def close(self) -> None:
-        fd, self.fd = self.fd, -1
-        anchor_fd, self._anchor_fd = self._anchor_fd, None
-        ancestor_fence, self._ancestor_fence = self._ancestor_fence, None
+        if self._closed:
+            return
+        owners = self._descriptor_owners
+        if not owners:
+            # Public leases can be constructed without construction tokens.
+            # Publish equivalent tokens on the lease before either close can
+            # run, so an interrupted close still has a reachable owner.
+            owners = tuple(
+                OwnedDescriptor(descriptor)
+                for descriptor in (self._fd, self._anchor_fd)
+                if descriptor is not None and descriptor >= 0
+            )
+            self._descriptor_owners = owners
+        _close_descriptor_owners(owners)
+        # Every token above has a durable close result. These fields are only
+        # mirrors now, and may safely lag across an asynchronous interruption.
+        self._fd = -1
+        self._anchor_fd = None
+        self._descriptor_owners = ()
         self._closed = True
-        _close_capability(fd, anchor_fd, ancestor_fence)
 
     def verify_identity(self) -> None:
-        if self._ancestor_fence is not None:
-            self._ancestor_fence.verify(role=self._role, path=self.path)
         _verify_named_descriptor(
             fd=self.fd,
             anchor_fd=self._anchor_fd,
             name=self._name,
             role=self._role,
             path=self.path,
+            expected_type=self._expected_type,
+        )
+
+
+class ManagedFileLease(_ManagedCapabilityLease):
+    def __init__(
+        self,
+        path: Path,
+        fd: int,
+        *,
+        _anchor_fd: int | None = None,
+        _name: str | None = None,
+        _role: str = "managed file",
+    ) -> None:
+        super().__init__(
+            path,
+            fd,
+            role=_role,
             expected_type=stat.S_ISREG,
+            anchor_fd=_anchor_fd,
+            name=_name,
         )
 
     def write_all(self, payload: bytes, *, retries: int = 0) -> None:
@@ -527,8 +588,10 @@ class ManagedFileLease:
     def stat(self) -> os.stat_result:
         return _managed_fstat(self.fd, role=self._role, path=self.path)
 
-    def duplicate_fd(self) -> int:
-        return _managed_dup(self.fd, role=self._role, path=self.path)
+    def duplicate_fd(self, *, _rollback: ResumableRollback) -> OwnedDescriptor:
+        return _managed_dup(
+            _rollback, self.fd, role=self._role, path=self.path
+        )
 
     def connection_token(self) -> ManagedConnectionToken:
         """Capture the one validated file identity a path-only client may use."""
@@ -550,10 +613,16 @@ class ManagedConnectionToken:
     def connect(
         self,
         opener: Callable[..., ConnectionT],
+        *,
+        _rollback: ResumableRollback,
         **kwargs: object,
     ) -> ConnectionT:
         try:
-            return opener(str(self._lease.path), **kwargs)
+            connection = OwnedResource.acquire(
+                _rollback,
+                partial(opener, str(self._lease.path), **kwargs),
+            )
+            return connection
         except BaseException as exc:
             try:
                 self.verify()
@@ -588,7 +657,7 @@ def _verify_connection_target(
         )
 
 
-class ManagedDirectoryLease:
+class ManagedDirectoryLease(_ManagedCapabilityLease):
     def __init__(
         self,
         path: Path,
@@ -598,47 +667,13 @@ class ManagedDirectoryLease:
         anchor_fd: int | None = None,
         name: str | None = None,
     ) -> None:
-        self.path = path
-        self._fd = fd
-        self.role = role
-        self._anchor_fd = anchor_fd
-        self._name = name
-        self._lexical_name = _LexicalName(name) if name is not None else None
-        self._ancestor_fence: _LexicalAncestorFence | None = None
-        self._closed = False
-
-    @property
-    def fd(self) -> int:
-        if self._closed:
-            raise RuntimeError("managed directory lease is closed")
-        return self._fd
-
-    def close(self) -> None:
-        fd, self._fd = self._fd, -1
-        anchor_fd, self._anchor_fd = self._anchor_fd, None
-        ancestor_fence, self._ancestor_fence = self._ancestor_fence, None
-        self._closed = True
-        _close_capability(fd, anchor_fd, ancestor_fence)
-
-    def verify_identity(self) -> None:
-        if self._ancestor_fence is not None:
-            self._ancestor_fence.verify(role=self.role, path=self.path)
-        _verify_named_descriptor(
-            fd=self.fd,
-            anchor_fd=self._anchor_fd,
-            name=self._name,
-            role=self.role,
-            path=self.path,
+        super().__init__(
+            path,
+            fd,
+            role=role,
             expected_type=stat.S_ISDIR,
-        )
-
-    def _fence_for_child(
-        self, *, role: str, path: Path
-    ) -> _LexicalAncestorFence | None:
-        if self._ancestor_fence is None or self._lexical_name is None:
-            return None
-        return self._ancestor_fence.extend(
-            name=self._lexical_name, fd=self.fd, role=role, path=path
+            anchor_fd=anchor_fd,
+            name=name,
         )
 
     def fsync(self) -> None:
@@ -646,16 +681,12 @@ class ManagedDirectoryLease:
         os.fsync(self.fd)
 
     def remove_managed_staging(self) -> bool:
-        """Remove this exact, capability-held unpublished bundle staging."""
+        """Validate and remove one stale staging tree under process exclusion."""
         name = self._name
         anchor = self._anchor_fd
         if name is None or anchor is None:
             raise ValueError("staging reclamation requires a named child capability")
-        suffix = name.removeprefix(".staging-")
-        if (
-            len(suffix) != 32
-            or any(character not in "0123456789abcdef" for character in suffix)
-        ):
+        if _staging_token(name) is None:
             raise ValueError(f"not a managed staging directory: {name!r}")
         self.verify_identity()
         allowed_files = {"meta.json", "trace.jsonl"}
@@ -668,39 +699,129 @@ class ManagedDirectoryLease:
         )
         if unexpected:
             raise ValueError(f"unexpected entries in staging {name!r}: {unexpected}")
-        for entry in entries:
-            info = _managed_stat(
-                entry,
-                dir_fd=self.fd,
-                role="bundle staging entry",
-                path=self.path / entry,
-            )
-            if stat.S_ISLNK(info.st_mode):
-                raise ValueError(f"unexpected symlink in staging: {entry!r}")
-            if entry in allowed_files and not stat.S_ISREG(info.st_mode):
-                raise ValueError(f"staging entry {entry!r} is not a regular file")
-            if entry in allowed_directories and not stat.S_ISDIR(info.st_mode):
-                raise ValueError(f"staging entry {entry!r} is not a directory")
-        for entry in allowed_files & set(entries):
-            self.unlink_regular(PurePath(entry), missing_ok=False)
-        if "artifacts" in entries:
-            artifacts = self._open_directory(
-                "artifacts",
-                path=self.path / "artifacts",
-                role="bundle artifacts directory",
-            )
-            try:
+        file_leases: dict[str, ManagedFileLease] = {}
+        artifacts: ManagedDirectoryLease | None = None
+        rollback = RollbackSlot()
+        try:
+            for entry in entries:
+                expected_type = (
+                    stat.S_ISREG if entry in allowed_files else stat.S_ISDIR
+                )
+                expected_mode = 0o600 if entry in allowed_files else 0o700
+                entry_path = self.path / entry
+                info = _managed_stat(
+                    entry,
+                    dir_fd=self.fd,
+                    role="bundle staging entry",
+                    path=entry_path,
+                )
+                if stat.S_ISLNK(info.st_mode):
+                    raise ValueError(f"unexpected symlink in staging: {entry!r}")
+                if not expected_type(info.st_mode):
+                    kind = "regular file" if entry in allowed_files else "directory"
+                    raise ValueError(f"staging entry {entry!r} is not a {kind}")
+                if (
+                    info.st_uid != os.geteuid()
+                    or stat.S_IMODE(info.st_mode) != expected_mode
+                ):
+                    raise ValueError(
+                        f"staging entry {entry!r} has unmanaged ownership or mode"
+                    )
+                identity = (info.st_dev, info.st_ino)
+                entry_rollback = ResumableRollback()
+                rollback.begin(entry_rollback)
+                if entry in allowed_files:
+                    file_leases[entry] = self._open_regular(
+                        PurePath(entry),
+                        access="read",
+                        create=False,
+                        role="bundle staging entry",
+                        verify_lexical_parent=False,
+                        expected_identity=identity,
+                        _rollback=entry_rollback,
+                    )
+                    continue
+                artifacts = self._open_directory(
+                    entry,
+                    path=entry_path,
+                    role="bundle artifacts directory",
+                    expected_identity=identity,
+                    _rollback=entry_rollback,
+                )
                 if os.listdir(artifacts.fd):
                     raise ValueError("staging artifacts directory is not empty")
-                self.remove_directory_if_owned(artifacts)
-            finally:
-                artifacts.close()
-        self.verify_identity()
-        os.rmdir(name, dir_fd=anchor)
+
+            # The process lock excludes another conforming publisher while the
+            # retained capabilities are revalidated and removed by parent fd.
+            for entry, lease in file_leases.items():
+                opened = _managed_fstat(
+                    lease.fd, role=lease._role, path=lease.path
+                )
+                named = _managed_stat(
+                    entry, dir_fd=self.fd, role=lease._role, path=self.path / entry
+                )
+                if (opened.st_dev, opened.st_ino) != (
+                    named.st_dev,
+                    named.st_ino,
+                ):
+                    raise ManagedPathSecurityError(
+                        reason="identity_changed",
+                        role=lease._role,
+                        path=self.path / entry,
+                    )
+            if artifacts is not None:
+                identity = _managed_fstat(
+                    artifacts.fd, role=artifacts.role, path=artifacts.path
+                )
+                named = _managed_stat(
+                    "artifacts",
+                    dir_fd=self.fd,
+                    role=artifacts.role,
+                    path=self.path / "artifacts",
+                )
+                if (identity.st_dev, identity.st_ino) != (
+                    named.st_dev,
+                    named.st_ino,
+                ):
+                    raise ManagedPathSecurityError(
+                        reason="identity_changed",
+                        role=artifacts.role,
+                        path=self.path / "artifacts",
+                    )
+            self.verify_identity()
+            for entry in sorted(file_leases):
+                os.unlink(entry, dir_fd=self.fd)
+            if artifacts is not None:
+                os.rmdir("artifacts", dir_fd=self.fd)
+            self.verify_identity()
+            os.rmdir(name, dir_fd=anchor)
+        except BaseException as exc:
+            rollback.raise_failure(exc)
+        rollback.close()
         return True
 
+    def _remove_owned_regular_name(
+        self,
+        *,
+        name: str,
+        lease: ManagedFileLease,
+        expected_identity: tuple[int, int],
+    ) -> None:
+        named = _managed_stat(
+            name, dir_fd=self.fd, role=lease._role, path=self.path / name
+        )
+        if (named.st_dev, named.st_ino) != expected_identity:
+            raise ManagedPathSecurityError(
+                reason="identity_changed", role=lease._role, path=self.path / name
+            )
+        os.unlink(name, dir_fd=self.fd)
+
     def create_directory(
-        self, relative: PurePath, *, role: str
+        self,
+        relative: PurePath,
+        *,
+        role: str,
+        _rollback: ResumableRollback | None = None,
     ) -> ManagedDirectoryLease:
         parts = _validate_relative(relative)
         if len(parts) != 1:
@@ -708,53 +829,183 @@ class ManagedDirectoryLease:
         name = parts[0]
         path = self.path / name
         self.verify_identity()
+        owner = ConstructionOwner(_rollback)
+        rollback = owner.rollback
+        created_identity: tuple[int, int] | None = None
+
+        def remove_created_entry() -> bool:
+            try:
+                parent_fd = self.fd
+            except RuntimeError:
+                try:
+                    path.lstat()
+                except FileNotFoundError:
+                    return True
+                return False
+            try:
+                named = _managed_stat(
+                    name, dir_fd=parent_fd, role=role, path=path
+                )
+            except FileNotFoundError:
+                return True
+            if created_identity is None:
+                # ``mkdir`` returned, but no descriptor or stat established
+                # which inode the name denoted. It may already be a foreign
+                # replacement, so this rollback has nothing it can safely
+                # remove by name. A later retry may retire after an operator
+                # or startup reclaimer removes that uncertain entry.
+                return False
+            if not stat.S_ISDIR(named.st_mode):
+                return False
+            if created_identity is not None and (
+                named.st_dev,
+                named.st_ino,
+            ) != created_identity:
+                return False
+            os.rmdir(name, dir_fd=parent_fd)
+            return True
+
+        created_entry = OwnedResource[None](
+            lambda _created: remove_created_entry()
+        )
+        rollback.own(created_entry)
         try:
-            os.mkdir(name, 0o700, dir_fd=self.fd)
+            # The holder records mkdir's successful ``None`` result before
+            # Python regains an instruction boundary. An OSError leaves it
+            # unset, so rollback cannot remove a pre-existing name.
+            created_entry.capture_c_result(
+                partial(os.mkdir, name, 0o700, dir_fd=self.fd)
+            )
         except OSError as exc:
-            raise _translate_os_error(
+            translated = _translate_os_error(
                 exc,
                 role=role,
                 path=path,
                 operation="mkdir",
                 mode=0o700,
                 object_kind="directory",
-            ) from exc
-        rollback = ResumableRollback()
-        created_entry = object()
-        created_identity: tuple[int, int] | None = None
-
-        def remove_created_entry() -> bool:
-            if created_identity is None:
-                # mkdir returned, but the first identity observation did not.
-                # The name may already denote a replacement, so there is no
-                # object this transaction can prove it owns and safely remove.
-                return False
+            )
             try:
-                named = _managed_stat(name, dir_fd=self.fd, role=role, path=path)
-            except FileNotFoundError:
-                return True
-            if (
-                not stat.S_ISDIR(named.st_mode)
-                or (named.st_dev, named.st_ino) != created_identity
-            ):
-                return True
-            os.rmdir(name, dir_fd=self.fd)
-            return True
-
-        rollback.own(created_entry, remove_created_entry)
+                raise translated from exc
+            except BaseException as failure:
+                owner.fail(failure)
+        except BaseException as exc:
+            owner.fail(exc)
         try:
-            created = _managed_stat(name, dir_fd=self.fd, role=role, path=path)
-            created_identity = (created.st_dev, created.st_ino)
+            observed = _managed_stat(
+                name,
+                dir_fd=self.fd,
+                role=role,
+                path=path,
+            )
+            observed_identity = (observed.st_dev, observed.st_ino)
             lease = self._open_directory(
                 name,
                 path=path,
                 role=role,
-                expected_identity=created_identity,
+                expected_identity=observed_identity,
+                _rollback=rollback,
             )
+            created = _managed_fstat(lease.fd, role=role, path=path)
+            created_identity = (created.st_dev, created.st_ino)
+            lease.verify_identity()
+            owner.publish(lease, parts=(created_entry,))
+        except BaseException as exc:
+            owner.fail(exc)
+        return lease
+
+    def reclaim_stale_trace_staging(self) -> int:
+        """Remove validated stale trace staging after the process lock is held."""
+        try:
+            traces_info = _managed_stat(
+                "traces",
+                dir_fd=self.fd,
+                role="trace root",
+                path=self.path / "traces",
+            )
+        except FileNotFoundError:
+            return 0
+        rollback = ResumableRollback()
+        try:
+            traces = self._open_directory(
+                "traces",
+                path=self.path / "traces",
+                role="trace root",
+                expected_identity=(traces_info.st_dev, traces_info.st_ino),
+                _rollback=rollback,
+            )
+            removed = 0
+            for date_name in os.listdir(traces.fd):
+                try:
+                    if calendar_date.fromisoformat(date_name).isoformat() != date_name:
+                        continue
+                except ValueError:
+                    continue
+                date_rollback = ResumableRollback()
+                try:
+                    date_info = _managed_stat(
+                        date_name,
+                        dir_fd=traces.fd,
+                        role="trace date directory",
+                        path=traces.path / date_name,
+                    )
+                    if (
+                        not stat.S_ISDIR(date_info.st_mode)
+                        or date_info.st_uid != os.geteuid()
+                        or stat.S_IMODE(date_info.st_mode) != 0o700
+                    ):
+                        continue
+                    date = traces._open_directory(
+                        date_name,
+                        path=traces.path / date_name,
+                        role="trace date directory",
+                        expected_identity=(date_info.st_dev, date_info.st_ino),
+                        _rollback=date_rollback,
+                    )
+                    for name in os.listdir(date.fd):
+                        if _staging_token(name) is None:
+                            continue
+                        staging_rollback = ResumableRollback()
+                        try:
+                            info = _managed_stat(
+                                name,
+                                dir_fd=date.fd,
+                                role="bundle staging directory",
+                                path=date.path / name,
+                            )
+                            if (
+                                not stat.S_ISDIR(info.st_mode)
+                                or info.st_uid != os.geteuid()
+                                or stat.S_IMODE(info.st_mode) != 0o700
+                            ):
+                                continue
+                            staging = date._open_directory(
+                                name,
+                                path=date.path / name,
+                                role="bundle staging directory",
+                                expected_identity=(info.st_dev, info.st_ino),
+                                _rollback=staging_rollback,
+                            )
+                            if staging.remove_managed_staging():
+                                removed += 1
+                        except (ManagedPathSecurityError, OSError, ValueError) as exc:
+                            if not staging_rollback.retry():
+                                staging_rollback.raise_incomplete(exc)
+                            continue
+                        except BaseException as exc:
+                            staging_rollback.raise_failure(exc)
+                        staging_rollback.close()
+                except (ManagedPathSecurityError, OSError, ValueError) as exc:
+                    if not date_rollback.retry():
+                        date_rollback.raise_incomplete(exc)
+                    continue
+                except BaseException as exc:
+                    date_rollback.raise_failure(exc)
+                date_rollback.close()
         except BaseException as exc:
             rollback.raise_failure(exc)
-        rollback.transfer(created_entry)
-        return lease
+        rollback.close()
+        return removed
 
     def _open_directory(
         self,
@@ -763,38 +1014,36 @@ class ManagedDirectoryLease:
         path: Path,
         role: str,
         expected_identity: tuple[int, int] | None = None,
+        identity_observer: Callable[[tuple[int, int]], None] | None = None,
+        _rollback: ResumableRollback | None = None,
     ) -> ManagedDirectoryLease:
-        fd, anchor_fd = _mint_named_capability(
-            parent_fd=self.fd,
-            name=name,
-            path=path,
-            role=role,
-            directory=True,
-            flags=os.O_RDONLY | getattr(os, "O_DIRECTORY", 0),
-            expected_mode=0o700,
-            expected_named_identity=expected_identity,
-            preflight=False,
-        )
-        rollback = ResumableRollback()
-        fd_owner = OwnedDescriptor(fd)
-        anchor_owner = OwnedDescriptor(anchor_fd)
-        rollback.own(fd_owner)
-        rollback.own(anchor_owner)
+        owner = ConstructionOwner(_rollback)
         try:
-            self.verify_identity()
-            ancestor_fence = self._fence_for_child(role=role, path=path)
-            if ancestor_fence is not None:
-                rollback.own(ancestor_fence)
-            lease = ManagedDirectoryLease(
-                path, fd, role=role, anchor_fd=anchor_fd, name=name
+            fd_owner, anchor_owner = _mint_named_capability(
+                rollback=owner.rollback,
+                parent_fd=self.fd,
+                name=name,
+                path=path,
+                role=role,
+                directory=True,
+                flags=os.O_RDONLY | getattr(os, "O_DIRECTORY", 0),
+                expected_mode=0o700,
+                expected_named_identity=expected_identity,
+                identity_observer=identity_observer,
+                preflight=False,
             )
-            lease._ancestor_fence = ancestor_fence
+            self.verify_identity()
+            lease = ManagedDirectoryLease(
+                path,
+                fd_owner.fd,
+                role=role,
+                anchor_fd=anchor_owner.fd,
+                name=name,
+            )
+            lease.adopt_descriptors(fd_owner, anchor_owner)
+            owner.publish(lease, parts=(fd_owner, anchor_owner))
         except BaseException as exc:
-            rollback.raise_failure(exc)
-        rollback.transfer(fd_owner)
-        rollback.transfer(anchor_owner)
-        if ancestor_fence is not None:
-            rollback.transfer(ancestor_fence)
+            owner.fail(exc)
         return lease
 
     def rename_directory_no_replace(
@@ -829,46 +1078,30 @@ class ManagedDirectoryLease:
                 role="bundle staging directory",
                 path=source.path,
             )
-        libc = ctypes.CDLL(None, use_errno=True)
-        source_bytes = os.fsencode(source_name)
-        target_bytes = os.fsencode(parts[0])
-        if sys.platform == "darwin" and hasattr(libc, "renameatx_np"):
-            rename = libc.renameatx_np
-            rename.argtypes = [
-                ctypes.c_int,
-                ctypes.c_char_p,
-                ctypes.c_int,
-                ctypes.c_char_p,
-                ctypes.c_uint,
-            ]
-            rename.restype = ctypes.c_int
-            result = rename(self.fd, source_bytes, self.fd, target_bytes, 0x0004)
-        elif sys.platform.startswith("linux") and hasattr(libc, "renameat2"):
-            rename = libc.renameat2
-            rename.argtypes = [
-                ctypes.c_int,
-                ctypes.c_char_p,
-                ctypes.c_int,
-                ctypes.c_char_p,
-                ctypes.c_uint,
-            ]
-            rename.restype = ctypes.c_int
-            result = rename(self.fd, source_bytes, self.fd, target_bytes, 1)
-        else:
-            raise ManagedPathSecurityError(
-                reason="unsupported_nofollow",
-                role="bundle publication",
-                path=self.path / parts[0],
-            )
-        if result != 0:
-            error = ctypes.get_errno()
-            if error == errno_module.EEXIST:
-                raise FileExistsError(error, os.strerror(error), parts[0])
-            raise OSError(error, os.strerror(error), parts[0])
+        _rename_no_replace(
+            source_name,
+            parts[0],
+            source_parent_fd=self.fd,
+            target_parent_fd=self.fd,
+            role="bundle publication",
+            path=self.path / parts[0],
+        )
+        # RENAME_EXCL / RENAME_NOREPLACE protects only the destination.  The
+        # source is still resolved by name inside the syscall and could have
+        # changed after the checks above.  Do not transfer the capability to
+        # the public name until that name is proved to hold the descriptor we
+        # prepared.  A mismatch is publication-uncertain: the caller must not
+        # write through, repair, or delete either name.
+        _verify_named_descriptor(
+            fd=source.fd,
+            anchor_fd=self.fd,
+            name=parts[0],
+            role="bundle publication",
+            path=self.path / parts[0],
+            expected_type=stat.S_ISDIR,
+        )
         source.path = self.path / parts[0]
         source._name = parts[0]
-        assert source._lexical_name is not None
-        source._lexical_name.value = parts[0]
 
     def remove_directory_if_owned(self, child: ManagedDirectoryLease) -> bool:
         """Remove an empty direct child only while its name still names its fd."""
@@ -893,29 +1126,23 @@ class ManagedDirectoryLease:
         os.rmdir(child.path.name, dir_fd=self.fd)
         return True
 
-    def ensure_directory(self, relative: PurePath) -> ManagedDirectoryLease:
+    def ensure_directory(
+        self,
+        relative: PurePath,
+        *,
+        _rollback: ResumableRollback | None = None,
+    ) -> ManagedDirectoryLease:
         parts = _validate_relative(relative)
-        rollback = ResumableRollback()
-        parent_owner = OwnedDescriptor(
-            _managed_dup(self.fd, role=self.role, path=self.path)
-        )
-        rollback.own(parent_owner)
+        owner = ConstructionOwner(_rollback)
+        rollback = owner.rollback
         result_anchor_owner: OwnedDescriptor | None = None
-        try:
-            parent_fence = self._fence_for_child(
-                role=self.role, path=self.path
-            )
-            if parent_fence is not None:
-                rollback.own(parent_fence)
-        except BaseException as exc:
-            rollback.raise_failure(exc)
-        result_fence: _LexicalAncestorFence | None = None
         path = self.path
         try:
-            for index, part in enumerate(parts):
+            parent_owner = _managed_dup(
+                rollback, self.fd, role=self.role, path=self.path
+            )
+            for part in parts:
                 self.verify_identity()
-                if parent_fence is not None:
-                    parent_fence.verify(role="managed directory", path=path)
                 path = path / part
                 try:
                     os.mkdir(part, 0o700, dir_fd=parent_owner.fd)
@@ -930,7 +1157,8 @@ class ManagedDirectoryLease:
                         mode=0o700,
                         object_kind="directory",
                     ) from exc
-                child_fd, child_anchor_fd = _mint_named_capability(
+                child_owner, child_anchor_owner = _mint_named_capability(
+                    rollback=rollback,
                     parent_fd=parent_owner.fd,
                     name=part,
                     path=path,
@@ -940,45 +1168,23 @@ class ManagedDirectoryLease:
                     expected_mode=0o700,
                     preflight=False,
                 )
-                child_owner = OwnedDescriptor(child_fd)
-                child_anchor_owner = OwnedDescriptor(child_anchor_fd)
-                rollback.own(child_owner)
-                rollback.own(child_anchor_owner)
                 parent_owner.close()
                 if result_anchor_owner is not None:
                     result_anchor_owner.close()
                 parent_owner = child_owner
                 result_anchor_owner = child_anchor_owner
-                if index == len(parts) - 1:
-                    result_fence, parent_fence = parent_fence, None
-                elif parent_fence is not None:
-                    next_fence = parent_fence.extend(
-                        name=_LexicalName(part),
-                        fd=child_owner.fd,
-                        role="managed directory",
-                        path=path,
-                    )
-                    rollback.own(next_fence)
-                    parent_fence.close()
-                    parent_fence = next_fence
-            anchor_fd = (
-                None if result_anchor_owner is None else result_anchor_owner.fd
-            )
+            assert result_anchor_owner is not None
             lease = ManagedDirectoryLease(
                 path,
                 parent_owner.fd,
                 role="managed directory",
-                anchor_fd=anchor_fd,
+                anchor_fd=result_anchor_owner.fd,
                 name=parts[-1],
             )
-            lease._ancestor_fence = result_fence
+            lease.adopt_descriptors(parent_owner, result_anchor_owner)
+            owner.publish(lease, parts=(parent_owner, result_anchor_owner))
         except BaseException as exc:
-            rollback.raise_failure(exc)
-        rollback.transfer(parent_owner)
-        if result_anchor_owner is not None:
-            rollback.transfer(result_anchor_owner)
-        if result_fence is not None:
-            rollback.transfer(result_fence)
+            owner.fail(exc)
         return lease
 
     def open_regular(
@@ -988,6 +1194,7 @@ class ManagedDirectoryLease:
         access: Literal["read", "read_write", "append", "exclusive_write"],
         create: bool,
         role: str = "managed file",
+        _rollback: ResumableRollback | None = None,
     ) -> ManagedFileLease:
         return self._open_regular(
             relative,
@@ -995,6 +1202,7 @@ class ManagedDirectoryLease:
             create=create,
             role=role,
             verify_lexical_parent=True,
+            _rollback=_rollback,
         )
 
     def _open_regular(
@@ -1006,6 +1214,7 @@ class ManagedDirectoryLease:
         role: str,
         verify_lexical_parent: bool,
         expected_identity: tuple[int, int] | None = None,
+        _rollback: ResumableRollback | None = None,
     ) -> ManagedFileLease:
         parts = _validate_relative(relative)
         if len(parts) != 1:
@@ -1028,47 +1237,43 @@ class ManagedDirectoryLease:
         # is a FIFO; regular-file semantics are unchanged and the fd is typed
         # and identity-checked immediately below.
         flags |= getattr(os, "O_NONBLOCK", 0)
-        fd, anchor_fd = _mint_named_capability(
-            parent_fd=self.fd,
-            name=name,
-            path=path,
-            role=role,
-            directory=False,
-            flags=flags,
-            expected_mode=0o600,
-            create_mode=0o600,
-            expected_named_identity=expected_identity,
-        )
-        rollback = ResumableRollback()
-        fd_owner = OwnedDescriptor(fd)
-        anchor_owner = OwnedDescriptor(anchor_fd)
-        rollback.own(fd_owner)
-        rollback.own(anchor_owner)
+        owner = ConstructionOwner(_rollback)
+        rollback = owner.rollback
         try:
+            fd_owner, anchor_owner = _mint_named_capability(
+                rollback=rollback,
+                parent_fd=self.fd,
+                name=name,
+                path=path,
+                role=role,
+                directory=False,
+                flags=flags,
+                expected_mode=0o600,
+                create_mode=0o600,
+                expected_named_identity=expected_identity,
+            )
             if verify_lexical_parent:
                 self.verify_identity()
-            ancestor_fence = None
-            if verify_lexical_parent:
-                ancestor_fence = self._fence_for_child(role=role, path=path)
-            if ancestor_fence is not None:
-                rollback.own(ancestor_fence)
             lease = ManagedFileLease(
                 path,
-                fd,
-                _anchor_fd=anchor_fd,
+                fd_owner.fd,
+                _anchor_fd=anchor_owner.fd,
                 _name=name,
                 _role=role,
-                _ancestor_fence=ancestor_fence,
             )
+            lease.adopt_descriptors(fd_owner, anchor_owner)
+            owner.publish(lease, parts=(fd_owner, anchor_owner))
         except BaseException as exc:
-            rollback.raise_failure(exc)
-        rollback.transfer(fd_owner)
-        rollback.transfer(anchor_owner)
-        if ancestor_fence is not None:
-            rollback.transfer(ancestor_fence)
+            owner.fail(exc)
         return lease
 
-    def replace_bytes(self, relative: PurePath, payload: bytes) -> None:
+    def replace_bytes(
+        self,
+        relative: PurePath,
+        payload: bytes,
+        *,
+        published: Callable[[], None] | None = None,
+    ) -> None:
         parts = _validate_relative(relative)
         if len(parts) != 1:
             raise ValueError("replace_bytes requires a direct child")
@@ -1112,20 +1317,24 @@ class ManagedDirectoryLease:
                     path=target_path,
                 )
         temporary = f".{target}.{os.getpid()}.tmp"
-        lease = self.open_regular(
-            PurePath(temporary),
-            access="exclusive_write",
-            create=True,
-            role="descriptor temporary file",
-        )
-        rollback = ResumableRollback()
+        rollback = RollbackSlot()
+        temporary_rollback = ResumableRollback()
+        lease_rollback = ResumableRollback()
+        rollback.begin(temporary_rollback)
+        rollback.begin(lease_rollback)
         temporary_entry = object()
-        rollback.own(
+        temporary_rollback.own(
             temporary_entry,
             lambda: self.unlink_regular(PurePath(temporary), missing_ok=True),
         )
-        rollback.own(lease)
         try:
+            lease = self.open_regular(
+                PurePath(temporary),
+                access="exclusive_write",
+                create=True,
+                role="descriptor temporary file",
+                _rollback=lease_rollback,
+            )
             lease.write_all(payload)
             lease.fsync()
             temporary_info = lease.stat()
@@ -1138,9 +1347,11 @@ class ManagedDirectoryLease:
                 rollback.raise_failure(
                     RuntimeError("temporary file cleanup is incomplete")
                 )
-            rollback.transfer(lease)
+            lease_rollback.transfer(lease)
             published_target = object()
-            rollback.own(
+            published_rollback = ResumableRollback()
+            rollback.begin(published_rollback)
+            published_rollback.own(
                 published_target,
                 lambda: self._unlink_regular_identity(
                     PurePath(target), temporary_identity
@@ -1153,6 +1364,8 @@ class ManagedDirectoryLease:
                     src_dir_fd=self.fd,
                     dst_dir_fd=self.fd,
                 )
+                if published is not None:
+                    published()
             except OSError as exc:
                 raise _translate_os_error(
                     exc,
@@ -1164,14 +1377,15 @@ class ManagedDirectoryLease:
                 ) from exc
         except BaseException as exc:
             rollback.raise_failure(exc)
-        rollback.transfer(published_target)
-        rollback.transfer(temporary_entry)
+        published_rollback.transfer(published_target)
+        temporary_rollback.transfer(temporary_entry)
+        rollback.close()
 
     def _unlink_regular_identity(
         self, relative: PurePath, expected_identity: tuple[int, int]
     ) -> bool:
         """Remove a published name only while it still names our inode."""
-        lease: ManagedFileLease | None = None
+        rollback = ResumableRollback()
         try:
             lease = self._open_regular(
                 relative,
@@ -1180,8 +1394,11 @@ class ManagedDirectoryLease:
                 role="managed published file",
                 verify_lexical_parent=False,
                 expected_identity=expected_identity,
+                _rollback=rollback,
             )
-        except FileNotFoundError:
+        except FileNotFoundError as exc:
+            if not rollback.retry():
+                rollback.raise_incomplete(exc)
             return True
         except ManagedPathSecurityError as exc:
             if exc.reason in {
@@ -1190,24 +1407,25 @@ class ManagedDirectoryLease:
                 "wrong_type",
                 "wrong_owner",
             }:
+                if not rollback.retry():
+                    rollback.raise_incomplete(exc)
                 return True
-            raise
+            rollback.raise_failure(exc)
+        except BaseException as exc:
+            rollback.raise_failure(exc)
         try:
-            named = _managed_stat(
-                str(relative),
-                dir_fd=self.fd,
-                role="managed published file",
-                path=self.path / str(relative),
+            self._remove_owned_regular_name(
+                name=str(relative),
+                lease=lease,
+                expected_identity=expected_identity,
             )
-            if (named.st_dev, named.st_ino) != expected_identity:
-                return True
-            os.unlink(str(relative), dir_fd=self.fd)
-            return True
-        finally:
-            lease.close()
+        except BaseException as exc:
+            rollback.raise_failure(exc)
+        rollback.close()
+        return True
 
     def unlink_regular(self, relative: PurePath, *, missing_ok: bool) -> None:
-        lease: ManagedFileLease | None = None
+        rollback = ResumableRollback()
         try:
             lease = self._open_regular(
                 relative,
@@ -1215,9 +1433,15 @@ class ManagedDirectoryLease:
                 create=False,
                 role="managed file",
                 verify_lexical_parent=False,
+                _rollback=rollback,
             )
+            info = lease.stat()
             try:
-                os.unlink(str(relative), dir_fd=self.fd)
+                self._remove_owned_regular_name(
+                    name=str(relative),
+                    lease=lease,
+                    expected_identity=(info.st_dev, info.st_ino),
+                )
             except FileNotFoundError:
                 if not missing_ok:
                     raise
@@ -1230,18 +1454,30 @@ class ManagedDirectoryLease:
                     mode=0o600,
                     object_kind="file",
                 ) from exc
-        except FileNotFoundError:
+        except FileNotFoundError as exc:
             if not missing_ok:
-                raise
-        finally:
-            if lease is not None:
-                lease.close()
+                rollback.raise_failure(exc)
+        except BaseException as exc:
+            rollback.raise_failure(exc)
+        rollback.close()
 
 
 class ManagedStateLease(ManagedDirectoryLease):
-    def ensure_trace_directory(self, relative: PurePath) -> ManagedTraceRoot:
+    def ensure_trace_directory(
+        self,
+        relative: PurePath,
+        *,
+        _rollback: ResumableRollback | None = None,
+    ) -> ManagedTraceRoot:
         """Mint the path/fd-opaque root capability consumed by TraceSink."""
-        return ManagedTraceRoot(self.ensure_directory(relative))
+        owner = ConstructionOwner(_rollback)
+        try:
+            lease = self.ensure_directory(relative, _rollback=owner.rollback)
+            root = ManagedTraceRoot(lease)
+            owner.publish(root, parts=(lease,))
+            return root
+        except BaseException as exc:
+            owner.fail(exc)
 
 
 class ManagedTraceRoot:
@@ -1250,8 +1486,13 @@ class ManagedTraceRoot:
     def __init__(self, lease: ManagedDirectoryLease) -> None:
         self._lease = lease
 
-    def ensure_directory(self, relative: PurePath) -> ManagedDirectoryLease:
-        return self._lease.ensure_directory(relative)
+    def ensure_directory(
+        self,
+        relative: PurePath,
+        *,
+        _rollback: ResumableRollback | None = None,
+    ) -> ManagedDirectoryLease:
+        return self._lease.ensure_directory(relative, _rollback=_rollback)
 
     def close(self) -> None:
         self._lease.close()
@@ -1259,11 +1500,22 @@ class ManagedTraceRoot:
 
 class ManagedStateDirectory:
     @classmethod
-    def acquire_trace_root(cls, path: Path) -> ManagedTraceRoot:
-        return ManagedTraceRoot(cls.acquire(path))
+    def acquire_trace_root(
+        cls, path: Path, *, _rollback: ResumableRollback | None = None
+    ) -> ManagedTraceRoot:
+        owner = ConstructionOwner(_rollback)
+        try:
+            lease = cls.acquire(path, _rollback=owner.rollback)
+            root = ManagedTraceRoot(lease)
+            owner.publish(root, parts=(lease,))
+            return root
+        except BaseException as exc:
+            owner.fail(exc)
 
     @classmethod
-    def acquire(cls, path: Path) -> ManagedStateLease:
+    def acquire(
+        cls, path: Path, *, _rollback: ResumableRollback | None = None
+    ) -> ManagedStateLease:
         path = Path(path).absolute()
         parts = path.parts[1:]
         if not parts:
@@ -1274,51 +1526,22 @@ class ManagedStateDirectory:
                 reason="unsupported_nofollow", role="state root", path=path
             )
         directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | nofollow
-        rollback = ResumableRollback()
+        owner = ConstructionOwner(_rollback)
+        rollback = owner.rollback
+        parent_path = path.parent
         try:
-            parent_owner = OwnedDescriptor(os.open(os.sep, directory_flags))
-            rollback.own(parent_owner)
-        except OSError as exc:
-            raise _translate_os_error(
-                exc,
-                role="state root ancestor",
-                path=Path(os.sep),
-                operation="open",
-                object_kind="directory",
-            ) from exc
-        current = Path(os.sep)
-        ancestor_owners = [parent_owner]
-        ancestor_names: list[_LexicalName] = []
-        try:
-            for part in parts[:-1]:
-                current /= part
-                try:
-                    child_owner = OwnedDescriptor(
-                        os.open(part, directory_flags, dir_fd=parent_owner.fd)
-                    )
-                    rollback.own(child_owner)
-                except OSError as exc:
-                    try:
-                        entry = os.stat(
-                            part, dir_fd=parent_owner.fd, follow_symlinks=False
-                        )
-                        is_link = stat.S_ISLNK(entry.st_mode)
-                        wrong_type = not stat.S_ISDIR(entry.st_mode) and not is_link
-                    except OSError:
-                        is_link = False
-                        wrong_type = False
-                    raise _translate_os_error(
-                        exc,
-                        role="state root ancestor",
-                        path=current,
-                        operation="open",
-                        object_kind="directory",
-                        symlink=is_link,
-                        observed_wrong_type=wrong_type,
-                    ) from exc
-                parent_owner = child_owner
-                ancestor_owners.append(child_owner)
-                ancestor_names.append(_LexicalName(part))
+            try:
+                parent_owner = OwnedDescriptor.open(
+                    rollback, parent_path, directory_flags
+                )
+            except OSError as exc:
+                raise _translate_os_error(
+                    exc,
+                    role="state root parent",
+                    path=parent_path,
+                    operation="open",
+                    object_kind="directory",
+                ) from exc
             name = parts[-1]
             try:
                 os.mkdir(name, 0o700, dir_fd=parent_owner.fd)
@@ -1336,7 +1559,8 @@ class ManagedStateDirectory:
             named_before_open = _managed_stat(
                 name, dir_fd=parent_owner.fd, role="state root", path=path
             )
-            fd, anchor_fd = _mint_named_capability(
+            fd_owner, anchor_owner = _mint_named_capability(
+                rollback=rollback,
                 parent_fd=parent_owner.fd,
                 name=name,
                 path=path,
@@ -1349,27 +1573,17 @@ class ManagedStateDirectory:
                     named_before_open.st_ino,
                 ),
             )
-            fd_owner = OwnedDescriptor(fd)
-            anchor_owner = OwnedDescriptor(anchor_fd)
-            rollback.own(fd_owner)
-            rollback.own(anchor_owner)
-            ancestor_fence = _LexicalAncestorFence(
-                [owner.fd for owner in ancestor_owners], ancestor_names
+            parent_owner.close()
+            rollback.transfer(parent_owner)
+            lease = ManagedStateLease(
+                path,
+                fd_owner.fd,
+                role="state root",
+                anchor_fd=anchor_owner.fd,
+                name=name,
             )
-            rollback.own(ancestor_fence)
-            for owner in ancestor_owners:
-                rollback.transfer(owner)
+            lease.adopt_descriptors(fd_owner, anchor_owner)
+            owner.publish(lease, parts=(fd_owner, anchor_owner))
         except BaseException as exc:
-            rollback.raise_failure(exc)
-        lease = ManagedStateLease(
-            path,
-            fd_owner.fd,
-            role="state root",
-            anchor_fd=anchor_owner.fd,
-            name=name,
-        )
-        lease._ancestor_fence = ancestor_fence
-        rollback.transfer(fd_owner)
-        rollback.transfer(anchor_owner)
-        rollback.transfer(ancestor_fence)
+            owner.fail(exc)
         return lease

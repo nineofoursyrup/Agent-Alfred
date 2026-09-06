@@ -166,15 +166,16 @@ class DashboardCloseRig:
         self.lock = RecordingProcessLock(lease, self.trace)
         return self.lock
 
-    def _server_factory(self, address, handler):
+    def _server_factory(self, address, handler, owner):
         self.binds += 1
         self.trace.append("bind")
-        return RecordingServer(address, handler)
+        owner.publish(RecordingServer(address, handler))
 
-    def _open_database(self, state):
+    def _open_database(self, state, *, _rollback):
         del state
         self.database_opens += 1
         self.trace.append("open_db")
+        _rollback.own(self.conn)
         return self.conn
 
     def _write_descriptor(self, directory, descriptor):

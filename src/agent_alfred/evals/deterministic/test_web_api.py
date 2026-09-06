@@ -250,6 +250,7 @@ def _session_runs_page(session_id: str):
         runs=(
             SessionChatRun(
                 run_id="r1",
+                gateway="web",
                 phase="finished",
                 outcome="completed",
                 accepted_at="2026-08-27T12:00:00Z",
@@ -261,6 +262,7 @@ def _session_runs_page(session_id: str):
             ),
             SessionChatRun(
                 run_id="r2",
+                gateway="cli",
                 phase="running",
                 outcome=None,
                 accepted_at="2026-08-27T12:01:00Z",
@@ -430,7 +432,7 @@ def test_recording_unavailable_answers_503() -> None:
     ).submit({"message": "hi", "session_id": "s1"})
     assert outcome.status == 503
     assert outcome.code == "recording_unavailable"
-    assert outcome.payload()["busy"]["navigation"] == {
+    assert outcome.payload()["active_run_summary"]["navigation"] == {
         "href": "/runs/r1?filter=chat",
         "run_id": "r1",
         "filter": "chat",
@@ -478,10 +480,8 @@ def test_the_busy_card_carries_only_the_whitelisted_fields() -> None:
     snapshot = _snapshot(coordinator_state="running", active_run=_active())
     card = busy_summary_from(snapshot)
     assert card is not None
-    # Exactly the whitelist: purpose, Gateway, start time, the nullable
-    # current Step, an optional preview, the stage, and one navigation
-    # target. The run id and the shelf are parts of that target, not two
-    # more fields the client has to know about.
+    # One server-rendered summary: the original safe fields plus the stage
+    # label explicitly required by the recording-pending adjudication.
     assert set(card.to_json()) == {
         "purpose",
         "gateway",
@@ -531,6 +531,22 @@ def test_a_system_purpose_is_accepted_and_travels_through() -> None:
     facade = api._facade
     assert facade.requests is not None
     assert facade.requests[0].purpose == "inference_probe"
+
+
+def test_a_system_purpose_cannot_be_attached_to_a_chat_session() -> None:
+    api = _api(_accepted())
+
+    outcome = api.submit(
+        {
+            "message": "hi",
+            "purpose": "inference_probe",
+            "session_id": "s1",
+        }
+    )
+
+    assert outcome.status == 400
+    assert outcome.code == "unexpected_session_id"
+    assert api._facade.requests == []
 
 
 def test_an_unknown_session_is_refused_before_admission_is_asked() -> None:
@@ -864,6 +880,7 @@ def test_the_session_run_list_targets_one_session_and_shows_its_runs() -> None:
     assert facade.session_run_queries == [("s1", 1, "some-cursor")]
     assert [run["run_id"] for run in payload["runs"]] == ["r1", "r2"]
     assert [run["phase"] for run in payload["runs"]] == ["finished", "running"]
+    assert [run["gateway"] for run in payload["runs"]] == ["web", "cli"]
     assert payload["runs"][0]["reply_preview"] == "hi there"
     assert payload["runs"][0]["reply_source"] == "web"
     # The running Run's row carries its state, and nothing it has not got.

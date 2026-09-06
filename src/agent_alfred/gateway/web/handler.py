@@ -22,7 +22,7 @@ from __future__ import annotations
 import json
 from http.server import BaseHTTPRequestHandler
 from typing import Any
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 from agent_alfred.gateway.web.api import DashboardApi
 from agent_alfred.gateway.web.broker import StreamAdmissionRejected
@@ -33,6 +33,7 @@ from agent_alfred.gateway.web.guard import (
     RequestGuard,
 )
 from agent_alfred.gateway.web.replay import CursorText
+from agent_alfred.resource_rollback import ResumableRollback
 from agent_alfred.runtime.recording import RecordingUnavailable
 
 EVENTS_PATH = "/api/events"
@@ -45,6 +46,7 @@ SESSION_MESSAGES_PATH = "/api/sessions/messages"
 SESSION_RUNS_PATH = "/api/sessions/runs"
 RUNS_PATH = "/api/runs"
 MAINBAR_PATH = "/api/mainbar"
+REPLY_PATH = "/api/reply"
 
 # Sent on every response. ``nosniff`` stops a browser from reinterpreting a
 # JSON body as something executable; the CSP forbids framing and every
@@ -118,6 +120,29 @@ class DashboardHandler(BaseHTTPRequestHandler):
         in a terminal that is already running the CLI.
         """
 
+    def send_error(
+        self,
+        code: int,
+        message: str | None = None,
+        explain: str | None = None,
+    ) -> None:
+        """Keep parser failures inside the dashboard response contract.
+
+        ``BaseHTTPRequestHandler`` calls this before ``command`` and ``path``
+        necessarily exist.  Those failures cannot pass through the request
+        guard, but they still need the headers promised for every response.
+        """
+        if code == 501 and getattr(self, "command", None):
+            self._handle(self.command)
+            return
+        del message, explain
+        self.close_connection = True
+        self._send(
+            code,
+            {"code": "bad_request"},
+            extra=(("Connection", "close"),),
+        )
+
     def _send(
         self,
         status: int,
@@ -126,6 +151,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
         extra: tuple[tuple[str, str], ...] = (),
     ) -> None:
         body = b"" if payload is None else _dump(payload)
+        if getattr(self, "_request_body_pending", False):
+            self.close_connection = True
+            if not any(name.lower() == "connection" for name, _value in extra):
+                extra = (*extra, ("Connection", "close"))
         self.send_response(status)
         for name, value in BASE_HEADERS:
             self.send_header(name, value)
@@ -135,7 +164,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        if body:
+        if body and getattr(self, "command", None) != "HEAD":
             self.wfile.write(body)
 
     def _reject(self, rejection) -> None:
@@ -153,6 +182,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     def _read_body(self, length: int) -> tuple[dict[str, Any] | None, str | None]:
         body = self.rfile.read(length)
+        self._request_body_pending = False
+        if len(body) != length:
+            return None, "body_not_json"
         try:
             payload = json.loads(body.decode("utf-8"))
         except (ValueError, UnicodeDecodeError):
@@ -188,9 +220,19 @@ class DashboardHandler(BaseHTTPRequestHandler):
         """
         self._handle("OPTIONS")
 
+    def do_HEAD(self) -> None:  # noqa: N802
+        self._handle("HEAD")
+
+    def do_TRACE(self) -> None:  # noqa: N802
+        self._handle("TRACE")
+
+    def do_CONNECT(self) -> None:  # noqa: N802
+        self._handle("CONNECT")
+
     def _handle(self, method: str) -> None:
         context = self._context
         authorization = context.guard.authorize(method=method, headers=self.headers)
+        self._request_body_pending = authorization.body_declared
         if isinstance(authorization, Rejection):
             self._reject(authorization)
             return
@@ -201,11 +243,14 @@ class DashboardHandler(BaseHTTPRequestHandler):
         if path == EVENTS_PATH and method == "GET":
             self._serve_events()
             return
+        if path == EVENTS_PATH and method == "HEAD":
+            self._serve_events_head()
+            return
         try:
-            if method == "GET":
+            if method in {"GET", "HEAD"}:
                 self._route_get(path)
             else:
-                self._route_write(path, authorization)
+                self._route_write(method, path, authorization)
         except Exception:  # noqa: BLE001 - see below
             # An unhandled error in one request must not take the process
             # down or leak a traceback into a browser. 500 is the honest
@@ -233,6 +278,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
             status, payload = api.session_inbox(params)
             self._send(status, payload)
             return
+        if path == REPLY_PATH:
+            status, payload = api.recover_reply(params)
+            self._send(status, payload)
+            return
         if path == SESSION_MESSAGES_PATH:
             # A historic session_id is an opaque value (ADR-0027): it may
             # contain "/", "?", "#", "%" or anything else, so it is carried
@@ -248,11 +297,6 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._send(status, payload)
             return
         if path == SESSION_RUNS_PATH:
-            # Same rule as the messages read: the Session rides the query
-            # string verbatim, and only its absence is a bad request.
-            if "session_id" not in params:
-                self._send(400, {"code": "missing_session_id"})
-                return
             status, payload = api.session_runs(params)
             self._send(status, payload)
             return
@@ -261,24 +305,35 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._send(status, payload)
             return
         if path.startswith(RUNS_PATH + "/locate/"):
-            run_id = path[len(RUNS_PATH) + len("/locate/") :]
+            # The opaque identifier is the entire suffix, decoded once;
+            # encoded separators are data, not further routing structure.
+            run_id = unquote(path[len(RUNS_PATH) + len("/locate/") :])
             status, payload = api.locate_run(run_id, params)
             self._send(status, payload)
             return
         if path == MAINBAR_PATH:
-            # Same rule as the messages read: the session_id rides the query
-            # string verbatim, and only its absence is a bad request.
-            if "session_id" not in params:
-                self._send(400, {"code": "missing_session_id"})
-                return
             status, payload = api.mainbar(params)
             self._send(status, payload)
             return
         self._send(404, {"code": "not_found"})
 
-    def _route_write(self, path: str, authorization: AuthorizedRequest) -> None:
+    def _route_write(
+        self, method: str, path: str, authorization: AuthorizedRequest
+    ) -> None:
         context = self._context
+        if method != "POST":
+            self._send(405, {"code": "method_not_allowed"})
+            return
         if path == SESSIONS_PATH:
+            assert authorization.body_length is not None
+            body, error = self._read_body(authorization.body_length)
+            if error is not None:
+                self._send(400, {"code": error})
+                return
+            assert body is not None
+            if body:
+                self._send(400, {"code": "unexpected_fields"})
+                return
             result = context.api.create_session()
             if result.session_id is None:
                 # Refused rather than queued. The API distinguishes a held
@@ -301,6 +356,33 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     # -- the stream --------------------------------------------------------
 
+    def _serve_events_head(self) -> None:
+        """Return the stream's current metadata without owning a stream."""
+        context = self._context
+        session_id = self._params().get("session_id")
+        try:
+            context.broker.preflight_session(session_id)
+        except RecordingUnavailable:
+            self._send(503, {"code": "recording_unavailable"})
+            return
+        except Exception:  # noqa: BLE001 - no detail crosses the HTTP boundary
+            self._send(500, {"code": "internal_error"})
+            return
+
+        body_pending = getattr(self, "_request_body_pending", False)
+        if body_pending:
+            self.close_connection = True
+        self.send_response(200)
+        for name, value in BASE_HEADERS:
+            self.send_header(name, value)
+        for name, value in SSE_HEADERS:
+            if body_pending and name.lower() == "connection":
+                continue
+            self.send_header(name, value)
+        if body_pending:
+            self.send_header("Connection", "close")
+        self.end_headers()
+
     def _serve_events(self) -> None:
         """Hand the socket to the broker and wait for the writer to end.
 
@@ -313,21 +395,31 @@ class DashboardHandler(BaseHTTPRequestHandler):
         session_id = self._params().get("session_id")
         connection = SocketConnection(self.connection, self.wfile)
         cursor = self.headers.get("last-event-id")
+        proof_owner = ResumableRollback()
         try:
             proof = context.broker.prepare_stream(
                 connection=connection,
                 cursor=CursorText(cursor) if cursor is not None else None,
                 session_id=session_id,
+                _rollback=proof_owner,
             )
-        except RecordingUnavailable:
+        except RecordingUnavailable as exc:
+            if not proof_owner.retry():
+                proof_owner.raise_incomplete(exc)
             self._send(503, {"code": "recording_unavailable"})
             return
         except StreamAdmissionRejected as rejection:
+            if not proof_owner.retry():
+                proof_owner.raise_incomplete(rejection)
             self._send(rejection.status, {"code": rejection.code})
             return
-        except Exception:  # noqa: BLE001 - no detail crosses the HTTP boundary
+        except Exception as exc:  # noqa: BLE001 - no detail crosses the HTTP boundary
+            if not proof_owner.retry():
+                proof_owner.raise_incomplete(exc)
             self._send(500, {"code": "internal_error"})
             return
+        except BaseException as exc:
+            proof_owner.raise_failure(exc)
         try:
             self.send_response(200)
             for name, value in BASE_HEADERS:
@@ -335,18 +427,24 @@ class DashboardHandler(BaseHTTPRequestHandler):
             for name, value in SSE_HEADERS:
                 self.send_header(name, value)
             self.end_headers()
-        except BaseException:
-            context.broker.abort_stream(proof)
+        except BaseException as exc:
+            if not proof_owner.retry():
+                proof_owner.raise_incomplete(exc)
             self.close_connection = True
             return
         try:
             handle = context.broker.start_stream(proof)
-        except BaseException:
+            proof_owner.transfer(proof)
+        except BaseException as exc:
             # ``start_stream`` revokes the proof if spawning fails. A second
             # response is impossible after 200; closing is the only honest
             # outcome, and no reservation or registration survives it.
-            self.close_connection = True
-            return
+            handle = proof.transferred_handle()
+            if not proof_owner.retry():
+                proof_owner.raise_incomplete(exc)
+            if handle is None:
+                self.close_connection = True
+                return
         # The writer closes the socket; this thread must not touch it again,
         # so it only waits for the writer to say it is done.
         handle.finished.wait()

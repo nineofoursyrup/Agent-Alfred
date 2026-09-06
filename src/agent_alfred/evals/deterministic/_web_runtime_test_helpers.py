@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import sqlite3
 import threading
-import time
+from collections import defaultdict
+from weakref import WeakKeyDictionary
 
 from agent_alfred import schema
 from agent_alfred.clock import FakeClock
@@ -18,6 +19,59 @@ from agent_alfred.runtime.host import RuntimeHost
 from agent_alfred.settings import Settings
 
 INSTANCE = "proc-runtime"
+
+
+class _RuntimeStateProbe:
+    """Turn Host snapshot publications into one-shot state latches."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._waiters: dict[str, list[threading.Event]] = defaultdict(list)
+
+    def publish(self, snapshot) -> None:
+        with self._lock:
+            waiters = self._waiters.pop(snapshot.coordinator_state, ())
+        for waiter in waiters:
+            waiter.set()
+
+    def watch(self, state: str) -> threading.Event:
+        waiter = threading.Event()
+        with self._lock:
+            self._waiters[state].append(waiter)
+        return waiter
+
+    def cancel(self, state: str, waiter: threading.Event) -> None:
+        with self._lock:
+            waiters = self._waiters.get(state)
+            if waiters is None:
+                return
+            try:
+                waiters.remove(waiter)
+            except ValueError:
+                return
+            if not waiters:
+                self._waiters.pop(state, None)
+
+
+_STATE_PROBES: WeakKeyDictionary[RuntimeHost, _RuntimeStateProbe] = (
+    WeakKeyDictionary()
+)
+
+
+def wait_for_state(
+    host: RuntimeHost, state: str, *, timeout: float = 2.0
+) -> None:
+    """Wait on a publication latch, never by sampling a scheduler race."""
+    if host.snapshot().coordinator_state == state:
+        return
+    probe = _STATE_PROBES[host]
+    waiter = probe.watch(state)
+    if host.snapshot().coordinator_state == state:
+        probe.cancel(state, waiter)
+        return
+    if not waiter.wait(timeout):
+        probe.cancel(state, waiter)
+        raise AssertionError(f"state {state!r} was not published before timeout")
 
 
 class FailNextSessionCommit:
@@ -69,6 +123,7 @@ class SelectiveLatch:
         self.entered = threading.Event()
 
     def arm(self) -> None:
+        self.entered.clear()
         self._gate.clear()
 
     def release(self) -> None:
@@ -150,15 +205,6 @@ class StepStartedPostCommitLatch(CapturingSink):
         self._release.set()
 
 
-def wait_until(predicate, timeout: float = 5.0) -> None:
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        if predicate():
-            return
-        time.sleep(0.01)
-    raise AssertionError("condition not met before timeout")
-
-
 def call_within(callable_, *, seconds: float) -> tuple[bool, object]:
     """Run a callable on a thread and report whether it met the time bound."""
     box: dict = {}
@@ -192,6 +238,13 @@ def build_runtime_host(
         schema.migrate(database)
     capture = CapturingSink(name="capture", flush_at_run_end=True)
     sinks = [capture, *(extra_sinks or ())]
+    state_probe = _RuntimeStateProbe()
+
+    def publish_snapshot(snapshot) -> None:
+        state_probe.publish(snapshot)
+        if snapshot_listener is not None:
+            snapshot_listener(snapshot)
+
     host = RuntimeHost(
         conn=database,
         factory=ScriptedModelFactory(ScriptedModel(script or ["pong"], gate=gate)),
@@ -203,10 +256,11 @@ def build_runtime_host(
         before_recording_commit=before_recording_commit,
         after_recorded_snapshot=after_recorded_snapshot,
         before_recording_failed=before_recording_failed,
-        snapshot_listener=snapshot_listener,
+        snapshot_listener=publish_snapshot,
         snapshot_provider=snapshot_provider,
         redactor=redactor,
     )
+    _STATE_PROBES[host] = state_probe
     return host, database
 
 

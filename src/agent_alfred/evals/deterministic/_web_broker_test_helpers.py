@@ -108,12 +108,10 @@ class _NoThreads:
 
 
 class RealThreadSpawner:
-    """Runs every spawned thread for real, like the production broker."""
+    """Builds every spawned thread for the production broker to start."""
 
     def spawn(self, target):
-        thread = threading.Thread(target=target, daemon=True)
-        thread.start()
-        return thread
+        return threading.Thread(target=target, daemon=True)
 
 
 class GatedWriteConnection(FakeConnection):
@@ -128,6 +126,31 @@ class GatedWriteConnection(FakeConnection):
         self.entered_write.set()
         self.release.wait()
         super().write(data)
+
+
+class ObservedConnection(FakeConnection):
+    """A fake socket with event-driven observations of completed writes."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._written = threading.Condition()
+
+    def write(self, data: bytes) -> None:
+        with self._written:
+            super().write(data)
+            self._written.notify_all()
+
+    def wait_for_bytes(self, marker: bytes, *, timeout: float = 2.0) -> None:
+        with self._written:
+            assert self._written.wait_for(
+                lambda: marker in self.written, timeout=timeout
+            ), f"writer did not emit {marker!r}"
+
+    def wait_for_count(self, count: int, *, timeout: float = 2.0) -> None:
+        with self._written:
+            assert self._written.wait_for(
+                lambda: len(self.writes) >= count, timeout=timeout
+            ), f"writer did not complete {count} writes"
 
 
 class _FakeThread:
@@ -208,7 +231,6 @@ class GatedThreads:
             target()
 
         thread = threading.Thread(target=run, daemon=True)
-        thread.start()
         self.by_name.setdefault(name, thread)
         return thread
 
@@ -218,5 +240,5 @@ class GatedThreads:
 
 def drain_dispatcher(harness) -> None:
     """Drive the dispatcher until the ingress is empty, kick included."""
-    while harness.broker.deliver_next(timeout=0.05):
+    while harness.broker.deliver_next(timeout=0):
         pass

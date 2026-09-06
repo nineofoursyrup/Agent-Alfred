@@ -26,7 +26,7 @@ module never sets it and there is no code path that adds it.
 from __future__ import annotations
 
 import hmac
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Mapping
 
 # A chat message larger than this is not a chat message. The limit is checked
@@ -125,6 +125,7 @@ class Rejection:
     status: int
     code: str
     detail: str
+    body_declared: bool = field(default=False, compare=False)
 
 
 @dataclass(frozen=True)
@@ -132,6 +133,13 @@ class AuthorizedRequest:
     """Values the guard validated for the request that may proceed."""
 
     body_length: int | None
+    body_declared: bool = field(default=False, compare=False)
+
+
+def _rejection(
+    status: int, code: str, detail: str, *, body_declared: bool
+) -> Rejection:
+    return Rejection(status, code, detail, body_declared=body_declared)
 
 
 class RequestGuard:
@@ -167,51 +175,134 @@ class RequestGuard:
         self, *, method: str, headers: Mapping[str, str]
     ) -> AuthorizedRequest | Rejection:
         """Validate once and return the values downstream request IO may use."""
+        body_length, framing_error, body_declared = _request_framing(headers)
+
         host = _header(headers, "host")
         if host is None:
-            return Rejection(
-                400, "missing_host", "a Host header is required on every request"
+            return _rejection(
+                400,
+                "missing_host",
+                "a Host header is required on every request",
+                body_declared=body_declared,
             )
         name = normalize_host(host)
         if name is None or name not in ALLOWED_HOST_NAMES:
-            return Rejection(
+            return _rejection(
                 400,
                 "host_not_allowed",
                 "the Host header does not name this machine",
+                body_declared=body_declared,
             )
         origin = _header(headers, "origin")
         if origin is not None and normalize_origin(origin) not in self._origins:
             # 403 rather than 400: the request was well formed, it came from
             # somewhere we do not answer. The body says nothing about what
             # the whitelist contains, so a probe learns nothing.
-            return Rejection(
-                403, "origin_not_allowed", "the Origin is not this Dashboard"
+            return _rejection(
+                403,
+                "origin_not_allowed",
+                "the Origin is not this Dashboard",
+                body_declared=body_declared,
             )
         if method.upper() in WRITE_METHODS:
-            return self._check_write(headers)
-        return AuthorizedRequest(body_length=None)
+            return self._check_write(
+                headers,
+                body_length=body_length,
+                framing_error=framing_error,
+                body_declared=body_declared,
+            )
+        if framing_error is not None:
+            return framing_error
+        return AuthorizedRequest(body_length=None, body_declared=body_declared)
 
     def _check_write(
-        self, headers: Mapping[str, str]
+        self,
+        headers: Mapping[str, str],
+        *,
+        body_length: int | None,
+        framing_error: Rejection | None,
+        body_declared: bool,
     ) -> AuthorizedRequest | Rejection:
         token = _header(headers, CSRF_HEADER)
-        if token is None or not hmac.compare_digest(token, self._csrf_token):
-            return Rejection(
-                403, "csrf_rejected", "a valid CSRF token is required to write"
+        try:
+            token_matches = token is not None and hmac.compare_digest(
+                token, self._csrf_token
+            )
+        except TypeError:
+            # Unsupported token text is a refusal, not a handler failure.
+            token_matches = False
+        if not token_matches:
+            return _rejection(
+                403,
+                "csrf_rejected",
+                "a valid CSRF token is required to write",
+                body_declared=body_declared,
             )
         content_type = (_header(headers, "content-type") or "").split(";")[0]
         if content_type.strip().lower() != JSON_CONTENT_TYPE:
-            return Rejection(
+            return _rejection(
                 415,
                 "content_type_not_allowed",
                 f"writes must be {JSON_CONTENT_TYPE}",
+                body_declared=body_declared,
             )
-        raw = _header(headers, "content-length")
-        if raw is None:
-            return Rejection(
-                411, "length_required", "a Content-Length is required to write"
+        if framing_error is not None:
+            return framing_error
+        if body_length is None:
+            return _rejection(
+                411,
+                "length_required",
+                "a Content-Length is required to write",
+                body_declared=body_declared,
             )
-        return _authorize_body_length(raw)
+        return AuthorizedRequest(
+            body_length=body_length, body_declared=body_declared
+        )
+
+
+def _request_framing(
+    headers: Mapping[str, str],
+) -> tuple[int | None, Rejection | None, bool]:
+    """Return the one authoritative HTTP body framing decision."""
+    transfer_encodings = _header_values(headers, "transfer-encoding")
+    lengths = _header_values(headers, "content-length")
+    if transfer_encodings:
+        return (
+            None,
+            Rejection(
+                400,
+                "unsupported_transfer_encoding",
+                "Transfer-Encoding is not supported",
+                body_declared=True,
+            ),
+            True,
+        )
+    if len(lengths) > 1:
+        return (
+            None,
+            Rejection(
+                400,
+                "conflicting_content_length",
+                "exactly one Content-Length is allowed",
+                body_declared=True,
+            ),
+            True,
+        )
+    if not lengths:
+        return None, None, False
+    result = _authorize_body_length(lengths[0])
+    if isinstance(result, Rejection):
+        return (
+            None,
+            Rejection(
+                result.status,
+                result.code,
+                result.detail,
+                body_declared=True,
+            ),
+            True,
+        )
+    return result.body_length, None, True
 
 
 def _authorize_body_length(raw: str) -> AuthorizedRequest | Rejection:
@@ -251,3 +342,13 @@ def _header(headers: Mapping[str, str], name: str) -> str | None:
             if key.lower() == target:
                 return candidate
     return value
+
+
+def _header_values(headers: Mapping[str, str], name: str) -> list[str]:
+    get_all = getattr(headers, "get_all", None)
+    if get_all is not None:
+        values = get_all(name)
+        if values is not None:
+            return list(values)
+    value = _header(headers, name)
+    return [] if value is None else [value]

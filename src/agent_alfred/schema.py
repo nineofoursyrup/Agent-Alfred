@@ -1009,6 +1009,22 @@ def _apply_v3(conn: sqlite3.Connection) -> None:
     _backfill_sessions(conn)
 
 
+def _apply_v4(conn: sqlite3.Connection) -> None:
+    """Preserve v3 facts; absence of execution evidence is not a refusal."""
+    conn.execute(
+        """ALTER TABLE runs ADD COLUMN admission_state TEXT NOT NULL
+           DEFAULT 'unconfirmed' CHECK (
+             admission_state IN ('pending', 'admitted', 'rejected', 'unconfirmed')
+           )"""
+    )
+    conn.execute(
+        """UPDATE runs SET admission_state = 'admitted'
+           WHERE started_at IS NOT NULL OR phase = 'running'
+             OR telemetry IS NOT NULL
+             OR EXISTS (SELECT 1 FROM agent_log WHERE agent_log.run_id = runs.run_id)"""
+    )
+
+
 MIGRATIONS = (
     Migration(version=1, apply=_apply_v1, managed_objects=_V1_MANAGED_OBJECTS),
     # Renames and rebuilds only: every name it leaves behind is already v1's.
@@ -1018,6 +1034,7 @@ MIGRATIONS = (
         apply=_apply_v3,
         managed_objects=_V3_MANAGED_OBJECTS,
     ),
+    Migration(version=4, apply=_apply_v4, managed_objects=()),
 )
 MIGRATION_VERSIONS = tuple(migration.version for migration in MIGRATIONS)
 LATEST_MIGRATION_VERSION = MIGRATION_VERSIONS[-1]
@@ -1223,9 +1240,9 @@ def insert_accepted_run(
         """INSERT INTO runs (
              run_id, purpose, session_id, gateway, entry_surface_id,
              prompt_preview, phase, outcome, accepted_at, started_at,
-             finished_at, activity_revision, telemetry
+             finished_at, activity_revision, telemetry, admission_state
            ) VALUES (
-             ?, ?, ?, ?, ?, ?, 'accepted', NULL, ?, NULL, NULL, ?, NULL
+             ?, ?, ?, ?, ?, ?, 'accepted', NULL, ?, NULL, NULL, ?, NULL, 'pending'
            )""",
         (
             run_id,

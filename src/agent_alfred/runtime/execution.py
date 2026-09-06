@@ -41,7 +41,7 @@ from agent_alfred.settings import CONTROLLED_FAILURE_TEXT, Settings
 
 
 class ExecutionCoordinator(Protocol):
-    """The running transition execution may trigger on the coordinator."""
+    """The execution-lifecycle transitions owned by the coordinator."""
 
     def execution_mark_running(
         self, started_at: str
@@ -53,6 +53,9 @@ class ExecutionCoordinator(Protocol):
         payload: StepStarted,
         envelope: EventEnvelope | None,
     ) -> SequencedEvent: ...
+
+    def execution_mark_stopping(self) -> None:
+        """Close admission before a control exception releases its lease."""
 
 
 class _ExecutionEvents:
@@ -181,8 +184,11 @@ class RunExecutor:
         step_count = 0
         duration_ms = 0
         ledger = _AttemptLedger(item.client)
-        started_at = format_instant(self._clock.wall_utc())
         try:
+            # The clock is an injected collaborator and therefore belongs
+            # inside the same terminal ownership scope as every later Run
+            # step.  A BaseException here must still reach ``settle``.
+            started_at = format_instant(self._clock.wall_utc())
             with self._store.transaction() as conn:
                 revision = schema.allocate_activity_revision(conn)
                 schema.update_run_phase(
@@ -252,6 +258,10 @@ class RunExecutor:
         except _CONTROL_EXCEPTIONS as exc:
             # The process is going away. settle() runs from the finally, so
             # the Run is decided and the lease released before the unwind.
+            # Publish the doomed worker first: settle opens the admission
+            # lease before this frame reaches run_loop's outer exception
+            # handler, and accepting in that gap strands work in its queue.
+            self._coordinator.execution_mark_stopping()
             outcome = "interrupted"
             error = type(exc).__name__
             reply = None

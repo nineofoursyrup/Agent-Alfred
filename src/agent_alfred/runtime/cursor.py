@@ -12,7 +12,7 @@ binding and paired-position shape remain facts owned by each read.
 from __future__ import annotations
 
 import json
-from base64 import urlsafe_b64decode, urlsafe_b64encode
+from base64 import b64decode, urlsafe_b64encode
 from typing import Any
 
 __all__ = [
@@ -60,7 +60,8 @@ def decode_cursor(cursor: str, *, version: int, kind: str) -> dict[str, Any]:
     not a position this read can continue from.
     """
     try:
-        raw = urlsafe_b64decode(cursor.encode("ascii")).decode("utf-8")
+        encoded = cursor.encode("ascii")
+        raw = b64decode(encoded, altchars=b"-_", validate=True).decode("utf-8")
         payload = json.loads(raw)
     except Exception:
         raise MalformedCursor("cursor is not a readable token") from None
@@ -71,4 +72,10 @@ def decode_cursor(cursor: str, *, version: int, kind: str) -> dict[str, Any]:
         or payload.get("k") != kind
     ):
         raise MalformedCursor("cursor does not belong to this read")
+    try:
+        canonical = encode_cursor(payload)
+    except Exception:
+        raise MalformedCursor("cursor is not canonical") from None
+    if canonical != cursor:
+        raise MalformedCursor("cursor is not canonical")
     return payload

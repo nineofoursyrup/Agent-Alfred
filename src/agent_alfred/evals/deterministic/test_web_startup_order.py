@@ -13,11 +13,11 @@ import threading
 import pytest
 
 from agent_alfred.clock import FakeClock
+from agent_alfred.database import open_database as file_database
 from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
     free_loopback_port,
 )
 from agent_alfred.evals.deterministic._web_startup_test_helpers import (
-    file_database,
     managed_process_lock,
     scripted_factory,
 )
@@ -29,13 +29,17 @@ from agent_alfred.gateway.web.lifecycle import (
     write_entry_descriptor,
 )
 from agent_alfred.gateway.web.server import DashboardRuntime
-from agent_alfred.managed_state import ManagedFileLease, ManagedPathSecurityError
+from agent_alfred.managed_state import (
+    ManagedDirectoryLease,
+    ManagedFileLease,
+    ManagedPathSecurityError,
+)
 from agent_alfred.settings import Settings
 from agent_alfred.wiring import build_dashboard
 
 
 @pytest.mark.parametrize("root_kind", ("state", "external_trace"))
-def test_dashboard_refuses_any_managed_root_beneath_an_ancestor_symlink(
+def test_dashboard_refuses_a_managed_root_with_a_symlink_direct_parent(
     tmp_path, root_kind: str
 ) -> None:
     external = tmp_path / "external"
@@ -58,7 +62,7 @@ def test_dashboard_refuses_any_managed_root_beneath_an_ancestor_symlink(
     try:
         with pytest.raises(ManagedPathSecurityError) as caught:
             dashboard.start()
-        assert caught.value.reason == "symlink"
+        assert caught.value.reason == "wrong_type"
     finally:
         dashboard.close()
     after = external.stat()
@@ -123,6 +127,231 @@ def test_dashboard_reports_managed_child_permission_denied_and_rolls_back(
     assert caught.value.errno == errno.EACCES
     assert dashboard.state == "failed"
     assert read_entry_descriptor(state) is None
+
+
+@pytest.mark.parametrize("shape", ["empty", "partial", "full"])
+def test_dashboard_start_reclaims_valid_staging_before_runtime_construction(
+    tmp_path, monkeypatch, shape: str
+) -> None:
+    state = tmp_path / "state"
+    token = "0123456789abcdef0123456789abcdef"
+    staging = state / "traces" / "2026-08-28" / f".staging-{token}"
+    staging.mkdir(parents=True, mode=0o700)
+    if shape in {"partial", "full"}:
+        (staging / "meta.json").write_text("{}", encoding="utf-8")
+    if shape == "full":
+        (staging / "trace.jsonl").write_text("", encoding="utf-8")
+        (staging / "artifacts").mkdir(mode=0o700)
+    directories = [state, state / "traces", staging.parent, staging]
+    if shape == "full":
+        directories.append(staging / "artifacts")
+    for directory in directories:
+        directory.chmod(0o700)
+    for file in staging.iterdir():
+        if not file.is_file():
+            continue
+        file.chmod(0o600)
+    real_reclaim = ManagedDirectoryLease.reclaim_stale_trace_staging
+    reclaimed_counts: list[int] = []
+
+    def record_reclaimed_count(directory: ManagedDirectoryLease) -> int:
+        result = real_reclaim(directory)
+        reclaimed_counts.append(result)
+        return result
+
+    monkeypatch.setattr(
+        ManagedDirectoryLease,
+        "reclaim_stale_trace_staging",
+        record_reclaimed_count,
+    )
+
+    dashboard = build_dashboard(
+        state_dir=state,
+        factory=scripted_factory(),
+        clock=FakeClock(),
+        port=free_loopback_port(),
+        open_database=file_database,
+    )
+    try:
+        dashboard.start()
+        assert reclaimed_counts == [1]
+        assert not staging.exists()
+    finally:
+        dashboard.close()
+
+
+def test_dashboard_start_leaves_a_non_staging_reclaim_name_untouched(
+    tmp_path, monkeypatch
+) -> None:
+    state = tmp_path / "state"
+    reclaim = (
+        state
+        / "traces"
+        / "2026-08-28"
+        / (
+            ".reclaim-0123456789abcdef0123456789abcdef-"
+            "fedcba9876543210fedcba9876543210"
+        )
+    )
+    reclaim.mkdir(parents=True, mode=0o700)
+    for directory in (state, state / "traces", reclaim.parent, reclaim):
+        directory.chmod(0o700)
+    real_reclaim = ManagedDirectoryLease.reclaim_stale_trace_staging
+    reclaimed_counts: list[int] = []
+
+    def record_reclaimed_count(directory: ManagedDirectoryLease) -> int:
+        result = real_reclaim(directory)
+        reclaimed_counts.append(result)
+        return result
+
+    monkeypatch.setattr(
+        ManagedDirectoryLease,
+        "reclaim_stale_trace_staging",
+        record_reclaimed_count,
+    )
+    dashboard = build_dashboard(
+        state_dir=state,
+        factory=scripted_factory(),
+        clock=FakeClock(),
+        port=free_loopback_port(),
+        open_database=file_database,
+    )
+    try:
+        dashboard.start()
+        assert reclaimed_counts == [0]
+        assert reclaim.is_dir()
+    finally:
+        dashboard.close()
+
+
+def test_dashboard_start_skips_a_staging_tree_under_an_impossible_date(
+    tmp_path,
+) -> None:
+    state = tmp_path / "state"
+    staging = (
+        state
+        / "traces"
+        / "2026-99-99"
+        / ".staging-0123456789abcdef0123456789abcdef"
+    )
+    staging.mkdir(parents=True, mode=0o700)
+    marker = staging / "meta.json"
+    marker.write_text("{}", encoding="utf-8")
+    marker.chmod(0o600)
+    before = (staging.stat(), marker.stat())
+    dashboard = build_dashboard(
+        state_dir=state,
+        factory=scripted_factory(),
+        clock=FakeClock(),
+        port=free_loopback_port(),
+        open_database=file_database,
+    )
+    try:
+        dashboard.start()
+        after = (staging.stat(), marker.stat())
+        assert [(item.st_ino, item.st_mode) for item in after] == [
+            (item.st_ino, item.st_mode) for item in before
+        ]
+    finally:
+        dashboard.close()
+
+
+def test_dashboard_start_skips_an_unknown_nonempty_staging_atomically(
+    tmp_path,
+) -> None:
+    state = tmp_path / "state"
+    staging = (
+        state
+        / "traces"
+        / "2026-08-28"
+        / ".staging-fedcba9876543210fedcba9876543210"
+    )
+    artifacts = staging / "artifacts"
+    artifacts.mkdir(parents=True, mode=0o700)
+    meta = staging / "meta.json"
+    trace = staging / "trace.jsonl"
+    precious = artifacts / "precious"
+    for path, payload in ((meta, "{}"), (trace, ""), (precious, "keep")):
+        path.write_text(payload, encoding="utf-8")
+        path.chmod(0o600)
+    watched = (staging, artifacts, meta, trace, precious)
+    before = {path: path.lstat() for path in watched}
+    dashboard = build_dashboard(
+        state_dir=state,
+        factory=scripted_factory(),
+        clock=FakeClock(),
+        port=free_loopback_port(),
+        open_database=file_database,
+    )
+    try:
+        dashboard.start()
+        assert precious.read_text(encoding="utf-8") == "keep"
+        for path in watched:
+            after = path.lstat()
+            assert (after.st_ino, after.st_mode) == (
+                before[path].st_ino,
+                before[path].st_mode,
+            )
+    finally:
+        dashboard.close()
+
+
+@pytest.mark.parametrize(
+    "unmanaged_shape", ("invalid_name", "symlink", "fifo", "external_mode")
+)
+def test_dashboard_start_skips_other_unmanaged_staging_candidates_unchanged(
+    tmp_path, unmanaged_shape: str
+) -> None:
+    state = tmp_path / "state"
+    date = state / "traces" / "2026-08-28"
+    date.mkdir(parents=True, mode=0o700)
+    date.chmod(0o700)
+    name = (
+        ".staging-not-a-token"
+        if unmanaged_shape == "invalid_name"
+        else ".staging-0123456789abcdef0123456789abcdef"
+    )
+    candidate = date / name
+    watched: list = [date, candidate]
+    if unmanaged_shape == "symlink":
+        outside = tmp_path / "outside"
+        outside.mkdir(mode=0o755)
+        precious = outside / "precious"
+        precious.write_text("keep", encoding="utf-8")
+        candidate.symlink_to(outside, target_is_directory=True)
+        watched.extend((outside, precious))
+    else:
+        candidate.mkdir(mode=0o700)
+        if unmanaged_shape == "fifo":
+            special = candidate / "trace.jsonl"
+            os.mkfifo(special)
+            watched.append(special)
+        elif unmanaged_shape == "external_mode":
+            candidate.chmod(0o755)
+        else:
+            marker = candidate / "meta.json"
+            marker.write_text("{}", encoding="utf-8")
+            marker.chmod(0o600)
+            watched.append(marker)
+    before = {path: path.lstat() for path in watched}
+    dashboard = build_dashboard(
+        state_dir=state,
+        factory=scripted_factory(),
+        clock=FakeClock(),
+        port=free_loopback_port(),
+        open_database=file_database,
+    )
+    try:
+        dashboard.start()
+        for path in watched:
+            after = path.lstat()
+            assert (after.st_ino, after.st_mode, after.st_size) == (
+                before[path].st_ino,
+                before[path].st_mode,
+                before[path].st_size,
+            )
+    finally:
+        dashboard.close()
 
 
 def test_host_construction_failure_closes_constructed_broker_and_prior_resources(
@@ -224,11 +453,14 @@ def test_dashboard_post_host_assembly_failure_retains_retryable_owner(
     with pytest.raises(ValueError) as caught:
         dashboard.start()
     assert caught.value is assembly_failure
-    assert trace == ["host.close", "broker.close", "host.close"]
+    assert trace == ["host.close", "host.close"]
+    assert "broker.close" not in trace, (
+        "the broker remains available while the host may still publish"
+    )
     assert dashboard.state == "closing"
     assert dashboard.close() is True
     assert host.close_calls == 3
-    assert trace == ["host.close", "broker.close", "host.close", "host.close"]
+    assert trace == ["host.close", "host.close", "host.close", "broker.close"]
 
 # --- single-process Host startup ordering ---------------------------------
 #
@@ -313,9 +545,11 @@ class _FakeBoundServer:
         self.server_address = ("127.0.0.1", 17717)
         self.closed = False
         self.context = None
+        self.serving = threading.Event()
 
     def serve_forever(self) -> None:
         self._log.append("serve")
+        self.serving.set()
 
     def shutdown(self) -> None:
         return None
@@ -328,11 +562,11 @@ class _FakeBoundServer:
 def _step_runtime(tmp_path, *, log, bind_error=None, describe_error=None):
     """A runtime whose every process-level step is a line in ``log``."""
 
-    def server_factory(address, handler):
+    def server_factory(address, handler, owner):
         log.append("bind")
         if bind_error is not None:
             raise bind_error
-        return _FakeBoundServer(log)
+        owner.publish(_FakeBoundServer(log))
 
     def write_descriptor(directory, descriptor):
         log.append("describe")
@@ -340,9 +574,11 @@ def _step_runtime(tmp_path, *, log, bind_error=None, describe_error=None):
             raise describe_error
         return write_entry_descriptor(directory, descriptor)
 
-    def open_database(directory):
+    def open_database(directory, *, _rollback):
         log.append("database")
-        return sqlite3.connect(":memory:", check_same_thread=False)
+        conn = sqlite3.connect(":memory:", check_same_thread=False)
+        _rollback.own(conn)
+        return conn
 
     def assemble(conn, instance_id):
         log.append("assemble")
@@ -417,6 +653,9 @@ def test_the_successful_path_runs_the_steps_in_one_order(tmp_path) -> None:
     runtime = _step_runtime(tmp_path, log=log)
     descriptor = runtime.start()
     try:
+        server = runtime.service.server
+        assert isinstance(server, _FakeBoundServer)
+        assert server.serving.wait(2.0), "serving thread did not enter the server"
         assert log == [
             "lock",
             "bind",
