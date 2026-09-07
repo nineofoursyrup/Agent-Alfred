@@ -70,7 +70,7 @@ def test_max_steps_does_not_call_the_model() -> None:
 
 def test_loop_package_contains_no_vendor_names() -> None:
     root = Path(__file__).resolve().parents[2] / "loop"
-    banned = ("openai", "anthropic", "opencode", "deepseek", "tavily")
+    banned = ("openai", "anthropic", "opencode", "deepseek", "xai", "tavily")
     for path in root.rglob("*.py"):
         text = path.read_text(encoding="utf-8").lower()
         for word in banned:

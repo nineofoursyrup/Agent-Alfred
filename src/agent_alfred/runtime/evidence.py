@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import asdict
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -12,7 +13,9 @@ from typing import Any
 MAX_TRACE_BYTES = 32 * 1024 * 1024
 
 
-def read_evidence(store, redactor, run_id: str, trace_root: Path) -> dict | None:
+def read_evidence(
+    store, redactor, run_id: str, trace_root: Path, *, overrides=None
+) -> dict | None:
     with store.reading() as conn:
         row = conn.execute(
             "SELECT phase, telemetry FROM runs WHERE run_id = ?", (run_id,)
@@ -37,24 +40,39 @@ def read_evidence(store, redactor, run_id: str, trace_root: Path) -> dict | None
     except (ValueError, KeyError, TypeError, AttributeError):
         status, safe_events = "unavailable", []
     try:
-        projected = redactor.redact_jsonable({
-            "run_id": run_id,
-            "trace_status": status,
-            "trace_incomplete": telemetry.get("trace_incomplete"),
-            "recording_state": "recorded" if row[1] else None,
-            "events": safe_events,
-            "attempts": [
-                {"attempt_id": attempt["attempt_id"],
-                 "outcome": attempt["outcome"],
-                 "usage": _safe_usage(attempt.get("usage")),
-                 "cost": cost(attempt.get("usage"))}
-                for attempt in telemetry.get("attempts", [])
-            ],
-        })
+        projected = redactor.redact_jsonable(
+            {
+                "run_id": run_id,
+                "trace_status": status,
+                "trace_incomplete": telemetry.get("trace_incomplete"),
+                "recording_state": "recorded" if row[1] else None,
+                "events": safe_events,
+                "support_overrides": [
+                    asdict(item) for item in overrides.for_run(run_id)
+                ]
+                if overrides
+                else [],
+                "attempts": [
+                    {
+                        "attempt_id": attempt["attempt_id"],
+                        "outcome": attempt["outcome"],
+                        "usage": _safe_usage(attempt.get("usage")),
+                        "cost": cost(attempt.get("usage")),
+                    }
+                    for attempt in telemetry.get("attempts", [])
+                ],
+            }
+        )
     except Exception:
-        return {"run_id": run_id, "trace_status": "unavailable",
-                "trace_incomplete": None, "recording_state": None,
-                "events": [], "attempts": []}
+        return {
+            "run_id": run_id,
+            "trace_status": "unavailable",
+            "trace_incomplete": None,
+            "recording_state": None,
+            "events": [],
+            "attempts": [],
+            "support_overrides": [],
+        }
     return projected
 
 
@@ -104,10 +122,27 @@ def _read_trace(root: Path, run_id: str) -> tuple[str, list]:
 
 def _safe_event(event: dict) -> dict:
     payload = event["payload"]
-    selected = {key: payload[key] for key in (
-        "name", "attempt_id", "model", "streamed", "duration_ms", "stop_reason",
-        "outcome",
-    ) if key in payload}
+    selected = {
+        key: payload[key]
+        for key in (
+            "name",
+            "attempt_id",
+            "model",
+            "streamed",
+            "duration_ms",
+            "stop_reason",
+            "outcome",
+        )
+        if key in payload
+    }
+    if payload.get("code") == "model_support_flipped":
+        selected.update(
+            {
+                key: payload[key]
+                for key in ("code", "detail", "evidence")
+                if key in payload
+            }
+        )
     selected["blocks"] = [
         {"type": "text", "text": block["text"]} if block.get("type") == "text"
         else {"type": block.get("type", "unknown")}

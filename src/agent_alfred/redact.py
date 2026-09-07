@@ -16,6 +16,7 @@ from agent_alfred.events import (
     BlockStarted,
     BlockStopped,
     Notice,
+    RawToolArgumentFragment,
     RunFinished,
     RunStarted,
     StepFinished,
@@ -65,8 +66,9 @@ class Redactor:
             secret for secret in secrets if secret and len(secret) >= min_length
         )
 
-    def remember(self, secret: str | None) -> None:
-        if not secret or len(secret) < self._min_length:
+    def remember(self, secret: str | None, *, credential: bool = False) -> None:
+        """Only known credential inputs may bypass the ordinary length guard."""
+        if not secret or (not credential and len(secret) < self._min_length):
             return
         with self._lock:
             if secret not in self._secrets:
@@ -126,6 +128,15 @@ class Redactor:
         if isinstance(value, ThinkingBlock):
             text = self.redact_text(value.text)
             return value if text == value.text else replace(value, text=text)
+        if isinstance(value, RawToolArgumentFragment):
+            return replace(
+                value,
+                call_id=self.redact_text(value.call_id)
+                if value.call_id is not None
+                else None,
+                name=self.redact_text(value.name) if value.name is not None else None,
+                raw=self.redact_text(value.raw),
+            )
         if isinstance(value, ToolCallBlock):
             redacted_input = self.redact_jsonable(dict(value.input))
             name = self.redact_text(value.name)

@@ -1,0 +1,1 @@
+{"_type": "AttemptAborted", "name": "attempt.aborted", "trace_policy": "persist", "attempt_id": "a1", "partial": true, "blocks": [], "unparsed_tool_arguments": [], "usage": null, "error": {"retryable": false, "status_code": 400, "body_excerpt": "x", "attempt_id": "a1", "code": "c"}, "duration_ms": 0}

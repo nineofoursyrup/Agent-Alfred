@@ -442,6 +442,8 @@ class DashboardApi:
             return SubmitOutcome(
                 status=202, run_id=result.run_id, session_id=result.session_id
             )
+        if result.kind == "model_unsupported":
+            return SubmitOutcome(status=409, code="model_unsupported")
         if result.kind == "handoff_failed":
             # The committed Run is unreachable, including through a busy-card
             # navigation target. Return before consulting a failed-recording

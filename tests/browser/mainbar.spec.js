@@ -34,6 +34,8 @@ test("an accepted message receives one recorded reply, also after refresh", asyn
   await page.getByRole("button", { name: "展开对话", exact: true }).click();
   const input = page.getByRole("textbox", { name: "消息" });
   await input.fill("请回复");
+  // Session hydration and SSE readiness are asynchronous after creation.
+  await expect(page.getByRole("button", { name: "发送", exact: true })).toBeEnabled();
   const accepted = page.waitForResponse(
     (response) =>
       response.url().endsWith("/api/runs") &&

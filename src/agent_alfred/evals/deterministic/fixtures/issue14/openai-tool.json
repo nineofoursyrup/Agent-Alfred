@@ -1,0 +1,1 @@
+{"choices":[{"message":{"content":"Checking.","tool_calls":[{"id":"opaque-3","type":"function","function":{"name":"weather","arguments":"{\"city\":\"Oslo\"}"}}]},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":20,"completion_tokens":4}}
