@@ -48,6 +48,11 @@ SESSION_RUNS_PATH = "/api/sessions/runs"
 RUNS_PATH = "/api/runs"
 MAINBAR_PATH = "/api/mainbar"
 REPLY_PATH = "/api/reply"
+CONNECTIONS_PATH = "/api/connections"
+MODELS_PATH = "/api/models"
+SETTINGS_PATH = "/api/settings"
+REREAD_ENV_PATH = "/api/connections/reread"
+AUTH_PROBE_PATH = "/api/connections/probe"
 
 # Sent on every response. ``nosniff`` stops a browser from reinterpreting a
 # JSON body as something executable; the CSP forbids framing and every
@@ -338,6 +343,14 @@ class DashboardHandler(BaseHTTPRequestHandler):
             status, payload = api.mainbar(params)
             self._send(status, payload)
             return
+        if path == CONNECTIONS_PATH:
+            status, payload = api.connections()
+            self._send(status, payload)
+            return
+        if path == MODELS_PATH:
+            status, payload = api.models(params)
+            self._send(status, payload)
+            return
         self._send(404, {"code": "not_found"})
 
     def _route_write(
@@ -374,6 +387,39 @@ class DashboardHandler(BaseHTTPRequestHandler):
             assert body is not None
             outcome = context.api.submit(body)
             self._send(outcome.status, outcome.payload())
+            return
+        if path == SETTINGS_PATH:
+            assert authorization.body_length is not None
+            body, error = self._read_body(authorization.body_length)
+            if error is not None:
+                self._send(400, {"code": error})
+                return
+            assert body is not None
+            status, payload = context.api.mutate_settings(body)
+            self._send(status, payload)
+            return
+        if path == REREAD_ENV_PATH:
+            assert authorization.body_length is not None
+            body, error = self._read_body(authorization.body_length)
+            if error is not None:
+                self._send(400, {"code": error})
+                return
+            assert body is not None
+            if body:
+                self._send(400, {"code": "unexpected_fields"})
+                return
+            status, payload = context.api.reread_env()
+            self._send(status, payload)
+            return
+        if path == AUTH_PROBE_PATH:
+            assert authorization.body_length is not None
+            body, error = self._read_body(authorization.body_length)
+            if error is not None:
+                self._send(400, {"code": error})
+                return
+            assert body is not None
+            status, payload = context.api.probe_auth(body)
+            self._send(status, payload)
             return
         self._send(404, {"code": "not_found"})
 

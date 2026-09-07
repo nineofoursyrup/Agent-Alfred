@@ -26,14 +26,18 @@ from typing import Final, Literal, Protocol
 from agent_alfred import schema
 from agent_alfred.clock import Clock, format_instant
 from agent_alfred.loop.assistant import LoopResult
-from agent_alfred.model import ModelClientFactory, ModelUnsupported
+from agent_alfred.model import (
+    EndpointUnconfigured,
+    ModelClientFactory,
+    ModelUnsupported,
+)
 from agent_alfred.redact import Redactor
 from agent_alfred.resource_rollback import (
     ResumableRollback,
     RollbackSlot,
     dominant_error,
 )
-from agent_alfred.runtime.config import ConfigSnapshotProvider
+from agent_alfred.runtime.config import ConfigSnapshotProvider, InvalidProbeTarget
 from agent_alfred.runtime.recording import RecordingStore
 from agent_alfred.runtime.snapshot import (
     ActiveRunSummary,
@@ -288,11 +292,31 @@ class RunAdmission:
         # is redacted against its own key on the very first run. A capture
         # that fails never reaches the reserve, so there is nothing to
         # take back.
+        if request.purpose == "inference_probe" and (
+            type(request.endpoint_id) is not str
+            or type(request.model_id) is not str
+            or not request.endpoint_id
+            or not request.model_id
+        ):
+            return SubmitResult(kind="invalid_probe_target")
         try:
-            captured = self._snapshot_provider.capture(stream=request.stream)
+            if request.purpose == "inference_probe":
+                captured = self._snapshot_provider.capture(
+                    stream=request.stream,
+                    endpoint_id=request.endpoint_id,
+                    model_id=request.model_id,
+                )
+            else:
+                captured = self._snapshot_provider.capture(stream=request.stream)
             self._redactor.remember(captured.api_key, credential=True)
+        except InvalidProbeTarget:
+            return SubmitResult(kind="invalid_probe_target")
         except Exception:
             return SubmitResult(kind="admission_failed")
+        if request.purpose == "inference_probe" and not (
+            captured.api_key or ""
+        ).strip():
+            return SubmitResult(kind="endpoint_unconfigured")
         summary = ActiveRunSummary(
             run_id=run_id,
             purpose=request.purpose,
@@ -389,6 +413,8 @@ class RunAdmission:
                 raise failure
             if isinstance(failure, ModelUnsupported):
                 return SubmitResult(kind="model_unsupported")
+            if isinstance(failure, EndpointUnconfigured):
+                return SubmitResult(kind="endpoint_unconfigured")
             return SubmitResult(kind="admission_failed")
 
         assert item is not None

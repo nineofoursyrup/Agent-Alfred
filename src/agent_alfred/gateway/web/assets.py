@@ -20,7 +20,9 @@ ASSETS = {
 
 
 def page_asset(path: str) -> tuple[bytes, str] | None:
-    if path in {"/", "/inbox", "/runs"} or path.startswith("/runs/"):
+    if path in {"/", "/inbox", "/runs", "/models", "/connections"} or path.startswith(
+        "/runs/"
+    ):
         name, content_type = "index.html", "text/html"
     elif path in ASSETS:
         name, content_type = ASSETS[path]

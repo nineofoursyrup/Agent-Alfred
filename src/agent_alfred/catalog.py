@@ -52,6 +52,7 @@ def list_models(
     clock,
     pool,
     refresh: bool = False,
+    epoch: int | None = None,
 ) -> CatalogState:
     cached = pool.cached_catalog(endpoint.endpoint_id)
     state = cached if isinstance(cached, CatalogState) else CatalogState("unfetched")
@@ -65,6 +66,8 @@ def list_models(
         and state.health in ("fresh", "stale", "unavailable")
     ):
         return state
+    if epoch is None:
+        epoch = pool.catalog_epoch(endpoint.endpoint_id)
     try:
         payload = _fetch(endpoint, api_key=api_key, transport=transport)
         fetched_at = format_instant(clock.wall_utc())
@@ -90,10 +93,12 @@ def list_models(
             expires_at=now + SUCCESS_TTL_S,
             success_expires_at=now + SUCCESS_TTL_S,
         )
-        pool.store_catalog(endpoint.endpoint_id, fresh)
+        pool.store_catalog(endpoint.endpoint_id, fresh, epoch=epoch)
         return fresh
     except Exception as exc:
-        return _remember_failure(pool, endpoint.endpoint_id, state, clock, exc)
+        return _remember_failure(
+            pool, endpoint.endpoint_id, state, clock, exc, epoch=epoch
+        )
 
 
 def catalog_url_for(endpoint: ModelEndpoint) -> str:
@@ -246,7 +251,7 @@ class CatalogPriceBook:
 
 
 def _remember_failure(
-    pool, endpoint_id, previous: CatalogState, clock, exc
+    pool, endpoint_id, previous: CatalogState, clock, exc, *, epoch: int | None = None
 ) -> CatalogState:
     now = clock.monotonic()
     retry_at = format_instant(clock.wall_utc() + timedelta(seconds=FAILURE_TTL_S))
@@ -270,7 +275,7 @@ def _remember_failure(
             retry_at=retry_at,
             expires_at=now + FAILURE_TTL_S,
         )
-    pool.store_catalog(endpoint_id, failed)
+    pool.store_catalog(endpoint_id, failed, epoch=epoch)
     return failed
 
 

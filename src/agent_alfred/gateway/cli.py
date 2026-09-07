@@ -212,12 +212,18 @@ def main(
     # creation window.
     os.umask(0o077)
 
-    from dotenv import load_dotenv
+    from dotenv import find_dotenv, load_dotenv
 
+    from agent_alfred.connections import CredentialOverlay
     from agent_alfred.settings import SettingsError, load_settings
 
-    # .env feeds the environment before anything reads it, flags still win.
-    load_dotenv()
+    # Snapshot process env before the file is applied. Settings still read
+    # os.environ after a non-overriding load; credential rereads use overlay.
+    process_env = dict(os.environ)
+    dotenv_path = find_dotenv(usecwd=True) or None
+    if dotenv_path:
+        load_dotenv(dotenv_path, override=False)
+    credentials = CredentialOverlay(process_env, dotenv_path)
     try:
         settings = load_settings(
             os.environ,
@@ -244,6 +250,7 @@ def main(
             out=sys.stdout,
             factory=factory,
             build=build,
+            credentials=credentials,
         )
     runtime = _build_runtime(
         build=build,
@@ -251,6 +258,7 @@ def main(
         settings=settings,
         port=port,
         factory=factory,
+        credentials=credentials,
     )
     return _chat_in_the_foreground(runtime, args, settings, out=sys.stdout)
 
@@ -262,6 +270,7 @@ def _build_runtime(
     settings: Settings,
     port: int,
     factory: ModelClientFactory | None,
+    credentials: Any | None = None,
 ) -> Any:
     from agent_alfred.settings import resolve_state_dir
     from agent_alfred.wiring import build_dashboard
@@ -276,6 +285,7 @@ def _build_runtime(
         factory=factory,
         port=port,
         trace_root=directory / "traces",
+        credentials=credentials,
     )
 
 
@@ -408,6 +418,7 @@ def serve_dashboard(
     stop: threading.Event | None = None,
     factory: ModelClientFactory | None = None,
     build: Callable[..., Any] | None = None,
+    credentials: Any | None = None,
 ) -> int:
     """Run the Dashboard and nothing else, until interrupted.
 
@@ -429,6 +440,7 @@ def serve_dashboard(
         settings=settings,
         port=DEFAULT_PORT if port is None else port,
         factory=factory,
+        credentials=credentials,
     )
     failure: int | None = None
     try:

@@ -23,11 +23,16 @@ class AuthProbe:
     success_statuses: tuple[int, ...]
     timeout_s: float
     error_mapping: Mapping[int, str]
+    auth_scheme: Literal["bearer", "x-api-key"]
+    static_headers: Mapping[str, str] = field(default_factory=dict)
 
     def __post_init__(self):
         object.__setattr__(self, "success_statuses", tuple(self.success_statuses))
         object.__setattr__(
             self, "error_mapping", MappingProxyType(dict(self.error_mapping))
+        )
+        object.__setattr__(
+            self, "static_headers", MappingProxyType(dict(self.static_headers))
         )
 
 
@@ -35,18 +40,37 @@ def auth_probe(spec: Mapping | None) -> AuthProbe | None:
     """An incomplete executable declaration means no probe; never perform IO."""
     if not spec:
         return None
-    required = ("method", "path", "success_statuses", "timeout_s", "error_mapping")
+    required = (
+        "method",
+        "path",
+        "success_statuses",
+        "timeout_s",
+        "error_mapping",
+        "auth_scheme",
+    )
     if any(not spec.get(key) for key in required):
         return None
     timeout = spec["timeout_s"]
+    static_headers = spec.get("static_headers") or {}
     if (
         type(timeout) not in (int, float)
         or not math.isfinite(timeout)
         or timeout <= 0
         or spec["method"] not in ("GET", "HEAD", "POST")
+        or spec["auth_scheme"] not in ("bearer", "x-api-key")
         or not isinstance(spec["path"], str)
         or not spec["path"].startswith(("/", "https://"))
+        or spec["path"].startswith("//")
         or not isinstance(spec["error_mapping"], Mapping)
+        or not isinstance(static_headers, Mapping)
+        or any(
+            not isinstance(name, str)
+            or not name
+            or not isinstance(value, str)
+            or "{" in value
+            or "}" in value
+            for name, value in static_headers.items()
+        )
     ):
         return None
     statuses = spec["success_statuses"]
@@ -62,7 +86,15 @@ def auth_probe(spec: Mapping | None) -> AuthProbe | None:
         for code, reason in spec["error_mapping"].items()
     ):
         return None
-    return AuthProbe(*(spec[key] for key in required))
+    return AuthProbe(
+        spec["method"],
+        spec["path"],
+        spec["success_statuses"],
+        spec["timeout_s"],
+        spec["error_mapping"],
+        spec["auth_scheme"],
+        static_headers,
+    )
 
 
 @dataclass(frozen=True)

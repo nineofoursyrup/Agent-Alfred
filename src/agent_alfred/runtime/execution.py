@@ -299,6 +299,11 @@ class RunExecutor:
             reply = None
             del exc
         finally:
+            record = getattr(
+                self._coordinator, "record_connection_observation", None
+            )
+            if callable(record):
+                record(item, outcome, error)
             # The one thing no exception may skip. run.finished, the
             # durability barrier, the database finalizer and the lease
             # release all happen inside settle(); a Run that reached this

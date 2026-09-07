@@ -557,7 +557,7 @@ def test_missing_api_key_is_zero_network_zero_attempts() -> None:
     host.start()
     try:
         submitted = host.submit(SubmitRequest(message="hello"))
-        assert submitted.kind == "admission_failed"
+        assert submitted.kind == "endpoint_unconfigured"
         assert submitted.run_id is None
         assert published == []
         assert conn.execute("SELECT COUNT(*) FROM runs").fetchone() == (0,)

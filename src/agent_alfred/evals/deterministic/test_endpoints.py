@@ -114,7 +114,15 @@ def test_effective_support_never_borrows_evidence_from_another_shape(
 
 
 @pytest.mark.parametrize(
-    "missing", ["method", "path", "success_statuses", "timeout_s", "error_mapping"]
+    "missing",
+    [
+        "method",
+        "path",
+        "success_statuses",
+        "timeout_s",
+        "error_mapping",
+        "auth_scheme",
+    ],
 )
 def test_probe_requires_all_five_fields_and_production_declares_none(missing):
     from agent_alfred.endpoints import auth_probe, list_endpoints
@@ -125,11 +133,40 @@ def test_probe_requires_all_five_fields_and_production_declares_none(missing):
         success_statuses=(204,),
         timeout_s=2.0,
         error_mapping={401: "authentication_failed"},
+        auth_scheme="bearer",
     )
     assert auth_probe(spec) is not None
     del spec[missing]
     assert auth_probe(spec) is None
     assert all(row.auth_probe is None for row in list_endpoints())
+
+
+def test_probe_rejects_unknown_auth_scheme_without_io_shape():
+    from agent_alfred.endpoints import auth_probe
+
+    spec = dict(
+        method="GET",
+        path="/test-only-auth",
+        success_statuses=(204,),
+        timeout_s=2.0,
+        error_mapping={401: "authentication_failed"},
+        auth_scheme="basic",
+    )
+    assert auth_probe(spec) is None
+
+
+def test_probe_rejects_scheme_relative_path():
+    from agent_alfred.endpoints import auth_probe
+
+    spec = dict(
+        method="GET",
+        path="//evil.example/status",
+        success_statuses=(204,),
+        timeout_s=2.0,
+        error_mapping={401: "authentication_failed"},
+        auth_scheme="bearer",
+    )
+    assert auth_probe(spec) is None
 
 
 def test_opencode_exposes_source_and_one_auth_scheme_per_route():
