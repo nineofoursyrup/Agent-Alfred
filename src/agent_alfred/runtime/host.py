@@ -13,6 +13,7 @@ from pathlib import Path
 
 from agent_alfred import schema
 from agent_alfred.clock import Clock, format_instant
+from agent_alfred.connections import CredentialOverlay
 from agent_alfred.events import (
     EventEnvelope,
     FanOutSink,
@@ -37,6 +38,11 @@ from agent_alfred.runtime.config import (
     SettingsBackedSnapshotProvider,
 )
 from agent_alfred.runtime.execution import RunExecutor
+from agent_alfred.runtime.model_settings import (
+    ModelSettingsError,
+    ModelSettingsSnapshot,
+    ModelSettingsStore,
+)
 from agent_alfred.runtime.recording import (
     RecordingStore,
     RecordingUnavailable,
@@ -289,6 +295,8 @@ class RuntimeHost:
         snapshot_listener: Callable[[RuntimeSnapshot], None] | None = None,
         support_overrides: SupportOverrides | None = None,
         support_rule: SupportRule | None = None,
+        model_settings: ModelSettingsStore | None = None,
+        credentials: CredentialOverlay | None = None,
     ):
         self._support_overrides = support_overrides or SupportOverrides()
         self._conn = conn
@@ -349,6 +357,11 @@ class RuntimeHost:
         self._snapshot_provider = snapshot_provider or SettingsBackedSnapshotProvider(
             settings
         )
+        self._model_settings = model_settings
+        self._credentials = credentials
+        self._catalog_scheduler_obj = None
+        self._catalog_transport = None
+        self._auth_probe_transport = None
         self._recorder = RunRecorder(
             clock=clock,
             fanout=fanout,
@@ -660,6 +673,273 @@ class RuntimeHost:
         with self._handoff:
             self._mutating = False
             self._handoff.notify_all()
+
+    def mutate_model_settings(
+        self,
+        expected_revision: int,
+        transform,
+    ) -> ModelSettingsSnapshot:
+        if self._model_settings is None:
+            raise RuntimeError("model settings store is not attached")
+        previous = self._model_settings.snapshot()
+        result = self._model_settings.mutate(expected_revision, transform)
+        invalidate = getattr(self._factory, "invalidate_endpoint", None)
+        if callable(invalidate):
+            invalidate(previous.assignments.primary.endpoint_id)
+            new_id = result.assignments.primary.endpoint_id
+            if new_id != previous.assignments.primary.endpoint_id:
+                invalidate(new_id)
+        return result
+
+    def reread_dotenv(self) -> dict[str, str]:
+        if self._credentials is None or not self._credentials.can_reread:
+            raise RuntimeError("dotenv_unavailable")
+        values = self._credentials.reread()
+        bind = getattr(self._snapshot_provider, "bind_environ", None)
+        if callable(bind):
+            bind(values)
+        invalidate = getattr(self._factory, "invalidate_all", None)
+        if callable(invalidate):
+            invalidate()
+        if self._catalog_scheduler_obj is not None:
+            self._catalog_scheduler_obj.bump()
+        return values
+
+    def connections(self) -> dict:
+        from agent_alfred.catalog import CatalogState
+        from agent_alfred.connections import project_connections
+
+        endpoints = self._endpoint_rows()
+        env = self._credential_env()
+        observations: dict[str, dict] = {}
+        catalogs: dict[str, CatalogState] = {}
+        pool = getattr(self._factory, "transport_pool", None)
+        if pool is not None:
+            for endpoint in endpoints:
+                observed = pool.cached_observation(endpoint.endpoint_id)
+                if isinstance(observed, dict):
+                    observations[endpoint.endpoint_id] = observed
+                catalog = pool.cached_catalog(endpoint.endpoint_id)
+                if isinstance(catalog, CatalogState):
+                    catalogs[endpoint.endpoint_id] = catalog
+        return project_connections(
+            endpoints=endpoints,
+            env=env,
+            overlay={},
+            observations=observations,
+            catalogs=catalogs,
+        )
+
+    def models(self, *, expand: str | None = None, refresh: bool = False) -> dict:
+        from agent_alfred.candidates import project_models_page
+        from agent_alfred.catalog import CatalogState
+
+        if self._model_settings is None:
+            return {
+                "status": "settings_invalid",
+                "revision": 0,
+                "assignments": None,
+                "endpoints": [],
+            }
+        snapshot = self._model_settings.snapshot()
+        endpoints = self._endpoint_rows()
+        catalogs: dict[str, CatalogState] = {}
+        keys: dict[str, str | None] = {}
+        if snapshot.status == "ok":
+            scheduler = self._catalog_scheduler()
+            keys = {
+                endpoint.endpoint_id: self._key_for(endpoint.endpoint_id)
+                for endpoint in endpoints
+            }
+            if expand:
+                endpoint = next(
+                    (row for row in endpoints if row.endpoint_id == expand),
+                    None,
+                )
+                if endpoint is not None:
+                    scheduler.ensure(
+                        endpoint, api_key=keys.get(expand), refresh=refresh
+                    )
+                catalogs = scheduler.cached_states()
+            else:
+                catalogs = scheduler.open_assigned(
+                    assigned_endpoint_id=snapshot.assignments.primary.endpoint_id,
+                    keys=keys,
+                )
+        observed = {
+            row["endpoint_id"]: row["observation"]
+            for row in self.connections()["endpoints"]
+        }
+        return project_models_page(
+            snapshot=snapshot,
+            endpoints=endpoints,
+            catalogs=catalogs,
+            observations=observed,
+            keys=keys,
+        )
+
+    def apply_settings(self, body: dict) -> dict:
+        from decimal import Decimal
+
+        from agent_alfred.settings_commands import (
+            assign,
+            pin,
+            set_display_name,
+            set_price_override,
+            set_style,
+            unpin,
+        )
+
+        op = body.get("op")
+        expected = body.get("expected_revision")
+        if type(expected) is not int:
+            raise ModelSettingsError("settings_invalid")
+        if op not in {"pin", "unpin", "style", "display", "price", "assign"}:
+            raise ModelSettingsError("settings_invalid")
+        if type(body.get("endpoint_id")) is not str:
+            raise ModelSettingsError("settings_invalid")
+        if type(body.get("model_id")) is not str:
+            raise ModelSettingsError("settings_invalid")
+
+        def transform(snapshot):
+            endpoint_id = body.get("endpoint_id")
+            model_id = body.get("model_id")
+            if op == "pin":
+                return pin(
+                    snapshot, endpoint_id=endpoint_id, model_id=model_id
+                )
+            if op == "unpin":
+                return unpin(
+                    snapshot, endpoint_id=endpoint_id, model_id=model_id
+                )
+            if op == "style":
+                return set_style(
+                    snapshot,
+                    endpoint_id=endpoint_id,
+                    model_id=model_id,
+                    wire_style=body["wire_style"],
+                )
+            if op == "display":
+                return set_display_name(
+                    snapshot,
+                    endpoint_id=endpoint_id,
+                    model_id=model_id,
+                    display_name=body.get("display_name"),
+                )
+            if op == "price":
+                raw = body.get("value")
+                value = None if raw is None else Decimal(str(raw))
+                return set_price_override(
+                    snapshot,
+                    endpoint_id=endpoint_id,
+                    model_id=model_id,
+                    dimension=body["dimension"],
+                    value=value,
+                )
+            if op == "assign":
+                return assign(
+                    snapshot,
+                    slot=body.get("slot") or "primary",
+                    endpoint_id=endpoint_id,
+                    model_id=model_id,
+                )
+            raise ModelSettingsError("settings_invalid")
+
+        self.mutate_model_settings(expected, transform)
+        return self.models()
+
+    def probe_auth(self, endpoint_id: str) -> None:
+        from agent_alfred.auth_probe import (
+            AuthProbeRefused,
+            UrllibAuthProbeTransport,
+            run_auth_probe,
+        )
+
+        endpoint = next(
+            (row for row in self._endpoint_rows() if row.endpoint_id == endpoint_id),
+            None,
+        )
+        if endpoint is None:
+            raise AuthProbeRefused("unknown_endpoint", 404)
+        if endpoint.auth_probe is None:
+            raise AuthProbeRefused("auth_probe_unavailable", 400)
+        raw = None
+        env = self._credential_env()
+        value = env.get(endpoint.api_key_env)
+        if value is not None and value.strip():
+            raw = value
+        if raw is None:
+            raise AuthProbeRefused("endpoint_unconfigured", 409)
+        transport = self._auth_probe_transport or UrllibAuthProbeTransport()
+        observed = run_auth_probe(
+            endpoint, api_key=raw, transport=transport, clock=self._clock
+        )
+        pool = getattr(self._factory, "transport_pool", None)
+        if pool is not None:
+            pool.store_observation(endpoint.endpoint_id, observed)
+
+    def record_connection_observation(
+        self, item, outcome: str, error: str | None
+    ) -> None:
+        pool = getattr(self._factory, "transport_pool", None)
+        if pool is None or outcome not in {"completed", "failed"}:
+            return
+        via = (
+            "inference_probe"
+            if item.request.purpose == "inference_probe"
+            else "real_run"
+        )
+        pool.store_observation(
+            item.snapshot.endpoint_id,
+            {
+                "state": "connected" if outcome == "completed" else "error",
+                "checked_at": format_instant(self._clock.wall_utc()),
+                "checked_via": via,
+                "reason": None if outcome == "completed" else error,
+            },
+        )
+
+    def _endpoint_rows(self):
+        from agent_alfred.endpoints import list_endpoints
+
+        rows = getattr(self._factory, "_endpoints", None)
+        if rows is not None:
+            return tuple(rows)
+        return list_endpoints()
+
+    def _credential_env(self) -> dict[str, str]:
+        import os
+
+        if self._credentials is not None:
+            return self._credentials.values()
+        environ = getattr(self._snapshot_provider, "_environ", None)
+        if environ is not None:
+            return dict(environ)
+        return dict(os.environ)
+
+    def _key_for(self, endpoint_id: str) -> str | None:
+        from agent_alfred.runtime.config import _key_for
+
+        return _key_for(endpoint_id, self._credential_env())
+
+    def _catalog_scheduler(self):
+        if getattr(self, "_catalog_scheduler_obj", None) is None:
+            from agent_alfred.catalog_schedule import CatalogScheduler
+            from agent_alfred.runtime.transport import VersionedTransportPool
+
+            pool = getattr(self._factory, "transport_pool", None)
+            if pool is None:
+                pool = VersionedTransportPool(lambda snapshot: snapshot)
+                transport = _NullCatalogTransport()
+            else:
+                transport = self._catalog_transport or _UrllibCatalogTransport()
+            self._catalog_scheduler_obj = CatalogScheduler(
+                clock=self._clock,
+                pool=pool,
+                transport=transport,
+                endpoints=self._endpoint_rows(),
+            )
+        return self._catalog_scheduler_obj
 
     def mutation_in_flight(self) -> bool:
         """Whether a write from another door is inside the gate right now."""
@@ -1162,13 +1442,38 @@ class RuntimeHost:
     # -- public session read side (ADR-0027); callers never write SQL --
 
     def read_run_evidence(self, run_id: str, *, trace_root: Path) -> dict | None:
-        from agent_alfred.pricing import PriceChain, StaticPriceBook
+        from agent_alfred.pricing import PriceChain, PriceQuote, StaticPriceBook
         from agent_alfred.runtime.evidence import read_evidence
 
         catalog = None
         catalog_prices = getattr(self._factory, "catalog_prices", None)
         if callable(catalog_prices):
             catalog = catalog_prices()
+        pins = ()
+        if self._model_settings is not None:
+            snapshot = self._model_settings.snapshot()
+            if snapshot.status == "ok":
+                pins = snapshot.pins
+
+        class PinThenCatalog:
+            def quote(self, endpoint_id, model_id, dimension):
+                pin = next(
+                    (
+                        item
+                        for item in pins
+                        if item.endpoint_id == endpoint_id
+                        and item.model_id == model_id
+                    ),
+                    None,
+                )
+                if pin is not None and pin.price_override is not None:
+                    value = pin.price_override.explicit(dimension)
+                    if value is not None:
+                        return PriceQuote(unit_price=value, source="user_override")
+                if catalog is not None:
+                    return catalog.quote(endpoint_id, model_id, dimension)
+                return None
+
         return read_evidence(
             self._store,
             self._redactor,
@@ -1176,7 +1481,7 @@ class RuntimeHost:
             trace_root,
             overrides=self._support_overrides,
             prices=PriceChain(
-                catalog=catalog, static=StaticPriceBook.packaged()
+                catalog=PinThenCatalog(), static=StaticPriceBook.packaged()
             ),
             computed_at=format_instant(self._clock.wall_utc()),
         )
@@ -1381,3 +1686,26 @@ class RuntimeHost:
                 # Result and waiter are one single-consumer slot. Even two
                 # concurrent waits cannot leave the signalled Event behind.
                 self._done.pop(run_id, None)
+
+
+class _NullCatalogTransport:
+    def get(self, url, *, headers, timeout):
+        del url, headers, timeout
+        raise RuntimeError("catalog_transport_unavailable")
+
+
+class _UrllibCatalogTransport:
+    def get(self, url, *, headers, timeout):
+        import json
+        import urllib.error
+        import urllib.request
+
+        request = urllib.request.Request(url, headers=dict(headers), method="GET")
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                return {
+                    "status": response.status,
+                    "body": json.loads(response.read().decode("utf-8") or "{}"),
+                }
+        except urllib.error.HTTPError as exc:
+            return {"status": exc.code, "body": {}}

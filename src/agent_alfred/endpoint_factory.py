@@ -46,10 +46,20 @@ class EndpointClientFactory:
         self._http_client = http_client
         self._pool = VersionedTransportPool(self._build_transport)
 
+    @property
+    def transport_pool(self):
+        return self._pool
+
     def catalog_prices(self):
         from agent_alfred.catalog import CatalogPriceBook
 
         return CatalogPriceBook(self._pool)
+
+    def invalidate_endpoint(self, endpoint_id: str) -> None:
+        self._pool.discard(endpoint_id)
+
+    def invalidate_all(self) -> None:
+        self._pool.discard_all()
 
     def _route(self, snapshot):
         endpoint = next(

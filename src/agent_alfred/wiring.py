@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import sqlite3
 import uuid
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path, PurePath
 from typing import Any
 
 from agent_alfred.clock import Clock, SystemClock
+from agent_alfred.connections import CredentialOverlay
 from agent_alfred.database import open_database
 
 # Compatibility name retained for existing assembly callers.
@@ -36,8 +37,12 @@ from agent_alfred.resource_rollback import (
     ResumableRollback,
     RollbackSlot,
 )
-from agent_alfred.runtime.config import SettingsBackedSnapshotProvider
+from agent_alfred.runtime.config import (
+    SettingsBackedSnapshotProvider,
+    StoreBackedSnapshotProvider,
+)
 from agent_alfred.runtime.host import RuntimeHost
+from agent_alfred.runtime.model_settings import ModelSettingsStore
 from agent_alfred.runtime.snapshot import RuntimeSnapshot
 from agent_alfred.settings import (
     Settings,
@@ -178,6 +183,9 @@ def build_host(
     process_instance_id: str | None = None,
     trace_root: Path | ManagedTraceRoot | TraceRootRequest | None = None,
     snapshot_listener: Callable[[RuntimeSnapshot], None] | None = None,
+    model_settings: ModelSettingsStore | None = None,
+    environ: Mapping[str, str] | None = None,
+    credentials: CredentialOverlay | None = None,
     _rollback: ResumableRollback | None = None,
 ) -> RuntimeHost:
     settings = settings or Settings()
@@ -206,7 +214,14 @@ def build_host(
         rollback.own(fanout)
         for sink in sinks:
             rollback.transfer(sink)
-        provider = SettingsBackedSnapshotProvider(settings)
+        if credentials is not None:
+            environ = credentials.values()
+        if model_settings is None:
+            provider = SettingsBackedSnapshotProvider(settings)
+        else:
+            provider = StoreBackedSnapshotProvider(
+                model_settings, settings, environ=environ
+            )
         host = RuntimeHost(
             conn=conn,
             factory=factory,
@@ -222,6 +237,8 @@ def build_host(
                 if isinstance(factory, EndpointClientFactory)
                 else None
             ),
+            model_settings=model_settings,
+            credentials=credentials,
         )
         # The Host owns the FanOut from here; publishing the aggregate before
         # its part retires keeps one reachable owner across this return edge
@@ -248,6 +265,7 @@ def build_dashboard(
     write_descriptor: Callable[[Path, EntryDescriptor], Path] | None = None,
     lock: Callable[[Any], ProcessLock] | None = None,
     pid: int | None = None,
+    credentials: CredentialOverlay | None = None,
 ) -> DashboardRuntime:
     """Build the one Dashboard object. Take no ownership yet.
 
@@ -307,6 +325,10 @@ def build_dashboard(
                 ),
             )
             rollback.own(broker)
+            model_settings = ModelSettingsStore(
+                state.path / "model_settings.json", clock=clock
+            )
+            model_settings.load()
             host = build_host(
                 conn=conn,
                 factory=resolved_factory,
@@ -316,6 +338,8 @@ def build_dashboard(
                 extra_sinks=[broker, *extra_sinks],
                 process_instance_id=instance,
                 snapshot_listener=broker.publish_state_patch,
+                model_settings=model_settings,
+                credentials=credentials,
                 _rollback=rollback,
             )
             rollback.own(host)
@@ -391,12 +415,17 @@ def build_default_host(
         rollback.own(conn)
         if factory is None:
             factory = OpenCodeGoFactory(clock=clock)
+        model_settings = ModelSettingsStore(
+            state.path / "model_settings.json", clock=clock
+        )
+        model_settings.load()
         host = build_host(
             conn=conn,
             factory=factory,
             settings=settings,
             clock=clock,
             trace_root=(state, PurePath("traces")),
+            model_settings=model_settings,
             _rollback=rollback,
         )
         rollback.own(host)

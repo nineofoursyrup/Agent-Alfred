@@ -24,7 +24,14 @@ AdmissionRefusalKind = Literal[
 # ``AdmissionRefusalKind`` prevents coordinators from claiming it before a
 # committed Run actually exists.
 SubmitKind = (
-    Literal["accepted", "handoff_failed", "model_unsupported"] | AdmissionRefusalKind
+    Literal[
+        "accepted",
+        "handoff_failed",
+        "model_unsupported",
+        "endpoint_unconfigured",
+        "invalid_probe_target",
+    ]
+    | AdmissionRefusalKind
 )
 
 # What admission_reserve answers before the handoff: the refusal vocabulary
@@ -49,6 +56,8 @@ class SubmitRequest:
     # Asynchronous callers observe the durable Run and session read models and
     # must opt out so private reply/attempt/usage payloads are never retained.
     wait_for_result: bool = True
+    endpoint_id: str | None = None
+    model_id: str | None = None
 
     def __post_init__(self) -> None:
         if self.purpose != "chat" and self.session_id is not None:

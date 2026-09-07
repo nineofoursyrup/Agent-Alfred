@@ -2,7 +2,7 @@ import { Stream } from "./stream.js";
 import { node, textBlocks } from "./dom.js";
 import { Progress } from "./progress.js";
 import { ConnectionNotices, Announcer } from "./notices.js";
-import { inbox } from "./pages.js";
+import { inbox, modelsPage, connectionsPage } from "./pages.js";
 import { runsPage, outcomeLabel } from "./runs.js";
 /** @typedef {Record<string, any>} Wire */
 /** @template {Element} T @param {string} id @returns {T} */
@@ -540,16 +540,33 @@ function showDrawer() {
 }
 narrow.addEventListener("change", showDrawer);
 function route() {
-  const isRuns = location.pathname.startsWith("/runs");
+  const path = location.pathname;
+  const isRuns = path.startsWith("/runs");
+  const isModels = path.startsWith("/models");
+  const isConnections = path.startsWith("/connections");
   const heading = document.createElement("h1");
-  heading.textContent = isRuns ? "运行详情" : "Gateway 收件箱";
+  heading.textContent = isRuns
+    ? "运行详情"
+    : isModels
+      ? "模型"
+      : isConnections
+        ? "连接"
+        : "Gateway 收件箱";
   element("page").replaceChildren(heading);
-  if (!isRuns) inbox(element("page"), resume);
-  runPage = isRuns ? runsPage(element("page"), progress, route) : null;
+  runPage = null;
+  if (isModels) modelsPage(element("page"), () => csrf);
+  else if (isConnections) connectionsPage(element("page"), () => csrf);
+  else if (!isRuns) inbox(element("page"), resume);
+  else runPage = runsPage(element("page"), progress, route);
   if (connected) runPage?.sync(active);
   for (const link of document.querySelectorAll("nav a")) {
-    if ((link.getAttribute("href") === "/runs") === isRuns)
-      link.setAttribute("aria-current", "page");
+    const href = link.getAttribute("href");
+    const current =
+      (href === "/runs" && isRuns) ||
+      (href === "/models" && isModels) ||
+      (href === "/connections" && isConnections) ||
+      (href === "/inbox" && !isRuns && !isModels && !isConnections);
+    if (current) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
   }
 }
@@ -625,6 +642,8 @@ document.addEventListener("click", (event) => {
     !(
       link.pathname === "/inbox" ||
       link.pathname === "/runs" ||
+      link.pathname === "/models" ||
+      link.pathname === "/connections" ||
       link.pathname.startsWith("/runs/")
     ) ||
     event.ctrlKey ||

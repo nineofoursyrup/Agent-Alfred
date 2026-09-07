@@ -527,10 +527,41 @@ def test_an_unknown_purpose_is_refused_rather_than_escaped_in() -> None:
 
 def test_a_system_purpose_is_accepted_and_travels_through() -> None:
     api = _api(_accepted())
-    assert api.submit({"message": "hi", "purpose": "inference_probe"}).status == 202
+    assert (
+        api.submit(
+            {
+                "message": "hi",
+                "purpose": "inference_probe",
+                "endpoint_id": "opencode-go",
+                "model_id": "deepseek-v4-flash",
+            }
+        ).status
+        == 202
+    )
     facade = api._facade
     assert facade.requests is not None
     assert facade.requests[0].purpose == "inference_probe"
+
+
+def test_inference_probe_requires_and_forwards_row_identity() -> None:
+    api = _api(_accepted())
+    missing = api.submit({"message": "hi", "purpose": "inference_probe"})
+    assert missing.status == 400
+    assert missing.code == "invalid_probe_target"
+    assert api._facade.requests == []
+    outcome = api.submit(
+        {
+            "message": "hi",
+            "purpose": "inference_probe",
+            "endpoint_id": "opencode-go",
+            "model_id": "qwen3.7-max",
+        }
+    )
+    assert outcome.status == 202
+    request = api._facade.requests[0]
+    assert request.purpose == "inference_probe"
+    assert getattr(request, "endpoint_id", None) == "opencode-go"
+    assert getattr(request, "model_id", None) == "qwen3.7-max"
 
 
 def test_a_system_purpose_cannot_be_attached_to_a_chat_session() -> None:
@@ -653,7 +684,14 @@ def test_a_system_run_still_needs_no_session() -> None:
     """The explicit-Session rule is a Web chat rule. A system purpose keeps
     its successful contract, carrying no Session to admission."""
     api = _api(_accepted())
-    outcome = api.submit({"message": "hi", "purpose": "inference_probe"})
+    outcome = api.submit(
+        {
+            "message": "hi",
+            "purpose": "inference_probe",
+            "endpoint_id": "opencode-go",
+            "model_id": "deepseek-v4-flash",
+        }
+    )
     assert outcome.status == 202
     facade = api._facade
     assert facade.requests is not None

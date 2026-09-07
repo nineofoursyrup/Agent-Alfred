@@ -366,6 +366,78 @@ class DashboardApi:
             return 404, {"code": "unknown_run"}
         return 200, result
 
+    def connections(self) -> tuple[int, Any]:
+        return 200, self._facade.connections()
+
+    def models(self, params: dict[str, str]) -> tuple[int, Any]:
+        expand = params.get("expand")
+        refresh = params.get("refresh") == "1"
+        return 200, self._facade.models(expand=expand, refresh=refresh)
+
+    def mutate_settings(self, body: dict[str, Any]) -> tuple[int, Any]:
+        from agent_alfred.runtime.model_settings import ModelSettingsError
+
+        reason = self._facade.try_begin_mutation()
+        if reason is not None:
+            status = (
+                503
+                if reason in {"recording_unavailable", "admission_failed"}
+                else 409
+            )
+            return status, {"code": reason}
+        try:
+            payload = self._facade.apply_settings(body)
+            return 200, payload
+        except ModelSettingsError as exc:
+            status = 409 if exc.code in {"settings_conflict", "pin_assigned"} else 400
+            body_out: dict[str, Any] = {"code": exc.code}
+            if exc.cause is not None:
+                body_out["cause"] = exc.cause
+            return status, body_out
+        finally:
+            self._facade.end_mutation()
+
+    def reread_env(self) -> tuple[int, Any]:
+        reason = self._facade.try_begin_mutation()
+        if reason is not None:
+            status = (
+                503
+                if reason in {"recording_unavailable", "admission_failed"}
+                else 409
+            )
+            return status, {"code": reason}
+        try:
+            self._facade.reread_dotenv()
+            return 200, self._facade.connections()
+        except RuntimeError:
+            return 400, {"code": "dotenv_unavailable"}
+        finally:
+            self._facade.end_mutation()
+
+    def probe_auth(self, body: dict[str, Any]) -> tuple[int, Any]:
+        from agent_alfred.auth_probe import AuthProbeRefused
+
+        if set(body) - {"endpoint_id"}:
+            return 400, {"code": "unexpected_fields"}
+        endpoint_id = body.get("endpoint_id")
+        if type(endpoint_id) is not str or not endpoint_id:
+            return 400, {"code": "invalid_endpoint"}
+        reason = self._facade.try_begin_mutation()
+        if reason is not None:
+            status = (
+                503
+                if reason in {"recording_unavailable", "admission_failed"}
+                else 409
+            )
+            return status, {"code": reason}
+        try:
+            self._facade.probe_auth(endpoint_id)
+            return 200, self._facade.connections()
+        except AuthProbeRefused as exc:
+            return exc.status, {"code": exc.code}
+        finally:
+            self._facade.end_mutation()
+
     def create_session(self) -> CreateSessionResult:
         # The id is minted by the server and never taken from the client: a
         # Session is not a label the caller gets to choose, and letting it
@@ -401,6 +473,19 @@ class DashboardApi:
             return SubmitOutcome(status=400, code="bad_session_id")
         if purpose != "chat" and session_id is not None:
             return SubmitOutcome(status=400, code="unexpected_session_id")
+        endpoint_id = body.get("endpoint_id")
+        model_id = body.get("model_id")
+        if purpose == "inference_probe":
+            if (
+                type(endpoint_id) is not str
+                or not endpoint_id
+                or type(model_id) is not str
+                or not model_id
+            ):
+                return SubmitOutcome(status=400, code="invalid_probe_target")
+        else:
+            endpoint_id = None
+            model_id = None
         refusal = self._gate.preflight_submit()
         if refusal is not None:
             return self._outcome(refusal)
@@ -420,6 +505,8 @@ class DashboardApi:
                 gateway="web",
                 entry_surface_id="mainbar",
                 wait_for_result=False,
+                endpoint_id=endpoint_id,
+                model_id=model_id,
             )
         )
         if result is None:
@@ -444,6 +531,10 @@ class DashboardApi:
             )
         if result.kind == "model_unsupported":
             return SubmitOutcome(status=409, code="model_unsupported")
+        if result.kind == "endpoint_unconfigured":
+            return SubmitOutcome(status=409, code="endpoint_unconfigured")
+        if result.kind == "invalid_probe_target":
+            return SubmitOutcome(status=400, code="invalid_probe_target")
         if result.kind == "handoff_failed":
             # The committed Run is unreachable, including through a busy-card
             # navigation target. Return before consulting a failed-recording

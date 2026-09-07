@@ -35,7 +35,10 @@ from agent_alfred.model import (
 )
 from agent_alfred.redact import Redactor
 from agent_alfred.runtime.admission import RunAdmission
-from agent_alfred.runtime.config import SettingsBackedSnapshotProvider
+from agent_alfred.runtime.config import (
+    MutableAssignmentProvider,
+    SettingsBackedSnapshotProvider,
+)
 from agent_alfred.runtime.execution import RunExecutor
 from agent_alfred.runtime.host import RuntimeHost, SubmitRequest
 from agent_alfred.runtime.recording import RecordingStore
@@ -1060,12 +1063,26 @@ def test_startup_recovery_marks_leftover_runs_interrupted() -> None:
         host.close()
 
 
+def _probe_provider() -> MutableAssignmentProvider:
+    return MutableAssignmentProvider(
+        endpoint_id="opencode-go",
+        model_id="deepseek-v4-flash",
+        wire_style="openai",
+        api_key="sk-test-probe",
+    )
+
+
 def test_inference_probe_persists_telemetry_without_messages() -> None:
-    host, conn, _ = _host(["ok"])
+    host, conn, _ = _host(["ok"], snapshot_provider=_probe_provider())
     host.start()
     try:
         submitted = host.submit(
-            SubmitRequest(message="probe", purpose="inference_probe")
+            SubmitRequest(
+                message="probe",
+                purpose="inference_probe",
+                endpoint_id="opencode-go",
+                model_id="deepseek-v4-flash",
+            )
         )
         assert submitted.kind == "accepted"
         host.wait(submitted.run_id)
@@ -2731,11 +2748,16 @@ def test_events_none_and_inference_probe_still_record_usage() -> None:
         serialize_run_telemetry((model_result,), False, None, redactor=None)
     )
     assert serialized["attempts"][0]["usage"]["total_input_tokens"] == 9
-    host, conn, _ = _host([model_result])
+    host, conn, _ = _host([model_result], snapshot_provider=_probe_provider())
     host.start()
     try:
         submitted = host.submit(
-            SubmitRequest(message="probe", purpose="inference_probe")
+            SubmitRequest(
+                message="probe",
+                purpose="inference_probe",
+                endpoint_id="opencode-go",
+                model_id="deepseek-v4-flash",
+            )
         )
         host.wait(submitted.run_id)
         assert conn.execute("SELECT COUNT(*) FROM agent_log").fetchone() == (0,)
