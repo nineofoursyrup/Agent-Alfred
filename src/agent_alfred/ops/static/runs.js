@@ -347,12 +347,18 @@ function renderCost(root, charge) {
     return;
   }
   root.append(node("p", `${charge.state} · USD ${charge.amount}`));
-  if (charge.state === "estimated")
-    for (const component of charge.price_components || [])
+  if (charge.state === "estimated") {
+    const components = charge.price_components || [];
+    let tiered = false;
+    for (const component of components) {
       root.append(
         node(
           "small",
           `${component.dimension}: ${component.price_source || component.source}${component.stale ? " · stale" : ""} `,
         ),
       );
+      if (component.tiered) tiered = true;
+    }
+    if (tiered) root.append(node("p", "按基础档估算"));
+  }
 }

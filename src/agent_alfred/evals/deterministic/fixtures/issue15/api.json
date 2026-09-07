@@ -1,0 +1,40 @@
+{
+  "opencode-go": {
+    "id": "opencode-go",
+    "name": "OpenCode Go",
+    "api": "https://opencode.ai/zen/go/v1",
+    "env": ["OPENCODE_API_KEY"],
+    "models": {
+      "deepseek-v4-flash": {
+        "cost": {"input": 0.22, "output": 0.66, "cache_read": 0.007},
+        "limit": {"context": 1000000, "output": 384000}
+      },
+      "gpt-5.1": {
+        "cost": {
+          "input": 1.25,
+          "output": 10,
+          "cache_read": 0.125,
+          "tiers": [{"min": 200000}]
+        }
+      },
+      "free-demo": {
+        "cost": {"input": 0.0, "output": 0.0}
+      },
+      "no-cost": {
+        "id": "no-cost"
+      }
+    }
+  },
+  "opencode": {
+    "id": "opencode",
+    "name": "OpenCode Zen",
+    "api": "https://opencode.ai/zen/v1",
+    "env": ["OPENCODE_API_KEY"],
+    "models": {
+      "deepseek-v4-flash": {
+        "cost": {"input": 0.14, "output": 0.28, "cache_read": 0.03},
+        "limit": {"context": 1000000, "output": 384000}
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+This package includes a historical price snapshot derived from models.dev.
+
+Source: https://models.dev/api.json
+Repository: https://github.com/anomalyco/models.dev
+Copyright (c) 2025 models.dev
+License: MIT
+
+The snapshot is a fallback table, not a live quote. Redistribution retains
+the copyright and permission notice required by the MIT license of models.dev.

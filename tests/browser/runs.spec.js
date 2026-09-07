@@ -26,6 +26,7 @@ test("a real recorded Run deep link loads published Attempt evidence and exact c
   await expect(detail).toContainText("committed");
   await expect(detail).toContainText("exact");
   await expect(detail).toContainText("0.125");
+  await expect(detail).not.toContainText("按基础档估算");
   await expect(detail).toContainText("离线模型回复");
   await expect(
     page.getByRole("main").locator('[data-highlighted="true"]'),
@@ -125,6 +126,21 @@ test("aborted attempts stay in publication position and unknown cost never has a
               ],
             },
           },
+          {
+            attempt_id: "tiered",
+            usage: { output_tokens: 6 },
+            cost: {
+              state: "estimated",
+              amount: "0.007",
+              price_components: [
+                {
+                  dimension: "output",
+                  price_source: "model_static",
+                  tiered: true,
+                },
+              ],
+            },
+          },
         ],
         events: [
           fact(8, "good", "attempt.committed", {
@@ -139,6 +155,10 @@ test("aborted attempts stay in publication position and unknown cost never has a
             blocks: [{ type: "text", text: "已作废片段" }],
           }),
           fact(6, "good", "attempt.started"),
+          fact(10, "tiered", "attempt.committed", {
+            blocks: [{ type: "text", text: "阶梯快照" }],
+          }),
+          fact(9, "tiered", "attempt.started"),
         ],
       },
     }),
@@ -153,14 +173,23 @@ test("aborted attempts stay in publication position and unknown cost never has a
   await expect(summaries).toHaveText([
     "Attempt · seq 4 · aborted（已撤回）",
     "Attempt · seq 6 · committed",
+    "Attempt · seq 9 · committed",
   ]);
   await expect(detail.getByText("已作废片段", { exact: true })).toBeHidden();
   await summaries.first().click();
-  await expect(detail).toContainText("未进入回答但已产生 Token／费用");
-  await expect(detail).toContainText("unknown · 费用未知");
-  await expect(detail).not.toContainText("999");
-  await expect(detail).toContainText("estimated · USD 0.006");
-  await expect(detail).toContainText("output: catalog · stale");
+  const aborted = detail.locator('details[data-attempt="aborted"]');
+  const estimated = detail.locator('details[data-attempt="good"]');
+  const tiered = detail.locator('details[data-attempt="tiered"]');
+  await expect(aborted).toContainText("未进入回答但已产生 Token／费用");
+  await expect(aborted).toContainText("unknown · 费用未知");
+  await expect(aborted).not.toContainText("999");
+  await expect(aborted).not.toContainText("按基础档估算");
+  await expect(estimated).toContainText("estimated · USD 0.006");
+  await expect(estimated).toContainText("output: catalog · stale");
+  await expect(estimated).not.toContainText("按基础档估算");
+  await expect(tiered).toContainText("estimated · USD 0.007");
+  await expect(tiered).toContainText("output: model_static");
+  await expect(tiered).toContainText("按基础档估算");
   await expect(detail).toContainText("thinking × 1");
   await expect(detail).not.toContainText("不应显示的思考");
   await expect(detail).not.toContainText("工具参数");
@@ -182,6 +211,7 @@ test("durable accounting survives absent trace and event usage cannot manufactur
   const detail = page.getByRole("region", {name: "运行过程"});
   await expect(detail).toContainText("output_tokens: 42");
   await expect(detail).toContainText("exact · USD 0.42");
+  await expect(detail).not.toContainText("按基础档估算");
   await expect(detail).toContainText("过程顺序不可用");
   missing = false;
   await page.reload();

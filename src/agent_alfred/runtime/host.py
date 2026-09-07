@@ -1162,14 +1162,23 @@ class RuntimeHost:
     # -- public session read side (ADR-0027); callers never write SQL --
 
     def read_run_evidence(self, run_id: str, *, trace_root: Path) -> dict | None:
+        from agent_alfred.pricing import PriceChain, StaticPriceBook
         from agent_alfred.runtime.evidence import read_evidence
 
+        catalog = None
+        catalog_prices = getattr(self._factory, "catalog_prices", None)
+        if callable(catalog_prices):
+            catalog = catalog_prices()
         return read_evidence(
             self._store,
             self._redactor,
             run_id,
             trace_root,
             overrides=self._support_overrides,
+            prices=PriceChain(
+                catalog=catalog, static=StaticPriceBook.packaged()
+            ),
+            computed_at=format_instant(self._clock.wall_utc()),
         )
 
     def list_sessions(

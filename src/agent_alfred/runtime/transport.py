@@ -50,3 +50,7 @@ class VersionedTransportPool:
     def cached_catalog(self, endpoint_id: str) -> object | None:
         with self._lock:
             return self._catalog.get(endpoint_id)
+
+    def store_catalog(self, endpoint_id: str, value: object) -> None:
+        with self._lock:
+            self._catalog[endpoint_id] = value
