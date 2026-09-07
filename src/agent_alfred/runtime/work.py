@@ -23,7 +23,9 @@ AdmissionRefusalKind = Literal[
 # a submit result, never a preflight/reserve refusal: keeping it out of
 # ``AdmissionRefusalKind`` prevents coordinators from claiming it before a
 # committed Run actually exists.
-SubmitKind = Literal["accepted", "handoff_failed"] | AdmissionRefusalKind
+SubmitKind = (
+    Literal["accepted", "handoff_failed", "model_unsupported"] | AdmissionRefusalKind
+)
 
 # What admission_reserve answers before the handoff: the refusal vocabulary
 # plus the internal "reserved" outcome that never escapes into a SubmitResult.

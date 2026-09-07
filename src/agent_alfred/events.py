@@ -27,6 +27,7 @@ from agent_alfred.model import (
     ModelError,
     ModelRef,
     StopReason,
+    ToolChoice,
     Usage,
     parse_stop_reason,
 )
@@ -185,6 +186,7 @@ class StepStarted:
     system: tuple[TextBlock, ...] | None = None
     message_count: int = 0
     tool_names: tuple[str, ...] = ()
+    tool_choice: ToolChoice = "auto"
     max_tokens: int | None = None
 
 
@@ -239,13 +241,20 @@ class AttemptCommitted:
 
 
 @dataclass(frozen=True)
+class RawToolArgumentFragment:
+    call_id: str | None
+    name: str | None
+    raw: str
+
+
+@dataclass(frozen=True)
 class AttemptAborted:
     name: str = "attempt.aborted"
     trace_policy: TracePolicy = "persist"
     attempt_id: str = ""
     partial: bool = False
     blocks: tuple[Block, ...] = ()
-    unparsed_tool_arguments: tuple[tuple[str, str], ...] = ()
+    unparsed_tool_arguments: tuple[RawToolArgumentFragment, ...] = ()
     usage: Usage | None = None
     error: ModelError | None = None
     duration_ms: int = 0

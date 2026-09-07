@@ -61,6 +61,11 @@ from agent_alfred.runtime.work import (
 )
 from agent_alfred.session_validity import SessionValidity
 from agent_alfred.settings import Settings
+from agent_alfred.support_overrides import (
+    SupportOverrides,
+    SupportRecorder,
+    SupportRule,
+)
 
 __all__ = [
     "RuntimeHost",
@@ -282,7 +287,10 @@ class RuntimeHost:
         before_recording_failed: threading.Event | None = None,
         snapshot_provider: ConfigSnapshotProvider | None = None,
         snapshot_listener: Callable[[RuntimeSnapshot], None] | None = None,
+        support_overrides: SupportOverrides | None = None,
+        support_rule: SupportRule | None = None,
     ):
+        self._support_overrides = support_overrides or SupportOverrides()
         self._conn = conn
         self._factory = factory
         self._settings = settings
@@ -368,6 +376,9 @@ class RuntimeHost:
             recorder=self._recorder,
             coordinator=self,
             work_queue=self._queue,
+            support_recorder=SupportRecorder(
+                self._support_overrides, self._redactor, clock, support_rule
+            ),
         )
         self._worker = threading.Thread(
             target=self._executor.run_loop, name="run-worker", daemon=True
@@ -1153,7 +1164,13 @@ class RuntimeHost:
     def read_run_evidence(self, run_id: str, *, trace_root: Path) -> dict | None:
         from agent_alfred.runtime.evidence import read_evidence
 
-        return read_evidence(self._store, self._redactor, run_id, trace_root)
+        return read_evidence(
+            self._store,
+            self._redactor,
+            run_id,
+            trace_root,
+            overrides=self._support_overrides,
+        )
 
     def list_sessions(
         self,

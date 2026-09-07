@@ -10,6 +10,9 @@ from typing import Any
 
 from agent_alfred.clock import Clock, SystemClock
 from agent_alfred.database import open_database
+
+# Compatibility name retained for existing assembly callers.
+from agent_alfred.endpoint_factory import EndpointClientFactory
 from agent_alfred.events import BarrierFlushResult, EventSink, FanOutSink
 from agent_alfred.gateway.web.broker import SSEBroker
 from agent_alfred.gateway.web.lifecycle import (
@@ -25,74 +28,25 @@ from agent_alfred.managed_state import (
     ManagedTraceRoot,
 )
 from agent_alfred.model import (
-    ClientSnapshot,
-    EndpointUnconfigured,
-    ModelClient,
     ModelClientFactory,
-    ModelRef,
 )
-from agent_alfred.openai_compatible import OpenAICompatibleAdapter
 from agent_alfred.redact import Redactor
 from agent_alfred.resource_rollback import (
     ConstructionOwner,
     ResumableRollback,
     RollbackSlot,
 )
-from agent_alfred.retry import RetryPolicy, SystemSleeper
 from agent_alfred.runtime.config import SettingsBackedSnapshotProvider
 from agent_alfred.runtime.host import RuntimeHost
 from agent_alfred.runtime.snapshot import RuntimeSnapshot
-from agent_alfred.runtime.transport import VersionedTransportPool
 from agent_alfred.settings import (
-    OPENCODE_GO_BASE_URL,
     Settings,
     load_settings,
     resolve_state_dir,
 )
-from agent_alfred.stream_fallback import StreamFallback
 from agent_alfred.trace import RunBundleTraceSink
 
-
-class OpenCodeGoFactory:
-    def __init__(self, *, clock: Clock):
-        self._clock = clock
-        self._pool = VersionedTransportPool(self._build_transport)
-
-    def _build_transport(self, snapshot: ClientSnapshot) -> object:
-        if snapshot.api_key is None:
-            raise EndpointUnconfigured("endpoint_unconfigured")
-        from openai import OpenAI
-
-        return OpenAI(
-            base_url=OPENCODE_GO_BASE_URL,
-            api_key=snapshot.api_key,
-        )
-
-    def create(self, snapshot: ClientSnapshot) -> ModelClient:
-        if snapshot.api_key is None:
-            raise EndpointUnconfigured("endpoint_unconfigured")
-        transport = self._pool.client_for(snapshot)
-        model = ModelRef(
-            endpoint_id=snapshot.endpoint_id, model_id=snapshot.model_id
-        )
-        streaming = OpenAICompatibleAdapter(
-            client=transport, model=model, stream=True
-        )
-        nonstream = OpenAICompatibleAdapter(
-            client=transport, model=model, stream=False
-        )
-        return RetryPolicy(
-            StreamFallback(
-                streaming,
-                clock=self._clock,
-                stream=snapshot.stream,
-                stream_fallback=snapshot.stream_fallback,
-                per_attempt_timeout_s=snapshot.per_attempt_timeout_s,
-                nonstream=nonstream,
-            ),
-            clock=self._clock,
-            sleeper=SystemSleeper(),
-        )
+OpenCodeGoFactory = EndpointClientFactory
 
 
 def _secrets_from_env(settings: Settings) -> tuple[str, ...]:
@@ -102,7 +56,7 @@ def _secrets_from_env(settings: Settings) -> tuple[str, ...]:
     if raw is None:
         return ()
     value = raw.strip()
-    if len(value) < 8:
+    if not value:
         return ()
     return (value,)
 
@@ -230,7 +184,9 @@ def build_host(
     clock = clock or SystemClock()
     instance_id = process_instance_id or uuid.uuid4().hex
     secrets = _secrets_from_env(settings)
-    redactor = Redactor(secrets)
+    redactor = Redactor(())
+    for secret in secrets:
+        redactor.remember(secret, credential=True)
     owner = ConstructionOwner(_rollback)
     rollback = owner.rollback
     try:
@@ -261,6 +217,11 @@ def build_host(
             redactor=redactor,
             snapshot_provider=provider,
             snapshot_listener=snapshot_listener,
+            support_overrides=(
+                factory.support_overrides
+                if isinstance(factory, EndpointClientFactory)
+                else None
+            ),
         )
         # The Host owns the FanOut from here; publishing the aggregate before
         # its part retires keeps one reachable owner across this return edge

@@ -38,6 +38,7 @@ from agent_alfred.runtime.recording import RecordingStore, RunRecorder
 from agent_alfred.runtime.snapshot import ActiveRunSummary
 from agent_alfred.runtime.work import WorkItem
 from agent_alfred.settings import CONTROLLED_FAILURE_TEXT, Settings
+from agent_alfred.support_overrides import SupportRecorder
 
 
 class ExecutionCoordinator(Protocol):
@@ -113,7 +114,8 @@ class _AttemptLedger:
     streaming fallback a Step spent are already inside ``ModelResult.attempts``.
     """
 
-    def __init__(self, client: ModelClient):
+    def __init__(self, client: ModelClient, observe=None):
+        self._observe = observe
         self._client = client
         self.model_results: tuple[ModelResult, ...] = ()
 
@@ -126,6 +128,8 @@ class _AttemptLedger:
     ) -> ModelResult:
         result = self._client.respond(request, events=events, deadline=deadline)
         self.model_results += (result,)
+        if self._observe is not None:
+            self._observe(result, events)
         return result
 
 
@@ -142,7 +146,9 @@ class RunExecutor:
         recorder: RunRecorder,
         coordinator: ExecutionCoordinator,
         work_queue: "queue.Queue[WorkItem | None]",
+        support_recorder: SupportRecorder | None = None,
     ):
+        self._support_recorder = support_recorder
         self._clock = clock
         self._settings = settings
         self._redactor = redactor
@@ -183,7 +189,16 @@ class RunExecutor:
         error: str | None = None
         step_count = 0
         duration_ms = 0
-        ledger = _AttemptLedger(item.client)
+        ledger = _AttemptLedger(
+            item.client,
+            lambda result, events: (
+                self._support_recorder.observe(
+                    item.snapshot, item.run_id, result, events
+                )
+                if self._support_recorder is not None
+                else None
+            ),
+        )
         try:
             # The clock is an injected collaborator and therefore belongs
             # inside the same terminal ownership scope as every later Run

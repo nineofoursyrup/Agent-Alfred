@@ -4,11 +4,16 @@ import argparse
 import json
 import signal
 import sqlite3
+import sys
 import threading
 from contextlib import nullcontext
 from decimal import Decimal
 from pathlib import Path
 from tempfile import TemporaryDirectory
+
+# Child-process tests deliberately clear PYTHONPATH. Keep their application
+# import tied to this checkout when dependencies come from a shared runtime.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from agent_alfred import schema
 from agent_alfred.events import AttemptCommitted, AttemptStarted

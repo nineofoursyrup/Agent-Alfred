@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import threading
 import uuid
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from decimal import Decimal
 from typing import Any, Literal, Protocol, cast, get_args
@@ -129,16 +129,36 @@ def mark_final_error_non_retryable(result: ModelResult) -> ModelResult:
 
 
 @dataclass(frozen=True)
+class ToolSpec:
+    name: str
+    description: str
+    input_schema: Mapping[str, Any]
+
+
+@dataclass(frozen=True)
+class NamedToolChoice:
+    name: str
+
+
+ToolChoice = Literal["auto", "none", "required"] | NamedToolChoice
+
+
+@dataclass(frozen=True)
 class ModelRequest:
     model: ModelRef
     system: tuple[TextBlock, ...] | None
     messages: tuple[Message, ...]
-    tools: tuple[Any, ...] = ()
+    tools: tuple[ToolSpec, ...] = ()
     max_tokens: int | None = None
+    tool_choice: ToolChoice = "auto"
 
 
 class EndpointUnconfigured(Exception):
     """No credential is available; no network round-trip may be sent."""
+
+
+class ModelUnsupported(Exception):
+    """The pinned shape is unsupported; preserve the assignment without sending."""
 
 
 class ModelClient(Protocol):

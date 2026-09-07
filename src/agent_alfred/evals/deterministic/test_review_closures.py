@@ -36,11 +36,12 @@ from agent_alfred.model import (
     ScriptedModelFactory,
 )
 from agent_alfred.openai_compatible import OpenAICompatibleAdapter
+from agent_alfred.redact import Redactor
 from agent_alfred.runtime.config import MutableAssignmentProvider
 from agent_alfred.runtime.host import RuntimeHost, SubmitRequest
 from agent_alfred.settings import Settings
 from agent_alfred.stream_fallback import StreamFallback
-from agent_alfred.wiring import OpenCodeGoFactory, open_database
+from agent_alfred.wiring import OpenCodeGoFactory, build_host, open_database
 
 SECRET = "supersecret-key-value"
 ROTATED = "rotated-secret-key-value"
@@ -196,6 +197,9 @@ def _stream_chunks(parts: list[str], *, finish: str | None):
             ),
         )
     )
+    if finish is not None:
+        # This fake represents a clean wire completion, not a bare socket EOF.
+        chunks.append("[DONE]")
     return chunks
 
 
@@ -289,6 +293,127 @@ def _dumped_events(capture: CapturingSink) -> str:
 
 
 # --- 1. rotated key must enter the shared redactor before preview ---
+
+
+@pytest.mark.parametrize(
+    "credential",
+    ["Z", "Z7", "Z7k3", "Z7k3p9Q", "Z7k3p9Q2", "synthetic-credential-long"],
+)
+def test_explicit_credentials_ignore_only_the_credential_length_threshold(
+    credential: str,
+) -> None:
+    redactor = Redactor(("ordinary",), min_length=12)
+    redactor.remember("unrelated")
+    redactor.remember(credential, credential=True)
+
+    assert redactor.redact_text(f"value: {credential}") == "value: ***"
+    assert redactor.redact_text("ordinary unrelated text") == "ordinary unrelated text"
+
+
+@pytest.mark.parametrize("credential", [None, ""])
+def test_empty_explicit_credentials_leave_text_unchanged(credential) -> None:
+    redactor = Redactor(())
+    redactor.remember(credential, credential=True)
+
+    assert redactor.redact_text("ordinary text") == "ordinary text"
+    assert redactor.redact_text("") == ""
+
+
+def test_ordinary_secret_registration_keeps_its_default_threshold() -> None:
+    redactor = Redactor(("short", "synthetic-long-one"))
+    redactor.remember("tiny")
+    redactor.remember("synthetic-long-two")
+
+    assert redactor.redact_text(
+        "short tiny synthetic-long-one synthetic-long-two"
+    ) == "short tiny *** ***"
+
+
+@pytest.mark.parametrize(
+    "credential",
+    ["Z", "Z7", "Z7k3p9Q", "Z7k3p9Q2", "synthetic-credential-long", None, "", " \t "],
+)
+def test_loaded_credentials_protect_events_before_first_admission(
+    monkeypatch, credential,
+) -> None:
+    settings = Settings(api_key_env="ISSUE14_SYNTHETIC_API_KEY")
+    if credential is None:
+        monkeypatch.delenv(settings.api_key_env, raising=False)
+    else:
+        monkeypatch.setenv(settings.api_key_env, credential)
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    capture = CapturingSink(name="capture", flush_at_run_end=True)
+    host = build_host(
+        conn=conn,
+        factory=ScriptedModelFactory(ScriptedModel(["unused"])),
+        settings=settings,
+        clock=FakeClock(),
+        extra_sinks=(capture,),
+    )
+    try:
+        has_credential = credential is not None and bool(credential.strip())
+        text = f"value: {credential}" if has_credential else "ordinary text"
+        host.note_sink_disabled("capture", text)
+        detail = dict(capture.events[-1].payload.detail)
+        assert detail == {
+            "sink": "capture",
+            "stage": "value: ***" if has_credential else "ordinary text",
+        }
+    finally:
+        host.close()
+        conn.close()
+
+
+def test_rotated_credentials_remain_protected_without_changing_plain_text(
+    monkeypatch,
+) -> None:
+    settings = Settings(api_key_env="ISSUE14_SYNTHETIC_API_KEY")
+    initial = "initial-synthetic-credential"
+    monkeypatch.setenv(settings.api_key_env, initial)
+    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(conn)
+    capture = CapturingSink(name="capture", flush_at_run_end=True)
+    factory = ScriptedModelFactory(ScriptedModel(["ordinary reply"]))
+    host = build_host(
+        conn=conn,
+        factory=factory,
+        settings=settings,
+        clock=FakeClock(),
+        extra_sinks=(capture,),
+    )
+    registered = [initial]
+    host.start()
+    try:
+        for credential in (
+            "Z", "X9", "Q7m2r4T", "B8k3s5R2", "synthetic-rotated-long",
+            "", " \t ", None,
+        ):
+            if credential is None:
+                monkeypatch.delenv(settings.api_key_env, raising=False)
+            else:
+                monkeypatch.setenv(settings.api_key_env, credential)
+            submitted = host.submit(SubmitRequest(message="ordinary text"))
+            assert submitted.kind == "accepted"
+            host.wait(submitted.run_id)
+            has_credential = credential is not None and bool(credential.strip())
+            assert factory.snapshots[-1].api_key == (
+                credential if has_credential else None
+            )
+            if has_credential:
+                registered.append(credential)
+            for known in registered:
+                host.note_sink_disabled("capture", f"value: {known}")
+                assert dict(capture.events[-1].payload.detail) == {
+                    "sink": "capture", "stage": "value: ***",
+                }
+            host.note_sink_disabled("capture", "ordinary text")
+            assert dict(capture.events[-1].payload.detail) == {
+                "sink": "capture", "stage": "ordinary text",
+            }
+    finally:
+        host.close()
+        conn.close()
 
 
 def test_rotated_key_is_redacted_on_the_first_run_preview() -> None:

@@ -53,9 +53,7 @@ class _RuntimeStateProbe:
                 self._waiters.pop(state, None)
 
 
-_STATE_PROBES: WeakKeyDictionary[RuntimeHost, _RuntimeStateProbe] = (
-    WeakKeyDictionary()
-)
+_STATE_PROBES: WeakKeyDictionary[RuntimeHost, _RuntimeStateProbe] = WeakKeyDictionary()
 
 
 def wait_for_state(
@@ -231,6 +229,8 @@ def build_runtime_host(
     snapshot_listener=None,
     snapshot_provider=None,
     redactor=None,
+    support_overrides=None,
+    support_rule=None,
 ):
     database = conn
     if database is None:
@@ -259,6 +259,8 @@ def build_runtime_host(
         snapshot_listener=publish_snapshot,
         snapshot_provider=snapshot_provider,
         redactor=redactor,
+        support_overrides=support_overrides,
+        support_rule=support_rule,
     )
     _STATE_PROBES[host] = state_probe
     return host, database

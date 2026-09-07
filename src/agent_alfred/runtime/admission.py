@@ -26,7 +26,7 @@ from typing import Final, Literal, Protocol
 from agent_alfred import schema
 from agent_alfred.clock import Clock, format_instant
 from agent_alfred.loop.assistant import LoopResult
-from agent_alfred.model import ModelClientFactory
+from agent_alfred.model import ModelClientFactory, ModelUnsupported
 from agent_alfred.redact import Redactor
 from agent_alfred.resource_rollback import (
     ResumableRollback,
@@ -290,7 +290,7 @@ class RunAdmission:
         # take back.
         try:
             captured = self._snapshot_provider.capture(stream=request.stream)
-            self._redactor.remember(captured.api_key)
+            self._redactor.remember(captured.api_key, credential=True)
         except Exception:
             return SubmitResult(kind="admission_failed")
         summary = ActiveRunSummary(
@@ -387,6 +387,8 @@ class RunAdmission:
                 raise cleanup_error from failure
             if stage == "reserving":
                 raise failure
+            if isinstance(failure, ModelUnsupported):
+                return SubmitResult(kind="model_unsupported")
             return SubmitResult(kind="admission_failed")
 
         assert item is not None

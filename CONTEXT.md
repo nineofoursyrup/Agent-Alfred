@@ -174,8 +174,12 @@ _Avoid_: Gateway、网关、供应商、provider、Adapter
 
 **support_basis（支持依据）**：
 支持三态这个**结论**是凭什么下的：`builtin_table`（内置表声明）
-或 `probe_evidence`（探测到的证据，须写进 trace）。
+或 `probe_evidence`（已生效的形状覆盖证据，trace 是其审计副本）。
 它只记**系统自己的**依据——用户手选 style 不是依据，那是 `wire_style_source` 的事。
+
+**支持覆盖（support override）**：
+本进程中对某个端点、模型及线路形状的不支持结论，叠加在内置声明之上而不改变指派。
+重启丢弃覆盖不等于重新验证成功；已落盘审计证据仍可保留。
 
 **钉选模型（pinned model）**：
 用户在 Models 页留存下来的一条模型记录，键是 `(endpoint_id, model_id)`。

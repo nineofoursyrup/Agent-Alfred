@@ -1,0 +1,1 @@
+{"_type": "StepStarted", "name": "step.started", "trace_policy": "persist", "step_index": 0, "system": null, "message_count": 2, "tool_names": ["t"], "max_tokens": null}
