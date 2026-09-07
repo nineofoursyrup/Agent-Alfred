@@ -12,10 +12,12 @@ from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
 from agent_alfred.events import AttemptCommitted, AttemptStarted
 from agent_alfred.messages import TextBlock, ThinkingBlock
 from agent_alfred.model import (
+    AttemptRecord,
     ModelResponse,
     ModelResult,
     ScriptedModel,
     ScriptedModelFactory,
+    Usage,
 )
 from agent_alfred.runtime.work import SubmitRequest
 from agent_alfred.wiring import build_dashboard
@@ -27,7 +29,9 @@ class EvidenceModel(ScriptedModel):
         attempt = result.attempts[0]
         blocks = (TextBlock("正文快照"), ThinkingBlock("不得进入界面的思考正文"))
         if events is not None:
-            events.emit(AttemptStarted(attempt_id=attempt.attempt_id))
+            events.emit(AttemptStarted(
+                attempt_id=attempt.attempt_id, model=request.model,
+            ))
             events.emit(AttemptCommitted(
                 attempt_id=attempt.attempt_id, blocks=blocks, usage=attempt.usage,
             ))
@@ -77,6 +81,58 @@ def test_evidence_http_exposes_text_and_types_without_thinking_body(recorded):
     assert '"type": "thinking"' in encoded
     assert "不得进入界面的思考正文" not in encoded
     assert body["attempts"][0]["cost"] == {"state": "unknown"}
+
+
+class PricedEvidenceModel(EvidenceModel):
+    def respond(self, request, *, events=None, deadline=None):
+        usage = Usage(uncached_input_tokens=10, output_tokens=5)
+        attempt_id = "priced-attempt"
+        blocks = (TextBlock("正文快照"),)
+        if events is not None:
+            events.emit(AttemptStarted(attempt_id=attempt_id, model=request.model))
+            events.emit(AttemptCommitted(
+                attempt_id=attempt_id, blocks=blocks, usage=usage,
+            ))
+        return ModelResult(
+            attempts=(
+                AttemptRecord(
+                    attempt_id=attempt_id,
+                    streamed=False,
+                    outcome="committed",
+                    usage=usage,
+                ),
+            ),
+            response=ModelResponse(blocks, "end_turn", request.model),
+            final_error=None,
+        )
+
+
+def test_evidence_http_projects_estimated_cost_from_static_prices(tmp_path):
+    port = free_loopback_port()
+    dashboard = build_dashboard(
+        state_dir=tmp_path, port=port,
+        factory=ScriptedModelFactory(PricedEvidenceModel([])),
+    )
+    try:
+        dashboard.start()
+        host = dashboard.host
+        submitted = host.submit(SubmitRequest(
+            message="费用投影", session_id=host.create_session(),
+        ))
+        host.wait(submitted.run_id)
+        body = read(port, submitted.run_id)
+    finally:
+        assert dashboard.close()
+    charge = body["attempts"][0]["cost"]
+    assert charge["state"] == "estimated"
+    assert charge["currency"] == "USD"
+    assert charge["amount"] == "0.0000055"
+    assert charge["computed_at"]
+    assert [row["dimension"] for row in charge["price_components"]] == [
+        "uncached_input",
+        "output",
+    ]
+    assert charge["price_components"][0]["source"] == "model_static"
 
 
 @pytest.mark.parametrize("damage", ["missing", "tail", "interior", "shape"])

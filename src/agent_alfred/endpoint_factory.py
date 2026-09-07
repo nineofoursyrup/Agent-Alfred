@@ -46,6 +46,11 @@ class EndpointClientFactory:
         self._http_client = http_client
         self._pool = VersionedTransportPool(self._build_transport)
 
+    def catalog_prices(self):
+        from agent_alfred.catalog import CatalogPriceBook
+
+        return CatalogPriceBook(self._pool)
+
     def _route(self, snapshot):
         endpoint = next(
             (row for row in self._endpoints if row.endpoint_id == snapshot.endpoint_id),

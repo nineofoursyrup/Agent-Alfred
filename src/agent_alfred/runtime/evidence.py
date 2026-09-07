@@ -6,15 +6,23 @@ import hashlib
 import json
 from dataclasses import asdict
 from datetime import datetime
-from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
+
+from agent_alfred.pricing import project_cost
 
 MAX_TRACE_BYTES = 32 * 1024 * 1024
 
 
 def read_evidence(
-    store, redactor, run_id: str, trace_root: Path, *, overrides=None
+    store,
+    redactor,
+    run_id: str,
+    trace_root: Path,
+    *,
+    overrides=None,
+    prices=None,
+    computed_at: str | None = None,
 ) -> dict | None:
     with store.reading() as conn:
         row = conn.execute(
@@ -39,6 +47,7 @@ def read_evidence(
         safe_events = [_safe_event(event) for event in events]
     except (ValueError, KeyError, TypeError, AttributeError):
         status, safe_events = "unavailable", []
+    models = _attempt_models(safe_events)
     try:
         projected = redactor.redact_jsonable(
             {
@@ -53,12 +62,9 @@ def read_evidence(
                 if overrides
                 else [],
                 "attempts": [
-                    {
-                        "attempt_id": attempt["attempt_id"],
-                        "outcome": attempt["outcome"],
-                        "usage": _safe_usage(attempt.get("usage")),
-                        "cost": cost(attempt.get("usage")),
-                    }
+                    _attempt_evidence(
+                        attempt, models, prices, computed_at
+                    )
                     for attempt in telemetry.get("attempts", [])
                 ],
             }
@@ -159,6 +165,34 @@ def _safe_event(event: dict) -> dict:
             )}, "payload": selected}
 
 
+def _attempt_evidence(attempt, models, prices, computed_at) -> dict[str, Any]:
+    endpoint_id, model_id = models.get(attempt["attempt_id"], (None, None))
+    return {
+        "attempt_id": attempt["attempt_id"],
+        "outcome": attempt["outcome"],
+        "usage": _safe_usage(attempt.get("usage")),
+        "cost": cost(
+            attempt.get("usage"),
+            prices,
+            endpoint_id=endpoint_id,
+            model_id=model_id,
+            computed_at=computed_at,
+        ),
+    }
+
+
+def _attempt_models(events: list) -> dict[str, tuple[str | None, str | None]]:
+    found: dict[str, tuple[str | None, str | None]] = {}
+    for event in events:
+        payload = event.get("payload") or {}
+        attempt_id = payload.get("attempt_id")
+        model = payload.get("model")
+        if not attempt_id or not isinstance(model, dict):
+            continue
+        found[attempt_id] = (model.get("endpoint_id"), model.get("model_id"))
+    return found
+
+
 def _safe_usage(usage: dict | None) -> dict:
     return {key: value for key, value in (usage or {}).items()
             if key in {"total_input_tokens", "uncached_input_tokens",
@@ -166,13 +200,19 @@ def _safe_usage(usage: dict | None) -> dict:
                        "reasoning_tokens", "endpoint_reported_cost_usd"}}
 
 
-def cost(usage: dict | None) -> dict[str, Any]:
-    """No pricing source is installed yet; never manufacture an estimate."""
-    amount = (usage or {}).get("endpoint_reported_cost_usd")
-    try:
-        value = Decimal(str(amount))
-        if value.is_finite() and value >= 0:
-            return {"state": "exact", "amount": format(value, "f"), "currency": "USD"}
-    except InvalidOperation:
-        pass
-    return {"state": "unknown"}
+def cost(
+    usage: dict | None,
+    prices=None,
+    *,
+    endpoint_id: str | None = None,
+    model_id: str | None = None,
+    computed_at: str | None = None,
+) -> dict[str, Any]:
+    """Project a ledger amount at render time. Telemetry stays token facts."""
+    return project_cost(
+        usage,
+        prices,
+        endpoint_id=endpoint_id,
+        model_id=model_id,
+        computed_at=computed_at,
+    )
