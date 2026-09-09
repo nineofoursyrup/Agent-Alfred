@@ -15,9 +15,12 @@ from agent_alfred.settings import Settings
 
 def test_same_endpoint_gate_uses_assigned_codec_and_keeps_answer_client():
     sent = []
+    identities = []
     gate = '{"retrieve":false,"query":null,"reason_code":"greeting"}'
 
     def dispatch(request):
+        identities.append((request.headers["user-agent"],
+                           request.headers["x-opencode-session"]))
         body = json.loads(request.content)
         sent.append(
             (
@@ -74,6 +77,8 @@ def test_same_endpoint_gate_uses_assigned_codec_and_keeps_answer_client():
             submitted = host.submit(SubmitRequest("hello"))
             result = host.wait(submitted.run_id)
             assert result.outcome == "completed"
+            assert identities[0] == identities[1]
+            assert identities[0][0].startswith("agent-alfred/")
             assert sent == [
                 ("/zen/go/v1/messages", "qwen3.7-max", True, False),
                 ("/zen/go/v1/chat/completions", "deepseek-v4-flash", False, True),

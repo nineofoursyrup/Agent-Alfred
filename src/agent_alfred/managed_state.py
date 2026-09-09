@@ -1267,6 +1267,56 @@ class ManagedDirectoryLease(_ManagedCapabilityLease):
             owner.fail(exc)
         return lease
 
+    def preserve_regular(self, source: PurePath, target: PurePath) -> None:
+        """Move a file to an exclusive recovery name; never discard either name."""
+        source_parts = _validate_relative(source)
+        target_parts = _validate_relative(target)
+        if len(source_parts) != 1 or len(target_parts) != 1:
+            raise ValueError("preserve requires direct children")
+        self.verify_identity()
+        _rename_no_replace(source_parts[0], target_parts[0],
+                           source_parent_fd=self.fd, target_parent_fd=self.fd,
+                           role="file recovery", path=self.path / target_parts[0])
+        self.fsync()
+
+    def create_bytes(
+        self, relative: PurePath, payload: bytes, *,
+        _rollback: ResumableRollback | None = None,
+        prepared: Callable[[tuple[int, int]], None] | None = None,
+        checkpoint: Callable[[], None] | None = None,
+    ) -> None:
+        """Create an exclusive durable-operation target, retaining partial writes.
+
+        The caller must have persisted intent before entry. An incomplete file
+        is an unverified operation result, never an anonymous staging resource.
+        This seam never removes or overwrites a published name.
+        """
+        parts = _validate_relative(relative)
+        if len(parts) != 1:
+            raise ValueError("create_bytes requires a direct child")
+        rollback = ResumableRollback()
+        if _rollback is not None:
+            _rollback.own(rollback)
+        check = checkpoint or (lambda: None)
+        try:
+            check()
+            target = self.open_regular(relative, access="exclusive_write",
+                                       create=True, _rollback=rollback)
+            identity = target.stat()
+            if prepared is not None:
+                prepared((identity.st_dev, identity.st_ino))
+            for offset in range(0, len(payload), 65536):
+                check()
+                target.write_all(payload[offset:offset + 65536])
+            check()
+            target.fsync()
+            check()
+            self.fsync()
+            target.verify_identity()
+        except BaseException as exc:
+            rollback.raise_failure(exc)
+        rollback.close()
+
     def replace_bytes(
         self,
         relative: PurePath,
@@ -1323,9 +1373,19 @@ class ManagedDirectoryLease(_ManagedCapabilityLease):
         rollback.begin(temporary_rollback)
         rollback.begin(lease_rollback)
         temporary_entry = object()
+
+        def remove_temporary() -> None:
+            try:
+                self.unlink_regular(PurePath(temporary), missing_ok=True)
+            except BaseException as exc:
+                # Unlink may remove the name, then fail closing its inspection
+                # lease. A later missing-name success cannot retire that lease.
+                rollback.capture_failure(exc)
+                raise
+
         temporary_rollback.own(
             temporary_entry,
-            lambda: self.unlink_regular(PurePath(temporary), missing_ok=True),
+            remove_temporary,
         )
         try:
             lease = self.open_regular(

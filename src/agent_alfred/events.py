@@ -169,6 +169,8 @@ class RunStarted:
 
 @dataclass(frozen=True)
 class RunFinished:
+    finalization_reason: str | None = None
+    not_executed_call_ids: tuple[str, ...] = ()
     name: str = "run.finished"
     trace_policy: TracePolicy = "persist"
     outcome: RunOutcome = "completed"
@@ -310,6 +312,43 @@ class GateEvaluated:
     trace_policy: TracePolicy = "persist"
 
 
+@dataclass(frozen=True)
+class ToolStarted:
+    call_id: str
+    tool_name: str
+    effect: str
+    parallel_group: None = None
+    name: str = "tool.started"
+    trace_policy: TracePolicy = "persist"
+
+
+@dataclass(frozen=True)
+class ToolFinished:
+    call_id: str
+    tool_name: str
+    outcome: str
+    error_code: str | None
+    model_content: str
+    audit_content: str
+    truncated: bool
+    original_bytes: int
+    content_digest: str
+    duration_ms: int
+    summary: str | None = None
+    cost: object | None = None
+    name: str = "tool.finished"
+    trace_policy: TracePolicy = "persist"
+
+
+@dataclass(frozen=True)
+class ToolProgress:
+    call_id: str
+    tool_name: str
+    text: str
+    name: str = "tool.progress"
+    trace_policy: TracePolicy = "transient"
+
+
 EventPayload = (
     RunStarted
     | RunFinished
@@ -323,6 +362,9 @@ EventPayload = (
     | BlockStopped
     | Notice
     | GateEvaluated
+    | ToolStarted
+    | ToolFinished
+    | ToolProgress
 )
 
 

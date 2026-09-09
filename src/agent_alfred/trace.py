@@ -160,6 +160,7 @@ class _RunBundle:
     broken: str | None = None
     first_error: str | None = None
     cleanup_rollback: ResumableRollback | None = field(default=None, repr=False)
+    artifact_cleanup: RollbackSlot = field(default_factory=RollbackSlot, repr=False)
     retirement_rollback: ResumableRollback | None = field(
         default=None, repr=False
     )
@@ -206,6 +207,12 @@ class _RunBundle:
 
     def retry_cleanup(self) -> tuple[bool, BaseException | None]:
         """Retry retained construction cleanup without losing its progress."""
+        try:
+            artifacts_complete = self.artifact_cleanup.retry()
+        except BaseException as exc:
+            return False, exc
+        if not artifacts_complete:
+            return False, next(iter(self.artifact_cleanup.errors), None)
         with self.lock:
             rollback = self.cleanup_rollback
         if rollback is None:
@@ -529,7 +536,28 @@ class RunBundleTraceSink:
                 return  # the failed publish already counted this event
         if trace_file is None:
             raise AssertionError("published trace bundle has no trace capability")
-        line = _compose_line(item.prepared, item.event) + "\n"
+        prepared = item.prepared
+        from agent_alfred.events import ToolFinished
+
+        if isinstance(item.event.payload, ToolFinished):
+            value = json.loads(prepared)
+            audit = value["audit_content"].encode("utf-8")
+            if len(audit) > 256 * 1024:
+                artifact_name = f"tool-{item.event.seq}.txt"
+                artifacts = bundle.artifacts_dir
+                if artifacts is None:
+                    raise AssertionError("published bundle lacks artifacts directory")
+                try:
+                    artifacts.replace_bytes(PurePath(artifact_name), audit)
+                except BaseException as exc:
+                    # Retain nested owners before the drain reduces the failure
+                    # to a safe type name, including a control-error unwind.
+                    bundle.artifact_cleanup.capture_failure(exc)
+                    raise
+                value["audit_content"] = {"artifact": "artifacts/" + artifact_name,
+                                           "bytes": len(audit)}
+                prepared = _prepare_payload(value)
+        line = _compose_line(prepared, item.event) + "\n"
         data = line.encode("utf-8")
         try:
             trace_file.write_all(data, retries=_WRITE_RETRIES)

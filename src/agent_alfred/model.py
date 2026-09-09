@@ -162,6 +162,15 @@ class ToolSpec:
     input_schema: Mapping[str, Any]
 
 
+def tool_schema_jsonable(value):
+    """Copy immutable declaration schemas into provider JSON containers."""
+    if isinstance(value, Mapping):
+        return {key: tool_schema_jsonable(item) for key, item in value.items()}
+    if isinstance(value, (tuple, list)):
+        return [tool_schema_jsonable(item) for item in value]
+    return value
+
+
 @dataclass(frozen=True)
 class NamedToolChoice:
     name: str
@@ -183,6 +192,8 @@ class ModelRequest:
     on_attempt_started: Callable[[str], None] | None = field(
         default=None, compare=False, repr=False
     )
+    # Trusted execution provenance, not message text or a model-supplied ID.
+    conversation_id: str | None = field(default=None, repr=False)
 
 
 class EndpointUnconfigured(Exception):

@@ -29,6 +29,7 @@ from agent_alfred.loop.assistant import Assistant, AssistantEvents
 from agent_alfred.loop.budget import RunBudget
 from agent_alfred.messages import (
     Message,
+    TextBlock,
     blocks_from_jsonable,
     text_message,
 )
@@ -117,10 +118,13 @@ class _AttemptLedger:
     streaming fallback a Step spent are already inside ``ModelResult.attempts``.
     """
 
-    def __init__(self, client: ModelClient, observe=None, records=None):
+    def __init__(
+        self, client: ModelClient, observe=None, records=None, conversation_id=None,
+    ):
         self._observe = observe
         self._records = records
         self._client = client
+        self._conversation_id = conversation_id
         self.model_results: tuple[ModelResult, ...] = ()
 
     def respond(
@@ -132,6 +136,8 @@ class _AttemptLedger:
     ) -> ModelResult:
         from agent_alfred.model import ModelCallInterrupted
 
+        if self._conversation_id is not None:
+            request = replace(request, conversation_id=self._conversation_id)
         failure = None
         try:
             result = self._client.respond(request, events=events, deadline=deadline)
@@ -202,8 +208,16 @@ class RunExecutor:
         support_recorder: SupportRecorder | None = None,
         memory_service=None,
         factory=None,
+        tools=None,
+        file_tools=None,
+        persona_tools=None,
+        skill_tools=None,
     ):
         self._memory_service = memory_service
+        self._skill_tools = skill_tools
+        self._persona_tools = persona_tools
+        self._file_tools = file_tools
+        self._tools = tools
         self._factory = factory
         self._support_recorder = support_recorder
         self._clock = clock
@@ -247,6 +261,12 @@ class RunExecutor:
         step_count = 0
         duration_ms = 0
         all_results = []
+        # A Session spans Runs and process restarts. Sessionless system Runs
+        # get their own namespace; Step/Attempt identities never split it.
+        conversation_id = (
+            "session:" + item.session_id
+            if item.session_id is not None else "run:" + item.run_id
+        )
         ledger = _AttemptLedger(
             item.client,
             lambda result, events: (
@@ -257,13 +277,14 @@ class RunExecutor:
                 else None
             ),
             records=all_results,
+            conversation_id=conversation_id,
         )
 
         def gate_ledger(client, snapshot):
             wrapped = _AttemptLedger(client, lambda result, events: (
                 self._support_recorder.observe(snapshot, item.run_id, result, events)
                 if self._support_recorder is not None else None
-            ), records=all_results)
+            ), records=all_results, conversation_id=conversation_id)
             return wrapped
 
         budget = RunBudget(self._settings.max_steps)
@@ -271,6 +292,11 @@ class RunExecutor:
             # The clock is an injected collaborator and therefore belongs
             # inside the same terminal ownership scope as every later Run
             # step.  A BaseException here must still reach ``settle``.
+            run_started = self._clock.monotonic()
+            if self._file_tools is not None:
+                self._file_tools.set_run_deadline(run_started + (
+                    item.snapshot.overall_deadline_s
+                    if item.snapshot.overall_deadline_s is not None else 30.0))
             started_at = format_instant(self._clock.wall_utc())
             with self._store.transaction() as conn:
                 revision = schema.allocate_activity_revision(conn)
@@ -310,6 +336,28 @@ class RunExecutor:
                 ),
                 envelope,
             )
+            if item.request.purpose == "chat" and self._file_tools is not None:
+                command_result = self._file_tools.handle_command(item.request.message)
+                if command_result is None and self._skill_tools is not None:
+                    command_result = self._skill_tools.handle_command(
+                        item.request.message
+                    )
+                if command_result is not None:
+                    from agent_alfred.tools import ToolFailure
+                    reply = text_message("assistant", "\n".join(
+                        block.text for block in command_result.content))
+                    outcome = (
+                        "failed"
+                        if isinstance(command_result, ToolFailure)
+                        else "completed"
+                    )
+                    error = command_result.stop_reason
+                    return
+            if item.request.purpose == "chat" and self._file_tools is not None:
+                self._file_tools.resume_pending()
+                self._file_tools.set_run_deadline(
+                    run_started + item.snapshot.overall_deadline_s
+                    if item.snapshot.overall_deadline_s is not None else float("inf"))
             memory = None
             if item.request.purpose == "chat":
                 memory = RunMemory(
@@ -332,8 +380,14 @@ class RunExecutor:
                 session_id=item.session_id,
                 events=self._events,
                 source=item.request.gateway,
-                overall_deadline_s=item.snapshot.overall_deadline_s,
+                overall_deadline_s=(None if item.snapshot.overall_deadline_s is None
+                    else max(0.0, item.snapshot.overall_deadline_s
+                             - (self._clock.monotonic() - run_started))),
                 memory=memory,
+                tools=self._tools if item.request.purpose == "chat" else None,
+                tool_permission=item.memory_permission,
+                tool_state=item.memory_telemetry,
+                persona=self._persona_tools.current() if self._persona_tools else None,
             )
             outcome = loop_result.outcome
             reply = loop_result.reply
@@ -378,6 +432,13 @@ class RunExecutor:
             reply = None
             del exc
         finally:
+            if self._file_tools is not None:
+                self._file_tools.set_run_deadline(float("inf"))
+            receipts = item.memory_telemetry.pop("system_receipts", [])
+            if receipts and outcome != "interrupted":
+                blocks = () if reply is None else reply.blocks
+                reply = Message("assistant", (*blocks, TextBlock(
+                    "\n\n系统操作回执：\n" + "\n".join(receipts))))
             record = getattr(
                 self._coordinator, "record_connection_observation", None
             )

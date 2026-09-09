@@ -303,6 +303,8 @@ class RuntimeHost:
         model_settings: ModelSettingsStore | None = None,
         credentials: CredentialOverlay | None = None,
         audit_key=None,
+        file_state=None,
+        skill_builtin=None,
     ):
         self._support_overrides = support_overrides or SupportOverrides()
         self._conn = conn
@@ -405,6 +407,26 @@ class RuntimeHost:
             database=self._store,
             coordinator=self,
         )
+        from agent_alfred.tools import ToolRegistry
+        from agent_alfred.tools.calendar import CalendarTools
+        from agent_alfred.tools.files import FileTools
+        from agent_alfred.tools.ledger import ExternalToolLedger
+        from agent_alfred.tools.memory import MemoryTools
+        from agent_alfred.tools.persona import PersonaTools
+        from agent_alfred.tools.skills import SkillTools
+
+        self._file_tools = FileTools(self._store, file_state, clock)
+
+        persona_tools = PersonaTools(self._file_tools, settings)
+        skill_tools = SkillTools(self._file_tools, builtin=skill_builtin)
+        self._external_tools = ExternalToolLedger(self._store, clock)
+        tools = ToolRegistry(
+            (*CalendarTools(self._store, clock).declarations(),
+             *MemoryTools(self._memory_service).declarations(),
+             *self._file_tools.declarations(),
+             *persona_tools.declarations(),
+             *skill_tools.declarations()), clock=clock, redactor=self._redactor,
+             external_ledger=self._external_tools)
         self._executor = RunExecutor(
             clock=clock,
             settings=settings,
@@ -416,6 +438,10 @@ class RuntimeHost:
             coordinator=self,
             work_queue=self._queue,
             memory_service=self._memory_service,
+            tools=tools,
+            file_tools=self._file_tools,
+            persona_tools=persona_tools,
+            skill_tools=skill_tools,
             factory=factory,
             support_recorder=SupportRecorder(
                 self._support_overrides, self._redactor, clock, support_rule
@@ -610,6 +636,8 @@ class RuntimeHost:
                 ):
                     return False
                 self._fanout_closed = True
+            if not self._file_tools.close():
+                return False
             if self._owned_resources is not None:
                 self._owned_resources.close()
             self._closed = True
@@ -671,6 +699,7 @@ class RuntimeHost:
 
     def recover(self) -> None:
         self._recorder.recover()
+        self._external_tools.recover()
 
     def create_session(self) -> str:
         session_id = uuid.uuid4().hex

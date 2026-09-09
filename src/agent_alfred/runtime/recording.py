@@ -351,6 +351,12 @@ class RunRecorder:
         try:
             self._fanout.emit(
                 RunFinished(
+                    finalization_reason=item.memory_telemetry.get(
+                        "finalization_reason"
+                    ),
+                    not_executed_call_ids=tuple(
+                        item.memory_telemetry.get("not_executed_call_ids", ())
+                    ),
                     outcome=outcome,
                     reply=reply,
                     error=error,

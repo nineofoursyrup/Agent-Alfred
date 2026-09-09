@@ -7,6 +7,7 @@ import sqlite3
 import sys
 import threading
 from contextlib import nullcontext
+from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -17,8 +18,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 
 from agent_alfred import schema
 from agent_alfred.events import AttemptCommitted, AttemptStarted
+from agent_alfred.messages import TextBlock, ToolCallBlock, ToolResultBlock
 from agent_alfred.model import (
     AttemptRecord,
+    ModelResponse,
     ModelResult,
     ScriptedModel,
     ScriptedModelFactory,
@@ -32,19 +35,100 @@ class BrowserModel(ScriptedModel):
 
     def respond(self, request, *, events=None, deadline=None):
         result = ScriptedModel(["离线模型回复"]).respond(request, deadline=deadline)
+        if request.tools:
+            last = request.messages[-1].blocks
+            text_input = next((b.text for b in last if isinstance(b, TextBlock)), "")
+            if text_input in ("创建确认测试Skill", "创建取消测试Skill"):
+                name = "browser-confirm" if "确认" in text_input else "browser-cancel"
+                result = replace(
+                    result,
+                    response=ModelResponse(
+                        (
+                            ToolCallBlock(
+                                "browser-skill",
+                                "create_skill",
+                                {
+                                    "name": name,
+                                    "description": "Browser candidate",
+                                    "body": "完整浏览器候选正文",
+                                },
+                            ),
+                        ),
+                        "tool_use",
+                        request.model,
+                    ),
+                )
+            elif any(
+                isinstance(block, TextBlock) and block.text == "创建工具测试日程"
+                for block in last
+            ):
+                result = replace(
+                    result,
+                    response=ModelResponse(
+                        (
+                            ToolCallBlock(
+                                "browser-create",
+                                "create_event",
+                                {
+                                    "title": "工具测试日程",
+                                    "starts_at": "2026-09-10T12:00:00+08:00",
+                                },
+                            ),
+                        ),
+                        "tool_use",
+                        request.model,
+                    ),
+                )
+            elif (
+                last
+                and isinstance(last[0], ToolResultBlock)
+                and last[0].call_id == "browser-create"
+            ):
+                result = replace(
+                    result,
+                    response=ModelResponse(
+                        (ToolCallBlock("browser-query", "query_events", {}),),
+                        "tool_use",
+                        request.model,
+                    ),
+                )
+            elif (
+                last
+                and isinstance(last[0], ToolResultBlock)
+                and last[0].call_id == "browser-query"
+            ):
+                records = json.loads(last[0].content[0].text)
+                text = (
+                    "已查询到工具测试日程"
+                    if any(row["title"] == "工具测试日程" for row in records)
+                    else "未命中"
+                )
+                result = replace(
+                    result,
+                    response=ModelResponse(
+                        (TextBlock(text),), "end_turn", request.model
+                    ),
+                )
         attempt = result.attempts[0]
         usage = Usage(output_tokens=4, endpoint_reported_cost_usd=Decimal("0.125"))
         if events is not None:
-            events.emit(AttemptStarted(
-                attempt_id=attempt.attempt_id, model=request.model,
-            ))
-            events.emit(AttemptCommitted(
-                attempt_id=attempt.attempt_id, blocks=result.response.blocks,
-                usage=usage,
-            ))
+            events.emit(
+                AttemptStarted(
+                    attempt_id=attempt.attempt_id,
+                    model=request.model,
+                )
+            )
+            events.emit(
+                AttemptCommitted(
+                    attempt_id=attempt.attempt_id,
+                    blocks=result.response.blocks,
+                    usage=usage,
+                )
+            )
         return ModelResult(
             attempts=(AttemptRecord(attempt.attempt_id, False, "committed", usage),),
-            response=result.response, final_error=None,
+            response=result.response,
+            final_error=None,
         )
 
 
@@ -65,9 +149,13 @@ def seed_v2(path: Path) -> None:
                 "INSERT INTO agent_log "
                 "(session_id, role, content, source, created_at) "
                 "VALUES (?, 'user', ?, 'cli', ?)",
-                ("legacy /会话?", json.dumps([
-                    {"type": "text", "text": f"升级前消息 {index + 1:02}"}
-                ]), "非规范旧时间"),
+                (
+                    "legacy /会话?",
+                    json.dumps(
+                        [{"type": "text", "text": f"升级前消息 {index + 1:02}"}]
+                    ),
+                    "非规范旧时间",
+                ),
             )
         conn.commit()
     finally:
@@ -83,13 +171,20 @@ def main() -> None:
     signal.signal(signal.SIGTERM, lambda *_: stopped.set())
     signal.signal(signal.SIGINT, lambda *_: stopped.set())
     state_context = (
-        nullcontext(args.state) if args.state
+        nullcontext(args.state)
+        if args.state
         else TemporaryDirectory(prefix="alfred-browser-")
     )
     with state_context as state:
         if not (Path(state) / "db.sqlite3").exists():
             seed_v2(Path(state) / "db.sqlite3")
+        builtin = Path(state) / "test-builtin"
+        for name in ("browser-confirm", "browser-cancel"):
+            path = builtin / name / "SKILL.md"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(f"---\nname: {name}\ndescription: Builtin\n---\nOriginal")
         dashboard = build_dashboard(
+            skill_builtin=builtin,
             state_dir=Path(state),
             port=args.port,
             factory=ScriptedModelFactory(BrowserModel([])),

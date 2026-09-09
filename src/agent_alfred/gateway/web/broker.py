@@ -826,9 +826,15 @@ class SSEBroker:
             raise ProcessFatalSinkError(
                 "the dispatcher is down; this sink cannot deliver"
             ) from self._fatal
+        from agent_alfred.events import ToolFinished, event_json_default
+
+        public_payload = event.payload
+        if isinstance(public_payload, ToolFinished):
+            public_payload = event_json_default(public_payload)
+            public_payload.pop("audit_content", None)
         return frames.domain_event_frames(
             event_name=event.payload.name,
-            payload={"envelope": event.envelope, "payload": event.payload},
+            payload={"envelope": event.envelope, "payload": public_payload},
             event_id=event.event_id,
             replayable=event.replayable,
             max_frame_bytes=self._max_frame_bytes,

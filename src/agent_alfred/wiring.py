@@ -188,6 +188,8 @@ def build_host(
     credentials: CredentialOverlay | None = None,
     _rollback: ResumableRollback | None = None,
     audit_key_path: Path | None = None,
+    file_state=None,
+    skill_builtin=None,
 ) -> RuntimeHost:
     settings = settings or Settings()
     clock = clock or SystemClock()
@@ -230,6 +232,8 @@ def build_host(
         )
         host = RuntimeHost(
             audit_key=audit_key,
+            file_state=file_state,
+            skill_builtin=skill_builtin,
             conn=conn,
             factory=factory,
             settings=settings,
@@ -259,6 +263,7 @@ def build_host(
 
 def build_dashboard(
     *,
+    skill_builtin=None,
     state_dir: Path,
     settings: Settings | None = None,
     factory: ModelClientFactory | None = None,
@@ -349,6 +354,8 @@ def build_dashboard(
                 credentials=credentials,
                 _rollback=rollback,
                 audit_key_path=state.path / "audit.key",
+                file_state=state,
+                skill_builtin=skill_builtin,
             )
             rollback.own(host)
             broker.bind_session_check(host.transport_session_validity)
@@ -397,6 +404,7 @@ def build_dashboard(
 def build_default_host(
     *,
     state_dir: Path | None = None,
+    skill_builtin=None,
     settings: Settings | None = None,
     factory: ModelClientFactory | None = None,
     _rollback: ResumableRollback | None = None,
@@ -436,6 +444,8 @@ def build_default_host(
             model_settings=model_settings,
             _rollback=rollback,
             audit_key_path=state.path / "audit.key",
+                file_state=state,
+                skill_builtin=skill_builtin,
         )
         rollback.own(host)
         host.attach_owned_resources(conn, state, source=rollback)
