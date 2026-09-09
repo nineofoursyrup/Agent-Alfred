@@ -367,6 +367,12 @@ def test_migrate_creates_required_tables_without_user_id() -> None:
         "memory_operations",
         "memory_sources",
         "memory_provenance",
+        "forget_clock", "history_groups", "history_reads", "memory_uses",
+        "history_group_times", "forget_scope_versions", "forget_observations",
+        "forget_projection_recovery", "forget_projection_fences",
+        "forget_projection_unknown",
+        "memory_source_evidence", "forget_operations", "forget_limits",
+        "forget_scopes", "forget_actions", "forget_cleanup", "forget_targets",
     }
     assert required <= names
     extras = names - required
@@ -460,7 +466,7 @@ def test_migrate_writes_one_contiguous_ledger_row_per_version() -> None:
     schema.migrate(conn)
     rows = conn.execute("SELECT version FROM schema_migrations").fetchall()
     conn.close()
-    assert rows == [(1,), (2,), (3,), (4,), (5,)]
+    assert rows == [(1,), (2,), (3,), (4,), (5,), (6,)]
 
 
 def test_migrate_does_not_commit_the_callers_transaction() -> None:
@@ -1640,7 +1646,7 @@ def test_upgrading_a_version_1_database_lands_the_current_shape(commit: str) -> 
     ).fetchall()[0] == (1, historic_schema.V1_APPLIED_AT)
     assert conn.execute(
         "SELECT version FROM schema_migrations ORDER BY version"
-    ).fetchall() == [(1,), (2,), (3,), (4,), (5,)]
+    ).fetchall() == [(1,), (2,), (3,), (4,), (5,), (6,)]
     conn.close()
 
 
@@ -1833,6 +1839,7 @@ def test_a_failed_upgrade_in_a_caller_transaction_leaves_the_ledger_intact(
         (3,),
         (4,),
         (5,),
+        (6,),
     ]
     # Rolling back is still the caller's decision too, and it takes back the
     # caller's own write and nothing else.

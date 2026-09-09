@@ -87,6 +87,22 @@ class RecordingStore:
         if not self.available:
             raise RecordingUnavailable("recording store is unavailable")
 
+    @property
+    def transaction_in_progress(self) -> bool:
+        """Inspection only; callers still need the shared admission capability."""
+        return self._conn.in_transaction
+
+    def validate_borrowed_transaction(self, conn: sqlite3.Connection) -> None:
+        """An internal participant borrows the caller's connection and lock.
+
+        This never acquires a second lock, commits, or rolls back. The caller
+        already owns admission and the transaction; possession is not a public
+        HTTP/model authorization mechanism.
+        """
+        self._require_available()
+        if conn is not self._conn or not conn.in_transaction:
+            raise ValueError("transaction_required")
+
     @contextmanager
     def transaction(self):
         with self._db_lock:

@@ -329,11 +329,19 @@ class MutationGate:
         that has to report the reason has to report the true one, and
         "busy" is not the same thing as "closed".
         """
+        return self.execute(self._facade.create_session)
+
+    def execute(self, operation):
+        # RuntimeHost retains a claim before acquisition; legacy injected facades
+        # keep their existing synchronous test protocol.
+        execute = getattr(self._facade, "execute_mutation", None)
+        if execute is not None:
+            return execute(operation)
         reason = self._facade.try_begin_mutation()
         if reason is not None:
             return None, reason
         try:
-            return self._facade.create_session(), None
+            return operation(), None
         finally:
             self._facade.end_mutation()
 
@@ -377,16 +385,12 @@ class DashboardApi:
     def mutate_settings(self, body: dict[str, Any]) -> tuple[int, Any]:
         from agent_alfred.runtime.model_settings import ModelSettingsError
 
-        reason = self._facade.try_begin_mutation()
-        if reason is not None:
-            status = (
-                503
-                if reason in {"recording_unavailable", "admission_failed"}
-                else 409
-            )
-            return status, {"code": reason}
         try:
-            payload = self._facade.apply_settings(body)
+            payload, reason = self._gate.execute(
+                lambda: self._facade.apply_settings(body)
+            )
+            if reason is not None:
+                return self._mutation_refusal(reason)
             return 200, payload
         except ModelSettingsError as exc:
             status = 409 if exc.code in {"settings_conflict", "pin_assigned"} else 400
@@ -394,25 +398,24 @@ class DashboardApi:
             if exc.cause is not None:
                 body_out["cause"] = exc.cause
             return status, body_out
-        finally:
-            self._facade.end_mutation()
+
+    @staticmethod
+    def _mutation_refusal(reason):
+        status = 503 if reason in {"recording_unavailable", "admission_failed"} else 409
+        return status, {"code": reason}
 
     def reread_env(self) -> tuple[int, Any]:
-        reason = self._facade.try_begin_mutation()
-        if reason is not None:
-            status = (
-                503
-                if reason in {"recording_unavailable", "admission_failed"}
-                else 409
-            )
-            return status, {"code": reason}
-        try:
+        def read():
             self._facade.reread_dotenv()
-            return 200, self._facade.connections()
+            return self._facade.connections()
+
+        try:
+            payload, reason = self._gate.execute(read)
+            if reason is not None:
+                return self._mutation_refusal(reason)
+            return 200, payload
         except RuntimeError:
             return 400, {"code": "dotenv_unavailable"}
-        finally:
-            self._facade.end_mutation()
 
     def probe_auth(self, body: dict[str, Any]) -> tuple[int, Any]:
         from agent_alfred.auth_probe import AuthProbeRefused
@@ -422,21 +425,17 @@ class DashboardApi:
         endpoint_id = body.get("endpoint_id")
         if type(endpoint_id) is not str or not endpoint_id:
             return 400, {"code": "invalid_endpoint"}
-        reason = self._facade.try_begin_mutation()
-        if reason is not None:
-            status = (
-                503
-                if reason in {"recording_unavailable", "admission_failed"}
-                else 409
-            )
-            return status, {"code": reason}
-        try:
+        def probe():
             self._facade.probe_auth(endpoint_id)
-            return 200, self._facade.connections()
+            return self._facade.connections()
+
+        try:
+            payload, reason = self._gate.execute(probe)
+            if reason is not None:
+                return self._mutation_refusal(reason)
+            return 200, payload
         except AuthProbeRefused as exc:
             return exc.status, {"code": exc.code}
-        finally:
-            self._facade.end_mutation()
 
     def create_session(self) -> CreateSessionResult:
         # The id is minted by the server and never taken from the client: a

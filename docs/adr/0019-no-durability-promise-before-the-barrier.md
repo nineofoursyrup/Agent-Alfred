@@ -1,7 +1,7 @@
 # trace 在持久性屏障之前没有持久性承诺
 
 `TraceSink` 的 drain 线程逐条写入 `trace.jsonl`（无缓冲二进制 fd + 完整写循环），
-但 **`fsync` 全程只在持久性屏障处发生一次**
+但 **`fsync` 只在明确的持久性屏障处发生**
 （[ADR-0004](0004-flush-barrier-at-run-end.md)）。逐条 `fsync` 会把每个 Run 的本地写
 放大到几百次同步，而它想买的东西已经有人买过了：崩溃丢掉末尾若干条的后果，
 正是 [#3](https://github.com/nineofoursyrup/Agent-Alfred/issues/3) 那条
@@ -31,3 +31,7 @@
 
 熔断是 **Run 粒度，不是进程粒度**：下一个 Run 重新尝试发布新 bundle。
 写盘出问题从来不该让此后所有 Run 都失去追踪。
+
+R10/A54 为遗忘增加非终结前缀屏障，沿相同同步次序确认删除前证据；
+它不关闭或退休 bundle，不替代 Run 最终 flush。超时、丢事件、部分写或同步失败
+均不能授权删除，超时的队列项以后完成也不会后台执行删除。

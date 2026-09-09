@@ -281,6 +281,7 @@ class _WriteBarrier:
     """
 
     bundles: tuple[_RunBundle, ...]
+    terminal: bool = True
     done: threading.Event = field(default_factory=threading.Event)
     dropped: int = 0
     failed: str | None = None
@@ -691,6 +692,13 @@ class RunBundleTraceSink:
     # -- flush barrier (ADR-0019) ------------------------------------------
 
     def flush(self, run_id: str) -> FlushResult:
+        return self._barrier(run_id, terminal=True)
+
+    def checkpoint(self, run_id: str | None = None) -> FlushResult:
+        """Confirm the queued prefix without sealing or retiring the Run."""
+        return self._barrier(run_id, terminal=False)
+
+    def _barrier(self, run_id: str | None, *, terminal: bool) -> FlushResult:
         with self._wake:
             if self._stopping:
                 return BarrierFlushResult(
@@ -698,18 +706,21 @@ class RunBundleTraceSink:
                     dropped_events=0,
                     detail=REASON_SINK_STOPPING,
                 )
-            # The FanOut always names the finishing Run, so the unscoped
-            # "settle every bundle at once" shape is gone: a barrier is
-            # always somebody's, and it retires exactly that somebody.
-            bundle = self._bundles.get(run_id)
-            snapshot = () if bundle is None else (bundle,)
-            barrier = _WriteBarrier(bundles=snapshot)
+            # A terminal flush owns one Run. A manual forget checkpoint may
+            # cover all pending bundles without retiring any of them.
+            if run_id is None and not terminal:
+                snapshot = tuple(self._bundles.values())
+            else:
+                bundle = self._bundles.get(run_id)
+                snapshot = () if bundle is None else (bundle,)
+            barrier = _WriteBarrier(bundles=snapshot, terminal=terminal)
             for bundle in snapshot:
                 # Seal at enqueue, under the same lock commits need: any
                 # commit for these Runs from now on is rejected fail-closed
                 # instead of being enqueued behind this barrier and silently
                 # dropped after it retires the bundle.
-                bundle.sealed = True
+                if terminal:
+                    bundle.sealed = True
             self._queue.append(barrier)
             self._wake.notify_all()
         # The one deliberate blocking point: the barrier item's position in
@@ -762,7 +773,7 @@ class RunBundleTraceSink:
                 details.append(
                     _exception_detail(REASON_SINK_FAILED, cleanup_error)
                 )
-            if cleanup_complete:
+            if cleanup_complete and barrier.terminal:
                 resources_complete, close_error = bundle.retry_resources()
                 if close_error is not None:
                     details.append(

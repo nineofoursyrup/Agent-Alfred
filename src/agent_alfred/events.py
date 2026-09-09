@@ -1582,6 +1582,46 @@ class FanOutSink:
             reasons = self._persist_lost.setdefault(run_id, [])
             reasons.append(f"run.finished publish failed: {type(exc).__name__}")
 
+    def checkpoint_barrier(self, run_id: str | None = None) -> tuple[bool, str | None]:
+        """Confirm a prefix without retiring Run state or hiding earlier loss."""
+        with self._lock:
+            lost = (
+                bool(self._persist_lost)
+                if run_id is None
+                else bool(self._persist_lost.get(run_id))
+            )
+        critical = [sink for sink in self._sinks if sink.flush_at_run_end]
+        failed = lost or not critical
+        for sink in critical:
+            checkpoint = getattr(sink, "checkpoint", None)
+            if checkpoint is None:
+                failed = True
+                continue
+            try:
+                result = checkpoint(run_id)
+            except Exception:
+                failed = True
+                continue
+            if (
+                not isinstance(result, BarrierFlushResult)
+                or result.outcome != "flushed"
+                or result.dropped_events
+            ):
+                failed = True
+        with self._lock:
+            failed = failed or (
+                bool(self._persist_lost)
+                if run_id is None
+                else bool(self._persist_lost.get(run_id))
+            )
+            if failed:
+                affected = tuple(self._last_envelope) if run_id is None else (run_id,)
+                for affected_run in affected:
+                    self._persist_lost.setdefault(affected_run, []).append(
+                        "trace_checkpoint_failed"
+                    )
+        return failed, "trace_checkpoint_failed" if failed else None
+
     def flush_barrier(self, run_id: str) -> tuple[bool, str | None]:
         """Wait on flush_at_run_end sinks. Missing/failed/exception => incomplete."""
         reasons: list[str] = []
