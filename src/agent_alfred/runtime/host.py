@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import sqlite3
+import sys
 import threading
 import time
 import uuid
 from collections import deque
 from collections.abc import Callable
 from dataclasses import replace
+from functools import partial
 from pathlib import Path
 
 from agent_alfred import schema
@@ -27,7 +29,9 @@ from agent_alfred.model import ModelClientFactory
 from agent_alfred.redact import Redactor
 from agent_alfred.resource_rollback import (
     BackgroundCloseStep,
+    OwnedLock,
     ResumableRollback,
+    dominant_error,
     thread_exit_confirmed,
     thread_start_effect_happened,
 )
@@ -333,6 +337,8 @@ class RuntimeHost:
         # held" are one question with one answer rather than two flags that
         # can disagree for a moment.
         self._mutating = False
+        self._mutation_owner = None
+        self._implicit_mutation = threading.local()
         self._memory_run_permission = None
         self._coord: CoordinatorState = "idle"
         self._active_summary: ActiveRunSummary | None = None
@@ -351,6 +357,7 @@ class RuntimeHost:
         self._memory_service = MemoryCommandService(
             recording_store=self._store, audit_key=audit_key,
             clock=self._clock.wall_utc, admission=self,
+            delete_barrier=self._fanout.checkpoint_barrier,
         )
         self._queue = _HandoffQueue(self._store)
         self._done: dict[str, threading.Event] = {}
@@ -682,7 +689,9 @@ class RuntimeHost:
     # write spans one call. A short lock around the call would answer "free"
     # for the entire window in which a Run is still holding the lease.
 
-    def try_begin_mutation(self) -> str | None:
+    def try_begin_mutation(
+        self, *, owner: ResumableRollback | None = None,
+    ) -> str | None:
         """Reserve the one mutation slot, or say why not. Never waits.
 
         Returns ``None`` when the write may begin, and otherwise the reason
@@ -698,22 +707,80 @@ class RuntimeHost:
           still hold it) or another write is inside it.
         - ``admission_failed`` -- Host shutdown permanently closed the gate.
         """
-        with self._lock:
-            if self._closing:
-                return "admission_failed"
-            if self._coord == "recording_failed":
-                return "recording_unavailable"
-            if self._mutating or self._coord != "idle":
-                return "mutation_in_flight"
-            if not self._store.available:
-                return "recording_unavailable"
-            self._mutating = True
-            return None
+        implicit = owner is None
+        if implicit:
+            owner = ResumableRollback()
+        lock = OwnedLock(self._lock)
+        owner.own(lock)
+        try:
+            try:
+                lock.acquire()
+                if self._closing:
+                    return "admission_failed"
+                if self._coord == "recording_failed":
+                    return "recording_unavailable"
+                if self._mutating or self._coord != "idle":
+                    return "mutation_in_flight"
+                if not self._store.available:
+                    return "recording_unavailable"
+                if implicit:
+                    self._implicit_mutation.owner = owner
+                self._mutation_owner = owner
+                self._mutating = True
+                return None
+            finally:
+                lock.close()
+        except BaseException as failure:
+            if implicit:
+                recovery = ResumableRollback()
+                recovery.own(owner, partial(self.end_mutation, owner=owner))
+                recovery.raise_failure(failure)
+            raise
 
-    def end_mutation(self) -> None:
-        with self._handoff:
-            self._mutating = False
-            self._handoff.notify_all()
+    def end_mutation(self, *, owner: ResumableRollback | None = None) -> None:
+        implicit = owner is None
+        if implicit:
+            # A legacy caller may only release its own thread's successful claim.
+            owner = getattr(self._implicit_mutation, "owner", None)
+            if owner is None:
+                return
+        try:
+            owner.close()
+            lock = OwnedLock(self._lock)
+            owner.own(lock)
+            try:
+                lock.acquire()
+                if self._mutation_owner is not owner:
+                    return
+                self._mutating = False
+                self._handoff.notify_all()
+                self._mutation_owner = None
+            finally:
+                lock.close()
+        except BaseException as failure:
+            if implicit:
+                recovery = ResumableRollback()
+                recovery.own(owner, partial(self.end_mutation, owner=owner))
+                recovery.raise_failure(failure)
+            raise
+
+    def execute_mutation(self, operation):
+        """Keep admission owned across acquisition, callback and return boundaries."""
+        owner = ResumableRollback()
+        cleanup = ResumableRollback()
+        cleanup.own(owner, partial(self.end_mutation, owner=owner))
+        try:
+            reason = self.try_begin_mutation(owner=owner)
+            if reason is not None:
+                return None, reason
+            return operation(), None
+        finally:
+            original = sys.exception()
+            if not cleanup.retry():
+                cleanup.raise_failure(
+                    dominant_error(original, cleanup.process_control)
+                    or cleanup.errors[0]
+                )
 
     def mutate_model_settings(
         self,

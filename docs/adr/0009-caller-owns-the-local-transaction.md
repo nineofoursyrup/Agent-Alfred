@@ -43,3 +43,15 @@ Store 上有一个静态声明 `transaction_mode: "local_atomic" | "external"`�
 搜不到究竟是还没同步、还是根本没写进去，轮询分不出来。
 远端写入是否成功**只能**由写入回执与状态机判断，
 **检索暂不可见绝不能被读作写入失败，也不能被读作成功。**
+
+## 共享记忆命令与操作回执
+
+[Memory裁决](https://github.com/nineofoursyrup/Agent-Alfred/issues/31#issuecomment-5588135839) R08将Dashboard和对话工具的save/update/delete统一到共享命令服务，调用方事务执行器使业务/FTS、最小审计/工具账、来源关联和安全操作回执共同提交；Store仍不自行提交。手动入口取得MutationGate，Run工具继承既有准入权限，不能再次取门而自锁，也不为手动操作伪造模型Run。
+
+每次动作有稳定operation_id；同ID重送读取原提交事实，参数身份用HMAC/key_id，无正文快照。回执与条目现状、跨文件清理状态分开，避免响应丢失后重复副作用或复活旧正文。Registry仍负责通用协议与两份结果投影，不重复落一次记忆账。提炼复用事务能力但仍拥有consolidation_batches，绝不混入tool_ledger。
+
+范围确认的冻结成员、动作回执、闭包限制及 SQLite 投影失效同事务提交。
+投影参与者使用执行器的连接，不提交、不回滚、不做文件 IO；这不是改变 Store Protocol。
+受管文件意图同删除提交，清理逐项核验后另记进度，仍由同一 mutation 准入排序。
+R13 的来源、目标或使用链影响使整批候选失效并清正文；暂停来源禁止读取或提交，
+不称为已确认污染。真实批次与镜像实现仍归 #18。

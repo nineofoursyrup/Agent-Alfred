@@ -5,13 +5,17 @@ from __future__ import annotations
 import hmac
 import json
 import sqlite3
+import sys
+import threading
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
+from functools import partial
 from typing import Any
 
 from agent_alfred.memory.audit import AuditKey
 from agent_alfred.memory.episodic import SQLiteEpisodicStore
+from agent_alfred.memory.forget_ports import CleanupPort, ProjectionParticipant
 from agent_alfred.memory.semantic import SQLiteSemanticStore
 from agent_alfred.memory.types import (
     AlreadyAbsent,
@@ -26,6 +30,11 @@ from agent_alfred.memory.types import (
     UpdateApplied,
     VersionConflict,
     origin_json,
+)
+from agent_alfred.resource_rollback import (
+    ResumableRollback,
+    dominant_error,
+    raise_if_rollback_pending,
 )
 from agent_alfred.runtime.recording import RecordingStore, RecordingUnavailable
 
@@ -63,11 +72,46 @@ class MemoryCommandService:
         audit_key: AuditKey,
         clock,
         admission=None,
+        delete_barrier=None,
+        projection_participants: tuple[ProjectionParticipant, ...] = (),
+        projection_inventory_evidence_id: str | None = None,
+        cleanup_port: CleanupPort | None = None,
+        memory_notifier=None,
+        process_instance_id=None,
     ):
         self._db = recording_store
         self._key = audit_key
         self._clock = clock
         self._admission = admission
+        self._delete_barrier = delete_barrier
+        self._projection_participants = tuple(projection_participants)
+        self._projection_inventory_evidence_id = projection_inventory_evidence_id
+        self._cleanup_port = cleanup_port
+        self._memory_notifier = memory_notifier
+        self.notification_failed = False
+        self._process_instance_id = process_instance_id
+        self._mutation_lock = threading.RLock()
+        self._mutation_thread = None
+        from agent_alfred.memory.forgetting import ForgettingService
+
+        self.forgetting = ForgettingService(self)
+
+    def _notify_memory(self, revision, change=None):
+        if self._memory_notifier is None:
+            return
+        payload = {
+            "schema_version": 1,
+            "process_instance_id": self._process_instance_id,
+            "memory_revision": revision,
+            "change": change,
+        }
+        try:
+            self._memory_notifier(payload)
+        except Exception as error:
+            raise_if_rollback_pending(error)
+            # Transport delivery cannot undo a durable command. The #46 adapter
+            # owns disconnect-on-loss; readers always revalidate the DB revision.
+            self.notification_failed = True
 
     def _stores(self, conn):
         options = {"clock": self._clock, "fingerprint": self._key.fingerprint}
@@ -143,33 +187,100 @@ class MemoryCommandService:
                     "source_groups": context.source_groups,
                 }
             ).encode("utf-8")
-        except ValueError, TypeError, KeyError:
+        except (ValueError, TypeError, KeyError) as error:
+            raise_if_rollback_pending(error)
             return _error("invalid_input")
-        acquired = False
-        if self._admission is not None:
-            if isinstance(context.origin, ToolOrigin):
-                if not self._admission.validate_memory_permission(
-                    context.permission, context.run_id
-                ):
-                    return _error("busy")
-            else:
-                reason = self._admission.try_begin_mutation()
-                if reason is not None:
-                    return _error(
-                        "busy"
-                        if reason in ("busy", "run_in_progress", "mutation_in_flight")
-                        else "unavailable"
-                    )
-                acquired = True
-        try:
+
+        def execute():
+            # A durable replay never starts another barrier or mutation.
+            if command["action"] == "delete" and (
+                context.run_id or self._delete_barrier is not None
+            ):
+                old = self.get_operation(command["operation_id"])
+                if old is None:
+                    current = self.get(command["kind"], parsed["id"])
+                    if current is None:
+                        return self._execute_transaction(
+                            command, context, parsed, canonical
+                        )
+                    if current.record_version != command["expected_version"]:
+                        return _error(
+                            "version_conflict", current_version=current.record_version
+                        )
+                    if self._delete_barrier is None:
+                        return _error("trace_barrier_failed")
+                    try:
+                        failed, _ = self._delete_barrier(context.run_id)
+                    except Exception as error:
+                        raise_if_rollback_pending(error)
+                        return _error("trace_barrier_failed")
+                    if failed:
+                        return _error("trace_barrier_failed")
             return self._execute_transaction(command, context, parsed, canonical)
-        except ValueError:
+
+        return self._run_mutation(execute, context)
+
+    def _run_mutation(self, operation, context):
+        # RLock's native owner is observable even when interruption precedes
+        # capture of acquire()'s return. Still reject recursive public mutations.
+        if self._mutation_lock._is_owned():
+            return _error("busy")
+        admission_owner = ResumableRollback()
+        cleanup = ResumableRollback()
+        cleanup.own(self._mutation_lock, self._release_mutation_lock)
+        if self._admission is not None:
+            cleanup.own(
+                admission_owner,
+                partial(
+                    self._admission.end_mutation,
+                    owner=admission_owner,
+                ),
+            )
+        try:
+            if not self._mutation_lock.acquire(blocking=False):
+                return _error("busy")
+            self._mutation_thread = threading.get_ident()
+            if self._admission is not None:
+                if isinstance(context.origin, ToolOrigin):
+                    if not self._admission.validate_memory_permission(
+                        context.permission, context.run_id
+                    ):
+                        return _error("busy")
+                else:
+                    reason = self._admission.try_begin_mutation(owner=admission_owner)
+                    if reason is not None:
+                        return _error(
+                            "busy"
+                            if reason
+                            in ("busy", "run_in_progress", "mutation_in_flight")
+                            else "unavailable"
+                        )
+            # Independent executors cannot borrow a caller's open transaction.
+            # Reject before any recording context, trace checkpoint or file IO.
+            if self._db.transaction_in_progress:
+                return _error("transaction_required")
+            return operation()
+        except (ValueError, TypeError) as error:
+            raise_if_rollback_pending(error)
             return _error("invalid_input")
-        except sqlite3.Error, RecordingUnavailable:
+        except (sqlite3.Error, RecordingUnavailable) as error:
+            raise_if_rollback_pending(error)
             return _error("storage_write_failed")
         finally:
-            if acquired:
-                self._admission.end_mutation()
+            original = sys.exception()
+            if not cleanup.retry():
+                # Retry an interrupted idempotent release while preserving the
+                # original control exception and an owner for incomplete work.
+                failure = (
+                    dominant_error(original, cleanup.process_control)
+                    or cleanup.errors[0]
+                )
+                cleanup.raise_failure(failure)
+
+    def _release_mutation_lock(self):
+        if self._mutation_lock._is_owned():
+            self._mutation_thread = None
+            self._mutation_lock.release()
 
     def _execute_transaction(self, command, context, parsed, canonical):
         fingerprint, key_id = self._key.fingerprint(canonical)
@@ -246,12 +357,30 @@ class MemoryCommandService:
                     else None,
                     key_id=result.key_id if isinstance(result, Deleted) else None,
                 )
+            if action == "delete" and isinstance(result, Deleted):
+                from agent_alfred.memory.forget_graph import start_forgetting
+
+                start_forgetting(
+                    conn,
+                    operation_id,
+                    command["kind"],
+                    memory_id,
+                    command["expected_version"],
+                    committed_at,
+                )
+                self.forgetting.invalidate(
+                    conn, operation_id, memories=((command["kind"], memory_id),)
+                )
             encoded = _json(receipt)
             if not isinstance(context.origin, ConsolidationOrigin):
                 conn.execute(
-                    """INSERT INTO tool_ledger
-                    (tool_name,fingerprint,effect,status,call_id,run_id,session_id,summary,created_at,updated_at)
-                    VALUES (?,?,'local_write','succeeded',?,?,?,?,?,?)""",
+                    (
+                        "INSERT INTO tool_ledger\n                    "
+                        "(tool_name,fingerprint,effect,status,call_id,"
+                        "run_id,session_id,summary,created_at,updated_"
+                        "at)\n                    "
+                        "VALUES (?,?,'local_write','succeeded',?,?,?,?,?,?)"
+                    ),
                     (
                         f"memory_{action}",
                         fingerprint,
@@ -298,8 +427,24 @@ class MemoryCommandService:
                 "INSERT INTO memory_operations VALUES (?,?,?,?)",
                 (operation_id, fingerprint, key_id, encoded),
             )
+            if action == "delete" and isinstance(result, Deleted):
+                from agent_alfred.memory.forget_graph import record_observations
+
+                record_observations(conn, committed_at)
+            read_revision = conn.execute(
+                "SELECT revision FROM memory_revision WHERE singleton=1"
+            ).fetchone()[0]
             conn.commit()
-            return receipt
+        if affected:
+            change = {
+                "kind": command["kind"],
+                "id": memory_id,
+                "record_version": version,
+                "operation_id": operation_id,
+                "action": "deleted" if action == "delete" else "updated",
+            }
+            self._notify_memory(read_revision, change)
+        return receipt
 
     @staticmethod
     def _validate(command: dict) -> dict:

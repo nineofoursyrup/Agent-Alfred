@@ -8,6 +8,7 @@ from collections.abc import Callable, Iterable
 from datetime import datetime
 from typing import NamedTuple
 
+from agent_alfred.memory.forget_migration import TABLES as _V6_OBJECTS
 from agent_alfred.outcomes import RUN_OUTCOMES, parse_run_outcome
 from agent_alfred.run_phases import RUN_PHASES as PHASES
 
@@ -1033,6 +1034,12 @@ def _apply_v5(conn: sqlite3.Connection) -> None:
     migrate_commands(conn)
 
 
+def _apply_v6(conn):
+    from agent_alfred.memory.forget_migration import migrate_forgetting
+
+    migrate_forgetting(conn)
+
+
 MIGRATIONS = (
     Migration(version=1, apply=_apply_v1, managed_objects=_V1_MANAGED_OBJECTS),
     # Renames and rebuilds only: every name it leaves behind is already v1's.
@@ -1051,6 +1058,7 @@ MIGRATIONS = (
             "memory_provenance",
         ),
     ),
+    Migration(version=6, apply=_apply_v6, managed_objects=_V6_OBJECTS),
 )
 MIGRATION_VERSIONS = tuple(migration.version for migration in MIGRATIONS)
 LATEST_MIGRATION_VERSION = MIGRATION_VERSIONS[-1]

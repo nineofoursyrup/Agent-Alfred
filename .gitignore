@@ -37,3 +37,6 @@ usage.jsonl
 # Dashboard development tools and browser evidence
 node_modules/
 output/playwright/
+
+# Local implementation evidence and isolated artifact installs
+.scratch/

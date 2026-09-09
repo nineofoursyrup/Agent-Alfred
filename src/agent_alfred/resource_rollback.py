@@ -33,6 +33,45 @@ def dominant_error(
     return current
 
 
+def retain_failure_context(
+    failure: BaseException, earlier: BaseException | None,
+) -> None:
+    """Keep a deferred failure reachable without replacing either error's chain.
+
+    Unlike raising a saved error inside another handler, this also preserves the
+    later error's existing cause and context. It never advances resource cleanup.
+    """
+    if earlier is None or _exception_graph_contains(failure, earlier):
+        return
+    bridge = RuntimeError("earlier failure retained during recovery")
+    bridge.__cause__ = earlier
+    bridge.__context__ = failure.__context__
+    failure.__context__ = bridge
+
+
+def reraise_failure(
+    failure: BaseException, *, earlier: BaseException | None = None,
+) -> NoReturn:
+    """Publish the old graph before re-raising can replace implicit context."""
+    try:
+        retain_failure_context(failure, earlier)
+        previous = failure.__context__
+        if previous is not None:
+            bridge = RuntimeError("earlier context retained during recovery")
+            bridge.__cause__ = failure.__cause__
+            bridge.__context__ = previous
+            failure.__cause__ = bridge
+        raise failure
+    except _PROCESS_CONTROL as interruption:
+        if interruption is not failure:
+            primary = dominant_error(failure, interruption)
+            retain_failure_context(interruption, failure)
+            retain_failure_context(interruption, earlier)
+            if primary is failure:
+                reraise_failure(failure, earlier=earlier)
+        raise
+
+
 @runtime_checkable
 class CloseCompletion(Protocol):
     """Optional stable fact published before a close action returns."""
@@ -102,6 +141,29 @@ def capture_call_result(
     make an arbitrary Python operation's own ``PY_RETURN`` safe.
     """
     next(map(partial(setattr, receiver, attribute), starmap(operation, ((),))))
+
+
+class OwnedLock:
+    """One native lock acquisition with observable, repeatable release.
+
+    Both effects enter their completion field in the same C call. In particular,
+    interruption at this wrapper's return cannot cause a second native release.
+    """
+
+    def __init__(self, lock: threading.Lock) -> None:
+        self._lock = lock
+        self._acquired = False
+        self._release_result: bool | None = False
+
+    def acquire(self) -> None:
+        capture_call_result(self, "_acquired", self._lock.acquire)
+
+    def close(self) -> None:
+        if self._acquired and self._release_result is False:
+            capture_call_result(self, "_release_result", self._lock.release)
+
+    def close_completed(self) -> bool:
+        return not self._acquired or self._release_result is None
 
 
 @dataclass
@@ -948,3 +1010,15 @@ def _cause_outside_owner(
         seen.add(id(cause))
         cause = cause._restored_cause
     return cause
+
+
+def raise_if_rollback_pending(failure: BaseException) -> None:
+    """Do not normalize an error while it still owns unfinished cleanup.
+
+    The public exception graph remains the caller's standard recovery interface;
+    replacing it with a status value would strand its resource owners.
+    """
+    pending = RollbackSlot()
+    pending.capture_failure(failure)
+    if not pending.settled:
+        reraise_failure(failure)
