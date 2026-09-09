@@ -27,6 +27,12 @@ from agent_alfred.settings import Settings
 _TS = "2026-08-27T12:00:00+00:00"
 
 
+_GATE_DECISION = (
+    '{"retrieve":true,"query":"runtime-fixture",'
+    '"reason_code":"conservative_retrieve"}'
+)
+
+
 def _database_through_version(version: int) -> sqlite3.Connection:
     conn = sqlite3.connect(":memory:", check_same_thread=False)
     schema.configure_connection(conn)
@@ -70,9 +76,12 @@ def _migrated_host(
 ) -> RuntimeHost:
     schema.migrate(conn)
     capture = CapturingSink(name="capture", flush_at_run_end=True)
+    responses = [
+        item for answer in (script or ["pong"]) for item in (_GATE_DECISION, answer)
+    ]
     host = RuntimeHost(
         conn=conn,
-        factory=ScriptedModelFactory(ScriptedModel(script or ["pong"])),
+        factory=ScriptedModelFactory(ScriptedModel(responses)),
         settings=Settings(),
         clock=FakeClock(),
         fanout=FanOutSink([capture], process_instance_id="proc-sessions"),

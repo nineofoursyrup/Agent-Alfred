@@ -70,6 +70,18 @@ WALL = datetime(2026, 8, 28, 12, 34, 56, tzinfo=timezone.utc)
 _STAGING_NAME = ".staging-0123456789abcdef0123456789abcdef"
 
 
+def _chat_factory(replies: list[str]) -> ScriptedModelFactory:
+    # The new gate is a real request; give it a valid structured decision so
+    # the existing I/O ownership tests still reach a normal answer and barrier.
+    gate = (
+        '{"retrieve":true,"query":"trace fixture",'
+        '"reason_code":"conservative_retrieve"}'
+    )
+    return ScriptedModelFactory(
+        ScriptedModel([item for reply in replies for item in (gate, reply)])
+    )
+
+
 def test_bundle_publishes_its_retirement_owner_before_closing_resources() -> None:
     """An interrupted owner store leaves every capability reachable."""
     closed: list[str] = []
@@ -1934,7 +1946,7 @@ def test_a_real_run_through_the_host_publishes_without_staging_leftovers(
     from agent_alfred.runtime.host import SubmitRequest
 
     host = build_default_host(
-        state_dir=tmp_path, factory=ScriptedModelFactory(ScriptedModel(["pong"]))
+        state_dir=tmp_path, factory=_chat_factory(["pong"])
     )
     host.start()
     try:
@@ -2000,7 +2012,7 @@ def test_real_host_trace_create_refuses_directory_replaced_before_open(
     monkeypatch.setattr(managed_module.os, "open", replace_created_directory)
     host = build_default_host(
         state_dir=tmp_path,
-        factory=ScriptedModelFactory(ScriptedModel(["first", "second"])),
+        factory=_chat_factory(["first", "second"]),
     )
     host.start()
     try:
@@ -2025,7 +2037,7 @@ def test_real_host_trace_create_refuses_directory_replaced_before_open(
         assert host.close() is True
     successor = build_default_host(
         state_dir=tmp_path,
-        factory=ScriptedModelFactory(ScriptedModel(["successor"])),
+        factory=_chat_factory(["successor"]),
     )
     successor.start()
     try:
@@ -2488,7 +2500,7 @@ def test_real_host_trace_preserves_unknown_directory_after_identity_capture_fail
     monkeypatch.setattr(managed_module.os, "stat", fail_first_created_stat)
     host = build_default_host(
         state_dir=tmp_path,
-        factory=ScriptedModelFactory(ScriptedModel(["first"])),
+        factory=_chat_factory(["first"]),
     )
     host.start()
     with _captured_thread_exception() as thread_error:
@@ -2560,7 +2572,7 @@ def test_real_host_trace_preserves_unknown_directory_after_identity_capture_fail
         assert host.close() is True
     successor = build_default_host(
         state_dir=tmp_path,
-        factory=ScriptedModelFactory(ScriptedModel(["successor"])),
+        factory=_chat_factory(["successor"]),
     )
     successor.start()
     try:
@@ -2583,7 +2595,7 @@ def test_broken_bundle_fd_is_released_for_a_real_host_run(
     rounds = 4
     host = build_default_host(
         state_dir=tmp_path,
-        factory=ScriptedModelFactory(ScriptedModel(["pong"] * rounds)),
+        factory=_chat_factory(["pong"] * rounds),
     )
     sinks = [
         item for item in host._fanout.sinks if isinstance(item, RunBundleTraceSink)

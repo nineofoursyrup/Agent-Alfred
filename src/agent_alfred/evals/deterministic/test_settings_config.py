@@ -25,6 +25,11 @@ from agent_alfred.settings import (
 )
 from agent_alfred.wiring import build_default_host
 
+_GATE_DECISION = (
+    '{"retrieve":true,"query":"runtime-fixture",'
+    '"reason_code":"conservative_retrieve"}'
+)
+
 
 def test_environment_overrides_reach_settings(monkeypatch) -> None:
     monkeypatch.setenv("AGENT_ALFRED_MAX_STEPS", "3")
@@ -249,7 +254,7 @@ def test_persona_never_enters_the_session_record_or_the_transcript(
     capture = CapturingSink(name="capture", flush_at_run_end=True)
     host = RuntimeHost(
         conn=conn,
-        factory=ScriptedModelFactory(ScriptedModel(["pong"])),
+        factory=ScriptedModelFactory(ScriptedModel([_GATE_DECISION, "pong"])),
         settings=Settings(persona=persona),
         clock=FakeClock(),
         fanout=FanOutSink([capture], process_instance_id="proc-persona"),
@@ -272,10 +277,14 @@ def test_persona_never_enters_the_session_record_or_the_transcript(
         # The run transcript the model receives has no system entry; the
         # persona rides in request.system only (per-request composition).
         model = host._factory._model
-        assert model.requests, "the scripted model saw the request"
-        assert [m.role for m in model.requests[0].messages] == ["user"]
-        transcript_blob = repr(model.requests[0].messages)
-        assert persona not in transcript_blob
+        assert len(model.requests) == 2  # gate and answer have separate systems
+        gate_request, answer_request = model.requests
+        assert persona not in repr(gate_request.system)
+        assert persona in repr(answer_request.system)
+        assert gate_request.system != answer_request.system
+        for request in model.requests:
+            assert [m.role for m in request.messages] == ["user"]
+            assert persona not in repr(request.messages)
     finally:
         host.close()
 
@@ -296,7 +305,7 @@ def test_cli_stream_setting_reaches_the_admission_snapshot(tmp_path) -> None:
     capture = CapturingSink(name="capture", flush_at_run_end=True)
     host = RuntimeHost(
         conn=conn,
-        factory=ScriptedModelFactory(ScriptedModel(["pong"])),
+        factory=ScriptedModelFactory(ScriptedModel([_GATE_DECISION, "pong"])),
         settings=settings,
         clock=FakeClock(),
         fanout=FanOutSink([capture], process_instance_id="proc-stream-cli"),

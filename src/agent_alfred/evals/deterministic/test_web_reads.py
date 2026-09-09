@@ -46,6 +46,12 @@ _TS = "2026-08-27T12:00:00+00:00"
 _REDACTION_CANARY = "sk-top-secret-value"
 
 
+_GATE_DECISION = (
+    '{"retrieve":true,"query":"runtime-fixture",'
+    '"reason_code":"conservative_retrieve"}'
+)
+
+
 def _assert_redaction_canary_absent(value) -> None:
     if _REDACTION_CANARY in repr(value):
         pytest.fail("browser read leaked the redaction canary", pytrace=False)
@@ -86,9 +92,12 @@ def _host_over(
     before_recording_commit: threading.Event | None = None,
 ) -> RuntimeHost:
     capture = CapturingSink(name="capture", flush_at_run_end=True)
+    responses = [
+        item for answer in (script or ["pong"]) for item in (_GATE_DECISION, answer)
+    ]
     return RuntimeHost(
         conn=conn,
-        factory=ScriptedModelFactory(ScriptedModel(script or ["pong"])),
+        factory=ScriptedModelFactory(ScriptedModel(responses)),
         settings=Settings(),
         clock=FakeClock(),
         fanout=FanOutSink([capture], process_instance_id="proc-reads"),

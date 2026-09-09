@@ -31,6 +31,11 @@ from agent_alfred.runtime.work import SubmitRequest
 from agent_alfred.settings import Settings
 from agent_alfred.wiring import build_dashboard
 
+_GATE_DECISION = (
+    '{"retrieve":true,"query":"runtime-fixture",'
+    '"reason_code":"conservative_retrieve"}'
+)
+
 
 class _RefusingRuntime:
     def __init__(self, error: BaseException) -> None:
@@ -190,7 +195,7 @@ def test_the_default_cli_starts_the_dashboard(tmp_path, capsys) -> None:
     port = free_loopback_port()
     code = cli_module.main(
         ["--state-dir", str(tmp_path), "--port", str(port), "-m", "hi"],
-        factory=scripted_factory(),
+        factory=scripted_factory([_GATE_DECISION, "pong"]),
         build=_cli_build,
     )
     assert code == 0
@@ -218,7 +223,7 @@ def test_cli_events_reach_the_same_broker(tmp_path) -> None:
     assert (
         cli_module.main(
             ["--state-dir", str(tmp_path), "--port", str(port), "-m", "hi"],
-            factory=scripted_factory(),
+            factory=scripted_factory([_GATE_DECISION, "pong"]),
             build=build,
         )
         == 0
@@ -235,7 +240,9 @@ def test_the_cli_and_the_web_compete_for_one_coordinator(tmp_path) -> None:
     gate = threading.Event()
     runtime = build_dashboard(
         state_dir=tmp_path,
-        factory=ScriptedModelFactory(ScriptedModel(["pong"], gate=gate)),
+        factory=ScriptedModelFactory(
+            ScriptedModel([_GATE_DECISION, "pong"], gate=gate)
+        ),
         clock=FakeClock(),
         port=free_loopback_port(),
         open_database=file_database,
@@ -314,7 +321,7 @@ def test_cli_initial_session_is_refused_while_a_web_run_owns_the_gate(
             state_dir=tmp_path,
             settings=Settings(),
             factory=ScriptedModelFactory(
-                ScriptedModel(["pong"], gate=run_gate)
+                ScriptedModel([_GATE_DECISION, "pong"], gate=run_gate)
             ),
             port=free_loopback_port(),
             trace_root=tmp_path / "traces",
@@ -346,7 +353,7 @@ def test_the_cli_releases_the_socket_the_descriptor_and_the_lock(tmp_path) -> No
     assert (
         cli_module.main(
             ["--state-dir", str(tmp_path), "--port", str(port), "-m", "hi"],
-            factory=scripted_factory(),
+            factory=scripted_factory([_GATE_DECISION, "pong"]),
             build=_cli_build,
         )
         == 0

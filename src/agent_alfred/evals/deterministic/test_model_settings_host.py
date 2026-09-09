@@ -285,7 +285,10 @@ def test_chat_and_inference_probe_write_connection_observations(
     class ObservedFactory(ScriptedModelFactory):
         transport_pool = pool
 
-    factory = ObservedFactory(ScriptedModel(["pong", "probe-ok"]))
+    factory = ObservedFactory(ScriptedModel([
+        '{"retrieve":false,"query":null,"reason_code":"greeting"}',
+        "pong", "probe-ok"
+    ]))
     host, _store, _provider = _host_with_store(tmp_path, factory=factory)
     host.start()
     try:

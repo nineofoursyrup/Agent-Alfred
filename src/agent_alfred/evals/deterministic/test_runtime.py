@@ -7,6 +7,7 @@ import queue
 import sqlite3
 import sys
 import threading
+from dataclasses import replace
 
 import pytest
 
@@ -123,6 +124,12 @@ class FailingBarrierSink:
         return None
 
 
+_GATE_DECISION = (
+    '{"retrieve":true,"query":"runtime-fixture",'
+    '"reason_code":"conservative_retrieve"}'
+)
+
+
 def _host(
     script: list | None = None,
     *,
@@ -136,6 +143,7 @@ def _host(
     before_recording_failed: threading.Event | None = None,
     snapshot_provider=None,
     factory=None,
+    chat_script: bool = True,
 ) -> tuple[RuntimeHost, sqlite3.Connection, CapturingSink]:
     if conn is None:
         conn = sqlite3.connect(":memory:", check_same_thread=False)
@@ -143,7 +151,12 @@ def _host(
     capture = CapturingSink(name="capture", flush_at_run_end=True)
     sinks = [capture, *(extra_sinks or ())]
     fanout = FanOutSink(sinks, process_instance_id="proc-test")
-    model = ScriptedModel(script or ["pong"])
+    responses = script or ["pong"]
+    if chat_script:
+        # Each fixture entry is an answer for a separate chat Run. The gate
+        # makes its own real scripted request before that answer.
+        responses = [item for answer in responses for item in (_GATE_DECISION, answer)]
+    model = ScriptedModel(responses)
     host = RuntimeHost(
         conn=conn,
         factory=factory or ScriptedModelFactory(model),
@@ -189,7 +202,7 @@ def test_a_new_host_reuses_session_record_as_working_memory() -> None:
         host1.wait(first.run_id)
     finally:
         host1.close()
-    model = ScriptedModel(["second-reply"])
+    model = ScriptedModel([_GATE_DECISION, "second-reply"])
     capture = CapturingSink(name="capture", flush_at_run_end=True)
     host2 = RuntimeHost(
         conn=conn,
@@ -206,7 +219,8 @@ def test_a_new_host_reuses_session_record_as_working_memory() -> None:
         )
         result = host2.wait(second.run_id)
         assert result.outcome == "completed"
-        roles = [message.role for message in model.requests[0].messages]
+        assert len(model.requests) == 2  # gate followed by answer
+        roles = [message.role for message in model.requests[1].messages]
         assert roles == ["user", "assistant", "user"]
     finally:
         host2.close()
@@ -258,7 +272,7 @@ def test_wait_consumes_the_complete_result_and_waiter_exactly_once() -> None:
 
         assert result.outcome == "completed"
         assert message_plain_text(result.reply) == "pong"
-        assert len(result.model_results) == 1
+        assert len(result.model_results) == 2  # gate and answer share the Run
         assert host._done == {}
         assert host._results == {}
         with pytest.raises(KeyError, match=submitted.run_id):
@@ -883,7 +897,7 @@ def test_control_after_reserve_cannot_leave_close_waiting_for_handoff() -> None:
 def test_control_after_work_is_published_does_not_reclassify_it_unstarted() -> None:
     """A publisher may be interrupted only after the worker owns the item."""
     release_execution = threading.Event()
-    model = ScriptedModel(["pong"], gate=release_execution)
+    model = ScriptedModel([_GATE_DECISION, "pong"], gate=release_execution)
     host, _conn, _ = _host(factory=ScriptedModelFactory(model))
     publish = host.admission_publish_handoff
     control = KeyboardInterrupt("after publication")
@@ -1073,7 +1087,9 @@ def _probe_provider() -> MutableAssignmentProvider:
 
 
 def test_inference_probe_persists_telemetry_without_messages() -> None:
-    host, conn, _ = _host(["ok"], snapshot_provider=_probe_provider())
+    host, conn, _ = _host(
+        ["ok"], snapshot_provider=_probe_provider(), chat_script=False
+    )
     host.start()
     try:
         submitted = host.submit(
@@ -1165,7 +1181,7 @@ def test_run_finished_publish_failure_is_merged_into_the_barrier_result() -> Non
     )
     host = RuntimeHost(
         conn=conn,
-        factory=ScriptedModelFactory(ScriptedModel(["pong"])),
+        factory=ScriptedModelFactory(ScriptedModel([_GATE_DECISION, "pong"])),
         settings=Settings(),
         clock=FakeClock(),
         fanout=fanout,
@@ -1554,7 +1570,7 @@ def test_unstarted_finalize_resumes_before_control_escapes(control_type) -> None
 
 def test_retried_close_idle_cannot_clear_a_successor_run() -> None:
     release_model = threading.Event()
-    model = ScriptedModel(["pong"], gate=release_model)
+    model = ScriptedModel([_GATE_DECISION, "pong"], gate=release_model)
     host, _conn, _ = _host(factory=ScriptedModelFactory(model))
     publish = host.admission_publish_handoff
     close_idle = host.admission_close_idle
@@ -1627,7 +1643,7 @@ def _fake_admission(
     conn, *, factory=None, coordinator=None, snapshot_provider=None
 ):
     if factory is None:
-        factory = ScriptedModelFactory(ScriptedModel(["pong"]))
+        factory = ScriptedModelFactory(ScriptedModel([_GATE_DECISION, "pong"]))
     if coordinator is None:
         coordinator = _FakeAdmissionCoordinator()
     return RunAdmission(
@@ -2553,8 +2569,10 @@ def test_run_telemetry_aggregates_every_usage_field() -> None:
         raw = conn.execute("SELECT telemetry FROM runs").fetchone()[0]
         payload = json.loads(raw)
         attempts = payload["attempts"]
-        assert len(attempts) == 2
-        first = attempts[0]
+        assert len(attempts) == 3  # gate, aborted answer, committed answer
+        assert attempts[0]["outcome"] == "committed"
+        assert attempts[0]["usage"]["total_input_tokens"] is None
+        first = attempts[1]
         assert first["attempt_id"] == "att-abort"
         assert first["streamed"] is True
         assert first["outcome"] == "aborted"
@@ -2568,7 +2586,7 @@ def test_run_telemetry_aggregates_every_usage_field() -> None:
         assert usage["endpoint_reported_cost_usd"] == "0.123456789012345678"
         assert usage["raw"]["prompt_tokens"] == 10
         assert secret not in json.dumps(payload)
-        assert attempts[1]["usage"]["total_input_tokens"] == 4
+        assert attempts[2]["usage"]["total_input_tokens"] == 4
         log_tel = conn.execute(
             "SELECT telemetry FROM agent_log WHERE run_id = ?",
             (submitted.run_id,),
@@ -2633,7 +2651,15 @@ def test_recorded_run_keeps_attempts_after_telemetry_return_interrupt(
             assert not armed[0], "the serializer return injection was not reached"
 
         assert result.outcome == "completed"
-        assert result.model_results == (model_result,)
+        assert len(result.model_results) == 2
+        assert result.model_results[0].response.blocks[0].text == _GATE_DECISION
+        assert result.model_results[1] == replace(
+            model_result,
+            attempts=(replace(
+                model_result.attempts[0],
+                model=ModelRef(endpoint_id="opencode-go", model_id="deepseek-v4-flash"),
+            ),),
+        )
         row = conn.execute(
             "SELECT phase, telemetry FROM runs WHERE run_id = ?",
             (submitted.run_id,),
@@ -2649,9 +2675,10 @@ def test_recorded_run_keeps_attempts_after_telemetry_return_interrupt(
             )
             for attempt in attempts
         ]
-        assert recorded_usage == [("att-recorded", 11, 7)], (
-            "a recorded Run omitted its known Attempt usage"
-        )
+        gate_attempt_id = result.model_results[0].attempts[0].attempt_id
+        assert recorded_usage == [
+            (gate_attempt_id, None, None), ("att-recorded", 11, 7)
+        ], "a recorded Run omitted its known Attempt usage"
     finally:
         host.close(timeout=2)
         conn.close()
@@ -2748,7 +2775,9 @@ def test_events_none_and_inference_probe_still_record_usage() -> None:
         serialize_run_telemetry((model_result,), False, None, redactor=None)
     )
     assert serialized["attempts"][0]["usage"]["total_input_tokens"] == 9
-    host, conn, _ = _host([model_result], snapshot_provider=_probe_provider())
+    host, conn, _ = _host(
+        [model_result], snapshot_provider=_probe_provider(), chat_script=False
+    )
     host.start()
     try:
         submitted = host.submit(
@@ -2829,7 +2858,7 @@ def test_file_database_survives_closing_the_host_and_connection(tmp_path) -> Non
         conn.close()
 
     conn2 = sqlite3.connect(str(path), check_same_thread=False)
-    model = ScriptedModel(["second"])
+    model = ScriptedModel([_GATE_DECISION, "second"])
     capture = CapturingSink(name="capture", flush_at_run_end=True)
     host2 = RuntimeHost(
         conn=conn2,
@@ -2851,7 +2880,8 @@ def test_file_database_survives_closing_the_host_and_connection(tmp_path) -> Non
             SubmitRequest(message="again", session_id=session_id)
         )
         host2.wait(again.run_id)
-        roles = [message.role for message in model.requests[0].messages]
+        assert len(model.requests) == 2  # gate followed by answer
+        roles = [message.role for message in model.requests[1].messages]
         assert roles == ["user", "assistant", "user"]
     finally:
         host2.close()

@@ -16,6 +16,14 @@ from agent_alfred.adapter_common import (
     decoded_tool_call,
     raw_usage,
 )
+from agent_alfred.attempt_io import (
+    attempt_scope,
+    deadline_chunks,
+    prepare_attempt,
+    preserve_attempt_usage,
+    propagate_local_failure,
+    start_transport,
+)
 from agent_alfred.events import (
     AttemptAborted,
     AttemptCommitted,
@@ -52,6 +60,12 @@ class AnthropicAdapter:
         bound._attempt_timeout_s = timeout_s
         return bound
 
+    def with_attempt_budget(self, budget):
+        bound = copy(self)
+        bound._io_budget = budget
+        return bound
+
+    @attempt_scope
     def respond(self, request, *, events=None, deadline=None):
         del deadline
         attempt = uuid.uuid4().hex
@@ -87,26 +101,29 @@ class AnthropicAdapter:
             kwargs["timeout"] = self._attempt_timeout_s
         if self._stream:
             return self._respond_stream(request, kwargs, events, attempt)
-        _emit(
-            events,
-            AttemptStarted(
+        prepare_attempt(
+            lambda: _emit(events, AttemptStarted(
                 attempt_id=attempt,
                 model=request.model,
                 timeout_ms=_timeout_ms(self._attempt_timeout_s),
-            ),
+            ), attempt),
             attempt,
         )
         usage = Usage()
         try:
+            start_transport()
             response = self._client.messages.create(**kwargs)
         except Exception as exc:
+            propagate_local_failure()
             error = _error_from_exc(attempt, exc)
         else:
             try:
                 usage = _usage(_field(response, "usage"))
+                preserve_attempt_usage(usage)
                 blocks = tuple(_decode(b) for b in _field(response, "content"))
                 stop = _stop(_field(response, "stop_reason"))
             except Exception as exc:
+                propagate_local_failure()
                 error = _error_from_exc(
                     attempt, exc, retryable=False, code="invalid_response"
                 )
@@ -131,14 +148,13 @@ class AnthropicAdapter:
         return _aborted(attempt, error, streamed=False, usage=usage)
 
     def _respond_stream(self, request, kwargs, events, attempt):
-        _emit(
-            events,
-            AttemptStarted(
+        prepare_attempt(
+            lambda: _emit(events, AttemptStarted(
                 attempt_id=attempt,
                 model=request.model,
                 streamed=True,
                 timeout_ms=_timeout_ms(self._attempt_timeout_s),
-            ),
+            ), attempt),
             attempt,
         )
         state = {}
@@ -148,14 +164,16 @@ class AnthropicAdapter:
         response = None
         error = None
         try:
+            start_transport()
             response = self._client.messages.create(**kwargs, stream=True)
-            for event in response:
+            for event in deadline_chunks(response):
                 kind = _field(event, "type")
                 if kind == "message_start":
                     if started:
                         raise ResponseDecodeError("duplicate message start")
                     started = True
                     raw.update(raw_usage(_field(_field(event, "message"), "usage")))
+                    preserve_attempt_usage(_usage(raw))
                 elif kind == "content_block_start":
                     index = _field(event, "index")
                     if (
@@ -237,6 +255,7 @@ class AnthropicAdapter:
                             if v is not None
                         }
                     )
+                    preserve_attempt_usage(_usage(raw))
                     reason = _field(_field(event, "delta"), "stop_reason")
                     if reason is not None:
                         finish = reason
@@ -270,6 +289,7 @@ class AnthropicAdapter:
                     code="incomplete_stream",
                 )
             usage = _usage(raw)
+            preserve_attempt_usage(usage)
             blocks = []
             if error is None:
                 for index in sorted(state):
@@ -294,8 +314,10 @@ class AnthropicAdapter:
                             decoded_tool_call(block["id"], block["name"], args)
                         )
         except Exception as exc:
+            propagate_local_failure()
             error = _stream_error_from_exc(attempt, exc)
             usage = _usage(raw)
+            preserve_attempt_usage(usage)
         finally:
             error = close_stream(response, attempt, error)
         if error is not None:

@@ -69,6 +69,7 @@ class MutableAssignmentProvider:
                 primary=self._primary,
                 retrieval_gate=self._retrieval_gate,
                 api_key=self._api_key,
+                retrieval_gate_api_key=self._api_key,
                 stream=stream,
                 settings=self._settings,
             )
@@ -162,6 +163,7 @@ def _snapshot(
     api_key: str | None,
     stream: bool,
     settings: Settings,
+    retrieval_gate_api_key: str | None = None,
 ) -> ClientSnapshot:
     return ClientSnapshot(
         config_version=version,
@@ -172,6 +174,7 @@ def _snapshot(
         stream_fallback=settings.stream_fallback,
         overall_deadline_s=settings.overall_deadline_s,
         per_attempt_timeout_s=settings.per_attempt_timeout_s,
+        retrieval_gate_api_key=retrieval_gate_api_key,
     )
 
 
@@ -261,11 +264,15 @@ class StoreBackedSnapshotProvider:
                 raise InvalidProbeTarget
             invoked = _assignment_for(target, snapshot)
         key = _key_for(invoked.endpoint_id, self._environ)
+        gate_key = None if retrieval_gate is None else _key_for(
+            retrieval_gate.endpoint_id, self._environ
+        )
         fingerprint = (
             snapshot.revision,
             snapshot.status,
             invoked,
             retrieval_gate,
+            gate_key,
             key,
             self._settings.stream_fallback,
             self._settings.overall_deadline_s,
@@ -279,6 +286,7 @@ class StoreBackedSnapshotProvider:
         return _snapshot(
             version=version,
             primary=invoked,
+            retrieval_gate_api_key=gate_key,
             retrieval_gate=retrieval_gate,
             api_key=key,
             stream=stream,

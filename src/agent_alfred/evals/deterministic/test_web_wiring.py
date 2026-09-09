@@ -47,7 +47,9 @@ from agent_alfred.wiring import build_dashboard
 
 
 def _factory() -> ScriptedModelFactory:
-    return ScriptedModelFactory(ScriptedModel(["pong"]))
+    return ScriptedModelFactory(ScriptedModel([
+        '{"retrieve":false,"query":null,"reason_code":"greeting"}', "pong"
+    ]))
 
 
 def _database(state, *, _rollback) -> sqlite3.Connection:

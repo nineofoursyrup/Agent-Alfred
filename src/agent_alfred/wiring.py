@@ -187,6 +187,7 @@ def build_host(
     environ: Mapping[str, str] | None = None,
     credentials: CredentialOverlay | None = None,
     _rollback: ResumableRollback | None = None,
+    audit_key_path: Path | None = None,
 ) -> RuntimeHost:
     settings = settings or Settings()
     clock = clock or SystemClock()
@@ -222,7 +223,13 @@ def build_host(
             provider = StoreBackedSnapshotProvider(
                 model_settings, settings, environ=environ
             )
+        from agent_alfred.memory.audit import AuditKey
+        audit_key = (
+            None if audit_key_path is None
+            else AuditKey.load_or_create(audit_key_path, redactor)
+        )
         host = RuntimeHost(
+            audit_key=audit_key,
             conn=conn,
             factory=factory,
             settings=settings,
@@ -341,6 +348,7 @@ def build_dashboard(
                 model_settings=model_settings,
                 credentials=credentials,
                 _rollback=rollback,
+                audit_key_path=state.path / "audit.key",
             )
             rollback.own(host)
             broker.bind_session_check(host.transport_session_validity)
@@ -427,6 +435,7 @@ def build_default_host(
             trace_root=(state, PurePath("traces")),
             model_settings=model_settings,
             _rollback=rollback,
+            audit_key_path=state.path / "audit.key",
         )
         rollback.own(host)
         host.attach_owned_resources(conn, state, source=rollback)

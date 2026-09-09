@@ -559,21 +559,57 @@ def test_close_failure_usage_reaches_real_run_ledger(style, tmp_path):
 
     cls = OpenAICompatibleAdapter if style == "openai" else AnthropicAdapter
 
+    gate_json = '{"retrieve":false,"query":null,"reason_code":"greeting"}'
+    gate_stream = (
+        [
+            {"type": "message_start", "message": {"usage": {"input_tokens": 1}}},
+            {"type": "content_block_start", "index": 0,
+             "content_block": {"type": "text", "text": ""}},
+            {"type": "content_block_delta", "index": 0,
+             "delta": {"type": "text_delta", "text": gate_json}},
+            {"type": "content_block_stop", "index": 0},
+            {"type": "message_delta", "delta": {"stop_reason": "end_turn"},
+             "usage": {"output_tokens": 1}},
+            {"type": "message_stop"},
+        ] if style == "anthropic" else [
+            chunk({"content": gate_json}, "stop"),
+            {"choices": [], "usage": {"prompt_tokens": 1, "completion_tokens": 1}},
+            "[DONE]",
+        ]
+    )
+
+    class GateThenCloseFailure(Wire):
+        def create(self, **kwargs):
+            self.requests.append(kwargs)
+            return gate_stream if len(self.requests) == 1 else CloseFailure()
+
+    from agent_alfred.stream_fallback import StreamFallback
+
+    clock = FakeClock()
+
     class Factory:
         def create(self, snapshot):
-            return cls(client=Wire(CloseFailure()), model=request().model, stream=True)
+            return StreamFallback(
+                cls(
+                    client=GateThenCloseFailure(None),
+                    model=request().model, stream=True
+                ),
+                clock=clock, stream=True, stream_fallback=False,
+            )
 
     conn = sqlite3.connect(":memory:", check_same_thread=False)
     schema.migrate(conn)
-    host = build_host(conn=conn, factory=Factory(), clock=FakeClock())
+    host = build_host(conn=conn, factory=Factory(), clock=clock)
     host.start()
     try:
         run = host.submit(SubmitRequest("hello")).run_id
         assert host.wait(run, timeout=2).outcome == "failed"
         evidence = host.read_run_evidence(run, trace_root=tmp_path)
-        assert len(evidence["attempts"]) == 1
-        assert evidence["attempts"][0]["outcome"] == "aborted"
-        assert evidence["attempts"][0]["usage"]["output_tokens"] == 5
+        assert len(evidence["attempts"]) == 2
+        assert evidence["attempts"][0]["outcome"] == "committed"
+        assert evidence["attempts"][0]["usage"]["output_tokens"] == 1
+        assert evidence["attempts"][1]["outcome"] == "aborted"
+        assert evidence["attempts"][1]["usage"]["output_tokens"] == 5
     finally:
         host.close()
         conn.close()

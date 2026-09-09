@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import queue
+from dataclasses import replace
 from typing import Protocol
 
 from agent_alfred import schema
@@ -34,8 +35,10 @@ from agent_alfred.messages import (
 from agent_alfred.model import ModelClient, ModelRef, ModelRequest, ModelResult
 from agent_alfred.outcomes import RunOutcome
 from agent_alfred.redact import Redactor
+from agent_alfred.runtime.memory import RunMemory
 from agent_alfred.runtime.recording import RecordingStore, RunRecorder
 from agent_alfred.runtime.snapshot import ActiveRunSummary
+from agent_alfred.runtime.telemetry import AttemptObservationFailed
 from agent_alfred.runtime.work import WorkItem
 from agent_alfred.settings import CONTROLLED_FAILURE_TEXT, Settings
 from agent_alfred.support_overrides import SupportRecorder
@@ -114,8 +117,9 @@ class _AttemptLedger:
     streaming fallback a Step spent are already inside ``ModelResult.attempts``.
     """
 
-    def __init__(self, client: ModelClient, observe=None):
+    def __init__(self, client: ModelClient, observe=None, records=None):
         self._observe = observe
+        self._records = records
         self._client = client
         self.model_results: tuple[ModelResult, ...] = ()
 
@@ -126,10 +130,59 @@ class _AttemptLedger:
         events: AssistantEvents | None = None,
         deadline: float | None = None,
     ) -> ModelResult:
-        result = self._client.respond(request, events=events, deadline=deadline)
+        from agent_alfred.model import ModelCallInterrupted
+
+        failure = None
+        try:
+            result = self._client.respond(request, events=events, deadline=deadline)
+        except ModelCallInterrupted as interrupted:
+            result = interrupted.result
+            failure = interrupted.cause
+        try:
+            result = self._record(result, request, events)
+        except BaseException as observation:
+            if failure is None:
+                raise
+            # Bookkeeping is fatal, but may not override pending process control.
+            if isinstance(failure, (KeyboardInterrupt, SystemExit, GeneratorExit)):
+                primary, secondary = failure, observation
+            else:
+                primary, secondary = observation, failure
+            if primary is not secondary:
+                # These failures arose in separate exception scopes. Preserve
+                # their causes and append the old context without making a cycle.
+                previous = primary.__context__
+                tail = secondary
+                seen = {id(primary), id(secondary)}
+                while tail.__context__ is not None:
+                    if id(tail.__context__) in seen:
+                        break
+                    tail = tail.__context__
+                    seen.add(id(tail))
+                tail.__context__ = (
+                    previous if previous is not None and id(previous) not in seen
+                    else None
+                )
+                primary.__context__ = secondary
+            failure = primary
+        if failure is not None:
+            # Unwind outside the carrier's handler: preserve the original cause
+            # chain rather than introducing a cycle through the carrier.
+            raise failure
+        return result
+
+    def _record(self, result, request, events):
+        result = replace(result, attempts=tuple(
+            replace(attempt, model=request.model) for attempt in result.attempts
+        ))
         self.model_results += (result,)
+        if self._records is not None:
+            self._records.append(result)
         if self._observe is not None:
-            self._observe(result, events)
+            try:
+                self._observe(result, events)
+            except Exception as exc:
+                raise AttemptObservationFailed(exc) from exc
         return result
 
 
@@ -147,7 +200,11 @@ class RunExecutor:
         coordinator: ExecutionCoordinator,
         work_queue: "queue.Queue[WorkItem | None]",
         support_recorder: SupportRecorder | None = None,
+        memory_service=None,
+        factory=None,
     ):
+        self._memory_service = memory_service
+        self._factory = factory
         self._support_recorder = support_recorder
         self._clock = clock
         self._settings = settings
@@ -189,6 +246,7 @@ class RunExecutor:
         error: str | None = None
         step_count = 0
         duration_ms = 0
+        all_results = []
         ledger = _AttemptLedger(
             item.client,
             lambda result, events: (
@@ -198,7 +256,17 @@ class RunExecutor:
                 if self._support_recorder is not None
                 else None
             ),
+            records=all_results,
         )
+
+        def gate_ledger(client, snapshot):
+            wrapped = _AttemptLedger(client, lambda result, events: (
+                self._support_recorder.observe(snapshot, item.run_id, result, events)
+                if self._support_recorder is not None else None
+            ), records=all_results)
+            return wrapped
+
+        budget = RunBudget(self._settings.max_steps)
         try:
             # The clock is an injected collaborator and therefore belongs
             # inside the same terminal ownership scope as every later Run
@@ -242,7 +310,15 @@ class RunExecutor:
                 ),
                 envelope,
             )
-            budget = RunBudget(self._settings.max_steps)
+            memory = None
+            if item.request.purpose == "chat":
+                memory = RunMemory(
+                    item=item, clock=self._clock, settings=self._settings,
+                    service=self._memory_service, factory=self._factory,
+                    ledger_factory=gate_ledger, answer_ledger=ledger,
+                    events=self._events,
+                    working_history_groups=self._working_history_groups(item.session_id),
+                )
             loop_result = self._assistant.respond(
                 item.request.message,
                 client=ledger,
@@ -257,6 +333,7 @@ class RunExecutor:
                 events=self._events,
                 source=item.request.gateway,
                 overall_deadline_s=item.snapshot.overall_deadline_s,
+                memory=memory,
             )
             outcome = loop_result.outcome
             reply = loop_result.reply
@@ -282,6 +359,8 @@ class RunExecutor:
             reply = None
             raise
         except Exception as exc:
+            if isinstance(exc, AttemptObservationFailed):
+                exc = exc.cause
             outcome = "failed"
             error = type(exc).__name__
             if reply is None:
@@ -313,9 +392,9 @@ class RunExecutor:
                 outcome=outcome,
                 reply=reply,
                 error=error,
-                step_count=step_count,
+                step_count=max(step_count, budget.used),
                 duration_ms=duration_ms,
-                model_results=ledger.model_results,
+                model_results=tuple(all_results),
             )
 
     def _load_working_memory(self, session_id: str | None) -> tuple[Message, ...]:
@@ -335,3 +414,16 @@ class RunExecutor:
             blocks = blocks_from_jsonable(json.loads(content))
             messages.append(Message(role=role, blocks=blocks))
         return tuple(messages)
+
+    def _working_history_groups(self, session_id: str | None) -> tuple[str, ...]:
+        if session_id is None:
+            return ()
+        with self._store.reading() as conn:
+            rows = conn.execute(
+                "SELECT run_id FROM agent_log WHERE session_id = ? "
+                "ORDER BY id DESC LIMIT ?",
+                (session_id, self._settings.working_memory_rounds * 2),
+            ).fetchall()
+        return tuple(dict.fromkeys(
+            row[0] for row in reversed(rows) if row[0] is not None
+        ))

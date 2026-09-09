@@ -48,6 +48,12 @@ ROTATED = "rotated-secret-key-value"
 _MODEL = ModelRef(endpoint_id="opencode-go", model_id="deepseek-v4-flash")
 
 
+_GATE_DECISION = (
+    '{"retrieve":true,"query":"runtime-fixture",'
+    '"reason_code":"conservative_retrieve"}'
+)
+
+
 def _request(text: str = "hi") -> ModelRequest:
     return ModelRequest(
         model=_MODEL,
@@ -267,9 +273,12 @@ def _host(
     fanout = FanOutSink(
         sinks, process_instance_id="proc-review", redactor=fanout_redactor
     )
+    responses = [
+        item for answer in (script or ["pong"]) for item in (_GATE_DECISION, answer)
+    ]
     host = RuntimeHost(
         conn=conn,
-        factory=factory or ScriptedModelFactory(ScriptedModel(script or ["pong"])),
+        factory=factory or ScriptedModelFactory(ScriptedModel(responses)),
         settings=settings or Settings(),
         clock=FakeClock(),
         fanout=fanout,
@@ -374,7 +383,7 @@ def test_rotated_credentials_remain_protected_without_changing_plain_text(
     conn = sqlite3.connect(":memory:", check_same_thread=False)
     schema.migrate(conn)
     capture = CapturingSink(name="capture", flush_at_run_end=True)
-    factory = ScriptedModelFactory(ScriptedModel(["ordinary reply"]))
+    factory = ScriptedModelFactory(ScriptedModel([_GATE_DECISION, "ordinary reply"]))
     host = build_host(
         conn=conn,
         factory=factory,
@@ -1087,7 +1096,7 @@ def test_step_started_system_is_redacted_for_every_sink() -> None:
     )
     host = RuntimeHost(
         conn=sqlite3.connect(":memory:", check_same_thread=False),
-        factory=ScriptedModelFactory(ScriptedModel(["pong"])),
+        factory=ScriptedModelFactory(ScriptedModel([_GATE_DECISION, "pong"])),
         settings=Settings(persona=f"Never leak {SECRET}."),
         clock=FakeClock(),
         fanout=fanout,
@@ -1107,10 +1116,13 @@ def test_step_started_system_is_redacted_for_every_sink() -> None:
                 for event in sink.events
                 if event.payload.name == "step.started"
             ]
-            assert systems and systems[0] is not None
-            joined = " ".join(block.text for block in systems[0])
+            assert len(systems) == 2
+            gate_system, answer_system = systems
+            assert gate_system is not None and answer_system is not None
+            assert "Never leak" not in " ".join(block.text for block in gate_system)
+            joined = " ".join(block.text for block in answer_system)
             assert SECRET not in joined
-            assert "***" in joined
+            assert "Never leak ***." in joined
     finally:
         host.close()
 

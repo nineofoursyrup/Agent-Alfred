@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal
 
 from agent_alfred.model import ClientSnapshot, ModelClient
@@ -81,3 +81,11 @@ class WorkItem:
     session_id: str | None
     prompt_preview: str | None
     accepted_at: str
+    memory_permission: object = field(default_factory=object, repr=False)
+    memory_telemetry: dict = field(
+        default_factory=lambda: {
+            "gate_state": "not_evaluated",
+            "gate": None,
+            "input_attempts": [],
+        }
+    )

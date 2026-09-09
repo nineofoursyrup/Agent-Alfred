@@ -8,6 +8,8 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
+    { name = "httpcore2" },
+    { name = "httpx2" },
     { name = "openai" },
     { name = "python-dotenv" },
     { name = "rich" },
@@ -26,6 +28,8 @@ otel = [
 [package.metadata]
 requires-dist = [
     { name = "anthropic", specifier = ">=1.0.0" },
+    { name = "httpcore2", specifier = "==2.12.0" },
+    { name = "httpx2", specifier = "==2.12.0" },
     { name = "openai", specifier = ">=3.3.1" },
     { name = "opentelemetry-api", marker = "extra == 'otel'", specifier = ">=1.44.0" },
     { name = "opentelemetry-sdk", marker = "extra == 'otel'", specifier = ">=1.44.0" },

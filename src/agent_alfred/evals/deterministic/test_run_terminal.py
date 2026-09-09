@@ -60,6 +60,7 @@ from agent_alfred.runtime.work import WorkItem
 from agent_alfred.settings import CONTROLLED_FAILURE_TEXT, Settings
 
 TS = "2026-08-28T00:00:00Z"
+GATE_SKIP = '{"retrieve":false,"query":null,"reason_code":"greeting"}'
 
 
 # --- harness ---------------------------------------------------------------
@@ -684,7 +685,7 @@ def test_closed_host_releases_client_after_execution_start_failure(
     class FreshClientFactory:
         def create(self, snapshot):
             del snapshot
-            client = ScriptedModel(["pong"])
+            client = ScriptedModel([GATE_SKIP, "pong"])
             clients.append(weakref.ref(client))
             return client
 
@@ -729,7 +730,7 @@ def test_execution_start_clock_base_exception_still_settles_and_notifies(
     clock = _InterruptWorkerStartClock(make_exception)
     host = _build_host(
         conn,
-        ScriptedModelFactory(ScriptedModel(["pong"])),
+        ScriptedModelFactory(ScriptedModel([GATE_SKIP, "pong"])),
         clock=clock,
     )
     worker_failures: list[BaseException] = []
@@ -790,7 +791,7 @@ def test_running_snapshot_listener_control_retires_handoff_cell() -> None:
 
     host = _build_host(
         conn,
-        ScriptedModelFactory(ScriptedModel(["pong", "pong"])),
+        ScriptedModelFactory(ScriptedModel([GATE_SKIP, "pong", GATE_SKIP, "pong"])),
         snapshot_listener=interrupt_running_snapshot,
     )
     host.start()
@@ -826,7 +827,7 @@ def test_run_finished_prepare_control_cannot_skip_terminal_settlement(
     interrupting = _InterruptRunFinishedPrepare(make_exception)
     host = _build_host(
         conn,
-        ScriptedModelFactory(ScriptedModel(["pong", "pong"])),
+        ScriptedModelFactory(ScriptedModel([GATE_SKIP, "pong", GATE_SKIP, "pong"])),
         extra_sinks=(interrupting,),
     )
     worker_failures: list[BaseException] = []
@@ -890,7 +891,7 @@ def test_run_finished_after_publish_control_is_not_retried(
     conn = _database()
     host = _build_host(
         conn,
-        ScriptedModelFactory(ScriptedModel(["pong", "pong"])),
+        ScriptedModelFactory(ScriptedModel([GATE_SKIP, "pong", GATE_SKIP, "pong"])),
     )
     interrupted = _InterruptRunFinishedAfterPublish(
         host._fanout.emit,
@@ -992,7 +993,7 @@ def test_settlement_boundary_base_exception_is_recovered(
     conn = _database()
     host = _build_host(
         conn,
-        ScriptedModelFactory(ScriptedModel(["pong", "pong"])),
+        ScriptedModelFactory(ScriptedModel([GATE_SKIP, "pong", GATE_SKIP, "pong"])),
     )
     owner = host._fanout if stage == "flush" else host
     boundary = _InterruptOnceAround(
@@ -1055,7 +1056,7 @@ def test_recorded_snapshot_precedes_idle_after_summary_return_interrupt(
     conn = _database()
     host = _build_host(
         conn,
-        ScriptedModelFactory(ScriptedModel(["pong", "pong"])),
+        ScriptedModelFactory(ScriptedModel([GATE_SKIP, "pong", GATE_SKIP, "pong"])),
         snapshot_listener=observed.append,
     )
     boundary = (
@@ -1127,7 +1128,7 @@ def test_consecutive_terminal_listener_failures_cannot_retain_admission(
 
     host = _build_host(
         conn,
-        ScriptedModelFactory(ScriptedModel(["pong", "pong"])),
+        ScriptedModelFactory(ScriptedModel([GATE_SKIP, "pong", GATE_SKIP, "pong"])),
         snapshot_listener=interrupt_terminal_delivery,
     )
     host.start()
@@ -1210,7 +1211,7 @@ def test_flush_control_cleans_run_bookkeeping_without_retry() -> None:
     trailing = _CountingFlush()
     host = _build_host(
         conn,
-        ScriptedModelFactory(ScriptedModel(["pong", "pong"])),
+        ScriptedModelFactory(ScriptedModel([GATE_SKIP, "pong", GATE_SKIP, "pong"])),
         extra_sinks=(interrupting, trailing),
     )
     host.start()
@@ -1293,7 +1294,7 @@ def test_finalize_commit_then_base_exception_is_reconciled_without_duplicates(
     interrupted = _InterruptFinalizeCommit(raw, make_exception)
     host = _build_host(
         interrupted,
-        ScriptedModelFactory(ScriptedModel(["pong", "pong"])),
+        ScriptedModelFactory(ScriptedModel([GATE_SKIP, "pong", GATE_SKIP, "pong"])),
     )
     worker_failures: list[BaseException] = []
     monkeypatch.setattr(
@@ -1330,7 +1331,7 @@ def test_idle_snapshot_publication_before_effect_is_resumed(
     conn = _database()
     host = _build_host(
         conn,
-        ScriptedModelFactory(ScriptedModel(["pong", "pong"])),
+        ScriptedModelFactory(ScriptedModel([GATE_SKIP, "pong", GATE_SKIP, "pong"])),
     )
     replace_snapshot = host._states.replace
     entered = threading.Event()
@@ -1385,7 +1386,7 @@ def test_unstarted_handoff_idle_snapshot_before_effect_is_resumed(
     conn = _database()
     host = _build_host(
         conn,
-        ScriptedModelFactory(ScriptedModel(["pong"])),
+        ScriptedModelFactory(ScriptedModel([GATE_SKIP, "pong"])),
     )
     publish_handoff = host.admission_publish_handoff
     replace_snapshot = host._states.replace
@@ -1447,7 +1448,7 @@ def test_release_after_idle_retry_cannot_clear_a_concurrent_successor(
     conn = _database()
     host = _build_host(
         conn,
-        ScriptedModelFactory(ScriptedModel(["pong", "pong"])),
+        ScriptedModelFactory(ScriptedModel([GATE_SKIP, "pong", GATE_SKIP, "pong"])),
     )
     release = host.recording_publish_recorded_then_release
     released = threading.Event()

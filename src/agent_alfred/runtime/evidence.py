@@ -56,6 +56,9 @@ def read_evidence(
                 "trace_incomplete": telemetry.get("trace_incomplete"),
                 "recording_state": "recorded" if row[1] else None,
                 "events": safe_events,
+                "memory": telemetry.get("memory", {
+                    "gate_state": "legacy_unknown", "gate": None, "input_attempts": []
+                }),
                 "support_overrides": [
                     asdict(item) for item in overrides.for_run(run_id)
                 ]
@@ -166,7 +169,11 @@ def _safe_event(event: dict) -> dict:
 
 
 def _attempt_evidence(attempt, models, prices, computed_at) -> dict[str, Any]:
-    endpoint_id, model_id = models.get(attempt["attempt_id"], (None, None))
+    model = attempt.get("model")
+    if isinstance(model, dict):
+        endpoint_id, model_id = model.get("endpoint_id"), model.get("model_id")
+    else:
+        endpoint_id, model_id = models.get(attempt["attempt_id"], (None, None))
     return {
         "attempt_id": attempt["attempt_id"],
         "outcome": attempt["outcome"],

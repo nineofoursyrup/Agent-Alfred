@@ -63,7 +63,15 @@ from agent_alfred.wiring import build_default_host
 
 
 def _scripted_factory(script: list) -> ScriptedModelFactory:
-    return ScriptedModelFactory(ScriptedModel(script))
+    # Each chat now spends one model request on the retrieval gate before
+    # its answer. Keep the trace/fault scenarios on real, completed Runs.
+    gate = (
+        '{"retrieve":true,"query":"trace fixture",'
+        '"reason_code":"conservative_retrieve"}'
+    )
+    return ScriptedModelFactory(
+        ScriptedModel([item for reply in script for item in (gate, reply)])
+    )
 
 
 def _run_one(host: RuntimeHost, message: str = "hello"):

@@ -12,6 +12,11 @@ from agent_alfred.model import ScriptedModel, ScriptedModelFactory
 from agent_alfred.runtime.host import RuntimeHost
 from agent_alfred.settings import Settings
 
+_GATE_DECISION = (
+    '{"retrieve":true,"query":"runtime-fixture",'
+    '"reason_code":"conservative_retrieve"}'
+)
+
 
 def test_cli_markdown_reply_goes_through_the_rich_renderer() -> None:
     conn = sqlite3.connect(":memory:", check_same_thread=False)
@@ -19,7 +24,7 @@ def test_cli_markdown_reply_goes_through_the_rich_renderer() -> None:
     sink = CapturingSink(flush_at_run_end=True)
     host = RuntimeHost(
         conn=conn,
-        factory=ScriptedModelFactory(ScriptedModel(["**hello**"])),
+        factory=ScriptedModelFactory(ScriptedModel([_GATE_DECISION, "**hello**"])),
         settings=Settings(),
         clock=FakeClock(),
         fanout=FanOutSink([sink], process_instance_id="cli-md"),
@@ -39,7 +44,7 @@ def test_cli_one_shot_prints_the_scripted_reply() -> None:
     sink = CapturingSink(flush_at_run_end=True)
     host = RuntimeHost(
         conn=conn,
-        factory=ScriptedModelFactory(ScriptedModel(["hello there"])),
+        factory=ScriptedModelFactory(ScriptedModel([_GATE_DECISION, "hello there"])),
         settings=Settings(),
         clock=FakeClock(),
         fanout=FanOutSink([sink], process_instance_id="cli-test"),

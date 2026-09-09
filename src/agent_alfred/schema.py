@@ -1025,6 +1025,14 @@ def _apply_v4(conn: sqlite3.Connection) -> None:
     )
 
 
+def _apply_v5(conn: sqlite3.Connection) -> None:
+    from agent_alfred.memory.command_migration import migrate_commands
+    from agent_alfred.memory.migration import migrate_memory
+
+    migrate_memory(conn)
+    migrate_commands(conn)
+
+
 MIGRATIONS = (
     Migration(version=1, apply=_apply_v1, managed_objects=_V1_MANAGED_OBJECTS),
     # Renames and rebuilds only: every name it leaves behind is already v1's.
@@ -1035,6 +1043,14 @@ MIGRATIONS = (
         managed_objects=_V3_MANAGED_OBJECTS,
     ),
     Migration(version=4, apply=_apply_v4, managed_objects=()),
+    Migration(
+        version=5,
+        apply=_apply_v5,
+        managed_objects=(
+            "memory_revision", "memory_operations", "memory_sources",
+            "memory_provenance",
+        ),
+    ),
 )
 MIGRATION_VERSIONS = tuple(migration.version for migration in MIGRATIONS)
 LATEST_MIGRATION_VERSION = MIGRATION_VERSIONS[-1]

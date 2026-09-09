@@ -128,7 +128,10 @@ def _host(
     capture = CapturingSink(name="capture", flush_at_run_end=True)
     sinks = [capture, *(extra_sinks or ())]
     fanout = FanOutSink(sinks, process_instance_id="proc-lifecycle")
-    scripted = model if model is not None else ScriptedModel(script or ["pong"])
+    gate_decision = '{"retrieve":false,"query":null,"reason_code":"greeting"}'
+    responses = [item for answer in (script or ["pong"])
+                 for item in (gate_decision, answer)]
+    scripted = model if model is not None else ScriptedModel(responses)
     host = RuntimeHost(
         conn=conn,
         factory=ScriptedModelFactory(scripted),
@@ -304,7 +307,9 @@ def test_repeat_start_during_an_active_run_leaves_the_index_untouched() -> None:
     used to rewrite the live Run to finished/interrupted, after which the
     still-running worker's finalizer silently dropped the reply."""
     gate = threading.Event()
-    host, conn, _capture, model = _host(model=ScriptedModel(["real-reply"], gate=gate))
+    host, conn, _capture, model = _host(model=ScriptedModel([
+        '{"retrieve":false,"query":null,"reason_code":"greeting"}', "real-reply"
+    ], gate=gate))
     calls = _instrument_recover(host)
     host.start()
     try:

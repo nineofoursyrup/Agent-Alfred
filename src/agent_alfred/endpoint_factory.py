@@ -3,9 +3,11 @@
 from types import SimpleNamespace
 
 from agent_alfred.anthropic_native import AnthropicAdapter
+from agent_alfred.attempt_io import install_http_boundary
 from agent_alfred.endpoints import ModelRoute, list_endpoints, resolve_model
 from agent_alfred.model import EndpointUnconfigured, ModelRef, ModelUnsupported
 from agent_alfred.openai_compatible import OpenAICompatibleAdapter
+from agent_alfred.resource_rollback import ResumableRollback
 from agent_alfred.retry import RetryPolicy, SystemSleeper
 from agent_alfred.runtime.transport import VersionedTransportPool
 from agent_alfred.stream_fallback import StreamFallback
@@ -15,13 +17,27 @@ from agent_alfred.support_overrides import SupportOverrides
 class _RouteClient:
     """Keep the table's exact relative path while the SDK owns HTTP and SSE."""
 
-    def __init__(self, sdk, route, response_type, stream_type):
+    def __init__(self, sdk, route, response_type, stream_type, *, owns_http):
         self._sdk = sdk
         self._route = route
         self._response_type = response_type
         self._stream_type = stream_type
+        install_http_boundary(sdk)
+        self._close_owner = ResumableRollback()
+        if owns_http:
+            self._close_owner.own(sdk)
+            # HTTPClient.close marks itself closed before closing transports.
+            # Retain their retryable progress independently of that SDK state.
+            http = sdk._client
+            self._close_owner.own(http._transport)
+            for transport in http._mounts.values():
+                if transport is not None:
+                    self._close_owner.own(transport)
         self.messages = self
         self.chat = SimpleNamespace(completions=self)
+
+    def close(self):
+        self._close_owner.close()
 
     def create(self, **kwargs):
         timeout = kwargs.pop("timeout", None)
@@ -44,7 +60,9 @@ class EndpointClientFactory:
         self._endpoints = list_endpoints() if endpoints is None else tuple(endpoints)
         self.support_overrides = support_overrides or SupportOverrides()
         self._http_client = http_client
-        self._pool = VersionedTransportPool(self._build_transport)
+        self._pool = VersionedTransportPool(
+            self._build_transport, close=lambda client: client.close()
+        )
 
     @property
     def transport_pool(self):
@@ -60,6 +78,9 @@ class EndpointClientFactory:
 
     def invalidate_all(self) -> None:
         self._pool.discard_all()
+
+    def close(self) -> None:
+        self._pool.close()
 
     def _route(self, snapshot):
         endpoint = next(
@@ -114,7 +135,11 @@ class EndpointClientFactory:
                         yield event
 
             return _RouteClient(
-                OpenAI(**options), route, ChatCompletion, TerminalStream
+                OpenAI(**options),
+                route,
+                ChatCompletion,
+                TerminalStream,
+                owns_http=self._http_client is None,
             )
         from anthropic import Anthropic, Stream
         from anthropic.types import Message, RawMessageStreamEvent
@@ -124,6 +149,7 @@ class EndpointClientFactory:
             route,
             Message,
             Stream[RawMessageStreamEvent],
+            owns_http=self._http_client is None,
         )
 
     def create(self, snapshot):

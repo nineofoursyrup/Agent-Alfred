@@ -26,6 +26,7 @@ from agent_alfred.managed_state import ManagedStateLease
 from agent_alfred.model import ModelClientFactory
 from agent_alfred.redact import Redactor
 from agent_alfred.resource_rollback import (
+    BackgroundCloseStep,
     ResumableRollback,
     thread_exit_confirmed,
     thread_start_effect_happened,
@@ -297,6 +298,7 @@ class RuntimeHost:
         support_rule: SupportRule | None = None,
         model_settings: ModelSettingsStore | None = None,
         credentials: CredentialOverlay | None = None,
+        audit_key=None,
     ):
         self._support_overrides = support_overrides or SupportOverrides()
         self._conn = conn
@@ -331,9 +333,25 @@ class RuntimeHost:
         # held" are one question with one answer rather than two flags that
         # can disagree for a moment.
         self._mutating = False
+        self._memory_run_permission = None
         self._coord: CoordinatorState = "idle"
         self._active_summary: ActiveRunSummary | None = None
         self._store = RecordingStore(conn, self._db_lock)
+        from agent_alfred.memory.audit import AuditKey
+        from agent_alfred.memory.commands import MemoryCommandService
+        if audit_key is None:
+            import secrets
+            filename = conn.execute("PRAGMA database_list").fetchone()[2]
+            if filename:
+                audit_key = AuditKey.load_or_create(
+                    Path(filename).parent / "memory-audit" / "audit.key", self._redactor
+                )
+            else:
+                audit_key = AuditKey(secrets.token_hex(16), secrets.token_bytes(32))
+        self._memory_service = MemoryCommandService(
+            recording_store=self._store, audit_key=audit_key,
+            clock=self._clock.wall_utc, admission=self,
+        )
         self._queue = _HandoffQueue(self._store)
         self._done: dict[str, threading.Event] = {}
         self._results: dict[str, LoopResult] = {}
@@ -349,6 +367,7 @@ class RuntimeHost:
         self._closed = False
         self._stop_sent = False
         self._fanout_closed = False
+        self._transport_close = BackgroundCloseStep("alfred-transport-close")
         self._owned_resources: ResumableRollback | None = None
         self._publish_work = publish_work
         self._before_recording_commit = before_recording_commit
@@ -389,6 +408,8 @@ class RuntimeHost:
             recorder=self._recorder,
             coordinator=self,
             work_queue=self._queue,
+            memory_service=self._memory_service,
+            factory=factory,
             support_recorder=SupportRecorder(
                 self._support_overrides, self._redactor, clock, support_rule
             ),
@@ -396,6 +417,21 @@ class RuntimeHost:
         self._worker = threading.Thread(
             target=self._executor.run_loop, name="run-worker", daemon=True
         )
+
+    def validate_memory_permission(self, permission, run_id) -> bool:
+        with self._lock:
+            current = self._memory_run_permission
+            return (
+                current is not None and permission is current[1]
+                and run_id == current[0]
+                and self._states.get().active_run is not None
+                and self._states.get().active_run.run_id == run_id
+                and self._coord in ("accepted", "running")
+            )
+
+    @property
+    def memory_service(self):
+        return self._memory_service
 
     @property
     def process_instance_id(self) -> str:
@@ -550,6 +586,11 @@ class RuntimeHost:
         if not self._recorder.retry_pending_settlements():
             return False
         with self._lifecycle:
+            invalidate = getattr(self._factory, "invalidate_all", None)
+            if callable(invalidate) and not self._transport_close.complete(
+                invalidate, max(0.0, deadline - time.monotonic())
+            ):
+                return False
             if not self._fanout_closed:
                 # The bit moves only behind a confirmed FanOut close. A sink
                 # that reports False is still draining; a sink that raises
@@ -1181,6 +1222,8 @@ class RuntimeHost:
         observe a WorkItem. If this call is interrupted, the idempotent
         recovery seam completes the decision and fence retirement.
         """
+        with self._lock:
+            self._memory_run_permission = (item.run_id, item.memory_permission)
         if self._publish_work is not None:
             self._publish_work(item)
             self._queue.publish(item, enqueue=False)
