@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Protocol
@@ -15,7 +16,13 @@ from agent_alfred.events import (
     StepStarted,
 )
 from agent_alfred.loop.budget import RunBudget, StepBudgetExceeded
-from agent_alfred.messages import Message, TextBlock, text_message
+from agent_alfred.messages import (
+    Message,
+    TextBlock,
+    ToolCallBlock,
+    ToolResultBlock,
+    text_message,
+)
 from agent_alfred.model import (
     ModelClient,
     ModelRef,
@@ -32,6 +39,7 @@ from agent_alfred.settings import (
     Settings,
 )
 from agent_alfred.stream_fallback import OverallDeadlineExceeded
+from agent_alfred.tools import ToolContext
 
 
 @dataclass(frozen=True)
@@ -74,6 +82,10 @@ class Assistant:
         source: str = "cli",
         overall_deadline_s: float | None = None,
         memory=None,
+        tools=None,
+        tool_permission=None,
+        tool_state=None,
+        persona=None,
     ) -> LoopResult:
         started = self._clock.monotonic()
         overall_s = (
@@ -83,18 +95,21 @@ class Assistant:
         )
         overall_abs = None if overall_s is None else started + overall_s
         system = (
-            TextBlock(self._settings.persona),
+            TextBlock(self._settings.persona if persona is None else persona),
             TextBlock(f"Current local time: {self._clock.local_now().isoformat()}"),
         )
         user = text_message("user", message)
         transcript: list[Message] = [*working_memory, user]
+        turns: list[Message] = []
         results: list[ModelResult] = []
         outcome: RunOutcome = "failed"
         reply: Message | None = None
         error: str | None = None
         step_count = 0
-        if memory is not None and budget.remaining > 0 and (
-            overall_abs is None or self._clock.monotonic() < overall_abs
+        if (
+            memory is not None
+            and budget.remaining > 0
+            and (overall_abs is None or self._clock.monotonic() < overall_abs)
         ):
             gate = memory.evaluate(budget, working_memory, overall_abs)
             step_count = budget.used
@@ -112,7 +127,8 @@ class Assistant:
                 if gate.reference_text is not None:
                     transcript = [
                         *working_memory,
-                        text_message("user", gate.reference_text), user,
+                        text_message("user", gate.reference_text),
+                        user,
                     ]
         while True:
             if overall_abs is not None and self._clock.monotonic() >= overall_abs:
@@ -142,12 +158,16 @@ class Assistant:
                 if reference_text is not None:
                     transcript.append(text_message("user", reference_text))
                 transcript.append(user)
+                transcript.extend(turns)
             if events is not None:
                 events.emit(
                     StepStarted(
                         step_index=lease.step_index,
                         system=system,
                         message_count=len(transcript),
+                        tool_names=(
+                            tuple(t.name for t in tools.schemas()) if tools else ()
+                        ),
                         max_tokens=self._settings.max_tokens,
                     ),
                     envelope,
@@ -156,11 +176,12 @@ class Assistant:
                 model=model,
                 system=system,
                 messages=tuple(transcript),
+                tools=tools.schemas() if tools else (),
                 max_tokens=self._settings.max_tokens,
                 on_attempt_started=(
-                    None if memory is None else memory.attempt_observer(
-                        lease.step_index, "answer"
-                    )
+                    None
+                    if memory is None
+                    else memory.attempt_observer(lease.step_index, "answer")
                 ),
             )
             bind = events.bind_origin if events is not None else None
@@ -184,10 +205,9 @@ class Assistant:
             stop_reason: StopReason = "error"
             if model_result.response is not None:
                 stop_reason = model_result.response.stop_reason
-                reply = Message(
-                    role="assistant", blocks=model_result.response.blocks
-                )
+                reply = Message(role="assistant", blocks=model_result.response.blocks)
                 transcript.append(reply)
+                turns.append(reply)
                 outcome = "completed"
                 error = None
             else:
@@ -202,12 +222,114 @@ class Assistant:
                     StepFinished(
                         step_index=lease.step_index,
                         stop_reason=stop_reason,
-                        duration_ms=_duration_ms(
-                            started, self._clock.monotonic()
-                        ),
+                        duration_ms=_duration_ms(started, self._clock.monotonic()),
                     ),
                     envelope,
                 )
+            if model_result.response is not None and tools is not None:
+                calls = [
+                    block
+                    for block in model_result.response.blocks
+                    if isinstance(block, ToolCallBlock)
+                ]
+                if calls:
+                    tool_results = []
+                    boundary = None
+                    for index, call in enumerate(calls):
+                        execution = tools.execute(
+                            call,
+                            ToolContext(
+                                run_id,
+                                lease.step_index,
+                                call.id,
+                                source,
+                                overall_abs
+                                if overall_abs is not None
+                                else float("inf"),
+                                session_id,
+                                tool_permission,
+                            ),
+                            events=events,
+                        )
+                        tool_results.append(execution.block)
+                        if (
+                            execution.system_receipt is not None
+                            and tool_state is not None
+                        ):
+                            tool_state.setdefault("system_receipts", []).append(
+                                execution.system_receipt
+                            )
+                        if execution.stop_reason is not None:
+                            boundary = execution.stop_reason
+                            if (
+                                boundary == "memory_delete_boundary"
+                                and tool_state is not None
+                            ):
+                                tool_state.pop("system_receipts", None)
+                            remaining = [pending.id for pending in calls[index + 1 :]]
+                            for pending in calls[index + 1 :]:
+                                tool_results.append(
+                                    ToolResultBlock(
+                                        pending.id,
+                                        (
+                                            TextBlock(
+                                                json.dumps(
+                                                    {
+                                                        "ok": False,
+                                                        "code": "unavailable",
+                                                        "reason": boundary,
+                                                    }
+                                                )
+                                            ),
+                                        ),
+                                        True,
+                                    )
+                                )
+                            if tool_state is not None:
+                                tool_state.update(
+                                    finalization_reason=boundary,
+                                    not_executed_call_ids=remaining,
+                                )
+                            reply = text_message(
+                                "assistant",
+                                "记忆删除已确认。"
+                                "操作回执："
+                                + execution.block.content[0].text
+                                + "。未执行调用："
+                                + ", ".join(remaining),
+                            )
+                            if boundary == "file_result_unverified":
+                                operation_id = execution.operation_id
+                                if tool_state is not None:
+                                    tool_state["file_operation_id"] = operation_id
+                                reply = text_message(
+                                    "assistant",
+                                    "文件结果待核验。操作编号："
+                                    + operation_id
+                                    + "；恢复操作 "
+                                    + operation_id
+                                    + "；未执行调用："
+                                    + ", ".join(remaining),
+                                )
+                                outcome = "failed"
+                                error = boundary
+                            elif boundary == "memory_result_unverified":
+                                reply = text_message(
+                                    "assistant",
+                                    "记忆操作结果待核验。操作编号："
+                                    + execution.operation_id,
+                                )
+                                outcome = "failed"
+                                error = boundary
+                            else:
+                                outcome = "completed"
+                            break
+                    tool_message = Message("user", tuple(tool_results))
+                    turns.append(tool_message)
+                    transcript.append(tool_message)
+                    if boundary is not None:
+                        break
+                    continue
             break
         return LoopResult(
             outcome=outcome,

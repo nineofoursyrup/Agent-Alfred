@@ -7,6 +7,7 @@ import json
 import sqlite3
 import sys
 import threading
+from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
@@ -48,6 +49,20 @@ class CommandContext:
     call_id: str | None = None
     permission: object | None = None
     source_groups: tuple[str, ...] = ()
+    checkpoint: Callable[[], None] | None = None
+
+
+class _CommandDeadline(TimeoutError):
+    """Our own pre-commit checkpoint expired, not an ambiguous storage error."""
+
+
+def _check_deadline(context):
+    if context.checkpoint is not None:
+        try:
+            context.checkpoint()
+        except TimeoutError as error:
+            raise_if_rollback_pending(error)
+            raise _CommandDeadline from error
 
 
 def _json(value: Any) -> str:
@@ -192,6 +207,7 @@ class MemoryCommandService:
             return _error("invalid_input")
 
         def execute():
+            _check_deadline(context)
             # A durable replay never starts another barrier or mutation.
             if command["action"] == "delete" and (
                 context.run_id or self._delete_barrier is not None
@@ -260,6 +276,9 @@ class MemoryCommandService:
             if self._db.transaction_in_progress:
                 return _error("transaction_required")
             return operation()
+        except _CommandDeadline as error:
+            raise_if_rollback_pending(error)
+            return _error("deadline_exceeded")
         except (ValueError, TypeError) as error:
             raise_if_rollback_pending(error)
             return _error("invalid_input")
@@ -283,6 +302,7 @@ class MemoryCommandService:
             self._mutation_lock.release()
 
     def _execute_transaction(self, command, context, parsed, canonical):
+        _check_deadline(context)
         fingerprint, key_id = self._key.fingerprint(canonical)
         operation_id = command["operation_id"]
         with self._db.transaction() as conn:
@@ -434,6 +454,7 @@ class MemoryCommandService:
             read_revision = conn.execute(
                 "SELECT revision FROM memory_revision WHERE singleton=1"
             ).fetchone()[0]
+            _check_deadline(context)
             conn.commit()
         if affected:
             change = {

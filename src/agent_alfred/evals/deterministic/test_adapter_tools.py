@@ -766,3 +766,19 @@ def test_anthropic_stream_error_preserves_unknown_retryability(error_type, expec
     assert result.response is None
     assert result.final_error.retryable == expected
     assert events.payloads[-1].error.retryable == expected
+
+
+def test_registry_nested_schemas_are_json_serializable_at_wire_boundary():
+    from dataclasses import replace
+
+    from agent_alfred.clock import FakeClock
+    from agent_alfred.tools import Tool, ToolRegistry, ToolSuccess
+
+    registry = ToolRegistry((Tool("echo", "Echo", {"type": "object", "properties": {
+        "text": {"type": "string"}}, "required": ["text"]},
+        lambda args, ctx: ToolSuccess(()), "local_read"),), clock=FakeClock())
+    wire = Wire(json.loads((FIXTURES / "openai-tool.json").read_text()))
+    OpenAICompatibleAdapter(client=wire, model=request().model).respond(
+        replace(request(), tools=registry.schemas()))
+    encoded = json.loads(json.dumps(wire.requests[0]))
+    assert encoded["tools"][0]["function"]["parameters"]["required"] == ["text"]

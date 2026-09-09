@@ -45,6 +45,7 @@ from agent_alfred.model import (
     ModelResult,
     NamedToolChoice,
     Usage,
+    tool_schema_jsonable,
 )
 
 
@@ -87,7 +88,7 @@ class AnthropicAdapter:
                 {
                     "name": t.name,
                     "description": t.description,
-                    "input_schema": dict(t.input_schema),
+                    "input_schema": tool_schema_jsonable(t.input_schema),
                 }
                 for t in request.tools
             ]

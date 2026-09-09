@@ -71,6 +71,7 @@ class Settings:
     working_memory_rounds: int = 20
     prompt_preview_max_chars: int = PROMPT_PREVIEW_MAX_CHARS
     persona: str = DEFAULT_PERSONA
+    persona_file: str | None = None
     endpoint_id: str = DEFAULT_ENDPOINT_ID
     model_id: str = DEFAULT_MODEL_ID
     wire_style: str = DEFAULT_WIRE_STYLE
@@ -272,6 +273,7 @@ def load_settings(
             20 if resolved_rounds is None else resolved_rounds
         ),
         persona=persona,
+        persona_file=persona_path if persona_path and persona_path.strip() else None,
         per_store_limit=_env_int(
             env, "AGENT_ALFRED_PER_STORE_LIMIT", minimum=1, allow_zero=False
         ) or 5,

@@ -162,6 +162,15 @@ class ToolSpec:
     input_schema: Mapping[str, Any]
 
 
+def tool_schema_jsonable(value):
+    """Copy immutable declaration schemas into provider JSON containers."""
+    if isinstance(value, Mapping):
+        return {key: tool_schema_jsonable(item) for key, item in value.items()}
+    if isinstance(value, (tuple, list)):
+        return [tool_schema_jsonable(item) for item in value]
+    return value
+
+
 @dataclass(frozen=True)
 class NamedToolChoice:
     name: str

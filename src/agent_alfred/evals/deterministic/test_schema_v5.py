@@ -110,6 +110,7 @@ def test_upgrade_starts_observed_versions_preserves_bodies_and_known_origins(
         (4,),
         (5,),
         (6,),
+        (7,),
     ]
     schema.migrate(conn)
     assert semantic.get(MemoryId("fact-manual")).record_version == 1

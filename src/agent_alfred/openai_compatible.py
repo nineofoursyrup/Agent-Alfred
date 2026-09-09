@@ -52,6 +52,7 @@ from agent_alfred.model import (
     NamedToolChoice,
     StopReason,
     Usage,
+    tool_schema_jsonable,
 )
 
 
@@ -105,7 +106,7 @@ class OpenAICompatibleAdapter:
                     "function": {
                         "name": tool.name,
                         "description": tool.description,
-                        "parameters": dict(tool.input_schema),
+                        "parameters": tool_schema_jsonable(tool.input_schema),
                     },
                 }
                 for tool in request.tools

@@ -22,6 +22,9 @@ from agent_alfred.events import (
     RunStarted,
     StepFinished,
     StepStarted,
+    ToolFinished,
+    ToolProgress,
+    ToolStarted,
     UnsequencedEvent,
 )
 from agent_alfred.messages import (
@@ -48,6 +51,9 @@ _EVENT_PAYLOAD_TYPES = (
     RunStarted,
     RunFinished,
     StepStarted,
+    ToolStarted,
+    ToolFinished,
+    ToolProgress,
     StepFinished,
     AttemptStarted,
     AttemptCommitted,

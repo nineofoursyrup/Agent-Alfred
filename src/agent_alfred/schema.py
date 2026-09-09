@@ -1040,6 +1040,11 @@ def _apply_v6(conn):
     migrate_forgetting(conn)
 
 
+def _apply_v7(conn):
+    from agent_alfred.tools.file_migration import migrate_files
+    migrate_files(conn)
+
+
 MIGRATIONS = (
     Migration(version=1, apply=_apply_v1, managed_objects=_V1_MANAGED_OBJECTS),
     # Renames and rebuilds only: every name it leaves behind is already v1's.
@@ -1054,11 +1059,23 @@ MIGRATIONS = (
         version=5,
         apply=_apply_v5,
         managed_objects=(
-            "memory_revision", "memory_operations", "memory_sources",
+            "memory_revision",
+            "memory_operations",
+            "memory_sources",
             "memory_provenance",
         ),
     ),
     Migration(version=6, apply=_apply_v6, managed_objects=_V6_OBJECTS),
+    Migration(
+        version=7,
+        apply=_apply_v7,
+        managed_objects=(
+            "file_operations",
+            "file_pending_target",
+            "skill_candidates",
+            "local_tool_operations",
+        ),
+    ),
 )
 MIGRATION_VERSIONS = tuple(migration.version for migration in MIGRATIONS)
 LATEST_MIGRATION_VERSION = MIGRATION_VERSIONS[-1]
