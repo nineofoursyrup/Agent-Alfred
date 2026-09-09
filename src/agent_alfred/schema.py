@@ -1045,6 +1045,18 @@ def _apply_v7(conn):
     migrate_files(conn)
 
 
+def _apply_v8(conn):
+    from agent_alfred.tools.external_migration import migrate_external_operations
+
+    migrate_external_operations(conn)
+
+
+def _apply_v9(conn):
+    from agent_alfred.tools.file_attempt_migration import migrate_file_attempts
+
+    migrate_file_attempts(conn)
+
+
 MIGRATIONS = (
     Migration(version=1, apply=_apply_v1, managed_objects=_V1_MANAGED_OBJECTS),
     # Renames and rebuilds only: every name it leaves behind is already v1's.
@@ -1076,6 +1088,10 @@ MIGRATIONS = (
             "local_tool_operations",
         ),
     ),
+    Migration(
+        version=8, apply=_apply_v8, managed_objects=("external_tool_operations",),
+    ),
+    Migration(version=9, apply=_apply_v9, managed_objects=()),
 )
 MIGRATION_VERSIONS = tuple(migration.version for migration in MIGRATIONS)
 LATEST_MIGRATION_VERSION = MIGRATION_VERSIONS[-1]

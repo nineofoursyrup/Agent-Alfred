@@ -2,8 +2,11 @@
 
 权威：[完整施工规范 v1](https://github.com/nineofoursyrup/Agent-Alfred/issues/19)。
 实现基线：`772b02d1c5181a6e90aa9f7675f498e109a49313`。
-本记录属于后继候选 v3；最终候选以本地提交及独立评审记录为准。
-真实模型 T49/T50 尚未获得单独调用授权，均为 **NOT RUN**。
+本记录属于默认客户端兼容候选 v8；最终候选以完整文件清单及独立评审记录为准。
+T49/T50 已在前序提交 a0a115c 获授权并通过真实模型验收；测试临时注入了真实
+客户端标识及稳定 OpenCode session 请求头。v8 已在正式路径补齐兼容，并通过
+离线 HTTP 验证；尚未新增真实模型复验，历史结果不冒充新候选实测。详见
+[默认客户端请求头](opencode-client-headers.md)。
 
 ## 公共接缝与数据边界
 
@@ -137,8 +140,8 @@ E=`test_tool_recovery_edges.py`；A=`test_tool_acceptance.py`；P=`test_tool_pro
 | T46 | A cli_candidate_and_operation_commands；tests/browser/tools.spec.js 三条流程 |
 | T47 | 全量 pytest + 全量浏览器；既有 Session/Run/finalizer/预算回归 |
 | T48 | scripts/check_installed_tools.py：wheel/sdist 新虚拟环境、python -I、临时 cwd |
-| T49 | NOT RUN：需要真实模型调用授权，使用合成事实验证实际 save_fact 与唯一账 |
-| T50 | NOT RUN：需要真实模型调用授权，真实模型跨 Step 创建日程再查询 |
+| T49 | 历史 PASS（a0a115c）：真实模型 save_fact 与唯一账；注入请求头限定，本后继未重新调用 |
+| T50 | 历史 PASS（a0a115c）：真实模型跨 Step 创建日程再查询；注入请求头限定，本后继未重新调用 |
 
 ## 实际命令与结果
 
@@ -153,3 +156,43 @@ E=`test_tool_recovery_edges.py`；A=`test_tool_acceptance.py`；P=`test_tool_pro
   固定依赖，在两个独立临时 venv 安装相应产物，并以 `python -I scripts/check_installed_tools.py`
   执行真实草稿、内置覆盖确认、失败后重启恢复：两种产物均 PASS。
 - 独立 Standards/Spec 首轮未通过；v2 Standards CLEAR，Spec 的候选取消重送和明确超时两项已修复。最终冻结核对与最新全量结果见本次本地交付记录。不得把此记录当作远端交付或 Issue 关闭。
+
+## v4 独立反例修复
+
+`test_tool_review_v4.py` 覆盖四项独立反例及提交、重启和控制异常边界。
+原始反例及 red/green 日志保存在本地 `.scratch/issue-19/review-loop/`，
+冻结清单以该目录 v4 交接包为准。
+
+- 审计工件失败的嵌套清理由 Run bundle 长期持有。临时文件删除后的检查句柄
+  也有独立重试所有者；清理未结束，父目录不退役、close 不报告完成。
+- 预算从 Registry 入口固定计算，记账后、FanOut 准备后提交 started 前、
+  事件发布返回后均检查同一绝对期限。准备耗尽时不进入 fn；external 已预留
+  的账保存 failed 与“未启动”回执。对于已提交 started 后才耗时的监听器／简单
+  emitter，保留已发布事件，finished 明确报告未启动，账不记 unknown。
+- 有候选 dev/inode 证据后目标消失即 conflict；显式恢复和自动恢复都保留删除，
+  不再创建，也不补成功账。共用 outbox、persona、Skill 路径遵守同一规则。
+- v8 仅新增 external_tool_operations，旧迁移不改写。可信 run_id、step_index、
+  call_id 联合作为唯一身份，完整参数及工具名指纹验证重送。首次意图与唯一
+  tool_ledger 行在同一事务提交；最终状态与经过脱敏的模型回执同事务保存。
+  重送回读原回执，缺回执的 started/unknown 拒绝重做；新身份相同参数仍可执行。
+  调用方已有事务被拒绝且保持原样。该回执表不替代唯一业务账。
+
+## v6 创建尝试持久边界
+
+v9 前向迁移增加 publication_attempted。旧记录默认 1，因为旧协议的 NULL
+candidate_identity 不能证明没有执行过创建；新操作显式写入 0，创建目标前先
+提交尝试状态 1，再进入独占 open。尝试提交不确定、open 返回中断或身份提交
+失败都不会让下一次恢复把缺失目标当作首次创建。目标消失时保留 conflict 和
+零成功账；仅有明确未尝试证据的新准备记录可进入首次创建。已有 complete
+仍回读历史回执。`test_tool_publication_attempts.py` 覆盖三类文件路径、显式与
+自动恢复、创建返回及身份提交前后普通／控制异常、旧持久记录升级。
+
+## v7 准备提交回执与固定收尾
+
+FileTools.write 覆盖初始准备事务及其返回边界。异常后先保留可达清理所有者，
+再回读原操作：只有确认没有持久记录时才报告已知未执行；原意图仍在时保留
+原 operation_id 并停止当前 Run 的后续工具与模型。回读失败时返回 unverified
+及同一恢复入口，不把数据库不可读误读为没有操作。进程控制继续传播，调用方
+事务不被接管；后续 Run 只恢复原意图一次。`test_tool_prepare_receipts.py`
+通过真实 Host/SQLite 的提交前后、回读和回滚失败，断言一次草拟不会因模型
+重试加自动恢复产生第二份文件。

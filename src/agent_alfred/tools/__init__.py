@@ -6,6 +6,7 @@ import math
 import re
 import time
 from collections.abc import Callable, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from typing import Any, Literal
 
@@ -208,6 +209,9 @@ class ToolRegistry:
             context.source,
         )
         executed = False
+        ledger_id = None
+        unknown = False
+        entered = False
         tool = next((tool for tool in self._tools if tool.name == call.name), None)
         if tool is None:
             outcome = ToolFailure("unknown_tool", (TextBlock("Unknown tool."),))
@@ -242,56 +246,77 @@ class ToolRegistry:
             except ValueError as exc:
                 outcome = ToolFailure("invalid_input", (TextBlock(str(exc)),))
             else:
-                ledger_id = None
+                claim = None
                 if tool.effect == "external" and self._external_ledger is not None:
-                    ledger_id = self._external_ledger.start(tool, call.input, context)
-                if events is not None:
-                    events.emit(ToolStarted(call.id, tool.name, tool.effect), envelope)
-                executed = True
-                unknown = False
-                try:
-                    outcome = tool.fn(
-                        call.input,
-                        replace(
-                            context,
-                            monotonic=self._clock.monotonic,
-                            events=(
-                                ProgressEvents(events, envelope, call.id, tool.name)
-                                if tool.emits_progress
-                                else None
-                            ),
-                            deadline=min(
-                                context.deadline,
-                                self._clock.monotonic() + tool.budget_s,
-                            ),
-                        ),
-                    )
-                except Exception as exc:
-                    raise_if_rollback_pending(exc)
-                    unknown = True
+                    claim = self._external_ledger.start(tool, call.input, context)
+                    if claim.execution is not None:
+                        return claim.execution
+                    ledger_id = claim.row_id
+                if claim is not None and claim.error is not None:
                     outcome = ToolFailure(
-                        "timeout"
-                        if isinstance(exc, TimeoutError)
-                        else "execution_error",
+                        claim.error,
                         (
                             TextBlock(
-                                "Tool execution failed; inspect the operation result."
+                                "Existing operation differs or has no confirmed "
+                                "receipt; inspect its result. Not started."
                             ),
                         ),
                     )
-                if ledger_id is not None:
-                    state = (
-                        "unknown"
-                        if unknown
-                        or (
-                            isinstance(outcome, ToolFailure)
-                            and outcome.code == "timeout"
-                        )
-                        else "failed"
-                        if isinstance(outcome, ToolFailure)
-                        else "succeeded"
+                else:
+                    execution_context = replace(
+                        context,
+                        monotonic=self._clock.monotonic,
+                        events=(
+                            ProgressEvents(events, envelope, call.id, tool.name)
+                            if tool.emits_progress
+                            else None
+                        ),
+                        deadline=min(context.deadline, started + tool.budget_s),
                     )
-                    self._external_ledger.finish(ledger_id, state)
+                    try:
+                        execution_context.checkpoint()
+                        if events is not None:
+                            # FanOut preparation may consume the remaining budget.
+                            # Its publication boundary checks before allocating a
+                            # sequence or committing any tool.started projection.
+                            linearized = getattr(events, "emit_linearized", None)
+                            if linearized is not None:
+                                linearized(
+                                    ToolStarted(call.id, tool.name, tool.effect),
+                                    envelope,
+                                    boundary=_start_boundary(execution_context),
+                                    after_commit=lambda event: None,
+                                )
+                            else:
+                                events.emit(
+                                    ToolStarted(call.id, tool.name, tool.effect),
+                                    envelope,
+                                )
+                            # Post-commit listeners (or a simple emitter) can also
+                            # consume time. Never enter fn on an expired budget.
+                            executed = True
+                            execution_context.checkpoint()
+                        entered = True
+                        outcome = tool.fn(call.input, execution_context)
+                    except Exception as exc:
+                        raise_if_rollback_pending(exc)
+                        unknown = entered
+                        outcome = ToolFailure(
+                            "timeout"
+                            if isinstance(exc, TimeoutError)
+                            else "execution_error",
+                            (
+                                TextBlock(
+                                    "Tool execution failed; "
+                                    "inspect the operation result."
+                                    if unknown
+                                    else "Budget or event preparation failed; "
+                                    "not started."
+                                ),
+                            ),
+                        )
+                    else:
+                        executed = True
         content = tuple(outcome.content)
         if isinstance(outcome, ToolFailure):
             header = json.dumps(
@@ -317,6 +342,37 @@ class ToolRegistry:
             model = audit[: self._limit] + (
                 f"\n[truncated original_bytes={original_bytes} sha256={digest}]"
             )
+        execution = ToolExecution(
+            ToolResultBlock(
+                call.id, (TextBlock(model),), isinstance(outcome, ToolFailure)
+            ),
+            outcome.stop_reason,
+            outcome.operation_id,
+            audit
+            if (
+                tool is not None
+                and tool.effect == "local_write"
+                and isinstance(outcome, ToolSuccess)
+                and not outcome.stop_reason
+            )
+            else None,
+        )
+
+        if ledger_id is not None:
+            state = (
+                "unknown"
+                if unknown
+                or (
+                    executed
+                    and isinstance(outcome, ToolFailure)
+                    and outcome.code == "timeout"
+                    and entered
+                )
+                else "failed"
+                if isinstance(outcome, ToolFailure)
+                else "succeeded"
+            )
+            self._external_ledger.finish(ledger_id, state, execution)
         if events is not None and executed:
             events.emit(
                 ToolFinished(
@@ -335,18 +391,10 @@ class ToolRegistry:
                 ),
                 envelope,
             )
-        return ToolExecution(
-            ToolResultBlock(
-                call.id, (TextBlock(model),), isinstance(outcome, ToolFailure)
-            ),
-            outcome.stop_reason,
-            outcome.operation_id,
-            audit
-            if (
-                tool is not None
-                and tool.effect == "local_write"
-                and isinstance(outcome, ToolSuccess)
-                and not outcome.stop_reason
-            )
-            else None,
-        )
+        return execution
+
+
+@contextmanager
+def _start_boundary(context):
+    context.checkpoint()
+    yield

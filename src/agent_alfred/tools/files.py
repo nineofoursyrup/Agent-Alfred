@@ -124,6 +124,7 @@ class FileTools:
         with self.directory(relative.parent) as directory:
             # Existing targets are first preserved under an operation-specific
             # name in recover(); publication itself always protects late arrivals.
+            self.record_publication_attempt()
             directory.create_bytes(
                 PurePath(relative.name),
                 content.encode("utf-8"),
@@ -131,6 +132,18 @@ class FileTools:
                 prepared=self.record_publication_identity,
                 checkpoint=self.checkpoint,
             )
+
+    def record_publication_attempt(self):
+        self.checkpoint()
+        if self._publication_op is None:
+            raise RuntimeError("publication has no durable operation")
+        with self._store.transaction() as conn:
+            conn.execute(
+                "UPDATE file_operations SET publication_attempted=1 "
+                "WHERE operation_id=?", (self._publication_op,),
+            )
+            conn.commit()
+        self.checkpoint()
 
     def record_publication_identity(self, identity):
         self.checkpoint()
@@ -150,6 +163,13 @@ class FileTools:
                 "SELECT candidate_identity IS NOT NULL "
                 "FROM file_operations WHERE operation_id=?",
                 (op,),
+            ).fetchone()[0]
+
+    def publication_was_attempted(self, op):
+        with self._store.reading() as conn:
+            return conn.execute(
+                "SELECT publication_attempted FROM file_operations "
+                "WHERE operation_id=?", (op,),
             ).fetchone()[0]
 
     def replay(self, op, tool, target, content, expected):
@@ -274,6 +294,27 @@ class FileTools:
         self._deadline = min(previous, context.deadline)
         try:
             return self._write(op, tool, target, content, expected, context)
+        except BaseException as failure:
+            # A commit can take effect and still raise at its return boundary.
+            # Retain cleanup before observing durable state or normalizing it.
+            self._nested_cleanup.capture_failure(failure)
+            if not isinstance(failure, Exception):
+                raise
+            try:
+                details = self.get_operation(op)
+            except BaseException as observation:
+                self._nested_cleanup.capture_failure(observation)
+                if not isinstance(observation, Exception):
+                    raise
+                return self._pending_details(op, "unverified", None)
+            if details is None:
+                # Only an authoritative absence permits ordinary model retry:
+                # there is no old durable intent for resume_pending to execute.
+                return ToolFailure(
+                    "execution_error",
+                    (TextBlock("Preparation was not persisted; not executed."),),
+                )
+            return self._pending_details(op, details["state"], details)
         finally:
             self._deadline = previous
 
@@ -314,7 +355,7 @@ class FileTools:
         with self._store.transaction() as conn:
             conn.execute(
                 "INSERT INTO file_operations VALUES "
-                "(?,?,?,?,?,'prepared',?,?,?,?,NULL,?,?,NULL)",
+                "(?,?,?,?,?,'prepared',?,?,?,?,NULL,?,?,NULL,0)",
                 (
                     op,
                     tool,
@@ -364,6 +405,16 @@ class FileTools:
         backup = str(PurePath(target).with_name(".original-" + op + ".md"))
         try:
             current = self.read_file(target)
+            if current is None and self.publication_was_attempted(op):
+                # Attempt intent is committed before exclusive create: even a
+                # lost identity receipt cannot turn a deletion into a retry.
+                with self._store.transaction() as conn:
+                    conn.execute(
+                        "UPDATE file_operations SET state='conflict' "
+                        "WHERE operation_id=?", (op,),
+                    )
+                    conn.commit()
+                return self.pending(op, "conflict")
             observed = None if current is None else digest(current)
             if observed != digest(content) or (
                 observed == expected and not self.has_publication_identity(op)
@@ -470,7 +521,16 @@ class FileTools:
             return self.pending(op, "prepared")
 
     def pending(self, op, state):
-        details = self.get_operation(op)
+        try:
+            details = self.get_operation(op)
+        except BaseException as observation:
+            self._nested_cleanup.capture_failure(observation)
+            if not isinstance(observation, Exception):
+                raise
+            return self._pending_details(op, "unverified", None)
+        return self._pending_details(op, state, details)
+
+    def _pending_details(self, op, state, details):
         recovery_path = None
         if details is not None:
             recovery_path = str(

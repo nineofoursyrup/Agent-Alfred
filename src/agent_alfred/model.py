@@ -192,6 +192,8 @@ class ModelRequest:
     on_attempt_started: Callable[[str], None] | None = field(
         default=None, compare=False, repr=False
     )
+    # Trusted execution provenance, not message text or a model-supplied ID.
+    conversation_id: str | None = field(default=None, repr=False)
 
 
 class EndpointUnconfigured(Exception):

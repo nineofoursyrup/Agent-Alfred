@@ -50,11 +50,15 @@ from agent_alfred.model import (
 
 
 class AnthropicAdapter:
-    def __init__(self, *, client, model, stream=False, attempt_timeout_s=None):
+    def __init__(
+        self, *, client, model, stream=False, attempt_timeout_s=None,
+        request_headers=None,
+    ):
         self._client = client
         self._model = model
         self._stream = stream
         self._attempt_timeout_s = attempt_timeout_s
+        self._request_headers = request_headers
 
     def with_attempt_timeout(self, timeout_s):
         bound = copy(self)
@@ -100,6 +104,8 @@ class AnthropicAdapter:
             )
         if self._attempt_timeout_s is not None:
             kwargs["timeout"] = self._attempt_timeout_s
+        if self._request_headers is not None:
+            kwargs["extra_headers"] = self._request_headers(request)
         if self._stream:
             return self._respond_stream(request, kwargs, events, attempt)
         prepare_attempt(

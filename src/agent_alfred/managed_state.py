@@ -1373,9 +1373,19 @@ class ManagedDirectoryLease(_ManagedCapabilityLease):
         rollback.begin(temporary_rollback)
         rollback.begin(lease_rollback)
         temporary_entry = object()
+
+        def remove_temporary() -> None:
+            try:
+                self.unlink_regular(PurePath(temporary), missing_ok=True)
+            except BaseException as exc:
+                # Unlink may remove the name, then fail closing its inspection
+                # lease. A later missing-name success cannot retire that lease.
+                rollback.capture_failure(exc)
+                raise
+
         temporary_rollback.own(
             temporary_entry,
-            lambda: self.unlink_regular(PurePath(temporary), missing_ok=True),
+            remove_temporary,
         )
         try:
             lease = self.open_regular(

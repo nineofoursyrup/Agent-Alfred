@@ -66,11 +66,13 @@ class OpenAICompatibleAdapter:
         model: ModelRef,
         stream: bool = False,
         attempt_timeout_s: float | None = None,
+        request_headers=None,
     ):
         self._client = client
         self._model = model
         self._stream = stream
         self._attempt_timeout_s = attempt_timeout_s
+        self._request_headers = request_headers
 
     def with_attempt_timeout(self, timeout_s: float) -> OpenAICompatibleAdapter:
         """Return a wire-equivalent Adapter with a policy-computed timeout."""
@@ -119,6 +121,8 @@ class OpenAICompatibleAdapter:
             )
         if self._attempt_timeout_s is not None:
             kwargs["timeout"] = self._attempt_timeout_s
+        if self._request_headers is not None:
+            kwargs["extra_headers"] = self._request_headers(request)
         if self._stream:
             return self._respond_stream(attempt_id, request, kwargs, events)
         return self._respond_once(attempt_id, request, kwargs, events)

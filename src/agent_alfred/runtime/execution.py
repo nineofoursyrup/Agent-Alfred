@@ -118,10 +118,13 @@ class _AttemptLedger:
     streaming fallback a Step spent are already inside ``ModelResult.attempts``.
     """
 
-    def __init__(self, client: ModelClient, observe=None, records=None):
+    def __init__(
+        self, client: ModelClient, observe=None, records=None, conversation_id=None,
+    ):
         self._observe = observe
         self._records = records
         self._client = client
+        self._conversation_id = conversation_id
         self.model_results: tuple[ModelResult, ...] = ()
 
     def respond(
@@ -133,6 +136,8 @@ class _AttemptLedger:
     ) -> ModelResult:
         from agent_alfred.model import ModelCallInterrupted
 
+        if self._conversation_id is not None:
+            request = replace(request, conversation_id=self._conversation_id)
         failure = None
         try:
             result = self._client.respond(request, events=events, deadline=deadline)
@@ -256,6 +261,12 @@ class RunExecutor:
         step_count = 0
         duration_ms = 0
         all_results = []
+        # A Session spans Runs and process restarts. Sessionless system Runs
+        # get their own namespace; Step/Attempt identities never split it.
+        conversation_id = (
+            "session:" + item.session_id
+            if item.session_id is not None else "run:" + item.run_id
+        )
         ledger = _AttemptLedger(
             item.client,
             lambda result, events: (
@@ -266,13 +277,14 @@ class RunExecutor:
                 else None
             ),
             records=all_results,
+            conversation_id=conversation_id,
         )
 
         def gate_ledger(client, snapshot):
             wrapped = _AttemptLedger(client, lambda result, events: (
                 self._support_recorder.observe(snapshot, item.run_id, result, events)
                 if self._support_recorder is not None else None
-            ), records=all_results)
+            ), records=all_results, conversation_id=conversation_id)
             return wrapped
 
         budget = RunBudget(self._settings.max_steps)
