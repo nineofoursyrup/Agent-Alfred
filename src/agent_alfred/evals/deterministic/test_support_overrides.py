@@ -154,9 +154,10 @@ def test_production_has_zero_rules_even_for_suggestive_error_text(endpoint, stat
 
 
 @pytest.mark.parametrize("when", ["before", "after"])
+@pytest.mark.parametrize("stage", ["gate", "answer"])
 @pytest.mark.parametrize("fault", [RuntimeError, KeyboardInterrupt, SystemExit])
 def test_record_fault_settles_real_run_and_preserves_attempt_ledger(
-    when, fault, tmp_path
+    when, stage, fault, tmp_path
 ):
     from agent_alfred.evals.deterministic._web_runtime_test_helpers import (
         build_runtime_host,
@@ -179,6 +180,7 @@ def test_record_fault_settles_real_run_and_preserves_attempt_ledger(
         support_overrides=store,
         support_rule=lambda *_: "shape_mismatch_400",
         publish_work=items.append,
+        chat_script=stage == "answer",
     )
     host.start()
     try:
@@ -191,7 +193,9 @@ def test_record_fault_settles_real_run_and_preserves_attempt_ledger(
         result = host.wait(submitted.run_id, timeout=2)
         assert result.outcome == ("failed" if fault is RuntimeError else "interrupted")
         evidence = host.read_run_evidence(submitted.run_id, trace_root=tmp_path)
-        assert len(evidence["attempts"]) == 1
+        assert len(evidence["attempts"]) == (1 if stage == "gate" else 2)
+        if fault is RuntimeError:
+            assert result.error == "RuntimeError"
         assert bool(evidence["support_overrides"]) == (when == "after")
         assert host.snapshot().coordinator_state == "idle"
     finally:

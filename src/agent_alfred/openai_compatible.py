@@ -20,6 +20,14 @@ from agent_alfred.adapter_common import (
     decoded_tool_call,
     raw_usage,
 )
+from agent_alfred.attempt_io import (
+    attempt_scope,
+    deadline_chunks,
+    prepare_attempt,
+    preserve_attempt_usage,
+    propagate_local_failure,
+    start_transport,
+)
 from agent_alfred.events import (
     AttemptAborted,
     AttemptCommitted,
@@ -69,6 +77,12 @@ class OpenAICompatibleAdapter:
         bound._attempt_timeout_s = timeout_s
         return bound
 
+    def with_attempt_budget(self, budget):
+        bound = copy(self)
+        bound._io_budget = budget
+        return bound
+
+    @attempt_scope
     def respond(
         self,
         request: ModelRequest,
@@ -115,19 +129,20 @@ class OpenAICompatibleAdapter:
         kwargs: dict[str, Any],
         events: Any | None,
     ) -> ModelResult:
-        _emit(
-            events,
-            AttemptStarted(
+        prepare_attempt(
+            lambda: _emit(events, AttemptStarted(
                 attempt_id=attempt_id,
                 model=request.model,
                 streamed=False,
                 timeout_ms=_timeout_ms(self._attempt_timeout_s),
-            ),
+            ), attempt_id),
             attempt_id,
         )
         try:
+            start_transport()
             response = self._client.chat.completions.create(**kwargs)
         except Exception as exc:
+            propagate_local_failure()
             error = _error_from_exc(attempt_id, exc)
             _emit(
                 events,
@@ -143,10 +158,12 @@ class OpenAICompatibleAdapter:
         usage = Usage()
         try:
             usage = _usage_from_sdk(_field(response, "usage"))
+            preserve_attempt_usage(usage)
             choice = _field(response, "choices")[0]
             blocks = _decode_message(_field(choice, "message"))
             stop = _stop_reason(_field(choice, "finish_reason"))
         except Exception as exc:
+            propagate_local_failure()
             error = _error_from_exc(
                 attempt_id, exc, retryable=False, code="invalid_response"
             )
@@ -189,14 +206,13 @@ class OpenAICompatibleAdapter:
         )
 
     def _respond_stream(self, attempt_id, request, kwargs, events):
-        _emit(
-            events,
-            AttemptStarted(
+        prepare_attempt(
+            lambda: _emit(events, AttemptStarted(
                 attempt_id=attempt_id,
                 model=request.model,
                 streamed=True,
                 timeout_ms=_timeout_ms(self._attempt_timeout_s),
-            ),
+            ), attempt_id),
             attempt_id,
         )
         usage = Usage()
@@ -229,16 +245,18 @@ class OpenAICompatibleAdapter:
 
         error = None
         try:
+            start_transport()
             response = self._client.chat.completions.create(
                 **kwargs, stream=True, stream_options={"include_usage": True}
             )
-            for chunk in response:
+            for chunk in deadline_chunks(response):
                 if chunk == "[DONE]":
                     terminal_seen = True
                     break
                 value = _field(chunk, "usage")
                 if value is not None:
                     usage = _usage_from_sdk(value)
+                    preserve_attempt_usage(usage)
                 choices = _field(chunk, "choices") or ()
                 if not choices:
                     continue
@@ -287,6 +305,7 @@ class OpenAICompatibleAdapter:
                     )
             blocks = [decoded[key] for key in opened if key in decoded]
         except Exception as exc:
+            propagate_local_failure()
             error = _stream_error_from_exc(attempt_id, exc)
         finally:
             error = close_stream(response, attempt_id, error)

@@ -15,7 +15,6 @@ from agent_alfred.events import (
     StepStarted,
 )
 from agent_alfred.loop.budget import RunBudget, StepBudgetExceeded
-from agent_alfred.memory.retrieval_gate import evaluate as evaluate_retrieval_gate
 from agent_alfred.messages import Message, TextBlock, text_message
 from agent_alfred.model import (
     ModelClient,
@@ -43,6 +42,7 @@ class LoopResult:
     step_count: int
     duration_ms: int
     model_results: tuple[ModelResult, ...] = field(default_factory=tuple)
+    memory_telemetry: dict | None = None
 
 
 class AssistantEvents(Protocol):
@@ -73,6 +73,7 @@ class Assistant:
         events: AssistantEvents | None = None,
         source: str = "cli",
         overall_deadline_s: float | None = None,
+        memory=None,
     ) -> LoopResult:
         started = self._clock.monotonic()
         overall_s = (
@@ -87,12 +88,32 @@ class Assistant:
         )
         user = text_message("user", message)
         transcript: list[Message] = [*working_memory, user]
-        evaluate_retrieval_gate(transcript)
         results: list[ModelResult] = []
         outcome: RunOutcome = "failed"
         reply: Message | None = None
         error: str | None = None
         step_count = 0
+        if memory is not None and budget.remaining > 0 and (
+            overall_abs is None or self._clock.monotonic() < overall_abs
+        ):
+            gate = memory.evaluate(budget, working_memory, overall_abs)
+            step_count = budget.used
+            if gate is not None:
+                if gate.failure_code is not None:
+                    return LoopResult(
+                        outcome="failed",
+                        reply=text_message(
+                            "assistant", "记忆检索资料不可用，本次未生成回答。"
+                        ),
+                        error=gate.failure_code,
+                        step_count=step_count,
+                        duration_ms=_duration_ms(started, self._clock.monotonic()),
+                    )
+                if gate.reference_text is not None:
+                    transcript = [
+                        *working_memory,
+                        text_message("user", gate.reference_text), user,
+                    ]
         while True:
             if overall_abs is not None and self._clock.monotonic() >= overall_abs:
                 outcome = "failed"
@@ -115,6 +136,12 @@ class Assistant:
                 node_id=lease.node_id,
                 source=source,
             )
+            if memory is not None:
+                reference_text = memory.reference_text()
+                transcript = [*working_memory]
+                if reference_text is not None:
+                    transcript.append(text_message("user", reference_text))
+                transcript.append(user)
             if events is not None:
                 events.emit(
                     StepStarted(
@@ -130,6 +157,11 @@ class Assistant:
                 system=system,
                 messages=tuple(transcript),
                 max_tokens=self._settings.max_tokens,
+                on_attempt_started=(
+                    None if memory is None else memory.attempt_observer(
+                        lease.step_index, "answer"
+                    )
+                ),
             )
             bind = events.bind_origin if events is not None else None
             if bind is not None:

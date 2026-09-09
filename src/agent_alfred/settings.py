@@ -19,6 +19,7 @@ the session record or the run transcript.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -74,6 +75,18 @@ class Settings:
     model_id: str = DEFAULT_MODEL_ID
     wire_style: str = DEFAULT_WIRE_STYLE
     api_key_env: str = OPENCODE_API_KEY_ENV
+    per_store_limit: int = 5
+    per_store_character_budget: int = 4000
+    gate_model_budget_s: float = 5.0
+
+    def __post_init__(self) -> None:
+        for name in ("per_store_limit", "per_store_character_budget"):
+            value = getattr(self, name)
+            if type(value) is not int or value <= 0:
+                raise SettingsError(f"{name} must be a positive integer")
+        value = self.gate_model_budget_s
+        if type(value) not in (int, float) or not math.isfinite(value) or value <= 0:
+            raise SettingsError("gate_model_budget_s must be finite and positive")
 
 
 class SettingsError(ValueError):
@@ -259,6 +272,13 @@ def load_settings(
             20 if resolved_rounds is None else resolved_rounds
         ),
         persona=persona,
+        per_store_limit=_env_int(
+            env, "AGENT_ALFRED_PER_STORE_LIMIT", minimum=1, allow_zero=False
+        ) or 5,
+        per_store_character_budget=_env_int(
+            env, "AGENT_ALFRED_PER_STORE_CHARACTER_BUDGET", minimum=1, allow_zero=False
+        ) or 4000,
+        gate_model_budget_s=_env_float(env, "AGENT_ALFRED_GATE_MODEL_BUDGET_S") or 5.0,
     )
 
 

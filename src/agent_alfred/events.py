@@ -286,6 +286,30 @@ class BlockStopped:
     index: int = 0
 
 
+@dataclass(frozen=True)
+class GateEvaluated:
+    """Final body-free retrieval evidence; the business object is authoritative."""
+
+    schema_version: int
+    decision: bool
+    outcome: str
+    decision_source: str
+    reason_code: str
+    fallback_reason: str | None
+    rule_version: str | None
+    gate_step_index: int | None
+    model_ref: dict | None
+    latency_ms: int
+    timing: dict
+    stores: dict
+    hit_count: int | None
+    selected_count: int
+    references: list
+    input_disposition: str
+    name: str = "gate.evaluated"
+    trace_policy: TracePolicy = "persist"
+
+
 EventPayload = (
     RunStarted
     | RunFinished
@@ -298,6 +322,7 @@ EventPayload = (
     | BlockDelta
     | BlockStopped
     | Notice
+    | GateEvaluated
 )
 
 

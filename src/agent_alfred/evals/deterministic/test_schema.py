@@ -363,6 +363,10 @@ def test_migrate_creates_required_tables_without_user_id() -> None:
         "trace_prunes",
         "consolidation_batches",
         "consolidation_ops",
+        "memory_revision",
+        "memory_operations",
+        "memory_sources",
+        "memory_provenance",
     }
     assert required <= names
     extras = names - required
@@ -456,7 +460,7 @@ def test_migrate_writes_one_contiguous_ledger_row_per_version() -> None:
     schema.migrate(conn)
     rows = conn.execute("SELECT version FROM schema_migrations").fetchall()
     conn.close()
-    assert rows == [(1,), (2,), (3,), (4,)]
+    assert rows == [(1,), (2,), (3,), (4,), (5,)]
 
 
 def test_migrate_does_not_commit_the_callers_transaction() -> None:
@@ -1512,6 +1516,22 @@ def _all_rows(conn: sqlite3.Connection) -> dict[str, list[tuple]]:
                           source, telemetry, created_at
                    FROM agent_log"""
             ).fetchall()
+        elif table == "facts":
+            # Version 5 adds observed versions and protection metadata. Keep
+            # comparing every original column, including provenance and keys.
+            rows[table] = conn.execute(
+                """SELECT id, subject, fact, origin_kind, origin_batch_id,
+                          origin_source, origin_call_id, created_at,
+                          idempotency_key, fingerprint, key_id, normalization_version
+                   FROM facts"""
+            ).fetchall()
+        elif table == "episodes":
+            rows[table] = conn.execute(
+                """SELECT id, summary, occurred_at, occurred_until, origin_kind,
+                          origin_batch_id, origin_source, origin_call_id, created_at,
+                          idempotency_key, fingerprint, key_id, normalization_version
+                   FROM episodes"""
+            ).fetchall()
         else:
             rows[table] = conn.execute(f"SELECT * FROM {table}").fetchall()
     return rows
@@ -1620,7 +1640,7 @@ def test_upgrading_a_version_1_database_lands_the_current_shape(commit: str) -> 
     ).fetchall()[0] == (1, historic_schema.V1_APPLIED_AT)
     assert conn.execute(
         "SELECT version FROM schema_migrations ORDER BY version"
-    ).fetchall() == [(1,), (2,), (3,), (4,)]
+    ).fetchall() == [(1,), (2,), (3,), (4,), (5,)]
     conn.close()
 
 
@@ -1812,6 +1832,7 @@ def test_a_failed_upgrade_in_a_caller_transaction_leaves_the_ledger_intact(
         (2,),
         (3,),
         (4,),
+        (5,),
     ]
     # Rolling back is still the caller's decision too, and it takes back the
     # caller's own write and nothing else.

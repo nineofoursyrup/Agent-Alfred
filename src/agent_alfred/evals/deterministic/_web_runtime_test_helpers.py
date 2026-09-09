@@ -231,6 +231,7 @@ def build_runtime_host(
     redactor=None,
     support_overrides=None,
     support_rule=None,
+    chat_script: bool = True,
 ):
     database = conn
     if database is None:
@@ -245,9 +246,16 @@ def build_runtime_host(
         if snapshot_listener is not None:
             snapshot_listener(snapshot)
 
+    responses = script or ["pong"]
+    if chat_script:
+        gate_decision = (
+            '{"retrieve":true,"query":"runtime-fixture",'
+            '"reason_code":"conservative_retrieve"}'
+        )
+        responses = [item for answer in responses for item in (gate_decision, answer)]
     host = RuntimeHost(
         conn=database,
-        factory=ScriptedModelFactory(ScriptedModel(script or ["pong"], gate=gate)),
+        factory=ScriptedModelFactory(ScriptedModel(responses, gate=gate)),
         settings=Settings(),
         clock=FakeClock(),
         fanout=FanOutSink(sinks, process_instance_id=INSTANCE),

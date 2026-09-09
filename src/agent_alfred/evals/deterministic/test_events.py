@@ -45,6 +45,12 @@ from agent_alfred.trace import RunBundleTraceSink
 SECRET = "supersecret-key-value"
 
 
+_GATE_DECISION = (
+    '{"retrieve":true,"query":"runtime-fixture",'
+    '"reason_code":"conservative_retrieve"}'
+)
+
+
 class _RunStartedFailingSink(CapturingSink):
     def commit(self, prepared: object, event: SequencedEvent) -> None:
         super().commit(prepared, event)
@@ -2631,7 +2637,7 @@ def test_prepare_failure_does_not_abort_the_run_or_revisit_the_dead_sink() -> No
     )
     host = RuntimeHost(
         conn=conn,
-        factory=ScriptedModelFactory(ScriptedModel(["pong"])),
+        factory=ScriptedModelFactory(ScriptedModel([_GATE_DECISION, "pong"])),
         settings=Settings(),
         clock=FakeClock(),
         fanout=fanout,

@@ -1,0 +1,369 @@
+"""One transaction owner for memory writes, their ledger, and replay receipts."""
+
+from __future__ import annotations
+
+import hmac
+import json
+import sqlite3
+from contextlib import contextmanager
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any
+
+from agent_alfred.memory.audit import AuditKey
+from agent_alfred.memory.episodic import SQLiteEpisodicStore
+from agent_alfred.memory.semantic import SQLiteSemanticStore
+from agent_alfred.memory.types import (
+    AlreadyAbsent,
+    ConsolidationOrigin,
+    Deleted,
+    DuplicateConflict,
+    ManualOrigin,
+    MemoryId,
+    NotFound,
+    Origin,
+    ToolOrigin,
+    UpdateApplied,
+    VersionConflict,
+    origin_json,
+)
+from agent_alfred.runtime.recording import RecordingStore, RecordingUnavailable
+
+
+@dataclass(frozen=True)
+class CommandContext:
+    origin: Origin
+    source: str
+    run_id: str | None = None
+    session_id: str | None = None
+    call_id: str | None = None
+    permission: object | None = None
+    source_groups: tuple[str, ...] = ()
+
+
+def _json(value: Any) -> str:
+    return json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    )
+
+
+def _error(code: str, **metadata: Any) -> dict:
+    return {"error": {"code": code, **metadata}}
+
+
+class MemoryCommandService:
+    def __init__(
+        self,
+        *,
+        recording_store: RecordingStore,
+        audit_key: AuditKey,
+        clock,
+        admission=None,
+    ):
+        self._db = recording_store
+        self._key = audit_key
+        self._clock = clock
+        self._admission = admission
+
+    def _stores(self, conn):
+        options = {"clock": self._clock, "fingerprint": self._key.fingerprint}
+        return SQLiteSemanticStore(conn, **options), SQLiteEpisodicStore(
+            conn, **options
+        )
+
+    @contextmanager
+    def reading_stores(self):
+        with self._db.reading() as conn:
+            yield self._stores(conn)
+
+    def get(self, kind: str, id: str):
+        if kind not in ("semantic", "episodic") or not isinstance(id, str):
+            raise ValueError("invalid_input")
+        with self.reading_stores() as stores:
+            return stores[0 if kind == "semantic" else 1].get(MemoryId(id))
+
+    @property
+    def memory_revision(self) -> int:
+        with self.reading_stores() as stores:
+            return stores[0].memory_revision
+
+    def get_operation(self, operation_id: str) -> dict | None:
+        with self._db.reading() as conn:
+            row = conn.execute(
+                "SELECT receipt FROM memory_operations WHERE operation_id=?",
+                (operation_id,),
+            ).fetchone()
+            return None if row is None else json.loads(row[0])
+
+    def get_provenance(self, kind: str, memory_id: str, version: int) -> dict:
+        with self._db.reading() as conn:
+            row = conn.execute(
+                "SELECT state FROM memory_provenance "
+                "WHERE kind=? AND memory_id=? AND record_version=?",
+                (kind, memory_id, version),
+            ).fetchone()
+            groups = conn.execute(
+                "SELECT source_group_id FROM memory_sources "
+                "WHERE kind=? AND memory_id=? AND record_version=? "
+                "ORDER BY source_group_id",
+                (kind, memory_id, version),
+            ).fetchall()
+            return {
+                "state": "unknown" if row is None else row[0],
+                "source_groups": [group[0] for group in groups],
+            }
+
+    def get_records(self, **query):
+        from agent_alfred.memory.queries import MemoryQueryService
+
+        return MemoryQueryService(self.reading_stores).get_records(**query)
+
+    def statistics(self, **query):
+        from agent_alfred.memory.statistics import read_statistics
+
+        return read_statistics(self._db, clock=self._clock, **query)
+
+    def execute(self, command: dict, context: CommandContext) -> dict:
+        try:
+            command = json.loads(_json(command))
+            parsed = self._validate(command)
+            canonical = _json(
+                {
+                    "version": 1,
+                    "command": command,
+                    "origin": origin_json(context.origin),
+                    "source": context.source,
+                    "run_id": context.run_id,
+                    "session_id": context.session_id,
+                    "call_id": context.call_id,
+                    "source_groups": context.source_groups,
+                }
+            ).encode("utf-8")
+        except ValueError, TypeError, KeyError:
+            return _error("invalid_input")
+        acquired = False
+        if self._admission is not None:
+            if isinstance(context.origin, ToolOrigin):
+                if not self._admission.validate_memory_permission(
+                    context.permission, context.run_id
+                ):
+                    return _error("busy")
+            else:
+                reason = self._admission.try_begin_mutation()
+                if reason is not None:
+                    return _error(
+                        "busy"
+                        if reason in ("busy", "run_in_progress", "mutation_in_flight")
+                        else "unavailable"
+                    )
+                acquired = True
+        try:
+            return self._execute_transaction(command, context, parsed, canonical)
+        except ValueError:
+            return _error("invalid_input")
+        except sqlite3.Error, RecordingUnavailable:
+            return _error("storage_write_failed")
+        finally:
+            if acquired:
+                self._admission.end_mutation()
+
+    def _execute_transaction(self, command, context, parsed, canonical):
+        fingerprint, key_id = self._key.fingerprint(canonical)
+        operation_id = command["operation_id"]
+        with self._db.transaction() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            old = conn.execute(
+                "SELECT fingerprint,key_id,receipt FROM memory_operations "
+                "WHERE operation_id=?",
+                (operation_id,),
+            ).fetchone()
+            if old is not None:
+                if old[1] != key_id:
+                    return _error("operation_unverifiable")
+                if not hmac.compare_digest(old[0], fingerprint):
+                    return _error("operation_mismatch")
+                return json.loads(old[2])
+            store = self._stores(conn)[0 if command["kind"] == "semantic" else 1]
+            action = command["action"]
+            payload = dict(parsed)
+            if action == "save":
+                result = store.save_with_result(**payload, origin=context.origin)
+                status = "saved" if result.created else "already_exists"
+                memory_id, version = result.id, result.version
+                affected = int(result.created)
+            else:
+                memory_id = MemoryId(payload.pop("id"))
+                if action == "update":
+                    result = store.update(
+                        memory_id,
+                        expected_version=command["expected_version"],
+                        origin=context.origin,
+                        **payload,
+                    )
+                else:
+                    result = store.delete(
+                        memory_id, expected_version=command["expected_version"]
+                    )
+                match result:
+                    case VersionConflict(current_version):
+                        return _error(
+                            "version_conflict", current_version=current_version
+                        )
+                    case DuplicateConflict(existing_id):
+                        return _error("duplicate_conflict", existing_id=existing_id)
+                    case NotFound():
+                        return _error("not_found")
+                    case UpdateApplied(_, changed, version):
+                        status, affected = (
+                            ("updated" if changed else "unchanged"),
+                            int(changed),
+                        )
+                    case Deleted():
+                        status, affected, version = "deleted", 1, None
+                    case AlreadyAbsent():
+                        status, affected, version = "already_absent", 0, None
+                    case _:
+                        raise RuntimeError("unsupported_memory_outcome")
+            committed_at = self._clock().isoformat()
+            receipt = {
+                "operation_id": operation_id,
+                "action": action,
+                "kind": command["kind"],
+                "status": status,
+                "memory_id": memory_id,
+                "record_version": version,
+                "affected_count": affected,
+                "committed_at": committed_at,
+            }
+            if action == "delete":
+                receipt.update(
+                    fingerprint=result.fingerprint
+                    if isinstance(result, Deleted)
+                    else None,
+                    key_id=result.key_id if isinstance(result, Deleted) else None,
+                )
+            encoded = _json(receipt)
+            if not isinstance(context.origin, ConsolidationOrigin):
+                conn.execute(
+                    """INSERT INTO tool_ledger
+                    (tool_name,fingerprint,effect,status,call_id,run_id,session_id,summary,created_at,updated_at)
+                    VALUES (?,?,'local_write','succeeded',?,?,?,?,?,?)""",
+                    (
+                        f"memory_{action}",
+                        fingerprint,
+                        context.call_id,
+                        context.run_id,
+                        context.session_id,
+                        _json({"receipt": receipt, "key_id": key_id}),
+                        committed_at,
+                        committed_at,
+                    ),
+                )
+            if action != "delete":
+                groups = context.source_groups
+                if (
+                    not groups
+                    and isinstance(context.origin, ToolOrigin)
+                    and context.run_id
+                ):
+                    groups = (context.run_id,)
+                provenance_state = (
+                    "known"
+                    if groups
+                    else "known_none"
+                    if isinstance(context.origin, ManualOrigin)
+                    else "unknown"
+                )
+                conn.execute(
+                    "INSERT OR IGNORE INTO memory_provenance VALUES (?,?,?,?)",
+                    (command["kind"], memory_id, version, provenance_state),
+                )
+                if groups:
+                    conn.execute(
+                        "UPDATE memory_provenance SET state='known' "
+                        "WHERE kind=? AND memory_id=? AND record_version=? "
+                        "AND state='known_none'",
+                        (command["kind"], memory_id, version),
+                    )
+                conn.executemany(
+                    """INSERT OR IGNORE INTO memory_sources
+                    (kind,memory_id,record_version,source_group_id) VALUES (?,?,?,?)""",
+                    [(command["kind"], memory_id, version, group) for group in groups],
+                )
+            conn.execute(
+                "INSERT INTO memory_operations VALUES (?,?,?,?)",
+                (operation_id, fingerprint, key_id, encoded),
+            )
+            conn.commit()
+            return receipt
+
+    @staticmethod
+    def _validate(command: dict) -> dict:
+        if not isinstance(command, dict) or set(command) - {
+            "schema_version",
+            "operation_id",
+            "kind",
+            "action",
+            "payload",
+            "expected_version",
+        }:
+            raise ValueError("invalid_input")
+        if (
+            type(command.get("schema_version", 1)) is not int
+            or command.get("schema_version", 1) != 1
+        ):
+            raise ValueError("invalid_input")
+        if (
+            not isinstance(command.get("operation_id"), str)
+            or not command["operation_id"]
+        ):
+            raise ValueError("invalid_input")
+        if command.get("kind") not in ("semantic", "episodic"):
+            raise ValueError("invalid_input")
+        action = command.get("action")
+        if action not in ("save", "update", "delete"):
+            raise ValueError("invalid_input")
+        payload = command.get("payload")
+        if not isinstance(payload, dict):
+            raise ValueError("invalid_input")
+        fields = (
+            {"subject", "fact"}
+            if command["kind"] == "semantic"
+            else {"summary", "occurred_at", "occurred_until"}
+        )
+        allowed = fields if action == "save" else fields | {"id"}
+        if action == "delete":
+            allowed = {"id"}
+        if set(payload) - allowed:
+            raise ValueError("invalid_input")
+        if action == "save" and not fields <= payload.keys():
+            raise ValueError("invalid_input")
+        if action != "save":
+            if not isinstance(payload.get("id"), str) or not payload["id"]:
+                raise ValueError("invalid_input")
+            if (
+                type(command.get("expected_version")) is not int
+                or command["expected_version"] < 1
+            ):
+                raise ValueError("invalid_input")
+        parsed = dict(payload)
+        for field, value in payload.items():
+            if field in ("occurred_at", "occurred_until"):
+                if field == "occurred_until" and value is None:
+                    continue
+                if not isinstance(value, str):
+                    raise ValueError("invalid_input")
+                date = datetime.fromisoformat(value)
+                if date.utcoffset() is None:
+                    raise ValueError("invalid_input")
+                parsed[field] = date
+            elif not isinstance(value, str) or not value.strip():
+                raise ValueError("invalid_input")
+        if parsed.get("occurred_until") is not None and "occurred_at" in parsed:
+            if parsed["occurred_until"] < parsed["occurred_at"]:
+                raise ValueError("invalid_input")
+        return parsed

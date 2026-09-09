@@ -12,6 +12,7 @@ from agent_alfred.model import (
     ModelRequest,
     ModelResult,
     mark_final_error_non_retryable,
+    preserve_model_attempts,
 )
 
 
@@ -62,15 +63,18 @@ class StreamFallback:
             return first
         if not _is_incomplete_stream(first):
             return first
-        if self._deadline_elapsed(deadline):
-            return mark_final_error_non_retryable(first)
-        attempt_deadline = self._attempt_deadline(deadline)
-        target = self._bind_timeout(self._nonstream, attempt_deadline)
-        second = target.respond(
-            request,
-            events=self._timed_events(events),
-            deadline=attempt_deadline,
-        )
+        try:
+            if self._deadline_elapsed(deadline):
+                return mark_final_error_non_retryable(first)
+            attempt_deadline = self._attempt_deadline(deadline)
+            target = self._bind_timeout(self._nonstream, attempt_deadline)
+            second = target.respond(
+                request,
+                events=self._timed_events(events),
+                deadline=attempt_deadline,
+            )
+        except BaseException as exc:
+            raise preserve_model_attempts(exc, first) from exc
         return ModelResult(
             attempts=tuple(first.attempts) + tuple(second.attempts),
             response=second.response,
@@ -93,6 +97,11 @@ class StreamFallback:
         expose ``with_attempt_timeout`` only to encode that already-computed
         value into their transport request.
         """
+        from agent_alfred.attempt_io import AttemptIOBudget
+
+        bind_budget = getattr(target, "with_attempt_budget", None)
+        if callable(bind_budget):
+            target = bind_budget(AttemptIOBudget(self._clock, deadline))
         remaining = max(0.0, deadline - self._clock.monotonic())
         bind = getattr(target, "with_attempt_timeout", None)
         if not callable(bind):

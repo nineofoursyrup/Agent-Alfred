@@ -309,6 +309,7 @@ class RunAdmission:
             else:
                 captured = self._snapshot_provider.capture(stream=request.stream)
             self._redactor.remember(captured.api_key, credential=True)
+            self._redactor.remember(captured.retrieval_gate_api_key, credential=True)
         except InvalidProbeTarget:
             return SubmitResult(kind="invalid_probe_target")
         except Exception:

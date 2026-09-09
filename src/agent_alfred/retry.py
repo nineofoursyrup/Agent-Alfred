@@ -10,6 +10,7 @@ from agent_alfred.model import (
     ModelRequest,
     ModelResult,
     mark_final_error_non_retryable,
+    preserve_model_attempts,
 )
 from agent_alfred.stream_fallback import OverallDeadlineExceeded
 
@@ -56,37 +57,42 @@ class RetryPolicy:
     ) -> ModelResult:
         attempts = []
         last_failure: ModelResult | None = None
-        for retry_index in range(self._max_retries + 1):
-            try:
-                result = self._inner.respond(
-                    request, events=events, deadline=deadline
+        try:
+            for retry_index in range(self._max_retries + 1):
+                try:
+                    result = self._inner.respond(
+                        request, events=events, deadline=deadline
+                    )
+                except OverallDeadlineExceeded:
+                    if last_failure is None:
+                        raise
+                    return mark_final_error_non_retryable(last_failure)
+                attempts.extend(result.attempts)
+                combined = ModelResult(
+                    attempts=tuple(attempts),
+                    response=result.response,
+                    final_error=result.final_error,
                 )
-            except OverallDeadlineExceeded:
-                if last_failure is None:
-                    raise
-                return mark_final_error_non_retryable(last_failure)
-            attempts.extend(result.attempts)
-            combined = ModelResult(
-                attempts=tuple(attempts),
-                response=result.response,
-                final_error=result.final_error,
-            )
-            if result.response is not None:
-                return combined
-            last_failure = combined
-            error = result.final_error
-            if (
-                error is None
-                or error.retryable is not True
-                or retry_index == self._max_retries
-            ):
-                return combined
-            if self._deadline_elapsed(deadline):
-                return mark_final_error_non_retryable(combined)
-            if not self._sleep_before_retry(deadline):
-                return mark_final_error_non_retryable(combined)
-            if self._deadline_elapsed(deadline):
-                return mark_final_error_non_retryable(combined)
+                if result.response is not None:
+                    return combined
+                last_failure = combined
+                error = result.final_error
+                if (
+                    error is None
+                    or error.retryable is not True
+                    or retry_index == self._max_retries
+                ):
+                    return combined
+                if self._deadline_elapsed(deadline):
+                    return mark_final_error_non_retryable(combined)
+                if not self._sleep_before_retry(deadline):
+                    return mark_final_error_non_retryable(combined)
+                if self._deadline_elapsed(deadline):
+                    return mark_final_error_non_retryable(combined)
+        except BaseException as exc:
+            if last_failure is None:
+                raise
+            raise preserve_model_attempts(exc, last_failure) from exc
         raise AssertionError("retry loop exhausted without a ModelResult")
 
     def _deadline_elapsed(self, deadline: float | None) -> bool:

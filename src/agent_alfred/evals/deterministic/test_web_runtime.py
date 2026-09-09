@@ -681,7 +681,7 @@ def test_recording_pending_is_409_and_the_card_says_saving() -> None:
         assert third.status == 409
         assert third.busy is not None
         assert third.busy.stage == STAGE_SAVING
-        assert third.busy.current_step == 0
+        assert third.busy.current_step == 1  # gate is Step 0, answer is Step 1
         # The Run the card names is the one still saving, not the one asked for.
         assert third.busy.run_id == second.run_id
     finally:

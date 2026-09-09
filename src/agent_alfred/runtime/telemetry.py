@@ -9,12 +9,21 @@ from typing import Any
 from agent_alfred.model import AttemptRecord, ModelResult, Usage
 
 
+class AttemptObservationFailed(Exception):
+    """A completed model call failed in host accounting, not in model IO."""
+
+    def __init__(self, cause: Exception):
+        super().__init__("attempt_observation_failed")
+        self.cause = cause
+
+
 def serialize_run_telemetry(
     model_results: Sequence[ModelResult],
     incomplete: bool,
     reason: str | None,
     *,
     redactor: Any | None = None,
+    memory: dict | None = None,
 ) -> str:
     attempts = [
         _attempt_payload(record, redactor)
@@ -24,6 +33,9 @@ def serialize_run_telemetry(
     return json.dumps(
         {
             "attempts": attempts,
+            "memory": memory if memory is not None else {
+                "gate_state": "legacy_unknown", "gate": None, "input_attempts": []
+            },
             "trace_incomplete": incomplete,
             "trace_incomplete_reason": reason,
         },
@@ -35,6 +47,10 @@ def _attempt_payload(record: AttemptRecord, redactor: Any | None) -> dict[str, A
     return {
         "attempt_id": record.attempt_id,
         "streamed": record.streamed,
+        "model": None if record.model is None else {
+            "endpoint_id": record.model.endpoint_id,
+            "model_id": record.model.model_id,
+        },
         "outcome": record.outcome,
         "usage": _usage_payload(record.usage, redactor),
     }

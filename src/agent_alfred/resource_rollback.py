@@ -614,14 +614,14 @@ class ResumableRollback:
         if isinstance(cause, IncompleteRollback) and cause.owner is self:
             raise failure
         complete = self.retry()
-        propagated = self.process_control or failure
+        propagated = dominant_error(failure, self.process_control)
         if not complete:
             self._bind_incomplete(propagated, failure)
         raise propagated
 
     def raise_incomplete(self, failure: BaseException) -> NoReturn:
         """Propagate the already-attempted, still-incomplete cleanup."""
-        propagated = self.process_control or failure
+        propagated = dominant_error(failure, self.process_control)
         self._bind_incomplete(propagated, failure)
         raise propagated
 
@@ -812,7 +812,7 @@ class RollbackSlot:
         """Unwind every independent owner while preserving the first cause."""
         self.capture_failure(failure)
         complete = self._retry(propagate_control=False, results={})
-        propagated = self.process_control or failure
+        propagated = dominant_error(failure, self.process_control)
         if not complete:
             if self._incomplete is None:
                 self._bind_incomplete(propagated, failure)

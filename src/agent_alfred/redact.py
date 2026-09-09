@@ -15,6 +15,7 @@ from agent_alfred.events import (
     BlockDelta,
     BlockStarted,
     BlockStopped,
+    GateEvaluated,
     Notice,
     RawToolArgumentFragment,
     RunFinished,
@@ -55,6 +56,7 @@ _EVENT_PAYLOAD_TYPES = (
     BlockDelta,
     BlockStopped,
     Notice,
+    GateEvaluated,
 )
 
 

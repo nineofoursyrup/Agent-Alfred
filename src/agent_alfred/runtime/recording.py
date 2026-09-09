@@ -295,6 +295,7 @@ class RunRecorder:
             step_count=step_count,
             duration_ms=duration_ms,
             model_results=model_results,
+            memory_telemetry=item.memory_telemetry,
         )
         reply_text = _projection_reply_text(reply, self._redactor)
         reply_withheld = reply is not None and reply_text is None
@@ -463,7 +464,8 @@ class RunRecorder:
                 # Without telemetry the whole recording fails, never just its
                 # accounting: an empty ledger cannot stand in for known usage.
                 telemetry = serialize_run_telemetry(
-                    model_results, incomplete, reason, redactor=self._redactor
+                    model_results, incomplete, reason, redactor=self._redactor,
+                    memory=item.memory_telemetry
                 )
                 with self._store.transaction() as conn:
                     self._finalize(

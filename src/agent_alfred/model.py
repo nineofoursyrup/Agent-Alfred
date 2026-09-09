@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import threading
 import uuid
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from decimal import Decimal
 from typing import Any, Literal, Protocol, cast, get_args
@@ -88,6 +88,7 @@ class AttemptRecord:
     outcome: AttemptOutcome
     usage: Usage
     error: ModelError | None = None
+    model: ModelRef | None = None
 
 
 @dataclass(frozen=True)
@@ -111,6 +112,32 @@ class ModelResult:
             raise ValueError("ModelResult.attempts must be non-empty")
         if (self.response is None) == (self.final_error is None):
             raise ValueError("ModelResult needs exactly one of response or final_error")
+
+
+class ModelCallInterrupted(BaseException):
+    """A local/control failure after real Attempts, with their authoritative ledger.
+
+    Strategies preserve this carrier; the Run ledger records its result before
+    re-raising the original cause. It is not a new network Attempt or ModelError.
+    """
+
+    def __init__(self, cause: BaseException, result: ModelResult):
+        super().__init__("model_call_interrupted")
+        self.cause = cause
+        self.result = result
+
+
+def preserve_model_attempts(
+    failure: BaseException, previous: ModelResult,
+) -> ModelCallInterrupted:
+    """Prepend completed strategy history without reconstructing from events."""
+    if isinstance(failure, ModelCallInterrupted):
+        return ModelCallInterrupted(failure.cause, ModelResult(
+            attempts=previous.attempts + failure.result.attempts,
+            response=failure.result.response,
+            final_error=failure.result.final_error,
+        ))
+    return ModelCallInterrupted(failure, previous)
 
 
 def mark_final_error_non_retryable(result: ModelResult) -> ModelResult:
@@ -151,6 +178,11 @@ class ModelRequest:
     tools: tuple[ToolSpec, ...] = ()
     max_tokens: int | None = None
     tool_choice: ToolChoice = "auto"
+    # Called by the Adapter after local encoding, immediately at request start.
+    # This business evidence is independent of optional event delivery.
+    on_attempt_started: Callable[[str], None] | None = field(
+        default=None, compare=False, repr=False
+    )
 
 
 class EndpointUnconfigured(Exception):
@@ -192,6 +224,7 @@ class ClientSnapshot:
     stream_fallback: bool
     overall_deadline_s: float | None
     per_attempt_timeout_s: float
+    retrieval_gate_api_key: str | None = field(default=None, repr=False)
 
     @property
     def endpoint_id(self) -> str:
@@ -250,8 +283,13 @@ class ScriptedModel:
         if isinstance(item, BaseException):
             raise item
         if isinstance(item, ModelResult):
+            if request.on_attempt_started is not None:
+                for attempt in item.attempts:
+                    request.on_attempt_started(attempt.attempt_id)
             return item
         attempt_id = uuid.uuid4().hex
+        if request.on_attempt_started is not None:
+            request.on_attempt_started(attempt_id)
         if isinstance(item, ModelError):
             return ModelResult(
                 attempts=(

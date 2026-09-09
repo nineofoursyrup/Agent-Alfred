@@ -1869,6 +1869,7 @@ def test_build_default_host_attach_publication_has_one_cleanup_owner(
         claimed_monitoring_tool,
     )
     from agent_alfred.events import FanOutSink
+    from agent_alfred.memory.audit import AuditKey
     from agent_alfred.runtime.host import RuntimeHost
 
     calls = {"host": 0, "connection": 0, "state": 0}
@@ -1890,6 +1891,7 @@ def test_build_default_host_attach_publication_has_one_cleanup_owner(
     def build_runtime_host(**kwargs) -> RuntimeHost:
         return RuntimeHost(
             conn=kwargs["conn"],
+            audit_key=AuditKey("test", b"x" * 32),
             factory=kwargs["factory"],
             settings=kwargs["settings"],
             clock=FakeClock(),
