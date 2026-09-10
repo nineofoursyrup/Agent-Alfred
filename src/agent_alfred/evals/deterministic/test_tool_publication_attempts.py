@@ -163,7 +163,9 @@ def test_legacy_null_identity_does_not_authorize_recreation(
 ):
     state = tmp_path / "state"
     current = schema.MIGRATIONS
-    monkeypatch.setattr(schema, "MIGRATIONS", current[:-1])
+    monkeypatch.setattr(
+        schema, "MIGRATIONS", tuple(m for m in current if m.version < 9)
+    )
     host = build_default_host(
         state_dir=state, factory=ScriptedModelFactory(ScriptedModel([]))
     )
@@ -200,7 +202,9 @@ def test_legacy_null_identity_does_not_authorize_recreation(
 def test_v9_migration_respects_caller_rollback(monkeypatch):
     conn = sqlite3.connect(":memory:")
     current = schema.MIGRATIONS
-    monkeypatch.setattr(schema, "MIGRATIONS", current[:-1])
+    monkeypatch.setattr(
+        schema, "MIGRATIONS", tuple(m for m in current if m.version < 9)
+    )
     schema.migrate(conn)
     monkeypatch.setattr(schema, "MIGRATIONS", current)
     try:

@@ -265,7 +265,8 @@ class RunExecutor:
         # get their own namespace; Step/Attempt identities never split it.
         conversation_id = (
             "session:" + item.session_id
-            if item.session_id is not None else "run:" + item.run_id
+            if item.session_id is not None
+            else "run:" + item.run_id
         )
         ledger = _AttemptLedger(
             item.client,
@@ -281,10 +282,18 @@ class RunExecutor:
         )
 
         def gate_ledger(client, snapshot):
-            wrapped = _AttemptLedger(client, lambda result, events: (
-                self._support_recorder.observe(snapshot, item.run_id, result, events)
-                if self._support_recorder is not None else None
-            ), records=all_results, conversation_id=conversation_id)
+            wrapped = _AttemptLedger(
+                client,
+                lambda result, events: (
+                    self._support_recorder.observe(
+                        snapshot, item.run_id, result, events
+                    )
+                    if self._support_recorder is not None
+                    else None
+                ),
+                records=all_results,
+                conversation_id=conversation_id,
+            )
             return wrapped
 
         budget = RunBudget(self._settings.max_steps)
@@ -294,9 +303,14 @@ class RunExecutor:
             # step.  A BaseException here must still reach ``settle``.
             run_started = self._clock.monotonic()
             if self._file_tools is not None:
-                self._file_tools.set_run_deadline(run_started + (
-                    item.snapshot.overall_deadline_s
-                    if item.snapshot.overall_deadline_s is not None else 30.0))
+                self._file_tools.set_run_deadline(
+                    run_started
+                    + (
+                        item.snapshot.overall_deadline_s
+                        if item.snapshot.overall_deadline_s is not None
+                        else 30.0
+                    )
+                )
             started_at = format_instant(self._clock.wall_utc())
             with self._store.transaction() as conn:
                 revision = schema.allocate_activity_revision(conn)
@@ -322,8 +336,12 @@ class RunExecutor:
             )
             if item.request.purpose == "inference_probe":
                 working_memory: tuple[Message, ...] = ()
+                working_groups = ()
+                history_exclusions = {}
             else:
-                working_memory = self._load_working_memory(item.session_id)
+                working_memory, working_groups, history_exclusions = (
+                    self._load_working_memory(item.session_id)
+                )
             self._fanout.emit(
                 RunStarted(
                     user_message=text_message(
@@ -344,8 +362,11 @@ class RunExecutor:
                     )
                 if command_result is not None:
                     from agent_alfred.tools import ToolFailure
-                    reply = text_message("assistant", "\n".join(
-                        block.text for block in command_result.content))
+
+                    reply = text_message(
+                        "assistant",
+                        "\n".join(block.text for block in command_result.content),
+                    )
                     outcome = (
                         "failed"
                         if isinstance(command_result, ToolFailure)
@@ -357,16 +378,41 @@ class RunExecutor:
                 self._file_tools.resume_pending()
                 self._file_tools.set_run_deadline(
                     run_started + item.snapshot.overall_deadline_s
-                    if item.snapshot.overall_deadline_s is not None else float("inf"))
+                    if item.snapshot.overall_deadline_s is not None
+                    else float("inf")
+                )
             memory = None
             if item.request.purpose == "chat":
                 memory = RunMemory(
-                    item=item, clock=self._clock, settings=self._settings,
-                    service=self._memory_service, factory=self._factory,
-                    ledger_factory=gate_ledger, answer_ledger=ledger,
+                    item=item,
+                    clock=self._clock,
+                    settings=self._settings,
+                    service=self._memory_service,
+                    factory=self._factory,
+                    ledger_factory=gate_ledger,
+                    answer_ledger=ledger,
                     events=self._events,
-                    working_history_groups=self._working_history_groups(item.session_id),
+                    working_history_groups=working_groups,
+                    recording_store=self._store,
+                    history_exclusions=history_exclusions,
                 )
+            if memory is not None and self._memory_service is not None:
+                from agent_alfred.runtime.memory import (
+                    InputEvidenceError,
+                    memory_context,
+                )
+
+                registered = self._memory_service.forgetting.register_group(
+                    item.run_id,
+                    kind="run",
+                    container_id=item.session_id,
+                    evidence="complete",
+                    evidence_id="input-tracking:" + item.run_id,
+                    occurred_at=item.accepted_at,
+                    context=memory_context(item),
+                )
+                if "error" in registered:
+                    raise InputEvidenceError("input_evidence_unavailable")
             loop_result = self._assistant.respond(
                 item.request.message,
                 client=ledger,
@@ -380,9 +426,15 @@ class RunExecutor:
                 session_id=item.session_id,
                 events=self._events,
                 source=item.request.gateway,
-                overall_deadline_s=(None if item.snapshot.overall_deadline_s is None
-                    else max(0.0, item.snapshot.overall_deadline_s
-                             - (self._clock.monotonic() - run_started))),
+                overall_deadline_s=(
+                    None
+                    if item.snapshot.overall_deadline_s is None
+                    else max(
+                        0.0,
+                        item.snapshot.overall_deadline_s
+                        - (self._clock.monotonic() - run_started),
+                    )
+                ),
                 memory=memory,
                 tools=self._tools if item.request.purpose == "chat" else None,
                 tool_permission=item.memory_permission,
@@ -415,8 +467,26 @@ class RunExecutor:
         except Exception as exc:
             if isinstance(exc, AttemptObservationFailed):
                 exc = exc.cause
+            from agent_alfred.runtime.input_budget import InputLimitExceeded
+            from agent_alfred.runtime.memory import InputEvidenceError
+
             outcome = "failed"
             error = type(exc).__name__
+            if isinstance(exc, InputLimitExceeded):
+                error = "input_limit_exceeded"
+                reply = text_message("assistant", str(exc))
+            from agent_alfred.stream_fallback import OverallDeadlineExceeded
+
+            if isinstance(exc, OverallDeadlineExceeded):
+                error = "overall_deadline"
+                reply = text_message("assistant", "运行期限已到，未发送后续请求。")
+            if isinstance(exc, InputEvidenceError):
+                error = "input_evidence_unavailable"
+                reply = text_message(
+                    "assistant", "输入来源或读取登记暂不可确认，本次已停止；"
+                    "请检查存储状态后重试。已执行的动作不会自动重跑。"
+                )
+                item.memory_telemetry["input_evidence_error"] = error
             if reply is None:
                 reply = text_message("assistant", CONTROLLED_FAILURE_TEXT)
             del exc
@@ -437,11 +507,11 @@ class RunExecutor:
             receipts = item.memory_telemetry.pop("system_receipts", [])
             if receipts and outcome != "interrupted":
                 blocks = () if reply is None else reply.blocks
-                reply = Message("assistant", (*blocks, TextBlock(
-                    "\n\n系统操作回执：\n" + "\n".join(receipts))))
-            record = getattr(
-                self._coordinator, "record_connection_observation", None
-            )
+                reply = Message(
+                    "assistant",
+                    (*blocks, TextBlock("\n\n系统操作回执：\n" + "\n".join(receipts))),
+                )
+            record = getattr(self._coordinator, "record_connection_observation", None)
             if callable(record):
                 record(item, outcome, error)
             # The one thing no exception may skip. run.finished, the
@@ -458,33 +528,57 @@ class RunExecutor:
                 model_results=tuple(all_results),
             )
 
-    def _load_working_memory(self, session_id: str | None) -> tuple[Message, ...]:
+    def _load_working_memory(
+        self, session_id: str | None
+    ) -> tuple[tuple[Message, ...], tuple[str, ...], dict[str, int]]:
         if session_id is None:
-            return ()
-        limit = self._settings.working_memory_rounds * 2
+            return (), (), {}
+        excluded = {"incomplete": 0, "unsafe": 0, "round_limit": 0}
         with self._store.reading() as conn:
             rows = conn.execute(
-                """SELECT role, content FROM agent_log
-                   WHERE session_id = ?
-                   ORDER BY id DESC LIMIT ?""",
-                (session_id, limit),
+                """SELECT r.run_id, u.content, a.content
+                   FROM runs r
+                   JOIN agent_log u ON u.run_id = r.run_id AND u.role = 'user'
+                   JOIN agent_log a ON a.run_id = r.run_id AND a.role = 'assistant'
+                   WHERE r.session_id = ? AND r.purpose = 'chat'
+                     AND r.phase = 'finished'
+                     AND r.outcome IN ('completed', 'failed', 'max_steps')
+                     AND u.session_id = r.session_id
+                     AND a.session_id = r.session_id
+                   ORDER BY u.id DESC""",
+                (session_id,),
             ).fetchall()
-        rows.reverse()
-        messages: list[Message] = []
-        for role, content in rows:
-            blocks = blocks_from_jsonable(json.loads(content))
-            messages.append(Message(role=role, blocks=blocks))
-        return tuple(messages)
+            total = conn.execute(
+                "SELECT COUNT(*) FROM runs WHERE session_id=? AND purpose='chat' "
+                "AND phase='finished'",
+                (session_id,),
+            ).fetchone()[0]
+            legacy = conn.execute(
+                "SELECT COUNT(*) FROM agent_log WHERE session_id=? AND run_id IS NULL",
+                (session_id,),
+            ).fetchone()[0]
+            excluded["incomplete"] = total - len(rows) + legacy
+        if self._memory_service is not None:
+            from agent_alfred.runtime.memory import InputEvidenceError
 
-    def _working_history_groups(self, session_id: str | None) -> tuple[str, ...]:
-        if session_id is None:
-            return ()
-        with self._store.reading() as conn:
-            rows = conn.execute(
-                "SELECT run_id FROM agent_log WHERE session_id = ? "
-                "ORDER BY id DESC LIMIT ?",
-                (session_id, self._settings.working_memory_rounds * 2),
-            ).fetchall()
-        return tuple(dict.fromkeys(
-            row[0] for row in reversed(rows) if row[0] is not None
-        ))
+            evaluated = self._memory_service.forgetting.evaluate_history(
+                [row[0] for row in rows], purpose="working_window"
+            )
+            if "error" in evaluated:
+                raise InputEvidenceError("input_evidence_unavailable")
+            allowed = set(evaluated["allowed"])
+            excluded["unsafe"] = len(rows) - len(allowed)
+            rows = [row for row in rows if row[0] in allowed]
+        excluded["round_limit"] = max(
+            0, len(rows) - self._settings.working_memory_rounds
+        )
+        rows = rows[: self._settings.working_memory_rounds]
+        messages: list[Message] = []
+        groups: list[str] = []
+        for run_id, user, assistant in reversed(rows):
+            groups.append(run_id)
+            for role, content in (("user", user), ("assistant", assistant)):
+                messages.append(
+                    Message(role=role, blocks=blocks_from_jsonable(json.loads(content)))
+                )
+        return tuple(messages), tuple(groups), excluded

@@ -532,6 +532,10 @@ class ForgettingService:
             "SELECT revision FROM memory_revision WHERE singleton=1"
         ).fetchone()[0]
 
+    def notify_committed(self, revision):
+        """Notify readers after a borrowing owner has committed its transaction."""
+        self._owner._notify_memory(revision)
+
     def _write(
         self, fn, context, *, transaction=None, on_failure=None, prepare=None
     ):
@@ -722,6 +726,22 @@ class ForgettingService:
 
         return self._write(write, context, transaction=transaction)
 
+    def record_input_preparation(self, run_id, explanation, *, failed=False, context):
+        """Capacity explanation only: this does not register a model Attempt."""
+        kind = "failure" if failed else "preparation"
+
+        def write(conn):
+            conn.execute(
+                "INSERT INTO run_input_explanations "
+                "(run_id,identity,kind,explanation) VALUES (?,?,?,?) "
+                "ON CONFLICT(run_id,identity) DO UPDATE SET "
+                "explanation=excluded.explanation",
+                (run_id, kind, kind, json.dumps(explanation, ensure_ascii=False)),
+            )
+            return {"status": "recorded"}
+
+        return self._write(write, context)
+
     def register_read(
         self,
         consumer,
@@ -732,6 +752,7 @@ class ForgettingService:
         purpose,
         context,
         transaction=None,
+        input_explanation=None,
     ):
         if (
             not consumer
@@ -761,6 +782,13 @@ class ForgettingService:
                         "CONFLICT(operation_id,group_id) DO UPDATE SET mode='isolated'"
                     ),
                     (consumer, kind, memory_id),
+                )
+            if input_explanation is not None:
+                conn.execute(
+                    "INSERT INTO run_input_explanations "
+                    "(run_id,identity,kind,explanation) VALUES (?,?,'attempt',?)",
+                    (consumer, attempt_id, json.dumps(input_explanation,
+                                                    ensure_ascii=False)),
                 )
             propagate(conn)
             bump(conn)

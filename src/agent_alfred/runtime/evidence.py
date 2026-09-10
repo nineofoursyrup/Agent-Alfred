@@ -34,6 +34,23 @@ def read_evidence(
             "SELECT prune_reason FROM trace_prunes WHERE run_id = ?", (run_id,)
         ).fetchone()
     telemetry = json.loads(row[1]) if row[1] else {}
+    with store.reading() as conn:
+        input_rows = conn.execute(
+            "SELECT kind,explanation FROM run_input_explanations WHERE run_id=? "
+            "ORDER BY id", (run_id,),
+        ).fetchall()
+    if input_rows:
+        memory = telemetry.setdefault("memory", {
+            "gate_state": "legacy_unknown", "gate": None,
+        })
+        memory["input_attempts"] = []
+        for kind, encoded in input_rows:
+            explanation = json.loads(encoded)
+            if kind == "attempt":
+                memory["input_attempts"].append(explanation)
+            else:
+                key = "input_failure" if kind == "failure" else "input_preparation"
+                memory[key] = explanation
     # Active and pending Runs are presented by the existing SSE ReplayRing.
     # Disk evidence is historical once the durable index says finished,
     # including interrupted recovery without a telemetry record.
@@ -47,6 +64,18 @@ def read_evidence(
         safe_events = [_safe_event(event) for event in events]
     except (ValueError, KeyError, TypeError, AttributeError):
         status, safe_events = "unavailable", []
+    if "input_preparation" in telemetry.get("memory", {}):
+        # A start event is preparation, not proof of transport dispatch. Keep
+        # only identities certified by the durable business input records.
+        actual = {
+            entry["attempt_id"]
+            for entry in telemetry["memory"].get("input_attempts", [])
+        }
+        safe_events = [
+            event for event in safe_events
+            if event["envelope"].get("attempt_id") is None
+            or event["envelope"]["attempt_id"] in actual
+        ]
     models = _attempt_models(safe_events)
     try:
         projected = redactor.redact_jsonable(

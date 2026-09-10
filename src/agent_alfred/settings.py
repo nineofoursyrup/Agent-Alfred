@@ -36,9 +36,7 @@ LOOP_NODE_ID = "loop"
 MAX_STEPS_REACHED_TEXT = (
     "Reached the configured max_steps limit; no further model request was sent."
 )
-CONTROLLED_FAILURE_TEXT = (
-    "The model request failed; no assistant reply was produced."
-)
+CONTROLLED_FAILURE_TEXT = "The model request failed; no assistant reply was produced."
 OVERALL_DEADLINE_TEXT = (
     "The run overall deadline elapsed; no further model request was sent."
 )
@@ -53,6 +51,8 @@ ENV_OVERALL_DEADLINE_S = "AGENT_ALFRED_OVERALL_DEADLINE_S"
 ENV_PER_ATTEMPT_TIMEOUT_S = "AGENT_ALFRED_PER_ATTEMPT_TIMEOUT_S"
 ENV_STREAM = "AGENT_ALFRED_STREAM"
 ENV_STREAM_FALLBACK = "AGENT_ALFRED_STREAM_FALLBACK"
+ENV_INPUT_CHARACTER_LIMIT = "AGENT_ALFRED_INPUT_CHARACTER_LIMIT"
+ENV_GATE_INPUT_CHARACTER_LIMIT = "AGENT_ALFRED_GATE_INPUT_CHARACTER_LIMIT"
 ENV_WORKING_MEMORY_ROUNDS = "AGENT_ALFRED_WORKING_MEMORY_ROUNDS"
 ENV_PERSONA_FILE = "AGENT_ALFRED_PERSONA_FILE"
 
@@ -68,6 +68,8 @@ class Settings:
     per_attempt_timeout_s: float = 60.0
     stream: bool = False
     stream_fallback: bool = True
+    input_character_limit: int = 64000
+    gate_input_character_limit: int | None = None
     working_memory_rounds: int = 20
     prompt_preview_max_chars: int = PROMPT_PREVIEW_MAX_CHARS
     persona: str = DEFAULT_PERSONA
@@ -81,7 +83,14 @@ class Settings:
     gate_model_budget_s: float = 5.0
 
     def __post_init__(self) -> None:
-        for name in ("per_store_limit", "per_store_character_budget"):
+        for name in (
+            "per_store_limit",
+            "per_store_character_budget",
+            "input_character_limit",
+            "gate_input_character_limit",
+        ):
+            if name == "gate_input_character_limit" and getattr(self, name) is None:
+                continue
             value = getattr(self, name)
             if type(value) is not int or value <= 0:
                 raise SettingsError(f"{name} must be a positive integer")
@@ -175,6 +184,8 @@ def load_settings(
     stream: bool | None = None,
     stream_fallback: bool | None = None,
     working_memory_rounds: int | None = None,
+    input_character_limit: int | None = None,
+    gate_input_character_limit: int | None = None,
     persona_file: str | None = None,
 ) -> Settings:
     """Resolve the immutable Settings for host assembly. Fail-fast.
@@ -194,23 +205,15 @@ def load_settings(
     env_per_attempt = _env_float(env, ENV_PER_ATTEMPT_TIMEOUT_S)
     env_stream = _env_bool(env, ENV_STREAM)
     env_fallback = _env_bool(env, ENV_STREAM_FALLBACK)
-    env_rounds = _env_int(
-        env, ENV_WORKING_MEMORY_ROUNDS, minimum=None, allow_zero=True
-    )
+    env_rounds = _env_int(env, ENV_WORKING_MEMORY_ROUNDS, minimum=None, allow_zero=True)
 
-    resolved_max_steps = (
-        max_steps if max_steps is not None else env_max_steps
-    )
+    resolved_max_steps = max_steps if max_steps is not None else env_max_steps
     if resolved_max_steps is not None and resolved_max_steps < 0:
         raise SettingsError(f"{ENV_MAX_STEPS} must be >= 0, got {resolved_max_steps}")
 
-    resolved_max_tokens = (
-        max_tokens if max_tokens is not None else env_max_tokens
-    )
+    resolved_max_tokens = max_tokens if max_tokens is not None else env_max_tokens
     if resolved_max_tokens is not None and resolved_max_tokens < 1:
-        raise SettingsError(
-            f"{ENV_MAX_TOKENS} must be >= 1, got {resolved_max_tokens}"
-        )
+        raise SettingsError(f"{ENV_MAX_TOKENS} must be >= 1, got {resolved_max_tokens}")
 
     resolved_overall = (
         overall_deadline_s if overall_deadline_s is not None else env_overall
@@ -221,9 +224,7 @@ def load_settings(
         )
 
     resolved_per_attempt = (
-        per_attempt_timeout_s
-        if per_attempt_timeout_s is not None
-        else env_per_attempt
+        per_attempt_timeout_s if per_attempt_timeout_s is not None else env_per_attempt
     )
     if resolved_per_attempt is not None and resolved_per_attempt <= 0:
         raise SettingsError(
@@ -231,9 +232,7 @@ def load_settings(
         )
 
     resolved_rounds = (
-        working_memory_rounds
-        if working_memory_rounds is not None
-        else env_rounds
+        working_memory_rounds if working_memory_rounds is not None else env_rounds
     )
     if resolved_rounds is not None and resolved_rounds < 0:
         raise SettingsError(
@@ -260,7 +259,21 @@ def load_settings(
     else:
         resolved_fallback = True
 
+    env_input = _env_int(env, ENV_INPUT_CHARACTER_LIMIT, minimum=1, allow_zero=False)
+    env_gate = _env_int(
+        env, ENV_GATE_INPUT_CHARACTER_LIMIT, minimum=1, allow_zero=False
+    )
+    input_limit = (
+        input_character_limit if input_character_limit is not None else env_input
+    )
+    gate_limit = (
+        gate_input_character_limit
+        if gate_input_character_limit is not None
+        else env_gate
+    )
     return Settings(
+        input_character_limit=64000 if input_limit is None else input_limit,
+        gate_input_character_limit=gate_limit,
         max_steps=8 if resolved_max_steps is None else resolved_max_steps,
         max_tokens=resolved_max_tokens,
         overall_deadline_s=resolved_overall,
@@ -269,17 +282,17 @@ def load_settings(
         ),
         stream=resolved_stream,
         stream_fallback=resolved_fallback,
-        working_memory_rounds=(
-            20 if resolved_rounds is None else resolved_rounds
-        ),
+        working_memory_rounds=(20 if resolved_rounds is None else resolved_rounds),
         persona=persona,
         persona_file=persona_path if persona_path and persona_path.strip() else None,
         per_store_limit=_env_int(
             env, "AGENT_ALFRED_PER_STORE_LIMIT", minimum=1, allow_zero=False
-        ) or 5,
+        )
+        or 5,
         per_store_character_budget=_env_int(
             env, "AGENT_ALFRED_PER_STORE_CHARACTER_BUDGET", minimum=1, allow_zero=False
-        ) or 4000,
+        )
+        or 4000,
         gate_model_budget_s=_env_float(env, "AGENT_ALFRED_GATE_MODEL_BUDGET_S") or 5.0,
     )
 

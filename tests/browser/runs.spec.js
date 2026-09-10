@@ -1,6 +1,54 @@
 import { test, expect } from "@playwright/test";
 import { controlledTransport, domain, emit, state, run } from "./transport.js";
 
+test("input source failure stays explicit after reloading run details", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "新建会话", exact: true }).click();
+  await page.getByRole("button", { name: "展开对话", exact: true }).click();
+  await page.getByRole("textbox", { name: "消息" }).fill("输入来源失败展示");
+  const accepted = page.waitForResponse(response =>
+    response.url().endsWith("/api/runs") && response.status() === 202);
+  await page.getByRole("button", { name: "发送", exact: true }).click();
+  const { run_id } = await (await accepted).json();
+  await expect(page.getByRole("region", { name: "主对话" })).toContainText("已保存");
+  await page.route("**/api/run-evidence?*", async route => {
+    const body = await (await route.fetch()).json();
+    await route.fulfill({json: {...body, events: [], attempts: [], memory: {
+      gate_state: "not_evaluated", gate: null, input_attempts: [],
+      input_evidence_error: "input_evidence_unavailable",
+    }}});
+  });
+  await page.goto(`/runs/${encodeURIComponent(run_id)}`);
+  await page.getByText("本次输入", { exact: true }).click();
+  const detail = page.getByRole("region", { name: "运行过程" });
+  await expect(detail).toContainText("输入来源或读取登记暂不可确认");
+  await expect(detail).toContainText("该请求未发送");
+  await page.reload();
+  await page.getByText("本次输入", { exact: true }).click();
+  await expect(detail).toContainText("输入来源或读取登记暂不可确认");
+});
+
+test("oversized input shows preparation failure without an invented Attempt", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "新建会话", exact: true }).click();
+  await page.getByRole("button", { name: "展开对话", exact: true }).click();
+  await page.getByRole("textbox", { name: "消息" }).fill("x".repeat(64001));
+  const accepted = page.waitForResponse(response =>
+    response.url().endsWith("/api/runs") && response.status() === 202);
+  await page.getByRole("button", { name: "发送", exact: true }).click();
+  const { run_id } = await (await accepted).json();
+  await expect(page.getByRole("region", { name: "主对话" })).toContainText("已保存");
+  await page.goto(`/runs/${encodeURIComponent(run_id)}`);
+  await page.getByText("本次输入", { exact: true }).click();
+  const detail = page.getByRole("region", { name: "运行过程" });
+  await expect(detail).toContainText("输入准备失败");
+  await expect(detail).toContainText("预留");
+  await expect(detail).not.toContainText("Attempt");
+  await page.reload();
+  await page.getByText("本次输入", { exact: true }).click();
+  await expect(detail).toContainText("输入准备失败");
+});
+
 test("a real recorded Run deep link loads published Attempt evidence and exact cost", async ({
   page,
 }) => {
@@ -28,6 +76,15 @@ test("a real recorded Run deep link loads published Attempt evidence and exact c
   await expect(detail).toContainText("0.125");
   await expect(detail).not.toContainText("按基础档估算");
   await expect(detail).toContainText("离线模型回复");
+  await detail.getByText("本次输入", { exact: true }).click();
+  await expect(detail).toContainText("request-input-v1");
+  await expect(detail).toContainText("字符 / 上限 64000");
+  await expect(detail).toContainText("预留");
+  await page.reload();
+  await page.getByText("本次输入", { exact: true }).click();
+  await expect(page.getByRole("region", { name: "运行过程" })).toContainText(
+    "request-input-v1",
+  );
   await expect(
     page.getByRole("main").locator('[data-highlighted="true"]'),
   ).toHaveCount(1);
@@ -169,7 +226,7 @@ test("aborted attempts stay in publication position and unknown cost never has a
   );
   await expect(page.getByRole("main")).toContainText("<future-purpose>");
   const detail = page.getByRole("region", { name: "运行过程" });
-  const summaries = detail.locator("details > summary");
+  const summaries = detail.locator("details.attempt > summary");
   await expect(summaries).toHaveText([
     "Attempt · seq 4 · aborted（已撤回）",
     "Attempt · seq 6 · committed",
@@ -228,13 +285,13 @@ test("live Attempt updates keep keyboard focus and collapse only the new abort",
   await emit(page, "state_patch", state(session, 1, {coordinator_state: "running", active_run: run(session)}));
   await domain(page, 1, session, {name: "attempt.started", attempt_id: "a"}, {attempt: "a", step: 0});
   const detail = page.getByRole("region", {name: "运行过程"});
-  const summary = detail.locator("details > summary");
+  const summary = detail.locator("details.attempt > summary");
   await summary.focus();
   await domain(page, 2, session, {name: "block.started", index: 0, block_type: "text"}, {attempt: "a", step: 0});
   await expect(summary).toBeFocused();
   await domain(page, 3, session, {name: "attempt.aborted", blocks: [{type: "text", text: "作废正文"}]}, {attempt: "a", step: 0});
   await expect(summary).toContainText("aborted");
-  await expect(detail.locator("details")).not.toHaveAttribute("open", "");
+  await expect(detail.locator("details.attempt")).not.toHaveAttribute("open", "");
   await expect(summary).toBeFocused();
   await summary.press("Enter");
   await expect(detail.getByText("作废正文", {exact:true})).toBeVisible();

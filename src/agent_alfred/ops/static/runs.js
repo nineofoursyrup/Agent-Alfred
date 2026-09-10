@@ -194,6 +194,7 @@ export function runsPage(root, progress, navigate) {
                 : "过程记录不可用",
         ),
       );
+    renderInputs(detail, evidence?.memory);
     renderEvidence(
       detail,
       [...events.values()],
@@ -361,4 +362,45 @@ function renderCost(root, charge) {
     }
     if (tiered) root.append(node("p", "按基础档估算"));
   }
+}
+
+/** @param {HTMLElement} root @param {Wire|undefined} memory */
+function renderInputs(root, memory) {
+  const details = node("details");
+  details.dataset.attempt = "input-explanation";
+  details.append(node("summary", "本次输入"));
+  details.append(node("p", "字符限额是本地输入检查，不保证供应商 Token 容量。"));
+  if (!memory || memory.gate_state === "legacy_unknown") {
+    details.append(node("p", "输入说明未知或暂不可读取"));
+  }
+  if (memory?.input_evidence_error) {
+    details.append(node("p", "输入来源或读取登记暂不可确认；该请求未发送。请检查存储状态后重试。"));
+  }
+  const preparation = memory?.input_preparation;
+  if (preparation) {
+    details.append(node("p", `${preparation.status === "failed" ? "输入准备失败" : "容量选择"} · ${preparation.measurement_version}`));
+    details.append(node("p", `回答已有 ${preparation.answer_characters} 字符，预留 ${preparation.reserved_characters} 字符，上限 ${preparation.answer_limit}；检索门 ${preparation.gate_characters} / ${preparation.gate_limit}。预留不计作实际发送。`));
+  }
+  if (memory?.input_failure) {
+    const failure = memory.input_failure;
+    details.append(node("p", `输入准备失败 · Step ${failure.step_index} · ${failure.characters} 字符 / 上限 ${failure.limit}；未发送该请求。`));
+  }
+  for (const input of memory?.input_attempts || []) {
+    const section = node("section");
+    section.append(node("h3", `${input.purpose} · Step ${input.step_index} · Attempt ${input.attempt_id}`));
+    section.append(node("p", `${input.measurement_version ?? "计量未知"} · ${input.input_characters ?? "未知"} 字符 / 上限 ${input.input_limit ?? "未知"}`));
+    const omitted = input.history_exclusions;
+    if (omitted) section.append(node("p", `历史排除：不完整 ${omitted.incomplete}，隔离或来源未确认 ${omitted.unsafe}，N 上限 ${omitted.round_limit}，字符预算 ${input.budget_omitted_groups}。`));
+    for (const id of input.working_history_groups || []) {
+      const link = node("a", `历史 Run ${id}`);
+      link.href = `/runs/${encodeURIComponent(id)}`;
+      section.append(link);
+    }
+    for (const entry of input.ledger_entries || []) {
+      section.append(node("p", `工具账 ${entry.ledger_id} · ${entry.action} · ${entry.status} · ${entry.at} · 来源 Run ${entry.source_run}`));
+    }
+    if (input.purpose === "answer") section.append(node("p", `工具账因限额省略 ${input.ledger_omitted ?? "未知"} 条，其中结果未知 ${input.ledger_unknown_omitted ?? "未知"} 条；隔离或失效排除 ${input.ledger_excluded ?? "未知"} 条。有限摘要不能证明动作未发生。`));
+    details.append(section);
+  }
+  root.append(details);
 }

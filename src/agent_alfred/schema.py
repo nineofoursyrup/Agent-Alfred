@@ -1057,6 +1057,17 @@ def _apply_v9(conn):
     migrate_file_attempts(conn)
 
 
+def _apply_v10(conn):
+    conn.execute("""CREATE TABLE run_input_explanations (
+        id INTEGER PRIMARY KEY,
+        run_id TEXT NOT NULL,
+        identity TEXT NOT NULL,
+        kind TEXT NOT NULL CHECK (kind IN ('attempt','preparation','failure')),
+        explanation TEXT NOT NULL CHECK (json_valid(explanation)),
+        UNIQUE(run_id, identity)
+    )""")
+
+
 MIGRATIONS = (
     Migration(version=1, apply=_apply_v1, managed_objects=_V1_MANAGED_OBJECTS),
     # Renames and rebuilds only: every name it leaves behind is already v1's.
@@ -1092,6 +1103,9 @@ MIGRATIONS = (
         version=8, apply=_apply_v8, managed_objects=("external_tool_operations",),
     ),
     Migration(version=9, apply=_apply_v9, managed_objects=()),
+    Migration(
+        version=10, apply=_apply_v10, managed_objects=("run_input_explanations",),
+    ),
 )
 MIGRATION_VERSIONS = tuple(migration.version for migration in MIGRATIONS)
 LATEST_MIGRATION_VERSION = MIGRATION_VERSIONS[-1]

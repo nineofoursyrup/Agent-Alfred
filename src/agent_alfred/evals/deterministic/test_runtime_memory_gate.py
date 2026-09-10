@@ -26,10 +26,12 @@ def runtime(
     clock=None,
     publish_work=None,
     no_sinks=False,
+    extra_sinks=(),
+    memory_notifier=None,
 ):
     conn = sqlite3.connect(":memory:", check_same_thread=False)
     schema.migrate(conn)
-    capture = CapturingSink(flush_at_run_end=True)
+    capture = CapturingSink(flush_at_run_end=not bool(extra_sinks))
     model = ScriptedModel(script)
     host = RuntimeHost(
         conn=conn,
@@ -37,9 +39,11 @@ def runtime(
         settings=settings or Settings(),
         clock=clock or FakeClock(),
         fanout=FanOutSink(
-            [] if no_sinks else [capture], process_instance_id="memory-test"
+            [] if no_sinks else [capture, *extra_sinks],
+            process_instance_id="memory-test",
         ),
         publish_work=publish_work,
+        memory_notifier=memory_notifier,
         process_instance_id="memory-test",
         snapshot_provider=snapshot_provider
         or MutableAssignmentProvider(
