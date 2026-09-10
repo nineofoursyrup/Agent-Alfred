@@ -61,8 +61,9 @@ class AttemptScope:
         callback, attempt_id = self.start_event
         try:
             callback()
-            if self.request.on_attempt_started is not None:
-                self.request.on_attempt_started(attempt_id)
+            self.request.notify_attempt_started(
+                attempt_id, self.budget.deadline if self.budget is not None else None
+            )
         except Exception as exc:
             self.local_failure = AttemptObservationFailed(exc)
             raise self.local_failure from exc

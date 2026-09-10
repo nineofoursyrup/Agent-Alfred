@@ -85,6 +85,7 @@ export class Progress {
       !attempt.terminal &&
       seq > attempt.lastSeq
     ) {
+      attempt.dispatched = true;
       attempt.lastSeq = seq;
       if (p.name === "block.started" && p.block_type === "text")
         attempt.blocks.set(p.index, "");

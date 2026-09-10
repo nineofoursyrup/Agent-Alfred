@@ -152,6 +152,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="A failed streaming attempt fails the Step; no fallback.",
     )
     parser.add_argument(
+        "--input-character-limit", type=int, default=None,
+        help="Normalized input character limit; not a provider token guarantee.",
+    )
+    parser.add_argument(
+        "--gate-input-character-limit", type=int, default=None,
+        help="Retrieval gate input character limit; inherits the general limit.",
+    )
+    parser.add_argument(
         "--working-memory-rounds",
         type=int,
         default=None,
@@ -234,6 +242,8 @@ def main(
             stream=args.stream,
             stream_fallback=args.stream_fallback,
             working_memory_rounds=args.working_memory_rounds,
+            input_character_limit=args.input_character_limit,
+            gate_input_character_limit=args.gate_input_character_limit,
             persona_file=args.persona_file,
         )
     except SettingsError as exc:

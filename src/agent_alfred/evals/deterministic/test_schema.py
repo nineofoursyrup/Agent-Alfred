@@ -364,7 +364,7 @@ def test_migrate_creates_required_tables_without_user_id() -> None:
         "consolidation_batches",
         "consolidation_ops",
         "file_operations", "skill_candidates", "local_tool_operations",
-        "external_tool_operations",
+        "external_tool_operations", "run_input_explanations",
         "memory_revision",
         "memory_operations",
         "memory_sources",
@@ -468,7 +468,7 @@ def test_migrate_writes_one_contiguous_ledger_row_per_version() -> None:
     schema.migrate(conn)
     rows = conn.execute("SELECT version FROM schema_migrations").fetchall()
     conn.close()
-    assert rows == [(1,), (2,), (3,), (4,), (5,), (6,), (7,), (8,), (9,)]
+    assert rows == [(1,), (2,), (3,), (4,), (5,), (6,), (7,), (8,), (9,), (10,)]
 
 
 def test_migrate_does_not_commit_the_callers_transaction() -> None:
@@ -1648,7 +1648,7 @@ def test_upgrading_a_version_1_database_lands_the_current_shape(commit: str) -> 
     ).fetchall()[0] == (1, historic_schema.V1_APPLIED_AT)
     assert conn.execute(
         "SELECT version FROM schema_migrations ORDER BY version"
-    ).fetchall() == [(1,), (2,), (3,), (4,), (5,), (6,), (7,), (8,), (9,)]
+    ).fetchall() == [(1,), (2,), (3,), (4,), (5,), (6,), (7,), (8,), (9,), (10,)]
     conn.close()
 
 
@@ -1845,6 +1845,7 @@ def test_a_failed_upgrade_in_a_caller_transaction_leaves_the_ledger_intact(
         (7,),
         (8,),
         (9,),
+        (10,),
     ]
     # Rolling back is still the caller's decision too, and it takes back the
     # caller's own write and nothing else.

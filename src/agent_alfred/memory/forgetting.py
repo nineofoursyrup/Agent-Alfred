@@ -532,6 +532,10 @@ class ForgettingService:
             "SELECT revision FROM memory_revision WHERE singleton=1"
         ).fetchone()[0]
 
+    def notify_committed(self, revision):
+        """Notify readers after a borrowing owner has committed its transaction."""
+        self._owner._notify_memory(revision)
+
     def _write(
         self, fn, context, *, transaction=None, on_failure=None, prepare=None
     ):
@@ -722,6 +726,22 @@ class ForgettingService:
 
         return self._write(write, context, transaction=transaction)
 
+    def record_input_preparation(self, run_id, explanation, *, failed=False, context):
+        """Capacity explanation only: this does not register a model Attempt."""
+        kind = "failure" if failed else "preparation"
+
+        def write(conn):
+            conn.execute(
+                "INSERT INTO run_input_explanations "
+                "(run_id,identity,kind,explanation) VALUES (?,?,?,?) "
+                "ON CONFLICT(run_id,identity) DO UPDATE SET "
+                "explanation=excluded.explanation",
+                (run_id, kind, kind, json.dumps(explanation, ensure_ascii=False)),
+            )
+            return {"status": "recorded"}
+
+        return self._write(write, context)
+
     def register_read(
         self,
         consumer,
@@ -732,41 +752,151 @@ class ForgettingService:
         purpose,
         context,
         transaction=None,
+        input_explanation=None,
+        provisional=False,
     ):
         if (
             not consumer
             or not attempt_id
             or purpose not in ("gate", "answer", "consolidation")
+            or (provisional and input_explanation is None)
         ):
             return {"error": {"code": "invalid_input"}}
 
+        sources, memories = tuple(sources), tuple(memories)
+
         def write(conn):
             ensure_group(conn, consumer)
-            for source in sources:
+            for source in (() if provisional else sources):
                 ensure_group(conn, source)
                 conn.execute(
                     "INSERT OR IGNORE INTO history_reads VALUES (?,?,?,?)",
                     (source, consumer, attempt_id, purpose),
                 )
-            for kind, memory_id, version in memories:
+            for kind, memory_id, version in (() if provisional else memories):
                 conn.execute(
                     "INSERT OR IGNORE INTO memory_uses VALUES (?,?,?,?,?,?)",
                     (kind, memory_id, version, consumer, attempt_id, purpose),
                 )
+                if not provisional:
+                    conn.execute(
+                        (
+                            "INSERT INTO forget_limits\n                    SELECT "
+                            "operation_id,?,'isolated' FROM forget_operations "
+                            "WHERE kind=? "
+                            "AND memory_id=?\n                    ON "
+                            "CONFLICT(operation_id,group_id) DO UPDATE "
+                            "SET mode='isolated'"
+                        ),
+                        (consumer, kind, memory_id),
+                    )
+            if input_explanation is not None:
+                explanation = dict(input_explanation)
+                if provisional:
+                    explanation["dispatch_state"] = "unconfirmed"
+                    # A reservation is recoverable provenance, not an actual-use
+                    # edge. Deletion closure consumes only confirmed graph rows.
+                    explanation["pending_sources"] = sources
+                    explanation["pending_memories"] = memories
                 conn.execute(
-                    (
-                        "INSERT INTO forget_limits\n                    SELECT "
-                        "operation_id,?,'isolated' FROM forget_operations WHERE kind=? "
-                        "AND memory_id=?\n                    ON "
-                        "CONFLICT(operation_id,group_id) DO UPDATE SET mode='isolated'"
-                    ),
-                    (consumer, kind, memory_id),
+                    "INSERT INTO run_input_explanations "
+                    "(run_id,identity,kind,explanation) VALUES (?,?,'attempt',?)",
+                    (consumer, attempt_id, json.dumps(explanation,
+                                                    ensure_ascii=False)),
                 )
-            propagate(conn)
+            if not provisional:
+                propagate(conn)
             bump(conn)
             return {"consumer": consumer}
 
         return self._write(write, context, transaction=transaction)
+
+    def _resolve_input(self, conn, consumer, attempt_id, sent):
+        row = conn.execute(
+            "SELECT explanation FROM run_input_explanations "
+            "WHERE run_id=? AND identity=? AND kind='attempt'",
+            (consumer, attempt_id),
+        ).fetchone()
+        if row is None:
+            return {"status": "absent"}
+        explanation = json.loads(row[0])
+        state = explanation.get("dispatch_state")
+        resolved = "sent" if sent else "not_sent"
+        if state != "unconfirmed":
+            if state not in (None, resolved):
+                raise ValueError("conflicting_input_receipt")
+            return {"status": resolved, "explanation": explanation}
+        if sent:
+            for source in explanation.get("pending_sources", ()):
+                ensure_group(conn, source)
+                conn.execute("INSERT OR IGNORE INTO history_reads VALUES (?,?,?,?)",
+                             (source, consumer, attempt_id, explanation["purpose"]))
+            for kind, memory_id, version in explanation.get("pending_memories", ()):
+                conn.execute("INSERT OR IGNORE INTO memory_uses VALUES (?,?,?,?,?,?)",
+                             (kind, memory_id, version, consumer, attempt_id,
+                              explanation["purpose"]))
+            conn.execute(
+                "INSERT INTO forget_limits "
+                "SELECT o.operation_id,?,'isolated' FROM forget_operations o "
+                "JOIN memory_uses u ON u.kind=o.kind AND u.memory_id=o.memory_id "
+                "WHERE u.consumer=? AND u.attempt_id=? "
+                "ON CONFLICT(operation_id,group_id) DO UPDATE SET mode='isolated'",
+                (consumer, consumer, attempt_id),
+            )
+            propagate(conn)
+        else:
+            # These keys belong solely to the unsent Attempt. Earlier real reads
+            # and any independent isolation restrictions retain their ownership.
+            conn.execute("DELETE FROM history_reads WHERE consumer=? AND attempt_id=?",
+                         (consumer, attempt_id))
+            conn.execute("DELETE FROM memory_uses WHERE consumer=? AND attempt_id=?",
+                         (consumer, attempt_id))
+        explanation["dispatch_state"] = resolved
+        explanation.pop("pending_sources", None)
+        explanation.pop("pending_memories", None)
+        conn.execute(
+            "UPDATE run_input_explanations SET explanation=? "
+            "WHERE run_id=? AND identity=?",
+            (json.dumps(explanation, ensure_ascii=False), consumer, attempt_id),
+        )
+        bump(conn)
+        return {"status": resolved, "explanation": explanation}
+
+    def resolve_input_registration(self, consumer, attempt_id, *, sent, context):
+        """Resolve a provisional registration from the host's transport receipt."""
+        return self._write(
+            lambda conn: self._resolve_input(conn, consumer, attempt_id, sent), context
+        )
+
+    def recover_input_registrations(self):
+        """Reconcile only durable positive receipts; a crash gap stays unknown."""
+        if self._db.transaction_in_progress:
+            raise RuntimeError("caller_transaction_active")
+        with self._db.transaction() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            rows = conn.execute(
+                "SELECT i.run_id,i.identity,r.telemetry FROM run_input_explanations i "
+                "JOIN runs r ON r.run_id=i.run_id WHERE i.kind='attempt' "
+                "AND json_extract(i.explanation,'$.dispatch_state')='unconfirmed'"
+            ).fetchall()
+            changed = False
+            for consumer, identity, encoded in rows:
+                telemetry = json.loads(encoded) if encoded else {}
+                actual = {a["attempt_id"] for a in telemetry.get("attempts", [])}
+                unsent = telemetry.get("memory", {}).get("input_not_sent_attempts", [])
+                if identity not in actual and identity not in unsent:
+                    continue
+                self._participate(
+                    conn,
+                    lambda conn: self._resolve_input(
+                        conn, consumer, identity, identity in actual
+                    ),
+                )
+                changed = True
+            revision = self.prepare_commit(conn) if changed else None
+            conn.commit()
+        if revision is not None:
+            self.notify_committed(revision)
 
     @safe_read
     def get_forgetting(self, operation_id):
@@ -1044,9 +1174,18 @@ class ForgettingService:
                     evidence = conn.execute(
                         "SELECT evidence FROM history_groups WHERE group_id=?", (group,)
                     ).fetchone()
+                    unresolved_input = conn.execute(
+                        "SELECT 1 FROM run_input_explanations WHERE run_id=? "
+                        "AND kind='attempt' AND "
+                        "json_extract(explanation,'$.dispatch_state')='unconfirmed' "
+                        "LIMIT 1", (group,),
+                    ).fetchone()
                     (
                         allowed
-                        if not restricted and evidence == ("complete",)
+                        if (
+                            not restricted and not unresolved_input
+                            and evidence == ("complete",)
+                        )
                         else denied
                     ).append(group)
                 token = {

@@ -111,6 +111,9 @@ class Assistant:
             and budget.remaining > 0
             and (overall_abs is None or self._clock.monotonic() < overall_abs)
         ):
+            working_memory = memory.prepare(
+                working_memory, system, model, tools.schemas() if tools else ()
+            )
             gate = memory.evaluate(budget, working_memory, overall_abs)
             step_count = budget.used
             if gate is not None:
@@ -178,12 +181,9 @@ class Assistant:
                 messages=tuple(transcript),
                 tools=tools.schemas() if tools else (),
                 max_tokens=self._settings.max_tokens,
-                on_attempt_started=(
-                    None
-                    if memory is None
-                    else memory.attempt_observer(lease.step_index, "answer")
-                ),
             )
+            if memory is not None:
+                request = memory.answer_request(request, turns, lease.step_index)
             bind = events.bind_origin if events is not None else None
             if bind is not None:
                 bind(envelope)
@@ -201,6 +201,8 @@ class Assistant:
             finally:
                 if bind is not None:
                     bind(None)
+                if memory is not None:
+                    memory.notify_inputs()
             results.append(model_result)
             stop_reason: StopReason = "error"
             if model_result.response is not None:

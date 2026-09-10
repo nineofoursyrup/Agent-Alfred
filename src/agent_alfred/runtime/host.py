@@ -305,6 +305,7 @@ class RuntimeHost:
         audit_key=None,
         file_state=None,
         skill_builtin=None,
+        memory_notifier=None,
     ):
         self._support_overrides = support_overrides or SupportOverrides()
         self._conn = conn
@@ -360,6 +361,7 @@ class RuntimeHost:
             recording_store=self._store, audit_key=audit_key,
             clock=self._clock.wall_utc, admission=self,
             delete_barrier=self._fanout.checkpoint_barrier,
+            memory_notifier=memory_notifier,
         )
         self._queue = _HandoffQueue(self._store)
         self._done: dict[str, threading.Event] = {}
@@ -699,6 +701,7 @@ class RuntimeHost:
 
     def recover(self) -> None:
         self._recorder.recover()
+        self._memory_service.forgetting.recover_input_registrations()
         self._external_tools.recover()
 
     def create_session(self) -> str:

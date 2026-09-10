@@ -35,7 +35,7 @@ test("one real UI flow reaches 202, Step, Attempt, deltas and one reply across p
     await page.getByRole("link",{name:"查看当前运行",exact:true}).click();
     const detail = page.getByRole("region",{name:"运行过程"});
     await expect(detail.getByRole("heading",{name:"Step 0",exact:true})).toBeVisible();
-    await expect(detail.locator("details > summary")).toContainText("Attempt");
+    await expect(detail.locator("details.attempt > summary")).toContainText("Attempt");
     await expect(detail).toContainText("attempt.started");
     await expect(chat.getByText("正在流入的临时片段",{exact:true})).toHaveCount(1);
     await page.getByRole("link",{name:"收件箱",exact:true}).click();

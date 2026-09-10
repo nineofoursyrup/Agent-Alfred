@@ -34,6 +34,31 @@ def read_evidence(
             "SELECT prune_reason FROM trace_prunes WHERE run_id = ?", (run_id,)
         ).fetchone()
     telemetry = json.loads(row[1]) if row[1] else {}
+    with store.reading() as conn:
+        input_rows = conn.execute(
+            "SELECT kind,explanation FROM run_input_explanations WHERE run_id=? "
+            "ORDER BY id", (run_id,),
+        ).fetchall()
+    if input_rows:
+        memory = telemetry.setdefault("memory", {
+            "gate_state": "legacy_unknown", "gate": None,
+        })
+        memory["input_attempts"] = []
+        memory["input_unconfirmed"] = []
+        for kind, encoded in input_rows:
+            explanation = json.loads(encoded)
+            if kind == "attempt":
+                state = explanation.get("dispatch_state")
+                if state == "unconfirmed":
+                    memory["input_unconfirmed"].append({
+                        key: explanation[key]
+                        for key in ("attempt_id", "purpose", "step_index")
+                    })
+                elif state != "not_sent":
+                    memory["input_attempts"].append(explanation)
+            else:
+                key = "input_failure" if kind == "failure" else "input_preparation"
+                memory[key] = explanation
     # Active and pending Runs are presented by the existing SSE ReplayRing.
     # Disk evidence is historical once the durable index says finished,
     # including interrupted recovery without a telemetry record.
@@ -47,6 +72,27 @@ def read_evidence(
         safe_events = [_safe_event(event) for event in events]
     except (ValueError, KeyError, TypeError, AttributeError):
         status, safe_events = "unavailable", []
+    if "input_preparation" in telemetry.get("memory", {}):
+        # A start event is preparation, not proof of transport dispatch. Keep
+        # identities proved independently by model accounting, confirmed input
+        # registration, or a durable terminal snapshot. Missing receipts cannot
+        # erase real process facts, nor may preparation manufacture a call.
+        actual = {
+            entry["attempt_id"]
+            for entry in telemetry["memory"].get("input_attempts", [])
+        }
+        actual.update(
+            entry["attempt_id"] for entry in telemetry.get("attempts", [])
+        )
+        actual.update(
+            event["envelope"].get("attempt_id") for event in safe_events
+            if event["payload"]["name"] in ("attempt.committed", "attempt.aborted")
+        )
+        safe_events = [
+            event for event in safe_events
+            if event["envelope"].get("attempt_id") is None
+            or event["envelope"]["attempt_id"] in actual
+        ]
     models = _attempt_models(safe_events)
     try:
         projected = redactor.redact_jsonable(
