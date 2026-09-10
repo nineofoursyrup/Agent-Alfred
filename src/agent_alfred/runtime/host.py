@@ -701,6 +701,7 @@ class RuntimeHost:
 
     def recover(self) -> None:
         self._recorder.recover()
+        self._memory_service.forgetting.recover_input_registrations()
         self._external_tools.recover()
 
     def create_session(self) -> str:

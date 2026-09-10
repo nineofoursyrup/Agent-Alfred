@@ -195,11 +195,32 @@ export function runsPage(root, progress, navigate) {
         ),
       );
     renderInputs(detail, evidence?.memory);
+    const selectedId = selectedRun.run_id;
+    const confirmed = new Set(
+      [...progress.attempts.values()]
+        .filter(item => item.run_id === selectedId && item.dispatched)
+        .map(item => item.attempt_id),
+    );
+    const runFinished = selectedRun.phase === "finished" || [...events.values()].some(
+      event => event.payload.name === "run.finished");
+    const authoritative = evidence?.memory?.input_preparation &&
+      evidence.trace_status !== "live" && runFinished;
+    const actual = new Set([
+      ...(evidence?.attempts || []), ...(evidence?.memory?.input_attempts || []),
+    ].map((/** @type {Wire} */ item) => item.attempt_id));
+    for (const event of events.values()) {
+      if (["attempt.committed", "attempt.aborted"].includes(event.payload.name))
+        actual.add(event.envelope.attempt_id);
+    }
+    for (const id of confirmed) actual.add(id);
+    for (const id of actual) confirmed.add(id);
     renderEvidence(
       detail,
-      [...events.values()],
+      [...events.values()].filter(event => !authoritative ||
+        !event.envelope.attempt_id || actual.has(event.envelope.attempt_id)),
       evidence?.attempts || [],
-      selectedRun,
+      runFinished ? {...selectedRun, phase: "finished"} : selectedRun,
+      confirmed,
     );
     for (const item of detail.querySelectorAll("details")) {
       const previous = prior.get(item.dataset.attempt);
@@ -235,8 +256,8 @@ export function runsPage(root, progress, navigate) {
   return { update, loadEvidence, sync };
 }
 
-/** @param {HTMLElement} root @param {Wire[]} events @param {Wire[]} ledger @param {Wire} run */
-function renderEvidence(root, events, ledger, run) {
+/** @param {HTMLElement} root @param {Wire[]} events @param {Wire[]} ledger @param {Wire} run @param {Set<string>} confirmed */
+function renderEvidence(root, events, ledger, run, confirmed) {
   const shownAccounts = new Set();
   /** @type {Map<number,Wire[]>} */ const steps = new Map();
   for (const event of events.sort((a, b) => a.seq - b.seq)) {
@@ -264,37 +285,45 @@ function renderEvidence(root, events, ledger, run) {
     );
     if (committed)
       section.append(node("p", textBlocks(committed.payload.blocks)));
-    for (const start of facts.filter(
-      (fact) => fact.payload.name === "attempt.started",
-    )) {
-      const id = start.envelope.attempt_id;
+    const anchors = facts.filter(fact => fact.payload.name === "attempt.started");
+    for (const fact of facts) {
+      if (["attempt.committed", "attempt.aborted"].includes(fact.payload.name) &&
+          !anchors.some(anchor => anchor.envelope.attempt_id === fact.envelope.attempt_id))
+        anchors.push(fact);
+    }
+    for (const anchor of anchors.sort((a, b) => a.seq - b.seq)) {
+      const id = anchor.envelope.attempt_id;
       const transitions = facts.filter(
         (fact) => fact.envelope.attempt_id === id,
       );
+      const start = transitions.find(fact => fact.payload.name === "attempt.started");
       const terminal = transitions.find((fact) =>
         ["attempt.committed", "attempt.aborted"].includes(fact.payload.name),
       );
       const accounting = ledger.find((attempt) => attempt.attempt_id === id);
+      const actual = Boolean(terminal || accounting || confirmed.has(id));
       const details = node("details");
       details.dataset.attempt = id;
       const aborted = terminal?.payload.name === "attempt.aborted";
-      details.className = aborted ? "attempt aborted" : "attempt";
+      details.className = !actual ? "input-preparation" : aborted ? "attempt aborted" : "attempt";
       details.open = !aborted;
       details.append(
         node(
           "summary",
-          `Attempt · seq ${start.seq} · ${aborted ? "aborted（已撤回）" : terminal ? "committed" : "运行中"}`,
+          actual ? `Attempt · seq ${anchor.seq} · ${aborted ? "aborted（已撤回）" : terminal ? "committed" : run.phase === "finished" ? "结果未知" : "运行中"}`
+            : `输入准备 · seq ${anchor.seq} · 发送待确认`,
         ),
       );
       if (aborted) details.append(node("p", "未进入回答但已产生 Token／费用"));
-      if (start.payload.model)
+      if (start?.payload.model)
         details.append(
           node(
             "p",
             `${start.payload.model.endpoint_id} / ${start.payload.model.model_id}`,
           ),
         );
-      details.append(node("p", start.payload.streamed ? "流式" : "非流式"));
+      const streamed = start?.payload.streamed;
+      details.append(node("p", streamed === true ? "流式" : streamed === false ? "非流式" : "流式状态未知"));
       for (const transition of transitions)
         details.append(
           node("p", `seq ${transition.seq} · ${transition.payload.name}`),
@@ -315,7 +344,7 @@ function renderEvidence(root, events, ledger, run) {
         for (const [type, count] of counts)
           details.append(node("p", `${type} × ${count}`));
       }
-      renderAccounting(details, accounting);
+      if (actual) renderAccounting(details, accounting);
       if (accounting) shownAccounts.add(id);
       section.append(details);
     }
@@ -376,14 +405,23 @@ function renderInputs(root, memory) {
   if (memory?.input_evidence_error) {
     details.append(node("p", "输入来源或读取登记暂不可确认；该请求未发送。请检查存储状态后重试。"));
   }
+  for (const pending of memory?.input_unconfirmed || []) {
+    details.append(node("p", `输入登记待恢复 · ${pending.purpose} · Step ${pending.step_index} · 请求 ${pending.attempt_id}；来源登记未确认，不计作已确认输入。`));
+  }
   const preparation = memory?.input_preparation;
   if (preparation) {
     details.append(node("p", `${preparation.status === "failed" ? "输入准备失败" : "容量选择"} · ${preparation.measurement_version}`));
     details.append(node("p", `回答已有 ${preparation.answer_characters} 字符，预留 ${preparation.reserved_characters} 字符，上限 ${preparation.answer_limit}；检索门 ${preparation.gate_characters} / ${preparation.gate_limit}。预留不计作实际发送。`));
+    const excluded = preparation.history_exclusions;
+    details.append(node("p", `准备阶段历史排除：不完整 ${excluded?.incomplete ?? "未知"}，隔离或来源未确认 ${excluded?.unsafe ?? "未知"}，N 上限 ${excluded?.round_limit ?? "未知"}，字符预算 ${preparation.budget_omitted_groups ?? "未知"}。`));
+    details.append(node("p", `准备阶段工具账因限额省略 ${preparation.ledger_omitted ?? "未知"} 条，其中结果未知 ${preparation.ledger_unknown_omitted ?? "未知"} 条；隔离或失效排除 ${preparation.ledger_excluded ?? "未知"} 条。容量选择不计作实际发送，有限摘要不能证明动作未发生。`));
   }
   if (memory?.input_failure) {
     const failure = memory.input_failure;
     details.append(node("p", `输入准备失败 · Step ${failure.step_index} · ${failure.characters} 字符 / 上限 ${failure.limit}；未发送该请求。`));
+    const excluded = failure.history_exclusions;
+    details.append(node("p", `本次失败准备历史排除：不完整 ${excluded?.incomplete ?? "未知"}，隔离或来源未确认 ${excluded?.unsafe ?? "未知"}，N 上限 ${excluded?.round_limit ?? "未知"}，字符预算 ${failure.budget_omitted_groups ?? "未知"}。`));
+    details.append(node("p", `本次失败准备工具账因限额省略 ${failure.ledger_omitted ?? "未知"} 条，其中结果未知 ${failure.ledger_unknown_omitted ?? "未知"} 条；隔离或失效排除 ${failure.ledger_excluded ?? "未知"} 条。不计作实际发送。`));
   }
   for (const input of memory?.input_attempts || []) {
     const section = node("section");

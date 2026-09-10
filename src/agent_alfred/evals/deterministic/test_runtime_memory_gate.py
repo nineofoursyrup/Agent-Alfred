@@ -28,8 +28,9 @@ def runtime(
     no_sinks=False,
     extra_sinks=(),
     memory_notifier=None,
+    database=":memory:",
 ):
-    conn = sqlite3.connect(":memory:", check_same_thread=False)
+    conn = sqlite3.connect(database, check_same_thread=False)
     schema.migrate(conn)
     capture = CapturingSink(flush_at_run_end=not bool(extra_sinks))
     model = ScriptedModel(script)

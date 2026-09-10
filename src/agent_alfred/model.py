@@ -194,6 +194,17 @@ class ModelRequest:
     )
     # Trusted execution provenance, not message text or a model-supplied ID.
     conversation_id: str | None = field(default=None, repr=False)
+    # Transactional input registration receives the effective absolute deadline
+    # selected by the strategy, including the shorter per-Attempt limit.
+    on_attempt_preflight: Callable[[str, float | None], None] | None = field(
+        default=None, compare=False, repr=False
+    )
+
+    def notify_attempt_started(self, attempt_id, deadline=None):
+        if self.on_attempt_started is not None:
+            self.on_attempt_started(attempt_id)
+        if self.on_attempt_preflight is not None:
+            self.on_attempt_preflight(attempt_id, deadline)
 
 
 class EndpointUnconfigured(Exception):
@@ -294,13 +305,11 @@ class ScriptedModel:
         if isinstance(item, BaseException):
             raise item
         if isinstance(item, ModelResult):
-            if request.on_attempt_started is not None:
-                for attempt in item.attempts:
-                    request.on_attempt_started(attempt.attempt_id)
+            for attempt in item.attempts:
+                request.notify_attempt_started(attempt.attempt_id, deadline)
             return item
         attempt_id = uuid.uuid4().hex
-        if request.on_attempt_started is not None:
-            request.on_attempt_started(attempt_id)
+        request.notify_attempt_started(attempt_id, deadline)
         if isinstance(item, ModelError):
             return ModelResult(
                 attempts=(

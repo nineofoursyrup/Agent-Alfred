@@ -31,6 +31,14 @@ GATE_SYSTEM = (
 )
 
 
+class InputDeadlineExceeded(Exception):
+    """Input preparation exhausted the current request deadline before dispatch."""
+
+
+class InputResolutionError(Exception):
+    """A durable input registration still needs a dispatch receipt reconciliation."""
+
+
 class InputEvidenceError(Exception):
     """Required source evidence could not be confirmed before sending."""
 
@@ -63,10 +71,12 @@ class RunMemory:
         working_history_groups=(),
         recording_store=None,
         history_exclusions=None,
+        model_results=None,
     ):
         self._store = recording_store
+        self._model_results = model_results if model_results is not None else []
+        self._pending_inputs = {}
         self._overall_abs = None
-        self._input_revision = None
         self._history_exclusions = dict(history_exclusions or {})
         self._item = item
         self._clock = clock
@@ -202,7 +212,7 @@ class RunMemory:
             if characters <= self._settings.input_character_limit:
                 return replace(
                     current,
-                    on_attempt_started=self.attempt_observer(
+                    on_attempt_preflight=self.attempt_observer(
                         step_index, "answer", current
                     ),
                 )
@@ -219,6 +229,10 @@ class RunMemory:
                 "characters": characters,
                 "limit": self._settings.input_character_limit,
                 "step_index": step_index,
+                "working_history_groups": list(self._groups),
+                "budget_omitted_groups": self._budget_omitted,
+                "history_exclusions": dict(self._history_exclusions),
+                **self._evidence.explanation(),
             }
             self._record_preparation(
                 self._item.memory_telemetry["input_failure"], failed=True
@@ -265,7 +279,8 @@ class RunMemory:
             self._settings.gate_input_character_limit if purpose == "gate" else None
         ) or self._settings.input_character_limit
 
-        def observed(attempt_id):
+        def observed(attempt_id, deadline):
+            self._check_input_deadline(deadline)
             if characters > limit:
                 raise InputLimitExceeded(characters, limit)
             if purpose == "answer":
@@ -304,7 +319,7 @@ class RunMemory:
                     raise InputEvidenceError("caller_transaction_active")
                 with self._store.transaction() as conn:
                     conn.execute("BEGIN IMMEDIATE")
-                    self._check_input_deadline()
+                    self._check_input_deadline(deadline)
                     result = self._service.forgetting.register_read(
                         self._item.run_id,
                         sources=sources,
@@ -316,23 +331,27 @@ class RunMemory:
                         purpose=purpose,
                         context=memory_context(self._item),
                         input_explanation=explanation,
+                        provisional=True,
                         transaction=conn,
                     )
                     if "error" in result:
                         raise InputEvidenceError("input_evidence_unavailable")
-                    revision = self._service.forgetting.prepare_commit(conn)
-                    self._check_input_deadline()
+                    self._service.forgetting.prepare_commit(conn)
+                    self._check_input_deadline(deadline)
+                    self._pending_inputs[attempt_id] = explanation
                     conn.commit()
-                self._input_revision = revision
-            self._item.memory_telemetry["input_attempts"].append(explanation)
+                self._check_input_deadline(deadline)
 
             if purpose == "answer":
                 self._answered = True
 
-        def guarded(attempt_id):
+        def guarded(attempt_id, deadline=None):
             try:
-                observed(attempt_id)
-            except InputEvidenceError, InputLimitExceeded, OverallDeadlineExceeded:
+                observed(attempt_id, deadline)
+            except (
+                InputEvidenceError, InputLimitExceeded, OverallDeadlineExceeded,
+                InputDeadlineExceeded,
+            ):
                 raise
             except Exception as error:
                 from agent_alfred.resource_rollback import raise_if_rollback_pending
@@ -343,22 +362,72 @@ class RunMemory:
         return guarded
 
     def notify_inputs(self):
-        """Publish the latest committed revision after model dispatch has exited.
+        """Reconcile without replacing the failure already leaving model IO."""
+        import sys
 
-        Retries may advance the revision more than once. Notifications are change
-        hints; one latest revision lets consumers revalidate all committed reads.
-        No callback may stand between input registration and its request.
+        from agent_alfred.resource_rollback import dominant_error, reraise_failure
+
+        original = sys.exception()
+        try:
+            self._resolve_inputs()
+        except BaseException as resolution:
+            primary = dominant_error(original, resolution)
+            secondary = resolution if primary is original else original
+            reraise_failure(primary, earlier=secondary)
+
+    def _resolve_inputs(self):
+        """Resolve provisional inputs from actual Attempts after the call exits.
+
+        Reconciliation and its notifications happen after dispatch, so neither
+        a slow commit nor an interrupting notifier can manufacture a sent input.
+        Failed reconciliation leaves a durable identity for restart recovery.
         """
-        revision, self._input_revision = self._input_revision, None
-        if revision is not None:
-            self._service.forgetting.notify_committed(revision)
+        actual = {
+            attempt.attempt_id
+            for result in self._model_results for attempt in result.attempts
+        }
+        for identity, explanation in tuple(self._pending_inputs.items()):
+            sent = identity in actual
+            if not sent:
+                unsent = self._item.memory_telemetry.setdefault(
+                    "input_not_sent_attempts", []
+                )
+                if identity not in unsent:
+                    unsent.append(identity)
+            try:
+                result = self._service.forgetting.resolve_input_registration(
+                    self._item.run_id, identity, sent=sent,
+                    context=memory_context(self._item),
+                )
+                if "error" in result:
+                    raise InputResolutionError("input_resolution_unavailable")
+            except Exception as error:
+                from agent_alfred.resource_rollback import raise_if_rollback_pending
 
-    def _check_input_deadline(self):
+                raise_if_rollback_pending(error)
+                # The provisional commit still changed the durable revision even
+                # when reconciliation failed. Announce that unknown state only
+                # now, after dispatch has exited, using the authoritative revision.
+                self._service.forgetting.notify_committed(
+                    self._service.memory_revision
+                )
+                raise InputResolutionError("input_resolution_unavailable") from error
+            del self._pending_inputs[identity]
+            if sent:
+                self._item.memory_telemetry["input_attempts"].append(
+                    result["explanation"]
+                )
+        # Resolution writes own their post-commit notification. An empty pending
+        # set means there was no committed registration to announce.
+
+    def _check_input_deadline(self, deadline):
         if (
             self._overall_abs is not None
             and self._clock.monotonic() >= self._overall_abs
         ):
             raise OverallDeadlineExceeded()
+        if deadline is not None and self._clock.monotonic() >= deadline:
+            raise InputDeadlineExceeded()
 
     def invalidate(self, kind: str, memory_id: str) -> None:
         """Drop an edited reference permanently for this Run; never search again."""
@@ -438,7 +507,7 @@ class RunMemory:
             )
             request = replace(
                 request,
-                on_attempt_started=self.attempt_observer(
+                on_attempt_preflight=self.attempt_observer(
                     lease.step_index, "gate", request
                 ),
             )
@@ -483,8 +552,15 @@ class RunMemory:
                         )
                     except ValueError:
                         fallback_reason = "invalid_output"
-            except AttemptObservationFailed, InputEvidenceError:
+            except AttemptObservationFailed as error:
+                if isinstance(error.cause, InputDeadlineExceeded):
+                    fallback_reason = "model_deadline"
+                else:
+                    raise
+            except InputEvidenceError:
                 raise
+            except InputDeadlineExceeded:
+                fallback_reason = "model_deadline"
             except OverallDeadlineExceeded:
                 fallback_reason = "model_deadline"
             except Exception:

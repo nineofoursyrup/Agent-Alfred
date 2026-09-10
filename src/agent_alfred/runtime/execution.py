@@ -395,6 +395,7 @@ class RunExecutor:
                     working_history_groups=working_groups,
                     recording_store=self._store,
                     history_exclusions=history_exclusions,
+                    model_results=all_results,
                 )
             if memory is not None and self._memory_service is not None:
                 from agent_alfred.runtime.memory import (
@@ -468,7 +469,11 @@ class RunExecutor:
             if isinstance(exc, AttemptObservationFailed):
                 exc = exc.cause
             from agent_alfred.runtime.input_budget import InputLimitExceeded
-            from agent_alfred.runtime.memory import InputEvidenceError
+            from agent_alfred.runtime.memory import (
+                InputDeadlineExceeded,
+                InputEvidenceError,
+                InputResolutionError,
+            )
 
             outcome = "failed"
             error = type(exc).__name__
@@ -480,6 +485,15 @@ class RunExecutor:
             if isinstance(exc, OverallDeadlineExceeded):
                 error = "overall_deadline"
                 reply = text_message("assistant", "运行期限已到，未发送后续请求。")
+            if isinstance(exc, InputDeadlineExceeded):
+                error = "input_deadline_exceeded"
+                reply = text_message("assistant", "本次请求期限已到，未发送该请求。")
+            if isinstance(exc, InputResolutionError):
+                error = "input_resolution_unavailable"
+                reply = text_message(
+                    "assistant", "输入登记待恢复，本次已停止；发送状态请查看运行详情。"
+                )
+                item.memory_telemetry["input_resolution_error"] = error
             if isinstance(exc, InputEvidenceError):
                 error = "input_evidence_unavailable"
                 reply = text_message(

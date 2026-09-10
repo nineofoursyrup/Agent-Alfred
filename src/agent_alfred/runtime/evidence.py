@@ -44,10 +44,18 @@ def read_evidence(
             "gate_state": "legacy_unknown", "gate": None,
         })
         memory["input_attempts"] = []
+        memory["input_unconfirmed"] = []
         for kind, encoded in input_rows:
             explanation = json.loads(encoded)
             if kind == "attempt":
-                memory["input_attempts"].append(explanation)
+                state = explanation.get("dispatch_state")
+                if state == "unconfirmed":
+                    memory["input_unconfirmed"].append({
+                        key: explanation[key]
+                        for key in ("attempt_id", "purpose", "step_index")
+                    })
+                elif state != "not_sent":
+                    memory["input_attempts"].append(explanation)
             else:
                 key = "input_failure" if kind == "failure" else "input_preparation"
                 memory[key] = explanation
@@ -66,11 +74,20 @@ def read_evidence(
         status, safe_events = "unavailable", []
     if "input_preparation" in telemetry.get("memory", {}):
         # A start event is preparation, not proof of transport dispatch. Keep
-        # only identities certified by the durable business input records.
+        # identities proved independently by model accounting, confirmed input
+        # registration, or a durable terminal snapshot. Missing receipts cannot
+        # erase real process facts, nor may preparation manufacture a call.
         actual = {
             entry["attempt_id"]
             for entry in telemetry["memory"].get("input_attempts", [])
         }
+        actual.update(
+            entry["attempt_id"] for entry in telemetry.get("attempts", [])
+        )
+        actual.update(
+            event["envelope"].get("attempt_id") for event in safe_events
+            if event["payload"]["name"] in ("attempt.committed", "attempt.aborted")
+        )
         safe_events = [
             event for event in safe_events
             if event["envelope"].get("attempt_id") is None

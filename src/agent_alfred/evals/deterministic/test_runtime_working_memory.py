@@ -673,3 +673,548 @@ def test_input_notification_cannot_prevent_registered_transport(
             ]["input_attempts"]
             assert len(inputs) == len(sent) == 1
             assert sent == [0.0]
+
+
+@pytest.mark.parametrize("delay_at", ["registration", "commit"])
+@pytest.mark.parametrize(
+    "gate_s,attempt_s,registration_s,purpose",
+    [(5, 60, 6, "gate"), (20, 2, 3, "gate"), (20, 2, 3, "answer")],
+)
+def test_effective_input_deadline_rolls_back_before_transport(
+    tmp_path, gate_s, attempt_s, registration_s, purpose, delay_at
+):
+    import httpx2
+    from openai import OpenAI
+
+    from agent_alfred.clock import FakeClock
+    from agent_alfred.model import ModelRef
+    from agent_alfred.openai_compatible import OpenAICompatibleAdapter
+    from agent_alfred.stream_fallback import StreamFallback
+
+    clock = FakeClock()
+    sent = []
+
+    def handle(request):
+        sent.append(clock.monotonic())
+        return httpx2.Response(500)
+
+    with httpx2.Client(transport=httpx2.MockTransport(handle)) as http:
+        sdk = OpenAI(api_key="fixture", http_client=http, max_retries=0)
+        client = StreamFallback(
+            OpenAICompatibleAdapter(client=sdk, model=ModelRef("test", "m")),
+            clock=clock,
+            per_attempt_timeout_s=attempt_s,
+        )
+
+        class Factory:
+            def create(self, snapshot):
+                return client
+
+        with runtime(
+            [],
+            factory=Factory(),
+            clock=clock,
+            settings=Settings(
+                overall_deadline_s=30,
+                gate_model_budget_s=gate_s,
+                per_attempt_timeout_s=attempt_s,
+                max_steps=1 if purpose == "gate" else 2,
+            ),
+        ) as (host, _, _):
+            original = host.memory_service.forgetting.register_read
+
+            def slow_registration(*args, **kwargs):
+                result = original(*args, **kwargs)
+                if kwargs["purpose"] == purpose:
+                    if delay_at == "registration":
+                        clock.monotonic_value += registration_s
+                    else:
+                        conn = kwargs["transaction"]
+
+                        def delay_commit(sql):
+                            if sql.upper() == "COMMIT":
+                                conn.set_trace_callback(None)
+                                clock.monotonic_value += registration_s
+
+                        conn.set_trace_callback(delay_commit)
+                return result
+
+            host.memory_service.forgetting.register_read = slow_registration
+            submitted = host.submit(SubmitRequest("hello"))
+            result = host.wait(submitted.run_id)
+            inputs = host.read_run_evidence(submitted.run_id, trace_root=tmp_path)[
+                "memory"
+            ]["input_attempts"]
+            if purpose == "gate":
+                assert sent == []
+                assert inputs == []
+                assert (
+                    result.memory_telemetry["gate"]["fallback_reason"]
+                    == "model_deadline"
+                )
+                assert result.outcome == "max_steps"
+            else:
+                assert sent == [0.0]
+                assert [item["purpose"] for item in inputs] == ["gate"]
+                assert result.outcome == "failed"
+                assert result.error == "input_deadline_exceeded"
+
+
+@pytest.mark.parametrize("receipt", [False, True])
+@pytest.mark.parametrize("sent", [False, True])
+def test_failed_input_resolution_stays_unknown_and_recovers_from_durable_receipt(
+    tmp_path, sent, receipt
+):
+    import sqlite3
+
+    import httpx2
+    from openai import OpenAI
+
+    from agent_alfred.clock import FakeClock
+    from agent_alfred.model import ModelRef
+    from agent_alfred.openai_compatible import OpenAICompatibleAdapter
+    from agent_alfred.stream_fallback import StreamFallback
+
+    path = tmp_path / "input-recovery.sqlite"
+    clock = FakeClock()
+    requests = []
+
+    def dispatch(request):
+        requests.append(clock.monotonic())
+        return httpx2.Response(500)
+
+    with httpx2.Client(transport=httpx2.MockTransport(dispatch)) as http:
+        sdk = OpenAI(api_key="fixture", http_client=http, max_retries=0)
+        client = StreamFallback(
+            OpenAICompatibleAdapter(client=sdk, model=ModelRef("test", "m")),
+            clock=clock,
+        )
+
+        class Factory:
+            def create(self, snapshot):
+                return client
+
+        with runtime([], database=path, factory=Factory(), clock=clock) as (host, _, _):
+            original = host.memory_service.forgetting.register_read
+
+            def failing_resolution(*args, **kwargs):
+                value = original(*args, **kwargs)
+                conn = kwargs["transaction"]
+
+                def authorize(action, table, *rest):
+                    if (
+                        action == sqlite3.SQLITE_UPDATE
+                        and table == "run_input_explanations"
+                    ):
+                        return sqlite3.SQLITE_DENY
+                    return sqlite3.SQLITE_OK
+
+                def delayed_commit(sql):
+                    if sql.upper() == "COMMIT":
+                        conn.set_trace_callback(None)
+                        if not sent:
+                            clock.monotonic_value += 6
+
+                if not receipt:
+                    conn.execute("""CREATE TRIGGER fail_run_receipt
+                        BEFORE UPDATE OF telemetry ON runs
+                        WHEN NEW.telemetry IS NOT NULL
+                        BEGIN SELECT RAISE(FAIL, 'fixture receipt unavailable'); END""")
+                conn.set_authorizer(authorize)
+                conn.set_trace_callback(delayed_commit)
+                return value
+
+            host.memory_service.forgetting.register_read = failing_resolution
+            submitted = host.submit(SubmitRequest("hello"))
+            result = host.wait(submitted.run_id)
+            assert result.outcome == "failed"
+            assert result.error == "input_resolution_unavailable"
+            memory = host.read_run_evidence(submitted.run_id, trace_root=tmp_path)[
+                "memory"
+            ]
+            assert memory["input_attempts"] == []
+            assert len(memory["input_unconfirmed"]) == 1
+            assert len(requests) == int(sent)
+            assert host.memory_service.forgetting.evaluate_history(
+                [submitted.run_id], purpose="working_window"
+            )["denied"] == [submitted.run_id]
+
+    if not receipt:
+        with sqlite3.connect(path) as conn:
+            conn.execute("DROP TRIGGER fail_run_receipt")
+    with runtime([], database=path) as (host, _, _):
+        memory = host.read_run_evidence(submitted.run_id, trace_root=tmp_path)["memory"]
+        if receipt:
+            assert memory["input_unconfirmed"] == []
+            assert len(memory["input_attempts"]) == int(sent)
+        else:
+            assert len(memory["input_unconfirmed"]) == 1
+            assert memory["input_attempts"] == []
+        evaluated = host.memory_service.forgetting.evaluate_history(
+            [submitted.run_id], purpose="working_window"
+        )
+        assert evaluated["allowed" if receipt else "denied"] == [submitted.run_id]
+
+
+@pytest.mark.parametrize("source_kind", ["history", "memory"])
+@pytest.mark.parametrize("earlier_sent", [False, True])
+def test_unsent_input_never_joins_confirmed_forgetting_closure(
+    source_kind, earlier_sent
+):
+    import sqlite3
+
+    from agent_alfred.evals.deterministic.test_forgetting import (
+        CONTEXT,
+        delete,
+        save,
+        service,
+    )
+
+    with sqlite3.connect(":memory:") as conn:
+        memory = service(conn)
+        forgetting = memory.forgetting
+        for group in ("source", "consumer"):
+            forgetting.register_group(
+                group,
+                kind="run",
+                container_id="session",
+                evidence="complete",
+                evidence_id="fixture",
+                context=CONTEXT,
+            )
+        record = save(memory, groups=("source",))
+        refs = (
+            {"sources": ("source",)}
+            if source_kind == "history"
+            else {"memories": (("semantic", record["memory_id"], 1),)}
+        )
+        if earlier_sent:
+            assert "error" not in forgetting.register_read(
+                "consumer",
+                **refs,
+                attempt_id="actual",
+                purpose="answer",
+                context=CONTEXT,
+            )
+        assert "error" not in forgetting.register_read(
+            "consumer",
+            **refs,
+            attempt_id="unsent",
+            purpose="answer",
+            context=CONTEXT,
+            input_explanation={
+                "attempt_id": "unsent",
+                "purpose": "answer",
+                "step_index": 1,
+            },
+            provisional=True,
+        )
+        conn.execute("""CREATE TRIGGER reject_resolution
+            BEFORE UPDATE ON run_input_explanations
+            BEGIN SELECT RAISE(FAIL, 'fixture resolution failure'); END""")
+        conn.commit()
+        assert "error" in forgetting.resolve_input_registration(
+            "consumer",
+            "unsent",
+            sent=False,
+            context=CONTEXT,
+        )
+        assert delete(memory, record)["status"] == "deleted"
+        assert forgetting.evaluate_history(["consumer"], purpose="working_window")[
+            "denied"
+        ] == ["consumer"]
+        conn.execute("DROP TRIGGER reject_resolution")
+        conn.commit()
+        assert (
+            forgetting.resolve_input_registration(
+                "consumer",
+                "unsent",
+                sent=False,
+                context=CONTEXT,
+            )["status"]
+            == "not_sent"
+        )
+        result = forgetting.evaluate_history(["consumer"], purpose="working_window")
+        assert result["denied" if earlier_sent else "allowed"] == ["consumer"]
+
+
+@pytest.mark.parametrize("purpose", ["gate", "answer"])
+def test_input_resolution_failure_preserves_transport_control_and_error_chain(
+    tmp_path, purpose
+):
+    import sqlite3
+
+    import httpx2
+    from openai import OpenAI
+
+    from agent_alfred.clock import FakeClock
+    from agent_alfred.model import ModelRef
+    from agent_alfred.openai_compatible import OpenAICompatibleAdapter
+    from agent_alfred.runtime.memory import InputResolutionError
+    from agent_alfred.stream_fallback import StreamFallback
+
+    interruption = KeyboardInterrupt("transport interrupted")
+    sent = []
+
+    def dispatch(request):
+        sent.append(request)
+        if purpose == "answer" and len(sent) == 1:
+            return httpx2.Response(500)
+        raise interruption
+
+    with httpx2.Client(transport=httpx2.MockTransport(dispatch)) as http:
+        clock = FakeClock()
+        client = StreamFallback(
+            OpenAICompatibleAdapter(
+                client=OpenAI(api_key="fixture", http_client=http, max_retries=0),
+                model=ModelRef("test", "m"),
+            ),
+            clock=clock,
+        )
+
+        class Factory:
+            def create(self, snapshot):
+                return client
+
+        with runtime([], factory=Factory(), clock=clock) as (host, _, _):
+            original = host.memory_service.forgetting.register_read
+
+            def register(*args, **kwargs):
+                value = original(*args, **kwargs)
+                if kwargs["purpose"] == purpose:
+
+                    def authorize(action, table, *rest):
+                        if (
+                            action == sqlite3.SQLITE_UPDATE
+                            and table == "run_input_explanations"
+                        ):
+                            return sqlite3.SQLITE_DENY
+                        return sqlite3.SQLITE_OK
+
+                    kwargs["transaction"].set_authorizer(authorize)
+                return value
+
+            host.memory_service.forgetting.register_read = register
+            submitted = host.submit(SubmitRequest("hello"))
+            result = host.wait(submitted.run_id)
+            assert result.outcome == "interrupted"
+            assert sum(len(r.attempts) for r in result.model_results) == len(sent)
+            memory = host.read_run_evidence(submitted.run_id, trace_root=tmp_path)[
+                "memory"
+            ]
+            assert len(memory["input_unconfirmed"]) == 1
+            pending, seen, errors = [interruption], set(), []
+            while pending:
+                error = pending.pop()
+                if error is None or id(error) in seen:
+                    continue
+                seen.add(id(error))
+                errors.append(error)
+                pending.extend((error.__cause__, error.__context__))
+            assert any(isinstance(error, InputResolutionError) for error in errors)
+
+
+def test_later_input_failure_persists_its_final_exclusions_without_repeating_action(
+    tmp_path,
+):
+    from agent_alfred.evals.deterministic.test_runtime_tools import calls
+    from agent_alfred.messages import TextBlock, ToolCallBlock
+
+    action = ToolCallBlock(
+        "create",
+        "create_event",
+        {
+            "title": "one appointment",
+            "starts_at": "2026-09-10T12:00:00+08:00",
+        },
+    )
+    with runtime(
+        [
+            SKIP,
+            calls(action),
+            "created",
+            SKIP,
+            calls(action, TextBlock("x" * 64001)),
+            "unused",
+        ]
+    ) as (host, model, capture):
+        first = host.submit(SubmitRequest("create appointment"))
+        assert host.wait(first.run_id).outcome == "completed"
+        second = host.submit(SubmitRequest("create again", session_id=first.session_id))
+        result = host.wait(second.run_id)
+        assert result.error == "input_limit_exceeded"
+        memory = host.read_run_evidence(second.run_id, trace_root=tmp_path)["memory"]
+        failure = memory["input_failure"]
+        assert failure["budget_omitted_groups"] == 1
+        assert failure["history_exclusions"] == {
+            "incomplete": 0,
+            "unsafe": 0,
+            "round_limit": 0,
+        }
+        assert failure["ledger_omitted"] == 1
+        assert failure["ledger_unknown_omitted"] == failure["ledger_excluded"] == 0
+        assert failure["working_history_groups"] == failure["ledger_entries"] == []
+        assert memory["input_preparation"]["budget_omitted_groups"] == 0
+        assert len(memory["input_attempts"]) == 2
+        assert len(model.requests) == 5
+        assert (
+            sum(event.payload.name == "tool.finished" for event in capture.events) == 2
+        )
+
+
+@pytest.mark.parametrize(
+    "proof,terminal",
+    [
+        ("unconfirmed", "committed"),
+        ("unconfirmed", "aborted"),
+        ("no_ledger", "committed"),
+        ("no_ledger", "aborted"),
+        ("unsent", "committed"),
+        ("no_receipts", "committed"),
+        ("no_receipts", "aborted"),
+    ],
+)
+def test_trace_identity_accepts_either_durable_proof_without_confirming_sources(
+    tmp_path, proof, terminal
+):
+    import json
+    import sqlite3
+
+    import httpx2
+    from openai import OpenAI
+
+    from agent_alfred.clock import FakeClock
+    from agent_alfred.managed_state import ManagedStateDirectory
+    from agent_alfred.model import ModelRef
+    from agent_alfred.openai_compatible import OpenAICompatibleAdapter
+    from agent_alfred.stream_fallback import StreamFallback
+    from agent_alfred.trace import RunBundleTraceSink
+
+    clock = FakeClock()
+    root = tmp_path / "trace"
+    trace = RunBundleTraceSink(
+        root=ManagedStateDirectory.acquire_trace_root(root),
+        clock=clock,
+        process_instance_id="memory-test",
+    )
+    sent = []
+    database = tmp_path / "state.sqlite"
+    body = "partial response" if terminal == "aborted" else SKIP
+
+    def dispatch(request):
+        sent.append(request)
+        if terminal == "aborted":
+            chunk = {"choices": [{"delta": {"content": body}, "finish_reason": None}]}
+            return httpx2.Response(
+                200,
+                headers={"content-type": "text/event-stream"},
+                content=f"data: {json.dumps(chunk)}\n\n".encode(),
+            )
+        return httpx2.Response(
+            200,
+            json={
+                "id": "fixture",
+                "object": "chat.completion",
+                "created": 0,
+                "model": "m",
+                "choices": [
+                    {
+                        "index": 0,
+                        "finish_reason": "stop",
+                        "message": {"role": "assistant", "content": body},
+                    }
+                ],
+            },
+        )
+
+    def check_evidence(evidence):
+        assert evidence["trace_status"] == "available"
+        assert len(sent) == int(proof != "unsent")
+        assert len(evidence["attempts"]) == int(proof == "unconfirmed")
+        assert len(evidence["memory"]["input_unconfirmed"]) == int(
+            proof in ("unconfirmed", "no_receipts")
+        )
+        assert len(evidence["memory"]["input_attempts"]) == int(proof == "no_ledger")
+        terminals = [
+            event
+            for event in evidence["events"]
+            if event["payload"]["name"] in ("attempt.committed", "attempt.aborted")
+        ]
+        assert len(terminals) == int(proof != "unsent")
+        if terminals:
+            assert terminals[0]["payload"]["name"] == f"attempt.{terminal}"
+            assert terminals[0]["payload"]["blocks"][0]["text"] == body
+        else:
+            assert all(
+                event["envelope"].get("attempt_id") is None
+                for event in evidence["events"]
+            )
+
+    with httpx2.Client(transport=httpx2.MockTransport(dispatch)) as http:
+        sdk = OpenAI(api_key="fixture", http_client=http, max_retries=0)
+        client = StreamFallback(
+            OpenAICompatibleAdapter(
+                client=sdk,
+                model=ModelRef("test", "m"),
+                stream=terminal == "aborted",
+            ),
+            clock=clock,
+            stream=terminal == "aborted",
+            stream_fallback=False,
+        )
+
+        class Factory:
+            def create(self, snapshot):
+                return client
+
+        with runtime(
+            [],
+            factory=Factory(),
+            clock=clock,
+            extra_sinks=(trace,),
+            settings=Settings(max_steps=1),
+            database=database,
+        ) as (host, _, _):
+            original = host.memory_service.forgetting.register_read
+
+            def register(*args, **kwargs):
+                value = original(*args, **kwargs)
+                conn = kwargs["transaction"]
+                if proof in ("unconfirmed", "no_receipts"):
+                    if proof == "no_receipts":
+                        conn.execute("""CREATE TRIGGER reject_final
+                            BEFORE UPDATE OF telemetry ON runs
+                            WHEN NEW.telemetry IS NOT NULL
+                            BEGIN SELECT RAISE(FAIL,'fixture final recording'); END""")
+
+                    def authorize(action, table, *rest):
+                        if (
+                            action == sqlite3.SQLITE_UPDATE
+                            and table == "run_input_explanations"
+                        ):
+                            return sqlite3.SQLITE_DENY
+                        return sqlite3.SQLITE_OK
+
+                    conn.set_authorizer(authorize)
+                elif proof == "no_ledger":
+                    conn.execute("""CREATE TRIGGER omit_accounting
+                        AFTER UPDATE OF telemetry ON runs
+                        WHEN json_type(NEW.telemetry,'$.attempts')='array'
+                        BEGIN UPDATE runs
+                        SET telemetry=json_remove(NEW.telemetry,'$.attempts')
+                        WHERE run_id=NEW.run_id; END""")
+                else:
+                    clock.monotonic_value += 6
+                return value
+
+            host.memory_service.forgetting.register_read = register
+            submitted = host.submit(SubmitRequest("hello"))
+            host.wait(submitted.run_id)
+            evidence = host.read_run_evidence(submitted.run_id, trace_root=root)
+            if proof != "no_receipts":
+                check_evidence(evidence)
+    if proof == "no_receipts":
+        with sqlite3.connect(database) as conn:
+            conn.execute("DROP TRIGGER reject_final")
+        with runtime([], database=database) as (host, _, _):
+            check_evidence(host.read_run_evidence(submitted.run_id, trace_root=root))
