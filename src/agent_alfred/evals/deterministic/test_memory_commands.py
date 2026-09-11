@@ -290,3 +290,531 @@ def test_delete_receipt_identifies_record_content_under_its_original_audit_key(
     assert deleted["fingerprint"] == expected
     assert deleted["key_id"] == "test"
     conn.close()
+
+
+def _complete_group(memory, group, context):
+    assert "error" not in memory.forgetting.register_group(
+        group,
+        kind="run",
+        container_id="s",
+        evidence="complete",
+        evidence_id="proof-" + group,
+        context=context,
+    )
+
+
+def _use_record(memory, consumer, memory_id, version, attempt, context):
+    registered = memory.forgetting.register_read(
+        consumer,
+        sources=(),
+        memories=(("semantic", memory_id, version),),
+        attempt_id=attempt,
+        purpose="answer",
+        context=context,
+        provisional=False,
+    )
+    assert "error" not in registered, registered
+
+
+def test_repeat_save_source_groups_isolate_existing_consumer():
+    conn = sqlite3.connect(":memory:")
+    memory = service(conn)
+    context = CommandContext(origin=ManualOrigin("web"), source="web")
+    origin = memory.execute(
+        {
+            "operation_id": "A",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "origin", "fact": "BASILORIGIN"},
+        },
+        context,
+    )
+    product = memory.execute(
+        {
+            "operation_id": "P",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "product", "fact": "CORIANDERPRODUCT"},
+        },
+        context,
+    )
+    _complete_group(memory, "G", context)
+    _complete_group(memory, "R", context)
+    _use_record(memory, "G", origin["memory_id"], 1, "g-a", context)
+    _use_record(memory, "R", product["memory_id"], 1, "r-p", context)
+    late = memory.execute(
+        {
+            "operation_id": "P-late",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "product", "fact": "CORIANDERPRODUCT"},
+        },
+        CommandContext(
+            origin=ManualOrigin("web"), source="web", source_groups=("G",)
+        ),
+    )
+    assert late["status"] == "already_exists"
+    assert late["record_version"] == 1
+    assert "G" in memory.get_provenance("semantic", product["memory_id"], 1)[
+        "source_groups"
+    ]
+    deleted = memory.execute(
+        {
+            "operation_id": "delete-A",
+            "kind": "semantic",
+            "action": "delete",
+            "expected_version": 1,
+            "payload": {"id": origin["memory_id"]},
+        },
+        context,
+    )
+    assert deleted["status"] == "deleted"
+    evaluated = memory.forgetting.evaluate_history(
+        ("G", "R"), purpose="working_window"
+    )
+    assert "R" in evaluated["denied"]
+    conn.close()
+
+
+def test_unchanged_update_source_groups_isolate_existing_consumer():
+    conn = sqlite3.connect(":memory:")
+    memory = service(conn)
+    context = CommandContext(origin=ManualOrigin("web"), source="web")
+    origin = memory.execute(
+        {
+            "operation_id": "A",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "origin", "fact": "BASILORIGIN"},
+        },
+        context,
+    )
+    product = memory.execute(
+        {
+            "operation_id": "P",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "product", "fact": "CORIANDERPRODUCT"},
+        },
+        context,
+    )
+    _complete_group(memory, "G", context)
+    _complete_group(memory, "R", context)
+    _use_record(memory, "G", origin["memory_id"], 1, "g-a", context)
+    _use_record(memory, "R", product["memory_id"], 1, "r-p", context)
+    unchanged = memory.execute(
+        {
+            "operation_id": "P-update",
+            "kind": "semantic",
+            "action": "update",
+            "expected_version": 1,
+            "payload": {
+                "id": product["memory_id"],
+                "subject": "product",
+                "fact": "CORIANDERPRODUCT",
+            },
+        },
+        CommandContext(
+            origin=ManualOrigin("web"), source="web", source_groups=("G",)
+        ),
+    )
+    assert unchanged["status"] == "unchanged"
+    assert unchanged["record_version"] == 1
+    deleted = memory.execute(
+        {
+            "operation_id": "delete-A",
+            "kind": "semantic",
+            "action": "delete",
+            "expected_version": 1,
+            "payload": {"id": origin["memory_id"]},
+        },
+        context,
+    )
+    assert deleted["status"] == "deleted"
+    evaluated = memory.forgetting.evaluate_history(
+        ("G", "R"), purpose="working_window"
+    )
+    assert "R" in evaluated["denied"]
+    conn.close()
+
+
+def test_source_write_failure_rolls_back_and_retries():
+    conn = sqlite3.connect(":memory:")
+    memory = service(conn)
+    context = CommandContext(origin=ManualOrigin("web"), source="web")
+    origin = memory.execute(
+        {
+            "operation_id": "A",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "origin", "fact": "BASILORIGIN"},
+        },
+        context,
+    )
+    product = memory.execute(
+        {
+            "operation_id": "P",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "product", "fact": "CORIANDERPRODUCT"},
+        },
+        context,
+    )
+    _complete_group(memory, "G", context)
+    _complete_group(memory, "R", context)
+    _use_record(memory, "G", origin["memory_id"], 1, "g-a", context)
+    _use_record(memory, "R", product["memory_id"], 1, "r-p", context)
+    conn.execute(
+        "CREATE TRIGGER fail_reads BEFORE INSERT ON history_reads "
+        "WHEN NEW.source='G' AND NEW.consumer='R' "
+        "BEGIN SELECT RAISE(ABORT, 'graph fail'); END"
+    )
+    failed = memory.execute(
+        {
+            "operation_id": "P-late",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "product", "fact": "CORIANDERPRODUCT"},
+        },
+        CommandContext(
+            origin=ManualOrigin("web"), source="web", source_groups=("G",)
+        ),
+    )
+    assert failed == {"error": {"code": "storage_write_failed"}}
+    assert "G" not in memory.get_provenance("semantic", product["memory_id"], 1)[
+        "source_groups"
+    ]
+    conn.execute("DROP TRIGGER fail_reads")
+    retried = memory.execute(
+        {
+            "operation_id": "P-late",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "product", "fact": "CORIANDERPRODUCT"},
+        },
+        CommandContext(
+            origin=ManualOrigin("web"), source="web", source_groups=("G",)
+        ),
+    )
+    assert retried["status"] == "already_exists"
+    assert "G" in memory.get_provenance("semantic", product["memory_id"], 1)[
+        "source_groups"
+    ]
+    conn.close()
+
+
+def test_new_version_sources_do_not_isolate_old_version_consumer():
+    conn = sqlite3.connect(":memory:")
+    memory = service(conn)
+    context = CommandContext(origin=ManualOrigin("web"), source="web")
+    origin = memory.execute(
+        {
+            "operation_id": "A",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "origin", "fact": "BASILORIGIN"},
+        },
+        context,
+    )
+    product = memory.execute(
+        {
+            "operation_id": "P",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "product", "fact": "CORIANDERPRODUCT"},
+        },
+        context,
+    )
+    _complete_group(memory, "G", context)
+    _complete_group(memory, "R", context)
+    _use_record(memory, "G", origin["memory_id"], 1, "g-a", context)
+    _use_record(memory, "R", product["memory_id"], 1, "r-p", context)
+    updated = memory.execute(
+        {
+            "operation_id": "P-v2",
+            "kind": "semantic",
+            "action": "update",
+            "expected_version": 1,
+            "payload": {
+                "id": product["memory_id"],
+                "subject": "product",
+                "fact": "CORIANDERPRODUCT v2",
+            },
+        },
+        CommandContext(
+            origin=ManualOrigin("web"), source="web", source_groups=("G",)
+        ),
+    )
+    assert updated["status"] == "updated"
+    assert updated["record_version"] == 2
+    deleted = memory.execute(
+        {
+            "operation_id": "delete-A",
+            "kind": "semantic",
+            "action": "delete",
+            "expected_version": 1,
+            "payload": {"id": origin["memory_id"]},
+        },
+        context,
+    )
+    assert deleted["status"] == "deleted"
+    evaluated = memory.forgetting.evaluate_history(
+        ("G", "R"), purpose="working_window"
+    )
+    assert evaluated["denied"] == ["G"]
+    assert evaluated["allowed"] == ["R"]
+    conn.close()
+
+
+def test_late_source_after_delete_invalidates_awaiting_batch():
+    from agent_alfred.evals.deterministic.test_memory_consolidation_service import (
+        MODEL,
+        _complete_chat,
+    )
+    from agent_alfred.memory.consolidation import ConsolidationLimits
+
+    conn = sqlite3.connect(":memory:")
+    memory = service(conn)
+    memory.consolidation._limits = ConsolidationLimits(source_threshold=1)
+    context = CommandContext(origin=ManualOrigin("web"), source="web")
+    origin = memory.execute(
+        {
+            "operation_id": "A",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "origin", "fact": "BASILORIGIN"},
+        },
+        context,
+    )
+    product = memory.execute(
+        {
+            "operation_id": "P",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "product", "fact": "CORIANDERPRODUCT"},
+        },
+        context,
+    )
+    _complete_group(memory, "G", context)
+    _complete_chat(memory, conn, "s", "R", "I like coriander", "Noted.")
+    _complete_group(memory, "R", context)
+    _use_record(memory, "G", origin["memory_id"], 1, "g-a", context)
+    _use_record(memory, "R", product["memory_id"], 1, "r-p", context)
+    deleted = memory.execute(
+        {
+            "operation_id": "delete-A",
+            "kind": "semantic",
+            "action": "delete",
+            "expected_version": 1,
+            "payload": {"id": origin["memory_id"]},
+        },
+        context,
+    )
+    assert deleted["status"] == "deleted"
+    plan = (
+        '{"semantic":[{"action":"update","id":"%s","subject":"product",'
+        '"fact":"SENSITIVE-CANDIDATE"}],"episode_summary":"Pending"}'
+        % product["memory_id"]
+    )
+    pending = memory.consolidation.submit(
+        "s", plan, context=context, operation_id="pending-batch", model=MODEL
+    )
+    assert pending["status"] == "awaiting_approval", pending
+    late = memory.execute(
+        {
+            "operation_id": "P-late",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "product", "fact": "CORIANDERPRODUCT"},
+        },
+        CommandContext(origin=ManualOrigin("web"), source="web", source_groups=("G",)),
+    )
+    assert late["status"] == "already_exists"
+    view = memory.consolidation.get_batch(pending["batch_id"])
+    assert view["status"] == "invalidated"
+    assert "plan" not in view
+    conn.close()
+
+
+def test_source_projection_failure_rolls_back_then_retries():
+    from agent_alfred.evals.deterministic.test_memory_consolidation_service import (
+        MODEL,
+        _complete_chat,
+    )
+    from agent_alfred.memory.consolidation import ConsolidationLimits
+
+    conn = sqlite3.connect(":memory:")
+    notes = []
+    schema.migrate(conn)
+    memory = MemoryCommandService(
+        recording_store=RecordingStore(conn, threading.Lock()),
+        audit_key=AuditKey("test", b"x" * 32),
+        clock=lambda: datetime(2026, 9, 9, tzinfo=timezone.utc),
+        memory_notifier=notes.append,
+    )
+    memory.consolidation._limits = ConsolidationLimits(source_threshold=1)
+    context = CommandContext(origin=ManualOrigin("web"), source="web")
+    origin = memory.execute(
+        {
+            "operation_id": "A",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "origin", "fact": "BASILORIGIN"},
+        },
+        context,
+    )
+    product = memory.execute(
+        {
+            "operation_id": "P",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "product", "fact": "CORIANDERPRODUCT"},
+        },
+        context,
+    )
+    _complete_group(memory, "G", context)
+    _complete_chat(memory, conn, "s", "R", "I like coriander", "Noted.")
+    _complete_group(memory, "R", context)
+    _use_record(memory, "G", origin["memory_id"], 1, "g-a", context)
+    _use_record(memory, "R", product["memory_id"], 1, "r-p", context)
+    memory.execute(
+        {
+            "operation_id": "delete-A",
+            "kind": "semantic",
+            "action": "delete",
+            "expected_version": 1,
+            "payload": {"id": origin["memory_id"]},
+        },
+        context,
+    )
+    plan = (
+        '{"semantic":[{"action":"update","id":"%s","subject":"product",'
+        '"fact":"SENSITIVE-CANDIDATE"}],"episode_summary":"Pending"}'
+        % product["memory_id"]
+    )
+    pending = memory.consolidation.submit(
+        "s", plan, context=context, operation_id="pending-batch", model=MODEL
+    )
+    assert pending["status"] == "awaiting_approval"
+    notes.clear()
+    conn.execute(
+        "CREATE TRIGGER fail_invalidate BEFORE UPDATE ON "
+        "memory_consolidation_batches WHEN NEW.status='invalidated' "
+        "BEGIN SELECT RAISE(ABORT, 'projection fail'); END"
+    )
+    failed = memory.execute(
+        {
+            "operation_id": "P-late",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "product", "fact": "CORIANDERPRODUCT"},
+        },
+        CommandContext(origin=ManualOrigin("web"), source="web", source_groups=("G",)),
+    )
+    assert failed == {"error": {"code": "storage_write_failed"}}
+    assert "G" not in memory.get_provenance("semantic", product["memory_id"], 1)[
+        "source_groups"
+    ]
+    assert memory.consolidation.get_batch(pending["batch_id"])["status"] == (
+        "awaiting_approval"
+    )
+    assert notes == []
+    conn.execute("DROP TRIGGER fail_invalidate")
+    retried = memory.execute(
+        {
+            "operation_id": "P-late",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "product", "fact": "CORIANDERPRODUCT"},
+        },
+        CommandContext(origin=ManualOrigin("web"), source="web", source_groups=("G",)),
+    )
+    assert retried["status"] == "already_exists"
+    view = memory.consolidation.get_batch(pending["batch_id"])
+    assert view["status"] == "invalidated"
+    assert "plan" not in view
+    assert notes
+    conn.close()
+
+
+def test_prepare_commit_failure_rolls_back_source_only_save():
+    conn = sqlite3.connect(":memory:")
+    notes = []
+    schema.migrate(conn)
+    memory = MemoryCommandService(
+        recording_store=RecordingStore(conn, threading.Lock()),
+        audit_key=AuditKey("test", b"x" * 32),
+        clock=lambda: datetime(2026, 9, 9, tzinfo=timezone.utc),
+        memory_notifier=notes.append,
+    )
+    context = CommandContext(origin=ManualOrigin("web"), source="web")
+    origin = memory.execute(
+        {
+            "operation_id": "A",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "origin", "fact": "BASILORIGIN"},
+        },
+        context,
+    )
+    product = memory.execute(
+        {
+            "operation_id": "P",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "product", "fact": "CORIANDERPRODUCT"},
+        },
+        context,
+    )
+    _complete_group(memory, "G", context)
+    _complete_group(memory, "R", context)
+    _use_record(memory, "G", origin["memory_id"], 1, "g-a", context)
+    _use_record(memory, "R", product["memory_id"], 1, "r-p", context)
+    deleted = memory.execute(
+        {
+            "operation_id": "delete-A",
+            "kind": "semantic",
+            "action": "delete",
+            "expected_version": 1,
+            "payload": {"id": origin["memory_id"]},
+        },
+        context,
+    )
+    assert deleted["status"] == "deleted"
+    notes.clear()
+    original = memory.forgetting.prepare_commit
+
+    def boom(transaction):
+        raise sqlite3.OperationalError("observation fail")
+
+    memory.forgetting.prepare_commit = boom
+    failed = memory.execute(
+        {
+            "operation_id": "P-late",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "product", "fact": "CORIANDERPRODUCT"},
+        },
+        CommandContext(origin=ManualOrigin("web"), source="web", source_groups=("G",)),
+    )
+    assert failed == {"error": {"code": "storage_write_failed"}}
+    assert "G" not in memory.get_provenance("semantic", product["memory_id"], 1)[
+        "source_groups"
+    ]
+    assert notes == []
+    memory.forgetting.prepare_commit = original
+    retried = memory.execute(
+        {
+            "operation_id": "P-late",
+            "kind": "semantic",
+            "action": "save",
+            "payload": {"subject": "product", "fact": "CORIANDERPRODUCT"},
+        },
+        CommandContext(origin=ManualOrigin("web"), source="web", source_groups=("G",)),
+    )
+    assert retried["status"] == "already_exists"
+    assert "G" in memory.get_provenance("semantic", product["memory_id"], 1)[
+        "source_groups"
+    ]
+    assert notes
+    conn.close()

@@ -371,6 +371,9 @@ def test_host_construction_failure_closes_constructed_broker_and_prior_resources
         def publish_state_patch(self, patch):
             del patch
 
+        def publish_memory_patch(self, patch):
+            del patch
+
         def close(self, timeout=0.0):
             del timeout
             closed.append(True)
@@ -414,6 +417,9 @@ def test_dashboard_post_host_assembly_failure_retains_retryable_owner(
             del kwargs
 
         def publish_state_patch(self, patch):
+            del patch
+
+        def publish_memory_patch(self, patch):
             del patch
 
         def bind_session_check(self, check):

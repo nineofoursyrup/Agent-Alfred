@@ -93,6 +93,7 @@ class MemoryCommandService:
         cleanup_port: CleanupPort | None = None,
         memory_notifier=None,
         process_instance_id=None,
+        file_state=None,
     ):
         self._db = recording_store
         self._key = audit_key
@@ -104,15 +105,31 @@ class MemoryCommandService:
         self._cleanup_port = cleanup_port
         self._memory_notifier = memory_notifier
         self.notification_failed = False
+        self._last_notified_revision = None
         self._process_instance_id = process_instance_id
         self._mutation_lock = threading.RLock()
         self._mutation_thread = None
+        from agent_alfred.memory.consolidation_service import ConsolidationService
         from agent_alfred.memory.forgetting import ForgettingService
 
         self.forgetting = ForgettingService(self)
+        self.consolidation = ConsolidationService(self)
+        self._projection_participants = tuple(projection_participants) + (
+            self.consolidation,
+        )
+        self.mirrors = None
+        if file_state is not None:
+            from agent_alfred.memory.mirrors import MarkdownMirrors
+
+            self.mirrors = MarkdownMirrors(self, file_state)
+            self._projection_participants += (self.mirrors,)
+            self._cleanup_port = self.mirrors
+            self._projection_inventory_evidence_id = "managed-markdown-v1"
 
     def _notify_memory(self, revision, change=None):
-        if self._memory_notifier is None:
+        if (self._memory_notifier is None or
+                self._last_notified_revision is not None and
+                revision <= self._last_notified_revision):
             return
         payload = {
             "schema_version": 1,
@@ -121,7 +138,8 @@ class MemoryCommandService:
             "change": change,
         }
         try:
-            self._memory_notifier(payload)
+            if self._memory_notifier(payload) is not False:
+                self._last_notified_revision = revision
         except Exception as error:
             raise_if_rollback_pending(error)
             # Transport delivery cannot undo a durable command. The #46 adapter
@@ -257,10 +275,15 @@ class MemoryCommandService:
                 return _error("busy")
             self._mutation_thread = threading.get_ident()
             if self._admission is not None:
-                if isinstance(context.origin, ToolOrigin):
-                    if not self._admission.validate_memory_permission(
+                trusted = (
+                    context.permission is not None
+                    and context.run_id is not None
+                    and self._admission.validate_memory_permission(
                         context.permission, context.run_id
-                    ):
+                    )
+                )
+                if isinstance(context.origin, ToolOrigin) or trusted:
+                    if not trusted:
                         return _error("busy")
                 else:
                     reason = self._admission.try_begin_mutation(owner=admission_owner)
@@ -275,7 +298,20 @@ class MemoryCommandService:
             # Reject before any recording context, trace checkpoint or file IO.
             if self._db.transaction_in_progress:
                 return _error("transaction_required")
-            return operation()
+            result = operation()
+            if self.mirrors is not None:
+                try:
+                    self.mirrors.refresh_admitted()
+                except Exception as error:
+                    raise_if_rollback_pending(error)
+                    # A committed command receipt is independent of projection
+                    # refresh. Transactional generations retain retry duty.
+            try:
+                self._notify_memory(self.memory_revision)
+            except Exception as error:
+                raise_if_rollback_pending(error)
+                # Notification failure cannot rewrite a committed receipt.
+            return result
         except _CommandDeadline as error:
             raise_if_rollback_pending(error)
             return _error("deadline_exceeded")
@@ -305,6 +341,7 @@ class MemoryCommandService:
         _check_deadline(context)
         fingerprint, key_id = self._key.fingerprint(canonical)
         operation_id = command["operation_id"]
+        source_changed = False
         with self._db.transaction() as conn:
             conn.execute("BEGIN IMMEDIATE")
             old = conn.execute(
@@ -353,6 +390,12 @@ class MemoryCommandService:
                             ("updated" if changed else "unchanged"),
                             int(changed),
                         )
+                        if changed:
+                            self.consolidation.invalidate(
+                                conn,
+                                memories=((command["kind"], memory_id),),
+                                isolated=(),
+                            )
                     case Deleted():
                         status, affected, version = "deleted", 1, None
                     case AlreadyAbsent():
@@ -438,25 +481,34 @@ class MemoryCommandService:
                         "AND state='known_none'",
                         (command["kind"], memory_id, version),
                     )
-                conn.executemany(
-                    """INSERT OR IGNORE INTO memory_sources
-                    (kind,memory_id,record_version,source_group_id) VALUES (?,?,?,?)""",
-                    [(command["kind"], memory_id, version, group) for group in groups],
-                )
+                    sourced = self.forgetting.register_sources(
+                        command["kind"],
+                        memory_id,
+                        version,
+                        groups=groups,
+                        evidence_id="command:" + operation_id,
+                        context=context,
+                        transaction=conn,
+                    )
+                    if "error" in sourced:
+                        return sourced
+                    source_changed = True
             conn.execute(
                 "INSERT INTO memory_operations VALUES (?,?,?,?)",
                 (operation_id, fingerprint, key_id, encoded),
             )
-            if action == "delete" and isinstance(result, Deleted):
-                from agent_alfred.memory.forget_graph import record_observations
-
-                record_observations(conn, committed_at)
-            read_revision = conn.execute(
-                "SELECT revision FROM memory_revision WHERE singleton=1"
-            ).fetchone()[0]
+            forgetting_changed = source_changed or (
+                action == "delete" and isinstance(result, Deleted)
+            )
+            if forgetting_changed:
+                read_revision = self.forgetting.prepare_commit(conn)
+            else:
+                read_revision = conn.execute(
+                    "SELECT revision FROM memory_revision WHERE singleton=1"
+                ).fetchone()[0]
             _check_deadline(context)
             conn.commit()
-        if affected:
+        if affected or source_changed:
             change = {
                 "kind": command["kind"],
                 "id": memory_id,

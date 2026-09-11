@@ -296,7 +296,11 @@ class RunExecutor:
             )
             return wrapped
 
-        budget = RunBudget(self._settings.max_steps)
+        budget = RunBudget(
+            1
+            if item.request.purpose == "consolidation"
+            else self._settings.max_steps
+        )
         try:
             # The clock is an injected collaborator and therefore belongs
             # inside the same terminal ownership scope as every later Run
@@ -334,7 +338,7 @@ class RunExecutor:
                 node_id=None,
                 source=item.request.gateway,
             )
-            if item.request.purpose == "inference_probe":
+            if item.request.purpose in ("inference_probe", "consolidation"):
                 working_memory: tuple[Message, ...] = ()
                 working_groups = ()
                 history_exclusions = {}
@@ -414,34 +418,39 @@ class RunExecutor:
                 )
                 if "error" in registered:
                     raise InputEvidenceError("input_evidence_unavailable")
-            loop_result = self._assistant.respond(
-                item.request.message,
-                client=ledger,
-                budget=budget,
-                working_memory=working_memory,
-                model=ModelRef(
-                    endpoint_id=item.snapshot.endpoint_id,
-                    model_id=item.snapshot.model_id,
-                ),
-                run_id=item.run_id,
-                session_id=item.session_id,
-                events=self._events,
-                source=item.request.gateway,
-                overall_deadline_s=(
-                    None
-                    if item.snapshot.overall_deadline_s is None
-                    else max(
-                        0.0,
-                        item.snapshot.overall_deadline_s
-                        - (self._clock.monotonic() - run_started),
-                    )
-                ),
-                memory=memory,
-                tools=self._tools if item.request.purpose == "chat" else None,
-                tool_permission=item.memory_permission,
-                tool_state=item.memory_telemetry,
-                persona=self._persona_tools.current() if self._persona_tools else None,
-            )
+            if item.request.purpose == "consolidation":
+                loop_result = self._consolidate(item, ledger, run_started, budget)
+            else:
+                loop_result = self._assistant.respond(
+                    item.request.message,
+                    client=ledger,
+                    budget=budget,
+                    working_memory=working_memory,
+                    model=ModelRef(
+                        endpoint_id=item.snapshot.endpoint_id,
+                        model_id=item.snapshot.model_id,
+                    ),
+                    run_id=item.run_id,
+                    session_id=item.session_id,
+                    events=self._events,
+                    source=item.request.gateway,
+                    overall_deadline_s=(
+                        None
+                        if item.snapshot.overall_deadline_s is None
+                        else max(
+                            0.0,
+                            item.snapshot.overall_deadline_s
+                            - (self._clock.monotonic() - run_started),
+                        )
+                    ),
+                    memory=memory,
+                    tools=self._tools if item.request.purpose == "chat" else None,
+                    tool_permission=item.memory_permission,
+                    tool_state=item.memory_telemetry,
+                    persona=(
+                        self._persona_tools.current() if self._persona_tools else None
+                    ),
+                )
             outcome = loop_result.outcome
             reply = loop_result.reply
             error = loop_result.error
@@ -541,6 +550,251 @@ class RunExecutor:
                 duration_ms=duration_ms,
                 model_results=tuple(all_results),
             )
+
+    def _consolidate(self, item, ledger, run_started, budget):
+        from agent_alfred.loop.assistant import LoopResult
+        from agent_alfred.loop.budget import StepBudgetExceeded
+        from agent_alfred.model import ModelRef
+        from agent_alfred.runtime.memory import InputEvidenceError, memory_context
+
+        started = self._clock.monotonic()
+        if self._memory_service is None:
+            return LoopResult(
+                outcome="failed",
+                reply=None,
+                error="unavailable",
+                step_count=0,
+                duration_ms=int((self._clock.monotonic() - started) * 1000),
+            )
+        context = memory_context(item)
+        model = ModelRef(item.snapshot.endpoint_id, item.snapshot.model_id)
+        begun = self._memory_service.consolidation.begin_generation(
+            item.request.message,
+            context=context,
+            operation_id=(
+                "begin:" + item.run_id if item.request.retry_batch_id is not None
+                else item.request.operation_id or ("begin:" + item.run_id)
+            ),
+            model=model,
+            generation_run_id=item.run_id,
+            retry_batch_id=item.request.retry_batch_id,
+            expected_revision=item.request.expected_revision,
+        )
+        if begun.get("status") != "running":
+            code = None
+            if "error" in begun:
+                code = begun["error"].get("code")
+            return LoopResult(
+                outcome="completed" if code is None else "failed",
+                reply=None,
+                error=code or begun.get("status"),
+                step_count=0,
+                duration_ms=int((self._clock.monotonic() - started) * 1000),
+            )
+        pending: list[str] = []
+        completed = False
+        release_error_code = "storage_write_failed"
+        try:
+            lease = budget.reserve_step("consolidation")
+            self._events.emit(
+                StepStarted(step_index=lease.step_index),
+                EventEnvelope(
+                    ts=self._clock.monotonic(),
+                    run_id=item.run_id,
+                    session_id=item.session_id,
+                    step_index=lease.step_index,
+                    attempt_id=None,
+                    node_id="consolidation",
+                    source=item.request.gateway,
+                ),
+            )
+
+            def preflight(attempt_id, deadline):
+                self._reject_expired_consolidation_deadline(
+                    deadline, run_started, item
+                )
+                memories = tuple(
+                    (ref["kind"], ref["id"], ref["version"])
+                    for ref in begun.get("candidate_refs") or ()
+                )
+                registered = self._memory_service.forgetting.register_read(
+                    item.run_id,
+                    sources=tuple(begun.get("source_run_ids") or ()),
+                    memories=memories,
+                    attempt_id=attempt_id,
+                    purpose="consolidation",
+                    context=context,
+                    input_explanation={
+                        "step_index": lease.step_index,
+                        "attempt_id": attempt_id,
+                        "purpose": "consolidation",
+                    },
+                    provisional=True,
+                )
+                if "error" in registered:
+                    raise InputEvidenceError("input_evidence_unavailable")
+                pending.append(attempt_id)
+                token = self._memory_service.forgetting.evaluate_automatic_records(
+                    memories
+                )
+                if "error" in token:
+                    raise InputEvidenceError("input_evidence_unavailable")
+                if token["denied"]:
+                    raise InputEvidenceError("input_sources_changed")
+                if not self._memory_service.consolidation.generation_input_is_current(
+                    begun["batch_id"], begun["revision"], item.run_id
+                ):
+                    raise InputEvidenceError("input_sources_changed")
+                self._reject_expired_consolidation_deadline(
+                    deadline, run_started, item
+                )
+
+            request = self._memory_service.consolidation.thaw_request(
+                begun["request"], on_attempt_preflight=preflight
+            )
+            deadline = None
+            if item.snapshot.overall_deadline_s is not None:
+                deadline = run_started + item.snapshot.overall_deadline_s
+            result = ledger.respond(request, deadline=deadline)
+            self._resolve_consolidation_inputs(item, context, pending, ledger)
+            finished = self._memory_service.consolidation.finish_generation(
+                begun["batch_id"],
+                begun["revision"],
+                result.response,
+                context=context,
+                operation_id="finish:" + item.run_id,
+            )
+            error = None
+            if finished.get("status") in (
+                "failed",
+                "invalidated",
+                "awaiting_approval",
+                "succeeded",
+            ):
+                if finished.get("status") == "failed":
+                    error = (finished.get("error") or {}).get("code")
+                    outcome = "failed"
+                elif "error" in finished:
+                    error = finished["error"].get("code")
+                    outcome = "failed"
+                else:
+                    outcome = "completed"
+                completed = True
+                return LoopResult(
+                    outcome=outcome,
+                    reply=None,
+                    error=error,
+                    step_count=lease.step_index + 1,
+                    duration_ms=int((self._clock.monotonic() - started) * 1000),
+                )
+            error = (finished.get("error") or {}).get("code") or "storage_write_failed"
+            release_error_code = error
+            return LoopResult(
+                outcome="failed",
+                reply=None,
+                error=error,
+                step_count=lease.step_index + 1,
+                duration_ms=int((self._clock.monotonic() - started) * 1000),
+            )
+        except StepBudgetExceeded:
+            return LoopResult(
+                outcome="max_steps",
+                reply=None,
+                error="max_steps",
+                step_count=budget.used,
+                duration_ms=int((self._clock.monotonic() - started) * 1000),
+            )
+        finally:
+            if not completed:
+                self._release_consolidation_generation(
+                    item,
+                    context,
+                    pending,
+                    ledger,
+                    begun,
+                    error_code=release_error_code,
+                )
+
+    def _reject_expired_consolidation_deadline(self, deadline, run_started, item):
+        from agent_alfred.stream_fallback import OverallDeadlineExceeded
+
+        overall = item.snapshot.overall_deadline_s
+        if overall is not None and self._clock.monotonic() >= run_started + overall:
+            raise OverallDeadlineExceeded()
+        if deadline is not None and self._clock.monotonic() >= deadline:
+            raise OverallDeadlineExceeded()
+
+    def _release_consolidation_generation(
+        self, item, context, pending, ledger, begun, *, error_code
+    ):
+        import sys
+
+        from agent_alfred.resource_rollback import dominant_error, reraise_failure
+
+        original = sys.exception()
+        cleanup = None
+        try:
+            self._resolve_consolidation_inputs(item, context, pending, ledger)
+        except BaseException as error:
+            cleanup = error
+        try:
+            released = self._memory_service.consolidation.fail_generation(
+                begun["batch_id"],
+                begun["revision"],
+                context=context,
+                operation_id="fail:" + item.run_id,
+                error_code=error_code,
+            )
+            if (
+                released.get("status")
+                not in ("failed", "invalidated", "awaiting_approval", "succeeded")
+                and "error" in released
+            ):
+                from agent_alfred.runtime.memory import InputResolutionError
+
+                raise InputResolutionError(
+                    released["error"].get("code") or "storage_write_failed"
+                )
+        except BaseException as error:
+            cleanup = dominant_error(cleanup, error)
+        if cleanup is not None:
+            primary = dominant_error(original, cleanup)
+            secondary = cleanup if primary is original else original
+            reraise_failure(primary, earlier=secondary)
+
+    def _resolve_consolidation_inputs(self, item, context, pending, ledger):
+        from agent_alfred.resource_rollback import dominant_error, reraise_failure
+        from agent_alfred.runtime.memory import InputResolutionError
+
+        actual = {
+            attempt.attempt_id
+            for result in ledger.model_results
+            for attempt in result.attempts
+        }
+        failure = None
+        for attempt_id in tuple(pending):
+            sent = attempt_id in actual
+            if not sent:
+                unsent = item.memory_telemetry.setdefault(
+                    "input_not_sent_attempts", []
+                )
+                if attempt_id not in unsent:
+                    unsent.append(attempt_id)
+            try:
+                resolved = self._memory_service.forgetting.resolve_input_registration(
+                    item.run_id,
+                    attempt_id,
+                    sent=sent,
+                    context=context,
+                )
+                if "error" in resolved:
+                    raise InputResolutionError("input_resolution_unavailable")
+            except BaseException as error:
+                failure = dominant_error(failure, error)
+                continue
+            pending.remove(attempt_id)
+        if failure is not None:
+            reraise_failure(failure)
 
     def _load_working_memory(
         self, session_id: str | None

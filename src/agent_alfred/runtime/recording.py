@@ -92,6 +92,12 @@ class RecordingStore:
         """Inspection only; callers still need the shared admission capability."""
         return self._conn.in_transaction
 
+    def validate_owner_connection(self, conn: sqlite3.Connection) -> None:
+        """Borrowed reads must use this Store's live connection, never another."""
+        self._require_available()
+        if conn is not self._conn:
+            raise ValueError("transaction_required")
+
     def validate_borrowed_transaction(self, conn: sqlite3.Connection) -> None:
         """An internal participant borrows the caller's connection and lock.
 
@@ -99,8 +105,8 @@ class RecordingStore:
         already owns admission and the transaction; possession is not a public
         HTTP/model authorization mechanism.
         """
-        self._require_available()
-        if conn is not self._conn or not conn.in_transaction:
+        self.validate_owner_connection(conn)
+        if not conn.in_transaction:
             raise ValueError("transaction_required")
 
     @contextmanager
@@ -128,11 +134,12 @@ class RecordingStore:
             yield self._conn
 
 
-_SettlementStep = Literal["pending", "result", "resolution", "notify"]
+_SettlementStep = Literal["pending", "result", "resolution", "notify", "schedule"]
 _SETTLEMENT_ORDER: tuple[_SettlementStep, ...] = (
     "pending",
     "result",
     "resolution",
+    "schedule",
     "notify",
 )
 
@@ -147,12 +154,14 @@ class _RecordingSettlementOwner:
         item: WorkItem,
         projection: UnrecordedTerminalProjection,
         result: LoopResult,
+        after_recorded: Callable[[str], None] | None = None,
     ) -> None:
         self._lock = threading.Lock()
         self._coordinator = coordinator
         self._item = item
         self._projection = projection
         self._result = result
+        self._after_recorded = after_recorded
         self._recorded: bool | None = None
         self._resolve_recording: Callable[[], bool] | None = None
         self._next = 0
@@ -199,6 +208,18 @@ class _RecordingSettlementOwner:
                     if step_complete:
                         break
                 if not step_complete:
+                    if _SETTLEMENT_ORDER[self._next] == "schedule":
+                        # Scheduling is optional follow-up work. Keep its owner
+                        # pending, but do not make the saved reply depend on it.
+                        notify = self._owners[_SETTLEMENT_ORDER.index("notify")]
+                        for _attempt in range(attempts_per_step):
+                            notified = notify.retry()
+                            error = notify.process_control or next(
+                                iter(notify.errors), None
+                            )
+                            first_error = dominant_error(first_error, error)
+                            if notified:
+                                break
                     return False, first_error
                 self._next += 1
             return self._next > stop, first_error
@@ -223,8 +244,14 @@ class _RecordingSettlementOwner:
                 self._coordinator.recording_publish_recorded_then_release(run_id)
             else:
                 self._coordinator.recording_enter_failed(self._projection)
-        else:
+        elif step == "notify":
             self._coordinator.notify_run_done(run_id)
+        elif (
+            self._recorded and self._after_recorded is not None
+            and self._item.request.purpose == "chat"
+            and self._result.outcome == "completed"
+        ):
+            self._after_recorded(run_id)
         return None
 
 
@@ -238,12 +265,18 @@ class RunRecorder:
         store: RecordingStore,
         coordinator: Any,
         before_recording_commit: threading.Event | None = None,
+        finalize_run: Callable[[sqlite3.Connection, WorkItem], None] | None = None,
+        notify_finalized_run: Callable[[WorkItem], None] | None = None,
+        after_recorded: Callable[[str], None] | None = None,
     ):
         self._clock = clock
         self._fanout = fanout
         self._redactor = redactor
         self._store = store
         self._coordinator: RecordingCoordinator = coordinator
+        self._finalize_run = finalize_run
+        self._notify_finalized_run = notify_finalized_run
+        self._after_recorded = after_recorded
         self._before_recording_commit = before_recording_commit
         self._settlement_lock = threading.Lock()
         self._pending_settlements: dict[str, _RecordingSettlementOwner] = {}
@@ -442,6 +475,7 @@ class RunRecorder:
             item=item,
             projection=projection,
             result=result,
+            after_recorded=self._after_recorded,
         )
         with self._settlement_lock:
             return self._pending_settlements.setdefault(item.run_id, candidate)
@@ -498,6 +532,8 @@ class RunRecorder:
                         telemetry,
                         now=format_instant(self._clock.wall_utc()),
                     )
+                if self._notify_finalized_run is not None:
+                    self._notify_finalized_run(item)
             except BaseException:  # noqa: BLE001 - outcome may be uncertain
                 continue
             return True
@@ -569,6 +605,8 @@ class RunRecorder:
                     created_at=now,
                     run_id=item.run_id,
                 )
+        if self._finalize_run is not None:
+            self._finalize_run(conn, item)
         conn.commit()
 
 

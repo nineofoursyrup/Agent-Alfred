@@ -81,6 +81,10 @@ class Settings:
     per_store_limit: int = 5
     per_store_character_budget: int = 4000
     gate_model_budget_s: float = 5.0
+    consolidation_source_threshold: int = 10
+    consolidation_deadline_s: float = 60.0
+    consolidation_candidate_count_limit: int = 20
+    consolidation_candidate_character_limit: int = 16000
 
     def __post_init__(self) -> None:
         for name in (
@@ -88,6 +92,9 @@ class Settings:
             "per_store_character_budget",
             "input_character_limit",
             "gate_input_character_limit",
+            "consolidation_source_threshold",
+            "consolidation_candidate_count_limit",
+            "consolidation_candidate_character_limit",
         ):
             if name == "gate_input_character_limit" and getattr(self, name) is None:
                 continue
@@ -97,6 +104,15 @@ class Settings:
         value = self.gate_model_budget_s
         if type(value) not in (int, float) or not math.isfinite(value) or value <= 0:
             raise SettingsError("gate_model_budget_s must be finite and positive")
+        deadline = self.consolidation_deadline_s
+        if (
+            type(deadline) not in (int, float)
+            or not math.isfinite(deadline)
+            or deadline <= 0
+        ):
+            raise SettingsError(
+                "consolidation_deadline_s must be finite and positive"
+            )
 
 
 class SettingsError(ValueError):
@@ -294,6 +310,31 @@ def load_settings(
         )
         or 4000,
         gate_model_budget_s=_env_float(env, "AGENT_ALFRED_GATE_MODEL_BUDGET_S") or 5.0,
+        consolidation_source_threshold=_env_int(
+            env,
+            "AGENT_ALFRED_CONSOLIDATION_SOURCE_THRESHOLD",
+            minimum=1,
+            allow_zero=False,
+        )
+        or 10,
+        consolidation_deadline_s=_env_float(
+            env, "AGENT_ALFRED_CONSOLIDATION_DEADLINE_S"
+        )
+        or 60.0,
+        consolidation_candidate_count_limit=_env_int(
+            env,
+            "AGENT_ALFRED_CONSOLIDATION_CANDIDATE_COUNT",
+            minimum=1,
+            allow_zero=False,
+        )
+        or 20,
+        consolidation_candidate_character_limit=_env_int(
+            env,
+            "AGENT_ALFRED_CONSOLIDATION_CANDIDATE_CHARS",
+            minimum=1,
+            allow_zero=False,
+        )
+        or 16000,
     )
 
 

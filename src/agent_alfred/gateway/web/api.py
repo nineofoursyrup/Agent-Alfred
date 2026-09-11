@@ -359,6 +359,14 @@ class DashboardApi:
         # test can drive two writes at once without a socket.
         self._gate = gate if gate is not None else MutationGate(facade)
 
+    def memory_read(self, params, *, mirrors=False):
+        from agent_alfred.gateway.web.memory_api import serve_memory
+        return serve_memory(self._facade, params=params, mirrors=mirrors)
+
+    def memory_action(self, body):
+        from agent_alfred.gateway.web.memory_api import serve_memory
+        return serve_memory(self._facade, body=body)
+
     # -- writes ------------------------------------------------------------
 
     @_map_read_errors
@@ -459,6 +467,8 @@ class DashboardApi:
         purpose = body.get("purpose", "chat")
         if purpose not in PURPOSES:
             return SubmitOutcome(status=400, code="unknown_purpose")
+        if purpose == "consolidation":
+            return SubmitOutcome(status=400, code="unsupported_purpose")
         session_id = body.get("session_id")
         # A Web chat names its Session (#28). Absent -- the key missing or
         # JSON null -- is refused here, at this boundary, before the gate:

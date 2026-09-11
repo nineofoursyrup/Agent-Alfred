@@ -15,10 +15,12 @@ from functools import wraps
 from agent_alfred.memory.forget_graph import (
     add_scopes,
     bump,
+    carry_memory_provenance,
     ensure_group,
     insert_scope,
     operation_state,
     propagate,
+    record_memory_sources,
     record_observations,
     refresh_pauses,
     revision,
@@ -336,70 +338,73 @@ class ForgettingService:
         interruption leaves a durable running item for the same recovery path.
         """
 
-        def retry():
-            restored = self._restore_projection(operation_id)
-            if restored is not None:
-                return restored
-            with self._db.reading() as conn:
-                if (
-                    conn.execute(
-                        "SELECT 1 FROM forget_operations WHERE operation_id=?",
-                        (operation_id,),
-                    ).fetchone()
-                    is None
-                ):
-                    return {"error": {"code": "not_found"}}
-                items = conn.execute(
-                    (
-                        "SELECT target_id,revision FROM forget_cleanup WHERE "
-                        "operation_id=? AND state!='complete' AND NOT EXISTS "
-                        "(SELECT 1 FROM forget_projection_fences f WHERE "
-                        "f.target_id=forget_cleanup.target_id) AND NOT EXISTS "
-                        "(SELECT 1 FROM forget_projection_unknown) ORDER BY target_id"
-                    ),
-                    (operation_id,),
-                ).fetchall()
-            for target, generation in items:
-                with self._db.transaction() as conn:
-                    conn.execute("BEGIN IMMEDIATE")
-                    conn.execute(
-                        (
-                            "UPDATE forget_cleanup SET state='running',err"
-                            "or=NULL WHERE "
-                            "target_id=? AND revision=? AND state!='complete'"
-                        ),
-                        (target, generation),
-                    )
-                    bump(conn)
-                    read_revision = conn.execute(
-                        "SELECT revision FROM memory_revision WHERE singleton=1"
-                    ).fetchone()[0]
-                    record_observations(conn, self._owner._clock().isoformat())
-                    conn.commit()
-                self._owner._notify_memory(read_revision)
-                try:
-                    port = self._owner._cleanup_port
-                    if port is None:
-                        raise ValueError("cleanup_port_unavailable")
-                    if not port.verify(target, generation):
-                        port.rebuild(target, generation)
-                    if not port.verify(target, generation):
-                        raise ValueError("cleanup_not_verified")
-                except Exception as failure:
-                    try:
-                        self._record_file_cleanup(
-                            target, generation, "cleanup_unconfirmed"
-                        )
-                    except BaseException as secondary:
-                        if dominant_error(failure, secondary) is failure:
-                            raise_if_rollback_pending(failure)
-                        raise
-                    raise_if_rollback_pending(failure)
-                else:
-                    self._record_file_cleanup(target, generation, None)
-            return self.get_forgetting(operation_id)
+        return self._owner._run_mutation(
+            lambda: self._retry_cleanup_admitted(operation_id), context
+        )
 
-        return self._owner._run_mutation(retry, context)
+    def _retry_cleanup_admitted(self, operation_id):
+        """Internal continuation; caller already owns mutation admission."""
+        restored = self._restore_projection(operation_id)
+        if restored is not None:
+            return restored
+        with self._db.reading() as conn:
+            if (
+                conn.execute(
+                    "SELECT 1 FROM forget_operations WHERE operation_id=?",
+                    (operation_id,),
+                ).fetchone()
+                is None
+            ):
+                return {"error": {"code": "not_found"}}
+            items = conn.execute(
+                (
+                    "SELECT target_id,revision FROM forget_cleanup WHERE "
+                    "operation_id=? AND state!='complete' AND NOT EXISTS "
+                    "(SELECT 1 FROM forget_projection_fences f WHERE "
+                    "f.target_id=forget_cleanup.target_id) AND NOT EXISTS "
+                    "(SELECT 1 FROM forget_projection_unknown) ORDER BY target_id"
+                ),
+                (operation_id,),
+            ).fetchall()
+        for target, generation in items:
+            with self._db.transaction() as conn:
+                conn.execute("BEGIN IMMEDIATE")
+                conn.execute(
+                    (
+                        "UPDATE forget_cleanup SET state='running',err"
+                        "or=NULL WHERE "
+                        "target_id=? AND revision=? AND state!='complete'"
+                    ),
+                    (target, generation),
+                )
+                bump(conn)
+                read_revision = conn.execute(
+                    "SELECT revision FROM memory_revision WHERE singleton=1"
+                ).fetchone()[0]
+                record_observations(conn, self._owner._clock().isoformat())
+                conn.commit()
+            self._owner._notify_memory(read_revision)
+            try:
+                port = self._owner._cleanup_port
+                if port is None:
+                    raise ValueError("cleanup_port_unavailable")
+                if not port.verify(target, generation):
+                    port.rebuild(target, generation)
+                if not port.verify(target, generation):
+                    raise ValueError("cleanup_not_verified")
+            except Exception as failure:
+                try:
+                    self._record_file_cleanup(
+                        target, generation, "cleanup_unconfirmed"
+                    )
+                except BaseException as secondary:
+                    if dominant_error(failure, secondary) is failure:
+                        raise_if_rollback_pending(failure)
+                    raise
+                raise_if_rollback_pending(failure)
+            else:
+                self._record_file_cleanup(target, generation, None)
+        return self.get_forgetting(operation_id)
 
     def _record_file_cleanup(self, target, generation, error):
         """Publish a verified result while the originating failure stays in scope."""
@@ -692,21 +697,7 @@ class ForgettingService:
             return {"error": {"code": "invalid_input"}}
 
         def write(conn):
-            for group in groups:
-                ensure_group(conn, group)
-                conn.execute(
-                    "INSERT OR IGNORE INTO memory_sources VALUES (?,?,?,?)",
-                    (kind, memory_id, version, group),
-                )
-                conn.execute(
-                    (
-                        "INSERT INTO forget_limits\n                    SELECT "
-                        "operation_id,?,'isolated' FROM forget_operations WHERE kind=? "
-                        "AND memory_id=?\n                    ON "
-                        "CONFLICT(operation_id,group_id) DO UPDATE SET mode='isolated'"
-                    ),
-                    (group, kind, memory_id),
-                )
+            record_memory_sources(conn, kind, memory_id, version, groups)
             conn.execute(
                 "INSERT OR IGNORE INTO memory_source_evidence VALUES (?,?,?,?,?)",
                 (
@@ -720,7 +711,6 @@ class ForgettingService:
             # Adding positive edges does not certify that every historical edge
             # has been found. Only identified members leave pending scopes;
             # other unknown obligations remain pending.
-            propagate(conn)
             bump(conn)
             return {"status": "registered"}
 
@@ -779,6 +769,13 @@ class ForgettingService:
                     (kind, memory_id, version, consumer, attempt_id, purpose),
                 )
                 if not provisional:
+                    carry_memory_provenance(
+                        conn,
+                        consumer,
+                        attempt_id,
+                        purpose,
+                        ((kind, memory_id, version),),
+                    )
                     conn.execute(
                         (
                             "INSERT INTO forget_limits\n                    SELECT "
@@ -835,6 +832,13 @@ class ForgettingService:
                 conn.execute("INSERT OR IGNORE INTO memory_uses VALUES (?,?,?,?,?,?)",
                              (kind, memory_id, version, consumer, attempt_id,
                               explanation["purpose"]))
+            carry_memory_provenance(
+                conn,
+                consumer,
+                attempt_id,
+                explanation["purpose"],
+                tuple(explanation.get("pending_memories") or ()),
+            )
             conn.execute(
                 "INSERT INTO forget_limits "
                 "SELECT o.operation_id,?,'isolated' FROM forget_operations o "
@@ -1161,44 +1165,88 @@ class ForgettingService:
 
         return self._write(write, context)
 
-    def evaluate_history(self, groups, *, purpose):
+    def evaluate_history(
+        self, groups, *, purpose, transaction=None, connection=None
+    ):
         if purpose not in PURPOSES:
             return {"error": {"code": "invalid_input"}}
+
+        def read(conn):
+            allowed, denied = [], []
+            for group in dict.fromkeys(groups):
+                restricted = conn.execute(
+                    "SELECT 1 FROM forget_limits WHERE group_id=? LIMIT 1", (group,)
+                ).fetchone()
+                evidence = conn.execute(
+                    "SELECT evidence FROM history_groups WHERE group_id=?", (group,)
+                ).fetchone()
+                unresolved_input = conn.execute(
+                    "SELECT 1 FROM run_input_explanations WHERE run_id=? "
+                    "AND kind='attempt' AND "
+                    "json_extract(explanation,'$.dispatch_state')='unconfirmed' "
+                    "LIMIT 1", (group,),
+                ).fetchone()
+                (
+                    allowed
+                    if (
+                        not restricted and not unresolved_input
+                        and evidence == ("complete",)
+                    )
+                    else denied
+                ).append(group)
+            token = {
+                "allowed": allowed,
+                "denied": denied,
+                "revision": revision(conn),
+                "purpose": purpose,
+            }
+            token["proof"], token["key_id"] = self._owner._key.fingerprint(
+                json.dumps(token, sort_keys=True).encode()
+            )
+            return token
+
         try:
+            if transaction is not None:
+                self._db.validate_borrowed_transaction(transaction)
+                return read(transaction)
+            if connection is not None:
+                self._db.validate_owner_connection(connection)
+                return read(connection)
             with self._db.reading() as conn:
-                allowed, denied = [], []
-                for group in dict.fromkeys(groups):
-                    restricted = conn.execute(
-                        "SELECT 1 FROM forget_limits WHERE group_id=? LIMIT 1", (group,)
-                    ).fetchone()
-                    evidence = conn.execute(
-                        "SELECT evidence FROM history_groups WHERE group_id=?", (group,)
-                    ).fetchone()
-                    unresolved_input = conn.execute(
-                        "SELECT 1 FROM run_input_explanations WHERE run_id=? "
-                        "AND kind='attempt' AND "
-                        "json_extract(explanation,'$.dispatch_state')='unconfirmed' "
-                        "LIMIT 1", (group,),
-                    ).fetchone()
-                    (
-                        allowed
-                        if (
-                            not restricted and not unresolved_input
-                            and evidence == ("complete",)
-                        )
-                        else denied
-                    ).append(group)
-                token = {
-                    "allowed": allowed,
-                    "denied": denied,
-                    "revision": revision(conn),
-                    "purpose": purpose,
-                }
-                token["proof"], token["key_id"] = self._owner._key.fingerprint(
-                    json.dumps(token, sort_keys=True).encode()
-                )
-                return token
-        except (sqlite3.Error, RecordingUnavailable) as error:
+                return read(conn)
+        except (sqlite3.Error, RecordingUnavailable, ValueError) as error:
+            raise_if_rollback_pending(error)
+            return {"error": {"code": "storage_read_failed"}}
+
+    def evaluate_automatic_records(
+        self, memories, *, transaction=None, connection=None
+    ):
+        """Deny automatic reuse of records whose known sources are restricted."""
+
+        def read(conn):
+            allowed, denied = [], []
+            for kind, memory_id, version in memories:
+                restricted = conn.execute(
+                    "SELECT 1 FROM memory_sources s "
+                    "JOIN forget_limits l ON l.group_id=s.source_group_id "
+                    "WHERE s.kind=? AND s.memory_id=? AND s.record_version=? "
+                    "LIMIT 1",
+                    (kind, memory_id, version),
+                ).fetchone()
+                identity = (kind, memory_id, version)
+                (denied if restricted else allowed).append(identity)
+            return {"allowed": allowed, "denied": denied}
+
+        try:
+            if transaction is not None:
+                self._db.validate_borrowed_transaction(transaction)
+                return read(transaction)
+            if connection is not None:
+                self._db.validate_owner_connection(connection)
+                return read(connection)
+            with self._db.reading() as conn:
+                return read(conn)
+        except (sqlite3.Error, RecordingUnavailable, ValueError) as error:
             raise_if_rollback_pending(error)
             return {"error": {"code": "storage_read_failed"}}
 
@@ -1227,7 +1275,9 @@ class ForgettingService:
             raise_if_rollback_pending(error)
             return False
 
-    def write_projection(self, token, *, targets=(), write, context):
+    def write_projection(
+        self, token, *, targets=(), write, context, transaction=None
+    ):
         """Atomic #18 seam: the callback uses this connection, never commits it."""
 
         def apply(conn):
@@ -1251,7 +1301,7 @@ class ForgettingService:
                 bump(conn)
             return result
 
-        return self._write(apply, context)
+        return self._write(apply, context, transaction=transaction)
 
     def consume_history(self, token, consume, context):
         """Validate at use under the same admission lease that orders deletion.

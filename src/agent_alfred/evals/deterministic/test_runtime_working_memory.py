@@ -302,6 +302,8 @@ def test_input_registration_deadline_prevents_send_and_rolls_back_evidence(tmp_p
             settings=Settings(overall_deadline_s=5),
             memory_notifier=notifications.append,
         ) as (host, _, _):
+            assert [p["memory_revision"] for p in notifications] == [0]
+            notifications.clear()
             original = host.memory_service.forgetting.register_read
 
             def slow_registration(*args, **kwargs):
@@ -604,16 +606,48 @@ def test_incomplete_run_does_not_displace_or_split_the_last_complete_run():
 
 def test_actual_input_registration_notifies_committed_memory_revision():
     notifications = []
-    with runtime([SKIP, "answer"], memory_notifier=notifications.append) as (
-        host,
-        _,
-        _,
-    ):
+    target = {"active": False}
+    input_notifications = []
+    group_notifications = []
+    group_target = {"active": False}
+
+    def notify(payload):
+        notifications.append(payload)
+        if group_target["active"]:
+            group_notifications.append(payload)
+        if target["active"]:
+            assert not host._conn.in_transaction
+            assert payload["memory_revision"] == host.memory_service.memory_revision
+            input_notifications.append(payload)
+
+    with runtime([SKIP, "answer"], memory_notifier=notify) as (host, _, _):
+        assert [p["memory_revision"] for p in notifications] == [0]
+        register_group = host.memory_service.forgetting.register_group
+
+        def group(*args, **kwargs):
+            group_target["active"] = True
+            try:
+                return register_group(*args, **kwargs)
+            finally:
+                group_target["active"] = False
+
+        host.memory_service.forgetting.register_group = group
+        original = host.memory_service.forgetting.resolve_input_registration
+
+        def resolve(*args, **kwargs):
+            target["active"] = True
+            try:
+                return original(*args, **kwargs)
+            finally:
+                target["active"] = False
+
+        host.memory_service.forgetting.resolve_input_registration = resolve
         submitted = host.submit(SubmitRequest("hello"))
         assert host.wait(submitted.run_id).outcome == "completed"
-        # Group registration emits one change, and each gate/answer read must
-        # announce its newly committed provenance revision as well.
-        assert len(notifications) == 3
+        # Each gate/answer registration announces its committed revision;
+        # startup and saved-chat maintenance have separate identities.
+        assert len(group_notifications) == 1
+        assert len(input_notifications) == 2
         revisions = [item["memory_revision"] for item in notifications]
         assert revisions == sorted(set(revisions))
 
@@ -633,10 +667,12 @@ def test_input_notification_cannot_prevent_registered_transport(
     clock = FakeClock()
     sent = []
     notifications = []
+    target = {"active": False, "effects": 0}
 
     def notify(payload):
         notifications.append(payload)
-        if len(notifications) == 2:
+        if target["active"]:
+            target["effects"] += 1
             if notification_effect == "interrupt":
                 raise KeyboardInterrupt("notification fixture")
             clock.monotonic_value += 6
@@ -663,6 +699,17 @@ def test_input_notification_cannot_prevent_registered_transport(
             settings=Settings(overall_deadline_s=5),
             memory_notifier=notify,
         ) as (host, _, _):
+            assert [p["memory_revision"] for p in notifications] == [0]
+            original = host.memory_service.forgetting.resolve_input_registration
+
+            def resolve(*args, **kwargs):
+                target["active"] = True
+                try:
+                    return original(*args, **kwargs)
+                finally:
+                    target["active"] = False
+
+            host.memory_service.forgetting.resolve_input_registration = resolve
             submitted = host.submit(SubmitRequest("hello"))
             result = host.wait(submitted.run_id)
             assert result.outcome == (
@@ -673,6 +720,7 @@ def test_input_notification_cannot_prevent_registered_transport(
             ]["input_attempts"]
             assert len(inputs) == len(sent) == 1
             assert sent == [0.0]
+            assert target["effects"] == 1
 
 
 @pytest.mark.parametrize("delay_at", ["registration", "commit"])

@@ -8,7 +8,11 @@ from collections.abc import Callable, Iterable
 from datetime import datetime
 from typing import NamedTuple
 
+from agent_alfred.memory.consolidation_migration import TABLES as _V11_OBJECTS
 from agent_alfred.memory.forget_migration import TABLES as _V6_OBJECTS
+from agent_alfred.memory.mirror_migration import OBJECTS as _V14_OBJECTS
+from agent_alfred.memory.notification_migration import OBJECTS as _V15_OBJECTS
+from agent_alfred.memory.notification_migration import RUN_OBJECTS as _V16_OBJECTS
 from agent_alfred.outcomes import RUN_OUTCOMES, parse_run_outcome
 from agent_alfred.run_phases import RUN_PHASES as PHASES
 
@@ -48,7 +52,11 @@ _ORIGIN_KIND_SQL = ", ".join(f"'{kind}'" for kind in ORIGIN_KINDS)
 # values match today: a new message source must not silently rewrite runs.
 GATEWAYS = ("cli", "web")
 _GATEWAY_SQL = ", ".join(f"'{gateway}'" for gateway in GATEWAYS)
-PURPOSES = ("chat", "inference_probe")
+# v3 DDL is frozen to this pair. Current purpose names live in PURPOSES and
+# are applied by a later migration; changing PURPOSES must not rewrite v3 SQL.
+_V3_PURPOSES = ("chat", "inference_probe")
+_V3_PURPOSE_SQL = ", ".join(f"'{purpose}'" for purpose in _V3_PURPOSES)
+PURPOSES = (*_V3_PURPOSES, "consolidation")
 _PURPOSE_SQL = ", ".join(f"'{purpose}'" for purpose in PURPOSES)
 _PHASE_SQL = ", ".join(f"'{phase}'" for phase in PHASES)
 OUTCOMES = RUN_OUTCOMES
@@ -851,7 +859,7 @@ CREATE TABLE sessions (
 _V3_RUNS = f"""
 CREATE TABLE runs (
   run_id TEXT PRIMARY KEY,
-  purpose TEXT NOT NULL CHECK (purpose IN ({_PURPOSE_SQL})),
+  purpose TEXT NOT NULL CHECK (purpose IN ({_V3_PURPOSE_SQL})),
   session_id TEXT,
   gateway TEXT NOT NULL CHECK (gateway IN ({_GATEWAY_SQL})),
   entry_surface_id TEXT,
@@ -1068,6 +1076,91 @@ def _apply_v10(conn):
     )""")
 
 
+def _apply_v11(conn):
+    from agent_alfred.memory.consolidation_migration import migrate_consolidation
+
+    migrate_consolidation(conn)
+
+
+_V12_RUN_COLUMNS = (
+    "run_id",
+    "purpose",
+    "session_id",
+    "gateway",
+    "entry_surface_id",
+    "prompt_preview",
+    "phase",
+    "outcome",
+    "accepted_at",
+    "started_at",
+    "finished_at",
+    "activity_revision",
+    "telemetry",
+    "admission_state",
+)
+_V12_RUNS = f"""
+CREATE TABLE runs (
+  run_id TEXT PRIMARY KEY,
+  purpose TEXT NOT NULL CHECK (purpose IN ({_PURPOSE_SQL})),
+  session_id TEXT,
+  gateway TEXT NOT NULL CHECK (gateway IN ({_GATEWAY_SQL})),
+  entry_surface_id TEXT,
+  prompt_preview TEXT,
+  phase TEXT NOT NULL CHECK (phase IN ({_PHASE_SQL})),
+  outcome TEXT CHECK (
+    outcome IS NULL OR outcome IN ({_OUTCOME_SQL})
+  ),
+  accepted_at TEXT NOT NULL,
+  started_at TEXT,
+  finished_at TEXT,
+  activity_revision INTEGER NOT NULL,
+  telemetry TEXT CHECK (telemetry IS NULL OR json_valid(telemetry)),
+  admission_state TEXT NOT NULL DEFAULT 'unconfirmed' CHECK (
+    admission_state IN ('pending', 'admitted', 'rejected', 'unconfirmed')
+  ),
+  CHECK {_PHASE_OUTCOME_CHECK}
+)
+"""
+
+
+def _apply_v12(conn):
+    _rebuild_table(
+        conn,
+        source="runs",
+        create=_V12_RUNS,
+        target="runs",
+        columns=_V12_RUN_COLUMNS,
+        select=_V12_RUN_COLUMNS,
+    )
+    conn.execute(_V3_RUNS_ACTIVITY_IDX)
+    conn.execute(
+        "ALTER TABLE memory_consolidation_plans ADD COLUMN request_json TEXT "
+        "CHECK(request_json IS NULL OR json_valid(request_json))"
+    )
+
+
+def _apply_v13(conn):
+    from agent_alfred.memory.consolidation_scheduling import migrate_scheduling
+    migrate_scheduling(conn)
+
+
+def _apply_v14(conn):
+    from agent_alfred.memory.mirror_migration import migrate_mirrors
+    migrate_mirrors(conn)
+
+
+
+
+def _apply_v15(conn):
+    from agent_alfred.memory.notification_migration import migrate_notifications
+    migrate_notifications(conn)
+
+
+def _apply_v16(conn):
+    from agent_alfred.memory.notification_migration import migrate_run_notifications
+    migrate_run_notifications(conn)
+
+
 MIGRATIONS = (
     Migration(version=1, apply=_apply_v1, managed_objects=_V1_MANAGED_OBJECTS),
     # Renames and rebuilds only: every name it leaves behind is already v1's.
@@ -1106,6 +1199,14 @@ MIGRATIONS = (
     Migration(
         version=10, apply=_apply_v10, managed_objects=("run_input_explanations",),
     ),
+    Migration(version=11, apply=_apply_v11, managed_objects=_V11_OBJECTS),
+    Migration(version=12, apply=_apply_v12, managed_objects=()),
+    Migration(version=13, apply=_apply_v13, managed_objects=(
+        "memory_consolidation_ready", "memory_consolidation_triggers",
+    )),
+    Migration(version=14, apply=_apply_v14, managed_objects=_V14_OBJECTS),
+    Migration(version=15, apply=_apply_v15, managed_objects=_V15_OBJECTS),
+    Migration(version=16, apply=_apply_v16, managed_objects=_V16_OBJECTS),
 )
 MIGRATION_VERSIONS = tuple(migration.version for migration in MIGRATIONS)
 LATEST_MIGRATION_VERSION = MIGRATION_VERSIONS[-1]

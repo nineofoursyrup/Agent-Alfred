@@ -129,6 +129,154 @@ def test_explicit_repeat_protects_without_content_version_and_blocks_automatic_u
             fact="likes pepper",
         )
     assert store.get(id).fact == "likes mint"
+    from agent_alfred.memory.types import (
+        ConsolidationApprovalProof,
+        UpdateApplied,
+    )
+
+    proof = ConsolidationApprovalProof("approved-batch", 1)
+    with pytest.raises(ProtectedMemoryError):
+        store.apply_approved_consolidation(
+            id,
+            expected_version=1,
+            origin=ConsolidationOrigin("approved-batch"),
+            proof=proof,
+            fact="likes pepper",
+        )
+    now = "2026-09-09T00:00:00+00:00"
+    database.execute(
+        """INSERT INTO memory_consolidation_batches (
+             batch_id, session_id, revision, status, created_at, updated_at
+           ) VALUES ('approved-batch', 's1', 1, 'awaiting_approval', ?, ?)""",
+        (now, now),
+    )
+    database.execute(
+        """INSERT INTO memory_consolidation_plans (
+             batch_id, revision, plan_json, episode_summary, occurred_at,
+             occurred_until, candidate_text
+           ) VALUES ('approved-batch', 1, ?, NULL, NULL, NULL, NULL)""",
+        (
+            '{"semantic":[{"action":"update","id":"%s","subject":"Alice",'
+            '"fact":"likes pepper","expected_version":1}],'
+            '"episode_summary":"x"}' % id,
+        ),
+    )
+    database.execute(
+        "INSERT INTO memory_consolidation_approvals VALUES (?,?,?,?)",
+        ("approved-batch", 1, now, "op-approve"),
+    )
+    with pytest.raises(ProtectedMemoryError):
+        store.apply_approved_consolidation(
+            id,
+            expected_version=1,
+            origin=ConsolidationOrigin("approved-batch"),
+            proof=ConsolidationApprovalProof("approved-batch", 99),
+            fact="likes pepper",
+        )
+    with pytest.raises(ProtectedMemoryError):
+        store.apply_approved_consolidation(
+            id,
+            expected_version=1,
+            origin=ConsolidationOrigin("approved-batch"),
+            proof=proof,
+            fact="likes thyme",
+        )
+    approved = store.apply_approved_consolidation(
+        id,
+        expected_version=1,
+        origin=ConsolidationOrigin("approved-batch"),
+        proof=proof,
+        fact="likes pepper",
+    )
+    assert approved == UpdateApplied(id, True, 2)
+    record = store.get(id)
+    assert record.fact == "likes pepper"
+    assert record.origin == ConsolidationOrigin("batch")
+    assert record.last_change_origin == ConsolidationOrigin("approved-batch")
+    assert record.human_protected is True
+
+
+def test_approval_proof_binds_frozen_version_and_live_batch_lifecycle(database):
+    from agent_alfred.memory.types import (
+        ConsolidationApprovalProof,
+        ConsolidationOrigin,
+        ProtectedMemoryError,
+    )
+
+    store = SQLiteSemanticStore(database, fingerprint=fingerprint, clock=lambda: NOW)
+    database.execute("BEGIN")
+    identifier = store.save("home", "Beijing", ManualOrigin("web"))
+    store.update(
+        identifier,
+        expected_version=1,
+        origin=ManualOrigin("web"),
+        fact="Guangzhou",
+    )
+    assert store.get(identifier).record_version == 2
+    now = "2026-09-09T00:00:00+00:00"
+    database.execute(
+        """INSERT INTO memory_consolidation_batches (
+             batch_id, session_id, revision, status, created_at, updated_at
+           ) VALUES ('old-batch', 's1', 1, 'awaiting_approval', ?, ?)""",
+        (now, now),
+    )
+    database.execute(
+        """INSERT INTO memory_consolidation_plans (
+             batch_id, revision, plan_json, episode_summary, occurred_at,
+             occurred_until, candidate_text
+           ) VALUES ('old-batch', 1, ?, NULL, NULL, NULL, NULL)""",
+        (
+            '{"semantic":[{"action":"update","id":"%s","subject":"home",'
+            '"fact":"Shanghai","expected_version":1}],'
+            '"episode_summary":"x"}' % identifier,
+        ),
+    )
+    database.execute(
+        "INSERT INTO memory_consolidation_approvals VALUES (?,?,?,?)",
+        ("old-batch", 1, now, "op-stale"),
+    )
+    with pytest.raises(ProtectedMemoryError):
+        store.apply_approved_consolidation(
+            identifier,
+            expected_version=2,
+            origin=ConsolidationOrigin("old-batch"),
+            proof=ConsolidationApprovalProof("old-batch", 1),
+            subject="home",
+            fact="Shanghai",
+        )
+    database.execute(
+        """INSERT INTO memory_consolidation_batches (
+             batch_id, session_id, revision, status, created_at, updated_at
+           ) VALUES ('done-batch', 's2', 1, 'succeeded', ?, ?)""",
+        (now, now),
+    )
+    database.execute(
+        """INSERT INTO memory_consolidation_plans (
+             batch_id, revision, plan_json, episode_summary, occurred_at,
+             occurred_until, candidate_text
+           ) VALUES ('done-batch', 1, ?, NULL, NULL, NULL, NULL)""",
+        (
+            '{"semantic":[{"action":"update","id":"%s","subject":"home",'
+            '"fact":"Shanghai","expected_version":2}],'
+            '"episode_summary":"x"}' % identifier,
+        ),
+    )
+    database.execute(
+        "INSERT INTO memory_consolidation_approvals VALUES (?,?,?,?)",
+        ("done-batch", 1, now, "op-done"),
+    )
+    with pytest.raises(ProtectedMemoryError):
+        store.apply_approved_consolidation(
+            identifier,
+            expected_version=2,
+            origin=ConsolidationOrigin("done-batch"),
+            proof=ConsolidationApprovalProof("done-batch", 1),
+            subject="home",
+            fact="Shanghai",
+        )
+    record = store.get(identifier)
+    assert record.fact == "Guangzhou"
+    assert record.record_version == 2
 
 
 def test_episode_update_preserves_identity_and_clears_end_explicitly(database):

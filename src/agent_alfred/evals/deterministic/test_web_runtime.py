@@ -28,6 +28,7 @@ from agent_alfred.evals.deterministic._web_runtime_test_helpers import (
     ArmableCaptureFailure,
     FailFinalizeWhen,
     FailNextSessionCommit,
+    RunDoneProbe,
     SelectiveLatch,
     StepStartedLatch,
     StepStartedPostCommitLatch,
@@ -664,13 +665,14 @@ def test_recording_pending_is_409_and_the_card_says_saving() -> None:
     """
     latch = SelectiveLatch()
     host, _conn = build_runtime_host(before_recording_commit=latch)
+    done = RunDoneProbe(host)
     host.start()
     try:
         session_id = host.create_session()
         api = dashboard_api(host)
         first = api.submit({"message": "first", "session_id": session_id})
         assert first.status == 202
-        wait_for_state(host, "idle")
+        done.wait(first.run_id)
 
         latch.arm()
         second = api.submit({"message": "second", "session_id": session_id})
@@ -736,13 +738,14 @@ def test_recording_failed_answers_503_and_only_then() -> None:
         conn=wrapped,
         before_recording_commit=latch,
     )
+    done = RunDoneProbe(host)
     host.start()
     try:
         session_id = host.create_session()
         api = dashboard_api(host)
         first = api.submit({"message": "a-q", "session_id": session_id})
         assert first.status == 202
-        wait_for_state(host, "idle")
+        done.wait(first.run_id)
 
         latch.arm()
         second = api.submit({"message": "b-q", "session_id": session_id})
@@ -1741,6 +1744,7 @@ def test_a_new_run_is_accepted_without_inheriting_the_previous_step() -> None:
         extra_sinks=[step_started],
         snapshot_listener=observe,
     )
+    done = RunDoneProbe(host)
     host.start()
     second = None
     try:
@@ -1748,7 +1752,7 @@ def test_a_new_run_is_accepted_without_inheriting_the_previous_step() -> None:
         api = dashboard_api(host)
         first = api.submit({"message": "first", "session_id": session_id})
         assert first.status == 202
-        wait_for_state(host, "idle")
+        done.wait(first.run_id)
 
         gate.clear()
         step_started.published.clear()
@@ -2199,7 +2203,14 @@ def test_a_handoff_failure_retracts_the_lease_and_the_busy_card() -> None:
 def test_dashboard_runs_do_not_retain_unconsumed_in_memory_results() -> None:
     """A 202 is observed through durable reads, never an in-memory waiter."""
     run_count = 25
-    host, conn = build_runtime_host(["pong"] * run_count)
+    # This retention fixture creates chat history, not consolidation Runs.
+    from agent_alfred.settings import Settings
+
+    host, conn = build_runtime_host(
+        ["pong"] * run_count,
+        settings=Settings(consolidation_source_threshold=100),
+    )
+    done = RunDoneProbe(host)
     host.start()
     try:
         api = DashboardApi(facade=host)
@@ -2210,7 +2221,7 @@ def test_dashboard_runs_do_not_retain_unconsumed_in_memory_results() -> None:
                 {"message": f"message-{index}", "session_id": session_id}
             )
             assert outcome.status == 202
-            wait_for_state(host, "idle")
+            done.wait(outcome.run_id)
 
         assert conn.execute(
             "SELECT COUNT(*) FROM runs WHERE phase = 'finished'"
@@ -2351,6 +2362,7 @@ def test_the_gate_spans_the_whole_lease_on_the_real_host() -> None:
     """
     gate = threading.Event()
     host, _conn = build_runtime_host(["pong"], gate=gate)
+    done = RunDoneProbe(host)
     host.start()
     try:
         api = DashboardApi(facade=host)
@@ -2363,7 +2375,7 @@ def test_the_gate_spans_the_whole_lease_on_the_real_host() -> None:
         # ...and the refusal left no hold behind: the Run owns the gate.
         assert host.mutation_in_flight() is False
         gate.set()
-        wait_for_state(host, "idle")
+        done.wait(outcome.run_id)
         # The lease is back, so the gate opens again for the next write.
         assert host.try_begin_mutation() is None
         host.end_mutation()

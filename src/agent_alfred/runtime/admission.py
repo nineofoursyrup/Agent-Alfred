@@ -17,9 +17,11 @@ before anything answers 503) are structural, not conventions.
 
 from __future__ import annotations
 
+import sqlite3
 import threading
 import uuid
 from collections.abc import Callable
+from dataclasses import replace
 from functools import partial
 from typing import Final, Literal, Protocol
 
@@ -259,6 +261,7 @@ class RunAdmission:
         snapshot_provider: ConfigSnapshotProvider,
         database: RecordingStore,
         coordinator: AdmissionCoordinator,
+        bind_run: Callable[[sqlite3.Connection, WorkItem], None] | None = None,
     ):
         self._clock = clock
         self._settings = settings
@@ -267,6 +270,7 @@ class RunAdmission:
         self._snapshot_provider = snapshot_provider
         self._database = database
         self._coordinator = coordinator
+        self._bind_run = bind_run
 
     def submit(self, request: SubmitRequest) -> SubmitResult:
         observed, snapshot = self._coordinator.admission_observe()
@@ -308,6 +312,11 @@ class RunAdmission:
                 )
             else:
                 captured = self._snapshot_provider.capture(stream=request.stream)
+            if request.purpose == "consolidation":
+                captured = replace(
+                    captured,
+                    overall_deadline_s=self._settings.consolidation_deadline_s,
+                )
             self._redactor.remember(captured.api_key, credential=True)
             self._redactor.remember(captured.retrieval_gate_api_key, credential=True)
         except InvalidProbeTarget:
@@ -374,6 +383,8 @@ class RunAdmission:
                     entry_surface_id=request.entry_surface_id,
                     prompt_preview=summary.prompt_preview,
                 )
+                if self._bind_run is not None:
+                    self._bind_run(conn, item)
                 conn.commit()
 
             stage = "publishing"

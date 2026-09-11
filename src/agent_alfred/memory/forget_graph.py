@@ -91,6 +91,59 @@ def ensure_group(conn, group_id):
     )
 
 
+def carry_memory_provenance(conn, consumer, attempt_id, purpose, memories):
+    """Attach known version-specific source groups of used memories to this Attempt."""
+    for kind, memory_id, version in memories:
+        for (group,) in conn.execute(
+            "SELECT source_group_id FROM memory_sources "
+            "WHERE kind=? AND memory_id=? AND record_version=?",
+            (kind, memory_id, version),
+        ):
+            ensure_group(conn, group)
+            conn.execute(
+                "INSERT OR IGNORE INTO history_reads VALUES (?,?,?,?)",
+                (group, consumer, attempt_id, purpose),
+            )
+
+
+def attach_sources_to_existing_uses(conn, kind, memory_id, version, groups):
+    """Late positive sources join consumers that already used this exact version."""
+    uses = conn.execute(
+        "SELECT consumer, attempt_id, purpose FROM memory_uses "
+        "WHERE kind=? AND memory_id=? AND record_version=?",
+        (kind, memory_id, version),
+    ).fetchall()
+    for group in groups:
+        ensure_group(conn, group)
+        for consumer, attempt_id, purpose in uses:
+            conn.execute(
+                "INSERT OR IGNORE INTO history_reads VALUES (?,?,?,?)",
+                (group, consumer, attempt_id, purpose),
+            )
+
+
+def record_memory_sources(conn, kind, memory_id, version, groups):
+    """Insert version-specific sources and close actual-use isolation in one write."""
+    if not groups:
+        return
+    for group in groups:
+        ensure_group(conn, group)
+        conn.execute(
+            "INSERT OR IGNORE INTO memory_sources VALUES (?,?,?,?)",
+            (kind, memory_id, version, group),
+        )
+        conn.execute(
+            "INSERT INTO forget_limits "
+            "SELECT operation_id,?,'isolated' FROM forget_operations "
+            "WHERE kind=? AND memory_id=? "
+            "ON CONFLICT(operation_id,group_id) DO UPDATE SET mode='isolated'",
+            (group, kind, memory_id),
+        )
+    attach_sources_to_existing_uses(conn, kind, memory_id, version, groups)
+    propagate(conn)
+    bump(conn)
+
+
 def propagate(conn):
     # Fixed point includes cycles, multiple operations, and paused successors.
     while True:

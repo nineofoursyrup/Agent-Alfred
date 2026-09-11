@@ -104,16 +104,7 @@ def test_upgrade_starts_observed_versions_preserves_bodies_and_known_origins(
         == ledger_before
     )
     assert conn.execute("SELECT version FROM schema_migrations").fetchall() == [
-        (1,),
-        (2,),
-        (3,),
-        (4,),
-        (5,),
-        (6,),
-        (7,),
-        (8,),
-        (9,),
-        (10,),
+        (migration.version,) for migration in schema.MIGRATIONS
     ]
     schema.migrate(conn)
     assert semantic.get(MemoryId("fact-manual")).record_version == 1

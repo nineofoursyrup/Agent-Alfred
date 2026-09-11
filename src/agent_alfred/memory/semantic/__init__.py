@@ -127,7 +127,45 @@ class SQLiteSemanticStore(SQLiteStore):
         )
         key = canonical({name: normalize(value) for name, value in values.items()})
         return self._update(
-            row, values=values, key=key, origin=origin, human_protected=human_protected
+            row,
+            values=values,
+            key=key,
+            origin=origin,
+            human_protected=human_protected,
+        )
+
+    def apply_approved_consolidation(
+        self,
+        id: MemoryId,
+        *,
+        expected_version: int,
+        origin: Origin,
+        proof,
+        subject: str | None = None,
+        fact: str | None = None,
+    ) -> UpdateOutcome:
+        from agent_alfred.memory.types import NotFound, VersionConflict, origin_json
+
+        self._writing()
+        validate_limit(expected_version)
+        origin_json(origin)
+        row = self._row(id)
+        if row is None:
+            return NotFound(id)
+        if row["record_version"] != expected_version:
+            return VersionConflict(row["record_version"])
+        values = dict(
+            subject=row["subject"] if subject is None else subject,
+            fact=row["fact"] if fact is None else fact,
+        )
+        key = canonical({name: normalize(value) for name, value in values.items()})
+        return self._update(
+            row,
+            values=values,
+            key=key,
+            origin=origin,
+            human_protected=True,
+            approval_proof=proof,
         )
 
     def list_recent(

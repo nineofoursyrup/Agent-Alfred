@@ -43,6 +43,38 @@ class InputEvidenceError(Exception):
     """Required source evidence could not be confirmed before sending."""
 
 
+class _AutomaticUseStore:
+    """Drop records whose known sources are restricted; storage errors stay errors."""
+
+    def __init__(self, store, kind, forgetting):
+        self._store = store
+        self._kind = kind
+        self._forgetting = forgetting
+
+    def search(self, query):
+        hits = list(self._store.search(query))
+        allowed = self._allowed(
+            (self._kind, hit.record.id, hit.record.record_version) for hit in hits
+        )
+        return [hit for hit in hits if allowed(hit.record)]
+
+    def get(self, memory_id):
+        return self._store.get(memory_id)
+
+    def _allowed(self, identities):
+        token = self._forgetting.evaluate_automatic_records(
+            tuple(identities), connection=self._store._conn
+        )
+        if "error" in token:
+            raise OSError("storage_read_failed")
+        allowed = set(token["allowed"])
+
+        def keep(record):
+            return (self._kind, record.id, record.record_version) in allowed
+
+        return keep
+
+
 def memory_context(item):
     from agent_alfred.memory.commands import CommandContext
     from agent_alfred.memory.types import ToolOrigin
@@ -449,6 +481,21 @@ class RunMemory:
                         or record.record_version != reference["record_version"]
                     ):
                         self.invalidate(reference["kind"], reference["memory_id"])
+                        continue
+                    token = self._service.forgetting.evaluate_automatic_records(
+                        (
+                            (
+                                reference["kind"],
+                                reference["memory_id"],
+                                reference["record_version"],
+                            ),
+                        ),
+                        connection=store._conn,
+                    )
+                    if "error" in token:
+                        raise InputEvidenceError("input_evidence_unavailable")
+                    if token["denied"]:
+                        self.invalidate(reference["kind"], reference["memory_id"])
         return self._references.reference_text
 
     def evaluate(self, budget, working_memory, overall_abs):
@@ -602,6 +649,13 @@ class RunMemory:
         )
         try:
             with scope as (semantic, episodic):
+                if self._service is not None and semantic is not None:
+                    semantic = _AutomaticUseStore(
+                        semantic, "semantic", self._service.forgetting
+                    )
+                    episodic = _AutomaticUseStore(
+                        episodic, "episodic", self._service.forgetting
+                    )
                 result = retrieve(decision, semantic, episodic, **options)
         except Exception:
             # Failure acquiring the database read scope is a store failure too;

@@ -193,6 +193,7 @@ class SQLiteStore:
         key: bytes,
         origin: Origin,
         human_protected: bool,
+        approval_proof=None,
     ):
         from agent_alfred.memory.types import DuplicateConflict, UpdateApplied
 
@@ -208,13 +209,18 @@ class SQLiteStore:
             and row["human_protected"]
             and isinstance(origin, ConsolidationOrigin)
         ):
-            from agent_alfred.memory.types import ProtectedMemoryError
-
-            raise ProtectedMemoryError("human-protected memory requires confirmation")
+            self._require_approval_proof(
+                approval_proof,
+                origin,
+                row["id"],
+                values,
+                row["record_version"],
+            )
         protected = (
             row["human_protected"]
             or human_protected
             or not isinstance(origin, ConsolidationOrigin)
+            or approval_proof is not None
         )
         if changed or protected != row["human_protected"]:
             updates = {"human_protected": int(protected)}
@@ -239,6 +245,70 @@ class SQLiteStore:
         return UpdateApplied(
             MemoryId(row["id"]), changed, row["record_version"] + int(changed)
         )
+
+    def _require_approval_proof(
+        self, proof, origin, memory_id, values, expected_version
+    ):
+        from agent_alfred.memory.types import (
+            ConsolidationApprovalProof,
+            ProtectedMemoryError,
+        )
+
+        if not isinstance(proof, ConsolidationApprovalProof):
+            raise ProtectedMemoryError("human-protected memory requires confirmation")
+        if (
+            not isinstance(origin, ConsolidationOrigin)
+            or origin.batch_id != proof.batch_id
+            or type(proof.revision) is not int
+            or proof.revision < 1
+        ):
+            raise ProtectedMemoryError("human-protected memory requires confirmation")
+        batch = self._conn.execute(
+            "SELECT revision, status FROM memory_consolidation_batches "
+            "WHERE batch_id=?",
+            (proof.batch_id,),
+        ).fetchone()
+        if (
+            batch is None
+            or batch[0] != proof.revision
+            or batch[1] not in ("awaiting_approval", "failed")
+        ):
+            raise ProtectedMemoryError("human-protected memory requires confirmation")
+        approved = self._conn.execute(
+            "SELECT 1 FROM memory_consolidation_approvals "
+            "WHERE batch_id=? AND revision=?",
+            (proof.batch_id, proof.revision),
+        ).fetchone()
+        if approved is None:
+            raise ProtectedMemoryError("human-protected memory requires confirmation")
+        if self.table != "facts":
+            return
+        plan_row = self._conn.execute(
+            "SELECT plan_json FROM memory_consolidation_plans "
+            "WHERE batch_id=? AND revision=?",
+            (proof.batch_id, proof.revision),
+        ).fetchone()
+        if plan_row is None or not plan_row[0]:
+            raise ProtectedMemoryError("human-protected memory requires confirmation")
+        try:
+            payload = json.loads(plan_row[0])
+        except ValueError:
+            raise ProtectedMemoryError(
+                "human-protected memory requires confirmation"
+            ) from None
+        items = payload.get("semantic") if isinstance(payload, dict) else None
+        if isinstance(items, list):
+            for item in items:
+                if (
+                    isinstance(item, dict)
+                    and item.get("action") == "update"
+                    and item.get("id") == memory_id
+                    and item.get("subject") == values.get("subject")
+                    and item.get("fact") == values.get("fact")
+                    and item.get("expected_version") == expected_version
+                ):
+                    return
+        raise ProtectedMemoryError("human-protected memory requires confirmation")
 
     def _recent(self, limit: int, cursor: str | None, record):
         import base64
