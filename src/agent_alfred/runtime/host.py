@@ -361,7 +361,16 @@ class RuntimeHost:
             recording_store=self._store, audit_key=audit_key,
             clock=self._clock.wall_utc, admission=self,
             delete_barrier=self._fanout.checkpoint_barrier,
-            memory_notifier=memory_notifier,
+            memory_notifier=memory_notifier, file_state=file_state,
+            process_instance_id=process_instance_id,
+        )
+        from agent_alfred.memory.consolidation import ConsolidationLimits
+
+        self._memory_service.consolidation._limits = ConsolidationLimits(
+            source_threshold=settings.consolidation_source_threshold,
+            candidate_count_limit=settings.consolidation_candidate_count_limit,
+            candidate_character_limit=settings.consolidation_candidate_character_limit,
+            request_character_limit=settings.input_character_limit,
         )
         self._queue = _HandoffQueue(self._store)
         self._done: dict[str, threading.Event] = {}
@@ -399,6 +408,9 @@ class RuntimeHost:
             store=self._store,
             coordinator=self,
             before_recording_commit=before_recording_commit,
+            finalize_run=self._finalize_consolidation_run,
+            notify_finalized_run=self._notify_consolidation_run,
+            after_recorded=self._schedule_saved_chat,
         )
         self._admission = RunAdmission(
             clock=clock,
@@ -408,6 +420,7 @@ class RuntimeHost:
             snapshot_provider=self._snapshot_provider,
             database=self._store,
             coordinator=self,
+            bind_run=self._bind_consolidation_retry,
         )
         from agent_alfred.tools import ToolRegistry
         from agent_alfred.tools.calendar import CalendarTools
@@ -638,6 +651,9 @@ class RuntimeHost:
                 ):
                     return False
                 self._fanout_closed = True
+            if (self._memory_service.mirrors is not None
+                    and not self._memory_service.mirrors.close()):
+                return False
             if not self._file_tools.close():
                 return False
             if self._owned_resources is not None:
@@ -702,7 +718,19 @@ class RuntimeHost:
     def recover(self) -> None:
         self._recorder.recover()
         self._memory_service.forgetting.recover_input_registrations()
+        self._memory_service.consolidation.recover_abandoned()
+        self._memory_service.consolidation.scheduling.recover()
         self._external_tools.recover()
+        if self._memory_service.mirrors is not None:
+            from agent_alfred.memory.commands import CommandContext
+            from agent_alfred.memory.types import ManualOrigin
+
+            self._memory_service.forgetting.reconcile_projections(
+                CommandContext(ManualOrigin("cli"), "cli")
+            )
+        # Recovery can settle Run evidence without changing a terminal batch.
+        # Publish only after all startup transactions and file recovery finish.
+        self._memory_service.consolidation.notify_finalized()
 
     def create_session(self) -> str:
         session_id = uuid.uuid4().hex
@@ -1813,6 +1841,101 @@ class RuntimeHost:
 
     def submit(self, request: SubmitRequest) -> SubmitResult:
         return self._admission.submit(request)
+
+    def generate_consolidation(self, session_id: str) -> SubmitResult:
+        """Trusted internal entry for one sessionless consolidation system Run."""
+        if type(session_id) is not str or not session_id:
+            raise ValueError("invalid_consolidation_session")
+        return self.submit(
+            SubmitRequest(
+                message=session_id,
+                purpose="consolidation",
+                session_id=None,
+                gateway="cli",
+                wait_for_result=True,
+            )
+        )
+
+    def _finalize_consolidation_run(self, conn, item) -> None:
+        if item.request.purpose == "consolidation":
+            self._memory_service.consolidation.finalize_run(conn, item.run_id)
+        elif item.request.purpose == "chat":
+            self._memory_service.consolidation.scheduling.record_chat(conn, item.run_id)
+
+    def _schedule_saved_chat(self, run_id):
+        scheduling = self._memory_service.consolidation.scheduling
+        try:
+            session_id, refusal = self.execute_mutation(
+                lambda: scheduling.claim(run_id)
+            )
+        except sqlite3.Error:
+            scheduling.finish_admission(run_id, "storage_read_failed")
+            return
+        if refusal is not None:
+            scheduling.finish_admission(run_id, refusal)
+            return
+        if session_id is None:
+            return
+        try:
+            result = self.submit(SubmitRequest(
+                message=session_id, purpose="consolidation", gateway="cli",
+                wait_for_result=False, consolidation_trigger_run_id=run_id,
+            ))
+        except BaseException:
+            scheduling.finish_admission(run_id, "scheduling_interrupted")
+            raise
+        scheduling.finish_admission(run_id, result.kind)
+
+    def _notify_consolidation_run(self, item) -> None:
+        self._memory_service.consolidation.notify_finalized()
+
+    def _bind_consolidation_retry(self, conn, item) -> None:
+        """Bind the retry intent in the accepted Run's own transaction."""
+        request = item.request
+        if request.consolidation_trigger_run_id is not None:
+            self._memory_service.consolidation.scheduling.bind_run(
+                conn, request.consolidation_trigger_run_id, request.message, item.run_id
+            )
+        if request.purpose == "consolidation" and request.retry_batch_id is not None:
+            self._memory_service.consolidation.bind_retry_run(
+                conn,
+                request.operation_id,
+                request.retry_batch_id,
+                request.expected_revision,
+                item.run_id,
+            )
+
+    def retry_consolidation(
+        self, batch_id: str, expected_revision: int, *, operation_id: str
+    ):
+        """Retry a failed batch: commit a valid candidate or start one new Run."""
+        from agent_alfred.memory.commands import CommandContext
+        from agent_alfred.memory.types import ManualOrigin
+
+        context = CommandContext(ManualOrigin("cli"), "cli")
+        result = self._memory_service.consolidation.retry(
+            batch_id,
+            expected_revision,
+            context=context,
+            operation_id=operation_id,
+        )
+        if result.get("error", {}).get("code") != "generation_required":
+            return result
+        batch = self._memory_service.consolidation.get_batch(batch_id)
+        if batch is None:
+            return result
+        return self.submit(
+            SubmitRequest(
+                message=batch["session_id"],
+                purpose="consolidation",
+                session_id=None,
+                gateway="cli",
+                wait_for_result=True,
+                retry_batch_id=batch_id,
+                expected_revision=expected_revision,
+                operation_id=operation_id,
+            )
+        )
 
     def wait(self, run_id: str, timeout: float = 60.0) -> LoopResult:
         with self._lock:

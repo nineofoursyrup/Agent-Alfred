@@ -155,6 +155,14 @@ class ProtectedMemoryError(ValueError):
     """An automatic consolidation cannot overwrite human-protected content."""
 
 
+@dataclass(frozen=True)
+class ConsolidationApprovalProof:
+    """Persisted approval of one batch revision; not a caller-supplied flag."""
+
+    batch_id: str
+    revision: int
+
+
 class Unchanged:
     """Omitted optional interval endpoint, distinct from an explicit null."""
 

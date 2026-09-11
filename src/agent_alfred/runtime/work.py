@@ -58,8 +58,16 @@ class SubmitRequest:
     wait_for_result: bool = True
     endpoint_id: str | None = None
     model_id: str | None = None
+    retry_batch_id: str | None = None
+    expected_revision: int | None = None
+    operation_id: str | None = None
+    consolidation_trigger_run_id: str | None = None
 
     def __post_init__(self) -> None:
+        if self.consolidation_trigger_run_id is not None and (
+            self.purpose != "consolidation" or self.retry_batch_id is not None
+        ):
+            raise ValueError("invalid_consolidation_trigger")
         if self.purpose != "chat" and self.session_id is not None:
             raise ValueError("a system Run cannot name a Session")
 

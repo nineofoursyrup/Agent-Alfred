@@ -1007,6 +1007,18 @@ class ManagedDirectoryLease(_ManagedCapabilityLease):
         rollback.close()
         return removed
 
+    def open_directory(
+        self, relative: PurePath, *, _rollback: ResumableRollback | None = None,
+    ) -> ManagedDirectoryLease:
+        """Open an existing direct child without creating a directory."""
+        parts = _validate_relative(relative)
+        if len(parts) != 1:
+            raise ValueError("open_directory requires a direct child")
+        return self._open_directory(
+            parts[0], path=self.path / parts[0], role="managed directory",
+            _rollback=_rollback,
+        )
+
     def _open_directory(
         self,
         name: str,
@@ -1323,6 +1335,7 @@ class ManagedDirectoryLease(_ManagedCapabilityLease):
         payload: bytes,
         *,
         published: Callable[[], None] | None = None,
+        prepared: Callable[[str, tuple[int, int]], None] | None = None,
     ) -> None:
         parts = _validate_relative(relative)
         if len(parts) != 1:
@@ -1395,6 +1408,11 @@ class ManagedDirectoryLease(_ManagedCapabilityLease):
                 role="descriptor temporary file",
                 _rollback=lease_rollback,
             )
+            # A durable caller can record exact inode ownership before any
+            # body is written. Failure leaves the existing rollback in charge.
+            if prepared is not None:
+                prepared_info = lease.stat()
+                prepared(temporary, (prepared_info.st_dev, prepared_info.st_ino))
             lease.write_all(payload)
             lease.fsync()
             temporary_info = lease.stat()

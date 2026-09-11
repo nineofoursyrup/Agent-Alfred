@@ -90,6 +90,7 @@ def _host_over(
     *,
     redactor: Redactor | None = None,
     before_recording_commit: threading.Event | None = None,
+    settings: Settings | None = None,
 ) -> RuntimeHost:
     capture = CapturingSink(name="capture", flush_at_run_end=True)
     responses = [
@@ -98,7 +99,7 @@ def _host_over(
     return RuntimeHost(
         conn=conn,
         factory=ScriptedModelFactory(ScriptedModel(responses)),
-        settings=Settings(),
+        settings=settings or Settings(),
         clock=FakeClock(),
         fanout=FanOutSink([capture], process_instance_id="proc-reads"),
         process_instance_id="proc-reads",
@@ -184,6 +185,7 @@ def _historic_host(
     *,
     redactor: Redactor | None = None,
     before_recording_commit: threading.Event | None = None,
+    settings: Settings | None = None,
 ) -> RuntimeHost:
     """A Host over a real v2 database seeded with historic Message rows.
 
@@ -589,7 +591,11 @@ def test_mainbar_returns_one_pair_per_recorded_chat_run() -> None:
 
 def test_the_mainbar_default_is_the_most_recent_25() -> None:
     assert DEFAULT_MAINBAR_LIMIT == 25
-    host = _fresh_host(script=["pong"] * 30)
+    # Pagination history must not spend this chat-only script on consolidation.
+    host = _host_over(
+        _current_database(), ["pong"] * 30,
+        settings=Settings(consolidation_source_threshold=100),
+    )
     host.start()
     try:
         session_id = host.create_session()

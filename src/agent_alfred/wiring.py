@@ -183,6 +183,7 @@ def build_host(
     process_instance_id: str | None = None,
     trace_root: Path | ManagedTraceRoot | TraceRootRequest | None = None,
     snapshot_listener: Callable[[RuntimeSnapshot], None] | None = None,
+    memory_notifier=None,
     model_settings: ModelSettingsStore | None = None,
     environ: Mapping[str, str] | None = None,
     credentials: CredentialOverlay | None = None,
@@ -243,6 +244,7 @@ def build_host(
             redactor=redactor,
             snapshot_provider=provider,
             snapshot_listener=snapshot_listener,
+            memory_notifier=memory_notifier,
             support_overrides=(
                 factory.support_overrides
                 if isinstance(factory, EndpointClientFactory)
@@ -350,6 +352,7 @@ def build_dashboard(
                 extra_sinks=[broker, *extra_sinks],
                 process_instance_id=instance,
                 snapshot_listener=broker.publish_state_patch,
+                memory_notifier=broker.publish_memory_patch,
                 model_settings=model_settings,
                 credentials=credentials,
                 _rollback=rollback,

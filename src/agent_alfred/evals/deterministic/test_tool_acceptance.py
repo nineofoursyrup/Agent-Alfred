@@ -383,11 +383,15 @@ def test_real_delete_receipt_separates_cleanup_failure_and_completion(
     class FilePort:
         failed = True
 
+        def __init__(self):
+            self.attempts = []
+
         def verify(self, target_id, generation):
             path = tmp_path / "projection"
             return path.exists() and path.read_text() == str(generation)
 
         def rebuild(self, target_id, generation):
+            self.attempts.append((target_id, generation))
             if self.failed:
                 raise OSError("private cleanup error")
             (tmp_path / "projection").write_text(str(generation))
@@ -444,9 +448,16 @@ def test_real_delete_receipt_separates_cleanup_failure_and_completion(
                 context_,
             )
             assert receipt["status"] == "confirmed"
-        assert memory.forgetting.get_forgetting(op)["state"] == "cleaning"
+        # The real mirror refresh already tried the injected failing port.
+        cleanup = memory.forgetting.get_forgetting(op)
+        assert port.attempts == [("fixture-file", 1)]
+        assert cleanup["state"] == "failed"
+        assert "cleanup_unconfirmed" in str(cleanup)
+        assert memory.get_operation(op)["status"] == "deleted"
         memory.forgetting.retry_cleanup(op, context_)
         assert memory.forgetting.get_forgetting(op)["state"] == "failed"
+        # Explicit retry and its admitted mirror refresh both retry honestly.
+        assert port.attempts == [("fixture-file", 1)] * 3
         port.failed = False
         memory.forgetting.retry_cleanup(op, context_)
         assert memory.forgetting.get_forgetting(op)["state"] == "complete"

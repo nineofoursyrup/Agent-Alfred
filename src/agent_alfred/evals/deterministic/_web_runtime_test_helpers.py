@@ -232,6 +232,7 @@ def build_runtime_host(
     support_overrides=None,
     support_rule=None,
     chat_script: bool = True,
+    settings=None,
 ):
     database = conn
     if database is None:
@@ -256,7 +257,7 @@ def build_runtime_host(
     host = RuntimeHost(
         conn=database,
         factory=ScriptedModelFactory(ScriptedModel(responses, gate=gate)),
-        settings=Settings(),
+        settings=settings or Settings(),
         clock=FakeClock(),
         fanout=FanOutSink(sinks, process_instance_id=INSTANCE),
         process_instance_id=INSTANCE,
@@ -340,3 +341,26 @@ def refused(patch, current) -> str:
     except StatePatchRejected as exc:
         return exc.reason
     raise AssertionError("the patch should have been refused")
+
+
+class RunDoneProbe:
+    """Observe actual completion without allocating Dashboard result waiters."""
+
+    def __init__(self, host):
+        self._condition = threading.Condition()
+        self._done = set()
+        original = host.notify_run_done
+
+        def notify(run_id):
+            original(run_id)
+            with self._condition:
+                self._done.add(run_id)
+                self._condition.notify_all()
+
+        host.notify_run_done = notify
+
+    def wait(self, run_id):
+        with self._condition:
+            assert self._condition.wait_for(lambda: run_id in self._done, 5.0), (
+                f"Run {run_id} did not finish post-recording scheduling"
+            )

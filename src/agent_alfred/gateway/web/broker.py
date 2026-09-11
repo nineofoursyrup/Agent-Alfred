@@ -251,6 +251,15 @@ class _BroadcastPatch:
 
 
 @dataclass(frozen=True)
+class _MemoryPatch:
+    frame: PreparedFrames
+    revision: int
+
+    def ingress_cost(self) -> FrameCost:
+        return self.frame.ingress_cost()
+
+
+@dataclass(frozen=True)
 class _PublishedEvent:
     """One published domain event on its way to the dispatcher.
 
@@ -577,6 +586,7 @@ class ConnectionHandle:
     # precisely the in-flight attempt ADR-0013 says a reconnect must not
     # see again.
     published_through: int = 0
+    memory_revision_through: int = -1
     verdict: CursorVerdict | None = None
     registered_monotonic: float = 0.0
     # Set once this connection's writer has returned: it has stopped writing
@@ -653,6 +663,7 @@ class SSEBroker:
         )
         self._instance = frames.validate_process_instance_id(process_instance_id)
         self._latest = snapshot
+        self._memory_latest = None
         # Bound to the Host as soon as the Host exists -- see
         # :meth:`bind_session_check`. Until then there is no Session truth to
         # consult and, more to the point, no connection to answer for.
@@ -2101,6 +2112,7 @@ class SSEBroker:
                             current_run_state,
                         )
                     latest = self._latest
+                    memory_latest = self._memory_latest
                     # Same binding as publish_state_patch: the step summary is
                     # shown only while it belongs to the snapshot's active Run.
                     active = latest.active_run
@@ -2133,6 +2145,8 @@ class SSEBroker:
                         )
                     )
                 startup.append(_patch_frames(latest, step, session_valid))
+                if memory_latest is not None:
+                    startup.append(frames.memory_patch_frames(memory_latest))
                 built = tuple(startup)
                 boundary = (
                     nullcontext()
@@ -2200,6 +2214,11 @@ class SSEBroker:
                         handle.verdict = verdict
                         handle.ingress_seen = self._ingress_dropped
                         handle.published_through = published_through
+                        handle.memory_revision_through = (
+                            -1 if memory_latest is None
+                            else memory_latest["memory_revision"]
+                        )
+
                         # Registered at the current disconnect generation:
                         # everything published so far is either in this opening
                         # stream or behind the published boundary above.
@@ -2369,6 +2388,62 @@ class SSEBroker:
     def connections(self) -> tuple[ConnectionHandle, ...]:
         with self._registry_lock:
             return tuple(self._connections)
+
+    def publish_memory_patch(self, payload: dict) -> bool:
+        """Use the bounded state-delivery lane; loss requires current-state readback."""
+        if (
+            set(payload)
+            != {"schema_version", "process_instance_id", "memory_revision", "change"}
+            or type(payload["schema_version"]) is not int
+            or payload["schema_version"] != 1
+            or payload["process_instance_id"] != self._instance
+            or type(payload["memory_revision"]) is not int
+            or payload["memory_revision"] < 0
+        ):
+            return False
+        # The transport carries invalidation only. No caller-supplied fields can
+        # accidentally turn this into a second copy of a memory record.
+        body = {**payload, "change": None}
+        prepared = _MemoryPatch(
+            frames.memory_patch_frames(body), body["memory_revision"]
+        )
+        kick = False
+        failure = None
+        with self._lock:
+            if self._closed or self._stopping or self._fatal is not None:
+                return False
+            previous = self._memory_latest
+            if (
+                previous is not None
+                and body["memory_revision"] < previous["memory_revision"]
+            ):
+                return False
+            repeated = (
+                previous is not None
+                and body["memory_revision"] == previous["memory_revision"]
+            )
+            self._memory_latest = body
+            self._state_epoch += 1
+            try:
+                offered = False if repeated else self._ingress.offer(prepared)
+            except BaseException as error:
+                failure = error
+                offered = False
+            if not offered:
+                self._disconnect_generation += 1
+                kick = self._arm_kick_locked()
+        if failure is not None:
+            if not isinstance(failure, Exception):
+                if kick:
+                    self._ingress.put_kick()
+                raise failure
+            handler = self._publish_fatal(failure)
+            if handler is not None:
+                handler(failure)
+            raise failure
+        if kick:
+            self._ingress.put_kick()
+        return offered
 
     def publish_state_patch(self, snapshot: RuntimeSnapshot) -> bool:
         """Broadcast an absolute lifecycle replacement. Never blocks.
@@ -2836,6 +2911,11 @@ class SSEBroker:
                 return
         with self._registry_lock:
             handles = tuple(self._connections)
+        if isinstance(item, _MemoryPatch):
+            for handle in handles:
+                if item.revision > handle.memory_revision_through:
+                    handle.queue.offer(item.frame)
+            return
         if isinstance(item, _BroadcastPatch):
             for handle in handles:
                 if handle.session_valid is None:

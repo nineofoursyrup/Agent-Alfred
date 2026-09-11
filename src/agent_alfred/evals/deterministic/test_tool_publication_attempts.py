@@ -166,17 +166,18 @@ def test_legacy_null_identity_does_not_authorize_recreation(
     monkeypatch.setattr(
         schema, "MIGRATIONS", tuple(m for m in current if m.version < 9)
     )
-    host = build_default_host(
-        state_dir=state, factory=ScriptedModelFactory(ScriptedModel([]))
-    )
-    host._conn.execute(
+    # Build genuine pre-v9 rows before assembling today's Host dependencies.
+    state.mkdir()
+    legacy = sqlite3.connect(state / "db.sqlite3")
+    schema.migrate(legacy)
+    legacy.execute(
         "INSERT INTO file_operations VALUES "
         "('operation','draft_message','outbox/draft.md','new',NULL,?,"
         "'call','run',NULL,'2026-09-10T00:00:00Z',?,'fingerprint',NULL,NULL)",
         (old_state, 'historical receipt' if old_state == 'complete' else None),
     )
-    host._conn.commit()
-    host.close()
+    legacy.commit()
+    legacy.close()
     monkeypatch.setattr(schema, "MIGRATIONS", current)
     restarted = build_default_host(
         state_dir=state, factory=ScriptedModelFactory(ScriptedModel([]))

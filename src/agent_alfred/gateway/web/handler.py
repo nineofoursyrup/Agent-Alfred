@@ -343,6 +343,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
             status, payload = api.mainbar(params)
             self._send(status, payload)
             return
+        if path in {"/api/memory/consolidation", "/api/memory/mirrors"}:
+            status, payload = api.memory_read(params, mirrors=path.endswith("/mirrors"))
+            self._send(status, payload)
+            return
         if path == CONNECTIONS_PATH:
             status, payload = api.connections()
             self._send(status, payload)
@@ -359,6 +363,15 @@ class DashboardHandler(BaseHTTPRequestHandler):
         context = self._context
         if method != "POST":
             self._send(405, {"code": "method_not_allowed"})
+            return
+        if path == "/api/memory/consolidation/actions":
+            assert authorization.body_length is not None
+            body, error = self._read_body(authorization.body_length)
+            if error is not None:
+                self._send(400, {"code": error})
+                return
+            status, payload = context.api.memory_action(body)
+            self._send(status, payload)
             return
         if path == SESSIONS_PATH:
             assert authorization.body_length is not None

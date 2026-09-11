@@ -849,3 +849,8 @@ def state_patch_frames(body: dict) -> PreparedFrames:
     connection is closed instead and the client reconnects for the snapshot.
     """
     return replace(_single_payload_frame(STATE_PATCH, body), must_deliver=True)
+
+
+def memory_patch_frames(body: dict) -> PreparedFrames:
+    """Body-free persisted-state invalidation, without domain seq/checkpoint."""
+    return replace(_single_payload_frame("memory_patch", body), must_deliver=True)
