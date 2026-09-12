@@ -189,6 +189,7 @@ class DashboardRuntime:
         self._construction_rollback = construction_rollback
         self._host: RuntimeHost | None = None
         self._broker: SSEBroker | None = None
+        self._handler_context: HandlerContext | None = None
         self._conn: sqlite3.Connection | None = None
         self._database_owner: ResumableRollback | None = None
         self._thread: Any = None
@@ -397,18 +398,18 @@ class DashboardRuntime:
         # The guard depends on the port that was actually bound, which is
         # only knowable now, so the context is attached here -- still before
         # anything can be accepted.
-        service.attach_context(
-            HandlerContext(
-                guard=RequestGuard(port=service.port, csrf_token=self._csrf_token),
-                # The Host satisfies the DashboardFacade protocol itself, so
-                # the API is built on it directly: every member it needs --
-                # the reads, the snapshot and the mutation gate's authority --
-                # is answered by the one object that owns the facts.
-                api=DashboardApi(facade=host, trace_root=self._trace_root),
-                broker=broker,
-                instance_id=self._instance_id,
-            )
+        context = HandlerContext(
+            guard=RequestGuard(port=service.port, csrf_token=self._csrf_token),
+            # The Host satisfies the DashboardFacade protocol itself, so
+            # the API is built on it directly: every member it needs --
+            # the reads, the snapshot and the mutation gate's authority --
+            # is answered by the one object that owns the facts.
+            api=DashboardApi(facade=host, trace_root=self._trace_root),
+            broker=broker,
+            instance_id=self._instance_id,
         )
+        self._handler_context = context
+        service.attach_context(context)
         # 6. The dispatcher starts before the Host recovers, so an event
         #    published during recovery is delivered to the first connection
         #    that arrives rather than left sitting in a queue nobody is
@@ -485,9 +486,18 @@ class DashboardRuntime:
         know how long a Run takes and does not pretend to.
         """
         service = self._service
+        context = self._handler_context
+        if context is not None:
+            context.stop_requests()
         # 8. Stop accepting first: nothing new may arrive while the rest is
         #    being wound down.
         if not service.stop_serving(timeout=timeout):
+            return False
+        # Accepted/keepalive requests may outlive the listening thread.
+        # Ordinary requests can borrow Host mirrors and other resources too.
+        if context is not None and not context.wait_requests(
+            streams=False, timeout=timeout
+        ):
             return False
         # An assembler can fail after creating a Host but before returning
         # it.  Its typed owner must finish before this runtime releases the
@@ -521,6 +531,12 @@ class DashboardRuntime:
             if not drained:
                 return False
             self._broker_stopped = True
+        # SSE preparation and handlers can still borrow the database even
+        # after the broker has drained its writers. Do not release it early.
+        if context is not None and not context.wait_requests(
+            streams=True, timeout=timeout
+        ):
+            return False
         # 5-1. Only once nothing is running does this process give up what
         #      the running parts were using.
         self._release_locked()
