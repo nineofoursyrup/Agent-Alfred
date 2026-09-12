@@ -434,6 +434,7 @@ class RuntimeHost:
 
         persona_tools = PersonaTools(self._file_tools, settings)
         skill_tools = SkillTools(self._file_tools, builtin=skill_builtin)
+        self._skill_catalog = skill_tools.catalog
         self._external_tools = ExternalToolLedger(self._store, clock)
         tools = ToolRegistry(
             (*CalendarTools(self._store, clock).declarations(),
@@ -480,6 +481,11 @@ class RuntimeHost:
     @property
     def memory_service(self):
         return self._memory_service
+
+    @property
+    def skill_catalog(self):
+        """The read-only Skill index built at startup; None without a state dir."""
+        return self._skill_catalog
 
     @property
     def process_instance_id(self) -> str:

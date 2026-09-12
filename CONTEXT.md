@@ -334,9 +334,16 @@ _Avoid_: Observer、观察者
 进程内**当前权威快照**的版本号，随每一次生命周期状态变化递增，与 `process_instance_id` 同行携带。
 客户端据它拒收倒退的补丁。它描述的是「现在是什么样」，不是「发生过什么」。
 
-**三个序号互不相通**：
+**记忆修订号（`memory_revision`）**：
+记忆库自己的单行持久时钟，随该库每一次持久状态变化递增——事实、遗忘进度、提炼批次
+与镜像状态都计入。它与 Run/会话的 `activity_revision` 是相互独立的持久时钟，
+客户端据它判断手里的记忆读数是否已经陈旧。
+_Avoid_: 版本号、修订
+
+**四个序号互不相通**：
 `seq` 是事件的发布线性化顺序，`state_revision` 是进程内快照的版本，
-`activity_revision` 是持久状态变化的顺序。三者**完全正交**——
+`activity_revision` 是持久状态变化的顺序，`memory_revision` 是记忆库持久状态变化的顺序。
+四者**完全正交**——
 不得互相比较、不得互相推导、不得拿其中一个给另一个排序或判新旧。
 它们碰巧都是单调递增的整数，而这就是把它们混为一谈的全部诱因。
 
@@ -352,12 +359,14 @@ _Avoid_: Observer、观察者
 今天同真是巧合，混用会让两个轴焊死在每一处调用点上。
 
 **SSE 载荷（SSE payload）**：
-经 SSE 送到浏览器的东西闭合为三类，各有各的序号来源：
+经 SSE 送到浏览器的东西闭合为四类，各有各的序号来源：
 `domain_event` 是既有的领域事件，每个物理 payload 都携带发布时的事件 `seq`，
 同一分片逻辑事件的所有 payload 使用同一个值；
 `transport_notice` 只描述本条连接，**不占 `seq`**，不进 trace 也不进重放环；
 `state_patch` 是幂等的**绝对**生命周期替换（不是增量），不占 `seq`，
-自带 `process_instance_id` 与 `state_revision`。
+自带 `process_instance_id` 与 `state_revision`；
+`memory_patch` 是记忆库变更的**失效通知**——不带正文也不带变更内容，不占 `seq`，
+自带 `process_instance_id` 与 `memory_revision`，说的是「重新去读」，不是「这是新值」。
 让传输层的通知占掉一个 `seq`，会让别的连接凭空缺号。
 
 **`flush_at_run_end`（持久性关键）**：

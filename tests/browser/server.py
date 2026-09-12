@@ -109,13 +109,18 @@ class BrowserModel(ScriptedModel):
                         (TextBlock(text),), "end_turn", request.model
                     ),
                 )
+        return self.committed(result, request.model, events)
+
+    @staticmethod
+    def committed(result, model, events):
+        """Publish the scripted reply as one ordinary committed Attempt."""
         attempt = result.attempts[0]
         usage = Usage(output_tokens=4, endpoint_reported_cost_usd=Decimal("0.125"))
         if events is not None:
             events.emit(
                 AttemptStarted(
                     attempt_id=attempt.attempt_id,
-                    model=request.model,
+                    model=model,
                 )
             )
             events.emit(

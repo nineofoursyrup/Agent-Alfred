@@ -1,6 +1,8 @@
 import { node, textBlocks } from "./dom.js";
 import { Pager } from "./pages.js";
+import { interval, originLabel, sourceGroups } from "./memory.js";
 /** @typedef {Record<string,any>} Wire */
+/** @typedef {{expanded: Map<string, Wire>, toggle: (ref: Wire) => void}} References */
 /** @param {Wire} run */
 export function outcomeLabel(run) {
   const labels = /** @type {Record<string,string>} */ ({
@@ -14,8 +16,8 @@ export function outcomeLabel(run) {
   );
 }
 
-/** @param {HTMLElement} root @param {import('./progress.js').Progress} progress @param {()=>void} navigate */
-export function runsPage(root, progress, navigate) {
+/** @param {HTMLElement} root @param {import('./progress.js').Progress} progress @param {()=>void} navigate @param {import('./memory.js').MemorySync} memory */
+export function runsPage(root, progress, navigate, memory) {
   const filter = node("select");
   filter.setAttribute("aria-label", "运行筛选");
   for (const [value, label] of [
@@ -51,6 +53,50 @@ export function runsPage(root, progress, navigate) {
   /** @type {Wire|null} */ let evidence = null;
   /** @type {Wire|null} */ let live = null;
   /** @type {Wire|null} */ let globalActive = null;
+  // Expanded references always re-read the current record; nothing from the
+  // Run's time is shown as current, and invalidation hides what was shown.
+  /** @type {Map<string, Wire>} */ const expanded = new Map();
+  /** @param {string} key */
+  async function current(key) {
+    const entry = expanded.get(key);
+    if (!entry) return;
+    entry.state = memory.online ? "loading" : "offline";
+    entry.record = null;
+    update();
+    if (!memory.online) return;
+    const result = await memory.read("/api/memory/record", {
+      kind: entry.ref.kind,
+      id: entry.ref.memory_id,
+    });
+    if (expanded.get(key) !== entry || result.state === "stale") return;
+    if (result.state === "ok") {
+      entry.state = "current";
+      entry.record = result.body.record;
+    } else if (result.state === "failed") {
+      entry.state = result.status === 404 ? "gone" : "failed";
+      entry.code = result.code;
+    } else entry.state = "offline";
+    update();
+  }
+  /** @type {References} */ const references = {
+    expanded,
+    toggle(ref) {
+      const key = referenceKey(ref);
+      if (expanded.delete(key)) update();
+      else {
+        expanded.set(key, { ref });
+        void current(key);
+      }
+    },
+  };
+  // #page outlives this page instance; its own detail section does not.
+  const unwatch = memory.watch(() => {
+    if (!detail.isConnected) {
+      unwatch();
+      return;
+    }
+    for (const key of expanded.keys()) void current(key);
+  });
   /** @param {Wire|null} active */
   function sync(active) {
     globalActive = active;
@@ -174,6 +220,8 @@ export function runsPage(root, progress, navigate) {
     const focused = document.activeElement;
     const focusAttempt = focused?.tagName === "SUMMARY" && detail.contains(focused)
       ? /** @type {HTMLElement} */ (focused.parentElement).dataset.attempt : null;
+    const focusReference = focused instanceof HTMLElement && detail.contains(focused)
+      ? focused.dataset.reference : undefined;
     detail.replaceChildren(node("h2", "过程证据"), node("p", "事件发布顺序"));
     if (evidence?.trace_incomplete === true)
       detail.append(node("p", "追踪不完整"));
@@ -194,7 +242,7 @@ export function runsPage(root, progress, navigate) {
                 : "过程记录不可用",
         ),
       );
-    renderInputs(detail, evidence?.memory);
+    renderInputs(detail, evidence?.memory, references);
     const selectedId = selectedRun.run_id;
     const confirmed = new Set(
       [...progress.attempts.values()]
@@ -229,6 +277,12 @@ export function runsPage(root, progress, navigate) {
       if (focusAttempt && focusAttempt === item.dataset.attempt)
         item.querySelector("summary")?.focus({preventScroll: true});
     }
+    if (focusReference !== undefined)
+      for (const button of detail.querySelectorAll("button"))
+        if (button.dataset.reference === focusReference) {
+          button.focus({preventScroll: true});
+          break;
+        }
   }
   if (selected !== null) {
     void (async () => {
@@ -393,8 +447,95 @@ function renderCost(root, charge) {
   }
 }
 
-/** @param {HTMLElement} root @param {Wire|undefined} memory */
-function renderInputs(root, memory) {
+/** @param {Wire} ref */
+function referenceKey(ref) {
+  return [ref.kind, ref.memory_id, ref.record_version].join("\u0000");
+}
+
+/** @param {Wire} ref @param {string} label @param {References} references */
+function referenceRow(ref, label, references) {
+  const row = node("div");
+  const key = referenceKey(ref);
+  const entry = references.expanded.get(key);
+  row.append(node("p", label));
+  const toggle = node("button", entry ? "收起当前内容" : "查看当前内容");
+  toggle.dataset.reference = `${label}\u0000${key}`;
+  toggle.addEventListener("click", () => references.toggle(ref));
+  row.append(toggle);
+  if (!entry) return row;
+  const record = entry.record;
+  row.append(
+    entry.state === "offline"
+      ? node("p", "连接中断：正文已隐藏，重连并核验后再显示。")
+      : entry.state === "gone"
+        ? node("p", "记录已不存在（可能已被删除）；不显示旧正文。")
+        : entry.state === "failed"
+          ? node("p", `读取失败（${entry.code}）：不能确认记录是否存在。`)
+          : entry.state !== "current" || !record
+            ? node("p", "正在读取当前内容…")
+            : node(
+                "p",
+                record.record_version === ref.record_version
+                  ? "当前内容与引用版本一致"
+                  : `当前展示为修改后内容（当前版本 ${record.record_version}，引用时版本 ${ref.record_version}）`,
+              ),
+  );
+  if (entry.state === "current" && record)
+    row.append(
+      node(
+        "p",
+        record.kind === "semantic"
+          ? `${record.subject}：${record.fact}`
+          : `${record.summary}（${interval(record)}）`,
+      ),
+      node(
+        "small",
+        `创建：${originLabel(record.origin)} · 最近修改：${originLabel(record.last_change_origin)} · ${record.modified_at}`,
+      ),
+      sourceGroups(record.provenance),
+    );
+  return row;
+}
+
+/** @param {HTMLElement} root @param {Wire} gate @param {References} references */
+function renderGate(root, gate, references) {
+  const section = node("section");
+  section.append(node("h3", "检索门"));
+  section.append(
+    node(
+      "p",
+      `结果 ${gate.outcome} · ${gate.decision_source === "model" ? "模型判断" : "确定性规则"} · 原因 ${gate.reason_code}${gate.fallback_reason ? " · 回退原因 " + gate.fallback_reason : ""}${gate.rule_version ? " · 规则 " + gate.rule_version : ""}`,
+    ),
+  );
+  for (const [name, label] of [["semantic", "语义库"], ["episodic", "情景库"]]) {
+    const store = gate.stores?.[name];
+    if (store)
+      section.append(
+        node(
+          "p",
+          `${label} ${store.status}${store.hit_count === null ? "" : " · 召回 " + store.hit_count}${store.error_code ? " · " + store.error_code : ""}`,
+        ),
+      );
+  }
+  section.append(
+    node(
+      "p",
+      `召回 ${gate.hit_count ?? "未知"} 条 · 选入参考资料 ${gate.selected_count} 条 · 输入处置 ${gate.input_disposition}。选入不等于已发送，实际携带见下方各请求。`,
+    ),
+  );
+  for (const ref of gate.references || [])
+    section.append(
+      referenceRow(
+        ref,
+        `${ref.kind === "semantic" ? "语义" : "情景"} 第 ${ref.rank} 条 · ${ref.memory_id} · 引用版本 ${ref.record_version} · ${originLabel(ref.origin)} · ${ref.selected ? "已选入" : `未选入（${ref.omission_reason}）`}`,
+        references,
+      ),
+    );
+  root.append(section);
+}
+
+/** @param {HTMLElement} root @param {Wire|undefined} memory @param {References} references */
+function renderInputs(root, memory, references) {
   const details = node("details");
   details.dataset.attempt = "input-explanation";
   details.append(node("summary", "本次输入"));
@@ -402,6 +543,12 @@ function renderInputs(root, memory) {
   if (!memory || memory.gate_state === "legacy_unknown") {
     details.append(node("p", "输入说明未知或暂不可读取"));
   }
+  if (memory?.gate_state === "evaluated" && memory.gate)
+    renderGate(details, memory.gate, references);
+  else if (memory?.gate_state === "not_evaluated")
+    details.append(node("p", "本次未评估检索门"));
+  else if (memory?.gate_state === "incomplete")
+    details.append(node("p", "检索门评估未完成，不计入统计"));
   if (memory?.input_evidence_error) {
     details.append(node("p", "输入来源或读取登记暂不可确认；该请求未发送。请检查存储状态后重试。"));
   }
@@ -429,6 +576,14 @@ function renderInputs(root, memory) {
     section.append(node("p", `${input.measurement_version ?? "计量未知"} · ${input.input_characters ?? "未知"} 字符 / 上限 ${input.input_limit ?? "未知"}`));
     const omitted = input.history_exclusions;
     if (omitted) section.append(node("p", `历史排除：不完整 ${omitted.incomplete}，隔离或来源未确认 ${omitted.unsafe}，N 上限 ${omitted.round_limit}，字符预算 ${input.budget_omitted_groups}。`));
+    for (const ref of input.references || [])
+      section.append(
+        referenceRow(
+          ref,
+          `实际请求携带 ${ref.kind === "semantic" ? "语义" : "情景"}记忆 ${ref.memory_id} · 版本 ${ref.record_version}`,
+          references,
+        ),
+      );
     for (const id of input.working_history_groups || []) {
       const link = node("a", `历史 Run ${id}`);
       link.href = `/runs/${encodeURIComponent(id)}`;

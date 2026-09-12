@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { expect } from "@playwright/test";
 
 // The transport is the controlled system boundary. No app functions are exposed.
-export async function controlledTransport(page) {
+export async function controlledEventSource(page) {
   await page.addInitScript(() => {
     window.sources = [];
     window.EventSource = class extends EventTarget {
@@ -16,6 +16,10 @@ export async function controlledTransport(page) {
       }
     };
   });
+}
+
+export async function controlledTransport(page) {
+  await controlledEventSource(page);
   await page.goto("/");
   await page.getByRole("button", { name: "新建会话", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "消息" })).toBeEnabled();
