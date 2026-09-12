@@ -8,7 +8,7 @@ import pytest
 
 from agent_alfred.gateway.web.assets import PAGE_POLICY
 from agent_alfred.gateway.web.guard import RequestGuard
-from agent_alfred.gateway.web.handler import DashboardHandler
+from agent_alfred.gateway.web.handler import DashboardHandler, HandlerContext
 
 
 @pytest.mark.parametrize("method", ["GET", "HEAD"])
@@ -18,8 +18,9 @@ def test_static_response_preserves_headers_and_finishes_pending_body(
     method, path, pending,
 ):
     handler = object.__new__(DashboardHandler)
-    handler.server = SimpleNamespace(context=SimpleNamespace(
+    handler.server = SimpleNamespace(context=HandlerContext(
         guard=RequestGuard(port=17736, csrf_token="offline-test-token"),
+        api=None, broker=None, instance_id="offline-test",
     ))
     handler.command = method
     handler.path = path

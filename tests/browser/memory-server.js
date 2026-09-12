@@ -19,7 +19,7 @@ export async function memoryServer({threshold = 10, prepare, spawnProcess = spaw
   async function start() {
     stderr = "";
     server = spawnProcess(".venv/bin/python", [
-      "-B", "tests/browser/memory_server.py", "--port", String(port),
+      "-X", "faulthandler", "-B", "tests/browser/memory_server.py", "--port", String(port),
       "--state", directory, "--threshold", String(threshold),
     ]);
     // Capture close at creation: exit may precede final stderr or stop().

@@ -20,6 +20,7 @@ Two rules shape the response headers:
 from __future__ import annotations
 
 import json
+import threading
 from http.server import BaseHTTPRequestHandler
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlsplit
@@ -103,6 +104,40 @@ class HandlerContext:
         self.api = api
         self.broker = broker
         self.instance_id = instance_id
+        self._requests = threading.Condition()
+        self._stopping = False
+        self._active_requests: dict[object, bool] = {}
+
+    def begin_request(self, registration: object, *, stream: bool) -> bool:
+        """Register under the caller's already-owned, unique release identity."""
+        with self._requests:
+            if self._stopping:
+                return False
+            self._active_requests[registration] = stream
+            return True
+
+    def end_request(self, registration: object) -> None:
+        """Idempotent even for rejection or interruption before registration."""
+        with self._requests:
+            self._active_requests.pop(registration, None)
+            self._requests.notify_all()
+
+    def stop_requests(self) -> None:
+        with self._requests:
+            self._stopping = True
+
+    def wait_requests(self, *, streams: bool, timeout: float | None) -> bool:
+        """Ordinary reads drain before Host resources; SSE after broker stop.
+
+        A five-second default bounds a stuck client; False retains resources
+        so a later Dashboard.close can resume without declaring shutdown done.
+        """
+        with self._requests:
+            return self._requests.wait_for(
+                lambda: not self._active_requests if streams
+                else all(self._active_requests.values()),
+                timeout=5.0 if timeout is None else max(0.0, timeout),
+            )
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
@@ -248,6 +283,22 @@ class DashboardHandler(BaseHTTPRequestHandler):
         if isinstance(authorization, Rejection):
             self._reject(authorization)
             return
+        stream = method == "GET" and urlsplit(self.path).path == EVENTS_PATH
+        registration = object()
+        # Ownership starts before begin_request: its effect may succeed and
+        # then be interrupted before the call returns to this frame.
+        try:
+            if not context.begin_request(registration, stream=stream):
+                self.close_connection = True
+                self._send(503, {"code": "shutting_down"})
+                return
+            self._handle_admitted(method, authorization)
+        finally:
+            context.end_request(registration)
+
+    def _handle_admitted(
+        self, method: str, authorization: AuthorizedRequest
+    ) -> None:
         if method == "OPTIONS":
             self._send(405, {"code": "no_preflight"})
             return
