@@ -333,6 +333,9 @@ function receiptsPanel(page) {
   const section = node("section");
   section.setAttribute("aria-label", "记忆操作回执");
   const entries = receiptEntries;
+  // Unsubmitted UI choices are scoped to an exact operation and scope revision.
+  /** @type {Map<string, Map<string, number>>} */ const selections = new Map();
+  /** @type {Map<string, number>} */ const confirmations = new Map();
   /** @type {Map<string,string>} */ const notes = new Map();
   // Coalesce concurrent reads, but remember an invalidation during a read.
   /** @type {Map<string,boolean>} */ const querying = new Map();
@@ -406,12 +409,15 @@ function receiptsPanel(page) {
     }
     querying.set(entry.operation_id, false);
     const unconfirmed = entry.state !== "committed";
+    const confirmation = confirmations.get(entry.operation_id) || 0;
+    const obsolete = () => confirmation !== (confirmations.get(entry.operation_id) || 0);
     try {
       const response = await fetch(
         "/api/memory/operations?" +
           new URLSearchParams({ operation_id: entry.operation_id }),
       );
       const body = await response.json();
+      if (obsolete()) return;
       if (response.ok && commandReceipt(body, entry)) {
         committed(entry, body);
         notes.delete(entry.operation_id);
@@ -443,6 +449,7 @@ function receiptsPanel(page) {
         );
       }
     } catch {
+      if (obsolete()) return;
       notes.set(
         entry.operation_id,
         unconfirmed ? "查询失败：仍未确认。" : "清理进度暂不可读取。",
@@ -450,10 +457,9 @@ function receiptsPanel(page) {
     } finally {
       const again = querying.get(entry.operation_id);
       querying.delete(entry.operation_id);
-      // A pre-commit 404 cannot consume a later commit/delete notification.
-      if (again && (entry.state !== "committed" ||
-          (entry.result?.status === "deleted" && entry.forgetting?.state !== "complete")))
-        void query(entry);
+      // One follow-up only for an actual coalesced request. A local complete
+      // receipt cannot cancel requested verification of current progress.
+      if (again) void query(entry);
     }
     persist();
     render();
@@ -467,9 +473,7 @@ function receiptsPanel(page) {
     for (const entry of entries)
       if (
         entry.state === "pending" || entry.state === "sending" ||
-        (entry.state === "committed" &&
-          entry.result?.status === "deleted" &&
-          entry.forgetting?.state !== "complete")
+        (entry.state === "committed" && entry.action === "delete")
       )
         await query(entry);
   }
@@ -502,9 +506,12 @@ function receiptsPanel(page) {
         body: null,
       };
     if (response.ok && response.body) {
+      confirmations.set(entry.operation_id, (confirmations.get(entry.operation_id) || 0) + 1);
       entry.forgetting = response.body.forgetting;
       delete entry.confirming;
       notes.delete(entry.operation_id);
+      persist();
+      render();
       await query(entry);
       return;
     }
@@ -553,6 +560,11 @@ function receiptsPanel(page) {
     const pending = (Array.isArray(entry.scopes) ? entry.scopes : []).filter(
       (scope) => scope.state === "pending",
     );
+    const selected = selections.get(entry.operation_id) || new Map();
+    selections.set(entry.operation_id, selected);
+    for (const [id, revision] of selected)
+      if (state !== "needs_scope" || !pending.some(scope => scope.scope_id === id && scope.revision === revision))
+        selected.delete(id);
     if (state === "needs_scope" && pending.length) {
       const form = node("fieldset");
       form.append(
@@ -563,6 +575,11 @@ function receiptsPanel(page) {
       for (const scope of pending) {
         const box = input("checkbox");
         box.value = scope.scope_id;
+        box.checked = selected.get(scope.scope_id) === scope.revision;
+        box.addEventListener("change", () => {
+          if (box.checked) selected.set(scope.scope_id, scope.revision);
+          else selected.delete(scope.scope_id);
+        });
         boxes.push(box);
         const bounds = scope.boundary || {};
         field(

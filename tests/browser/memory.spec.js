@@ -1779,3 +1779,301 @@ test("G2 v4: controlled stream waits for the application's entry read", async ({
     await expect(page.getByRole("tabpanel", {name: "语义记忆"}).getByText("记忆库为空。", {exact: true})).toBeVisible();
   } finally { release?.(); await server.close(); }
 });
+
+test("G2 v5: receipt refresh preserves the selected exact legacy scope", async ({page}) => {
+  const {execFileSync} = await import("node:child_process");
+  const server = await memoryServer({
+    prepare: directory => execFileSync(".venv/bin/python", ["-B", "-c", SEED_LEGACY, directory]),
+  });
+  try {
+    await page.goto(server.origin + "/memory");
+    const panel = page.getByRole("tabpanel", {name: "语义记忆"});
+    await panel.getByLabel("新主题").fill("饮食");
+    await panel.getByLabel("新事实").fill("legacy scoped fact");
+    await panel.getByRole("button", {name: "保存", exact: true}).click();
+    await panel.getByRole("button", {name: "查看详情", exact: true}).click();
+    await panel.getByRole("button", {name: "删除", exact: true}).click();
+    await panel.getByRole("button", {name: "确认删除", exact: true}).click();
+    const receipt = page.getByRole("region", {name: "记忆操作回执"}).locator("article").first();
+    await expect(receipt).toContainText("记忆已删除（数据库已确认）");
+    await expect(receipt).toContainText("来源关联不完整：确认隔离范围之前遗忘尚未完成。");
+    const scopes = receipt.getByRole("group", {name: "待确认的历史范围（服务端快照）"});
+    const scope = scopes.getByLabel(/^legacy legacy \/会话\? · 55 个历史组 · 时间未知 至 时间未知 · 修订 1/);
+    await expect(scope).toBeVisible();
+    await scopes.getByRole("button", {name: "确认隔离所选范围", exact: true}).click();
+    await expect(receipt).toContainText("来源关联不完整");
+    await scope.check();
+    const checkedNode = await scope.elementHandle();
+    const other = await api(page.request, server.origin);
+    await other.command({operation_id: "scope-refresh", kind: "semantic", action: "save", payload: {subject: "other", fact: "unrelated invalidation"}});
+    await expect.poll(() => checkedNode.evaluate(element => element.isConnected)).toBe(false);
+    await expect(scope).toBeChecked();
+    await scopes.getByRole("button", {name: "确认隔离所选范围", exact: true}).click();
+    await expect(receipt).toContainText("遗忘完成：条目、索引与受管副本均已清理并核实。");
+    await expect(receipt.getByRole("group")).toHaveCount(0);
+    await expect(receipt).toContainText("原始会话与删除前的追踪仍可人工查看");
+  } finally {
+    await server.close();
+  }
+});
+
+test("G2 v5: late pre-confirmation receipt cannot restore needs-scope progress", async ({page}) => {
+  const {execFileSync} = await import("node:child_process");
+  const server = await memoryServer({
+    prepare: directory => execFileSync(".venv/bin/python", ["-B", "-c", SEED_LEGACY, directory]),
+  });
+  try {
+    await page.goto(server.origin + "/memory");
+    const panel = page.getByRole("tabpanel", {name: "语义记忆"});
+    await panel.getByLabel("新主题").fill("饮食");
+    await panel.getByLabel("新事实").fill("legacy scoped fact");
+    await panel.getByRole("button", {name: "保存", exact: true}).click();
+    await panel.getByRole("button", {name: "查看详情", exact: true}).click();
+    await panel.getByRole("button", {name: "删除", exact: true}).click();
+    await panel.getByRole("button", {name: "确认删除", exact: true}).click();
+    const receipt = page.getByRole("region", {name: "记忆操作回执"}).locator("article").first();
+    await expect(receipt).toContainText("记忆已删除（数据库已确认）");
+    await expect(receipt).toContainText("来源关联不完整：确认隔离范围之前遗忘尚未完成。");
+    const scopes = receipt.getByRole("group", {name: "待确认的历史范围（服务端快照）"});
+    const scope = scopes.getByLabel(/^legacy legacy \/会话\? · 55 个历史组 · 时间未知 至 时间未知 · 修订 1/);
+    await expect(scope).toBeVisible();
+    await scopes.getByRole("button", {name: "确认隔离所选范围", exact: true}).click();
+    await expect(receipt).toContainText("来源关联不完整");
+    let release;
+    const held = new Promise(resolve => {release = resolve;});
+    let captured = false;
+    let delivered = false;
+    await page.route("**/api/memory/operations?*", async route => {
+      if (captured) return route.continue();
+      const response = await route.fetch(); captured = true;
+      await held; await route.fulfill({response}); delivered = true;
+    });
+    const other = await api(page.request, server.origin);
+    await other.command({operation_id: "late-scope-refresh", kind: "semantic", action: "save", payload: {subject: "other", fact: "unrelated"}});
+    await expect.poll(() => captured).toBe(true);
+    await scope.check();
+    await scopes.getByRole("button", {name: "确认隔离所选范围", exact: true}).click();
+    await expect.poll(() => page.evaluate(() => JSON.parse(sessionStorage.getItem("alfred.memory.operations")).find(e => e.action === "delete")?.forgetting?.state)).toBe("complete");
+    await expect(receipt).toContainText("遗忘完成：条目、索引与受管副本均已清理并核实。");
+    const watched = await watchText(page, "来源关联不完整");
+    release();
+    await expect.poll(() => delivered).toBe(true);
+    await expect(receipt).toContainText("遗忘完成：条目、索引与受管副本均已清理并核实。");
+    await expect(receipt.getByRole("group")).toHaveCount(0);
+    expect((await watched()).shown).toBe(false);
+    await expect(receipt).toContainText("原始会话与删除前的追踪仍可人工查看");
+  } finally {
+    await server.close();
+  }
+});
+
+test("G2 v5: a revised scope requires a new explicit selection", async ({page}) => {
+  const {execFileSync} = await import("node:child_process");
+  const server = await memoryServer({
+    prepare: directory => execFileSync(".venv/bin/python", ["-B", "-c", SEED_LEGACY, directory]),
+  });
+  try {
+    await page.goto(server.origin + "/memory");
+    const panel = page.getByRole("tabpanel", {name: "语义记忆"});
+    await panel.getByLabel("新主题").fill("饮食");
+    await panel.getByLabel("新事实").fill("legacy scoped fact");
+    await panel.getByRole("button", {name: "保存", exact: true}).click();
+    await panel.getByRole("button", {name: "查看详情", exact: true}).click();
+    await panel.getByRole("button", {name: "删除", exact: true}).click();
+    await panel.getByRole("button", {name: "确认删除", exact: true}).click();
+    const receipt = page.getByRole("region", {name: "记忆操作回执"}).locator("article").first();
+    await expect(receipt).toContainText("记忆已删除（数据库已确认）");
+    await expect(receipt).toContainText("来源关联不完整：确认隔离范围之前遗忘尚未完成。");
+    const scopes = receipt.getByRole("group", {name: "待确认的历史范围（服务端快照）"});
+    const scope = scopes.getByLabel(/^legacy legacy \/会话\? · 55 个历史组 · 时间未知 至 时间未知 · 修订 1/);
+    await expect(scope).toBeVisible();
+    await scopes.getByRole("button", {name: "确认隔离所选范围", exact: true}).click();
+    await expect(receipt).toContainText("来源关联不完整");
+    await scope.check();
+    await page.route("**/api/memory/operations?*", async route => {
+      const response = await route.fetch();
+      const body = await response.json();
+      // Exercise the read contract's revision boundary without authorizing
+      // this fabricated successor on the real server.
+      if (body.scopes) body.scopes = body.scopes.map(scope => ({...scope, revision: scope.revision + 1}));
+      await route.fulfill({response, json: body});
+    });
+    const checkedNode = await scope.elementHandle();
+    const other = await api(page.request, server.origin);
+    await other.command({operation_id: "scope-refresh", kind: "semantic", action: "save", payload: {subject: "other", fact: "unrelated invalidation"}});
+    await expect.poll(() => checkedNode.evaluate(element => element.isConnected)).toBe(false);
+    const revised = scopes.getByRole("checkbox");
+    await expect(revised).not.toBeChecked();
+    await expect(scopes).toContainText("修订 2");
+    let sent = false;
+    await page.route("**/api/memory/forget/actions", route => {sent = true; return route.continue();});
+    await scopes.getByRole("button", {name: "确认隔离所选范围", exact: true}).click();
+    expect(sent).toBe(false);
+    await expect(receipt).toContainText("来源关联不完整");
+  } finally {
+    await server.close();
+  }
+});
+
+test("G2 v6: late abort is ignored and the coalesced query runs", async ({page}) => {
+  const {execFileSync} = await import("node:child_process");
+  const server = await memoryServer({
+    prepare: directory => execFileSync(".venv/bin/python", ["-B", "-c", SEED_LEGACY, directory]),
+  });
+  try {
+    await page.goto(server.origin + "/memory");
+    const panel = page.getByRole("tabpanel", {name: "语义记忆"});
+    await panel.getByLabel("新主题").fill("饮食");
+    await panel.getByLabel("新事实").fill("legacy scoped fact");
+    await panel.getByRole("button", {name: "保存", exact: true}).click();
+    await panel.getByRole("button", {name: "查看详情", exact: true}).click();
+    await panel.getByRole("button", {name: "删除", exact: true}).click();
+    await panel.getByRole("button", {name: "确认删除", exact: true}).click();
+    const receipt = page.getByRole("region", {name: "记忆操作回执"}).locator("article").first();
+    await expect(receipt).toContainText("记忆已删除（数据库已确认）");
+    await expect(receipt).toContainText("来源关联不完整：确认隔离范围之前遗忘尚未完成。");
+    const scopes = receipt.getByRole("group", {name: "待确认的历史范围（服务端快照）"});
+    const scope = scopes.getByLabel(/^legacy legacy \/会话\? · 55 个历史组 · 时间未知 至 时间未知 · 修订 1/);
+    await expect(scope).toBeVisible();
+    await scopes.getByRole("button", {name: "确认隔离所选范围", exact: true}).click();
+    await expect(receipt).toContainText("来源关联不完整");
+    let release;
+    const held = new Promise(resolve => {release = resolve;});
+    let captured = false;
+    let delivered = false;
+    let reads = 0;
+    await page.route("**/api/memory/operations?*", async route => {
+      reads++;
+      if (captured) return route.continue();
+      const response = await route.fetch(); captured = true;
+      await held; await route.abort("failed"); delivered = true;
+    });
+    const other = await api(page.request, server.origin);
+    await other.command({operation_id: "late-scope-refresh", kind: "semantic", action: "save", payload: {subject: "other", fact: "unrelated"}});
+    await expect.poll(() => captured).toBe(true);
+    await scope.check();
+    await scopes.getByRole("button", {name: "确认隔离所选范围", exact: true}).click();
+    await expect.poll(() => page.evaluate(() => JSON.parse(sessionStorage.getItem("alfred.memory.operations")).find(e => e.action === "delete")?.forgetting?.state)).toBe("complete");
+    await expect(receipt).toContainText("遗忘完成：条目、索引与受管副本均已清理并核实。");
+    const watched = await watchText(page, "清理进度暂不可读取");
+    release();
+    await expect.poll(() => delivered).toBe(true);
+    await expect.poll(() => reads).toBeGreaterThan(1);
+    await expect(receipt).toContainText("遗忘完成：条目、索引与受管副本均已清理并核实。");
+    await expect(receipt.getByRole("group")).toHaveCount(0);
+    expect((await watched()).shown).toBe(false);
+    await expect(receipt).toContainText("原始会话与删除前的追踪仍可人工查看");
+  } finally {
+    await server.close();
+  }
+});
+
+
+test("G2 v6: late truncated-json is ignored and the coalesced query runs", async ({page}) => {
+  const {execFileSync} = await import("node:child_process");
+  const server = await memoryServer({
+    prepare: directory => execFileSync(".venv/bin/python", ["-B", "-c", SEED_LEGACY, directory]),
+  });
+  try {
+    await page.goto(server.origin + "/memory");
+    const panel = page.getByRole("tabpanel", {name: "语义记忆"});
+    await panel.getByLabel("新主题").fill("饮食");
+    await panel.getByLabel("新事实").fill("legacy scoped fact");
+    await panel.getByRole("button", {name: "保存", exact: true}).click();
+    await panel.getByRole("button", {name: "查看详情", exact: true}).click();
+    await panel.getByRole("button", {name: "删除", exact: true}).click();
+    await panel.getByRole("button", {name: "确认删除", exact: true}).click();
+    const receipt = page.getByRole("region", {name: "记忆操作回执"}).locator("article").first();
+    await expect(receipt).toContainText("记忆已删除（数据库已确认）");
+    await expect(receipt).toContainText("来源关联不完整：确认隔离范围之前遗忘尚未完成。");
+    const scopes = receipt.getByRole("group", {name: "待确认的历史范围（服务端快照）"});
+    const scope = scopes.getByLabel(/^legacy legacy \/会话\? · 55 个历史组 · 时间未知 至 时间未知 · 修订 1/);
+    await expect(scope).toBeVisible();
+    await scopes.getByRole("button", {name: "确认隔离所选范围", exact: true}).click();
+    await expect(receipt).toContainText("来源关联不完整");
+    let release;
+    const held = new Promise(resolve => {release = resolve;});
+    let captured = false;
+    let delivered = false;
+    let reads = 0;
+    await page.route("**/api/memory/operations?*", async route => {
+      reads++;
+      if (captured) return route.continue();
+      const response = await route.fetch(); captured = true;
+      await held; await route.fulfill({status:200,contentType:"application/json",body:"{\"result\":"}); delivered = true;
+    });
+    const other = await api(page.request, server.origin);
+    await other.command({operation_id: "late-scope-refresh", kind: "semantic", action: "save", payload: {subject: "other", fact: "unrelated"}});
+    await expect.poll(() => captured).toBe(true);
+    await scope.check();
+    await scopes.getByRole("button", {name: "确认隔离所选范围", exact: true}).click();
+    await expect.poll(() => page.evaluate(() => JSON.parse(sessionStorage.getItem("alfred.memory.operations")).find(e => e.action === "delete")?.forgetting?.state)).toBe("complete");
+    await expect(receipt).toContainText("遗忘完成：条目、索引与受管副本均已清理并核实。");
+    const watched = await watchText(page, "清理进度暂不可读取");
+    release();
+    await expect.poll(() => delivered).toBe(true);
+    await expect.poll(() => reads).toBeGreaterThan(1);
+    await expect(receipt).toContainText("遗忘完成：条目、索引与受管副本均已清理并核实。");
+    await expect(receipt.getByRole("group")).toHaveCount(0);
+    expect((await watched()).shown).toBe(false);
+    await expect(receipt).toContainText("原始会话与删除前的追踪仍可人工查看");
+  } finally {
+    await server.close();
+  }
+});
+
+
+test("G2 v6: retained complete deletion rechecks on invalidation and reconnect without polling", async ({page}) => {
+  const server = await memoryServer();
+  try {
+    const other = await api(page.request, server.origin);
+    const stream = await controlledStream(page, server.origin);
+    await other.command({operation_id:"reopen-seed",kind:"semantic",action:"save",payload:{subject:"cleanup",fact:"fact"}});
+    await page.goto(server.origin + "/memory");
+    await stream.connect();
+    const panel = page.getByRole("tabpanel", {name:"语义记忆"});
+    await panel.getByRole("button", {name:"查看详情",exact:true}).click();
+    await panel.getByRole("button", {name:"删除",exact:true}).click();
+    await panel.getByRole("button", {name:"确认删除",exact:true}).click();
+    const receipt = page.getByRole("region", {name:"记忆操作回执"}).locator("article").first();
+    await expect(receipt).toContainText("遗忘完成");
+    let reads = 0;
+    let reopened = true;
+    await page.route("**/api/memory/operations?*", async route => {
+      reads++;
+      const response = await route.fetch();
+      const body = await response.json();
+      // Legal read-side progress shape at the HTTP boundary; this does not
+      // simulate an actual server-side late provenance association.
+      if (reopened && body.forgetting) body.forgetting = {...body.forgetting,state:"cleaning"};
+      await route.fulfill({response,json:body});
+    });
+    await other.command({operation_id:"reopen-wakeup",kind:"semantic",action:"save",payload:{subject:"other",fact:"unrelated"}});
+    await stream.patch((await other.get("/api/memory/state")).body.memory_revision);
+    await expect(receipt).toContainText("受管副本清理中");
+    expect(reads).toBeGreaterThan(0);
+    const beforeReconnect = reads;
+    reopened = false;
+    await stream.emit("error", {});
+    await stream.connect();
+    await expect(receipt).toContainText("遗忘完成");
+    expect(reads).toBeGreaterThan(beforeReconnect);
+    const beforeCompleteReconnect = reads;
+    await stream.emit("error", {});
+    await stream.connect();
+    await expect.poll(() => reads).toBeGreaterThan(beforeCompleteReconnect);
+    await expect(receipt).toContainText("遗忘完成");
+    for (let i = 0; i < 5; i++) {
+      await other.get("/api/memory/state");
+      await page.evaluate(() => new Promise(requestAnimationFrame));
+    }
+    // Drain the finite reads through HTTP and browser turns without sending
+    // another invalidation. No timer or self-trigger may create more reads.
+    const snapshot = reads;
+    for (let i = 0; i < 5; i++) {
+      await other.get("/api/memory/state");
+      await page.evaluate(() => new Promise(requestAnimationFrame));
+    }
+    expect(reads).toBe(snapshot);
+  } finally {await server.close();}
+});
