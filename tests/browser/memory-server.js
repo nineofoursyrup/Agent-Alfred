@@ -8,18 +8,22 @@ import {join} from "node:path";
 // A real Memory Dashboard on its own state directory. stdin drives only the
 // offline model's next plan, the Host's own mutation gate and the test-edge
 // faults documented in memory_server.py.
-export async function memoryServer({threshold = 10, prepare} = {}) {
+export async function memoryServer({threshold = 10, prepare, spawnProcess = spawn} = {}) {
   const directory = await mkdtemp(join(tmpdir(), "alfred-memory-browser-"));
   const port = Number(process.env.ALFRED_BROWSER_TEST_PORT || 17736) + 4;
   let server;
   let lines;
   let stderr = "";
+  let closed;
   const waiting = [];
   async function start() {
-    server = spawn(".venv/bin/python", [
+    stderr = "";
+    server = spawnProcess(".venv/bin/python", [
       "-B", "tests/browser/memory_server.py", "--port", String(port),
       "--state", directory, "--threshold", String(threshold),
     ]);
+    // Capture close at creation: exit may precede final stderr or stop().
+    closed = once(server, "close");
     lines = createInterface({input: server.stdout});
     server.stderr.on("data", data => {stderr += data;});
     lines.on("line", line => {
@@ -28,17 +32,17 @@ export async function memoryServer({threshold = 10, prepare} = {}) {
     });
     await Promise.race([
       new Promise(resolve => waiting.push({line: "ready", resolve})),
-      once(server, "exit").then(() => {throw new Error(stderr);}),
+      closed.then(([code, signal]) => {throw new Error(`Memory server closed before ready (code=${code}, signal=${signal}): ${stderr}`);}),
     ]);
   }
   async function stop() {
-    if (server && server.exitCode === null) {
-      const exited = once(server, "exit");
+    if (!server) return;
+    if (server.exitCode === null && server.signalCode === null)
       server.stdin.write("stop\n");
-      await exited;
-    }
+    const [code, signal] = await closed;
     lines?.close();
-    if (server && server.exitCode !== 0) throw new Error(stderr);
+    if (code !== 0 || signal !== null)
+      throw new Error(`Memory server closed (code=${code}, signal=${signal}): ${stderr}`);
   }
   async function send(command) {
     const done = new Promise(resolve => waiting.push({line: "ok " + command, resolve}));

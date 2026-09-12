@@ -1752,3 +1752,30 @@ conn.close()
     }
   } finally { await server.close(); }
 });
+
+test("G2 v4: controlled stream waits for the application's entry read", async ({page}) => {
+  const server = await memoryServer();
+  let release;
+  try {
+    const stream = await controlledStream(page, server.origin);
+    const held = new Promise(resolve => {release = resolve;});
+    let captured = false;
+    await page.route("**/api/entry", async route => {
+      const response = await route.fetch(); captured = true;
+      await held; await route.fulfill({response});
+    });
+    await page.goto(server.origin + "/memory");
+    await expect.poll(() => captured).toBe(true);
+    expect(await page.evaluate(() => window.sources.length)).toBe(0);
+    let outcome = "waiting";
+    const connected = stream.connect().then(() => {outcome = "connected";}, error => {outcome = error.message; throw error;});
+    void connected.catch(() => {});
+    // This round trip establishes that connect reached the browser while
+    // entry is still held; readiness must remain pending, not throw.
+    await page.evaluate(() => document.readyState);
+    expect(outcome).toBe("waiting");
+    release();
+    await connected;
+    await expect(page.getByRole("tabpanel", {name: "语义记忆"}).getByText("记忆库为空。", {exact: true})).toBeVisible();
+  } finally { release?.(); await server.close(); }
+});

@@ -62,6 +62,9 @@ export function run(session, extra = {}) {
 }
 
 export async function emit(page, kind, body) {
+  // Navigation completion does not imply the asynchronous entry read has
+  // created the stream. Wait for that boundary, then dispatch exactly once.
+  await page.waitForFunction(() => window.sources?.length > 0);
   await page.evaluate(
     ({ kind, body }) => {
       const source = window.sources.at(-1);
