@@ -4,6 +4,7 @@ import { Progress } from "./progress.js";
 import { ConnectionNotices, Announcer } from "./notices.js";
 import { inbox, modelsPage, connectionsPage } from "./pages.js";
 import { runsPage, outcomeLabel } from "./runs.js";
+import { MemorySync, memoryPage, memoryReceipts } from "./memory.js";
 /** @typedef {Record<string, any>} Wire */
 /** @template {Element} T @param {string} id @returns {T} */
 function element(id) {
@@ -46,6 +47,8 @@ let historyPending = false;
 let historyLoading = false;
 let historyRefresh = false;
 const progress = new Progress();
+const memory = new MemorySync();
+const receipts = memoryReceipts(memory, () => csrf);
 /** @type {ReturnType<typeof runsPage>|null} */ let runPage = null;
 const notices = new ConnectionNotices(element("connection"));
 const announcer = new Announcer(element("announcements"));
@@ -302,6 +305,7 @@ const stream = new Stream(
         valid = body.session_valid;
         notices.snapshot();
         updateSend();
+        void memory.connected(instance);
       }
       if (body.state_revision <= revision) return;
       notices.snapshot();
@@ -405,12 +409,13 @@ const stream = new Stream(
       progress.interrupt();
       notices.receive(body);
       renderMessages();
-    }
+    } else if (kind === "memory_patch") memory.patch(body);
   },
   () => {
     connected = false;
     progress.interrupt();
     notices.disconnected();
+    memory.disconnected();
     renderMessages();
     updateSend();
   },
@@ -544,6 +549,7 @@ function route() {
   const isRuns = path.startsWith("/runs");
   const isModels = path.startsWith("/models");
   const isConnections = path.startsWith("/connections");
+  const isMemory = path === "/memory";
   const heading = document.createElement("h1");
   heading.textContent = isRuns
     ? "运行详情"
@@ -551,13 +557,22 @@ function route() {
       ? "模型"
       : isConnections
         ? "连接"
-        : "Gateway 收件箱";
+        : isMemory
+          ? "记忆"
+          : "Gateway 收件箱";
+  receipts.detach();
   element("page").replaceChildren(heading);
   runPage = null;
   if (isModels) modelsPage(element("page"), () => csrf);
   else if (isConnections) connectionsPage(element("page"), () => csrf);
+  else if (isMemory)
+    memoryPage(element("page"), memory, {
+      csrf: () => csrf,
+      session: () => session,
+      receipts,
+    });
   else if (!isRuns) inbox(element("page"), resume);
-  else runPage = runsPage(element("page"), progress, route);
+  else runPage = runsPage(element("page"), progress, route, memory);
   if (connected) runPage?.sync(active);
   for (const link of document.querySelectorAll("nav a")) {
     const href = link.getAttribute("href");
@@ -565,7 +580,8 @@ function route() {
       (href === "/runs" && isRuns) ||
       (href === "/models" && isModels) ||
       (href === "/connections" && isConnections) ||
-      (href === "/inbox" && !isRuns && !isModels && !isConnections);
+      (href === "/memory" && isMemory) ||
+      (href === "/inbox" && !isRuns && !isModels && !isConnections && !isMemory);
     if (current) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
   }
@@ -590,6 +606,7 @@ async function resume(target) {
     revision = -1;
     restoreDraft();
     progress.interrupt();
+    memory.disconnected();
     stream.connect(session);
   }
   expanded = true;
@@ -644,6 +661,7 @@ document.addEventListener("click", (event) => {
       link.pathname === "/runs" ||
       link.pathname === "/models" ||
       link.pathname === "/connections" ||
+      link.pathname === "/memory" ||
       link.pathname.startsWith("/runs/")
     ) ||
     event.ctrlKey ||
@@ -679,6 +697,7 @@ element("new-session").addEventListener("click", async () => {
     resetHistory();
     connected = false;
     revision = -1;
+    memory.disconnected();
     stream.connect(session);
     await loadMessages();
     input.focus();

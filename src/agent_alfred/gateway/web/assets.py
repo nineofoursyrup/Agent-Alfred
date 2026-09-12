@@ -16,13 +16,19 @@ ASSETS = {
     "/assets/notices.js": ("notices.js", "text/javascript"),
     "/assets/pages.js": ("pages.js", "text/javascript"),
     "/assets/runs.js": ("runs.js", "text/javascript"),
+    "/assets/memory.js": ("memory.js", "text/javascript"),
 }
 
 
 def page_asset(path: str) -> tuple[bytes, str] | None:
-    if path in {"/", "/inbox", "/runs", "/models", "/connections"} or path.startswith(
-        "/runs/"
-    ):
+    if path in {
+        "/",
+        "/inbox",
+        "/runs",
+        "/memory",
+        "/models",
+        "/connections",
+    } or path.startswith("/runs/"):
         name, content_type = "index.html", "text/html"
     elif path in ASSETS:
         name, content_type = ASSETS[path]

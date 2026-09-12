@@ -33,6 +33,12 @@ from agent_alfred.gateway.web.guard import (
     Rejection,
     RequestGuard,
 )
+from agent_alfred.gateway.web.memory_api import (
+    PAGE_READS as MEMORY_PAGE_READS,
+)
+from agent_alfred.gateway.web.memory_api import (
+    PAGE_WRITES as MEMORY_PAGE_WRITES,
+)
 from agent_alfred.gateway.web.replay import CursorText
 from agent_alfred.resource_rollback import ResumableRollback
 from agent_alfred.runtime.recording import RecordingUnavailable
@@ -347,6 +353,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
             status, payload = api.memory_read(params, mirrors=path.endswith("/mirrors"))
             self._send(status, payload)
             return
+        if path in MEMORY_PAGE_READS:
+            status, payload = api.memory_page_read(path, params)
+            self._send(status, payload)
+            return
         if path == CONNECTIONS_PATH:
             status, payload = api.connections()
             self._send(status, payload)
@@ -371,6 +381,15 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send(400, {"code": error})
                 return
             status, payload = context.api.memory_action(body)
+            self._send(status, payload)
+            return
+        if path in MEMORY_PAGE_WRITES:
+            assert authorization.body_length is not None
+            body, error = self._read_body(authorization.body_length)
+            if error is not None:
+                self._send(400, {"error": {"code": error}})
+                return
+            status, payload = context.api.memory_page_write(path, body)
             self._send(status, payload)
             return
         if path == SESSIONS_PATH:

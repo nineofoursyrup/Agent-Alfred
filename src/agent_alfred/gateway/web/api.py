@@ -367,6 +367,14 @@ class DashboardApi:
         from agent_alfred.gateway.web.memory_api import serve_memory
         return serve_memory(self._facade, body=body)
 
+    def memory_page_read(self, path, params):
+        from agent_alfred.gateway.web.memory_api import serve_memory_read
+        return serve_memory_read(self._facade, path, params)
+
+    def memory_page_write(self, path, body):
+        from agent_alfred.gateway.web.memory_api import serve_memory_write
+        return serve_memory_write(self._facade, path, body)
+
     # -- writes ------------------------------------------------------------
 
     @_map_read_errors

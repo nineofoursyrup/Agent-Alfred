@@ -35,7 +35,12 @@ export class Stream {
       fragments = [];
       this.disconnected();
     });
-    for (const kind of ["state_patch", "transport_notice", "domain_event"]) {
+    for (const kind of [
+      "state_patch",
+      "transport_notice",
+      "domain_event",
+      "memory_patch",
+    ]) {
       source.addEventListener(kind, (event) => {
         const currentEpoch = epoch;
         const data = /** @type {MessageEvent<string>} */ (event).data;

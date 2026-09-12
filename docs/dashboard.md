@@ -1,6 +1,6 @@
 # Dashboard 开发与验证
 
-页面通过现有 Dashboard 服务提供，入口为 `/inbox`，运行页为 `/runs`。
+页面通过现有 Dashboard 服务提供，入口为 `/inbox`，运行页为 `/runs`，记忆页为 `/memory`。
 MainBar 属于壳层；页面导航不会新建 EventSource。Session 和草稿存放在
 当前标签页的 sessionStorage；新建和继续会话均需显式操作。
 
@@ -31,6 +31,8 @@ git diff --check
 旧消息数据库。重连等边界用受控 EventSource 输入，等待以可见状态或事件为准，
 提示计时使用浏览器虚拟时钟。测试端口默认 17736，可用
 `ALFRED_BROWSER_TEST_PORT` 指定；已占用时失败，不复用其他服务。
+Memory 页用例另由 `tests/browser/memory_server.py` 在端口 +4 启动独立状态目录的
+Dashboard，接口与验收对应见 [Issue 46 实现说明](implementation/issue-46-memory-page.md)。
 
 ## 运行详情只读补充接口
 
