@@ -531,7 +531,7 @@ def test_a_failed_settle_enters_recording_failed_and_keeps_answering_503() -> No
     inner = _database()
     conn = _FailOn(
         inner,
-        when=lambda sql: sql.lstrip().upper().startswith("UPDATE")
+        when=lambda sql: sql.lstrip().upper().startswith("UPDATE RUNS")
         and "finished_at" in sql,
     )
     # A non-control BaseException: the worker survives it, so what governs

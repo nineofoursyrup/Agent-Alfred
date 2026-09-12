@@ -50,6 +50,7 @@ class CommandContext:
     permission: object | None = None
     source_groups: tuple[str, ...] = ()
     checkpoint: Callable[[], None] | None = None
+    meter_success: Callable | None = None
 
 
 class _CommandDeadline(TimeoutError):
@@ -507,6 +508,8 @@ class MemoryCommandService:
                     "SELECT revision FROM memory_revision WHERE singleton=1"
                 ).fetchone()[0]
             _check_deadline(context)
+            if context.meter_success is not None:
+                context.meter_success(conn, operation_id)
             conn.commit()
         if affected or source_changed:
             change = {

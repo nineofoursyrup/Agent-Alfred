@@ -191,6 +191,8 @@ def build_host(
     audit_key_path: Path | None = None,
     file_state=None,
     skill_builtin=None,
+    extra_tools=(),
+    tool_policies=None,
 ) -> RuntimeHost:
     settings = settings or Settings()
     clock = clock or SystemClock()
@@ -236,6 +238,8 @@ def build_host(
             file_state=file_state,
             skill_builtin=skill_builtin,
             conn=conn,
+            extra_tools=extra_tools,
+            tool_policies=tool_policies,
             factory=factory,
             settings=settings,
             clock=clock,
@@ -280,6 +284,8 @@ def build_dashboard(
     lock: Callable[[Any], ProcessLock] | None = None,
     pid: int | None = None,
     credentials: CredentialOverlay | None = None,
+    extra_tools=(),
+    tool_policies=None,
 ) -> DashboardRuntime:
     """Build the one Dashboard object. Take no ownership yet.
 
@@ -346,6 +352,8 @@ def build_dashboard(
             host = build_host(
                 conn=conn,
                 factory=resolved_factory,
+                extra_tools=extra_tools,
+                tool_policies=tool_policies,
                 settings=settings,
                 clock=clock,
                 trace_root=managed_trace,

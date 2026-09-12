@@ -8,7 +8,7 @@ import {join} from "node:path";
 // A real Memory Dashboard on its own state directory. stdin drives only the
 // offline model's next plan, the Host's own mutation gate and the test-edge
 // faults documented in memory_server.py.
-export async function memoryServer({threshold = 10, prepare, spawnProcess = spawn} = {}) {
+export async function memoryServer({threshold = 10, prepare, spawnProcess = spawn, script = "tests/browser/memory_server.py"} = {}) {
   const directory = await mkdtemp(join(tmpdir(), "alfred-memory-browser-"));
   const port = Number(process.env.ALFRED_BROWSER_TEST_PORT || 17736) + 4;
   let server;
@@ -19,7 +19,7 @@ export async function memoryServer({threshold = 10, prepare, spawnProcess = spaw
   async function start() {
     stderr = "";
     server = spawnProcess(".venv/bin/python", [
-      "-X", "faulthandler", "-B", "tests/browser/memory_server.py", "--port", String(port),
+      "-X", "faulthandler", "-B", script, "--port", String(port),
       "--state", directory, "--threshold", String(threshold),
     ]);
     // Capture close at creation: exit may precede final stderr or stop().

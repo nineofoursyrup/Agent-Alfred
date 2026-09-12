@@ -350,6 +350,7 @@ def test_migrate_creates_required_tables_without_user_id() -> None:
     names = _tables(conn)
     required = {
         "schema_migrations",
+        "tool_metering", "tool_metering_health", "tool_operation_verifications",
         "calendar_entries",
         "facts",
         "facts_fts",
@@ -495,6 +496,7 @@ def test_migrate_writes_one_contiguous_ledger_row_per_version() -> None:
         (14,),
         (15,),
         (16,),
+        (17,),
     ]
 
 
@@ -1692,6 +1694,7 @@ def test_upgrading_a_version_1_database_lands_the_current_shape(commit: str) -> 
         (14,),
         (15,),
         (16,),
+        (17,),
     ]
     conn.close()
 
@@ -1896,6 +1899,7 @@ def test_a_failed_upgrade_in_a_caller_transaction_leaves_the_ledger_intact(
         (14,),
         (15,),
         (16,),
+        (17,),
     ]
     # Rolling back is still the caller's decision too, and it takes back the
     # caller's own write and nothing else.

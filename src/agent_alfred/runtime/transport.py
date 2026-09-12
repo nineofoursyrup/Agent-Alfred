@@ -62,6 +62,12 @@ class VersionedTransportPool:
         with self._lock:
             return self._observation.get(endpoint_id)
 
+    def catalog_snapshot(self):
+        import copy
+
+        with self._lock:
+            return copy.deepcopy(self._catalog)
+
     def cached_catalog(self, endpoint_id: str) -> object | None:
         with self._lock:
             return self._catalog.get(endpoint_id)

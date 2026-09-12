@@ -378,16 +378,43 @@ class DashboardApi:
     # -- writes ------------------------------------------------------------
 
     @_map_read_errors
+    def accounting_read(self, path, params):
+        from agent_alfred.gateway.web.accounting_api import read
+
+        return read(self._facade, self._trace_root, path, params)
+
+    @_map_read_errors
+    def accounting_write(self, path, body):
+        from agent_alfred.gateway.web.accounting_api import write
+
+        return write(self._facade, path, body)
+
+    @_map_read_errors
     def run_evidence(self, params: dict[str, str]) -> tuple[int, Any]:
         if "run_id" not in params:
             return 400, {"code": "missing_run_id"}
         if self._trace_root is None:
             return 503, {"code": "evidence_unavailable"}
-        result = self._facade.read_run_evidence(
-            params["run_id"], trace_root=self._trace_root
-        )
+        accounting = None
+        if params.get("snapshot_id"):
+            status, accounting = self.accounting_read("/api/ops/detail", params)
+            if status != 200:
+                return status, accounting
+        if accounting is None:
+            result = self._facade.read_run_evidence(
+                params["run_id"], trace_root=self._trace_root
+            )
+        else:
+            result = self._facade.read_run_evidence(
+                params["run_id"],
+                trace_root=self._trace_root,
+                accounting_attempts=accounting["run"]["attempts"],
+            )
         if result is None:
             return 404, {"code": "unknown_run"}
+        if accounting is not None:
+            result["attempts"] = accounting["run"]["attempts"]
+            result["accounting_snapshot"] = accounting
         return 200, result
 
     def connections(self) -> tuple[int, Any]:

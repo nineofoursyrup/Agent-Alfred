@@ -18,6 +18,7 @@ export function outcomeLabel(run) {
 
 /** @param {HTMLElement} root @param {import('./progress.js').Progress} progress @param {()=>void} navigate @param {import('./memory.js').MemorySync} memory */
 export function runsPage(root, progress, navigate, memory) {
+  const context = new URLSearchParams(location.search);
   const filter = node("select");
   filter.setAttribute("aria-label", "运行筛选");
   for (const [value, label] of [
@@ -196,10 +197,15 @@ export function runsPage(root, progress, navigate, memory) {
     if (selected === null) return;
     try {
       const response = await fetch(
-        "/api/run-evidence?" + new URLSearchParams({ run_id: selected }),
+        "/api/run-evidence?" + new URLSearchParams({ run_id: selected, ...(context.get("snapshot_id") ? {snapshot_id: context.get("snapshot_id") || ""} : {}) }),
       );
       const body = await response.json();
       if (!root.isConnected) return;
+      if (response.status === 410 && body.error?.code === "snapshot_expired") {
+        evidence = { snapshot_expired: true };
+        update();
+        return;
+      }
       if (!response.ok || body.run_id !== selected)
         throw new Error("过程不可用");
       evidence = body;
@@ -223,6 +229,15 @@ export function runsPage(root, progress, navigate, memory) {
     const focusReference = focused instanceof HTMLElement && detail.contains(focused)
       ? focused.dataset.reference : undefined;
     detail.replaceChildren(node("h2", "过程证据"), node("p", "事件发布顺序"));
+    if (evidence?.snapshot_expired) {
+      const filters = new URLSearchParams({snapshot_context: context.has("ops_range") ? "expired" : "missing"});
+      for (const key of ["range", "timezone", "start", "end", "session_id", "purpose", "tool", "run_id"])
+        if (context.has("ops_" + key)) filters.set(key, context.get("ops_" + key) || "");
+      const refresh = node("a", "返回账本核对筛选并刷新");
+      refresh.href = "/ops?" + filters;
+      detail.append(node("p", "账目快照已失效；尚未核验当前过程记录。"), refresh);
+      return;
+    }
     if (evidence?.trace_incomplete === true)
       detail.append(node("p", "追踪不完整"));
     if (evidence?.recording_state === "recorded")

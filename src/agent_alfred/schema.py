@@ -1161,6 +1161,12 @@ def _apply_v16(conn):
     migrate_run_notifications(conn)
 
 
+def _apply_v17(conn):
+    from agent_alfred.tools.metering import migrate_metering
+
+    migrate_metering(conn)
+
+
 MIGRATIONS = (
     Migration(version=1, apply=_apply_v1, managed_objects=_V1_MANAGED_OBJECTS),
     # Renames and rebuilds only: every name it leaves behind is already v1's.
@@ -1207,6 +1213,15 @@ MIGRATIONS = (
     Migration(version=14, apply=_apply_v14, managed_objects=_V14_OBJECTS),
     Migration(version=15, apply=_apply_v15, managed_objects=_V15_OBJECTS),
     Migration(version=16, apply=_apply_v16, managed_objects=_V16_OBJECTS),
+    Migration(
+        version=17,
+        apply=_apply_v17,
+        managed_objects=(
+            "tool_metering",
+            "tool_metering_health",
+            "tool_operation_verifications",
+        ),
+    ),
 )
 MIGRATION_VERSIONS = tuple(migration.version for migration in MIGRATIONS)
 LATEST_MIGRATION_VERSION = MIGRATION_VERSIONS[-1]

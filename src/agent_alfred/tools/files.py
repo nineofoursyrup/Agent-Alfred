@@ -255,13 +255,13 @@ class FileTools:
             context,
         )
 
-    def resume_pending(self):
+    def resume_pending(self, run_id=None):
         with self._store.reading() as conn:
             pending = conn.execute(
                 "SELECT operation_id FROM file_operations WHERE state='prepared'"
             ).fetchall()
         for (op,) in pending:
-            self.recover(op)
+            self.recover(op, run_id)
 
     def unverified_targets(self):
         with self._store.reading() as conn:
@@ -370,14 +370,36 @@ class FileTools:
                     current,
                 ),
             )
+            if context.metering is not None:
+                context.metering.associate_operation(context, conn, op)
             conn.commit()
         return self.recover(op)
 
-    def recover(self, op):
+    def recover(self, op, run_id=None):
+        if self._store.transaction_in_progress:
+            return ToolFailure(
+                "execution_error", (TextBlock("Caller transaction is active."),)
+            )
         previous = self._publication_op
         self._publication_op = op
         try:
-            return self._recover(op)
+            result = self._recover(op)
+            with self._store.transaction() as conn:
+                conn.execute(
+                    "INSERT INTO tool_operation_verifications "
+                    "VALUES (?,?,?,'file_operations',?) "
+                    "ON CONFLICT(operation_id) DO UPDATE SET state=excluded.state, "
+                    "verified_at=excluded.verified_at, "
+                    "related_run=COALESCE(excluded.related_run,related_run)",
+                    (
+                        op,
+                        "complete" if isinstance(result, ToolSuccess) else "unverified",
+                        format_instant(self._clock.wall_utc()),
+                        run_id,
+                    ),
+                )
+                conn.commit()
+            return result
         finally:
             self._publication_op = previous
 
@@ -399,7 +421,7 @@ class FileTools:
             row
         )
         if state == "complete":
-            return ToolSuccess((TextBlock(receipt),))
+            return ToolSuccess((TextBlock(receipt),), operation_id=op)
         if state == "conflict":
             return self.pending(op, "conflict")
         backup = str(PurePath(target).with_name(".original-" + op + ".md"))
@@ -513,7 +535,7 @@ class FileTools:
                     (receipt, op),
                 )
                 conn.commit()
-            return ToolSuccess((TextBlock(receipt),))
+            return ToolSuccess((TextBlock(receipt),), operation_id=op)
         except Exception as exc:
             self._nested_cleanup.capture_failure(exc)
             # The prepared record is durable; an exception cannot prove that
@@ -555,7 +577,7 @@ class FileTools:
             operation_id=op,
         )
 
-    def handle_command(self, message):
+    def handle_command(self, message, run_id=None):
         for prefix in ("恢复操作 ", "查看操作 "):
             if message.startswith(prefix):
                 op = message[len(prefix) :].strip()
@@ -564,7 +586,7 @@ class FileTools:
                         "invalid_input", (TextBlock("Invalid operation ID."),)
                     )
                 if prefix == "恢复操作 ":
-                    return self.recover(op)
+                    return self.recover(op, run_id)
                 return ToolSuccess(
                     (TextBlock(json.dumps(self.get_operation(op), ensure_ascii=False)),)
                 )

@@ -1,5 +1,6 @@
 import json
 import tempfile
+from importlib.resources import files
 from pathlib import Path
 
 from agent_alfred.messages import ToolCallBlock
@@ -60,6 +61,16 @@ with tempfile.TemporaryDirectory() as temp:
     try:
         result = host.wait(host.submit(SubmitRequest(message="draft")).run_id)
         assert result.outcome == "completed"
+        catalog = host.tools_catalog()
+        assert any(t["name"] == "draft_message" for t in catalog["tools"])
+        snapshot = host.accounting_snapshot({"range": "all", "timezone": "UTC"})
+        assert snapshot["summary"]["tool_requests"] == 1
+        detail = host.accounting_detail(
+            snapshot["snapshot_id"], snapshot["runs"][0]["run_id"]
+        )
+        assert detail["run"]["tools"][0]["start_confirmation"] == "confirmed"
+        for asset in ("tools.js", "accounting.js"):
+            assert files("agent_alfred").joinpath("ops/static", asset).is_file()
         receipt = json.loads(model.requests[2].messages[-1].blocks[0].content[0].text)
         assert Path(receipt["path"]).read_text() == "installed draft\n"
         result = host.wait(host.submit(SubmitRequest(message="create skill")).run_id)
@@ -100,4 +111,6 @@ with tempfile.TemporaryDirectory() as temp:
         assert json.loads(result.reply.blocks[0].text)["state"] == "complete"
     finally:
         host.close()
-print("PASS: installed artifact draft, confirmation, restart recovery")
+print(
+    "PASS: installed Tools/Ops assets, accounting, draft, confirmation, recovery"
+)

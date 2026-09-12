@@ -25,6 +25,8 @@ from http.server import BaseHTTPRequestHandler
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlsplit
 
+from agent_alfred.gateway.web.accounting_api import READS as ACCOUNTING_READS
+from agent_alfred.gateway.web.accounting_api import WRITES as ACCOUNTING_WRITES
 from agent_alfred.gateway.web.api import DashboardApi
 from agent_alfred.gateway.web.assets import PAGE_POLICY, page_asset
 from agent_alfred.gateway.web.broker import StreamAdmissionRejected
@@ -342,6 +344,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
         context = self._context
         api = context.api
         params = self._params()
+        if path in ACCOUNTING_READS:
+            status, payload = api.accounting_read(path, params)
+            self._send(status, payload)
+            return
         if path == "/api/run-evidence":
             status, payload = api.run_evidence(params)
             self._send(status, payload)
@@ -424,6 +430,14 @@ class DashboardHandler(BaseHTTPRequestHandler):
         context = self._context
         if method != "POST":
             self._send(405, {"code": "method_not_allowed"})
+            return
+        if path in ACCOUNTING_WRITES:
+            body, error = self._read_body(authorization.body_length)
+            if error:
+                self._send(400, {"error": {"code": error}})
+                return
+            status, payload = context.api.accounting_write(path, body)
+            self._send(status, payload)
             return
         if path == "/api/memory/consolidation/actions":
             assert authorization.body_length is not None

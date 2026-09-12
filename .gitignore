@@ -40,3 +40,6 @@ output/playwright/
 
 # Local implementation evidence and isolated artifact installs
 .scratch/
+
+# Local Issue 55 verification evidence and build environments
+/tmp/issue-55/

@@ -810,7 +810,7 @@ class _FailMainbarFinalize:
     def execute(self, sql, parameters=()):
         if (
             self._armed["value"]
-            and sql.lstrip().upper().startswith("UPDATE")
+            and sql.lstrip().upper().startswith("UPDATE RUNS")
             and "finished_at" in sql
         ):
             raise sqlite3.OperationalError("injected finalize failure")

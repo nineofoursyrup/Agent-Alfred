@@ -306,6 +306,9 @@ class RuntimeHost:
         file_state=None,
         skill_builtin=None,
         memory_notifier=None,
+        extra_tools=(),
+        tool_policies=None,
+        tool_authorization_path=None,
     ):
         self._support_overrides = support_overrides or SupportOverrides()
         self._conn = conn
@@ -436,13 +439,48 @@ class RuntimeHost:
         skill_tools = SkillTools(self._file_tools, builtin=skill_builtin)
         self._skill_catalog = skill_tools.catalog
         self._external_tools = ExternalToolLedger(self._store, clock)
+        from agent_alfred.tools.metering import ToolMetering
+
+        self._tool_metering = ToolMetering(self._store, clock)
+        from agent_alfred.runtime.tool_history import ToolHistory
+
+        self._tool_history = ToolHistory(self._store, self._redactor)
+        from agent_alfred.runtime.accounting import AccountingSnapshots
+
+        self._accounting = AccountingSnapshots(
+            self._store,
+            self._tool_metering,
+            clock,
+            process_instance_id,
+            self._accounting_prices,
+        )
         tools = ToolRegistry(
-            (*CalendarTools(self._store, clock).declarations(),
-             *MemoryTools(self._memory_service).declarations(),
-             *self._file_tools.declarations(),
-             *persona_tools.declarations(),
-             *skill_tools.declarations()), clock=clock, redactor=self._redactor,
-             external_ledger=self._external_tools)
+            (
+                *CalendarTools(self._store, clock).declarations(),
+                *MemoryTools(self._memory_service).declarations(),
+                *self._file_tools.declarations(),
+                *persona_tools.declarations(),
+                *skill_tools.declarations(),
+                *extra_tools,
+            ),
+            clock=clock,
+            redactor=self._redactor,
+            policies=tool_policies,
+            external_ledger=self._external_tools,
+            metering=self._tool_metering,
+        )
+        self._tools = tools
+        from agent_alfred.tools.authorization import ToolAuthorization
+
+        authorization_path = tool_authorization_path or (
+            file_state.path / "tool_authorizations.json"
+            if file_state is not None
+            else None
+        )
+        self._tool_authorization = ToolAuthorization(
+            authorization_path, tools, self._publish_tools
+        )
+        tools = self._tools
         self._executor = RunExecutor(
             clock=clock,
             settings=settings,
@@ -662,6 +700,8 @@ class RuntimeHost:
                 return False
             if not self._file_tools.close():
                 return False
+            if not self._tool_history.close():
+                return False
             if self._owned_resources is not None:
                 self._owned_resources.close()
             self._closed = True
@@ -727,6 +767,13 @@ class RuntimeHost:
         self._memory_service.consolidation.recover_abandoned()
         self._memory_service.consolidation.scheduling.recover()
         self._external_tools.recover()
+        from agent_alfred.tools.metering import MeteringError
+
+        try:
+            self._tool_metering.recover()
+        except MeteringError:
+            # Historical reads remain available while new Runs stay refused.
+            pass
         if self._memory_service.mirrors is not None:
             from agent_alfred.memory.commands import CommandContext
             from agent_alfred.memory.types import ManualOrigin
@@ -1156,10 +1203,13 @@ class RuntimeHost:
             return "recording_unavailable"
         if self._coord != "idle":
             return "run_in_progress"
+        if self._tool_metering.failed.is_set():
+            return "recording_unavailable"
         if not self._store.available:
             return "recording_unavailable"
         if self._mutating:
             return "mutation_in_flight"
+        self._tool_authorization.check_disk_health()
         return None
 
     def admission_reserve(
@@ -1617,14 +1667,20 @@ class RuntimeHost:
 
     # -- public session read side (ADR-0027); callers never write SQL --
 
-    def read_run_evidence(self, run_id: str, *, trace_root: Path) -> dict | None:
+    def _accounting_prices(self):
+        import copy
+
         from agent_alfred.pricing import PriceChain, PriceQuote, StaticPriceBook
-        from agent_alfred.runtime.evidence import read_evidence
 
         catalog = None
         catalog_prices = getattr(self._factory, "catalog_prices", None)
         if callable(catalog_prices):
-            catalog = catalog_prices()
+            live = catalog_prices()
+            catalog = (
+                live.freeze()
+                if callable(getattr(live, "freeze", None))
+                else copy.deepcopy(live)
+            )
         pins = ()
         if self._model_settings is not None:
             snapshot = self._model_settings.snapshot()
@@ -1650,17 +1706,38 @@ class RuntimeHost:
                     return catalog.quote(endpoint_id, model_id, dimension)
                 return None
 
+        return PriceChain(catalog=PinThenCatalog(), static=StaticPriceBook.packaged())
+
+    def read_run_evidence(
+        self, run_id: str, *, trace_root: Path, accounting_attempts: list | None = None
+    ) -> dict | None:
+        from agent_alfred.runtime.evidence import read_evidence
+
         return read_evidence(
             self._store,
             self._redactor,
             run_id,
             trace_root,
             overrides=self._support_overrides,
-            prices=PriceChain(
-                catalog=PinThenCatalog(), static=StaticPriceBook.packaged()
-            ),
+            prices=self._accounting_prices() if accounting_attempts is None else None,
             computed_at=format_instant(self._clock.wall_utc()),
+            accounting_attempts=accounting_attempts,
         )
+
+    def accounting_snapshot(self, filters):
+        return self._accounting.create(
+            filters, recording_failed=self._recording_failed_run_ids()
+        )
+
+    def accounting_page(self, snapshot_id, offset=0):
+        return self._accounting.page(snapshot_id, offset)
+
+    def accounting_detail(self, snapshot_id, run_id):
+        value = self._accounting.detail(snapshot_id, run_id)
+        current = {item["identity"] for item in self.tools_catalog()["tools"]}
+        for item in value["run"]["tools"]:
+            item["currently_registered"] = item["identity"] in current
+        return value
 
     def list_sessions(
         self,
@@ -1844,6 +1921,81 @@ class RuntimeHost:
                 detail=(("sink", sink), ("stage", stage)),
             )
         )
+
+    def tools_catalog(self):
+        with self._lock:
+            return self._tool_authorization.snapshot(
+                suspend_external=self._coord == "idle" and not self._mutating
+            )
+
+    def _publish_tools(self, registry):
+        self._tools = registry
+        if hasattr(self, "_executor"):
+            self._executor._tools = registry
+
+    def save_tool_authorization(self, identity, authorization, expected_revision):
+        result, refusal = self.execute_mutation(
+            lambda: self._tool_authorization.save(
+                identity, authorization, expected_revision
+            )
+        )
+        return {"error": {"code": refusal}} if refusal else result
+
+    def reapply_tool_authorization(self, expected_revision):
+        result, refusal = self.execute_mutation(
+            lambda: self._tool_authorization.reapply(expected_revision)
+        )
+        return {"error": {"code": refusal}} if refusal else result
+
+    def tool_verification(self, run_id, step_index, call_id):
+        rows = self.tool_requests(run_id)
+        request = next(
+            (
+                r
+                for r in rows
+                if r["step_index"] == step_index and r["call_id"] == call_id
+            ),
+            None,
+        )
+        if request is None:
+            raise ValueError("unknown_request")
+        op = request["operation_id"]
+        result = {
+            "operation_id": op,
+            "observed_at": format_instant(self._clock.wall_utc()),
+            "state": "unrecorded",
+            "related_run": None,
+        }
+        if op:
+            with self._store.reading() as conn:
+                row = conn.execute(
+                    "SELECT state,verified_at,evidence_source,related_run "
+                    "FROM tool_operation_verifications WHERE operation_id=?",
+                    (op,),
+                ).fetchone()
+            if row:
+                result.update(
+                    zip(
+                        ("state", "verified_at", "evidence_source", "related_run"),
+                        row,
+                        strict=True,
+                    )
+                )
+        return result
+
+    def read_tool_history(self, trace_root, **query):
+        return self._tool_history.read(trace_root, **query)
+
+    def tool_requests(self, run_id):
+        return self._tool_metering.read(run_id)
+
+    def recover_tool_metering(self):
+        from agent_alfred.tools.metering import MeteringError
+
+        try:
+            return self.execute_mutation(self._tool_metering.recover)
+        except MeteringError:
+            return None, "metering_unconfirmed"
 
     def submit(self, request: SubmitRequest) -> SubmitResult:
         return self._admission.submit(request)

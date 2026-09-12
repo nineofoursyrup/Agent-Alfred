@@ -1,3 +1,5 @@
+import { toolsPage } from "./tools.js";
+import { accountingPage } from "./accounting.js";
 import { Stream } from "./stream.js";
 import { node, textBlocks } from "./dom.js";
 import { Progress } from "./progress.js";
@@ -33,6 +35,7 @@ let csrf = "";
 let instance = "";
 let revision = -1;
 let connected = false;
+/** @type {ReturnType<typeof toolsPage>|ReturnType<typeof accountingPage>|null} */ let accountingView = null;
 let valid = false;
 let sending = false;
 let unavailable = false;
@@ -306,6 +309,7 @@ const stream = new Stream(
         notices.snapshot();
         updateSend();
         void memory.connected(instance);
+        accountingView?.sync(instance);
       }
       if (body.state_revision <= revision) return;
       notices.snapshot();
@@ -321,6 +325,7 @@ const stream = new Stream(
       connected = true;
       valid = body.session_valid;
       active = body.coordinator_state === "idle" ? null : incoming;
+      if (!first) accountingView?.sync(instance);
       progress.snapshot(active, body.step);
       notices.settled(
         body.coordinator_state === "idle",
@@ -416,6 +421,7 @@ const stream = new Stream(
     progress.interrupt();
     notices.disconnected();
     memory.disconnected();
+    accountingView?.disconnect();
     renderMessages();
     updateSend();
   },
@@ -550,8 +556,11 @@ function route() {
   const isModels = path.startsWith("/models");
   const isConnections = path.startsWith("/connections");
   const isMemory = path === "/memory";
+  const isTools = path === "/tools";
+  const isOps = path === "/ops";
+  accountingView?.close(); accountingView = null;
   const heading = document.createElement("h1");
-  heading.textContent = isRuns
+  heading.textContent = isTools ? "Tools 工具" : isOps ? "Ops 账本" : isRuns
     ? "运行详情"
     : isModels
       ? "模型"
@@ -563,7 +572,9 @@ function route() {
   receipts.detach();
   element("page").replaceChildren(heading);
   runPage = null;
-  if (isModels) modelsPage(element("page"), () => csrf);
+  if (isTools) accountingView = toolsPage(element("page"), () => csrf);
+  else if (isOps) accountingView = accountingPage(element("page"), () => csrf);
+  else if (isModels) modelsPage(element("page"), () => csrf);
   else if (isConnections) connectionsPage(element("page"), () => csrf);
   else if (isMemory)
     memoryPage(element("page"), memory, {
@@ -577,11 +588,13 @@ function route() {
   for (const link of document.querySelectorAll("nav a")) {
     const href = link.getAttribute("href");
     const current =
+      (href === "/tools" && isTools) ||
+      (href === "/ops" && isOps) ||
       (href === "/runs" && isRuns) ||
       (href === "/models" && isModels) ||
       (href === "/connections" && isConnections) ||
       (href === "/memory" && isMemory) ||
-      (href === "/inbox" && !isRuns && !isModels && !isConnections && !isMemory);
+      (href === "/inbox" && !isRuns && !isModels && !isConnections && !isMemory && !isTools && !isOps);
     if (current) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
   }
@@ -607,6 +620,7 @@ async function resume(target) {
     restoreDraft();
     progress.interrupt();
     memory.disconnected();
+    accountingView?.disconnect();
     stream.connect(session);
   }
   expanded = true;
@@ -662,6 +676,8 @@ document.addEventListener("click", (event) => {
       link.pathname === "/models" ||
       link.pathname === "/connections" ||
       link.pathname === "/memory" ||
+      link.pathname === "/tools" ||
+      link.pathname === "/ops" ||
       link.pathname.startsWith("/runs/")
     ) ||
     event.ctrlKey ||
@@ -675,6 +691,15 @@ document.addEventListener("click", (event) => {
   route();
 });
 window.addEventListener("popstate", route);
+window.addEventListener("offline", () => {
+  connected = false;
+  stream.source?.close();
+  progress.interrupt();
+  memory.disconnected();
+  accountingView?.disconnect();
+  updateSend();
+});
+window.addEventListener("online", () => stream.connect(session));
 element("new-session").addEventListener("click", async () => {
   const button = /** @type {HTMLButtonElement} */ (element("new-session"));
   button.disabled = true;
@@ -698,6 +723,7 @@ element("new-session").addEventListener("click", async () => {
     connected = false;
     revision = -1;
     memory.disconnected();
+    accountingView?.disconnect();
     stream.connect(session);
     await loadMessages();
     input.focus();
