@@ -1635,8 +1635,30 @@ for i in range(52):
 conn.close()
 `);
 
-for (const action of ["approve", "reject", "retry"]) {
-  test(`G2 v2: older batches support ${action} through bounded queue pages`, async ({page}) => {
+function batchPollResult(response, batchId) {
+  // A revision change invalidates this read, not the batch. All other errors
+  // must fail with their evidence rather than masquerading as pending work.
+  if (response.status === 409 && response.body && response.body.code === "memory_changed") return null;
+  const batch = response.body && response.body.batch;
+  if (response.status !== 200 || !batch || batch.batch_id !== batchId ||
+      !["queued", "running", "awaiting_approval", "succeeded", "rejected", "failed", "invalidated"].includes(batch.status))
+    throw new Error(`Unexpected batch response for ${batchId}: ${JSON.stringify(response)}`);
+  return batch;
+}
+
+for (const [name, response] of [
+  ["missing", {status:404, body:{code:"not_found"}}],
+  ["storage", {status:503, body:{code:"storage_unavailable"}}],
+  ["unknown conflict", {status:409, body:{code:"unexpected_conflict"}}],
+  ["missing batch", {status:200, body:{}}],
+  ["wrong batch", {status:200, body:{batch:{batch_id:"other",status:"succeeded"}}}],
+  ["invalid status", {status:200, body:{batch:{batch_id:"expected",status:null}}}],
+]) test(`batch polling rejects ${name} with HTTP and body diagnostics`, () => {
+  expect(() => batchPollResult(response, "expected")).toThrow(JSON.stringify(response));
+});
+
+for (const [action, readRace] of [["approve",false], ["reject",false], ["retry",false], ["retry",true]]) {
+  test(`G2 v2: older batches support ${action} through bounded queue pages${readRace ? " during revision race" : ""}`, async ({page}) => {
     const {execFileSync} = await import("node:child_process");
     const server = await memoryServer({threshold: 2, prepare: directory => execFileSync(".venv/bin/python", ["-B", "-c", SEED_OLD_BATCHES, directory])});
     try {
@@ -1647,8 +1669,30 @@ for (const action of ["approve", "reject", "retry"]) {
       await expect(queue.locator(`[data-batch="${old.batch_id}"]`)).toHaveCount(0);
       await queue.getByRole("button", {name: "下一页", exact: true}).click();
       const row = queue.locator(`[data-batch="${old.batch_id}"]`);
+      if (readRace) await server.send("batch-read-race on");
       await row.getByRole("button", {name: {approve: "批准整批", reject: "拒绝整批", retry: "重试"}[action], exact: true}).click();
-      await expect.poll(async () => (await other.get("/api/memory/consolidation?batch_id=" + old.batch_id)).body.batch.status).toBe(action === "reject" ? "rejected" : "succeeded");
+      let changed = false, completed;
+      await expect.poll(async () => {
+        const response = await other.get("/api/memory/consolidation?batch_id=" + old.batch_id);
+        const batch = batchPollResult(response, old.batch_id);
+        if (batch === null) {
+          if (readRace) {
+            changed = true;
+            await server.send("batch-read-race off");
+          }
+          return "memory_changed";
+        }
+        completed = batch;
+        return batch.status;
+      }, {timeout:4000}).toBe(action === "reject" ? "rejected" : "succeeded");
+      if (readRace) expect(changed).toBe(true);
+      expect(completed).toMatchObject({batch_id:old.batch_id,session_id:old.session_id,source_run_ids:old.source_run_ids});
+      if (action === "retry") {
+        expect(completed.revision).toBeGreaterThan(old.revision);
+        expect(completed.receipt).toMatchObject({status:"succeeded", products:expect.arrayContaining([
+          expect.objectContaining({kind:"semantic"}), expect.objectContaining({kind:"episodic"}),
+        ])});
+      }
       if (action === "approve") expect((await other.get("/api/memory/records?kind=semantic")).body.records[0].fact).toBe("OLDER_CANDIDATE_BODY");
       if (action === "reject") expect((await other.get("/api/memory/records?kind=semantic")).body.records[0].fact).toBe("likes basil");
     } finally { await server.close(); }
