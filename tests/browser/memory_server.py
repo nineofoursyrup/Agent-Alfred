@@ -7,6 +7,7 @@ Commands (one per line; each answers ``ok <command>``):
 - ``fail-commit`` / ``heal`` -- make consolidation's episode insert abort;
 - ``mirror-fail on|off`` -- make managed mirror writes fail (not a conflict);
 - ``overflow`` -- the broker's bounded ingress refuses its next frame;
+- ``batch-read-race on|off`` -- overlap batch reads with a real memory write;
 - ``stop`` -- close the Dashboard.
 """
 
@@ -14,13 +15,18 @@ import argparse
 import json
 import sys
 import threading
+import time
+import uuid
 from dataclasses import replace
 from pathlib import Path
 
 from server import BrowserModel
 
+from agent_alfred.gateway.web.memory_api import MemoryApi
 from agent_alfred.managed_state import ManagedDirectoryLease
+from agent_alfred.memory.commands import CommandContext
 from agent_alfred.memory.consolidation import CANDIDATE_PREFACE, CONSOLIDATION_SYSTEM
+from agent_alfred.memory.types import ManualOrigin
 from agent_alfred.messages import TextBlock, ToolCallBlock, ToolResultBlock
 from agent_alfred.model import ModelResponse, ScriptedModel, ScriptedModelFactory
 from agent_alfred.runtime.memory import GATE_SYSTEM
@@ -130,6 +136,8 @@ def main():
     try:
         dashboard.start()
         host = dashboard.host
+        original_read = MemoryApi._read
+        read_race_lock = threading.Lock()
         print("ready", flush=True)
         for line in sys.stdin:
             command = line.strip()
@@ -141,6 +149,40 @@ def main():
                 assert host.try_begin_mutation() is None
             elif command == "idle":
                 host.end_mutation()
+            elif command == "batch-read-race on":
+
+                def overlapping_write(api, params, **kwargs):
+                    # The native revision bracket must produce the 409; do
+                    # not replace the HTTP response with a fabricated error.
+                    response = original_read(api, params, **kwargs)
+                    if "batch_id" in params:
+                        with read_race_lock:
+                            deadline = time.monotonic() + 3
+                            while (
+                                host.snapshot().coordinator_state != "idle"
+                                or host.mutation_in_flight()
+                            ):
+                                assert time.monotonic() < deadline, "Run did not settle"
+                                time.sleep(0.005)
+                            identity = uuid.uuid4().hex
+                            receipt = api.memory.execute(
+                                {
+                                    "operation_id": identity,
+                                    "kind": "semantic",
+                                    "action": "save",
+                                    "payload": {
+                                        "subject": "read-race fixture",
+                                        "fact": identity,
+                                    },
+                                },
+                                CommandContext(ManualOrigin("cli"), "cli"),
+                            )
+                            assert "memory_id" in receipt, receipt
+                    return response
+
+                MemoryApi._read = overlapping_write
+            elif command == "batch-read-race off":
+                MemoryApi._read = original_read
             elif command in ("fail-commit", "heal"):
                 with host._store.transaction() as conn:
                     conn.execute(
