@@ -1019,6 +1019,9 @@ for (const committed of [false, true]) {
 }
 
 test("R08: more than twenty unanswered commands remain recoverable after reload", async ({page}) => {
+  // 21 serial failed writes plus reload/query/resend exceed 15s with 600ms
+  // transport latency (measured 18.5s). Keep per-assertion timeouts unchanged.
+  test.setTimeout(30000);
   const server = await memoryServer();
   const bodies = [];
   try {
