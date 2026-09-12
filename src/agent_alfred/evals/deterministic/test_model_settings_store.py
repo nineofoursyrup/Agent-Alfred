@@ -241,7 +241,7 @@ def test_unpin_assigned_pin_is_rejected(tmp_path: Path) -> None:
 
 
 def test_memory_revision_publishes_only_after_rename(tmp_path, monkeypatch) -> None:
-    from agent_alfred.runtime import model_settings as module
+    from agent_alfred import atomic_config as module
     from agent_alfred.runtime.model_settings import ModelSettingsStore
 
     path = tmp_path / "model_settings.json"
@@ -262,7 +262,7 @@ def test_memory_revision_publishes_only_after_rename(tmp_path, monkeypatch) -> N
 
 
 def test_failed_fsync_does_not_publish_or_replace_target(tmp_path, monkeypatch) -> None:
-    from agent_alfred.runtime import model_settings as module
+    from agent_alfred import atomic_config as module
     from agent_alfred.runtime.model_settings import ModelSettingsStore
 
     path = tmp_path / "model_settings.json"
@@ -286,7 +286,7 @@ def test_failed_fsync_does_not_publish_or_replace_target(tmp_path, monkeypatch) 
 
 
 def test_failed_replace_does_not_leave_tmp_or_publish(tmp_path, monkeypatch) -> None:
-    from agent_alfred.runtime import model_settings as module
+    from agent_alfred import atomic_config as module
     from agent_alfred.runtime.model_settings import ModelSettingsStore
 
     path = tmp_path / "model_settings.json"

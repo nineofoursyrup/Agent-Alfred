@@ -23,6 +23,7 @@ def read_evidence(
     overrides=None,
     prices=None,
     computed_at: str | None = None,
+    accounting_attempts: list | None = None,
 ) -> dict | None:
     with store.reading() as conn:
         row = conn.execute(
@@ -110,7 +111,8 @@ def read_evidence(
                 ]
                 if overrides
                 else [],
-                "attempts": [
+                "attempts": accounting_attempts
+                if accounting_attempts is not None else [
                     _attempt_evidence(
                         attempt, models, prices, computed_at
                     )

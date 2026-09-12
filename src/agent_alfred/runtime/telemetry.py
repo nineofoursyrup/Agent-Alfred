@@ -32,10 +32,11 @@ def serialize_run_telemetry(
     ]
     return json.dumps(
         {
+            "accounting_version": 1,
             "attempts": attempts,
-            "memory": memory if memory is not None else {
-                "gate_state": "legacy_unknown", "gate": None, "input_attempts": []
-            },
+            "memory": memory
+            if memory is not None
+            else {"gate_state": "legacy_unknown", "gate": None, "input_attempts": []},
             "trace_incomplete": incomplete,
             "trace_incomplete_reason": reason,
         },

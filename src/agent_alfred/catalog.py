@@ -241,6 +241,9 @@ class CatalogPriceBook:
     def __init__(self, pool):
         self._pool = pool
 
+    def freeze(self):
+        return FrozenCatalogPriceBook(self._pool.catalog_snapshot())
+
     def quote(
         self, endpoint_id: str, model_id: str, dimension: str
     ) -> PriceQuote | None:
@@ -299,3 +302,16 @@ class CatalogFetchError(Exception):
     def __init__(self, reason: str):
         super().__init__(reason)
         self.reason = reason
+
+
+class FrozenCatalogPriceBook:
+    def __init__(self, states):
+        self.states = states
+
+    def quote(self, endpoint_id, model_id, dimension):
+        state = self.states.get(endpoint_id)
+        return (
+            state.prices.get(model_id, {}).get(dimension)
+            if isinstance(state, CatalogState)
+            else None
+        )

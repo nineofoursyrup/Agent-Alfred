@@ -106,6 +106,17 @@ class Assistant:
         reply: Message | None = None
         error: str | None = None
         step_count = 0
+        pending_tool_step = None
+
+        def note_not_sent(step_index):
+            # Retain the stop fact before attempting any fallible ledger write.
+            # Only the pending tool batch is affected, never an earlier batch
+            # already included in a subsequent model request.
+            if tool_state is not None and step_index is not None:
+                steps = tool_state.setdefault("tool_model_not_sent_steps", [])
+                if step_index not in steps:
+                    steps.append(step_index)
+
         if (
             memory is not None
             and budget.remaining > 0
@@ -138,11 +149,17 @@ class Assistant:
                 outcome = "failed"
                 reply = text_message("assistant", OVERALL_DEADLINE_TEXT)
                 error = "overall_deadline"
+                if tools is not None:
+                    note_not_sent(pending_tool_step)
+                    tools.stop_run(run_id, "overall_deadline")
                 break
             try:
                 lease = budget.reserve_step(LOOP_NODE_ID)
             except StepBudgetExceeded:
                 outcome = "max_steps"
+                if tools is not None:
+                    note_not_sent(pending_tool_step)
+                    tools.stop_run(run_id, "max_steps")
                 reply = text_message("assistant", MAX_STEPS_REACHED_TEXT)
                 break
             step_count = lease.step_index + 1
@@ -204,6 +221,7 @@ class Assistant:
                 if memory is not None:
                     memory.notify_inputs()
             results.append(model_result)
+            pending_tool_step = None
             stop_reason: StopReason = "error"
             if model_result.response is not None:
                 stop_reason = model_result.response.stop_reason
@@ -235,24 +253,49 @@ class Assistant:
                     if isinstance(block, ToolCallBlock)
                 ]
                 if calls:
+                    from agent_alfred.tools.metering import MeteringError
+
+                    committed = [
+                        a for a in model_result.attempts if a.outcome == "committed"
+                    ]
+                    if (
+                        len(committed) != 1
+                        or model_result.attempts[-1] is not committed[0]
+                    ):
+                        raise MeteringError("tool_identity_ambiguous")
+                    batch_context = ToolContext(
+                        run_id,
+                        lease.step_index,
+                        calls[0].id,
+                        source,
+                        overall_abs if overall_abs is not None else float("inf"),
+                        session_id,
+                        tool_permission,
+                    )
+                    tools.register_batch(calls, batch_context)
+                    pending_tool_step = lease.step_index
                     tool_results = []
                     boundary = None
                     for index, call in enumerate(calls):
-                        execution = tools.execute(
-                            call,
-                            ToolContext(
-                                run_id,
-                                lease.step_index,
-                                call.id,
-                                source,
-                                overall_abs
-                                if overall_abs is not None
-                                else float("inf"),
-                                session_id,
-                                tool_permission,
-                            ),
-                            events=events,
-                        )
+                        try:
+                            execution = tools.execute(
+                                call,
+                                ToolContext(
+                                    run_id,
+                                    lease.step_index,
+                                    call.id,
+                                    source,
+                                    overall_abs
+                                    if overall_abs is not None
+                                    else float("inf"),
+                                    session_id,
+                                    tool_permission,
+                                ),
+                                events=events,
+                            )
+                        except MeteringError:
+                            note_not_sent(lease.step_index)
+                            raise
                         tool_results.append(execution.block)
                         if (
                             execution.system_receipt is not None
@@ -268,6 +311,10 @@ class Assistant:
                                 and tool_state is not None
                             ):
                                 tool_state.pop("system_receipts", None)
+                            note_not_sent(lease.step_index)
+                            tools.stop_batch(
+                                calls[index + 1 :], batch_context, boundary
+                            )
                             remaining = [pending.id for pending in calls[index + 1 :]]
                             for pending in calls[index + 1 :]:
                                 tool_results.append(
@@ -315,11 +362,14 @@ class Assistant:
                                 )
                                 outcome = "failed"
                                 error = boundary
-                            elif boundary == "memory_result_unverified":
+                            elif boundary in (
+                                "memory_result_unverified",
+                                "tool_result_unverified",
+                            ):
                                 reply = text_message(
                                     "assistant",
-                                    "记忆操作结果待核验。操作编号："
-                                    + execution.operation_id,
+                                    "操作结果待核验。操作编号："
+                                    + (execution.operation_id or "未记录"),
                                 )
                                 outcome = "failed"
                                 error = boundary

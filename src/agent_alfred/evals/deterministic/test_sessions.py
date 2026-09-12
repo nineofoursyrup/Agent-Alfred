@@ -745,7 +745,8 @@ class _FailFinalizeWhen:
 
     def execute(self, sql, parameters=()):
         text = sql.lstrip().upper()
-        if self._flag["armed"] and text.startswith("UPDATE") and "finished_at" in sql:
+        if (self._flag["armed"] and text.startswith("UPDATE RUNS")
+                and "finished_at" in sql):
             raise sqlite3.OperationalError("injected finalize failure")
         return self._inner.execute(sql, parameters)
 

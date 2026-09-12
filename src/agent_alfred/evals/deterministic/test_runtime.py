@@ -325,7 +325,7 @@ def test_recording_failure_keeps_the_projection_and_returns_503() -> None:
     schema.migrate(conn)
     wrapped = _FailOn(
         conn,
-        when=lambda sql: sql.lstrip().upper().startswith("UPDATE")
+        when=lambda sql: sql.lstrip().upper().startswith("UPDATE RUNS")
         and "finished_at" in sql,
     )
     host, _conn, _ = _host(["pong"], conn=wrapped)
@@ -1485,7 +1485,7 @@ def test_public_host_unwinds_reserved_control_failures_before_close(
             if failure_stage == "accepted_db" and "INSERT INTO RUNS" in upper:
                 raise control
             if failure_stage == "interrupted_db" and (
-                upper.startswith("UPDATE") and "FINISHED_AT" in upper
+                upper.startswith("UPDATE RUNS") and "FINISHED_AT" in upper
             ):
                 raise control
             return raw.execute(sql, parameters)
@@ -1920,7 +1920,7 @@ def test_unstarted_db_failure_fails_closed_through_seams() -> None:
     schema.migrate(conn)
     wrapped = _FailOn(
         conn,
-        when=lambda sql: sql.lstrip().upper().startswith("UPDATE")
+        when=lambda sql: sql.lstrip().upper().startswith("UPDATE RUNS")
         and "finished_at" in sql,
     )
     coordinator = _FakeAdmissionCoordinator()
@@ -2345,7 +2345,7 @@ class _FailFinalizeAndRollback(_FailOn):
     def __init__(self, inner: sqlite3.Connection, rollback_attempted: threading.Event):
         super().__init__(
             inner,
-            when=lambda sql: sql.lstrip().upper().startswith("UPDATE")
+            when=lambda sql: sql.lstrip().upper().startswith("UPDATE RUNS")
             and "finished_at" in sql,
         )
         self._rollback_attempted = rollback_attempted
@@ -2360,7 +2360,7 @@ def test_recording_failed_snapshot_is_authoritative_before_503() -> None:
     schema.migrate(conn)
     wrapped = _FailOn(
         conn,
-        when=lambda sql: sql.lstrip().upper().startswith("UPDATE")
+        when=lambda sql: sql.lstrip().upper().startswith("UPDATE RUNS")
         and "finished_at" in sql,
     )
     host, _conn, _ = _host(["pong"], conn=wrapped)
@@ -2423,7 +2423,7 @@ def test_pending_to_failed_never_returns_503_with_pending_snapshot() -> None:
     schema.migrate(conn)
     wrapped = _FailOn(
         conn,
-        when=lambda sql: sql.lstrip().upper().startswith("UPDATE")
+        when=lambda sql: sql.lstrip().upper().startswith("UPDATE RUNS")
         and "finished_at" in sql,
     )
     before_failed = EnteredEvent()

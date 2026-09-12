@@ -152,7 +152,10 @@ class SkillTools:
         if isinstance(result, ToolSuccess) and result.stop_reason is None:
             receipt = json.loads(result.content[0].text)
             receipt["activation"] = "重启后加载；尚未匹配或注入。"
-            return ToolSuccess((TextBlock(json.dumps(receipt, ensure_ascii=False)),))
+            return ToolSuccess(
+                (TextBlock(json.dumps(receipt, ensure_ascii=False)),),
+                operation_id=result.operation_id,
+            )
         return result
 
     def handle_command(self, message):

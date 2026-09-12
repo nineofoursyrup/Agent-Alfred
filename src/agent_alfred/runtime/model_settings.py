@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
-import os
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, replace
@@ -331,56 +329,20 @@ class ModelSettingsStore:
         return snapshot
 
     def _read_bytes(self) -> tuple[bytes | None, _Fingerprint]:
-        try:
-            raw = self._path.read_bytes()
-        except FileNotFoundError:
-            return None, _Fingerprint(False, None)
-        digest = hashlib.sha256(raw).hexdigest()
-        return raw, _Fingerprint(True, digest)
+        from agent_alfred.atomic_config import read_bytes
+
+        raw, digest = read_bytes(self._path)
+        return raw, _Fingerprint(raw is not None, digest)
 
     def _read_fingerprint(self) -> _Fingerprint:
         _, fingerprint = self._read_bytes()
         return fingerprint
 
     def _write_atomic(self, data: bytes, expected: _Fingerprint) -> _Fingerprint:
-        directory = self._path.parent
-        tmp = directory / f".{self._path.name}.{os.getpid()}.tmp"
-        fd = os.open(tmp, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        from agent_alfred.atomic_config import DiskConflict, write_atomic
+
         try:
-            os.fchmod(fd, 0o600)
-            view = memoryview(data)
-            while view:
-                written = os.write(fd, view)
-                if written == 0:
-                    raise OSError("zero-byte settings write")
-                view = view[written:]
-            os.fsync(fd)
-        except BaseException:
-            os.close(fd)
-            try:
-                os.unlink(tmp)
-            except FileNotFoundError:
-                pass
-            raise
-        os.close(fd)
-        current = self._read_fingerprint()
-        if current != expected:
-            try:
-                os.unlink(tmp)
-            except FileNotFoundError:
-                pass
-            raise ModelSettingsError("settings_conflict", "external_change")
-        try:
-            os.replace(tmp, self._path)
-        except BaseException:
-            try:
-                os.unlink(tmp)
-            except FileNotFoundError:
-                pass
-            raise
-        dir_fd = os.open(directory, os.O_RDONLY)
-        try:
-            os.fsync(dir_fd)
-        finally:
-            os.close(dir_fd)
-        return _Fingerprint(True, hashlib.sha256(data).hexdigest())
+            digest = write_atomic(self._path, data, expected.digest)
+        except DiskConflict as error:
+            raise ModelSettingsError("settings_conflict", "external_change") from error
+        return _Fingerprint(True, digest)

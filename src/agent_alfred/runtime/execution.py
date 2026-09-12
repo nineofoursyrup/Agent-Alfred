@@ -359,7 +359,9 @@ class RunExecutor:
                 envelope,
             )
             if item.request.purpose == "chat" and self._file_tools is not None:
-                command_result = self._file_tools.handle_command(item.request.message)
+                command_result = self._file_tools.handle_command(
+                    item.request.message, item.run_id
+                )
                 if command_result is None and self._skill_tools is not None:
                     command_result = self._skill_tools.handle_command(
                         item.request.message
@@ -379,7 +381,7 @@ class RunExecutor:
                     error = command_result.stop_reason
                     return
             if item.request.purpose == "chat" and self._file_tools is not None:
-                self._file_tools.resume_pending()
+                self._file_tools.resume_pending(item.run_id)
                 self._file_tools.set_run_deadline(
                     run_started + item.snapshot.overall_deadline_s
                     if item.snapshot.overall_deadline_s is not None
@@ -486,6 +488,15 @@ class RunExecutor:
 
             outcome = "failed"
             error = type(exc).__name__
+            from agent_alfred.tools.metering import MeteringError
+
+            if isinstance(exc, MeteringError):
+                error = str(exc)
+                reply = text_message(
+                    "assistant",
+                    "工具计量未确认，本 Run 已停止后续工具与模型。"
+                    "已发生动作不会自动重放，请核验账目并修复计量存储。",
+                )
             if isinstance(exc, InputLimitExceeded):
                 error = "input_limit_exceeded"
                 reply = text_message("assistant", str(exc))

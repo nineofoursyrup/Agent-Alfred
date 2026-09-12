@@ -146,6 +146,8 @@ class CalendarTools:
                 (op, identity, receipt),
             )
             context.checkpoint()
+            if context.metering is not None:
+                context.metering.atomic_success(context, conn, op)
             conn.commit()
         return ToolSuccess(
             (TextBlock(json.dumps({"id": entry_id, "status": "created"})),)

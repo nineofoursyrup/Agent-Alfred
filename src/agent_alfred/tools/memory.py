@@ -155,6 +155,13 @@ class MemoryTools:
                     call_id=context.call_id,
                     permission=context.permission,
                     checkpoint=context.checkpoint,
+                    meter_success=(
+                        lambda conn, op: context.metering.atomic_success(
+                            context, conn, op
+                        )
+                    )
+                    if context.metering is not None
+                    else None,
                 ),
             )
         except Exception as exc:

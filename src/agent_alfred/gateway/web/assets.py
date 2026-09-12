@@ -8,6 +8,8 @@ PAGE_POLICY = (
 )
 
 ASSETS = {
+    "/assets/tools.js": ("tools.js", "text/javascript"),
+    "/assets/accounting.js": ("accounting.js", "text/javascript"),
     "/assets/app.js": ("app.js", "text/javascript"),
     "/assets/app.css": ("app.css", "text/css"),
     "/assets/stream.js": ("stream.js", "text/javascript"),
@@ -26,6 +28,8 @@ def page_asset(path: str) -> tuple[bytes, str] | None:
         "/inbox",
         "/runs",
         "/memory",
+        "/tools",
+        "/ops",
         "/models",
         "/connections",
     } or path.startswith("/runs/"):

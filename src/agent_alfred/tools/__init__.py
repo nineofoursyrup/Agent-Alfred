@@ -8,6 +8,7 @@ import time
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass, replace
+from decimal import Decimal
 from typing import Any, Literal
 
 from agent_alfred.events import EventEnvelope, ToolFinished, ToolProgress, ToolStarted
@@ -22,8 +23,19 @@ Effect = Literal["local_read", "local_write", "external"]
 
 @dataclass(frozen=True)
 class ToolCost:
-    units: float
+    units: Decimal
     unit: str
+    source: str = "reported"
+
+    def __post_init__(self):
+        if isinstance(self.units, bool) or not isinstance(
+            self.units, (Decimal, str, int)
+        ):
+            raise ValueError("tool cost requires Decimal, integer or decimal text")
+        value = Decimal(self.units)
+        if not value.is_finite() or value < 0:
+            raise ValueError("invalid tool cost")
+        object.__setattr__(self, "units", value)
 
 
 @dataclass(frozen=True)
@@ -72,6 +84,7 @@ class ToolContext:
     session_id: str | None = None
     permission: object | None = None
     events: object | None = None
+    metering: object | None = None
     monotonic: Callable[[], float] = time.monotonic
 
     def checkpoint(self):
@@ -98,12 +111,17 @@ class Tool:
     summary_keys: Sequence[str] = ()
     emits_progress: bool = False
     parallel_safe: bool = False
+    source_id: str = "builtin"
+    capability_id: str | None = None
+    cost_units: tuple[str, ...] = ()
+    cost_sources: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
 class ToolPolicy:
     configured: bool = False
     authorization: Literal["unset", "allowed", "denied"] = "unset"
+    connection: Literal["unverified", "connected", "error"] = "unverified"
 
 
 class ProgressEvents:
@@ -128,6 +146,8 @@ class ToolRegistry:
         model_content_limit=8000,
         redactor=None,
         external_ledger=None,
+        metering=None,
+        external_block=None,
     ):
         for tool in tools:
             if re.fullmatch(r"[a-zA-Z0-9_-]{1,64}", tool.name) is None:
@@ -135,6 +155,12 @@ class ToolRegistry:
         if len({tool.name for tool in tools}) != len(tools):
             raise ValueError("duplicate tool name")
         for tool in tools:
+            if not isinstance(tool.source_id, str) or not tool.source_id:
+                raise ValueError("invalid source identity")
+            if tool.capability_id is not None and (
+                not isinstance(tool.capability_id, str) or not tool.capability_id
+            ):
+                raise ValueError("invalid capability identity")
             if tool.effect not in ("local_read", "local_write", "external"):
                 raise ValueError("invalid tool effect")
             if not callable(tool.fn) or tool.parallel_safe is not False:
@@ -156,8 +182,15 @@ class ToolRegistry:
             ):
                 raise ValueError("summary_keys must name declared arguments")
         self._tools = tuple(
-            replace(tool, input_schema=freeze(tool.input_schema)) for tool in tools
+            replace(
+                tool,
+                input_schema=freeze(tool.input_schema),
+                capability_id=tool.capability_id or tool.name,
+            )
+            for tool in tools
         )
+        self._external_block = external_block
+        self._metering = metering
         self._external_ledger = external_ledger
         self._redactor = redactor or Redactor(())
         if type(model_content_limit) is not int or model_content_limit < 1:
@@ -167,6 +200,77 @@ class ToolRegistry:
         self._policies = freeze(policies or {})
         self._schemas = self._build_schemas()
 
+    def declarations(self):
+        return self._tools
+
+    def policy(self, name):
+        return self._policies.get(name, ToolPolicy())
+
+    def suspend_external(self, reason):
+        self._external_block = reason
+        self._schemas = self._build_schemas()
+
+    def with_policies(self, policies, *, external_block=None):
+        return ToolRegistry(
+            self._tools,
+            clock=self._clock,
+            policies=policies,
+            model_content_limit=self._limit,
+            redactor=self._redactor,
+            external_ledger=self._external_ledger,
+            metering=self._metering,
+            external_block=external_block,
+        )
+
+    def catalog(self):
+        rows = []
+        exposed = {s.name for s in self._schemas}
+        for tool in self._tools:
+            policy = self.policy(tool.name)
+            external = tool.effect == "external"
+            rows.append(
+                {
+                    "identity": capability_identity(tool),
+                    "name": tool.name,
+                    "description": tool.description,
+                    "source_id": tool.source_id,
+                    "capability_id": tool.capability_id,
+                    "effect": tool.effect,
+                    "availability": "configured"
+                    if not external or policy.configured
+                    else "unconfigured",
+                    "connection": policy.connection if external else "not_applicable",
+                    "authorization": policy.authorization
+                    if external
+                    else "not_required",
+                    "exposure": "hidden"
+                    if tool.name not in exposed
+                    else "guidance"
+                    if external and not policy.configured
+                    else "real",
+                    "reason": self._external_block
+                    if external and self._external_block
+                    else "not_authorized"
+                    if tool.name not in exposed
+                    else "configuration_required"
+                    if external and not policy.configured
+                    else None,
+                }
+            )
+        return rows
+
+    def register_batch(self, calls, context):
+        if self._metering is not None:
+            self._metering.register(calls, context, {t.name: t for t in self._tools})
+
+    def stop_run(self, run_id, reason):
+        if self._metering is not None:
+            self._metering.stop_run(run_id, reason)
+
+    def stop_batch(self, calls, context, reason):
+        if self._metering is not None:
+            self._metering.stopped(calls, context, reason)
+
     def schemas(self):
         return self._schemas
 
@@ -175,6 +279,8 @@ class ToolRegistry:
         for tool in self._tools:
             policy = self._policies.get(tool.name, ToolPolicy())
             if tool.effect == "external":
+                if self._external_block:
+                    continue
                 if policy.authorization == "denied" or (
                     policy.configured and policy.authorization != "allowed"
                 ):
@@ -198,6 +304,41 @@ class ToolRegistry:
         return tuple(exposed)
 
     def execute(self, call, context, *, events=None):
+        from agent_alfred.tools.metering import MeteringError
+
+        try:
+            return self._execute(call, context, events=events)
+        except MeteringError:
+            if self._metering is not None:
+                try:
+                    self._metering.not_sent(context)
+                except MeteringError:
+                    pass  # The terminal Run also retains this fact for recovery.
+            raise
+
+    def _execute(self, call, context, *, events=None):
+        if self._metering is not None:
+            self.register_batch([call], context)
+            context = replace(context, metering=self._metering)
+            prior = self._metering.prior(context)
+            if prior is not None:
+                return ToolExecution(
+                    ToolResultBlock(
+                        call.id,
+                        (
+                            TextBlock(
+                                "原请求已有持久记录，未再次执行；原结果："
+                                + prior["result"]
+                                + "。原正文可在人工历史中核对。"
+                            ),
+                        ),
+                        prior["result"] != "succeeded",
+                    ),
+                    stop_reason="tool_result_unverified"
+                    if prior["result"] == "unknown"
+                    else None,
+                    operation_id=prior["operation_id"],
+                )
         started = self._clock.monotonic()
         envelope = EventEnvelope(
             started,
@@ -215,6 +356,8 @@ class ToolRegistry:
         tool = next((tool for tool in self._tools if tool.name == call.name), None)
         if tool is None:
             outcome = ToolFailure("unknown_tool", (TextBlock("Unknown tool."),))
+        elif tool.effect == "external" and self._external_block:
+            outcome = ToolFailure("unavailable", (TextBlock(self._external_block),))
         elif self._clock.monotonic() >= context.deadline:
             outcome = ToolFailure(
                 "timeout", (TextBlock("Budget exhausted; not started."),)
@@ -296,9 +439,16 @@ class ToolRegistry:
                             # consume time. Never enter fn on an expired budget.
                             executed = True
                             execution_context.checkpoint()
+                        if self._metering is not None:
+                            self._metering.intent(context)
+                        execution_context.checkpoint()
                         entered = True
                         outcome = tool.fn(call.input, execution_context)
                     except Exception as exc:
+                        from agent_alfred.tools.metering import MeteringError
+
+                        if isinstance(exc, MeteringError):
+                            raise
                         raise_if_rollback_pending(exc)
                         unknown = entered
                         outcome = ToolFailure(
@@ -315,8 +465,48 @@ class ToolRegistry:
                                 ),
                             ),
                         )
+                    except BaseException:
+                        if self._metering is not None:
+                            try:
+                                self._metering.finish(
+                                    context,
+                                    entered=entered,
+                                    result="unknown",
+                                    reason="control_interrupted",
+                                    cost={"kind": "unknown"}
+                                    if tool.effect == "external"
+                                    else {"kind": "not_billable"},
+                                )
+                            except BaseException:
+                                self._metering.failed.set()
+                        raise
                     else:
                         executed = True
+        if self._metering is not None:
+            from agent_alfred.tools.cost import project_tool_cost
+            from agent_alfred.tools.metering import MeteringError
+
+            # Business services can normalize storage exceptions into outcomes.
+            # The accounting owner retains the stronger stop-execution signal.
+            if self._metering.failed.is_set():
+                raise MeteringError("metering_unconfirmed")
+
+            self._metering.finish(
+                context,
+                entered=entered,
+                result="unknown"
+                if unknown
+                or outcome.stop_reason
+                in ("file_result_unverified", "memory_result_unverified")
+                else "failed"
+                if isinstance(outcome, ToolFailure)
+                else "succeeded",
+                reason=outcome.code
+                if isinstance(outcome, ToolFailure)
+                else outcome.stop_reason,
+                cost=project_tool_cost(tool, outcome, entered),
+                operation_id=outcome.operation_id,
+            )
         content = tuple(outcome.content)
         if isinstance(outcome, ToolFailure):
             header = json.dumps(
@@ -398,3 +588,9 @@ class ToolRegistry:
 def _start_boundary(context):
     context.checkpoint()
     yield
+
+
+def capability_identity(tool):
+    return json.dumps(
+        [tool.source_id, tool.capability_id or tool.name], separators=(",", ":")
+    )
