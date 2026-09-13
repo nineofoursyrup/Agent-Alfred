@@ -107,7 +107,7 @@ class _ExecutionEvents:
 _CONTROL_EXCEPTIONS = (SystemExit,)
 
 
-class _AttemptLedger:
+class AttemptLedger:
     """The Run's own record of every ModelResult the loop really produced.
 
     The Run settles from this rather than from the loop's return value. A
@@ -268,7 +268,7 @@ class RunExecutor:
             if item.session_id is not None
             else "run:" + item.run_id
         )
-        ledger = _AttemptLedger(
+        ledger = AttemptLedger(
             item.client,
             lambda result, events: (
                 self._support_recorder.observe(
@@ -282,7 +282,7 @@ class RunExecutor:
         )
 
         def gate_ledger(client, snapshot):
-            wrapped = _AttemptLedger(
+            wrapped = AttemptLedger(
                 client,
                 lambda result, events: (
                     self._support_recorder.observe(

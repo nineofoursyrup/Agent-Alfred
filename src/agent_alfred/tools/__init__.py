@@ -86,7 +86,7 @@ class ToolFailure:
 @dataclass(frozen=True)
 class ToolContext:
     run_id: str
-    step_index: int
+    step_index: int | None
     call_id: str
     source: str
     deadline: float
@@ -95,6 +95,13 @@ class ToolContext:
     events: object | None = None
     metering: object | None = None
     monotonic: Callable[[], float] = time.monotonic
+
+    node_id: str | None = None
+
+    @property
+    def ledger_step_index(self):
+        # -1 is the durable zero-Step namespace, never a model Step or event.
+        return -1 if self.step_index is None else self.step_index
 
     def checkpoint(self):
         if self.monotonic() >= self.deadline:
@@ -250,6 +257,51 @@ class ToolRegistry:
             external_block=external_block,
         )
 
+    def restricted(self, names):
+        names = tuple(names)
+        if len(set(names)) != len(names) or set(names) - {t.name for t in self._tools}:
+            raise ValueError('invalid tool whitelist')
+        return RestrictedToolRegistry(self, names)
+
+    def read_metering(self, run_id):
+        return self._metering.read(run_id) if self._metering is not None else ()
+
+    def side_effect_state(self, run_id):
+        if self._metering is None or self._metering.failed.is_set():
+            return 'unknown'
+        try:
+            rows = self._metering.read(run_id)
+            effects = [r for r in rows if r['effect'] in ('local_write', 'external')]
+            if any(r['result'] == 'unknown' for r in effects):
+                return 'unknown'
+            with self._metering.store.reading() as conn:
+                recorded = conn.execute(
+                    "SELECT l.effect,l.status,o.step_index,o.call_id "
+                    "FROM tool_ledger l "
+                    "LEFT JOIN external_tool_operations o ON o.ledger_id=l.id "
+                    "WHERE l.run_id=? AND l.effect IN ('local_write','external')",
+                    (run_id,),
+                ).fetchall()
+            by_call = {(r['step_index'], r['call_id']): r for r in effects}
+            occurred = False
+            for effect, status, step, call_id in recorded:
+                if status in ('started', 'unknown'):
+                    return 'unknown'
+                meter = by_call.get((step, call_id))
+                if effect == 'external' and status == 'failed':
+                    if meter is None:
+                        return 'unknown'
+                    cost = meter['cost']
+                    if cost.get('kind') == 'not_billable' and cost.get('reason') in (
+                        'http_not_sent', 'transport_not_sent',
+                    ):
+                        continue
+                occurred = True
+            return 'occurred' if occurred else 'none'
+        except Exception:
+            # Missing accounting evidence cannot authorize automatic replay.
+            return 'unknown'
+
     def catalog(self):
         rows = []
         exposed = {s.name for s in self._schemas}
@@ -378,7 +430,7 @@ class ToolRegistry:
             context.session_id,
             context.step_index,
             None,
-            None,
+            context.node_id,
             context.source,
         )
         executed = False
@@ -685,3 +737,37 @@ def capability_identity(tool):
     return json.dumps(
         [tool.source_id, tool.capability_id or tool.name], separators=(",", ":")
     )
+
+
+class RestrictedToolRegistry:
+    """Capability view sharing the owner's current policy, ledger and meter."""
+    def __init__(self, owner, names):
+        self._owner, self._names = owner, names
+
+    def _view(self):
+        owner = self._owner
+        selected = {t.name: t for t in owner.declarations()}
+        return ToolRegistry(
+            tuple(selected[name] for name in self._names), clock=owner._clock,
+            policies=owner._policies, model_content_limit=owner._limit,
+            redactor=owner._redactor, external_ledger=owner._external_ledger,
+            metering=owner._metering, external_block=owner._external_block,
+        )
+
+    def schemas(self):
+        return self._view().schemas()
+
+    def declarations(self):
+        return self._view().declarations()
+
+    def register_batch(self, calls, context):
+        return self._view().register_batch(calls, context)
+
+    def execute(self, call, context, *, events=None):
+        return self._view().execute(call, context, events=events)
+
+    def stop_batch(self, calls, context, reason):
+        return self._owner.stop_batch(calls, context, reason)
+
+    def stop_run(self, run_id, reason):
+        return self._owner.stop_run(run_id, reason)

@@ -31,6 +31,7 @@ class RunBudget:
         self._remaining = max_steps
         self._used = 0
         self._lock = threading.Lock()
+        self._graph_run = None
 
     @property
     def remaining(self) -> int:
@@ -50,3 +51,11 @@ class RunBudget:
             self._remaining -= 1
             self._used += 1
             return lease
+
+    def claim_graph(self, run_id):
+        """At most one graph invocation can consume this Run's budget."""
+        with self._lock:
+            if self._graph_run is not None:
+                return False
+            self._graph_run = run_id
+            return True

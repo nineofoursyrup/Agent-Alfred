@@ -115,7 +115,7 @@ class SkillTools:
                         digest(content),
                         digest(builtins[name][2]),
                         context.run_id,
-                        context.step_index,
+                        context.ledger_step_index,
                         context.call_id,
                         context.source,
                         context.session_id,

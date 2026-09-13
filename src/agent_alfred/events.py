@@ -350,8 +350,61 @@ class ToolProgress:
     trace_policy: TracePolicy = "transient"
 
 
+@dataclass(frozen=True)
+class GraphStarted:
+    graph_id: str
+    topology_hash: str
+    schema_version: int
+    name: str = "graph.started"
+    trace_policy: TracePolicy = "persist"
+
+
+@dataclass(frozen=True)
+class GraphFinished:
+    outcome: str
+    name: str = "graph.finished"
+    trace_policy: TracePolicy = "persist"
+
+
+@dataclass(frozen=True)
+class NodeStarted:
+    name: str = "node.started"
+    trace_policy: TracePolicy = "persist"
+
+
+@dataclass(frozen=True)
+class NodeFinished:
+    outcome: str
+    name: str = "node.finished"
+    trace_policy: TracePolicy = "persist"
+
+
+@dataclass(frozen=True)
+class NodeSkipped:
+    reason: str
+    name: str = "node.skipped"
+    trace_policy: TracePolicy = "persist"
+
+    def __post_init__(self):
+        if self.reason not in ('all_inbound_not_taken', 'disabled_by_config'):
+            raise ValueError('invalid skip reason')
+
+
+@dataclass(frozen=True)
+class NodeAborted:
+    reason: str
+    name: str = "node.aborted"
+    trace_policy: TracePolicy = "persist"
+
+
 EventPayload = (
-    RunStarted
+    GraphStarted
+    | GraphFinished
+    | NodeStarted
+    | NodeFinished
+    | NodeSkipped
+    | NodeAborted
+    | RunStarted
     | RunFinished
     | StepStarted
     | StepFinished

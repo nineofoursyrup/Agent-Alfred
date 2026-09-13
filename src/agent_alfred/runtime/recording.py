@@ -587,7 +587,7 @@ class RunRecorder:
                 created_at=item.accepted_at,
                 run_id=item.run_id,
             )
-            if outcome != "interrupted":
+            if outcome != "interrupted" and item.record_reply:
                 assistant = reply
                 if assistant is None:
                     assistant = text_message("assistant", CONTROLLED_FAILURE_TEXT)

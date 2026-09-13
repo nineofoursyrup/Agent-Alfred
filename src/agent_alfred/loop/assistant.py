@@ -51,6 +51,7 @@ class LoopResult:
     duration_ms: int
     model_results: tuple[ModelResult, ...] = field(default_factory=tuple)
     memory_telemetry: dict | None = None
+    transcript: tuple[Message, ...] = ()
 
 
 class AssistantEvents(Protocol):
@@ -86,6 +87,9 @@ class Assistant:
         tool_permission=None,
         tool_state=None,
         persona=None,
+        node_id=LOOP_NODE_ID,
+        single_step=False,
+        on_step_started=None,
     ) -> LoopResult:
         started = self._clock.monotonic()
         overall_s = (
@@ -154,7 +158,7 @@ class Assistant:
                     tools.stop_run(run_id, "overall_deadline")
                 break
             try:
-                lease = budget.reserve_step(LOOP_NODE_ID)
+                lease = budget.reserve_step(node_id)
             except StepBudgetExceeded:
                 outcome = "max_steps"
                 if tools is not None:
@@ -162,6 +166,8 @@ class Assistant:
                     tools.stop_run(run_id, "max_steps")
                 reply = text_message("assistant", MAX_STEPS_REACHED_TEXT)
                 break
+            if on_step_started is not None:
+                on_step_started(lease)
             step_count = lease.step_index + 1
             envelope = EventEnvelope(
                 ts=self._clock.monotonic(),
@@ -271,6 +277,7 @@ class Assistant:
                         overall_abs if overall_abs is not None else float("inf"),
                         session_id,
                         tool_permission,
+                        node_id=node_id,
                     )
                     tools.register_batch(calls, batch_context)
                     pending_tool_step = lease.step_index
@@ -290,6 +297,7 @@ class Assistant:
                                     else float("inf"),
                                     session_id,
                                     tool_permission,
+                                    node_id=node_id,
                                 ),
                                 events=events,
                             )
@@ -334,63 +342,16 @@ class Assistant:
                                         True,
                                     )
                                 )
-                            if tool_state is not None:
-                                tool_state.update(
-                                    finalization_reason=boundary,
-                                    not_executed_call_ids=remaining,
-                                )
-                            reply = text_message(
-                                "assistant",
-                                "记忆删除已确认。"
-                                "操作回执："
-                                + execution.block.content[0].text
-                                + "。未执行调用："
-                                + ", ".join(remaining),
+                            outcome, reply, error = tool_boundary_result(
+                                execution, call, remaining, tool_state
                             )
-                            if boundary == "file_result_unverified":
-                                operation_id = execution.operation_id
-                                if tool_state is not None:
-                                    tool_state["file_operation_id"] = operation_id
-                                reply = text_message(
-                                    "assistant",
-                                    "文件结果待核验。操作编号："
-                                    + operation_id
-                                    + "；恢复操作 "
-                                    + operation_id
-                                    + "；未执行调用："
-                                    + ", ".join(remaining),
-                                )
-                                outcome = "failed"
-                                error = boundary
-                            elif boundary in (
-                                "memory_result_unverified",
-                                "tool_result_unverified",
-                            ):
-                                reply = text_message(
-                                    "assistant",
-                                    (
-                                        (
-                                            "工具结果无法确认，可能已执行；本次后续调用已停止，未自动重试。操作编号："
-                                            if call.name.startswith("mcp_")
-                                            else (
-                                                "搜索结果无法确认，可能已执行；"
-                                                "本次后续调用已停止，未自动重试。操作编号："
-                                            )
-                                        )
-                                        if boundary == "tool_result_unverified"
-                                        else "操作结果待核验。操作编号："
-                                    )
-                                    + (execution.operation_id or "未记录"),
-                                )
-                                outcome = "failed"
-                                error = boundary
-                            else:
-                                outcome = "completed"
                             break
                     tool_message = Message("user", tuple(tool_results))
                     turns.append(tool_message)
                     transcript.append(tool_message)
                     if boundary is not None:
+                        break
+                    if single_step:
                         break
                     continue
             break
@@ -401,8 +362,70 @@ class Assistant:
             step_count=step_count,
             duration_ms=_duration_ms(started, self._clock.monotonic()),
             model_results=tuple(results),
+            transcript=(user, *turns),
         )
 
 
 def _duration_ms(started: float, ended: float) -> int:
     return max(0, int((ended - started) * 1000))
+
+
+def tool_boundary_result(execution, call, remaining, tool_state):
+    """One trusted fixed receipt for both Assistant and zero-Step graph tools."""
+    boundary = execution.stop_reason
+    outcome, error = "completed", None
+    if boundary == "memory_delete_boundary" and tool_state is not None:
+        tool_state.pop("system_receipts", None)
+    if tool_state is not None:
+        tool_state.update(
+            finalization_reason=boundary,
+            not_executed_call_ids=remaining,
+        )
+    reply = text_message(
+        "assistant",
+        "记忆删除已确认。"
+        "操作回执："
+        + execution.block.content[0].text
+        + "。未执行调用："
+        + ", ".join(remaining),
+    )
+    if boundary == "file_result_unverified":
+        operation_id = execution.operation_id
+        if tool_state is not None:
+            tool_state["file_operation_id"] = operation_id
+        reply = text_message(
+            "assistant",
+            "文件结果待核验。操作编号："
+            + operation_id
+            + "；恢复操作 "
+            + operation_id
+            + "；未执行调用："
+            + ", ".join(remaining),
+        )
+        outcome = "failed"
+        error = boundary
+    elif boundary in (
+        "memory_result_unverified",
+        "tool_result_unverified",
+    ):
+        reply = text_message(
+            "assistant",
+            (
+                (
+                    "工具结果无法确认，可能已执行；本次后续调用已停止，未自动重试。操作编号："
+                    if call.name.startswith("mcp_")
+                    else (
+                        "搜索结果无法确认，可能已执行；"
+                        "本次后续调用已停止，未自动重试。操作编号："
+                    )
+                )
+                if boundary == "tool_result_unverified"
+                else "操作结果待核验。操作编号："
+            )
+            + (execution.operation_id or "未记录"),
+        )
+        outcome = "failed"
+        error = boundary
+    else:
+        outcome = "completed"
+    return outcome, reply, error

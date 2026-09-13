@@ -17,6 +17,51 @@ from agent_alfred.runtime.host import SubmitRequest
 
 root = Path.cwd()
 assert "site-packages" in str(Path(__import__("agent_alfred").__file__))
+from agent_alfred.graph import (
+    GraphBuilder, GraphRegistry, NodeOutcome, TerminalSpec, fn_node,
+    GraphRunContext, llm_node, agent_node, tool_node, settle_graph,
+)
+graph = GraphBuilder('installed').declare_input('value')
+graph.add_node(
+    'reply', fn_node(lambda state, context: NodeOutcome({'reply': state['value']})),
+    required_reads=('value',), writes=('reply',), terminal=TerminalSpec.result('reply'),
+)
+compiled = GraphRegistry({'installed': graph}).get('installed')
+assert compiled.invoke({'value': 'graph works'}).output == 'graph works'
+assert len(compiled.describe()['topology_hash']) == 64
+import sqlite3, threading
+from agent_alfred import schema
+from agent_alfred.clock import FakeClock
+from agent_alfred.loop.assistant import Assistant
+from agent_alfred.loop.budget import RunBudget
+from agent_alfred.model import ModelRef
+from agent_alfred.settings import Settings
+from agent_alfred.runtime.recording import RecordingStore
+from agent_alfred.tools import ToolRegistry
+from agent_alfred.tools.calendar import CalendarTools
+from agent_alfred.tools.metering import ToolMetering
+conn = sqlite3.connect(':memory:')
+schema.migrate(conn)
+clock = FakeClock()
+store = RecordingStore(conn, threading.Lock())
+tools = ToolRegistry(CalendarTools(store, clock).declarations(), clock=clock,
+                     metering=ToolMetering(store, clock))
+model = ScriptedModel(['classify', 'answer'])
+args = dict(client=model, model=ModelRef('offline', 'installed'),
+            assistant=Assistant(clock=clock, settings=Settings()))
+graph = GraphBuilder('four', tools=tools)
+graph.add_node('llm', llm_node('x', output_key='llm', **args), writes=('llm',))
+graph.add_node('agent', agent_node('x', output_key='agent', **args),
+               writes=('agent',))
+graph.add_node('fn', fn_node(lambda s, c: NodeOutcome()))
+graph.add_node('tool', tool_node('query_events', {}, output_key='tool'),
+               writes=('tool',), terminal=TerminalSpec.result('tool'))
+graph.add_edge('llm', 'agent').add_edge('agent', 'fn').add_edge('fn', 'tool')
+context = GraphRunContext(run_id='installed', budget=RunBudget(2),
+                          clock=clock, tools=tools)
+assert graph.compile().invoke({}, context=context).output
+assert context.budget.used == 2 and len(tools.read_metering('installed')) == 1
+conn.close()
 extra = sys.argv[1] == "mcp"
 assert (importlib.util.find_spec("jsonschema") is not None) == extra
 server = root / "server.py"
