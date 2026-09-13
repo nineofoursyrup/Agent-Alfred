@@ -26,6 +26,19 @@ def decode(raw):
         )
     ):
         raise ValueError("authorization_invalid")
+    active, retired = value.get("mcp_active", {}), value.get("mcp_retired", [])
+    if (
+        not isinstance(active, dict)
+        or any(
+            not isinstance(k, str)
+            or not isinstance(v, list)
+            or any(not isinstance(i, str) for i in v)
+            for k, v in active.items()
+        )
+        or not isinstance(retired, list)
+        or any(not isinstance(i, str) for i in retired)
+    ):
+        raise ValueError("authorization_invalid")
     return value
 
 
@@ -34,6 +47,7 @@ class ToolAuthorization:
         self.path, self.registry, self.publish = path, registry, publish
         self.lock = threading.RLock()
         self.revision, self.values, self.fingerprint = 0, {}, None
+        self.mcp_active, self.mcp_retired = {}, []
         self.status, self.application = "ok", "pending"
         self.load()
 
@@ -45,6 +59,8 @@ class ToolAuthorization:
                 )
                 value = decode(raw)
                 self.revision, self.values = value["revision"], value["authorizations"]
+                self.mcp_active = value.get("mcp_active", {})
+                self.mcp_retired = value.get("mcp_retired", [])
                 self.status = "ok"
             except OSError, ValueError, TypeError:
                 self.status = "authorization_unreadable"
@@ -163,6 +179,8 @@ class ToolAuthorization:
                             "schema_version": 1,
                             "revision": self.revision + 1,
                             "authorizations": values,
+                            "mcp_active": self.mcp_active,
+                            "mcp_retired": self.mcp_retired,
                         }
                     ).encode()
                     self.fingerprint = write_atomic(
@@ -188,6 +206,47 @@ class ToolAuthorization:
             self.values, self.revision = values, self.revision + 1
             self.apply(candidate)
             return {"saved": True, **self.snapshot()}
+
+    def reconcile_mcp(self, observed, removed):
+        """Retire old allows and save the complete observed generation atomically.
+
+        Disabled servers and failed/incomplete directories are not observations
+        of removal. Denials and historical records retain their old identity.
+        """
+        with self.lock:
+            if self.status != "ok" or self._observe_disk()[0]:
+                raise ValueError("mcp_authorization_unconfirmed")
+            active = {**self.mcp_active, **observed}
+            for key in removed:
+                active.pop(key, None)
+            values, retired = dict(self.values), list(self.mcp_retired)
+            for key in set(observed) | set(removed):
+                old = set(self.mcp_active.get(key, []))
+                for identity in old - set(active.get(key, [])):
+                    if values.get(identity) == "allowed":
+                        values[identity] = "unset"
+                        if identity not in retired:
+                            retired.append(identity)
+            if (active, values, retired) == (
+                self.mcp_active,
+                self.values,
+                self.mcp_retired,
+            ):
+                return
+            if self.path is None:
+                raise ValueError("mcp_authorization_storage_required")
+            payload = {
+                "schema_version": 1,
+                "revision": self.revision + 1,
+                "authorizations": values,
+                "mcp_active": active,
+                "mcp_retired": retired,
+            }
+            self.fingerprint = write_atomic(
+                self.path, json.dumps(payload).encode(), self.fingerprint
+            )
+            self.values, self.mcp_active, self.mcp_retired = values, active, retired
+            self.revision += 1
 
     def reapply(self, expected_revision):
         with self.lock:

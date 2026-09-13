@@ -261,7 +261,10 @@ def build_host(
         # its part retires keeps one reachable owner across this return edge
         # and the caller's store. Both closes are resumable and idempotent, so
         # the overlap can never close a sink twice.
-        owner.publish(host, parts=(fanout,))
+        rollback.own(host)
+        rollback.transfer(fanout)
+        host.initialize_mcp()
+        owner.publish(host)
         return host
     except BaseException as exc:
         owner.fail(exc)

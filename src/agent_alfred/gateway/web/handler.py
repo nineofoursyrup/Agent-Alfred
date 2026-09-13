@@ -414,6 +414,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
             status, payload = api.memory_page_read(path, params)
             self._send(status, payload)
             return
+        if path == "/api/connections/mcp/operation":
+            status, payload = api.mcp_operation(params)
+            self._send(status, payload)
+            return
         if path == CONNECTIONS_PATH:
             status, payload = api.connections()
             self._send(status, payload)
@@ -508,14 +512,18 @@ class DashboardHandler(BaseHTTPRequestHandler):
             status, payload = context.api.reread_env()
             self._send(status, payload)
             return
-        if path == AUTH_PROBE_PATH:
+        if path in (AUTH_PROBE_PATH, "/api/connections/mcp"):
             assert authorization.body_length is not None
             body, error = self._read_body(authorization.body_length)
             if error is not None:
                 self._send(400, {"code": error})
                 return
             assert body is not None
-            status, payload = context.api.probe_auth(body)
+            status, payload = (
+                context.api.probe_auth(body)
+                if path == AUTH_PROBE_PATH
+                else context.api.mcp_control(body)
+            )
             self._send(status, payload)
             return
         self._send(404, {"code": "not_found"})
@@ -618,6 +626,6 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
 
 def _dump(payload: Any) -> bytes:
-    return (
-        json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode(
+        "utf-8"
     )

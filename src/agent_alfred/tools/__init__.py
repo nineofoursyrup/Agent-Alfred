@@ -42,6 +42,8 @@ class ToolCost:
 class NotSentCost:
     """Trusted tool transport proved no business request was sent."""
 
+    reason: Literal["http_not_sent", "transport_not_sent"] = "http_not_sent"
+
 
 @dataclass(frozen=True)
 class UnknownCost:
@@ -55,6 +57,7 @@ class ToolSuccess:
     cost: ToolCost | UnknownCost | NotSentCost | None = None
     stop_reason: str | None = None
     operation_id: str | None = None
+    audit_data: Mapping[str, Any] | None = None
 
 
 ToolErrorCode = Literal[
@@ -77,6 +80,7 @@ class ToolFailure:
     stop_reason: str | None = None
     operation_id: str | None = None
     memory_code: str | None = None
+    audit_data: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -120,6 +124,7 @@ class Tool:
     capability_id: str | None = None
     cost_units: tuple[str, ...] = ()
     cost_sources: tuple[str, ...] = ()
+    schema_mode: Literal["local", "mcp"] = "local"
 
 
 @dataclass(frozen=True)
@@ -181,8 +186,11 @@ class ToolRegistry:
                 or tool.budget_s <= 0
             ):
                 raise ValueError("invalid tool budget")
-            validate_schema(tool.input_schema)
-            if tool.input_schema["type"] != "object":
+            if tool.schema_mode == "local":
+                validate_schema(tool.input_schema)
+            elif tool.schema_mode != "mcp" or not tool.source_id.startswith("mcp:"):
+                raise ValueError("invalid schema mode")
+            if tool.schema_mode == "local" and tool.input_schema["type"] != "object":
                 raise ValueError("tool parameters must be object")
             if any(
                 key not in tool.input_schema.get("properties", {})
@@ -220,6 +228,14 @@ class ToolRegistry:
 
     def suspend_external(self, reason):
         self._external_block = reason
+        self._schemas = self._build_schemas()
+
+    def suspend_tools(self, names, reason):
+        self._policies = freeze({
+            **self._policies,
+            **{name: replace(self.policy(name), unavailable_reason=reason)
+               for name in names},
+        })
         self._schemas = self._build_schemas()
 
     def with_policies(self, policies, *, external_block=None):
@@ -405,7 +421,18 @@ class ToolRegistry:
             )
         else:
             try:
-                validate_input(tool.input_schema, call.input)
+                if tool.schema_mode == "local":
+                    validate_input(tool.input_schema, call.input)
+                else:
+                    from agent_alfred.mcp.transport import decode
+
+                    if not isinstance(call.input, dict):
+                        raise ValueError("MCP arguments must be a JSON object")
+                    decode(
+                        json.dumps(
+                            call.input, ensure_ascii=False, allow_nan=False
+                        ).encode()
+                    )
             except ValueError as exc:
                 outcome = ToolFailure("invalid_input", (TextBlock(str(exc)),))
             else:
@@ -485,10 +512,12 @@ class ToolRegistry:
                                 ),
                             ),
                             stop_reason="tool_result_unverified"
-                            if unknown and tool.effect == "external" else None,
+                            if unknown and tool.effect == "external"
+                            else None,
                             operation_id=(
                                 f"{context.run_id}:{context.step_index}:{context.call_id}"
-                                if unknown and tool.effect == "external" else None
+                                if unknown and tool.effect == "external"
+                                else None
                             ),
                         )
                     except BaseException:
@@ -554,7 +583,10 @@ class ToolRegistry:
                 else "not_executed"
                 if not entered
                 and isinstance(outcome, ToolFailure)
-                and outcome.code == "timeout"
+                and (
+                    outcome.code == "timeout"
+                    or (tool is not None and tool.schema_mode == "mcp")
+                )
                 else "failed"
                 if isinstance(outcome, ToolFailure)
                 else "succeeded",
@@ -608,7 +640,8 @@ class ToolRegistry:
         if ledger_id is not None:
             state = (
                 "unknown"
-                if unknown or outcome.stop_reason == "tool_result_unverified"
+                if unknown
+                or outcome.stop_reason == "tool_result_unverified"
                 or (
                     executed
                     and isinstance(outcome, ToolFailure)
@@ -635,6 +668,7 @@ class ToolRegistry:
                     max(0, int((self._clock.monotonic() - started) * 1000)),
                     summary=outcome.summary or tool.name,
                     cost=outcome.cost,
+                    audit_data=self._redactor.redact_jsonable(outcome.audit_data),
                 ),
                 envelope,
             )

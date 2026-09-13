@@ -23,8 +23,8 @@ jobs:
         with:
           python-version: "3.14"
 
-      - name: Install package (dev extra)
-        run: uv sync --extra dev --locked
+      - name: Install package (dev and mcp extras)
+        run: uv sync --extra dev --extra mcp --locked
 
       - name: Lint
         run: uv run ruff check
@@ -36,7 +36,13 @@ jobs:
         run: uv run python scripts/check_env_example.py
 
       - name: Offline deterministic tests
-        run: uv run pytest
+        run: uv run --extra mcp pytest
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Verify base and MCP artifact installations
+        run: uv run python scripts/check_mcp_installations.py --output /tmp/mcp-artifacts.json
 
       - name: Install Node for Dashboard checks
         uses: actions/setup-node@v4

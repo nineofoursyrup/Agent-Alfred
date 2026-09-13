@@ -420,6 +420,21 @@ class DashboardApi:
     def connections(self) -> tuple[int, Any]:
         return 200, self._facade.connections()
 
+    def mcp_control(self, body):
+        result = self._facade.mcp_control(body)
+        if isinstance(result.get("error"), dict):
+            code = result["error"]["code"]
+            if code in ("admission_failed", "recording_unavailable"):
+                return 503, {"code": code}
+            if code in ("invalid_input", "invalid_server", "configuration_invalid"):
+                return 400, {"code": code}
+            return 409, {"code": code}
+        return (202 if result["status"] == "running" else 200), result
+
+    def mcp_operation(self, params):
+        result = self._facade.mcp_operation(params.get("operation_id", ""))
+        return (404 if isinstance(result.get("error"), dict) else 200), result
+
     def models(self, params: dict[str, str]) -> tuple[int, Any]:
         expand = params.get("expand")
         refresh = params.get("refresh") == "1"
@@ -459,9 +474,11 @@ class DashboardApi:
             return 200, payload
         except RuntimeError as exc:
             code = str(exc)
-            return 400, {"code": code if code in (
-                "dotenv_unavailable", "dotenv_reload_failed"
-            ) else "dotenv_reload_failed"}
+            return 400, {
+                "code": code
+                if code in ("dotenv_unavailable", "dotenv_reload_failed")
+                else "dotenv_reload_failed"
+            }
 
     def probe_auth(self, body: dict[str, Any]) -> tuple[int, Any]:
         from agent_alfred.auth_probe import AuthProbeRefused
@@ -471,6 +488,7 @@ class DashboardApi:
         endpoint_id = body.get("endpoint_id")
         if type(endpoint_id) is not str or not endpoint_id:
             return 400, {"code": "invalid_endpoint"}
+
         def probe():
             self._facade.probe_auth(endpoint_id)
             return self._facade.connections()
@@ -597,9 +615,7 @@ class DashboardApi:
         if result.kind == "recording_unavailable":
             # Only ever returned once the coordinator has actually reached
             # recording_failed -- the state lands before the answer does.
-            return SubmitOutcome(
-                status=503, code="recording_unavailable", busy=busy
-            )
+            return SubmitOutcome(status=503, code="recording_unavailable", busy=busy)
         if result.kind == "mutation_in_flight":
             # The same conflict the gate reports, reached through admission
             # because the write arrived between the gate's question and the
@@ -679,7 +695,8 @@ class DashboardApi:
         try:
             reply = self._facade.recover_reply(
                 process_instance_id=params["process_instance_id"],
-                session_id=params["session_id"], run_id=params["run_id"],
+                session_id=params["session_id"],
+                run_id=params["run_id"],
             )
         except ReplyContextExpired:
             return 409, {"code": "reply_context_expired"}
@@ -759,9 +776,7 @@ def _messages_payload(page: SessionMessagesPage) -> dict[str, Any]:
         "messages": [
             {
                 "role": message.role,
-                "blocks": [
-                    _block_json(block) for block in message.blocks
-                ],
+                "blocks": [_block_json(block) for block in message.blocks],
                 "source": message.source,
                 "created_at": message.created_at,
                 # Null for historic rows, and that is the point: a message

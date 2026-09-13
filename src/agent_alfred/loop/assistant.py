@@ -368,9 +368,18 @@ class Assistant:
                             ):
                                 reply = text_message(
                                     "assistant",
-                                    ("搜索结果无法确认，可能已执行；本次后续调用已停止，未自动重试。操作编号："
-                                     if boundary == "tool_result_unverified"
-                                     else "操作结果待核验。操作编号：")
+                                    (
+                                        (
+                                            "工具结果无法确认，可能已执行；本次后续调用已停止，未自动重试。操作编号："
+                                            if call.name.startswith("mcp_")
+                                            else (
+                                                "搜索结果无法确认，可能已执行；"
+                                                "本次后续调用已停止，未自动重试。操作编号："
+                                            )
+                                        )
+                                        if boundary == "tool_result_unverified"
+                                        else "操作结果待核验。操作编号："
+                                    )
                                     + (execution.operation_id or "未记录"),
                                 )
                                 outcome = "failed"
