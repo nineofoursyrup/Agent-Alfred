@@ -255,6 +255,7 @@ export function connectionsPage(root, csrf) {
       notice.textContent = "";
       configurationNotice.textContent = "";
     }
+
     return true;
   }
 
@@ -351,7 +352,71 @@ export function connectionsPage(root, csrf) {
       list.append(card);
     }
 
+    if (body.mcp) {
+      const mcp = body.mcp;
+      const section = node("section"); section.setAttribute("aria-label", "MCP 服务器");
+      section.append(node("h2", "本地 MCP"), node("p", `配置来源：${mcp.config_path || "未配置"}`),
+        node("p", "启用配置允许启动本地程序；工具调用仍需在工具页逐项授权。命令不是沙箱，配置指纹不证明程序内容未变。"));
+      if (mcp.error) section.append(node("p", `配置未应用或能力暂停：${mcp.error}`));
+      if (!mcp.servers.length) section.append(node("p", "未配置服务器；在状态目录 mcp.json 中显式设置 enabled: true 后应用。"));
+      const apply = node("button", "应用 mcp.json");
+      apply.onclick = () => void operateMCP({action:"apply", server_key:null, token:mcp.token, operation_id:crypto.randomUUID()});
+      section.append(apply);
+      if (mcp.operation) section.append(node("p", `最近操作 ${mcp.operation.operation_id}：${mcp.operation.status}`));
+      for (const server of mcp.servers) {
+        const card = node("article"); card.className = "card"; card.setAttribute("data-mcp-server", server.server_key);
+        card.append(node("h3", server.server_key), node("p", `启动许可：${server.enabled ? "已启用" : "未启用"}`),
+          node("p", `连接：${STATE_LABEL[server.state] || server.state} ${server.reason || ""}`),
+          node("p", `工具：可用 ${server.available_tools} / 总数 ${server.total_tools}`));
+        if (server.reason === "restart_required") card.append(node("p", "新环境已生效，MCP 尚待重连；旧工具不可调用。"));
+        if (server.cleanup_incomplete) card.append(node("p", "清理未完成，不能启动替代进程。"));
+        if (server.directory_changed) card.append(node("p", "目录可能变化；显式重连后重新发现。"));
+        if (server.history) card.append(node("p", `历史连接：${server.history.state}；不代表当前就绪。`));
+        for (const line of server.diagnostics || []) card.append(node("pre", line));
+        for (const [action, label] of [["reconnect", "重连"], ["cleanup", "继续清理"]]) {
+          const button = node("button", label);
+          button.onclick = () => void operateMCP({action, server_key:server.server_key, token:mcp.token, operation_id:crypto.randomUUID()});
+          card.append(button);
+        }
+        section.append(card);
+      }
+      list.append(section);
+    }
+
     return true;
+  }
+
+  /** @param {Wire} payload */
+  async function operateMCP(payload) {
+    const attempt = ++sequence;
+    ++noticeSequence;
+    notice.textContent = "MCP 操作正在受理…";
+    try {
+      const response = await fetch("/api/connections/mcp", {
+        method: "POST", headers: {"Content-Type": "application/json", "x-agent-alfred-csrf": csrf()},
+        body: JSON.stringify(payload),
+      });
+      let result = await response.json();
+      if (!response.ok) throw new Error(result.code || "操作未受理");
+      while (result.status === "running" && list.isConnected && attempt === sequence) {
+        notice.textContent = `MCP 操作 ${result.operation_id}：准备 / 清理 / 发布中`;
+        await new Promise(resolve => setTimeout(resolve, 250));
+        const progress = await fetch("/api/connections/mcp/operation?" + new URLSearchParams({operation_id: payload.operation_id}));
+        result = await progress.json();
+        if (!progress.ok) throw new Error("操作进度未知，请核对当前状态");
+      }
+      if (attempt === sequence && list.isConnected) {
+        notice.textContent = `MCP 操作 ${result.status} ${result.error || ""}；请核对各服务器结果。`;
+        channel.postMessage({instance});
+      }
+    } catch (error) {
+      if (attempt === sequence && list.isConnected) {
+        notice.replaceChildren(node("span", String(error)));
+        const retry = node("button", "重试同一 MCP 操作");
+        retry.onclick = () => void operateMCP(payload);
+        notice.append(retry);
+      }
+    } finally { await refresh(); }
   }
 
   async function refresh() {

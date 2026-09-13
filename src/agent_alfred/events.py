@@ -336,6 +336,7 @@ class ToolFinished:
     duration_ms: int
     summary: str | None = None
     cost: object | None = None
+    audit_data: object | None = None
     name: str = "tool.finished"
     trace_policy: TracePolicy = "persist"
 

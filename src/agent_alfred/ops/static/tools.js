@@ -27,12 +27,19 @@ export function toolsPage(root, csrf) {
     if (value.active_policy_retained) state.append(node('span', ' · 在途操作保留原政策；当前外部授权待核验，空闲后暂停外部能力。'));
     reapply.disabled = busy || value.configuration_state !== 'ok';
     list.replaceChildren();
+    for (const server of value.mcp?.servers || []) {
+      list.append(node('p', `MCP ${server.server_key}：${server.state} ${server.reason || ''} · 可用 ${server.available_tools}/${server.total_tools}`));
+    }
+    for (const historical of value.mcp_history || []) {
+      list.append(node('p', `历史目录 · ${historical.server_key} / ${historical.original_name} · ${historical.reason}；不可调用，不代表新来源。`));
+    }
     for (const tool of value.tools) {
       const card = node('article'); card.className = 'card';
       card.append(node('h2', tool.name), node('p', tool.description),
         node('p', `来源 ${tool.source_id} · 能力 ${tool.capability_id} · ${tool.effect}`),
         node('p', `可用性：${tool.availability} · 模型暴露：${tool.exposure} · ${tool.reason || '可使用'}`),
         node('p', tool.effect === 'external' ? `外部连接：${tool.connection === 'unverified' ? '尚未验证' : tool.connection}` : '本地工具，不需要外部授权'));
+      if (tool.server_key) card.append(node('p', `MCP 服务器 ${tool.server_key} · 原始工具名 ${tool.original_name} · 别名 ${tool.alias}`));
       if (tool.observation) card.append(node("p", `${tool.observation.checked_at || "未观测"} ${tool.observation.checked_via || ""} ${tool.observation.reason || ""}`));
       const history = node('a', '查看包含该工具的运行');
       history.href = '/ops?tool=' + encodeURIComponent(tool.identity);

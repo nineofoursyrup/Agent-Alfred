@@ -462,6 +462,12 @@ class RuntimeHost:
         from agent_alfred.integrations import Integrations
 
         self._integrations = Integrations(self._credential_env(), clock, self._redactor)
+        from agent_alfred.mcp import MCPBridge
+
+        self._mcp = MCPBridge(
+            file_state.path if file_state is not None else None,
+            self._credential_env(), clock, self._redactor,
+        )
         tools = ToolRegistry(
             (
                 *CalendarTools(self._store, clock).declarations(),
@@ -685,6 +691,10 @@ class RuntimeHost:
         # frame. They must finish before FanOut or the database can close, and
         # before close() claims success for waiters that still need a result.
         if not self._recorder.retry_pending_settlements():
+            return False
+        if hasattr(self, "_mcp_control") and not self._mcp_control.close(deadline):
+            return False
+        if not self._mcp.close(deadline):
             return False
         with self._lifecycle:
             invalidate = getattr(self._factory, "invalidate_all", None)
@@ -935,6 +945,7 @@ class RuntimeHost:
         old_overlay = dict(self._credentials._overlay)
         old_values = self._credentials.values()
         old_integration_state = self._integrations.checkpoint()
+        old_mcp_environment = self._mcp.environment_checkpoint()
         old_application = self._integration_application
         previous = self._tool_authorization.registry
         bind = getattr(self._snapshot_provider, "bind_environ", None)
@@ -942,6 +953,7 @@ class RuntimeHost:
             overlay = self._credentials.prepare()
             values = merge_credentials(self._credentials._process, overlay)
             self._integrations.prepare(values)
+            mcp_affected = self._mcp.affected_env(values)
             policies = {
                 t.name: previous.policy(t.name) for t in previous.declarations()
             }
@@ -949,6 +961,11 @@ class RuntimeHost:
                 policies[name] = replace(
                     available, authorization=policies[name].authorization
                 )
+            for name, (key, _) in self._mcp.aliases.items():
+                if key in mcp_affected:
+                    policies[name] = replace(
+                        policies[name], unavailable_reason="restart_required"
+                    )
             block = previous.external_block
             if block and block.startswith("configuration_not_applied"):
                 block = None
@@ -965,12 +982,14 @@ class RuntimeHost:
             self._credentials.publish(overlay)
             self._integrations.publish(values)
             self._tool_authorization.registry = candidate
+            self._mcp.publish_env(values, mcp_affected)
             self._integration_application = "applied"
         except BaseException as exc:
             self._integration_application = old_application
             try:
                 self._credentials.publish(old_overlay)
                 self._integrations.restore(old_integration_state)
+                self._mcp.restore_environment(old_mcp_environment)
                 if callable(bind):
                     bind(old_values)
                 self._publish_tools(previous)
@@ -992,6 +1011,7 @@ class RuntimeHost:
 
             raise_if_rollback_pending(exc)
             raise RuntimeError("dotenv_reload_failed") from None
+        self._mcp.clean_affected(mcp_affected)
         return values
 
     def connections(self) -> dict:
@@ -1023,6 +1043,9 @@ class RuntimeHost:
             catalogs=catalogs,
         )
 
+        result["mcp"] = self._mcp.snapshot()
+        if hasattr(self, "_mcp_control"):
+            result["mcp"].update(self._mcp_control.preview())
         result["integrations"] = self._integrations.snapshot()
         result["integration_revision"] = self._integrations.revision
         result["integration_application"] = self._integration_application
@@ -1111,13 +1134,9 @@ class RuntimeHost:
             endpoint_id = body.get("endpoint_id")
             model_id = body.get("model_id")
             if op == "pin":
-                return pin(
-                    snapshot, endpoint_id=endpoint_id, model_id=model_id
-                )
+                return pin(snapshot, endpoint_id=endpoint_id, model_id=model_id)
             if op == "unpin":
-                return unpin(
-                    snapshot, endpoint_id=endpoint_id, model_id=model_id
-                )
+                return unpin(snapshot, endpoint_id=endpoint_id, model_id=model_id)
             if op == "style":
                 return set_style(
                     snapshot,
@@ -1594,8 +1613,7 @@ class RuntimeHost:
         if (
             current.coordinator_state == coordinator_state
             and current.active_run == active_run
-            and current.unrecorded_terminal_projection
-            == unrecorded_terminal_projection
+            and current.unrecorded_terminal_projection == unrecorded_terminal_projection
         ):
             # The authoritative snapshot may have moved before an asynchronous
             # exception interrupted Host's own mirror assignments.  Repair the
@@ -1609,9 +1627,7 @@ class RuntimeHost:
                 owner_run_id=owner_run_id,
                 coordinator_state=coordinator_state,
                 active_run=active_run,
-                unrecorded_terminal_projection=(
-                    unrecorded_terminal_projection
-                ),
+                unrecorded_terminal_projection=(unrecorded_terminal_projection),
             )
         finally:
             if self._states.get() is not current:
@@ -1781,8 +1797,7 @@ class RuntimeHost:
                     (
                         item
                         for item in pins
-                        if item.endpoint_id == endpoint_id
-                        and item.model_id == model_id
+                        if item.endpoint_id == endpoint_id and item.model_id == model_id
                     ),
                     None,
                 )
@@ -1964,13 +1979,20 @@ class RuntimeHost:
             )
 
     def recover_reply(
-        self, *, process_instance_id: str, session_id: str, run_id: str,
+        self,
+        *,
+        process_instance_id: str,
+        session_id: str,
+        run_id: str,
     ) -> replies.RecoveredReply:
         """Recover formal reply text without changing Run or recording state."""
         return replies.recover_reply(
-            self.snapshot(), self._store, self._redactor,
+            self.snapshot(),
+            self._store,
+            self._redactor,
             process_instance_id=process_instance_id,
-            session_id=session_id, run_id=run_id,
+            session_id=session_id,
+            run_id=run_id,
         )
 
     def mainbar_pairs(
@@ -2024,7 +2046,100 @@ class RuntimeHost:
                     tool["observation"] = integration["observation"]
                     tool["connection"] = integration["observation"]["state"]
                     tool["integration_revision"] = integration["revision"]
+            result["process_instance_id"] = self._process_instance_id
+            result["mcp"] = self._mcp.snapshot()
+            result["mcp_history"] = self._mcp.historical_catalog()
+            for tool in result["tools"]:
+                entry = self._mcp.aliases.get(tool["name"])
+                if entry:
+                    key, item = entry
+                    row = self._mcp.rows[key]
+                    tool["description"] = self._redactor.redact_text(
+                        tool["description"]
+                    )
+                    tool.update(
+                        server_key=self._redactor.redact_text(key),
+                        original_name=self._redactor.redact_text(item["name"]),
+                        alias=tool["name"],
+                        connection=row["state"],
+                    )
+                    if row["state"] != "connected":
+                        tool.update(
+                            exposure="hidden",
+                            availability=row["reason"],
+                            reason=row["reason"],
+                        )
             return result
+
+    def initialize_mcp(self):
+        from agent_alfred.runtime.mcp_control import MCPControl
+
+        self._mcp.on_unavailable = self._suspend_mcp_server
+        self._mcp_control = MCPControl(self)
+        self._mcp.start()
+        try:
+            self._publish_mcp()
+        except Exception:
+            pass  # Optional MCP remains visibly paused; core construction survives.
+
+    def _suspend_mcp_server(self, key, reason):
+        with self._configuration_lock:
+            self._tools.suspend_tools(
+                [name for name, (server, _) in self._mcp.aliases.items()
+                 if server == key], reason,
+            )
+
+    def _publish_mcp(self):
+        from agent_alfred.tools import ToolRegistry, capability_identity
+
+        previous = self._tools
+        base = tuple(t for t in previous.declarations() if t.schema_mode != "mcp")
+        declarations = self._mcp.declarations(t.name for t in base)
+        observed = {
+            key: [
+                capability_identity(t)
+                for t in declarations
+                if t.source_id == "mcp:" + row.get("source", "")
+            ]
+            for key, row in self._mcp.rows.items()
+            if row["state"] == "connected"
+        }
+        removed = set(self._tool_authorization.mcp_active) - set(self._mcp.config)
+        try:
+            if self._mcp.error is None:
+                self._tool_authorization.reconcile_mcp(observed, removed)
+            policies = {
+                **{t.name: previous.policy(t.name) for t in base},
+                **self._mcp.policies(),
+            }
+            candidate = ToolRegistry(
+                (*base, *declarations),
+                clock=self._clock,
+                redactor=self._redactor,
+                policies=policies,
+                external_ledger=self._external_tools,
+                metering=self._tool_metering,
+                external_block=previous.external_block,
+            )
+            self._tool_authorization.registry = candidate
+            self._tool_authorization.apply()
+            if self._tool_authorization.application != "applied":
+                raise ValueError("mcp_publication_unconfirmed")
+        except Exception:
+            self._mcp.pause("publication_unconfirmed")
+            # Old registries also consult the bridge before entering stdio.
+            self._tools = previous
+            self._tool_authorization.registry = previous
+            raise
+
+    def mcp_control(self, body):
+        return self._mcp_control.submit(body)
+
+    def mcp_operation(self, operation_id):
+        return self._mcp_control.get(operation_id)
+
+    def wait_mcp_operation(self, operation_id, timeout=30):
+        return self._mcp_control.wait(operation_id, timeout)
 
     def _publish_tools(self, registry):
         if self._integration_application != "applied":
@@ -2137,10 +2252,15 @@ class RuntimeHost:
         if session_id is None:
             return
         try:
-            result = self.submit(SubmitRequest(
-                message=session_id, purpose="consolidation", gateway="cli",
-                wait_for_result=False, consolidation_trigger_run_id=run_id,
-            ))
+            result = self.submit(
+                SubmitRequest(
+                    message=session_id,
+                    purpose="consolidation",
+                    gateway="cli",
+                    wait_for_result=False,
+                    consolidation_trigger_run_id=run_id,
+                )
+            )
         except BaseException:
             scheduling.finish_admission(run_id, "scheduling_interrupted")
             raise
