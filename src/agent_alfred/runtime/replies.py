@@ -26,6 +26,7 @@ class RecoveredReply:
     session_id: str
     run_id: str
     reply_text: str
+    skill_notice: str | None = None
 
 
 def _redact_reply(redactor: Redactor, text: str) -> str:
@@ -69,11 +70,14 @@ def recover_reply(
                 session_id,
                 run_id,
                 _redact_reply(redactor, projection.reply_text),
+                _redact_reply(redactor, projection.skill_notice)
+                if projection.skill_notice
+                else None,
             )
     try:
         with store.reading() as conn:
             row = conn.execute(
-                """SELECT agent_log.content FROM runs
+                """SELECT agent_log.content, runs.telemetry FROM runs
                    JOIN agent_log ON agent_log.run_id = runs.run_id
                      AND agent_log.session_id = runs.session_id
                    WHERE runs.run_id = ? AND runs.session_id = ?
@@ -102,4 +106,14 @@ def recover_reply(
         session_id,
         run_id,
         _redact_reply(redactor, message_plain_text(message)),
+        _notice_from_telemetry(row[1], redactor),
     )
+
+
+def _notice_from_telemetry(encoded, redactor):
+    value = (
+        json.loads(encoded).get("memory", {}).get("skills", {}).get("notice")
+        if encoded
+        else None
+    )
+    return _redact_reply(redactor, value) if isinstance(value, str) else None

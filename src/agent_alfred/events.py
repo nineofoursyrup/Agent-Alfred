@@ -169,6 +169,7 @@ class RunStarted:
 
 @dataclass(frozen=True)
 class RunFinished:
+    skill_notice: str | None = None
     finalization_reason: str | None = None
     not_executed_call_ids: tuple[str, ...] = ()
     name: str = "run.finished"

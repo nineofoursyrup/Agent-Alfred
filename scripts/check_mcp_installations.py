@@ -91,8 +91,16 @@ for configured in (False, True):
                 }
             )
         )
+    skill_path = state / "skills" / "installed-skill" / "SKILL.md"
+    skill_path.parent.mkdir(parents=True, exist_ok=True)
+    skill_path.write_text(
+        "---\nname: installed-skill\ndescription: installed procedure\n"
+        "---\nWhole installed body\n"
+    )
     model = ScriptedModel(
-        ['{"retrieve":false,"query":null,"reason_code":"greeting"}', "core works"]
+        ['{"skills":["installed-skill"]}',
+         '{"retrieve":false,"query":null,"reason_code":"greeting"}', "core works",
+         '{"retrieve":false,"query":null,"reason_code":"greeting"}', "explicit works"]
     )
     host = build_default_host(
         state_dir=state,
@@ -110,7 +118,14 @@ for configured in (False, True):
             assert rows == []
         host.start()
         run = host.submit(SubmitRequest(message="hello"))
-        assert host.wait(run.run_id, 10).outcome == "completed"
+        result = host.wait(run.run_id, 10)
+        assert result.outcome == "completed"
+        loaded = result.memory_telemetry["skills"]["loaded"]
+        assert loaded[0]["name"] == "installed-skill"
+        assert "Whole installed body\n" in model.requests[-1].system[-1].text
+        explicit = host.submit(SubmitRequest(message="/skills installed-skill\nhello"))
+        assert host.wait(explicit.run_id, 10).outcome == "completed"
+        assert len(model.requests) == 5
     finally:
         assert host.close()
 print(

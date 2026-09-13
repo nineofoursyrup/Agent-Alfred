@@ -183,7 +183,8 @@ def test_reply_redaction_failure_is_read_unavailable_and_can_be_retried(saved):
         }
         api = DashboardApi(facade=host)
         with interrupt_py_return_once(
-            "reply-redaction-failure", Redactor.redact_text.__code__,
+            "reply-redaction-failure",
+            Redactor.redact_text.__code__,
             RuntimeError("synthetic redaction failure"),
         ) as armed:
             try:
@@ -192,7 +193,15 @@ def test_reply_redaction_failure_is_read_unavailable_and_can_be_retried(saved):
                 assert armed == [False], "redaction failure injection was not reached"
         assert response == (503, {"code": "reply_unavailable"})
         assert host.snapshot() == before
-        assert api.recover_reply(identity) == (200, {**identity, "reply_text": "pong"})
+        assert api.recover_reply(identity) == (
+            200,
+            {
+                **identity,
+                "reply_text": "pong",
+                "skill_notice": "Skill 已降级：部分流程未使用或选择器不可用；"
+                "请查看运行详情中的本次输入。",
+            },
+        )
         assert host.snapshot() == before
     finally:
         saving.release()
@@ -203,7 +212,8 @@ def test_reply_redaction_failure_is_read_unavailable_and_can_be_retried(saved):
 @pytest.mark.parametrize("failed", [False, True])
 @pytest.mark.parametrize("withheld", [False, True])
 def test_reply_recovery_distinguishes_withheld_text_from_a_literal_marker(
-    failed, withheld,
+    failed,
+    withheld,
 ):
     raw_reply = "synthetic reply" if withheld else "<redaction failed; text withheld>"
     saving = SelectiveLatch()
@@ -218,7 +228,8 @@ def test_reply_recovery_distinguishes_withheld_text_from_a_literal_marker(
     host.start()
     try:
         with claimed_monitoring_tool(
-            "projection-redaction-failure", local_codes=(code,),
+            "projection-redaction-failure",
+            local_codes=(code,),
         ) as tool_id:
 
             def fail_reply_redaction(actual_code, offset, result):
@@ -227,10 +238,14 @@ def test_reply_recovery_distinguishes_withheld_text_from_a_literal_marker(
                     raise RuntimeError("synthetic projection redaction failure")
 
             sys.monitoring.register_callback(
-                tool_id, sys.monitoring.events.PY_RETURN, fail_reply_redaction,
+                tool_id,
+                sys.monitoring.events.PY_RETURN,
+                fail_reply_redaction,
             )
             sys.monitoring.set_local_events(
-                tool_id, code, sys.monitoring.events.PY_RETURN,
+                tool_id,
+                code,
+                sys.monitoring.events.PY_RETURN,
             )
             submitted = host.submit(SubmitRequest(message="hello"))
             assert saving.entered.wait(2)
@@ -251,7 +266,16 @@ def test_reply_recovery_distinguishes_withheld_text_from_a_literal_marker(
         api = DashboardApi(facade=host)
         expected = (
             (503, {"code": "reply_unavailable"})
-            if withheld else (200, {**identity, "reply_text": raw_reply})
+            if withheld
+            else (
+                200,
+                {
+                    **identity,
+                    "reply_text": raw_reply,
+                    "skill_notice": "Skill 已降级：部分流程未使用或选择器不可用；"
+                    "请查看运行详情中的本次输入。",
+                },
+            )
         )
         assert api.recover_reply(identity) == expected
         assert host.snapshot() == before
@@ -259,7 +283,13 @@ def test_reply_recovery_distinguishes_withheld_text_from_a_literal_marker(
             saving.release()
             host.wait(submitted.run_id)
             assert api.recover_reply(identity) == (
-                200, {**identity, "reply_text": raw_reply},
+                200,
+                {
+                    **identity,
+                    "reply_text": raw_reply,
+                    "skill_notice": "Skill 已降级：部分流程未使用或选择器不可用；"
+                    "请查看运行详情中的本次输入。",
+                },
             )
     finally:
         flag["armed"] = False
@@ -368,7 +398,7 @@ def test_http_reply_never_substitutes_a_different_identity(field, expected):
         conn.close()
 
 
-def test_http_reply_contract_returns_only_identity_and_complete_content():
+def test_http_reply_contract_returns_identity_complete_content_and_skill_notice():
     saving = SelectiveLatch()
     saving.arm()
     host, conn = build_runtime_host(["正文" * 3000], before_recording_commit=saving)
@@ -383,7 +413,12 @@ def test_http_reply_contract_returns_only_identity_and_complete_content():
         }
         status, payload = DashboardApi(facade=host).recover_reply(identity)
         assert status == 200
-        assert payload == {**identity, "reply_text": "正文" * 3000}
+        assert payload == {
+            **identity,
+            "reply_text": "正文" * 3000,
+            "skill_notice": "Skill 已降级：部分流程未使用或选择器不可用；"
+            "请查看运行详情中的本次输入。",
+        }
         assert DashboardApi(facade=host).recover_reply(identity) == (status, payload)
         assert host.snapshot().coordinator_state == "recording_pending"
     finally:

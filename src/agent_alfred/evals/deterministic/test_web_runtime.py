@@ -93,6 +93,7 @@ def _assert_poisoned_database_reads_fail_closed(
 
     assert conn.execute_calls == calls_before_reads
 
+
 # --- the 202 ----------------------------------------------------------------
 
 
@@ -1401,7 +1402,8 @@ def test_stale_admission_failure_retry_cannot_revive_an_old_run() -> None:
 @pytest.mark.parametrize("failed", [False, True])
 @pytest.mark.parametrize("cursor", [None, CursorText("malformed")])
 def test_reconnect_recovers_complete_reply_without_repairing_the_process_gap(
-    failed, cursor,
+    failed,
+    cursor,
 ) -> None:
     latch = SelectiveLatch()
     latch.arm()
@@ -1424,9 +1426,13 @@ def test_reconnect_recovers_complete_reply_without_repairing_the_process_gap(
             latch.release()
             host.wait(submitted.run_id)
         before = host.snapshot()
-        opening = drain_connection(broker.connect(
-            connection=FakeConnection(), session_id=submitted.session_id, cursor=cursor,
-        ))
+        opening = drain_connection(
+            broker.connect(
+                connection=FakeConnection(),
+                session_id=submitted.session_id,
+                cursor=cursor,
+            )
+        )
         patch = _patch_from_items(opening)
         assert patch["unrecorded_terminal_projection"]["reply_preview"] == (
             text[:1999] + "…"
@@ -1434,15 +1440,26 @@ def test_reconnect_recovers_complete_reply_without_repairing_the_process_gap(
         assert all(b"event: domain_event" not in item.wire_bytes() for item in opening)
         identity = {
             "process_instance_id": host.process_instance_id,
-            "session_id": submitted.session_id, "run_id": submitted.run_id,
+            "session_id": submitted.session_id,
+            "run_id": submitted.run_id,
         }
         assert DashboardApi(facade=host).recover_reply(identity) == (
-            200, {**identity, "reply_text": text},
+            200,
+            {
+                **identity,
+                "reply_text": text,
+                "skill_notice": "Skill 已降级：部分流程未使用或选择器不可用；"
+                "请查看运行详情中的本次输入。",
+            },
         )
         assert host.snapshot() == before
-        after = drain_connection(broker.connect(
-            connection=FakeConnection(), session_id=submitted.session_id, cursor=cursor,
-        ))
+        after = drain_connection(
+            broker.connect(
+                connection=FakeConnection(),
+                session_id=submitted.session_id,
+                cursor=cursor,
+            )
+        )
         assert _patch_from_items(after) == patch
         if cursor is not None:
             for items in (opening, after):

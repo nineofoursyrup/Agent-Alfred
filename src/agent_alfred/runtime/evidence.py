@@ -192,6 +192,10 @@ def _safe_event(event: dict) -> dict:
         )
         if key in payload
     }
+    if payload.get("name", "").startswith(("graph.", "node.")):
+        selected.update({key: payload[key] for key in (
+            "graph_id", "topology_hash", "schema_version", "result", "reason"
+        ) if key in payload})
     if payload.get("code") == "model_support_flipped":
         selected.update(
             {
@@ -205,6 +209,14 @@ def _safe_event(event: dict) -> dict:
         else {"type": block.get("type", "unknown")}
         for block in payload.get("blocks", [])
     ]
+    if payload.get("name") == "step.started":
+        selected["skill_system"] = [
+            block["text"]
+            for block in payload.get("system") or ()
+            if block.get("type") == "text"
+            and isinstance(block.get("text"), str)
+            and block["text"].startswith("<skills>\n")
+        ]
     error = payload.get("error")
     if isinstance(error, dict):
         selected["error"] = {"code": error.get("code")}
@@ -213,7 +225,8 @@ def _safe_event(event: dict) -> dict:
     return {"seq": event["seq"], "process_instance_id": event["process_instance_id"],
             "envelope": {key: event.get(key) for key in (
                 "run_id", "session_id", "step_index", "attempt_id", "ts", "source"
-            )}, "payload": selected}
+            )} | ({"node_id": event["node_id"]}
+                  if event.get("node_id") is not None else {}), "payload": selected}
 
 
 def _attempt_evidence(attempt, models, prices, computed_at) -> dict[str, Any]:

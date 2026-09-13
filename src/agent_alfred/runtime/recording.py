@@ -354,12 +354,11 @@ class RunRecorder:
             outcome=outcome,
             reply_text=_REDACTION_FAILURE_TEXT if reply_withheld else reply_text,
             reply_withheld=reply_withheld,
+            skill_notice=item.memory_telemetry.get("skills", {}).get("notice"),
             error=_redact_projection_text(error, self._redactor),
             recording_state="pending",
             session_id=item.session_id,
-            prompt_preview=_redact_projection_text(
-                item.prompt_preview, self._redactor
-            ),
+            prompt_preview=_redact_projection_text(item.prompt_preview, self._redactor),
         )
         owner = self._retain_settlement(item, projection, result)
         clock_failure: str | None = None
@@ -384,6 +383,7 @@ class RunRecorder:
         try:
             self._fanout.emit(
                 RunFinished(
+                    skill_notice=item.memory_telemetry.get("skills", {}).get("notice"),
                     finalization_reason=item.memory_telemetry.get(
                         "finalization_reason"
                     ),

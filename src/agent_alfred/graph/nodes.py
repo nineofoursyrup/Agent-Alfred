@@ -16,6 +16,7 @@ class NodeExecutionFailed(Exception):
 def _model_node(kind, prompt, *, client, model, assistant, output_key, tool_names=()):
     def execute(state, context):
         run = context.run
+        run.checkpoint()
         tools = None
         if kind == "agent" and run.tools is not None:
             tools = run.tools.restricted(tool_names)
@@ -53,6 +54,12 @@ def _model_node(kind, prompt, *, client, model, assistant, output_key, tool_name
                 tool_permission=run.tool_permission,
                 tool_state=run.tool_state,
                 on_step_started=started,
+                skills=run.skills if kind == "agent" else None,
+                persona=run.persona,
+                absolute_deadline=run.deadline,
+                memory=run.memory,
+                memory_prepared=run.memory is not None,
+                prior_turns=tuple(run.transcript),
             )
         except MeteringError as exc:
             _metering_stop(run, exc)
@@ -64,6 +71,7 @@ def _model_node(kind, prompt, *, client, model, assistant, output_key, tool_name
                 result.outcome, result.reply, result.error, freeze(run.tool_state)
             )
             raise RunForcedStop()
+        run.checkpoint()
         if result.outcome == "max_steps":
             raise StepBudgetExceeded("node budget exhausted")
         if result.outcome != "completed":
@@ -124,7 +132,7 @@ def tool_node(tool_name, arguments, *, output_key):
                     None,
                     call_id,
                     run.source,
-                    float("inf"),
+                    run.deadline if run.deadline is not None else float("inf"),
                     run.session_id,
                     run.tool_permission,
                     node_id=context.node_id,

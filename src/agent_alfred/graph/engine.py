@@ -12,8 +12,14 @@ from agent_alfred.events import (
     NodeStarted,
 )
 from agent_alfred.loop.budget import RunBudget, StepBudgetExceeded
+from agent_alfred.runtime.memory import (
+    InputEvidenceError,
+    InputLimitExceeded,
+    InputResolutionError,
+)
+from agent_alfred.stream_fallback import OverallDeadlineExceeded
 
-from .context import GraphRunContext, NodeContext, RunForcedStop
+from .context import ForcedStop, GraphRunContext, NodeContext, RunForcedStop
 from .types import (
     BudgetExhausted,
     Completed,
@@ -121,6 +127,15 @@ class CompiledGraph:
                 if not active or name in disabled:
                     wave_status[name] = "skipped"
                     continue
+                try:
+                    context.checkpoint()
+                except OverallDeadlineExceeded:
+                    context.forced_stop = ForcedStop(
+                        "failed", None, "overall_deadline", freeze({})
+                    )
+                    return failed(
+                        NodeError(name, "overall_deadline", "Run deadline reached")
+                    )
                 started.append(name)
                 current_started.append(name)
                 context.emit(NodeStarted(), name)
@@ -132,6 +147,7 @@ class CompiledGraph:
                     outcome = node.factory.execute(
                         view, NodeContext(name, source_error, context)
                     )
+                    context.checkpoint()
                     if not isinstance(outcome, NodeOutcome):
                         raise ValueError("node must return NodeOutcome")
                     writes = freeze(outcome.writes)
@@ -148,7 +164,20 @@ class CompiledGraph:
                     return failed(
                         NodeError(name, "run_forced_stop", "Run finalization required")
                     )
-                except GraphInvariantError:
+                except OverallDeadlineExceeded:
+                    context.forced_stop = ForcedStop(
+                        "failed", None, "overall_deadline", freeze({})
+                    )
+                    return failed(
+                        NodeError(name, "overall_deadline", "Run deadline reached")
+                    )
+                except (
+                    GraphInvariantError,
+                    InputEvidenceError,
+                    InputLimitExceeded,
+                    InputResolutionError,
+                ) as exc:
+                    failed(NodeError(name, "run_input_failed", type(exc).__name__))
                     raise
                 except Exception as exc:
                     error = NodeError(
@@ -168,8 +197,8 @@ class CompiledGraph:
                     wave_status[name] = "failed"
                     wave_errors[name] = error
                     context.abort((name,))
-                except BaseException:
-                    context.abort(current_started)
+                except BaseException as exc:
+                    failed(NodeError(name, "run_interrupted", type(exc).__name__))
                     raise
             # Validate the entire write batch after all callable executions.
             written = set()

@@ -89,6 +89,7 @@ async function recoverReply(runId) {
       )
         throw new Error("正文未完整加载");
       reply.text = result.reply_text;
+      reply.skill_notice = result.skill_notice;
       reply.loading = false;
     } catch {
       if (instance === process && session === target) {
@@ -164,6 +165,7 @@ function renderMessages() {
       recorded.add(item.run_id);
       if (item.user) list.append(node("p", textBlocks(item.user)));
       if (item.assistant) list.append(node("p", textBlocks(item.assistant)));
+      if (item.skill_notice) list.append(node("p", item.skill_notice));
       list.append(node("small", "已保存"));
     } else list.append(node("p", textBlocks(item.blocks)));
   }
@@ -171,6 +173,7 @@ function renderMessages() {
     if (reply.session_id !== session || recorded.has(id)) continue;
     if (reply.user) list.append(node("p", reply.user));
     if (reply.text !== undefined) list.append(node("p", reply.text));
+    if (reply.skill_notice) list.append(node("p", reply.skill_notice));
     if (reply.loading) {
       list.append(node("p", "正文未完整加载"));
       const retry = node("button", "重新加载正文");
@@ -402,6 +405,7 @@ const stream = new Stream(
           ...old,
           session_id: envelope.session_id,
           outcome: event.outcome,
+          skill_notice: event.skill_notice,
           text: textBlocks(event.reply?.blocks) || event.error || "运行已结束",
           recording_state: old.recording_state || "pending",
           loading: false,

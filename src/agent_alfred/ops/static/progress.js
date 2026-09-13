@@ -68,6 +68,7 @@ export class Progress {
     if (p.name === "attempt.started" && !this.attempts.has(key)) {
       this.attempts.set(key, {
         run_id: e.run_id,
+        node_id: e.node_id,
         attempt_id: e.attempt_id,
         session_id: e.session_id,
         suppressed: false,
@@ -108,6 +109,7 @@ export class Progress {
     if (
       !this.slot ||
       this.slot.session_id !== session ||
+      this.slot.node_id === "skill_selector" ||
       this.slot.suppressed ||
       this.slot.terminal
     )
