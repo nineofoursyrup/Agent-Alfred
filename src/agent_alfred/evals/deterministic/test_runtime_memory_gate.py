@@ -82,17 +82,17 @@ def test_zero_and_one_step_budgets_never_infer_selected_means_answer_sent():
         (0, 0, "not_evaluated"),
         (1, 1, "evaluated"),
     ):
-        with runtime([SKIP], settings=Settings(max_steps=max_steps)) as (
+        with runtime(["answer"], settings=Settings(max_steps=max_steps)) as (
             host,
             model,
             _,
         ):
             result = host.wait(host.submit(SubmitRequest("hello")).run_id)
-            assert result.outcome == "max_steps"
+            assert result.outcome == ("max_steps" if max_steps == 0 else "completed")
             assert len(model.requests) == expected_calls
             assert result.memory_telemetry["gate_state"] == expected_state
             assert all(
-                attempt["purpose"] == "gate"
+                attempt["purpose"] == "answer"
                 for attempt in result.memory_telemetry["input_attempts"]
             )
 
@@ -213,19 +213,20 @@ def test_real_fts_reference_is_between_work_window_and_current_question_only():
         # The next Run uses an explicit script, preserving actual gate accounting.
 
 
-def test_selected_reference_with_one_step_has_zero_answer_attempts():
-    retrieve = (
-        '{"retrieve":true,"query":"coriander","reason_code":"personal_information"}'
-    )
-    with runtime([retrieve], settings=Settings(max_steps=1)) as (host, model, _):
+def test_selected_reference_with_one_step_is_carried_by_the_reserved_answer():
+    # SKILL-SPEC-r1 CE-16 explicitly replaces #17/#31 A15's old 1-Step outcome.
+    with runtime(["answer"], settings=Settings(max_steps=1)) as (host, model, _):
         save_fact(host)
         result = host.wait(host.submit(SubmitRequest("coriander")).run_id)
-        assert result.outcome == "max_steps"
+        assert result.outcome == "completed"
         assert result.memory_telemetry["gate"]["selected_count"] == 1
         assert [a["purpose"] for a in result.memory_telemetry["input_attempts"]] == [
-            "gate"
+            "answer"
         ]
         assert len(model.requests) == 1
+        assert "I prefer coriander" in " ".join(
+            message_plain_text(m) for m in model.requests[0].messages
+        )
 
 
 def test_all_excluded_stops_answer_but_preserves_evaluated_hit():

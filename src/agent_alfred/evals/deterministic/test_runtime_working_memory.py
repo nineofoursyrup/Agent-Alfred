@@ -766,7 +766,7 @@ def test_effective_input_deadline_rolls_back_before_transport(
                 overall_deadline_s=30,
                 gate_model_budget_s=gate_s,
                 per_attempt_timeout_s=attempt_s,
-                max_steps=1 if purpose == "gate" else 2,
+                max_steps=2,
             ),
         ) as (host, _, _):
             original = host.memory_service.forgetting.register_read
@@ -794,13 +794,14 @@ def test_effective_input_deadline_rolls_back_before_transport(
                 "memory"
             ]["input_attempts"]
             if purpose == "gate":
-                assert sent == []
-                assert inputs == []
+                # CE-16 reserves a remaining answer Step after the unsent gate.
+                assert sent == [registration_s]
+                assert [item["purpose"] for item in inputs] == ["answer"]
                 assert (
                     result.memory_telemetry["gate"]["fallback_reason"]
                     == "model_deadline"
                 )
-                assert result.outcome == "max_steps"
+                assert result.outcome == "failed"
             else:
                 assert sent == [0.0]
                 assert [item["purpose"] for item in inputs] == ["gate"]
@@ -1220,7 +1221,7 @@ def test_trace_identity_accepts_either_durable_proof_without_confirming_sources(
             factory=Factory(),
             clock=clock,
             extra_sinks=(trace,),
-            settings=Settings(max_steps=1),
+            settings=Settings(max_steps=1, overall_deadline_s=5),
             database=database,
         ) as (host, _, _):
             original = host.memory_service.forgetting.register_read

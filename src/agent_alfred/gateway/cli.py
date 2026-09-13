@@ -550,9 +550,10 @@ def _print_session_creation_failure(code: str | None, out: TextIO) -> None:
     out.flush()
 
 
-def _print_result(
-    result: LoopResult, out: TextIO, *, renderer: ReplyRenderer
-) -> None:
+def _print_result(result: LoopResult, out: TextIO, *, renderer: ReplyRenderer) -> None:
+    notice = (result.memory_telemetry or {}).get("skills", {}).get("notice")
+    if notice:
+        out.write(notice + "\n")
     if result.reply is not None:
         renderer(message_plain_text(result.reply), out)
         return

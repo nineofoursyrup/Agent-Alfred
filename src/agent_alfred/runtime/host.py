@@ -306,6 +306,7 @@ class RuntimeHost:
         audit_key=None,
         file_state=None,
         skill_builtin=None,
+        chat_graph_factory=None,
         memory_notifier=None,
         extra_tools=(),
         tool_policies=None,
@@ -352,6 +353,7 @@ class RuntimeHost:
         self._store = RecordingStore(conn, self._db_lock)
         from agent_alfred.memory.audit import AuditKey
         from agent_alfred.memory.commands import MemoryCommandService
+
         if audit_key is None:
             import secrets
             filename = conn.execute("PRAGMA database_list").fetchone()[2]
@@ -511,6 +513,7 @@ class RuntimeHost:
             file_tools=self._file_tools,
             persona_tools=persona_tools,
             skill_tools=skill_tools,
+            chat_graph_factory=chat_graph_factory,
             factory=factory,
             support_recorder=SupportRecorder(
                 self._support_overrides, self._redactor, clock, support_rule

@@ -578,6 +578,7 @@ export function modelsPage(root, csrf) {
           );
           row.append(assign);
           const gate = node("button", "指派为检索门");
+          gate.title = "同时用于 Skill 自动选择与记忆检索门";
           gate.addEventListener("click", () =>
             void mutate("assign", {
               slot: "retrieval_gate",

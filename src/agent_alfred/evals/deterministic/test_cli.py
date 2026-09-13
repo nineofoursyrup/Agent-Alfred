@@ -53,7 +53,10 @@ def test_cli_one_shot_prints_the_scripted_reply() -> None:
     out = io.StringIO()
     code = cli.run_injected(host, "hi", out=out)
     assert code == 0
-    assert out.getvalue() == "hello there\n"
+    assert (
+        out.getvalue() == "Skill 已降级：部分流程未使用或选择器不可用；"
+        "请查看运行详情中的本次输入。\nhello there\n"
+    )
     stored = conn.execute(
         "SELECT json_extract(content, '$[0].text') FROM agent_log ORDER BY id"
     ).fetchall()

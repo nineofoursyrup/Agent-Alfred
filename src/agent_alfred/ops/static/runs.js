@@ -257,7 +257,7 @@ export function runsPage(root, progress, navigate, memory) {
                 : "过程记录不可用",
         ),
       );
-    renderInputs(detail, evidence?.memory, references);
+    renderInputs(detail, evidence?.memory, references, evidence?.trace_incomplete ? "partial" : evidence?.trace_status);
     const selectedId = selectedRun.run_id;
     const confirmed = new Set(
       [...progress.attempts.values()]
@@ -339,6 +339,17 @@ function renderEvidence(root, events, ledger, run, confirmed) {
     const section = node("section");
     section.className = "card";
     section.append(node("h3", `Step ${index}`));
+    const preparation = facts.find(fact => fact.payload.name === "step.started");
+    const skillSystem = preparation?.payload.skill_system ||
+      (preparation?.payload.system || []).filter((/** @type {Wire} */ block) =>
+        block.type === "text" && block.text?.startsWith("<skills>\n")).map((/** @type {Wire} */ block) => block.text);
+    if (skillSystem.length) {
+      const prepared = node("details");
+      prepared.dataset.attempt = `skill-system-${index}`;
+      prepared.append(node("summary", "准备时的 Skill 区段（脱敏追踪，不单独证明发送）"));
+      for (const text of skillSystem) prepared.append(node("pre", text));
+      section.append(prepared);
+    }
     const committed = facts.find(
       (fact) => fact.payload.name === "attempt.committed",
     );
@@ -549,8 +560,8 @@ function renderGate(root, gate, references) {
   root.append(section);
 }
 
-/** @param {HTMLElement} root @param {Wire|undefined} memory @param {References} references */
-function renderInputs(root, memory, references) {
+/** @param {HTMLElement} root @param {Wire|undefined} memory @param {References} references @param {string|undefined} traceStatus */
+function renderInputs(root, memory, references, traceStatus) {
   const details = node("details");
   details.dataset.attempt = "input-explanation";
   details.append(node("summary", "本次输入"));
@@ -570,8 +581,22 @@ function renderInputs(root, memory, references) {
   for (const pending of memory?.input_unconfirmed || []) {
     details.append(node("p", `输入登记待恢复 · ${pending.purpose} · Step ${pending.step_index} · 请求 ${pending.attempt_id}；来源登记未确认，不计作已确认输入。`));
   }
+  const skills = memory?.skills;
+  if (skills) {
+    details.append(node("h3", "Skill"));
+    details.append(node("p", `选择方式：${skills.mode} · ${skills.status === "failed" ? "准备失败" : skills.status === "prepared" ? "准备完成，未单独证明发送" : "准备未完成"}`));
+    details.append(node("p", `所选顺序：${skills.selected?.join(" → ") || "无"}`));
+    if (skills.reason) details.append(node("p", `选择说明：${skills.reason}`));
+    for (const skill of skills.loaded || [])
+      details.append(node("p", `${skill.name} · ${skill.source} · ${skill.overrides_builtin ? "整体覆盖内置" : "未覆盖"} · ${skill.codepoints} 码点 · ${skill.fingerprint_version} ${skill.body_sha256}`));
+    for (const excluded of skills.excluded || [])
+      details.append(node("p", `未加载 ${excluded.name}：${excluded.reason}`));
+    if (skills.loaded?.length) details.append(node("p", traceStatus === "available" ? "当时正文请展开对应 Step 的脱敏追踪；当前目录不回填历史版本。" : "当时 Skill 正文追踪不可用或不完整；当前目录不能证明历史正文。"));
+  } else details.append(node("p", "Skill 选择证据未知或不可用"));
+  const selector = memory?.skill_input_preparation;
+  if (selector) details.append(node("p", `选择器输入 ${selector.status} · ${selector.characters} / ${selector.limit} 字符 · 历史预算排除 ${selector.budget_omitted_groups} 组`));
   const preparation = memory?.input_preparation;
-  if (preparation) {
+  if (preparation && preparation.purpose !== "skill_selector") {
     details.append(node("p", `${preparation.status === "failed" ? "输入准备失败" : "容量选择"} · ${preparation.measurement_version}`));
     details.append(node("p", `回答已有 ${preparation.answer_characters} 字符，预留 ${preparation.reserved_characters} 字符，上限 ${preparation.answer_limit}；检索门 ${preparation.gate_characters} / ${preparation.gate_limit}。预留不计作实际发送。`));
     const excluded = preparation.history_exclusions;
@@ -580,10 +605,10 @@ function renderInputs(root, memory, references) {
   }
   if (memory?.input_failure) {
     const failure = memory.input_failure;
-    details.append(node("p", `输入准备失败 · Step ${failure.step_index} · ${failure.characters} 字符 / 上限 ${failure.limit}；未发送该请求。`));
+    details.append(node("p", `输入准备失败 · ${failure.purpose === "skill_selector" ? "Skill 选择器" : `Step ${failure.step_index ?? "未知"}`} · ${failure.characters} 字符 / 上限 ${failure.limit}；未发送该请求。`));
     const excluded = failure.history_exclusions;
     details.append(node("p", `本次失败准备历史排除：不完整 ${excluded?.incomplete ?? "未知"}，隔离或来源未确认 ${excluded?.unsafe ?? "未知"}，N 上限 ${excluded?.round_limit ?? "未知"}，字符预算 ${failure.budget_omitted_groups ?? "未知"}。`));
-    details.append(node("p", `本次失败准备工具账因限额省略 ${failure.ledger_omitted ?? "未知"} 条，其中结果未知 ${failure.ledger_unknown_omitted ?? "未知"} 条；隔离或失效排除 ${failure.ledger_excluded ?? "未知"} 条。不计作实际发送。`));
+    if (failure.purpose !== "skill_selector") details.append(node("p", `本次失败准备工具账因限额省略 ${failure.ledger_omitted ?? "未知"} 条，其中结果未知 ${failure.ledger_unknown_omitted ?? "未知"} 条；隔离或失效排除 ${failure.ledger_excluded ?? "未知"} 条。不计作实际发送。`));
   }
   for (const input of memory?.input_attempts || []) {
     const section = node("section");
@@ -591,6 +616,8 @@ function renderInputs(root, memory, references) {
     section.append(node("p", `${input.measurement_version ?? "计量未知"} · ${input.input_characters ?? "未知"} 字符 / 上限 ${input.input_limit ?? "未知"}`));
     const omitted = input.history_exclusions;
     if (omitted) section.append(node("p", `历史排除：不完整 ${omitted.incomplete}，隔离或来源未确认 ${omitted.unsafe}，N 上限 ${omitted.round_limit}，字符预算 ${input.budget_omitted_groups}。`));
+    for (const skill of input.skills || [])
+      section.append(node("p", `实际请求携带 Skill ${skill.name} · ${skill.source} · ${skill.fingerprint_version} ${skill.body_sha256}`));
     for (const ref of input.references || [])
       section.append(
         referenceRow(

@@ -87,6 +87,7 @@ def _map_read_errors(method):
 
     return guarded
 
+
 __all__ = [
     "BusySummary",
     "CreateSessionResult",
@@ -707,6 +708,7 @@ class DashboardApi:
             "session_id": reply.session_id,
             "run_id": reply.run_id,
             "reply_text": reply.reply_text,
+            **({"skill_notice": reply.skill_notice} if reply.skill_notice else {}),
         }
 
     @_map_read_errors
@@ -866,6 +868,7 @@ def _mainbar_item_json(item) -> dict[str, Any]:
     if isinstance(item, runs.MainBarRunPair):
         return {
             "type": "run_pair",
+            **({"skill_notice": item.skill_notice} if item.skill_notice else {}),
             "run_id": item.run_id,
             "activity_revision": item.activity_revision,
             "session_id": item.session_id,

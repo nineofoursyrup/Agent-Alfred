@@ -28,6 +28,16 @@ class GraphRunContext:
     graph_identity: dict = field(default_factory=dict)
     started_s: float = 0.0
     ended_s: float = 0.0
+    deadline: float | None = None
+    skills: object = None
+    persona: str | None = None
+    memory: object = None
+
+    def checkpoint(self):
+        if self.deadline is not None and self.clock.monotonic() >= self.deadline:
+            from agent_alfred.stream_fallback import OverallDeadlineExceeded
+
+            raise OverallDeadlineExceeded()
 
     @property
     def duration_ms(self):

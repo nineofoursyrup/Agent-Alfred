@@ -41,6 +41,8 @@ from agent_alfred.settings import (
 from agent_alfred.stream_fallback import OverallDeadlineExceeded
 from agent_alfred.tools import ToolContext
 
+UNSET_DEADLINE = object()
+
 
 @dataclass(frozen=True)
 class LoopResult:
@@ -90,6 +92,10 @@ class Assistant:
         node_id=LOOP_NODE_ID,
         single_step=False,
         on_step_started=None,
+        skills=None,
+        absolute_deadline=UNSET_DEADLINE,
+        memory_prepared=False,
+        prior_turns=(),
     ) -> LoopResult:
         started = self._clock.monotonic()
         overall_s = (
@@ -97,11 +103,12 @@ class Assistant:
             if overall_deadline_s is None
             else overall_deadline_s
         )
-        overall_abs = None if overall_s is None else started + overall_s
-        system = (
-            TextBlock(self._settings.persona if persona is None else persona),
-            TextBlock(f"Current local time: {self._clock.local_now().isoformat()}"),
+        overall_abs = (
+            (None if overall_s is None else started + overall_s)
+            if absolute_deadline is UNSET_DEADLINE
+            else absolute_deadline
         )
+        system = self.system_blocks(persona=persona, skills=skills)
         user = text_message("user", message)
         transcript: list[Message] = [*working_memory, user]
         turns: list[Message] = []
@@ -123,6 +130,7 @@ class Assistant:
 
         if (
             memory is not None
+            and not memory_prepared
             and budget.remaining > 0
             and (overall_abs is None or self._clock.monotonic() < overall_abs)
         ):
@@ -206,7 +214,13 @@ class Assistant:
                 max_tokens=self._settings.max_tokens,
             )
             if memory is not None:
-                request = memory.answer_request(request, turns, lease.step_index)
+                request = memory.answer_request(
+                    request,
+                    turns,
+                    lease.step_index,
+                    task=message,
+                    prior_turns=prior_turns,
+                )
             bind = events.bind_origin if events is not None else None
             if bind is not None:
                 bind(envelope)
@@ -364,6 +378,15 @@ class Assistant:
             model_results=tuple(results),
             transcript=(user, *turns),
         )
+
+    def system_blocks(self, *, persona=None, skills=None):
+        blocks = (
+            TextBlock(self._settings.persona if persona is None else persona),
+            TextBlock(f"Current local time: {self._clock.local_now().isoformat()}"),
+        )
+        if skills is not None and skills.section:
+            blocks += (TextBlock(skills.section),)
+        return blocks
 
 
 def _duration_ms(started: float, ended: float) -> int:

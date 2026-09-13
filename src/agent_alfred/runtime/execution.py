@@ -212,7 +212,9 @@ class RunExecutor:
         file_tools=None,
         persona_tools=None,
         skill_tools=None,
+        chat_graph_factory=None,
     ):
+        self._chat_graph_factory = chat_graph_factory
         self._memory_service = memory_service
         self._skill_tools = skill_tools
         self._persona_tools = persona_tools
@@ -306,6 +308,11 @@ class RunExecutor:
             # inside the same terminal ownership scope as every later Run
             # step.  A BaseException here must still reach ``settle``.
             run_started = self._clock.monotonic()
+            overall_abs = (
+                None
+                if item.snapshot.overall_deadline_s is None
+                else run_started + item.snapshot.overall_deadline_s
+            )
             if self._file_tools is not None:
                 self._file_tools.set_run_deadline(
                     run_started
@@ -380,14 +387,19 @@ class RunExecutor:
                     )
                     error = command_result.stop_reason
                     return
-            if item.request.purpose == "chat" and self._file_tools is not None:
-                self._file_tools.resume_pending(item.run_id)
-                self._file_tools.set_run_deadline(
-                    run_started + item.snapshot.overall_deadline_s
-                    if item.snapshot.overall_deadline_s is not None
-                    else float("inf")
-                )
             memory = None
+            skills = None
+            task = item.request.message
+            if item.request.purpose == "chat":
+                from agent_alfred.skills.selection import RunSkills
+
+                selection = RunSkills(
+                    task,
+                    self._skill_tools.catalog if self._skill_tools else None,
+                    item.memory_telemetry,
+                    self._redactor,
+                )
+                task = selection.control.task
             if item.request.purpose == "chat":
                 memory = RunMemory(
                     item=item,
@@ -402,6 +414,8 @@ class RunExecutor:
                     recording_store=self._store,
                     history_exclusions=history_exclusions,
                     model_results=all_results,
+                    task=task,
+                    skills=skills,
                 )
             if memory is not None and self._memory_service is not None:
                 from agent_alfred.runtime.memory import (
@@ -420,39 +434,86 @@ class RunExecutor:
                 )
                 if "error" in registered:
                     raise InputEvidenceError("input_evidence_unavailable")
+            if memory is not None:
+                skills = selection.prepare(
+                    lambda listing, entries: memory.select_skills(
+                        listing,
+                        entries,
+                        budget,
+                        working_memory,
+                        overall_abs,
+                    )
+                )
+                memory.set_skills(skills)
+            if item.request.purpose == "chat" and self._file_tools is not None:
+                self._file_tools.resume_pending(item.run_id)
+                self._file_tools.set_run_deadline(
+                    run_started + item.snapshot.overall_deadline_s
+                    if item.snapshot.overall_deadline_s is not None
+                    else float("inf")
+                )
             if item.request.purpose == "consolidation":
                 loop_result = self._consolidate(item, ledger, run_started, budget)
             else:
-                loop_result = self._assistant.respond(
-                    item.request.message,
-                    client=ledger,
-                    budget=budget,
-                    working_memory=working_memory,
-                    model=ModelRef(
-                        endpoint_id=item.snapshot.endpoint_id,
-                        model_id=item.snapshot.model_id,
-                    ),
-                    run_id=item.run_id,
-                    session_id=item.session_id,
-                    events=self._events,
-                    source=item.request.gateway,
-                    overall_deadline_s=(
-                        None
-                        if item.snapshot.overall_deadline_s is None
-                        else max(
-                            0.0,
-                            item.snapshot.overall_deadline_s
-                            - (self._clock.monotonic() - run_started),
-                        )
-                    ),
-                    memory=memory,
-                    tools=self._tools if item.request.purpose == "chat" else None,
-                    tool_permission=item.memory_permission,
-                    tool_state=item.memory_telemetry,
-                    persona=(
-                        self._persona_tools.current() if self._persona_tools else None
-                    ),
-                )
+                persona = self._persona_tools.current() if self._persona_tools else None
+                model = ModelRef(item.snapshot.endpoint_id, item.snapshot.model_id)
+                loop_result = None
+                if memory is not None and self._chat_graph_factory is not None:
+                    from agent_alfred.runtime.chat_graph import run_chat_graph
+
+                    loop_result = run_chat_graph(
+                        self._chat_graph_factory,
+                        assistant=self._assistant,
+                        client=ledger,
+                        model=model,
+                        item=item,
+                        task=task,
+                        working_memory=working_memory,
+                        memory=memory,
+                        skills=skills,
+                        persona=persona,
+                        tools=self._tools,
+                        clock=self._clock,
+                        events=self._events,
+                        budget=budget,
+                        deadline=overall_abs,
+                    )
+                if loop_result is None:
+                    loop_result = self._assistant.respond(
+                        task,
+                        client=ledger,
+                        budget=budget,
+                        working_memory=working_memory,
+                        model=ModelRef(
+                            endpoint_id=item.snapshot.endpoint_id,
+                            model_id=item.snapshot.model_id,
+                        ),
+                        run_id=item.run_id,
+                        session_id=item.session_id,
+                        events=self._events,
+                        source=item.request.gateway,
+                        overall_deadline_s=(
+                            None
+                            if item.snapshot.overall_deadline_s is None
+                            else max(
+                                0.0,
+                                item.snapshot.overall_deadline_s
+                                - (self._clock.monotonic() - run_started),
+                            )
+                        ),
+                        memory=memory,
+                        skills=skills,
+                        absolute_deadline=overall_abs,
+                        memory_prepared=bool(self._chat_graph_factory and memory),
+                        tools=self._tools if item.request.purpose == "chat" else None,
+                        tool_permission=item.memory_permission,
+                        tool_state=item.memory_telemetry,
+                        persona=(
+                            self._persona_tools.current()
+                            if self._persona_tools
+                            else None
+                        ),
+                    )
             outcome = loop_result.outcome
             reply = loop_result.reply
             error = loop_result.error
@@ -517,10 +578,16 @@ class RunExecutor:
             if isinstance(exc, InputEvidenceError):
                 error = "input_evidence_unavailable"
                 reply = text_message(
-                    "assistant", "输入来源或读取登记暂不可确认，本次已停止；"
-                    "请检查存储状态后重试。已执行的动作不会自动重跑。"
+                    "assistant",
+                    "输入来源或读取登记暂不可确认，本次已停止；"
+                    "请检查存储状态后重试。已执行的动作不会自动重跑。",
                 )
                 item.memory_telemetry["input_evidence_error"] = error
+            from agent_alfred.skills.selection import SkillPreparationError
+
+            if isinstance(exc, SkillPreparationError):
+                error = "skill_preparation_failed"
+                reply = text_message("assistant", self._redactor.redact_text(str(exc)))
             if reply is None:
                 reply = text_message("assistant", CONTROLLED_FAILURE_TEXT)
             del exc
@@ -815,7 +882,7 @@ class RunExecutor:
         excluded = {"incomplete": 0, "unsafe": 0, "round_limit": 0}
         with self._store.reading() as conn:
             rows = conn.execute(
-                """SELECT r.run_id, u.content, a.content
+                """SELECT r.run_id, u.content, a.content, r.telemetry
                    FROM runs r
                    JOIN agent_log u ON u.run_id = r.run_id AND u.role = 'user'
                    JOIN agent_log a ON a.run_id = r.run_id AND a.role = 'assistant'
@@ -854,10 +921,26 @@ class RunExecutor:
         rows = rows[: self._settings.working_memory_rounds]
         messages: list[Message] = []
         groups: list[str] = []
-        for run_id, user, assistant in reversed(rows):
+        for run_id, user, assistant, telemetry in reversed(rows):
             groups.append(run_id)
             for role, content in (("user", user), ("assistant", assistant)):
-                messages.append(
-                    Message(role=role, blocks=blocks_from_jsonable(json.loads(content)))
+                message = Message(
+                    role=role, blocks=blocks_from_jsonable(json.loads(content))
                 )
+                if role == "user" and telemetry:
+                    from agent_alfred.messages import message_plain_text
+                    from agent_alfred.skills.selection import (
+                        SkillPreparationError,
+                        parse_control,
+                    )
+
+                    recorded = json.loads(telemetry).get("memory", {}).get("skills", {})
+                    if recorded.get("control_line_applied") is True:
+                        try:
+                            control = parse_control(message_plain_text(message))
+                        except SkillPreparationError:
+                            pass
+                        else:
+                            message = text_message("user", control.task)
+                messages.append(message)
         return tuple(messages), tuple(groups), excluded

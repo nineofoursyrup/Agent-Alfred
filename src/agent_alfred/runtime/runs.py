@@ -145,6 +145,7 @@ class MainBarRunPair:
     created_at: str | None
     user_message: Message | None
     assistant_message: Message | None
+    skill_notice: str | None = None
 
 
 @dataclass(frozen=True)
@@ -846,10 +847,16 @@ def mainbar_pairs(
     return MainBarPage(items=tuple(items), next_cursor=None)
 
 
-def _mainbar_pair(
-    conn, row: _MainBarRunRow, redactor: Redactor
-) -> MainBarRunPair:
+def _mainbar_pair(conn, row: _MainBarRunRow, redactor: Redactor) -> MainBarRunPair:
+    from agent_alfred.runtime.replies import _notice_from_telemetry
+
+    telemetry = conn.execute(
+        "SELECT telemetry FROM runs WHERE run_id=?", (row.run_id,)
+    ).fetchone()
     return MainBarRunPair(
+        skill_notice=_notice_from_telemetry(telemetry[0], redactor)
+        if telemetry
+        else None,
         run_id=row.run_id,
         activity_revision=row.activity_revision,
         session_id=row.session_id,

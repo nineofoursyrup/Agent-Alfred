@@ -99,7 +99,7 @@ test("oversized input shows preparation failure without an invented Attempt", as
   await page.getByRole("textbox", { name: "消息" }).fill("先保存一轮历史");
   await page.getByRole("button", { name: "发送", exact: true }).click();
   await expect(page.getByRole("region", { name: "主对话" })).toContainText("已保存");
-  await page.getByRole("textbox", { name: "消息" }).fill("x".repeat(64001));
+  await page.getByRole("textbox", { name: "消息" }).fill("/skills off\n" + "x".repeat(64001));
   const accepted = page.waitForResponse(response =>
     response.url().endsWith("/api/runs") && response.status() === 202);
   await page.getByRole("button", { name: "发送", exact: true }).click();

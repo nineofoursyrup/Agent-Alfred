@@ -205,7 +205,9 @@ def test_builtin_skill_candidate_requires_direct_user_confirmation_after_restart
     )
     host.start()
     try:
-        result = host.wait(host.submit(SubmitRequest(message="创建同名 Skill")).run_id)
+        result = host.wait(
+            host.submit(SubmitRequest(message="/skills off\n创建同名 Skill")).run_id
+        )
         assert result.outcome == "completed"
         receipt = json.loads(model.requests[-1].messages[-1].blocks[0].content[0].text)
         assert receipt["state"] == "awaiting_confirmation"

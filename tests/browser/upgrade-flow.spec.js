@@ -19,7 +19,7 @@ test("a real upgraded Session combines a new UI Run with every historic message 
     await chat.getByRole("button", {name:"更早的消息",exact:true}).click();
     await expect(chat.getByText(/^升级前消息 \d+$/)).toHaveCount(50);
     await chat.getByRole("button", {name:"更早的消息",exact:true}).click();
-    const expected = [...Array.from({length:55},(_,i)=>`升级前消息 ${String(i+1).padStart(2,"0")}`),"升级后同一会话的新问题","离线模型回复"];
+    const expected = [...Array.from({length:55},(_,i)=>`升级前消息 ${String(i+1).padStart(2,"0")}`),"升级后同一会话的新问题","离线模型回复","Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。"];
     await expect(chat.locator("#messages > p")).toHaveText(expected);
     await expect(chat.getByRole("button", {name:"更早的消息",exact:true})).toBeHidden();
     await page.reload();

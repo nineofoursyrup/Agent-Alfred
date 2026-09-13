@@ -104,7 +104,11 @@ class RunMemory:
         recording_store=None,
         history_exclusions=None,
         model_results=None,
+        task=None,
+        skills=None,
     ):
+        self._task = item.request.message if task is None else task
+        self._skills = skills
         self._store = recording_store
         self._model_results = model_results if model_results is not None else []
         self._pending_inputs = {}
@@ -129,6 +133,16 @@ class RunMemory:
         self._attempted = False
         self._answered = False
 
+    def select_skills(self, listing, entries, budget, working_memory, overall_abs):
+        from agent_alfred.runtime.skill_selector import select_skills
+
+        return select_skills(
+            self, listing, entries, budget, working_memory, overall_abs
+        )
+
+    def set_skills(self, snapshot):
+        self._skills = snapshot
+
     def prepare(self, working_memory, system, model, tools):
         self._evidence.refresh()
         self._history = tuple(working_memory)
@@ -152,7 +166,7 @@ class RunMemory:
                 messages=(
                     *answer.messages[:-1],
                     text_message("user", reserved_text),
-                    text_message("user", self._item.request.message),
+                    text_message("user", self._task),
                 ),
             )
             gate_chars = input_characters(gate)
@@ -203,13 +217,13 @@ class RunMemory:
                     if purpose == "answer" and self._evidence.text
                     else ()
                 ),
-                text_message("user", self._item.request.message),
+                text_message("user", self._task),
             ),
             tools=() if purpose == "gate" else self._tools,
             tool_choice="none" if purpose == "gate" else "auto",
         )
 
-    def answer_request(self, request, turns, step_index):
+    def answer_request(self, request, turns, step_index, *, task=None, prior_turns=()):
         if self._service is not None:
             evaluated = self._service.forgetting.evaluate_history(
                 self._groups, purpose="working_window"
@@ -237,7 +251,8 @@ class RunMemory:
                 messages.append(text_message("user", self._evidence.text))
             if reference is not None:
                 messages.append(text_message("user", reference))
-            messages.append(text_message("user", self._item.request.message))
+            messages.extend(prior_turns)
+            messages.append(text_message("user", self._task if task is None else task))
             messages.extend(turns)
             current = replace(request, messages=tuple(messages))
             characters = input_characters(current)
@@ -308,7 +323,7 @@ class RunMemory:
         )
         characters = input_characters(request or self._request(purpose))
         limit = (
-            self._settings.gate_input_character_limit if purpose == "gate" else None
+            self._settings.gate_input_character_limit if purpose != "answer" else None
         ) or self._settings.input_character_limit
 
         def observed(attempt_id, deadline):
@@ -331,6 +346,15 @@ class RunMemory:
                 "step_index": step_index,
                 "attempt_id": attempt_id,
                 "purpose": purpose,
+                "skills": (
+                    self._item.memory_telemetry.get("skills", {}).get("loaded", [])
+                    if purpose == "answer"
+                    and self._skills is not None
+                    and any(
+                        b.text == self._skills.section for b in request.system or ()
+                    )
+                    else []
+                ),
                 "references": [dict(ref) for ref in references],
                 "working_history_groups": list(groups),
                 "measurement_version": INPUT_VERSION,
@@ -368,6 +392,13 @@ class RunMemory:
                     )
                     if "error" in result:
                         raise InputEvidenceError("input_evidence_unavailable")
+                    evaluated = self._service.forgetting.evaluate_history(
+                        sources,
+                        purpose="working_window",
+                        transaction=conn,
+                    )
+                    if "error" in evaluated or evaluated["denied"]:
+                        raise InputEvidenceError("input_sources_changed")
                     self._service.forgetting.prepare_commit(conn)
                     self._check_input_deadline(deadline)
                     self._pending_inputs[attempt_id] = explanation
@@ -506,7 +537,7 @@ class RunMemory:
         state = self._item.memory_telemetry
         state["gate_state"] = "incomplete"
         started = self._clock.monotonic()
-        fallback_reason = None
+        fallback_reason = "step_budget" if budget.remaining < 2 else None
         gate_step_index = None
         model_ref = None
         model_ms = None
@@ -604,7 +635,7 @@ class RunMemory:
                     fallback_reason = "model_deadline"
                 else:
                     raise
-            except InputEvidenceError:
+            except InputEvidenceError, InputLimitExceeded, InputResolutionError:
                 raise
             except InputDeadlineExceeded:
                 fallback_reason = "model_deadline"
@@ -631,7 +662,7 @@ class RunMemory:
         if overall_abs is not None and self._clock.monotonic() >= overall_abs:
             return None
         if fallback_reason is not None:
-            decision = fallback_decision(self._item.request.message)
+            decision = fallback_decision(self._task)
         options = dict(
             fallback_reason=fallback_reason,
             gate_step_index=gate_step_index,

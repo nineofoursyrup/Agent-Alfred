@@ -17,7 +17,9 @@ class SkillMeta:
 
 
 def parse_skill(text):
-    match = re.match(r"\A\ufeff?---\s*\n(.*?)\n---\s*\n", text, re.DOTALL)
+    match = re.match(
+        r"\A\ufeff?---[ \t]*\r?\n(.*?)\r?\n---[ \t]*\r?\n", text, re.DOTALL
+    )
     if match is None:
         raise ValueError("skill_frontmatter_missing")
     fields = {}
@@ -45,9 +47,11 @@ def parse_skill(text):
 
 def read_directory(root, source, excluded=(), checkpoint=None):
     entries = {}
+    if root.is_symlink():
+        raise ValueError("invalid_skill_directory")
     if not root.exists():
         return entries
-    if root.is_symlink() or not root.is_dir():
+    if not root.is_dir():
         raise ValueError("invalid_skill_directory")
     for path in root.rglob("SKILL.md"):
         if checkpoint is not None:
@@ -61,7 +65,7 @@ def read_directory(root, source, excluded=(), checkpoint=None):
                 break
             if parent.is_symlink():
                 raise ValueError("skill_symlink_not_supported")
-        text = path.read_text(encoding="utf-8")
+        text = path.read_bytes().decode("utf-8")
         if checkpoint is not None:
             checkpoint()
         name, description, body = parse_skill(text)

@@ -64,7 +64,8 @@ _TIMEOUT = 3.0
 
 
 @pytest.mark.parametrize(
-    "session_id,run_id", [("", ""), ("session/a?b#c%+中文", "run/a?b#c%+中文")],
+    "session_id,run_id",
+    [("", ""), ("session/a?b#c%+中文", "run/a?b#c%+中文")],
 )
 def test_reply_recovery_wire_preserves_opaque_identity(server, session_id, run_id):
     from agent_alfred.runtime.work import SubmitRequest
@@ -79,18 +80,26 @@ def test_reply_recovery_wire_preserves_opaque_identity(server, session_id, run_i
         conn.execute("UPDATE sessions SET session_id = ?", (session_id,))
         conn.execute("UPDATE runs SET session_id = ?, run_id = ?", (session_id, run_id))
         conn.execute(
-            "UPDATE agent_log SET session_id = ?, run_id = ?", (session_id, run_id),
+            "UPDATE agent_log SET session_id = ?, run_id = ?",
+            (session_id, run_id),
         )
         conn.commit()
         identity = {
             "process_instance_id": host.process_instance_id,
-            "session_id": session_id, "run_id": run_id,
+            "session_id": session_id,
+            "run_id": run_id,
         }
         head, body = _request(
-            server.port, _get(server.port, "/api/reply?" + urlencode(identity)),
+            server.port,
+            _get(server.port, "/api/reply?" + urlencode(identity)),
         )
         assert head.startswith(b"HTTP/1.1 200")
-        assert json.loads(body) == {**identity, "reply_text": "pong"}
+        assert json.loads(body) == {
+            **identity,
+            "reply_text": "pong",
+            "skill_notice": "Skill 已降级：部分流程未使用或选择器不可用；"
+            "请查看运行详情中的本次输入。",
+        }
     finally:
         host.close()
         conn.close()
@@ -108,13 +117,20 @@ def test_reply_recovery_wire_returns_a_whole_body_above_the_sse_frame_limit(serv
         host.wait(submitted.run_id)
         identity = {
             "process_instance_id": host.process_instance_id,
-            "session_id": submitted.session_id, "run_id": submitted.run_id,
+            "session_id": submitted.session_id,
+            "run_id": submitted.run_id,
         }
         head, body = _request(
-            server.port, _get(server.port, "/api/reply?" + urlencode(identity)),
+            server.port,
+            _get(server.port, "/api/reply?" + urlencode(identity)),
         )
         assert head.startswith(b"HTTP/1.1 200")
-        assert json.loads(body) == {**identity, "reply_text": text}
+        assert json.loads(body) == {
+            **identity,
+            "reply_text": text,
+            "skill_notice": "Skill 已降级：部分流程未使用或选择器不可用；"
+            "请查看运行详情中的本次输入。",
+        }
         assert b"Cache-Control: no-store" in head
         _assert_no_cross_origin_permission(head)
     finally:
