@@ -33,6 +33,7 @@ export function toolsPage(root, csrf) {
         node('p', `来源 ${tool.source_id} · 能力 ${tool.capability_id} · ${tool.effect}`),
         node('p', `可用性：${tool.availability} · 模型暴露：${tool.exposure} · ${tool.reason || '可使用'}`),
         node('p', tool.effect === 'external' ? `外部连接：${tool.connection === 'unverified' ? '尚未验证' : tool.connection}` : '本地工具，不需要外部授权'));
+      if (tool.observation) card.append(node("p", `${tool.observation.checked_at || "未观测"} ${tool.observation.checked_via || ""} ${tool.observation.reason || ""}`));
       const history = node('a', '查看包含该工具的运行');
       history.href = '/ops?tool=' + encodeURIComponent(tool.identity);
       card.append(history);

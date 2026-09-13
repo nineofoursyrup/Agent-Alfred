@@ -29,147 +29,171 @@ test("unsupported grok rows do not show 支持", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("auth probe button posts only endpoint_id, shows result, and restores", async ({
-  page,
-}) => {
-  /** @type {Record<string, unknown>[]} */
-  const posts = [];
-  let releaseProbe;
-  const held = new Promise((resolve) => {
-    releaseProbe = resolve;
-  });
-  const connected = {
-    endpoints: [
-      {
-        endpoint_id: "openai",
-        base_url: "https://api.openai.com/v1",
-        catalog_url: null,
-        api_key_env: "OPENAI_API_KEY",
-        key: { configured: true, last4: "efgh", masked: false },
-        observation: {
-          state: "connected",
-          checked_at: "2026-08-28T12:00:00Z",
-          checked_via: "auth_probe",
-          reason: null,
-        },
-        catalog: {
-          health: "unfetched",
-          last_success_at: null,
-          last_error: null,
-          retry_at: null,
-        },
-        auth_probe: { available: true, label: null },
-      },
-    ],
-  };
-  await page.route("**/api/connections/probe", async (route) => {
-    posts.push(JSON.parse(route.request().postData() || "{}"));
-    await held;
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(connected),
+// Real connections responses identify the Host before the first SSE snapshot.
+// The additional ordering keeps the original probes and exercises a read that
+// replaces their initiating button while the operation receipt is in flight.
+for (const refreshDuringProbe of [false, true]) {
+  const suffix = refreshDuringProbe ? " after focus refresh" : "";
+  test("auth probe button posts only endpoint_id, shows result, and restores" + suffix, async ({
+    page,
+  }) => {
+    const {process_instance_id, integration_revision, connections_revision} = await (await page.request.get("/api/connections")).json();
+    /** @type {Record<string, unknown>[]} */
+    const posts = [];
+    let releaseProbe;
+    const held = new Promise((resolve) => {
+      releaseProbe = resolve;
     });
-  });
-  await page.route("**/api/connections", async (route) => {
-    const path = new URL(route.request().url()).pathname;
-    if (path === "/api/connections" && route.request().method() === "GET") {
+    const connected = {
+      process_instance_id, integration_revision, connections_revision: connections_revision + 1,
+      endpoints: [
+        {
+          endpoint_id: "openai",
+          base_url: "https://api.openai.com/v1",
+          catalog_url: null,
+          api_key_env: "OPENAI_API_KEY",
+          key: { configured: true, last4: "efgh", masked: false },
+          observation: {
+            state: "connected",
+            checked_at: "2026-08-28T12:00:00Z",
+            checked_via: "auth_probe",
+            reason: null,
+          },
+          catalog: {
+            health: "unfetched",
+            last_success_at: null,
+            last_error: null,
+            retry_at: null,
+          },
+          auth_probe: { available: true, label: null },
+        },
+      ],
+    };
+    await page.route("**/api/connections/probe", async (route) => {
+      posts.push(JSON.parse(route.request().postData() || "{}"));
+      await held;
+      if (refreshDuringProbe) {
+        const refreshed = page.waitForResponse(response => new URL(response.url()).pathname === "/api/connections");
+        await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+        await refreshed;
+        await expect(page.getByRole("button", {name:"验证凭据"})).toBeEnabled();
+      }
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({
-          endpoints: [
-            {
-              endpoint_id: "openai",
-              base_url: "https://api.openai.com/v1",
-              catalog_url: null,
-              api_key_env: "OPENAI_API_KEY",
-              key: { configured: true, last4: "efgh", masked: false },
-              observation: {
-                state: "configured_untested",
-                checked_at: null,
-                checked_via: null,
-                reason: null,
-              },
-              catalog: {
-                health: "unfetched",
-                last_success_at: null,
-                last_error: null,
-                retry_at: null,
-              },
-              auth_probe: { available: true, label: null },
-            },
-          ],
-        }),
+        body: JSON.stringify(connected),
       });
-      return;
-    }
-    await route.continue();
+    });
+    await page.route("**/api/connections", async (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path === "/api/connections" && route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            process_instance_id, integration_revision, connections_revision,
+      endpoints: [
+              {
+                endpoint_id: "openai",
+                base_url: "https://api.openai.com/v1",
+                catalog_url: null,
+                api_key_env: "OPENAI_API_KEY",
+                key: { configured: true, last4: "efgh", masked: false },
+                observation: {
+                  state: "configured_untested",
+                  checked_at: null,
+                  checked_via: null,
+                  reason: null,
+                },
+                catalog: {
+                  health: "unfetched",
+                  last_success_at: null,
+                  last_error: null,
+                  retry_at: null,
+                },
+                auth_probe: { available: true, label: null },
+              },
+            ],
+          }),
+        });
+        return;
+      }
+      await route.continue();
+    });
+    await page.goto("/connections");
+    const button = page.getByRole("button", { name: "验证凭据" });
+    await expect(button).toBeEnabled();
+    await button.click();
+    await expect(button).toBeDisabled();
+    releaseProbe();
+    await expect.poll(() => posts.length).toBe(1);
+    expect(posts[0]).toEqual({ endpoint_id: "openai" });
+    await expect(page.getByText("已连接")).toBeVisible();
+    await expect(page.getByText("auth_probe")).toBeVisible();
+    await expect(page.getByRole("button", { name: "验证凭据" })).toBeEnabled();
   });
-  await page.goto("/connections");
-  const button = page.getByRole("button", { name: "验证凭据" });
-  await expect(button).toBeEnabled();
-  await button.click();
-  await expect(button).toBeDisabled();
-  releaseProbe();
-  await expect.poll(() => posts.length).toBe(1);
-  expect(posts[0]).toEqual({ endpoint_id: "openai" });
-  await expect(page.getByText("已连接")).toBeVisible();
-  await expect(page.getByText("auth_probe")).toBeVisible();
-  await expect(page.getByRole("button", { name: "验证凭据" })).toBeEnabled();
-});
 
-test("auth probe error restores the button and shows the machine code", async ({
-  page,
-}) => {
-  await page.route("**/api/connections/probe", async (route) => {
-    await route.fulfill({
-      status: 409,
-      contentType: "application/json",
-      body: JSON.stringify({ code: "mutation_in_flight" }),
-    });
-  });
-  await page.route("**/api/connections", async (route) => {
-    const path = new URL(route.request().url()).pathname;
-    if (path === "/api/connections" && route.request().method() === "GET") {
+  test("auth probe error restores the button and shows the machine code" + suffix, async ({
+    page,
+  }) => {
+    const {process_instance_id, integration_revision, connections_revision} = await (await page.request.get("/api/connections")).json();
+    await page.route("**/api/connections/probe", async (route) => {
+      if (refreshDuringProbe) {
+        const refreshed = page.waitForResponse(response => new URL(response.url()).pathname === "/api/connections");
+        await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+        await refreshed;
+        await expect(page.getByRole("button", {name:"验证凭据"})).toBeEnabled();
+      }
       await route.fulfill({
-        status: 200,
+        status: 409,
         contentType: "application/json",
-        body: JSON.stringify({
-          endpoints: [
-            {
-              endpoint_id: "openai",
-              base_url: "https://api.openai.com/v1",
-              catalog_url: null,
-              api_key_env: "OPENAI_API_KEY",
-              key: { configured: true, last4: "efgh", masked: false },
-              observation: {
-                state: "configured_untested",
-                checked_at: null,
-                checked_via: null,
-                reason: null,
-              },
-              catalog: {
-                health: "unfetched",
-                last_success_at: null,
-                last_error: null,
-                retry_at: null,
-              },
-              auth_probe: { available: true, label: null },
-            },
-          ],
-        }),
+        body: JSON.stringify({ code: "mutation_in_flight" }),
       });
-      return;
-    }
-    await route.continue();
+    });
+    await page.route("**/api/connections", async (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path === "/api/connections" && route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            process_instance_id, integration_revision, connections_revision,
+      endpoints: [
+              {
+                endpoint_id: "openai",
+                base_url: "https://api.openai.com/v1",
+                catalog_url: null,
+                api_key_env: "OPENAI_API_KEY",
+                key: { configured: true, last4: "efgh", masked: false },
+                observation: {
+                  state: "configured_untested",
+                  checked_at: null,
+                  checked_via: null,
+                  reason: null,
+                },
+                catalog: {
+                  health: "unfetched",
+                  last_success_at: null,
+                  last_error: null,
+                  retry_at: null,
+                },
+                auth_probe: { available: true, label: null },
+              },
+            ],
+          }),
+        });
+        return;
+      }
+      await route.continue();
+    });
+    await page.goto("/connections");
+    const button = page.getByRole("button", { name: "验证凭据" });
+    await button.click();
+    await expect(page.getByText("mutation_in_flight")).toBeVisible();
+    await expect(button).toBeEnabled();
   });
-  await page.goto("/connections");
-  const button = page.getByRole("button", { name: "验证凭据" });
-  await button.click();
-  await expect(page.getByText("mutation_in_flight")).toBeVisible();
-  await expect(button).toBeEnabled();
-});
+
+}
 
 test("assigned inference probe names the row and catalog refresh exists", async ({
   page,

@@ -1,0 +1,45 @@
+{
+  "revision": "r3",
+  "state": "confirmed_and_published",
+  "baseline": "796b88c7d1e134906e25cf42f259d20381017fc2",
+  "issue": "https://github.com/nineofoursyrup/Agent-Alfred/issues/20",
+  "approved_r2_spec_sha256": "bcfc3f52d2378c5fcae4677c2ef2c0693fe364ea87d5fd24a043fcb6852395fc",
+  "files": {
+    "docs/design/issue-20-integrations-spec.md": "916bc71306e1b43b1f597bc55f2bd0a0553088fe1d4e71dcd8de5be66361b53b",
+    "CONTEXT.md": "b00e6a08c1ccb3c6de654b6c0880e6169864e61f236d93446cd4c17783cd586b",
+    "docs/design/issue-20-handoff.md": "d92835b85a3a62eae86861a36458a806af4e8b259dec8eefe48ae2ed121c8431",
+    "docs/design/issue-20-publication.json": "176633c9d3d2ee46da343de5b1cb5589e75929e531ffed11e5d8092b5473d7f8"
+  },
+  "confirmed_decisions": [
+    "Q1",
+    "Q2",
+    "Q3",
+    "Q4",
+    "Q5",
+    "Q6",
+    "Q7",
+    "Q8",
+    "Q9",
+    "Q10",
+    "Q11",
+    "Q12"
+  ],
+  "confirmed_cases": [
+    "CE-01",
+    "CE-02",
+    "CE-03",
+    "CE-04",
+    "CE-05",
+    "CE-06",
+    "CE-07",
+    "CE-08",
+    "CE-09",
+    "CE-10",
+    "CE-11",
+    "CE-12"
+  ],
+  "design_blockers": [],
+  "deferred_cases": [],
+  "implementation_tests_run": false,
+  "live_validation_run": false
+}

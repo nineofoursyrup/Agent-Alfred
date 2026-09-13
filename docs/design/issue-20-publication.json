@@ -1,0 +1,23 @@
+{
+  "issue": "https://github.com/nineofoursyrup/Agent-Alfred/issues/20",
+  "revision": "r3",
+  "published_updated_at": "2026-09-12T17:29:16Z",
+  "body_sha256": "916bc71306e1b43b1f597bc55f2bd0a0553088fe1d4e71dcd8de5be66361b53b",
+  "body_equal_local": true,
+  "state": "OPEN",
+  "labels": [
+    "wayfinder:task",
+    "ready-for-agent"
+  ],
+  "comments_preserved": true,
+  "dependencies": [
+    {
+      "number": 10,
+      "state": "closed"
+    },
+    {
+      "number": 19,
+      "state": "closed"
+    }
+  ]
+}

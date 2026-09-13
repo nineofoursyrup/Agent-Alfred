@@ -41,25 +41,40 @@ class CredentialOverlay:
     def values(self) -> dict[str, str]:
         return merge_credentials(self._process, self._overlay)
 
-    def reread(self) -> dict[str, str]:
+    def prepare(self):
         if self._path is None:
-            raise RuntimeError("dotenv path was not resolved at startup")
-        self._overlay = self._read_file()
+            raise RuntimeError("dotenv_unavailable")
+        return self._read_file()
+
+    def publish(self, overlay):
+        self._overlay = dict(overlay)
+
+    def reread(self) -> dict[str, str]:
+        self.publish(self.prepare())
         return self.values()
 
     def _read_file(self) -> dict[str, str]:
         if not self._path:
             return {}
-        from dotenv import dotenv_values
+        from io import StringIO
 
-        if not Path(self._path).is_file():
+        from dotenv.parser import parse_stream
+        from dotenv.variables import parse_variables
+
+        try:
+            text = Path(self._path).read_text(encoding="utf-8")
+        except FileNotFoundError:
             return {}
-        parsed = dotenv_values(self._path)
-        return {
-            key: value
-            for key, value in parsed.items()
-            if key is not None and value is not None
-        }
+        values = {}
+        for binding in parse_stream(StringIO(text)):
+            if binding.error:
+                raise ValueError("dotenv_invalid")
+            if binding.key is not None and binding.value is not None:
+                env = {**values, **self._process}
+                values[binding.key] = "".join(
+                    atom.resolve(env) for atom in parse_variables(binding.value)
+                )
+        return values
 
 
 def _raw_key(env: Mapping[str, str], name: str) -> str | None:

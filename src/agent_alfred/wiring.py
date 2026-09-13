@@ -418,6 +418,8 @@ def build_default_host(
     skill_builtin=None,
     settings: Settings | None = None,
     factory: ModelClientFactory | None = None,
+    credentials: CredentialOverlay | None = None,
+    clock: Clock | None = None,
     _rollback: ResumableRollback | None = None,
 ) -> RuntimeHost:
     """Build the standalone Host and everything it owns.
@@ -427,7 +429,7 @@ def build_default_host(
     return edge and its own store; without one, the Host that reaches the
     caller is its own sole owner, exactly as before.
     """
-    clock = SystemClock()
+    clock = clock or SystemClock()
     settings = settings or load_settings()
     directory = state_dir or resolve_state_dir()
     owner = ConstructionOwner(_rollback)
@@ -453,6 +455,7 @@ def build_default_host(
             clock=clock,
             trace_root=(state, PurePath("traces")),
             model_settings=model_settings,
+            credentials=credentials,
             _rollback=rollback,
             audit_key_path=state.path / "audit.key",
                 file_state=state,

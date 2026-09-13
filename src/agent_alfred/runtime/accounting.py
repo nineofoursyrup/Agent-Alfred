@@ -5,7 +5,7 @@ import json
 import threading
 import uuid
 from datetime import UTC, date, datetime, time, timedelta
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, localcontext
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from agent_alfred.clock import format_instant
@@ -182,7 +182,17 @@ def summary(rows):
                     ):
                         raise ValueError("invalid_cost")
                     key = cost["service"], cost["unit"]
-                    groups[key] = groups.get(key, Decimal(0)) + amount
+                    previous = groups.get(key, Decimal(0))
+                    # Service reports can carry more fractional places than the
+                    # default Decimal context; totals must not silently round.
+                    with localcontext() as context:
+                        context.prec = max(
+                            previous.adjusted(), amount.adjusted(), 0
+                        ) - min(
+                            previous.as_tuple().exponent,
+                            amount.as_tuple().exponent, 0,
+                        ) + 2
+                        groups[key] = previous + amount
                 except ValueError, TypeError, KeyError, InvalidOperation:
                     kind = "unknown"
             result["tool_cost_states"][

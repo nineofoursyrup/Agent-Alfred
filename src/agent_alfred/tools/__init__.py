@@ -39,6 +39,11 @@ class ToolCost:
 
 
 @dataclass(frozen=True)
+class NotSentCost:
+    """Trusted tool transport proved no business request was sent."""
+
+
+@dataclass(frozen=True)
 class UnknownCost:
     reason: str = "not_reported"
 
@@ -47,7 +52,7 @@ class UnknownCost:
 class ToolSuccess:
     content: Sequence[TextBlock]
     summary: str | None = None
-    cost: ToolCost | UnknownCost | None = None
+    cost: ToolCost | UnknownCost | NotSentCost | None = None
     stop_reason: str | None = None
     operation_id: str | None = None
 
@@ -68,7 +73,7 @@ class ToolFailure:
     code: ToolErrorCode
     content: Sequence[TextBlock]
     summary: str | None = None
-    cost: ToolCost | UnknownCost | None = None
+    cost: ToolCost | UnknownCost | NotSentCost | None = None
     stop_reason: str | None = None
     operation_id: str | None = None
     memory_code: str | None = None
@@ -122,6 +127,7 @@ class ToolPolicy:
     configured: bool = False
     authorization: Literal["unset", "allowed", "denied"] = "unset"
     connection: Literal["unverified", "connected", "error"] = "unverified"
+    unavailable_reason: str | None = None
 
 
 class ProgressEvents:
@@ -154,6 +160,8 @@ class ToolRegistry:
                 raise ValueError("invalid tool name")
         if len({tool.name for tool in tools}) != len(tools):
             raise ValueError("duplicate tool name")
+        if len({capability_identity(tool) for tool in tools}) != len(tools):
+            raise ValueError("duplicate capability identity")
         for tool in tools:
             if not isinstance(tool.source_id, str) or not tool.source_id:
                 raise ValueError("invalid source identity")
@@ -200,6 +208,10 @@ class ToolRegistry:
         self._policies = freeze(policies or {})
         self._schemas = self._build_schemas()
 
+    @property
+    def external_block(self):
+        return self._external_block
+
     def declarations(self):
         return self._tools
 
@@ -236,7 +248,9 @@ class ToolRegistry:
                     "source_id": tool.source_id,
                     "capability_id": tool.capability_id,
                     "effect": tool.effect,
-                    "availability": "configured"
+                    "availability": policy.unavailable_reason
+                    if external and policy.unavailable_reason
+                    else "configured"
                     if not external or policy.configured
                     else "unconfigured",
                     "connection": policy.connection if external else "not_applicable",
@@ -250,6 +264,8 @@ class ToolRegistry:
                     else "real",
                     "reason": self._external_block
                     if external and self._external_block
+                    else policy.unavailable_reason
+                    if external and policy.unavailable_reason
                     else "not_authorized"
                     if tool.name not in exposed
                     else "configuration_required"
@@ -279,7 +295,7 @@ class ToolRegistry:
         for tool in self._tools:
             policy = self._policies.get(tool.name, ToolPolicy())
             if tool.effect == "external":
-                if self._external_block:
+                if self._external_block or policy.unavailable_reason:
                     continue
                 if policy.authorization == "denied" or (
                     policy.configured and policy.authorization != "allowed"
@@ -358,6 +374,10 @@ class ToolRegistry:
             outcome = ToolFailure("unknown_tool", (TextBlock("Unknown tool."),))
         elif tool.effect == "external" and self._external_block:
             outcome = ToolFailure("unavailable", (TextBlock(self._external_block),))
+        elif tool.effect == "external" and self.policy(tool.name).unavailable_reason:
+            outcome = ToolFailure(
+                "unavailable", (TextBlock(self.policy(tool.name).unavailable_reason),)
+            )
         elif self._clock.monotonic() >= context.deadline:
             outcome = ToolFailure(
                 "timeout", (TextBlock("Budget exhausted; not started."),)
@@ -464,8 +484,37 @@ class ToolRegistry:
                                     "not started."
                                 ),
                             ),
+                            stop_reason="tool_result_unverified"
+                            if unknown and tool.effect == "external" else None,
+                            operation_id=(
+                                f"{context.run_id}:{context.step_index}:{context.call_id}"
+                                if unknown and tool.effect == "external" else None
+                            ),
                         )
                     except BaseException:
+                        if ledger_id is not None:
+                            try:
+                                self._external_ledger.finish(
+                                    ledger_id,
+                                    "unknown" if entered else "failed",
+                                    ToolExecution(
+                                        ToolResultBlock(
+                                            call.id,
+                                            (
+                                                TextBlock(
+                                                    "Control interrupted; "
+                                                    "result unverified."
+                                                ),
+                                            ),
+                                            True,
+                                        ),
+                                        stop_reason="tool_result_unverified"
+                                        if entered
+                                        else None,
+                                    ),
+                                )
+                            except BaseException:
+                                pass  # The retained intent is recovered as unknown.
                         if self._metering is not None:
                             try:
                                 self._metering.finish(
@@ -497,7 +546,15 @@ class ToolRegistry:
                 result="unknown"
                 if unknown
                 or outcome.stop_reason
-                in ("file_result_unverified", "memory_result_unverified")
+                in (
+                    "file_result_unverified",
+                    "memory_result_unverified",
+                    "tool_result_unverified",
+                )
+                else "not_executed"
+                if not entered
+                and isinstance(outcome, ToolFailure)
+                and outcome.code == "timeout"
                 else "failed"
                 if isinstance(outcome, ToolFailure)
                 else "succeeded",
@@ -551,7 +608,7 @@ class ToolRegistry:
         if ledger_id is not None:
             state = (
                 "unknown"
-                if unknown
+                if unknown or outcome.stop_reason == "tool_result_unverified"
                 or (
                     executed
                     and isinstance(outcome, ToolFailure)

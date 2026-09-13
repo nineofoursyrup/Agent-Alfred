@@ -53,6 +53,7 @@ const progress = new Progress();
 const memory = new MemorySync();
 const receipts = memoryReceipts(memory, () => csrf);
 /** @type {ReturnType<typeof runsPage>|null} */ let runPage = null;
+/** @type {ReturnType<typeof connectionsPage>|null} */ let connectionsView = null;
 const notices = new ConnectionNotices(element("connection"));
 const announcer = new Announcer(element("announcements"));
 const alerted = new Set();
@@ -310,6 +311,7 @@ const stream = new Stream(
         updateSend();
         void memory.connected(instance);
         accountingView?.sync(instance);
+        connectionsView?.sync(instance);
       }
       if (body.state_revision <= revision) return;
       notices.snapshot();
@@ -409,7 +411,10 @@ const stream = new Stream(
       }
       renderMessages();
       runPage?.update();
-      if (event.name === "run.finished") void runPage?.loadEvidence();
+      if (event.name === "run.finished") {
+        void runPage?.loadEvidence();
+        void connectionsView?.refresh();
+      }
     } else if (kind === "transport_notice") {
       progress.interrupt();
       notices.receive(body);
@@ -559,6 +564,7 @@ function route() {
   const isTools = path === "/tools";
   const isOps = path === "/ops";
   accountingView?.close(); accountingView = null;
+  connectionsView?.close(); connectionsView = null;
   const heading = document.createElement("h1");
   heading.textContent = isTools ? "Tools 工具" : isOps ? "Ops 账本" : isRuns
     ? "运行详情"
@@ -575,7 +581,7 @@ function route() {
   if (isTools) accountingView = toolsPage(element("page"), () => csrf);
   else if (isOps) accountingView = accountingPage(element("page"), () => csrf);
   else if (isModels) modelsPage(element("page"), () => csrf);
-  else if (isConnections) connectionsPage(element("page"), () => csrf);
+  else if (isConnections) connectionsView = connectionsPage(element("page"), () => csrf);
   else if (isMemory)
     memoryPage(element("page"), memory, {
       csrf: () => csrf,
@@ -584,7 +590,10 @@ function route() {
     });
   else if (!isRuns) inbox(element("page"), resume);
   else runPage = runsPage(element("page"), progress, route, memory);
-  if (connected) runPage?.sync(active);
+  if (connected) {
+    runPage?.sync(active);
+    connectionsView?.sync(instance);
+  }
   for (const link of document.querySelectorAll("nav a")) {
     const href = link.getAttribute("href");
     const current =
