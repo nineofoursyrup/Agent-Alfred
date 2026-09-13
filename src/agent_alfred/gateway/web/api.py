@@ -457,8 +457,11 @@ class DashboardApi:
             if reason is not None:
                 return self._mutation_refusal(reason)
             return 200, payload
-        except RuntimeError:
-            return 400, {"code": "dotenv_unavailable"}
+        except RuntimeError as exc:
+            code = str(exc)
+            return 400, {"code": code if code in (
+                "dotenv_unavailable", "dotenv_reload_failed"
+            ) else "dotenv_reload_failed"}
 
     def probe_auth(self, body: dict[str, Any]) -> tuple[int, Any]:
         from agent_alfred.auth_probe import AuthProbeRefused

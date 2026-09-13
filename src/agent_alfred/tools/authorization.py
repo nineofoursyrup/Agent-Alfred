@@ -79,7 +79,16 @@ class ToolAuthorization:
             policies[tool.name] = replace(
                 policy, authorization=values.get(capability_identity(tool), "unset")
             )
-        return self.registry.with_policies(policies, external_block=None)
+        block = self.registry.external_block
+        # Authorization publication owns its own failures only. Configuration
+        # recovery must explicitly clear a configuration-owned suspension.
+        if block in (
+            "authorization_unreadable",
+            "authorization_not_applied",
+            "authorization_write_unconfirmed",
+        ):
+            block = None
+        return self.registry.with_policies(policies, external_block=block)
 
     def apply(self, candidate=None):
         try:

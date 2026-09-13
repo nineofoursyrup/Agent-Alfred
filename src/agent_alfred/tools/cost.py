@@ -9,6 +9,8 @@ def read_tool_cost(raw, source_id):
         return {"kind": "unrecorded"}
     kind = raw.get("kind")
     if kind in ("not_billable", "unknown", "unrecorded"):
+        if kind == "not_billable" and raw.get("reason") == "http_not_sent":
+            return {"kind": kind, "reason": "http_not_sent"}
         return {"kind": kind}
     try:
         if kind != "reported" or type(raw.get("units")) not in (str, int):
@@ -31,11 +33,13 @@ def read_tool_cost(raw, source_id):
 
 
 def project_tool_cost(tool, outcome, entered):
-    from agent_alfred.tools import ToolCost
+    from agent_alfred.tools import NotSentCost, ToolCost
 
     if not entered or tool.effect != "external":
         return {"kind": "not_billable"}
     cost = outcome.cost
+    if isinstance(cost, NotSentCost):
+        return {"kind": "not_billable", "reason": "http_not_sent"}
     if not isinstance(cost, ToolCost):
         return {"kind": "unknown", "reason": "not_reported"}
     if cost.unit not in tool.cost_units or cost.source not in tool.cost_sources:

@@ -401,6 +401,8 @@ class RuntimeHost:
         )
         self._model_settings = model_settings
         self._credentials = credentials
+        self._configuration_lock = threading.RLock()
+        self._integration_application = "applied"
         self._catalog_scheduler_obj = None
         self._catalog_transport = None
         self._auth_probe_transport = None
@@ -454,6 +456,9 @@ class RuntimeHost:
             process_instance_id,
             self._accounting_prices,
         )
+        from agent_alfred.integrations import Integrations
+
+        self._integrations = Integrations(self._credential_env(), clock, self._redactor)
         tools = ToolRegistry(
             (
                 *CalendarTools(self._store, clock).declarations(),
@@ -461,11 +466,12 @@ class RuntimeHost:
                 *self._file_tools.declarations(),
                 *persona_tools.declarations(),
                 *skill_tools.declarations(),
+                *self._integrations.declarations(),
                 *extra_tools,
             ),
             clock=clock,
             redactor=self._redactor,
-            policies=tool_policies,
+            policies={**self._integrations.policies(), **(tool_policies or {})},
             external_ledger=self._external_tools,
             metering=self._tool_metering,
         )
@@ -913,20 +919,83 @@ class RuntimeHost:
         return result
 
     def reread_dotenv(self) -> dict[str, str]:
+        with self._configuration_lock:
+            return self._reread_dotenv()
+
+    def _reread_dotenv(self) -> dict[str, str]:
         if self._credentials is None or not self._credentials.can_reread:
             raise RuntimeError("dotenv_unavailable")
-        values = self._credentials.reread()
+        from dataclasses import replace
+
+        from agent_alfred.connections import merge_credentials
+
+        old_overlay = dict(self._credentials._overlay)
+        old_values = self._credentials.values()
+        old_integration_state = self._integrations.checkpoint()
+        old_application = self._integration_application
+        previous = self._tool_authorization.registry
         bind = getattr(self._snapshot_provider, "bind_environ", None)
-        if callable(bind):
-            bind(values)
-        invalidate = getattr(self._factory, "invalidate_all", None)
-        if callable(invalidate):
-            invalidate()
-        if self._catalog_scheduler_obj is not None:
-            self._catalog_scheduler_obj.bump()
+        try:
+            overlay = self._credentials.prepare()
+            values = merge_credentials(self._credentials._process, overlay)
+            self._integrations.prepare(values)
+            policies = {
+                t.name: previous.policy(t.name) for t in previous.declarations()
+            }
+            for name, available in self._integrations.policies(values).items():
+                policies[name] = replace(
+                    available, authorization=policies[name].authorization
+                )
+            block = previous.external_block
+            if block and block.startswith("configuration_not_applied"):
+                block = None
+            candidate = previous.with_policies(policies, external_block=block)
+            if callable(bind):
+                bind(values)
+            invalidate = getattr(self._factory, "invalidate_all", None)
+            if callable(invalidate):
+                invalidate()
+            if self._catalog_scheduler_obj is not None:
+                self._catalog_scheduler_obj.bump()
+            self._integration_application = "applied"
+            self._publish_tools(candidate)
+            self._credentials.publish(overlay)
+            self._integrations.publish(values)
+            self._tool_authorization.registry = candidate
+            self._integration_application = "applied"
+        except BaseException as exc:
+            self._integration_application = old_application
+            try:
+                self._credentials.publish(old_overlay)
+                self._integrations.restore(old_integration_state)
+                if callable(bind):
+                    bind(old_values)
+                self._publish_tools(previous)
+                self._tool_authorization.registry = previous
+            except BaseException:
+                self._integration_application = "not_applied"
+                previous.suspend_external(
+                    "configuration_not_applied; reread .env to repair"
+                )
+                self._tools.suspend_external(
+                    "configuration_not_applied; reread .env to repair"
+                )
+                self._tool_authorization.registry = self._tools
+                if not isinstance(exc, Exception):
+                    raise exc
+            if not isinstance(exc, Exception):
+                raise
+            from agent_alfred.resource_rollback import raise_if_rollback_pending
+
+            raise_if_rollback_pending(exc)
+            raise RuntimeError("dotenv_reload_failed") from None
         return values
 
     def connections(self) -> dict:
+        with self._configuration_lock:
+            return self._connections()
+
+    def _connections(self) -> dict:
         from agent_alfred.catalog import CatalogState
         from agent_alfred.connections import project_connections
 
@@ -943,13 +1012,19 @@ class RuntimeHost:
                 catalog = pool.cached_catalog(endpoint.endpoint_id)
                 if isinstance(catalog, CatalogState):
                     catalogs[endpoint.endpoint_id] = catalog
-        return project_connections(
+        result = project_connections(
             endpoints=endpoints,
             env=env,
             overlay={},
             observations=observations,
             catalogs=catalogs,
         )
+
+        result["integrations"] = self._integrations.snapshot()
+        result["integration_revision"] = self._integrations.revision
+        result["integration_application"] = self._integration_application
+        result["process_instance_id"] = self._process_instance_id
+        return result
 
     def models(self, *, expand: str | None = None, refresh: bool = False) -> dict:
         from agent_alfred.candidates import project_models_page
@@ -1070,6 +1145,9 @@ class RuntimeHost:
         return self.models()
 
     def probe_auth(self, endpoint_id: str) -> None:
+        if endpoint_id == "tavily":
+            self._integrations.probe()
+            return
         from agent_alfred.auth_probe import (
             AuthProbeRefused,
             UrllibAuthProbeTransport,
@@ -1923,12 +2001,26 @@ class RuntimeHost:
         )
 
     def tools_catalog(self):
-        with self._lock:
-            return self._tool_authorization.snapshot(
+        with self._lock, self._configuration_lock:
+            result = self._tool_authorization.snapshot(
                 suspend_external=self._coord == "idle" and not self._mutating
             )
+            integrations = {
+                row["integration_id"]: row for row in self._integrations.snapshot()
+            }
+            for tool in result["tools"]:
+                integration = integrations.get(tool["source_id"])
+                if integration:
+                    tool["observation"] = integration["observation"]
+                    tool["connection"] = integration["observation"]["state"]
+                    tool["integration_revision"] = integration["revision"]
+            return result
 
     def _publish_tools(self, registry):
+        if self._integration_application != "applied":
+            registry.suspend_external(
+                "configuration_not_applied; reread .env to repair"
+            )
         self._tools = registry
         if hasattr(self, "_executor"):
             self._executor._tools = registry

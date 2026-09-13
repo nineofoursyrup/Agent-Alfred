@@ -155,6 +155,16 @@ const CATALOG_LABEL = /** @type {Record<string,string>} */ ({
 
 /** @param {HTMLElement} root @param {()=>string} csrf */
 export function connectionsPage(root, csrf) {
+  let revision = -1;
+  let sequence = 0;
+  let instance = "";
+  const retired = new Set();
+  const channel = new BroadcastChannel("alfred-integrations");
+  const notice = node("p");
+  root.append(notice);
+  channel.onmessage = () => void refresh();
+  const focused = () => void refresh();
+  window.addEventListener("focus", focused);
   const list = node("div");
   list.setAttribute("aria-label", "端点连接");
   root.append(list);
@@ -166,6 +176,7 @@ export function connectionsPage(root, csrf) {
     const token = csrf();
     if (!token) return;
     reread.disabled = true;
+    const attempt = ++sequence;
     try {
       const response = await fetch("/api/connections/reread", {
         method: "POST",
@@ -176,7 +187,10 @@ export function connectionsPage(root, csrf) {
         body: "{}",
       });
       const body = await response.json();
-      if (response.ok) render(body);
+      if (response.ok) acceptMutation(body, attempt);
+      else if (attempt === sequence) notice.textContent = body.code || "error";
+    } catch {
+      if (attempt === sequence && list.isConnected) notice.textContent = "重读结果未确认，请核对当前状态后重试。";
     } finally {
       reread.disabled = false;
     }
@@ -188,6 +202,7 @@ export function connectionsPage(root, csrf) {
     if (!token) return;
     if (button.disabled) return;
     button.disabled = true;
+    const attempt = ++sequence;
     try {
       const response = await fetch("/api/connections/probe", {
         method: "POST",
@@ -198,19 +213,44 @@ export function connectionsPage(root, csrf) {
         body: JSON.stringify({ endpoint_id: endpointId }),
       });
       const body = await response.json();
-      if (response.ok) render(body);
-      else if (button.isConnected)
-        button.insertAdjacentElement(
-          "afterend",
-          node("p", body.code || "error"),
-        );
+      if (response.ok) acceptMutation(body, attempt);
+      else if (attempt === sequence && button.isConnected)
+        notice.textContent = body.code || "error";
+    } catch {
+      if (attempt === sequence && list.isConnected) notice.textContent = "测试结果未确认，请核对当前状态。";
     } finally {
       if (button.isConnected) button.disabled = false;
     }
   }
 
+  /** @param {Wire} body @param {number} attempt */
+  function acceptMutation(body, attempt) {
+    if (attempt !== sequence && (body.process_instance_id || instance) === instance
+        && (body.integration_revision ?? 0) <= revision) return;
+    if (!render(body)) return;
+    if (attempt === sequence && body.integration_application !== "not_applied")
+      notice.textContent = "";
+    channel.postMessage("changed");
+  }
+
+  /** @param {string} value */
+  function adoptInstance(value) {
+    if (retired.has(value)) return false;
+    if (value && value !== instance) {
+      if (instance) retired.add(instance);
+      instance = value; revision = -1;
+    }
+    return true;
+  }
+
   /** @param {Wire} body */
   function render(body) {
+    if (!list.isConnected || !adoptInstance(body.process_instance_id || instance)) return false;
+    const incoming = body.integration_revision ?? 0;
+    if (incoming < revision) return false;
+    revision = incoming;
+    if (body.integration_application === "not_applied")
+      notice.textContent = "配置未能一致生效，外部能力已暂停；请修复后重新读取 .env。";
     list.replaceChildren();
     for (const endpoint of body.endpoints) {
       const card = node("article");
@@ -270,11 +310,58 @@ export function connectionsPage(root, csrf) {
       }
       list.append(card);
     }
+    for (const integration of body.integrations || []) {
+      const card = node("article");
+      card.className = "card";
+      card.setAttribute("data-integration", integration.integration_id);
+      const observed = integration.observation;
+      card.append(node("h2", integration.integration_id), node("p",
+        `连接：${STATE_LABEL[observed.state] || observed.state} ${observed.reason || ""}`));
+      if (observed.checked_at) card.append(node("p", `历史观测 ${observed.checked_at} ${observed.checked_via}`));
+      const key = integration.key;
+      card.append(node("p", !key.configured ? "密钥：未配置" : key.masked ? "密钥：已掩码" : `密钥：末四位 ${key.last4}`));
+      card.append(node("p", "仅显式测试发送 /usage；探活免费未证实。授权请到工具页设置。"));
+      if (integration.last_attempt?.reason) card.append(node("p", `本次说明：${integration.last_attempt.reason}`));
+      if (integration.retry_at) card.append(node("p", `下次可测试：${integration.retry_at}`));
+      if (integration.search_retry_at) card.append(node("p", `搜索可重试：${integration.search_retry_at}`));
+      for (const scope of ["key", "account"]) {
+        const balance = observed.balances?.[scope];
+        if (balance) card.append(node("p", `${scope} 套餐用量：${balance.plan_usage ?? "未报告"}；套餐上限：${balance.plan_limit ?? "未报告"}`));
+      }
+      const button = node("button", "测试连接");
+      button.disabled = integration.availability !== "configured";
+      button.addEventListener("click", () => void verifyCredentials(integration.integration_id, button));
+      card.append(button);
+      list.append(card);
+    }
+
+    return true;
   }
 
-  void fetch("/api/connections")
-    .then((response) => response.json())
-    .then(render);
+  async function refresh() {
+    if (!list.isConnected) {channel.close(); return;}
+    const attempt = ++sequence;
+    try {
+      const response = await fetch("/api/connections");
+      const body = await response.json();
+      if (attempt === sequence) render(body);
+    } catch {
+      if (attempt === sequence && list.isConnected) notice.textContent = "连接状态读取失败，请重试。";
+    }
+  }
+  void refresh();
+  /** @param {string} value */
+  function sync(value) {
+    if (value !== instance && adoptInstance(value)) {
+      ++sequence;
+      list.replaceChildren(node("p", "连接状态更新中…"));
+      void refresh();
+    }
+  }
+  return {refresh, sync, close() {
+    ++sequence; channel.close();
+    window.removeEventListener("focus", focused);
+  }};
 }
 
 /** @param {HTMLElement} root @param {()=>string} csrf */
