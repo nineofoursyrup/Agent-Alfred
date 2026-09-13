@@ -54,7 +54,11 @@ class ExternalToolLedger:
             raise ValueError("caller_transaction_active")
         # Identity is host-supplied call provenance, never model arguments.
         # All parameters and the tool name participate in mismatch detection.
-        key = (context.run_id, context.step_index, context.call_id)
+        key = (
+            context.run_id,
+            (context.step_index if context.step_index is not None else -1),
+            context.call_id,
+        )
         fingerprint = hashlib.sha256(
             json.dumps(
                 [tool.name, dict(args)],

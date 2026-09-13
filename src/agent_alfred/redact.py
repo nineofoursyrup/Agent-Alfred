@@ -16,6 +16,12 @@ from agent_alfred.events import (
     BlockStarted,
     BlockStopped,
     GateEvaluated,
+    GraphFinished,
+    GraphStarted,
+    NodeAborted,
+    NodeFinished,
+    NodeSkipped,
+    NodeStarted,
     Notice,
     RawToolArgumentFragment,
     RunFinished,
@@ -63,6 +69,7 @@ _EVENT_PAYLOAD_TYPES = (
     BlockStopped,
     Notice,
     GateEvaluated,
+    GraphStarted, GraphFinished, NodeStarted, NodeFinished, NodeSkipped, NodeAborted,
 )
 
 

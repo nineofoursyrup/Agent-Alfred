@@ -58,7 +58,11 @@ class ToolMetering:
         with self.writing() as conn:
             for ordinal, call in enumerate(calls):
                 tool = declarations.get(call.name)
-                identity = (context.run_id, context.step_index, call.id)
+                identity = (
+                    context.run_id,
+                    (context.step_index if context.step_index is not None else -1),
+                    call.id,
+                )
                 old = conn.execute(
                     "SELECT tool_name,source_id,capability_id FROM tool_metering "
                     "WHERE run_id=? AND step_index=? AND call_id=?",
@@ -94,7 +98,8 @@ class ToolMetering:
             (
                 r
                 for r in rows
-                if r["step_index"] == context.step_index
+                if r["step_index"]
+                == (context.step_index if context.step_index is not None else -1)
                 and r["call_id"] == context.call_id
                 and r["result"] != "pending"
             ),
@@ -121,7 +126,10 @@ class ToolMetering:
             conn.execute(
                 "UPDATE tool_metering SET model_delivery='not_sent' "
                 "WHERE run_id=? AND step_index=?",
-                (context.run_id, context.step_index),
+                (
+                    context.run_id,
+                    (context.step_index if context.step_index is not None else -1),
+                ),
             )
 
     def intent(self, context):
@@ -135,7 +143,11 @@ class ToolMetering:
 
     @staticmethod
     def key(context):
-        return context.run_id, context.step_index, context.call_id
+        return (
+            context.run_id,
+            (context.step_index if context.step_index is not None else -1),
+            context.call_id,
+        )
 
     def finish(
         self, context, *, entered, result, reason, cost, operation_id=None, conn=None
@@ -213,7 +225,10 @@ class ToolMetering:
             conn.execute(
                 "UPDATE tool_metering SET model_delivery='not_sent' "
                 "WHERE run_id=? AND step_index=?",
-                (context.run_id, context.step_index),
+                (
+                    context.run_id,
+                    (context.step_index if context.step_index is not None else -1),
+                ),
             )
 
     def read(self, run_id, *, conn=None):
