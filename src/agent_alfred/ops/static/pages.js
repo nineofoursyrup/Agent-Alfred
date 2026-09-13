@@ -157,11 +157,14 @@ const CATALOG_LABEL = /** @type {Record<string,string>} */ ({
 export function connectionsPage(root, csrf) {
   let revision = -1;
   let sequence = 0;
+  let readSequence = 0;
+  let noticeSequence = 0;
   let instance = "";
   const retired = new Set();
   const channel = new BroadcastChannel("alfred-integrations");
   const notice = node("p");
-  root.append(notice);
+  const configurationNotice = node("p");
+  root.append(configurationNotice, notice);
   channel.onmessage = () => void refresh();
   const focused = () => void refresh();
   window.addEventListener("focus", focused);
@@ -188,9 +191,9 @@ export function connectionsPage(root, csrf) {
       });
       const body = await response.json();
       if (response.ok) acceptMutation(body, attempt);
-      else if (attempt === sequence) notice.textContent = body.code || "error";
+      else mutationFailure(body.code || "error", attempt);
     } catch {
-      if (attempt === sequence && list.isConnected) notice.textContent = "重读结果未确认，请核对当前状态后重试。";
+      mutationFailure("重读结果未确认，请核对当前状态后重试。", attempt);
     } finally {
       reread.disabled = false;
     }
@@ -214,22 +217,31 @@ export function connectionsPage(root, csrf) {
       });
       const body = await response.json();
       if (response.ok) acceptMutation(body, attempt);
-      else if (attempt === sequence && button.isConnected)
-        notice.textContent = body.code || "error";
+      else mutationFailure(body.code || "error", attempt);
     } catch {
-      if (attempt === sequence && list.isConnected) notice.textContent = "测试结果未确认，请核对当前状态。";
+      mutationFailure("测试结果未确认，请核对当前状态。", attempt);
     } finally {
       if (button.isConnected) button.disabled = false;
     }
   }
 
+  /** @param {string} message @param {number} attempt */
+  function mutationFailure(message, attempt) {
+    if (attempt !== sequence || !list.isConnected) return;
+    ++noticeSequence;
+    notice.textContent = message;
+  }
+
   /** @param {Wire} body @param {number} attempt */
   function acceptMutation(body, attempt) {
     if (attempt !== sequence && (body.process_instance_id || instance) === instance
-        && (body.integration_revision ?? 0) <= revision) return;
+        && (body.connections_revision ?? body.integration_revision ?? 0) <= revision) return;
     if (!render(body)) return;
-    if (attempt === sequence && body.integration_application !== "not_applied")
+    ++readSequence;
+    if (attempt === sequence && body.integration_application !== "not_applied") {
+      ++noticeSequence;
       notice.textContent = "";
+    }
     channel.postMessage("changed");
   }
 
@@ -239,6 +251,9 @@ export function connectionsPage(root, csrf) {
     if (value && value !== instance) {
       if (instance) retired.add(instance);
       instance = value; revision = -1;
+      ++sequence; ++noticeSequence;
+      notice.textContent = "";
+      configurationNotice.textContent = "";
     }
     return true;
   }
@@ -246,11 +261,12 @@ export function connectionsPage(root, csrf) {
   /** @param {Wire} body */
   function render(body) {
     if (!list.isConnected || !adoptInstance(body.process_instance_id || instance)) return false;
-    const incoming = body.integration_revision ?? 0;
+    const incoming = body.connections_revision ?? body.integration_revision ?? 0;
     if (incoming < revision) return false;
     revision = incoming;
-    if (body.integration_application === "not_applied")
-      notice.textContent = "配置未能一致生效，外部能力已暂停；请修复后重新读取 .env。";
+    // This current configuration fact is independent of operation receipts.
+    configurationNotice.textContent = body.integration_application === "not_applied"
+      ? "配置未能一致生效，外部能力已暂停；请修复后重新读取 .env。" : "";
     list.replaceChildren();
     for (const endpoint of body.endpoints) {
       const card = node("article");
@@ -340,20 +356,22 @@ export function connectionsPage(root, csrf) {
 
   async function refresh() {
     if (!list.isConnected) {channel.close(); return;}
-    const attempt = ++sequence;
+    // Reads are not new user operations and cannot invalidate their receipts.
+    const attempt = sequence;
+    const read = ++readSequence;
+    const noticeAtStart = noticeSequence;
     try {
       const response = await fetch("/api/connections");
       const body = await response.json();
-      if (attempt === sequence) render(body);
+      if (attempt === sequence && read === readSequence) render(body);
     } catch {
-      if (attempt === sequence && list.isConnected) notice.textContent = "连接状态读取失败，请重试。";
+      if (attempt === sequence && read === readSequence && noticeAtStart === noticeSequence && list.isConnected) notice.textContent = "连接状态读取失败，请重试。";
     }
   }
   void refresh();
   /** @param {string} value */
   function sync(value) {
     if (value !== instance && adoptInstance(value)) {
-      ++sequence;
       list.replaceChildren(node("p", "连接状态更新中…"));
       void refresh();
     }

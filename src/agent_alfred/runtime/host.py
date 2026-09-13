@@ -9,6 +9,7 @@ import time
 import uuid
 from collections import deque
 from collections.abc import Callable
+from copy import deepcopy
 from dataclasses import replace
 from functools import partial
 from pathlib import Path
@@ -402,6 +403,8 @@ class RuntimeHost:
         self._model_settings = model_settings
         self._credentials = credentials
         self._configuration_lock = threading.RLock()
+        self._connections_revision = 0
+        self._connections_snapshot = None
         self._integration_application = "applied"
         self._catalog_scheduler_obj = None
         self._catalog_transport = None
@@ -1024,6 +1027,13 @@ class RuntimeHost:
         result["integration_revision"] = self._integrations.revision
         result["integration_application"] = self._integration_application
         result["process_instance_id"] = self._process_instance_id
+        # Models, configuration application and integrations change independently.
+        # Version the complete public view under _configuration_lock; a Tavily
+        # revision alone cannot order model observations or failed publication.
+        if result != self._connections_snapshot:
+            self._connections_revision += 1
+            self._connections_snapshot = deepcopy(result)
+        result["connections_revision"] = self._connections_revision
         return result
 
     def models(self, *, expand: str | None = None, refresh: bool = False) -> dict:

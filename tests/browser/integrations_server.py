@@ -12,9 +12,11 @@ from urllib.request import ProxyHandler
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from agent_alfred.connections import CredentialOverlay
+from agent_alfred.evals.deterministic.test_auth_probe import _endpoint
 from agent_alfred.integrations_http import TavilyHTTP
 from agent_alfred.messages import TextBlock, ToolCallBlock, ToolResultBlock
 from agent_alfred.model import ModelResponse, ScriptedModel, ScriptedModelFactory
+from agent_alfred.runtime.transport import VersionedTransportPool
 from agent_alfred.wiring import build_dashboard
 
 
@@ -53,7 +55,9 @@ def main():
     current = {"status": 200}
     with TemporaryDirectory(prefix="alfred-integrations-") as directory:
         path = Path(directory) / ".env"
-        path.write_text("TAVILY_API_KEY=browser-key-original\n")
+        path.write_text(
+            "TAVILY_API_KEY=browser-key-original\nOPENAI_API_KEY=browser-auth-synthetic\n"
+        )
 
         class Handler(BaseHTTPRequestHandler):
             def do_GET(self):
@@ -72,6 +76,8 @@ def main():
                 data = self.rfile.read(int(self.headers.get("Content-Length", 0)))
                 if self.path == "/control":
                     value = json.loads(data)
+                    if "fault_publication" in value:
+                        current["fault_publication"] = value["fault_publication"]
                     if "key" in value:
                         path.write_text("TAVILY_API_KEY=" + value["key"] + "\n")
                     if "echo_keys" in value:
@@ -133,15 +139,35 @@ def main():
             target=lambda: server.serve_forever(poll_interval=0.01)
         )
         thread.start()
+        factory = ScriptedModelFactory(Model([]))
+        factory._endpoints = (_endpoint(),)
+        factory.transport_pool = VersionedTransportPool(lambda snapshot: snapshot)
+
+        class AuthTransport:
+            def request(self, *args, **kwargs):
+                requests.append("/auth-probe")
+                entered.set()
+                assert release.wait(10)
+                return {"status": 204}
+
         dashboard = build_dashboard(
             state_dir=Path(directory) / "state",
             port=17744,
             credentials=CredentialOverlay({}, str(path)),
-            factory=ScriptedModelFactory(Model([])),
+            factory=factory,
         )
         signal.signal(signal.SIGTERM, lambda *_: stopped.set())
         try:
             dashboard.start()
+            dashboard.host._auth_probe_transport = AuthTransport()
+            original_publish = dashboard.host._publish_tools
+
+            def publish_with_io_fault(registry):
+                original_publish(registry)
+                if current.get("fault_publication"):
+                    raise OSError("synthetic publication and rollback IO fault")
+
+            dashboard.host._publish_tools = publish_with_io_fault
             dashboard.host._integrations.transport = TavilyHTTP(
                 base_url=f"http://127.0.0.1:{server.server_port}",
                 proxy_handler=ProxyHandler({}),

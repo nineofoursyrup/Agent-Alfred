@@ -122,3 +122,55 @@ Loop、SQLite、回环 urllib 分别覆盖 search/usage，共 22 个边界：整
 再经 Tools 授权、MainBar 成功来源到 Ops 显示 unknown=1、reported=0；
 实际请求恰为一次 usage 和一次 search。该新增浏览器证据首次即通过，
 不宣称单独 browser red。
+
+
+## CI-01：Connections 异步回执恢复
+
+PR #58 首轮 CI 的 settings 两例丢失 auth_probe / mutation_in_flight。
+原始两例本地连续 5 轮通过；控制首次 SSE 在探活期间到达可重现两例失败，
+给旧 fixture 补齐真实 API 的 process_instance_id/integration_revision 后通过。
+这证明启动夹具失配，但不是全部原因：带真实身份的 focus GET 插入探活期间，
+仍会丢失成功回执；真实 Host 的 MutationGate 409 在真实 GET 完成后交付，
+也稳定丢失错误提示。
+
+根因是 Connections 将后台读取算作新操作，共用 sequence 使有效操作回执
+过期；读取重建按钮后，以旧 button.isConnected 判断错误有效性又会丢弃
+仍属于当前页面的错误。修复分开操作序号与读取序号，成功回执作废在途旧读，
+错误提示按当前页面/操作归属显示。提示另有代次，避免旧读取失败覆盖新提示，
+同时不妨碍其他标签的合法新状态读取。进程退休、集成 revision、较早操作
+回包的防护仍保留。
+
+保留原 settings 探活两例，补齐真实身份并增加 focus 乱序参数；新增真实
+Host/Registry/MutationGate/HTTP/浏览器 409 回归。测试不延长 timeout，
+不额外发送真实服务请求。原失败、单变量试验、修复回执见
+`.scratch/issue20/ci01/`；v5 完整候选和后续门禁见
+`.scratch/issue20/review-v5/`。本轮独立双轴与发布由协调任务统一安排。
+
+
+## v6：STD-V5-01 / SPEC-V5-01
+
+两项 v5 P2 都已用原公共输入重现，再补成功断言修复。模型端点的观测
+与 Tavily 的 integration_revision 不属于同一版本范围；Host 现在为完整
+Connections 只读投影提供 process_instance_id + connections_revision。
+在既有配置锁内比较整个 DTO，内容改变才推进进程内版本；相同读取不推进，
+调用方也不能通过修改返回值影响下一次版本比较。此版本同时覆盖模型观测、
+集成观测与配置应用状态，不改变 Tavily 调用、授权、计量或持久格式。
+
+页面按完整投影版本拒收旧状态；当前配置暂停/恢复说明与操作回执分别显示。
+采纳新进程身份时作废旧操作和旧提示，包括先由 GET 识别重启的场景。
+较早模型探活成功可更新观测，同时保留较新重读409说明；旧409和旧读失败
+不能清掉当前暂停指引。暂停说明只由可信的当前配置投影更新，真实重读成功
+后解除；没有取消后台刷新或所有版本过滤。
+
+新浏览器验收：STD-V5-01 用真实Host/API/VersionedTransportPool/MutationGate，
+仅替换外部auth transport，断言成功仍为 connected/auth_probe且重读409保留。
+SPEC-V5-01 保留真实usage屏障、较早409、精确_publish_tools发布和回滚OSError、
+真实reread400及focus GET；扩展同/新进程与较早读失败的四个组合，断言暂停
+说明保留、无额外探活、显式成功重读恢复。原两例先2 failed，修复后五个
+组合通过。跨进程场景使用真实Host重启；没有以DOM替身冒充浏览器验收。
+
+Python `test_connections_revision_tracks_model_observation_without_tavily_change`
+补证真实公共API的模型观测推进完整投影版本而不推进Tavily版本，重复读取
+稳定且返回DTO改动不污染Host内部比较。旧CI-01及全部既有边界继续保留。
+最终候选/门禁/制品证据在 `.scratch/issue20/review-v6/`；独立双轴仍由
+协调任务安排，本执行者不以历史v5结论代替v6复审。

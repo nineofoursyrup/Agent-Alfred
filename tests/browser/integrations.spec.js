@@ -202,3 +202,141 @@ test("CE-04 CE-05 over-limit reported numbers keep results, missing balance and 
     expect((await control(s)).requests).toEqual(["/usage", "/search"]);
   } finally {await context.close(); await s.close();}
 });
+
+test("CI-01 real busy probe receipt survives a completed focus refresh", async ({browser}) => {
+  const s = await server(); const context = await browser.newContext();
+  let deliver;
+  try {
+    const a = await context.newPage(), b = await context.newPage();
+    const origin = `http://127.0.0.1:${s.entry.port}`;
+    await a.goto(origin + "/connections"); await b.goto(origin + "/connections");
+    const card = p => p.locator('[data-integration="tavily"]');
+    await expect(card(a).getByRole("button", {name:"测试连接"})).toBeEnabled();
+    await expect(card(b).getByRole("button", {name:"测试连接"})).toBeEnabled();
+    await control(s, {block:true});
+    await card(a).getByRole("button", {name:"测试连接"}).click();
+    await expect.poll(async () => (await control(s)).entered).toBe(true);
+    let captured;
+    const received = new Promise(resolve => {captured=resolve;});
+    const held = new Promise(resolve => {deliver=resolve;});
+    await b.route("**/api/connections/probe", async route => {
+      const response = await route.fetch();
+      expect(response.status()).toBe(409);
+      expect(await response.json()).toMatchObject({code:"mutation_in_flight"});
+      captured(); await held; await route.fulfill({response});
+    });
+    await card(b).getByRole("button", {name:"测试连接"}).click(); await received;
+    const refreshed = b.waitForResponse(response => new URL(response.url()).pathname === "/api/connections");
+    await b.evaluate(() => window.dispatchEvent(new Event("focus")));
+    const snapshot = await (await refreshed).json();
+    expect(snapshot.process_instance_id).toBeTruthy();
+    expect(typeof snapshot.integration_revision).toBe("number");
+    deliver();
+    await expect(b.getByText("mutation_in_flight", {exact:true})).toBeVisible();
+    expect((await control(s)).requests).toEqual(["/usage"]);
+  } finally {deliver?.(); await control(s, {release:true}); await context.close(); await s.close();}
+});
+
+test("STD-V5-01 model probe success survives a later real reread refusal", async ({browser}) => {
+  const s = await server(); const context = await browser.newContext();
+  try {
+    const page = await context.newPage();
+    const origin = `http://127.0.0.1:${s.entry.port}`;
+    await page.goto(origin + "/connections");
+    const card = page.locator('[data-endpoint="openai"]');
+    await expect(card).toContainText("已配置未测试");
+    const initial = await (await page.request.get(origin + "/api/connections")).json();
+    await control(s, {block:true});
+    const successful = page.waitForResponse(response => response.url().endsWith("/api/connections/probe"));
+    await card.getByRole("button", {name:"验证凭据"}).click();
+    await expect.poll(async () => (await control(s)).entered).toBe(true);
+    const refused = page.waitForResponse(response => response.url().endsWith("/api/connections/reread"));
+    await page.getByRole("button", {name:"重新读取 .env"}).click();
+    expect((await refused).status()).toBe(409);
+    await expect(page.getByText("mutation_in_flight", {exact:true})).toBeVisible();
+    await control(s, {release:true});
+    const response = await successful;
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body.integration_revision).toBe(initial.integration_revision);
+    expect(body.connections_revision).toBeGreaterThan(initial.connections_revision);
+    expect(body.endpoints[0].observation).toMatchObject({state:"connected", checked_via:"auth_probe"});
+    await expect(card).toContainText("auth_probe");
+    await expect(card).toContainText("连接：已连接");
+    await expect(page.getByText("mutation_in_flight", {exact:true})).toBeVisible();
+    expect((await control(s)).requests).toEqual(["/auth-probe"]);
+  } finally {await control(s, {release:true}); await context.close(); await s.close();}
+});
+
+for (const restarted of [false, true]) {
+  for (const late of ["409", "read failure"]) {
+    test(`SPEC-V5-01 late ${late} preserves configuration suspension and recovery (${restarted ? "new" : "same"} process)`, async ({browser}) => {
+      let s = await server(); const context = await browser.newContext();
+      let deliver;
+      try {
+        const a = await context.newPage(), b = await context.newPage();
+        const origin = `http://127.0.0.1:${s.entry.port}`;
+        await a.goto(origin + "/connections"); await b.goto(origin + "/connections");
+        const card = p => p.locator('[data-integration="tavily"]');
+        await expect(card(a)).toContainText("已配置未测试");
+        await expect(card(b)).toContainText("已配置未测试");
+        await control(s, {block:true});
+        await card(a).getByRole("button", {name:"测试连接"}).click();
+        await expect.poll(async () => (await control(s)).entered).toBe(true);
+        let captured;
+        const received = new Promise(resolve => {captured=resolve;});
+        const held = new Promise(resolve => {deliver=resolve;});
+        let capturedOnce = false;
+        await b.route(late === "409" ? "**/api/connections/probe" : "**/api/connections", async route => {
+          if (capturedOnce) {await route.continue(); return;}
+          capturedOnce = true;
+          const response = await route.fetch(); expect(response.status()).toBe(late === "409" ? 409 : 200);
+          captured(); await held;
+          if (late === "409") await route.fulfill({response});
+          else await route.abort("failed");
+        });
+        if (late === "409") await card(b).getByRole("button", {name:"测试连接"}).click();
+        else await b.evaluate(() => window.dispatchEvent(new Event("focus")));
+        await received;
+        await control(s, {release:true}); await expect(card(a)).toContainText("连接：已连接");
+        const prior = await (await a.request.get(origin + "/api/connections")).json();
+        if (restarted) {
+          await s.close(); s = await server();
+          await a.goto(origin + "/connections");
+          await expect(card(a)).toContainText("已配置未测试");
+          await expect(a.getByRole("button", {name:"新建会话", exact:true})).toBeEnabled();
+        }
+        await control(s, {key:"replacement-spec-key", fault_publication:true});
+        const failed = a.waitForResponse(response => response.url().endsWith("/api/connections/reread"));
+        await a.getByRole("button", {name:"重新读取 .env"}).click();
+        expect((await failed).status()).toBe(400);
+        const refreshed = b.waitForResponse(response => response.url().endsWith("/api/connections"));
+        await b.evaluate(() => window.dispatchEvent(new Event("focus")));
+        const snapshot = await (await refreshed).json();
+        expect(snapshot.integration_application).toBe("not_applied");
+        if (restarted) expect(snapshot.process_instance_id).not.toBe(prior.process_instance_id);
+        else {
+          expect(snapshot.integration_revision).toBe(prior.integration_revision);
+          expect(snapshot.connections_revision).toBeGreaterThan(prior.connections_revision);
+        }
+        const pause = b.getByText("配置未能一致生效，外部能力已暂停；请修复后重新读取 .env。", {exact:true});
+        await expect(pause).toBeVisible();
+        const settled = late === "409"
+          ? b.waitForResponse(response => response.url().endsWith("/api/connections/probe"))
+          : b.waitForEvent("requestfailed", request => request.url().endsWith("/api/connections"));
+        deliver(); await settled;
+        if (late === "409" && !restarted) await expect(b.getByText("mutation_in_flight", {exact:true})).toBeVisible();
+        else await expect(b.getByText("mutation_in_flight", {exact:true})).not.toBeVisible();
+        await expect(pause).toBeVisible();
+        await expect(b.getByText("连接状态读取失败，请重试。", {exact:true})).not.toBeVisible();
+        expect((await control(s)).requests).toEqual(restarted ? [] : ["/usage"]);
+        await control(s, {fault_publication:false});
+        await a.getByRole("button", {name:"重新读取 .env"}).click();
+        await expect(card(a)).toContainText("已配置未测试");
+        await b.evaluate(() => window.dispatchEvent(new Event("focus")));
+        await expect(pause).not.toBeVisible();
+        await expect(card(b)).toContainText("已配置未测试");
+      } finally {deliver?.(); await control(s, {release:true}); await context.close(); await s.close();}
+    });
+  }
+}

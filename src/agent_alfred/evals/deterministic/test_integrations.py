@@ -1465,3 +1465,26 @@ def test_ce04_ce05_reported_number_expansion_is_bounded(
                 assert Decimal(summary["tool_costs"][0]["units"]) == Decimal(number) * 2
         else:
             assert summary["tool_costs"] == []
+
+
+def test_connections_revision_tracks_model_observation_without_tavily_change(tmp_path):
+    from agent_alfred.evals.deterministic.test_auth_probe import _host
+    from agent_alfred.gateway.web.api import DashboardApi
+
+    host, *_ = _host(tmp_path)
+    api = DashboardApi(facade=host)
+    try:
+        initial = api.connections()[1]
+        initial_revision = initial["connections_revision"]
+        initial["endpoints"].clear()
+        unchanged = api.connections()[1]
+        assert unchanged["endpoints"]
+        assert unchanged["connections_revision"] == initial_revision
+        status, result = api.probe_auth({"endpoint_id": "openai"})
+        assert status == 200
+        assert result["endpoints"][0]["observation"]["state"] == "connected"
+        assert result["integration_revision"] == unchanged["integration_revision"]
+        assert result["connections_revision"] > initial_revision
+        assert api.connections()[1] == result
+    finally:
+        host.close()
