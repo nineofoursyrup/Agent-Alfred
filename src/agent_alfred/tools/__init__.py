@@ -58,6 +58,7 @@ class ToolSuccess:
     stop_reason: str | None = None
     operation_id: str | None = None
     audit_data: Mapping[str, Any] | None = None
+    structured: Mapping[str, Any] | None = None
 
 
 ToolErrorCode = Literal[
@@ -114,6 +115,7 @@ class ToolExecution:
     stop_reason: str | None = None
     operation_id: str | None = None
     system_receipt: str | None = None
+    structured: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -686,6 +688,9 @@ class ToolRegistry:
                 and isinstance(outcome, ToolSuccess)
                 and not outcome.stop_reason
             )
+            else None,
+            freeze(self._redactor.redact_jsonable(outcome.structured))
+            if isinstance(outcome, ToolSuccess) and outcome.structured is not None
             else None,
         )
 

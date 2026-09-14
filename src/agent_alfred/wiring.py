@@ -176,6 +176,8 @@ def _trace_sink(
 def build_host(
     *,
     routing_graph_builder=None,
+    aggregation_before_send=None,
+    before_recording_commit=None,
     conn: sqlite3.Connection,
     factory: ModelClientFactory,
     settings: Settings | None = None,
@@ -238,6 +240,8 @@ def build_host(
         )
         host = RuntimeHost(
             routing_graph_builder=routing_graph_builder,
+            aggregation_before_send=aggregation_before_send,
+            before_recording_commit=before_recording_commit,
             audit_key=audit_key,
             file_state=file_state,
             skill_builtin=skill_builtin,
@@ -277,6 +281,8 @@ def build_host(
 def build_dashboard(
     *,
     routing_graph_builder=None,
+    aggregation_before_send=None,
+    before_recording_commit=None,
     skill_builtin=None,
     state_dir: Path,
     settings: Settings | None = None,
@@ -359,6 +365,8 @@ def build_dashboard(
             model_settings.load()
             host = build_host(
                 routing_graph_builder=routing_graph_builder,
+            aggregation_before_send=aggregation_before_send,
+            before_recording_commit=before_recording_commit,
                 conn=conn,
                 factory=resolved_factory,
                 extra_tools=extra_tools,

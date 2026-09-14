@@ -1,3 +1,4 @@
+import {aggregationForm} from "./aggregation.js";
 import { node, textBlocks } from "./dom.js";
 import { outcomeLabel } from "./runs.js";
 /** @typedef {Record<string, any>} Wire */
@@ -704,8 +705,9 @@ export function modelsPage(root, csrf) {
     .then(render);
 }
 
-/** @param {HTMLElement} root @param {()=>string} csrf */
-export function behaviourPage(root, csrf) {
+/** @param {HTMLElement} root @param {()=>string} csrf @param {()=>Wire} runtime @param {import("./memory.js").MemorySync} memory */
+export function behaviourPage(root, csrf, runtime, memory) {
+  aggregationForm(root, csrf, runtime, memory);
   let state = /** @type {Wire} */ ({});
   const label = node('label', '启用消息分流');
   const enabled = document.createElement('input');

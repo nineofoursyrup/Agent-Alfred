@@ -213,7 +213,13 @@ class RunExecutor:
         persona_tools=None,
         skill_tools=None,
         chat_graph_factory=None,
+        aggregation_graph=None,
+        aggregation_tools=None,
+        aggregation_before_send=None,
     ):
+        self._aggregation_before_send = aggregation_before_send
+        self._aggregation_graph = aggregation_graph
+        self._aggregation_tools = aggregation_tools
         self._chat_graph_factory = chat_graph_factory
         self._memory_service = memory_service
         self._skill_tools = skill_tools
@@ -346,7 +352,11 @@ class RunExecutor:
                 node_id=None,
                 source=item.request.gateway,
             )
-            if item.request.purpose in ("inference_probe", "consolidation"):
+            if item.request.purpose in (
+                "inference_probe",
+                "consolidation",
+                "aggregation",
+            ):
                 working_memory: tuple[Message, ...] = ()
                 working_groups = ()
                 history_exclusions = {}
@@ -453,7 +463,24 @@ class RunExecutor:
                     if item.snapshot.overall_deadline_s is not None
                     else float("inf")
                 )
-            if item.request.purpose == "consolidation":
+            if item.request.purpose == "aggregation":
+                from agent_alfred.aggregation.execution import run_aggregation
+
+                loop_result = run_aggregation(
+                    item,
+                    graph=self._aggregation_graph,
+                    tools=self._aggregation_tools,
+                    clock=self._clock,
+                    events=self._events,
+                    budget=budget,
+                    deadline=overall_abs,
+                    ledger=ledger,
+                    assistant=self._assistant,
+                    service=self._memory_service,
+                    store=self._store,
+                    before_send=self._aggregation_before_send,
+                )
+            elif item.request.purpose == "consolidation":
                 loop_result = self._consolidate(item, ledger, run_started, budget)
             else:
                 persona = self._persona_tools.current() if self._persona_tools else None
@@ -645,6 +672,14 @@ class RunExecutor:
             reply = None
             del exc
         finally:
+            aggregation_facts = item.memory_telemetry.get("aggregation")
+            if aggregation_facts is not None:
+                if error:
+                    aggregation_facts["error"] = error
+                    aggregation_facts["fallback"]["reason"] = error
+                item.memory_telemetry["aggregation"] = self._redactor.redact_jsonable(
+                    aggregation_facts
+                )
             routing_facts = item.memory_telemetry.get("routing")
             if routing_facts is not None:
                 fallback = routing_facts["fallback"]

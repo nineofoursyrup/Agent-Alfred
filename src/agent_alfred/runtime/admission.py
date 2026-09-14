@@ -262,6 +262,7 @@ class RunAdmission:
         database: RecordingStore,
         coordinator: AdmissionCoordinator,
         bind_run: Callable[[sqlite3.Connection, WorkItem], None] | None = None,
+        capture_aggregation=None,
     ):
         self._clock = clock
         self._settings = settings
@@ -271,12 +272,19 @@ class RunAdmission:
         self._database = database
         self._coordinator = coordinator
         self._bind_run = bind_run
+        self._capture_aggregation = capture_aggregation
 
     def submit(self, request: SubmitRequest) -> SubmitResult:
         observed, snapshot = self._coordinator.admission_observe()
         if observed != "admissible":
             return SubmitResult(kind=observed, snapshot=snapshot)
 
+        if request.purpose == "aggregation":
+            with self._database.reading() as conn:
+                if not conn.execute(
+                    "SELECT 1 FROM sessions WHERE session_id=?", (request.session_id,)
+                ).fetchone():
+                    raise ValueError("unknown_session")
         creates_session = request.purpose == "chat" and request.session_id is None
 
         # Everything the lease's busy card needs is minted before the
@@ -322,7 +330,11 @@ class RunAdmission:
         except InvalidProbeTarget:
             return SubmitResult(kind="invalid_probe_target")
         except Exception:
-            return SubmitResult(kind="admission_failed")
+            if request.purpose != "aggregation":
+                return SubmitResult(kind="admission_failed")
+            from agent_alfred.aggregation.config import UnavailableModel
+
+            captured = UnavailableModel(self._settings.overall_deadline_s)
         if request.purpose == "inference_probe" and not (
             captured.api_key or ""
         ).strip():
@@ -357,7 +369,12 @@ class RunAdmission:
                 return SubmitResult(kind=kind, snapshot=snapshot)
 
             stage = "client"
-            client = self._factory.create(captured)
+            if request.purpose == "aggregation":
+                from agent_alfred.aggregation.config import DeferredModel
+
+                client = DeferredModel(self._factory, captured)
+            else:
+                client = self._factory.create(captured)
             item = WorkItem(
                 run_id=run_id,
                 request=request,
@@ -366,6 +383,9 @@ class RunAdmission:
                 session_id=session_id,
                 prompt_preview=summary.prompt_preview,
                 accepted_at=accepted_at,
+                aggregation=self._capture_aggregation()
+                if request.purpose == "aggregation"
+                else None,
             )
             stage = "persisting"
             with self._database.transaction() as conn:

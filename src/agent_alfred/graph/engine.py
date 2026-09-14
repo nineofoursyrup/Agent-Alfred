@@ -22,6 +22,7 @@ from agent_alfred.runtime.telemetry import AttemptObservationFailed
 from agent_alfred.stream_fallback import OverallDeadlineExceeded
 
 from .context import ForcedStop, GraphRunContext, NodeContext, RunForcedStop
+from .nodes import NodeExecutionFailed
 from .types import (
     BudgetExhausted,
     Completed,
@@ -191,6 +192,7 @@ class CompiledGraph:
                         name,
                         "budget_exhausted"
                         if isinstance(exc, StepBudgetExceeded)
+                        else exc.public_code if isinstance(exc, NodeExecutionFailed)
                         else "node_failed",
                         type(exc).__name__,
                         context.tools.side_effect_state(context.run_id)

@@ -8,6 +8,7 @@ PAGE_POLICY = (
 )
 
 ASSETS = {
+    "/assets/aggregation.js": ("aggregation.js", "text/javascript"),
     "/assets/tools.js": ("tools.js", "text/javascript"),
     "/assets/accounting.js": ("accounting.js", "text/javascript"),
     "/assets/app.js": ("app.js", "text/javascript"),

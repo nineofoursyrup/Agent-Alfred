@@ -752,6 +752,7 @@ class ForgettingService:
             not in (
                 "gate",
                 "answer",
+                "aggregation",
                 "consolidation",
                 "skill_selector",
                 "message_classifier",

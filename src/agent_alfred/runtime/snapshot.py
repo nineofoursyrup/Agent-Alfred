@@ -77,6 +77,7 @@ class UnrecordedTerminalProjection:
     reply_withheld: bool = False
     skill_notice: str | None = None
     reply_disposition: str | None = None
+    aggregation: dict | None = None
 
     def __post_init__(self) -> None:
         parse_recording_state(self.recording_state, unrecorded_terminal=True)

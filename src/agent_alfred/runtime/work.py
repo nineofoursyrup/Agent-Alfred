@@ -62,14 +62,22 @@ class SubmitRequest:
     expected_revision: int | None = None
     operation_id: str | None = None
     consolidation_trigger_run_id: str | None = None
+    aggregation: object = None
 
     def __post_init__(self) -> None:
         if self.consolidation_trigger_run_id is not None and (
             self.purpose != "consolidation" or self.retry_batch_id is not None
         ):
             raise ValueError("invalid_consolidation_trigger")
-        if self.purpose != "chat" and self.session_id is not None:
+        if self.purpose not in ("chat", "aggregation") and self.session_id is not None:
             raise ValueError("a system Run cannot name a Session")
+        if self.purpose == "aggregation":
+            from agent_alfred.aggregation import AggregationRequest
+            if not isinstance(self.aggregation, AggregationRequest) or (
+                self.session_id != self.aggregation.session_id
+                or self.message != self.aggregation.goal
+            ):
+                raise ValueError("invalid_aggregation_request")
 
 
 @dataclass(frozen=True)
@@ -90,6 +98,7 @@ class WorkItem:
     prompt_preview: str | None
     accepted_at: str
     routing: object = None
+    aggregation: object = None
     record_reply: bool = True
     memory_permission: object = field(default_factory=object, repr=False)
     memory_telemetry: dict = field(

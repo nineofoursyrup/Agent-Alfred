@@ -1,3 +1,4 @@
+import {aggregationFacts} from "./aggregation.js";
 import { toolsPage } from "./tools.js";
 import { accountingPage } from "./accounting.js";
 import { Stream } from "./stream.js";
@@ -164,8 +165,9 @@ function renderMessages() {
     if (item.type === "run_pair") {
       if (recorded.has(item.run_id)) continue;
       recorded.add(item.run_id);
+      if (item.aggregation) aggregationFacts(list, item.aggregation, memory);
       if (item.user) list.append(node("p", textBlocks(item.user)));
-      if (item.reply_disposition === "no_reply") list.append(node("small", "已结束 · 按要求未回复"));
+      if (item.reply_disposition === "no_reply" && !item.aggregation) list.append(node("small", "已结束 · 按要求未回复"));
       if (item.assistant) list.append(node("p", textBlocks(item.assistant)));
       if (item.skill_notice) list.append(node("p", item.skill_notice));
       list.append(node("small", "已保存"));
@@ -173,6 +175,7 @@ function renderMessages() {
   }
   for (const [id, reply] of replies) {
     if (reply.session_id !== session || recorded.has(id)) continue;
+    if (reply.aggregation) aggregationFacts(list, reply.aggregation, memory);
     if (reply.user) list.append(node("p", reply.user));
     if (reply.text !== undefined && reply.reply_disposition !== "no_reply") list.append(node("p", reply.text));
     if (reply.skill_notice) list.append(node("p", reply.skill_notice));
@@ -349,6 +352,7 @@ const stream = new Stream(
           session_id: projection.session_id,
           user: old.user || projection.prompt_preview,
           outcome: projection.outcome,
+          aggregation: projection.aggregation,
           reply_disposition: projection.reply_disposition || old.reply_disposition,
           recording_state: projection.recording_state,
           loading: projection.reply_disposition !== "no_reply" && old.text === undefined,
@@ -408,6 +412,7 @@ const stream = new Stream(
           ...old,
           session_id: envelope.session_id,
           outcome: event.outcome,
+          aggregation: event.aggregation,
           skill_notice: event.skill_notice,
           reply_disposition: event.reply_disposition,
           text: event.reply_disposition === "no_reply" ? undefined : textBlocks(event.reply?.blocks) || event.error || "运行已结束",
@@ -587,7 +592,7 @@ function route() {
   receipts.detach();
   element("page").replaceChildren(heading);
   runPage = null;
-  if (isBehaviour) behaviourPage(element("page"), () => csrf);
+  if (isBehaviour) behaviourPage(element("page"), () => csrf, () => ({active, connected, unavailable, projection:[...replies.values()].find(r => r.aggregation && r.recording_state !== "recorded")}), memory);
   else if (isTools) accountingView = toolsPage(element("page"), () => csrf);
   else if (isOps) accountingView = accountingPage(element("page"), () => csrf);
   else if (isModels) modelsPage(element("page"), () => csrf);

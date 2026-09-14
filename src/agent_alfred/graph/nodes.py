@@ -10,7 +10,23 @@ from .types import NodeFactory, NodeOutcome, freeze, thaw
 
 
 class NodeExecutionFailed(Exception):
-    pass
+    @property
+    def public_code(self):
+        value = str(self)
+        return (
+            value
+            if value
+            in (
+                "read_failed",
+                "local_timeout",
+                "invalid_source_result",
+                "invalid_draft",
+                "invalid_draft_reference",
+                "invalid_draft_tool_request",
+                "model_unavailable",
+            )
+            else "node_failed"
+        )
 
 
 def _model_node(
@@ -25,6 +41,7 @@ def _model_node(
     binding=None,
     input_mode=None,
     context_key=None,
+    request_builder=None,
 ):
     def execute(state, context):
         run = context.run
@@ -56,6 +73,73 @@ def _model_node(
 
         ledger = AttemptLedger(node_client, records=run.model_results, observe=observed)
         try:
+            if request_builder is not None:
+                request = request_builder(state, node_model)
+                if request.tools or request.tool_choice != "none":
+                    raise NodeExecutionFailed("invalid_draft_tool_request")
+                lease = run.budget.reserve_step(context.node_id)
+                began = run.clock.monotonic()
+                started(lease)
+                from agent_alfred.events import EventEnvelope, StepFinished, StepStarted
+
+                envelope = EventEnvelope(
+                    run.clock.monotonic(),
+                    run.run_id,
+                    run.session_id,
+                    lease.step_index,
+                    None,
+                    context.node_id,
+                    run.source,
+                )
+                if run.events:
+                    run.events.emit(
+                        StepStarted(
+                            step_index=lease.step_index,
+                            system=request.system,
+                            message_count=len(request.messages),
+                            tool_names=(),
+                            max_tokens=request.max_tokens,
+                        ),
+                        envelope,
+                    )
+                    run.events.bind_origin(envelope)
+                try:
+                    generated = ledger.respond(
+                        request, events=run.events, deadline=run.deadline
+                    )
+                finally:
+                    if run.events:
+                        run.events.bind_origin(None)
+                run.checkpoint()
+                if run.events:
+                    run.events.emit(
+                        StepFinished(
+                            step_index=lease.step_index,
+                            stop_reason=generated.response.stop_reason
+                            if generated.response
+                            else "error",
+                            duration_ms=max(
+                                0, int((run.clock.monotonic() - began) * 1000)
+                            ),
+                        ),
+                        envelope,
+                    )
+                if generated.response is None:
+                    raise NodeExecutionFailed("model_failed")
+                from agent_alfred.messages import Message, ToolCallBlock
+
+                if generated.response.stop_reason != "end_turn" or any(
+                    isinstance(b, ToolCallBlock) for b in generated.response.blocks
+                ):
+                    raise NodeExecutionFailed("invalid_draft_tool_request")
+                run.pending_transcripts[context.node_id] = ()
+                return NodeOutcome(
+                    {
+                        output_key: message_plain_text(
+                            Message("assistant", generated.response.blocks)
+                        )
+                    }
+                )
             result = node_assistant.respond(
                 prompt(state) if callable(prompt) else prompt,
                 client=ledger,
@@ -109,12 +193,14 @@ def llm_node(
     output_key,
     binding=None,
     input_mode=None,
+    request_builder=None,
 ):
     return _model_node(
         "llm",
         prompt,
         binding=binding,
         input_mode=input_mode,
+        request_builder=request_builder,
         client=client,
         model=model,
         assistant=assistant,
@@ -146,7 +232,9 @@ def agent_node(
     )
 
 
-def tool_node(tool_name, arguments, *, output_key):
+def tool_node(
+    tool_name, arguments, *, output_key, structured=False, structured_validator=None
+):
     from agent_alfred.messages import ToolCallBlock
     from agent_alfred.tools import ToolContext
 
@@ -186,6 +274,14 @@ def tool_node(tool_name, arguments, *, output_key):
             run.tool_state.setdefault("system_receipts", []).append(
                 execution.system_receipt
             )
+        if execution.stop_reason == "aggregation_input_deadline":
+            from agent_alfred.runtime.memory import InputDeadlineExceeded
+
+            raise InputDeadlineExceeded()
+        if execution.stop_reason == "aggregation_input_unavailable":
+            from agent_alfred.runtime.memory import InputEvidenceError
+
+            raise InputEvidenceError("input_evidence_unavailable")
         if execution.stop_reason:
             outcome, reply, error = tool_boundary_result(
                 execution, call, [], run.tool_state
@@ -193,7 +289,30 @@ def tool_node(tool_name, arguments, *, output_key):
             run.forced_stop = ForcedStop(outcome, reply, error, freeze(run.tool_state))
             raise RunForcedStop()
         if execution.block.is_error:
+            if structured:
+                try:
+                    failure = "\n".join(b.text for b in execution.block.content).split(
+                        "\n"
+                    )[-1]
+                    if failure not in (
+                        "read_failed",
+                        "local_timeout",
+                        "invalid_source_result",
+                    ):
+                        failure = "read_failed"
+                except ValueError, TypeError:
+                    failure = "read_failed"
+                raise NodeExecutionFailed(failure)
             raise NodeExecutionFailed("tool_failed")
+        if structured:
+            if execution.structured is None:
+                raise NodeExecutionFailed("invalid_source_result")
+            if structured_validator is not None:
+                try:
+                    structured_validator(execution.structured, state)
+                except (ValueError, KeyError, TypeError) as error:
+                    raise NodeExecutionFailed("invalid_source_result") from error
+            return NodeOutcome({output_key: execution.structured})
         return NodeOutcome(
             {output_key: "\n".join(b.text for b in execution.block.content)}
         )

@@ -173,6 +173,7 @@ class RunStarted:
 
 @dataclass(frozen=True)
 class RunFinished:
+    aggregation: dict | None = field(default=None, metadata={"omit_none": True})
     reply_disposition: str | None = field(default=None, metadata={"omit_none": True})
     skill_notice: str | None = None
     finalization_reason: str | None = None

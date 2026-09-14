@@ -348,16 +348,22 @@ class RunRecorder:
         )
         reply_text = _projection_reply_text(reply, self._redactor)
         reply_withheld = reply is not None and reply_text is None
+        aggregation = item.memory_telemetry.get("aggregation")
+        if aggregation is not None:
+            aggregation = {
+                key: value for key, value in aggregation.items() if key != "request"
+            }
         projection = UnrecordedTerminalProjection(
+            aggregation=aggregation,
             run_id=item.run_id,
             purpose=item.request.purpose,
             outcome=outcome,
             reply_text=_REDACTION_FAILURE_TEXT if reply_withheld else reply_text,
             reply_withheld=reply_withheld,
             skill_notice=item.memory_telemetry.get("skills", {}).get("notice"),
-            reply_disposition=item.memory_telemetry.get("routing", {}).get(
-                "reply_disposition"
-            ),
+            reply_disposition=item.memory_telemetry.get(
+                "aggregation", item.memory_telemetry.get("routing", {})
+            ).get("reply_disposition"),
             error=_redact_projection_text(error, self._redactor),
             recording_state="pending",
             session_id=item.session_id,
@@ -386,10 +392,11 @@ class RunRecorder:
         try:
             self._fanout.emit(
                 RunFinished(
+                    aggregation=aggregation,
                     skill_notice=item.memory_telemetry.get("skills", {}).get("notice"),
-                    reply_disposition=item.memory_telemetry.get("routing", {}).get(
-                        "reply_disposition"
-                    ),
+                    reply_disposition=item.memory_telemetry.get(
+                        "aggregation", item.memory_telemetry.get("routing", {})
+                    ).get("reply_disposition"),
                     finalization_reason=item.memory_telemetry.get(
                         "finalization_reason"
                     ),
@@ -582,7 +589,10 @@ class RunRecorder:
             telemetry=telemetry,
             session_id=item.session_id,
         )
-        if item.request.purpose == "chat" and item.session_id is not None:
+        if (
+            item.request.purpose in ("chat", "aggregation")
+            and item.session_id is not None
+        ):
             user = text_message("user", item.request.message)
             _insert_log_message(
                 conn,
