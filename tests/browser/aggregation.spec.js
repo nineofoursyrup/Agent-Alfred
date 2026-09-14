@@ -219,7 +219,8 @@ for (const surface of ['mainbar','behaviour','runs']) for (const timing of ['ope
       await page.evaluate(() => window.dispatchEvent(new Event('offline')));
       await expect(area.getByText('coffee source',{exact:true})).toHaveCount(0);
       await page.evaluate(() => window.dispatchEvent(new Event('online')));
-      await expect(page.locator('#connection')).not.toContainText('离线');
+      // The stream reconnects before MemorySync verifies its persisted revision.
+      await expect(area.getByText('资料已变化，请重新查看。',{exact:true})).toBeVisible();
       await source.click();
       await expect(area.getByText('coffee source',{exact:true})).toBeVisible();
       let captured;
