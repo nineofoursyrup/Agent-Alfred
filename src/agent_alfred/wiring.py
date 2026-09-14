@@ -175,6 +175,7 @@ def _trace_sink(
 
 def build_host(
     *,
+    routing_graph_builder=None,
     conn: sqlite3.Connection,
     factory: ModelClientFactory,
     settings: Settings | None = None,
@@ -229,11 +230,14 @@ def build_host(
                 model_settings, settings, environ=environ
             )
         from agent_alfred.memory.audit import AuditKey
+
         audit_key = (
-            None if audit_key_path is None
+            None
+            if audit_key_path is None
             else AuditKey.load_or_create(audit_key_path, redactor)
         )
         host = RuntimeHost(
+            routing_graph_builder=routing_graph_builder,
             audit_key=audit_key,
             file_state=file_state,
             skill_builtin=skill_builtin,
@@ -272,6 +276,7 @@ def build_host(
 
 def build_dashboard(
     *,
+    routing_graph_builder=None,
     skill_builtin=None,
     state_dir: Path,
     settings: Settings | None = None,
@@ -353,6 +358,7 @@ def build_dashboard(
             )
             model_settings.load()
             host = build_host(
+                routing_graph_builder=routing_graph_builder,
                 conn=conn,
                 factory=resolved_factory,
                 extra_tools=extra_tools,

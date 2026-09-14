@@ -422,6 +422,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
             status, payload = api.connections()
             self._send(status, payload)
             return
+        if path == "/api/behaviour":
+            status, payload = api.behaviour()
+            self._send(status, payload)
+            return
         if path == MODELS_PATH:
             status, payload = api.models(params)
             self._send(status, payload)
@@ -489,14 +493,18 @@ class DashboardHandler(BaseHTTPRequestHandler):
             outcome = context.api.submit(body)
             self._send(outcome.status, outcome.payload())
             return
-        if path == SETTINGS_PATH:
+        if path in (SETTINGS_PATH, "/api/behaviour"):
             assert authorization.body_length is not None
             body, error = self._read_body(authorization.body_length)
             if error is not None:
                 self._send(400, {"code": error})
                 return
             assert body is not None
-            status, payload = context.api.mutate_settings(body)
+            status, payload = (
+                context.api.mutate_behaviour(body)
+                if path == "/api/behaviour"
+                else context.api.mutate_settings(body)
+            )
             self._send(status, payload)
             return
         if path == REREAD_ENV_PATH:

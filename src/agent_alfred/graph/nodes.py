@@ -13,10 +13,28 @@ class NodeExecutionFailed(Exception):
     pass
 
 
-def _model_node(kind, prompt, *, client, model, assistant, output_key, tool_names=()):
+def _model_node(
+    kind,
+    prompt,
+    *,
+    client,
+    model,
+    assistant,
+    output_key,
+    tool_names=(),
+    binding=None,
+    input_mode=None,
+    context_key=None,
+):
     def execute(state, context):
         run = context.run
         run.checkpoint()
+        bound = run.model_bindings.get(binding, (client, model, assistant))
+        node_client, node_model, node_assistant = bound
+        if input_mode == "current_task":
+            return run.memory.classify(context, output_key)
+        if context_key is not None:
+            run.memory.consume_projected_context(state[context_key])
         tools = None
         if kind == "agent" and run.tools is not None:
             tools = run.tools.restricted(tool_names)
@@ -36,12 +54,12 @@ def _model_node(kind, prompt, *, client, model, assistant, output_key, tool_name
         def observed(result, events):
             run.steps[-1]["attempt_ids"] = [a.attempt_id for a in result.attempts]
 
-        ledger = AttemptLedger(client, records=run.model_results, observe=observed)
+        ledger = AttemptLedger(node_client, records=run.model_results, observe=observed)
         try:
-            result = assistant.respond(
+            result = node_assistant.respond(
                 prompt(state) if callable(prompt) else prompt,
                 client=ledger,
-                model=model,
+                model=node_model,
                 budget=run.budget,
                 working_memory=(*run.working_memory, *run.transcript),
                 run_id=run.run_id,
@@ -82,10 +100,21 @@ def _model_node(kind, prompt, *, client, model, assistant, output_key, tool_name
     return NodeFactory(kind, execute, tuple(tool_names))
 
 
-def llm_node(prompt, *, client, model, assistant, output_key):
+def llm_node(
+    prompt,
+    *,
+    client=None,
+    model=None,
+    assistant=None,
+    output_key,
+    binding=None,
+    input_mode=None,
+):
     return _model_node(
         "llm",
         prompt,
+        binding=binding,
+        input_mode=input_mode,
         client=client,
         model=model,
         assistant=assistant,
@@ -93,10 +122,22 @@ def llm_node(prompt, *, client, model, assistant, output_key):
     )
 
 
-def agent_node(prompt, *, client, model, assistant, output_key, tool_names=()):
+def agent_node(
+    prompt,
+    *,
+    client=None,
+    model=None,
+    assistant=None,
+    output_key,
+    tool_names=(),
+    binding=None,
+    context_key=None,
+):
     return _model_node(
         "agent",
         prompt,
+        binding=binding,
+        context_key=context_key,
         client=client,
         model=model,
         assistant=assistant,

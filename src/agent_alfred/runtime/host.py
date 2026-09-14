@@ -307,6 +307,8 @@ class RuntimeHost:
         file_state=None,
         skill_builtin=None,
         chat_graph_factory=None,
+        behaviour_store=None,
+        routing_graph_builder=None,
         memory_notifier=None,
         extra_tools=(),
         tool_policies=None,
@@ -315,6 +317,18 @@ class RuntimeHost:
         self._support_overrides = support_overrides or SupportOverrides()
         self._conn = conn
         self._factory = factory
+        from agent_alfred.runtime.behaviour import BehaviourStore
+        from agent_alfred.runtime.routing import build_routing_graph
+
+        self._routing_graph_builder = routing_graph_builder or build_routing_graph
+        self._routing_graph = None
+        self._routing_generation = 0
+        self._routing_error = None
+        self._behaviour = behaviour_store or (
+            BehaviourStore(file_state.path / "behaviour.json")
+            if file_state is not None
+            else None
+        )
         self._settings = settings
         self._clock = clock
         self._fanout = fanout
@@ -498,6 +512,15 @@ class RuntimeHost:
             authorization_path, tools, self._publish_tools
         )
         tools = self._tools
+        if self._routing_graph is None:
+            try:
+                self._routing_graph = self._routing_graph_builder(self._tools)
+                self._routing_generation += 1
+            except Exception as error:
+                from agent_alfred.resource_rollback import raise_if_rollback_pending
+
+                raise_if_rollback_pending(error)
+                self._routing_error = type(error).__name__
         self._executor = RunExecutor(
             clock=clock,
             settings=settings,
@@ -1109,6 +1132,49 @@ class RuntimeHost:
             observations=observed,
             keys=keys,
         )
+
+    def routing_snapshot(self):
+        from agent_alfred.tools import capability_identity
+
+        state = self._behaviour.snapshot() if self._behaviour else None
+        if state is None or (state["status"] == "ok" and not state["enabled"]):
+            return None
+        return dict(
+            settings=state,
+            graph=self._routing_graph,
+            graph_error=self._routing_error,
+            generation=self._routing_generation,
+            capabilities=[capability_identity(t) for t in self._tools.declarations()],
+        )
+
+    def behaviour(self):
+        if self._behaviour is None:
+            return dict(
+                schema_version=1,
+                revision=0,
+                enabled=False,
+                status="ok",
+                fingerprint=None,
+                backup_path=None,
+            )
+        return self._behaviour.read()
+
+    def apply_behaviour(self, body):
+        from agent_alfred.runtime.behaviour import BehaviourError
+
+        if self._behaviour is None:
+            raise BehaviourError("settings_unavailable")
+        action = body.get("action")
+        expected = body.get("expected_revision")
+        if action == "save":
+            return self._behaviour.save(
+                expected_revision=expected, enabled=body.get("enabled")
+            )
+        if action == "recover":
+            return self._behaviour.recover(
+                expected_revision=expected, fingerprint=body.get("fingerprint")
+            )
+        raise BehaviourError("settings_invalid")
 
     def apply_settings(self, body: dict) -> dict:
         from decimal import Decimal
@@ -2145,10 +2211,14 @@ class RuntimeHost:
         return self._mcp_control.wait(operation_id, timeout)
 
     def _publish_tools(self, registry):
+        graph = self._routing_graph_builder(registry)
         if self._integration_application != "applied":
             registry.suspend_external(
                 "configuration_not_applied; reread .env to repair"
             )
+        self._routing_graph = graph
+        self._routing_error = None
+        self._routing_generation += 1
         self._tools = registry
         if hasattr(self, "_executor"):
             self._executor._tools = registry
@@ -2275,6 +2345,8 @@ class RuntimeHost:
     def _bind_consolidation_retry(self, conn, item) -> None:
         """Bind the retry intent in the accepted Run's own transaction."""
         request = item.request
+        if request.purpose == "chat":
+            item.routing = self.routing_snapshot()
         if request.consolidation_trigger_run_id is not None:
             self._memory_service.consolidation.scheduling.bind_run(
                 conn, request.consolidation_trigger_run_id, request.message, item.run_id

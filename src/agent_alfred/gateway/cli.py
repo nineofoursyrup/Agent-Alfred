@@ -509,6 +509,40 @@ def _send(
     renderer: ReplyRenderer | None = None,
     stream: bool = False,
 ) -> int:
+    if message.split()[:1] == ["/behaviour"]:
+        import json
+
+        parts = message.split()
+        api = DashboardApi(facade=host)
+        if parts in (["/behaviour"], ["/behaviour", "status"]):
+            status, payload = api.behaviour()
+        else:
+            try:
+                action = parts[1]
+                expected = int(parts[2])
+                if action in ("on", "off") and len(parts) == 3:
+                    body = dict(
+                        action="save",
+                        expected_revision=expected,
+                        enabled=action == "on",
+                    )
+                elif action == "recover" and len(parts) == 4:
+                    body = dict(
+                        action="recover",
+                        expected_revision=expected,
+                        fingerprint=parts[3],
+                    )
+                else:
+                    raise ValueError()
+                status, payload = api.mutate_behaviour(body)
+            except ValueError, IndexError:
+                out.write(
+                    "用法：/behaviour status | on/off <revision> | "
+                    "recover <revision> <fingerprint>（备份后恢复为关闭）\n"
+                )
+                return 1
+        out.write(json.dumps(payload, ensure_ascii=False) + "\n")
+        return 0 if status == 200 else 1
     submitted = host.submit(
         SubmitRequest(
             message=message,
@@ -522,6 +556,15 @@ def _send(
         return 1
     result = host.wait(submitted.run_id)
     _print_result(result, out, renderer=renderer or render_markdown_reply)
+    if (result.memory_telemetry or {}).get("routing"):
+        projection = host.snapshot().unrecorded_terminal_projection
+        if (
+            projection is not None
+            and projection.run_id == submitted.run_id
+            and projection.recording_state == "failed"
+        ):
+            out.write("本次运行未保存；请查看记录状态并恢复后再继续。\n")
+            return 1
     return 0 if result.outcome == "completed" else 1
 
 
@@ -551,6 +594,20 @@ def _print_session_creation_failure(code: str | None, out: TextIO) -> None:
 
 
 def _print_result(result: LoopResult, out: TextIO, *, renderer: ReplyRenderer) -> None:
+    routing = (result.memory_telemetry or {}).get("routing", {})
+    if routing.get("reply_disposition") == "no_reply":
+        out.write("已结束 · 按要求未回复\n")
+    fallback = routing.get("fallback", {})
+    if fallback.get("decision") == "allowed":
+        out.write("消息分流已降级，改用普通聊天。\n")
+    elif fallback.get("decision") == "blocked":
+        out.write(
+            "消息分流已停止，未重试普通聊天：" + fallback.get("reason", "") + "\n"
+        )
+    if routing.get("recoveries"):
+        out.write("本次上下文准备失败，已降级处理。\n")
+    if routing.get("reply_disposition") == "no_reply":
+        return
     notice = (result.memory_telemetry or {}).get("skills", {}).get("notice")
     if notice:
         out.write(notice + "\n")

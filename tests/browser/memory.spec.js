@@ -903,8 +903,13 @@ test("R08: a lost response stays unconfirmed until queried or resent with the sa
     // The page reads a lost response back against the persisted fact by
     // itself; holding that read shows what the user is offered until it lands.
     let answering = false;
-    await page.route("**/api/memory/operations?*", route =>
-      answering ? route.continue() : route.abort("connectionreset"));
+    let holdQueries = false;
+    let releaseQueries;
+    const queryGate = new Promise(resolve => { releaseQueries = resolve; });
+    await page.route("**/api/memory/operations?*", async route => {
+      if (holdQueries) await queryGate;
+      return answering ? route.continue() : route.abort("connectionreset");
+    });
     await panel.getByLabel("新主题").fill("饮食");
     await panel.getByLabel("新事实").fill("committed but unanswered");
     await panel.getByRole("button", {name: "保存", exact: true}).click();
@@ -913,8 +918,12 @@ test("R08: a lost response stays unconfirmed until queried or resent with the sa
     await page.reload();
     const pending = receipts.locator("article").first();
     await expect(pending).toContainText("结果待确认（network）");
-    answering = true;
+    // A reconnect query can race the click and remove this button. Hold
+    // responses until the explicit action has reached the real page handler.
+    holdQueries = true;
     await pending.getByRole("button", {name: "查询结果", exact: true}).click();
+    answering = true;
+    releaseQueries();
     await expect(pending).toContainText(/已保存 · ID .+ · 版本 1 · 提交于/);
     await page.unroute("**/api/memory/operations?*");
 

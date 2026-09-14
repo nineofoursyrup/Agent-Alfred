@@ -748,7 +748,14 @@ class ForgettingService:
         if (
             not consumer
             or not attempt_id
-            or purpose not in ("gate", "answer", "consolidation", "skill_selector")
+            or purpose
+            not in (
+                "gate",
+                "answer",
+                "consolidation",
+                "skill_selector",
+                "message_classifier",
+            )
             or (provisional and input_explanation is None)
         ):
             return {"error": {"code": "invalid_input"}}

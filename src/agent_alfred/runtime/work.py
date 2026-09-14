@@ -89,6 +89,7 @@ class WorkItem:
     session_id: str | None
     prompt_preview: str | None
     accepted_at: str
+    routing: object = None
     record_reply: bool = True
     memory_permission: object = field(default_factory=object, repr=False)
     memory_telemetry: dict = field(

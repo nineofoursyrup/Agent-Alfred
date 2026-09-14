@@ -578,7 +578,7 @@ export function modelsPage(root, csrf) {
           );
           row.append(assign);
           const gate = node("button", "指派为检索门");
-          gate.title = "同时用于 Skill 自动选择与记忆检索门";
+          gate.title = "同时用于 Skill 自动选择、记忆检索门与消息分类";
           gate.addEventListener("click", () =>
             void mutate("assign", {
               slot: "retrieval_gate",
@@ -702,4 +702,59 @@ export function modelsPage(root, csrf) {
   void fetch("/api/models")
     .then((response) => response.json())
     .then(render);
+}
+
+/** @param {HTMLElement} root @param {()=>string} csrf */
+export function behaviourPage(root, csrf) {
+  let state = /** @type {Wire} */ ({});
+  const label = node('label', '启用消息分流');
+  const enabled = document.createElement('input');
+  enabled.type = 'checkbox';
+  enabled.disabled = true;
+  label.prepend(enabled);
+  const notice = node('p'); notice.setAttribute('role', 'status');
+  const save = node('button', '保存设置'); save.disabled = true;
+  const refresh = node('button', '刷新设置');
+  const recover = node('button', '备份原文件并恢复为关闭'); recover.hidden = true;
+  root.append(node('p', '默认关闭。启用后识别纯问候、致谢及明确无需回复的消息；实际任务仍进入完整回答。'),
+    label, save, refresh, recover, notice);
+  async function read() {
+    try {
+      const response = await fetch('/api/behaviour');
+      if (!response.ok) throw new Error('读取失败');
+      state = await response.json();
+      if (!root.isConnected) return;
+      enabled.checked = state.enabled;
+      enabled.disabled = state.status !== 'ok';
+      save.disabled = state.status !== 'ok';
+      recover.hidden = state.status === 'ok' || !state.fingerprint;
+      notice.textContent = state.status === 'ok' ? '设置在下一 Run 生效。'
+        : `配置不可用（${state.status}）；普通聊天仍可使用。恢复会先备份原文件。`;
+    } catch { notice.textContent = '设置读取失败，请刷新。'; }
+  }
+  /** @param {string} action */
+  async function write(action) {
+    save.disabled = true; recover.disabled = true;
+    try {
+      const response = await fetch('/api/behaviour', {
+        method:'POST', headers:{'Content-Type':'application/json', 'x-agent-alfred-csrf':csrf()},
+        body:JSON.stringify({action, expected_revision:state.revision,
+          enabled:enabled.checked, fingerprint:state.fingerprint}),
+      });
+      const result = await response.json();
+      if (!root.isConnected) return;
+      if (!response.ok) {
+        notice.textContent = `未保存（${result.code}${result.cause ? ' / ' + result.cause : ''}）。选择已保留，请刷新后重试。${result.backup_path ? '备份：' + result.backup_path : ''}`;
+        return;
+      }
+      state = result; enabled.checked = result.enabled;
+      enabled.disabled = false; recover.hidden = true;
+      notice.textContent = '已保存；下一 Run 生效。';
+    } catch { notice.textContent = '保存结果未确认，请刷新核验。'; }
+    finally { save.disabled = state.status !== 'ok'; recover.disabled = false; }
+  }
+  save.addEventListener('click', () => void write('save'));
+  recover.addEventListener('click', () => void write('recover'));
+  refresh.addEventListener('click', () => void read());
+  void read();
 }

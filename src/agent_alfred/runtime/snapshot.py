@@ -76,6 +76,7 @@ class UnrecordedTerminalProjection:
     # A safe display marker is not complete reply content (ADR-0029).
     reply_withheld: bool = False
     skill_notice: str | None = None
+    reply_disposition: str | None = None
 
     def __post_init__(self) -> None:
         parse_recording_state(self.recording_state, unrecorded_terminal=True)

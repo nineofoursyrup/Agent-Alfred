@@ -355,6 +355,9 @@ class RunRecorder:
             reply_text=_REDACTION_FAILURE_TEXT if reply_withheld else reply_text,
             reply_withheld=reply_withheld,
             skill_notice=item.memory_telemetry.get("skills", {}).get("notice"),
+            reply_disposition=item.memory_telemetry.get("routing", {}).get(
+                "reply_disposition"
+            ),
             error=_redact_projection_text(error, self._redactor),
             recording_state="pending",
             session_id=item.session_id,
@@ -384,6 +387,9 @@ class RunRecorder:
             self._fanout.emit(
                 RunFinished(
                     skill_notice=item.memory_telemetry.get("skills", {}).get("notice"),
+                    reply_disposition=item.memory_telemetry.get("routing", {}).get(
+                        "reply_disposition"
+                    ),
                     finalization_reason=item.memory_telemetry.get(
                         "finalization_reason"
                     ),

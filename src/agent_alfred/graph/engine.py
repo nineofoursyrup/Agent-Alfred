@@ -13,10 +13,12 @@ from agent_alfred.events import (
 )
 from agent_alfred.loop.budget import RunBudget, StepBudgetExceeded
 from agent_alfred.runtime.memory import (
+    InputDeadlineExceeded,
     InputEvidenceError,
     InputLimitExceeded,
     InputResolutionError,
 )
+from agent_alfred.runtime.telemetry import AttemptObservationFailed
 from agent_alfred.stream_fallback import OverallDeadlineExceeded
 
 from .context import ForcedStop, GraphRunContext, NodeContext, RunForcedStop
@@ -24,6 +26,7 @@ from .types import (
     BudgetExhausted,
     Completed,
     CompletedWithRecovery,
+    ContextInvalid,
     Failed,
     GraphInvariantError,
     NoAction,
@@ -173,6 +176,8 @@ class CompiledGraph:
                     )
                 except (
                     GraphInvariantError,
+                    AttemptObservationFailed,
+                    InputDeadlineExceeded,
                     InputEvidenceError,
                     InputLimitExceeded,
                     InputResolutionError,
@@ -180,6 +185,8 @@ class CompiledGraph:
                     failed(NodeError(name, "run_input_failed", type(exc).__name__))
                     raise
                 except Exception as exc:
+                    if isinstance(exc, ContextInvalid):
+                        context.context_invalid = True
                     error = NodeError(
                         name,
                         "budget_exhausted"
@@ -248,6 +255,7 @@ class CompiledGraph:
                 name = node.node_id
                 if wave_status[name] == "succeeded":
                     state.update(pending[name])
+                    context.committed_state = freeze(state)
                     context.transcript.extend(context.pending_transcripts.pop(name, ()))
                     for step in context.steps:
                         if step["node_id"] == name and step["outcome"] == "provisional":
@@ -271,7 +279,10 @@ class CompiledGraph:
                     )
                     context.emit(NodeSkipped(reason), node.node_id)
                 else:
-                    context.emit(NodeFinished(status), node.node_id)
+                    context.emit(
+                        NodeFinished(status, route_label=labels.get(node.node_id)),
+                        node.node_id,
+                    )
             current_started = []
             statuses.update(wave_status)
             errors.update(wave_errors)
