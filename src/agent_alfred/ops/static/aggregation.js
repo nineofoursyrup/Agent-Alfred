@@ -85,19 +85,24 @@ export function aggregationForm(root, csrf, runtime, sync) {
   let keywordsEdited = false;
   keywords.addEventListener('input', () => { keywordsEdited = true; });
   goal.addEventListener('input', () => { if (!keywordsEdited) keywords.value = goal.value; });
+  let sessionRequest = 0;
   async function sessions() {
-    const selected = target.value || sessionStorage.getItem('alfred.session');
+    const request = ++sessionRequest;
     try {
       const response = await fetch('/api/sessions?limit=100');
       if (!response.ok) throw new Error();
       const body = await response.json();
+      if (request !== sessionRequest || !section.isConnected) return;
+      const selected = target.value || sessionStorage.getItem('alfred.session');
       target.replaceChildren(node('option','请选择目标会话'));
       target.options[0].value = '';
       for (const item of body.sessions || []) {
         const option = node('option', item.title || item.session_id); option.value = item.session_id; target.append(option);
       }
       if (selected) target.value = selected;
-    } catch { status.textContent = '会话读取失败，请刷新。'; }
+    } catch {
+      if (request === sessionRequest && section.isConnected) status.textContent = '会话读取失败，请刷新。';
+    }
   }
   async function update() {
     if (!section.isConnected) return;

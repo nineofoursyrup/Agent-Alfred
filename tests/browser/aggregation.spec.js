@@ -37,11 +37,19 @@ test('aggregation CE-02/04/14: Behaviour to same Session, refresh and restart', 
   } finally { await server.close(); }
 });
 
-async function prepareDraft(page, server) {
+async function acceptedRun(response, payload) {
+  const body = await response.json();
+  expect(response.status(), JSON.stringify({body, payload})).toBe(202);
+  expect(body).toMatchObject({run_id:expect.any(String), session_id:expect.any(String)});
+  return body;
+}
+
+async function prepareDraft(page, server, beforeCreate = async () => {}) {
   await page.goto(server.origin + '/behaviour');
   const other = await api(page.request, server.origin);
   const saved = await other.command({operation_id:'seed',kind:'semantic',action:'save',payload:{subject:'me',fact:'coffee source'}});
   expect(saved.status).toBe(200);
+  await beforeCreate();
   await page.getByRole('button',{name:'新建会话',exact:true}).click();
   await page.getByRole('button',{name:'展开对话',exact:true}).click();
   await page.getByRole('button',{name:'刷新会话',exact:true}).click();
@@ -102,7 +110,7 @@ test('aggregation CE-08: dropped accepted response does not resubmit or move Ses
       if (route.request().method() !== 'POST') return route.continue();
       sent++;
       const response = await route.fetch();
-      expect(response.status()).toBe(202);
+      await acceptedRun(response, route.request().postDataJSON());
       await route.abort();
     });
     await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
@@ -127,7 +135,7 @@ test('aggregation CE-11: invalid streamed candidate never becomes a draft', asyn
     await server.send('hold-model');
     const accepted = page.waitForResponse(r => r.url().endsWith('/api/runs') && r.request().method() === 'POST');
     await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
-    const {run_id} = await (await accepted).json();
+    const {run_id} = await acceptedRun(await accepted);
     await expect(page.locator('#messages')).not.toContainText('不得展示的候选流');
     await server.send('release-model');
     await expect.poll(async () => (await other.get('/api/run-evidence?run_id='+run_id)).body.memory?.aggregation?.error).toBe('invalid_draft_reference');
@@ -173,7 +181,7 @@ test('aggregation CE-14: every source combination through Behaviour', async ({pa
       for (let i=0;i<3;i++) await page.getByRole('checkbox',{name:names[i],exact:true}).setChecked(Boolean(bits & (1<<i)));
       const accepted = page.waitForResponse(r => r.url().endsWith('/api/runs') && r.request().method() === 'POST');
       await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
-      const {run_id} = await (await accepted).json();
+      const {run_id} = await acceptedRun(await accepted);
       await expect.poll(async () => (await other.get('/api/run-evidence?run_id='+run_id)).body.memory?.aggregation?.graph_result).toBe('Completed');
       const facts = (await other.get('/api/run-evidence?run_id='+run_id)).body.memory.aggregation;
       expect(facts.provided).toHaveLength(names.filter((_,i)=>bits & (1<<i)).length);
@@ -191,7 +199,7 @@ for (const surface of ['mainbar','behaviour','runs']) for (const timing of ['ope
       const {other,memoryId} = await prepareDraft(page,server);
       const accepted = page.waitForResponse(r => r.url().endsWith('/api/runs') && r.request().method() === 'POST');
       await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
-      const {run_id} = await (await accepted).json();
+      const {run_id} = await acceptedRun(await accepted);
       await expect(page.getByRole('button',{name:'生成聚合草稿',exact:true})).toBeEnabled();
       if (surface === 'runs') await page.goto(server.origin+'/runs/'+run_id);
       const area = surface === 'mainbar' ? page.locator('#messages') : surface === 'behaviour' ? page.getByRole('region',{name:'手动聚合',exact:true}) : page.getByRole('region',{name:'运行过程',exact:true});
@@ -255,8 +263,7 @@ test('SPEC-03 CE-08: accepted POST remains fixed while response waits and Sessio
       if(route.request().method() !== 'POST') return route.continue();
       submitted.push(route.request().postDataJSON());
       const response=await route.fetch();
-      expect(response.status()).toBe(202);
-      acknowledge(await response.json());
+      acknowledge(await acceptedRun(response, route.request().postDataJSON()));
       await delayed;
       await route.fulfill({response});
     });
@@ -292,7 +299,7 @@ test('SPEC-03 CE-11: partial stream transport failure preserves aborted Attempt 
     await server.send('fail-model'); await server.send('hold-model');
     const accepted=page.waitForResponse(r=>r.url().endsWith('/api/runs') && r.request().method()==='POST');
     await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
-    const {run_id}=await (await accepted).json();
+    const {run_id}=await acceptedRun(await accepted);
     await server.send('wait-stream');
     await expect(page.locator('#messages')).not.toContainText('不得展示的候选流');
     await server.send('release-model');
@@ -379,3 +386,79 @@ for (const rounds of [0, 1, 3]) {
     } finally {await server.close();}
   });
 }
+
+
+async function deliverSessionList(page, release) {
+  const delivered = page.waitForResponse(r => r.url().includes('/api/sessions?') && r.request().method() === 'GET');
+  release();
+  await (await delivered).finished();
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+}
+
+test('CI-01: delayed initial Session list cannot erase a newer selected target', async ({page}) => {
+  const server = await memoryServer({script:'tests/browser/aggregation_server.py'});
+  let release = () => {};
+  try {
+    let first = true, captured;
+    const received = new Promise(resolve => { captured = resolve; });
+    const held = new Promise(resolve => { release = resolve; });
+    await page.route('**/api/sessions?*', async route => {
+      if (!first) return route.continue();
+      first = false;
+      const response = await route.fetch();
+      expect(response.status()).toBe(200);
+      expect((await response.json()).sessions).toEqual([]);
+      captured(); await held; await route.fulfill({response});
+    });
+    const {other, session} = await prepareDraft(page, server, () => received);
+    await expect(page.getByRole('combobox',{name:'目标会话'})).toHaveValue(session);
+    await deliverSessionList(page, release);
+    // Keep the original HTTP acceptance assertion as well as the selected value.
+    const accepted = page.waitForResponse(r => r.url().endsWith('/api/runs') && r.request().method() === 'POST');
+    await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
+    const response = await accepted, body = await response.json();
+    expect(response.status(), JSON.stringify({body,payload:response.request().postDataJSON()})).toBe(202);
+    expect(response.request().postDataJSON().session_id).toBe(session);
+    await expect(page.getByRole('combobox',{name:'目标会话'})).toHaveValue(session);
+    await expect.poll(async () => (await other.get('/api/run-evidence?run_id='+body.run_id)).body.memory?.aggregation?.graph_result).toBe('Completed');
+    expect((await other.get('/api/runs?filter=chat&limit=25')).body.runs.filter(r => r.purpose === 'aggregation')).toHaveLength(1);
+  } finally { release(); await server.close(); }
+});
+
+test('CI-01: an in-flight Session refresh preserves the latest user selection', async ({page}) => {
+  const server = await memoryServer({script:'tests/browser/aggregation_server.py'});
+  let release = () => {};
+  try {
+    const {other, session} = await prepareDraft(page, server);
+    const created = page.waitForResponse(r => r.url().endsWith('/api/sessions') && r.request().method() === 'POST');
+    await page.getByRole('button',{name:'新建会话',exact:true}).click();
+    const response = await created;
+    expect(response.status()).toBe(201);
+    const second = (await response.json()).session_id;
+    const refreshed = page.waitForResponse(r => r.url().includes('/api/sessions?'));
+    await page.getByRole('button',{name:'刷新会话',exact:true}).click();
+    await (await refreshed).finished();
+    const target = page.getByRole('combobox',{name:'目标会话'});
+    await target.selectOption(session);
+    let captured;
+    const received = new Promise(resolve => { captured = resolve; });
+    const held = new Promise(resolve => { release = resolve; });
+    await page.route('**/api/sessions?*', async route => {
+      const response = await route.fetch();
+      expect(response.status()).toBe(200);
+      expect((await response.json()).sessions.map(s => s.session_id)).toEqual(expect.arrayContaining([session,second]));
+      captured(); await held; await route.fulfill({response});
+    });
+    await page.getByRole('button',{name:'刷新会话',exact:true}).click();
+    await received;
+    await target.selectOption(second);
+    await deliverSessionList(page, release);
+    await expect(target).toHaveValue(second);
+    const accepted = page.waitForResponse(r => r.url().endsWith('/api/runs') && r.request().method() === 'POST');
+    await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
+    const result = await accepted, body = await result.json();
+    expect(result.status(), JSON.stringify({body,payload:result.request().postDataJSON()})).toBe(202);
+    expect(body.session_id).toBe(second);
+    await expect.poll(async () => (await other.get('/api/run-evidence?run_id='+body.run_id)).body.memory?.aggregation?.request?.session_id).toBe(second);
+  } finally { release(); await server.close(); }
+});
