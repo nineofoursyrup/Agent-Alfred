@@ -50,10 +50,16 @@ async function prepareDraft(page, server, beforeCreate = async () => {}) {
   const saved = await other.command({operation_id:'seed',kind:'semantic',action:'save',payload:{subject:'me',fact:'coffee source'}});
   expect(saved.status).toBe(200);
   await beforeCreate();
+  const created = page.waitForResponse(r => r.url().endsWith('/api/sessions') && r.request().method() === 'POST');
   await page.getByRole('button',{name:'新建会话',exact:true}).click();
+  const response = await created;
+  const body = await response.json();
+  expect(response.status(), JSON.stringify(body)).toBe(201);
+  expect(body.session_id).toEqual(expect.any(String));
+  const session = body.session_id;
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('alfred.session'))).toBe(session);
   await page.getByRole('button',{name:'展开对话',exact:true}).click();
   await page.getByRole('button',{name:'刷新会话',exact:true}).click();
-  const session = await page.evaluate(() => sessionStorage.getItem('alfred.session'));
   await page.getByRole('combobox',{name:'目标会话'}).selectOption(session);
   await page.getByRole('textbox',{name:'聚合目标',exact:true}).fill('draft goal');
   await page.getByRole('textbox',{name:'聚合关键词',exact:true}).fill('coffee');

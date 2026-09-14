@@ -1,11 +1,11 @@
-import {test, expect} from '@playwright/test';
+import {expect} from '@playwright/test';
+import {test, createChatSession, sendChat} from './chat-fixture.js';
 
-test('A01 A02 A23 A28: MainBar to real Tools and immutable Ops ledger', async ({page}) => {
-  await page.goto('/inbox');
-  await page.getByRole('button', {name:'新建会话', exact:true}).click();
+test('A01 A02 A23 A28: MainBar to real Tools and immutable Ops ledger', async ({page, chatServer}) => {
+  await page.goto(chatServer.origin + '/inbox');
+  await createChatSession(page);
   await page.getByRole('button', {name:'展开对话', exact:true}).click();
-  await page.getByRole('textbox', {name:'消息', exact:true}).fill('创建工具测试日程');
-  await page.getByRole('button', {name:'发送', exact:true}).click();
+  await sendChat(page, chatServer, '创建工具测试日程');
   await expect(page.getByRole('region', {name:'主对话'})).toContainText('已查询到工具测试日程');
   await page.getByRole('link', {name:'Tools', exact:true}).click();
   const tool = page.locator('article').filter({has:page.getByRole('heading',{name:'create_event',exact:true})});
