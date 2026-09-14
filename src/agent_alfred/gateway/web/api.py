@@ -557,12 +557,20 @@ class DashboardApi:
         # non-Web origins, and letting a Web request reach it would create a
         # Session behind the caller's back. ``is None`` is the test, never
         # truthiness: a historic Session id may be the empty string.
-        if purpose == "chat" and session_id is None:
+        if purpose in ("chat", "aggregation") and session_id is None:
             return SubmitOutcome(status=400, code="missing_session_id")
         if session_id is not None and not isinstance(session_id, str):
             return SubmitOutcome(status=400, code="bad_session_id")
-        if purpose != "chat" and session_id is not None:
+        if purpose not in ("chat", "aggregation") and session_id is not None:
             return SubmitOutcome(status=400, code="unexpected_session_id")
+        aggregation = None
+        if purpose == "aggregation":
+            from agent_alfred.aggregation import AggregationRequest
+            try:
+                aggregation = AggregationRequest(session_id, message,
+                    body.get("keywords"), body.get("sources"))
+            except (ValueError, TypeError) as error:
+                return SubmitOutcome(status=400, code=str(error))
         endpoint_id = body.get("endpoint_id")
         model_id = body.get("model_id")
         if purpose == "inference_probe":
@@ -593,7 +601,8 @@ class DashboardApi:
                 purpose=purpose,
                 session_id=session_id,
                 gateway="web",
-                entry_surface_id="mainbar",
+                entry_surface_id="behaviour" if aggregation else "mainbar",
+                aggregation=aggregation,
                 wait_for_result=False,
                 endpoint_id=endpoint_id,
                 model_id=model_id,
@@ -902,6 +911,7 @@ def _mainbar_item_json(item) -> dict[str, Any]:
     if isinstance(item, runs.MainBarRunPair):
         return {
             "type": "run_pair",
+            **({"aggregation": item.aggregation} if item.aggregation else {}),
             **({"reply_disposition": "no_reply"} if item.no_reply else {}),
             **({"skill_notice": item.skill_notice} if item.skill_notice else {}),
             "run_id": item.run_id,

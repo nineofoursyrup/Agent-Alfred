@@ -11,7 +11,9 @@ def test_v14_preserves_v13_objects_and_rolls_back_dirty_responsibility(monkeypat
         patch.setattr(schema, "MIGRATIONS", schema.MIGRATIONS[:13])
         schema.migrate(conn)
     before = conn.execute("SELECT name,sql FROM sqlite_master").fetchall()
-    schema.migrate(conn)
+    with monkeypatch.context() as patch:
+        patch.setattr(schema, "MIGRATIONS", schema.MIGRATIONS[:14])
+        schema.migrate(conn)
     for name, sql in before:
         assert conn.execute(
             "SELECT sql FROM sqlite_master WHERE name=?", (name,)

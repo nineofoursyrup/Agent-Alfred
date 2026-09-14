@@ -56,8 +56,9 @@ _GATEWAY_SQL = ", ".join(f"'{gateway}'" for gateway in GATEWAYS)
 # are applied by a later migration; changing PURPOSES must not rewrite v3 SQL.
 _V3_PURPOSES = ("chat", "inference_probe")
 _V3_PURPOSE_SQL = ", ".join(f"'{purpose}'" for purpose in _V3_PURPOSES)
-PURPOSES = (*_V3_PURPOSES, "consolidation")
-_PURPOSE_SQL = ", ".join(f"'{purpose}'" for purpose in PURPOSES)
+PURPOSES = (*_V3_PURPOSES, "consolidation", "aggregation")
+# v12 remains frozen to its originally published closed set.
+_PURPOSE_SQL = "'chat', 'inference_probe', 'consolidation'"
 _PHASE_SQL = ", ".join(f"'{phase}'" for phase in PHASES)
 OUTCOMES = RUN_OUTCOMES
 _OUTCOME_SQL = ", ".join(f"'{outcome}'" for outcome in OUTCOMES)
@@ -1167,6 +1168,25 @@ def _apply_v17(conn):
     migrate_metering(conn)
 
 
+def _apply_v18(conn):
+    # Rebuilding a SQLite table drops its indexes and triggers. Preserve their
+    # exact definitions, including the v16 consolidation revision notification.
+    attached = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE tbl_name='runs' "
+        "AND type IN ('index','trigger') AND sql IS NOT NULL"
+    ).fetchall()
+    _rebuild_table(
+        conn,
+        source="runs",
+        target="runs",
+        create=_V12_RUNS.replace(_PURPOSE_SQL, _PURPOSE_SQL + ", 'aggregation'"),
+        columns=_V12_RUN_COLUMNS,
+        select=_V12_RUN_COLUMNS,
+    )
+    for (statement,) in attached:
+        conn.execute(statement)
+
+
 MIGRATIONS = (
     Migration(version=1, apply=_apply_v1, managed_objects=_V1_MANAGED_OBJECTS),
     # Renames and rebuilds only: every name it leaves behind is already v1's.
@@ -1222,6 +1242,7 @@ MIGRATIONS = (
             "tool_operation_verifications",
         ),
     ),
+    Migration(version=18, apply=_apply_v18, managed_objects=()),
 )
 MIGRATION_VERSIONS = tuple(migration.version for migration in MIGRATIONS)
 LATEST_MIGRATION_VERSION = MIGRATION_VERSIONS[-1]

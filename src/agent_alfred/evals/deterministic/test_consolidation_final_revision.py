@@ -150,7 +150,9 @@ def test_v16_run_evidence_revision_is_transactional_and_chat_is_not_consolidatio
             patch.setattr(schema, "MIGRATIONS", schema.MIGRATIONS[:15])
             schema.migrate(conn)
         original = conn.execute("SELECT name,sql FROM sqlite_master").fetchall()
-        schema.migrate(conn)
+        with monkeypatch.context() as patch:
+            patch.setattr(schema, "MIGRATIONS", schema.MIGRATIONS[:16])
+            schema.migrate(conn)
         for name, sql in original:
             assert conn.execute(
                 "SELECT sql FROM sqlite_master WHERE name=?", (name,)

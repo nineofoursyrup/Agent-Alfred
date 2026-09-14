@@ -147,6 +147,7 @@ class MainBarRunPair:
     assistant_message: Message | None
     skill_notice: str | None = None
     no_reply: bool = False
+    aggregation: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -398,9 +399,9 @@ def list_runs(
         position = _position(_decode_read_cursor(cursor, _RUNS_KIND))
 
     if filter == CHAT_FILTER:
-        purpose_clause = "AND purpose = 'chat'"
+        purpose_clause = "AND purpose IN ('chat', 'aggregation')"
     elif filter == SYSTEM_FILTER:
-        purpose_clause = "AND purpose != 'chat'"
+        purpose_clause = "AND purpose NOT IN ('chat', 'aggregation')"
     else:
         purpose_clause = ""
 
@@ -496,9 +497,9 @@ def locate_run(
             next_cursor=None,
         )
     if summary.filter == CHAT_FILTER:
-        purpose_clause = "AND purpose = 'chat'"
+        purpose_clause = "AND purpose IN ('chat', 'aggregation')"
     else:
-        purpose_clause = "AND purpose != 'chat'"
+        purpose_clause = "AND purpose NOT IN ('chat', 'aggregation')"
     # The newest ``limit - 1`` terminal Runs that are newer than the target,
     # taken nearest-first and then turned back around, so the page ends on
     # the target itself. Bounded either way: a deep link into the ten
@@ -858,6 +859,9 @@ def _mainbar_pair(conn, row: _MainBarRunRow, redactor: Redactor) -> MainBarRunPa
 
     return MainBarRunPair(
         no_reply=bool(telemetry and intentional_no_reply(telemetry[0])),
+        aggregation=json.loads(telemetry[0]).get("memory", {}).get("aggregation")
+        if telemetry and telemetry[0]
+        else None,
         skill_notice=_notice_from_telemetry(telemetry[0], redactor)
         if telemetry
         else None,
@@ -903,7 +907,8 @@ def _mainbar_catchup_rows(
         _MainBarRunRow(*row)
         for row in conn.execute(
             "SELECT runs.run_id, runs.session_id, runs.activity_revision "
-            "FROM runs WHERE runs.phase = ? AND runs.purpose = 'chat' "
+            "FROM runs WHERE runs.phase = ? "
+            "AND runs.purpose IN ('chat', 'aggregation') "
             "AND runs.session_id = ? AND runs.activity_revision > ? "
             "AND runs.activity_revision <= ? "
             "AND EXISTS (SELECT 1 FROM agent_log "
@@ -939,7 +944,7 @@ def _mainbar_run_rows(
         for row in conn.execute(
             "SELECT runs.run_id, runs.session_id, runs.activity_revision\n"
             "  FROM runs\n"
-            "  WHERE runs.phase = ? AND runs.purpose = 'chat'\n"
+            "  WHERE runs.phase = ? AND runs.purpose IN ('chat', 'aggregation')\n"
             "    AND runs.session_id = ?\n"
             "    AND EXISTS (SELECT 1 FROM agent_log\n"
             "                WHERE agent_log.run_id = runs.run_id)\n"
@@ -1070,7 +1075,7 @@ def list_session_chat_runs(
         "       runs.accepted_at,\n"
         "       runs.started_at, runs.finished_at, runs.activity_revision\n"
         "  FROM runs\n"
-        "  WHERE runs.session_id = ? AND runs.purpose = 'chat'\n"
+        "  WHERE runs.session_id = ? AND runs.purpose IN ('chat', 'aggregation')\n"
         "    AND runs.admission_state = 'admitted'\n"
         f"  {excluded}\n"
         f"  {beyond}"

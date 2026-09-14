@@ -64,3 +64,12 @@ jobs:
 
       - name: Offline Dashboard browser tests
         run: npm run test:browser
+
+      - name: Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-failure-evidence
+          path: output/playwright/results/
+          retention-days: 7
+          if-no-files-found: ignore

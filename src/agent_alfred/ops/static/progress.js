@@ -71,7 +71,7 @@ export class Progress {
         node_id: e.node_id,
         attempt_id: e.attempt_id,
         session_id: e.session_id,
-        suppressed: false,
+        suppressed: e.node_id === "synthesis",
         terminal: false,
         lastSeq: seq,
         blocks: new Map(),

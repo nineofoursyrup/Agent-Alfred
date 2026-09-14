@@ -195,6 +195,18 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=f"Dashboard port (default {DEFAULT_PORT}). Only this port is tried.",
     )
+    parser.add_argument(
+        "--aggregate", metavar="GOAL", help="Generate an explicit aggregation draft"
+    )
+    parser.add_argument("--session", help="Existing target Session for aggregation")
+    parser.add_argument(
+        "--keywords", default="", help="Explicit memory search keywords"
+    )
+    parser.add_argument(
+        "--sources",
+        default="semantic,episodic,history",
+        help="Comma-separated aggregation sources; empty selects none",
+    )
     return parser
 
 
@@ -212,6 +224,13 @@ def main(
     """
     parser = build_parser()
     args = parser.parse_args(list(argv) if argv is not None else None)
+
+    if args.aggregate is not None and (
+        not args.session or args.message is not None or args.serve
+    ):
+        parser.error(
+            "--aggregate requires --session and cannot combine with --message/--serve"
+        )
 
     import os
 
@@ -399,19 +418,24 @@ def _chat_in_the_foreground(
         if failure is None:
             host = runtime.host
             _announce(runtime.descriptor, out)
-            created = DashboardApi(facade=host).create_session()
-            if created.session_id is None:
-                _print_session_creation_failure(created.code, out)
-            elif args.message is not None:
-                result = _one_shot(
-                    host,
-                    args.message,
-                    created.session_id,
-                    out,
-                    stream=settings.stream,
+            if getattr(args, "aggregate", None) is not None:
+                result = run_aggregation_command(
+                    host, args, out, stream=settings.stream
                 )
             else:
-                result = _repl(host, created.session_id, stream=settings.stream)
+                created = DashboardApi(facade=host).create_session()
+                if created.session_id is None:
+                    _print_session_creation_failure(created.code, out)
+                elif args.message is not None:
+                    result = _one_shot(
+                        host,
+                        args.message,
+                        created.session_id,
+                        out,
+                        stream=settings.stream,
+                    )
+                else:
+                    result = _repl(host, created.session_id, stream=settings.stream)
     finally:
         close_complete = _close_runtime_preserving_control(runtime, out)
     if failure is not None:
@@ -467,6 +491,64 @@ def serve_dashboard(
     if failure is not None:
         return failure
     return 0 if close_complete else 1
+
+
+def run_aggregation_command(host, args, out, *, stream=False):
+    """The parsed CLI command and HTTP use the same immutable request contract."""
+    try:
+        submitted = host.aggregate(
+            session_id=args.session,
+            goal=args.aggregate,
+            keywords=args.keywords,
+            sources=tuple(filter(None, args.sources.split(","))),
+            gateway="cli",
+            stream=stream,
+        )
+    except ValueError as error:
+        out.write(str(error) + "\n")
+        return 1
+    if submitted.kind != "accepted":
+        _print_submit_failure(submitted.kind, out)
+        return 1
+    result = host.wait(submitted.run_id)
+    out.write("Run " + submitted.run_id + " · Session " + submitted.session_id + "\n")
+    facts = result.memory_telemetry.get("aggregation", {})
+    if result.outcome == "completed" and result.reply is not None:
+        out.write("聚合草稿\n")
+        render_markdown_reply(message_plain_text(result.reply), out)
+    else:
+        out.write((facts.get("reason_code") or result.error or result.outcome) + "\n")
+
+    def display(value):
+        return "unknown" if value is None else str(value)
+
+    if facts.get("recoveries"):
+        out.write("已降级：部分来源读取失败。\n")
+    for kind, source in facts.get("sources", {}).items():
+        rounds = (
+            f"轮数排除 {display(source.get('round_excluded'))} · "
+            if kind == "history"
+            else ""
+        )
+        out.write(
+            f"{kind}: {source['read_outcome']} · "
+            f"实际提供 {display(source.get('actual_input_count'))} · "
+            f"来源容量排除 {display(source.get('capacity_excluded'))} · "
+            f"请求裁剪 {display(source.get('request_excluded'))} · "
+            f"{rounds}"
+            f"许可排除 {display(source.get('permission_excluded'))} · "
+            f"未取完状态 {display(source.get('remaining'))}"
+            f" · {source.get('code') or ''}\n"
+        )
+    if facts.get("provided"):
+        out.write("本次提供的资料（不代表逐句证实）\n")
+    for ref in facts.get("provided", []):
+        out.write(f"本次提供资料 {ref['label']} · {ref['kind']}\n")
+    projection = host.snapshot().unrecorded_terminal_projection
+    if projection and projection.run_id == submitted.run_id:
+        out.write("未保存；请查看运行记录状态。\n")
+        return 1
+    return 0 if result.outcome == "completed" else 1
 
 
 def _one_shot(

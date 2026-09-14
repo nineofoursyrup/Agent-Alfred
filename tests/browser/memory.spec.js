@@ -1565,7 +1565,13 @@ for (const action of ["save", "update"]) {
       await page.goto(server.origin + "/memory");
       const panel = page.getByRole("tabpanel", {name: "语义记忆"});
       await page.route("**/api/memory/operations?*", r => r.fulfill({status: 503, json: {error: {code: "storage_read_failed"}}}));
-      await page.route("**/api/memory/commands", async r => {await r.fetch(); await r.abort("failed");});
+      let finishCommand;
+      const commandFinished = new Promise(resolve => {finishCommand = resolve;});
+      await page.route("**/api/memory/commands", async r => {
+        const response = await r.fetch();
+        finishCommand({status: response.status(), body: await response.json(), request: r.request().postDataJSON()});
+        await r.abort("failed");
+      });
       if (action === "save") {
         await panel.getByLabel("新主题").fill("away");
         await panel.getByLabel("新事实").fill("AWAY_PRIVATE_BODY");
@@ -1577,10 +1583,19 @@ for (const action of ["save", "update"]) {
         await panel.getByRole("button", {name: "保存修改", exact: true}).click();
       }
       await expect(page.getByRole("region", {name: "记忆操作回执"})).toContainText("仍未确认");
-      const record = (await other.get("/api/memory/records?kind=semantic")).body.records[0];
+      // Recovery can fail before the original command finishes mirror IO.
+      const finished = await commandFinished;
+      expect(finished.status, JSON.stringify(finished.body)).toBe(200);
+      expect(finished.body).toMatchObject({operation_id: finished.request.operation_id,
+        result: {operation_id: finished.request.operation_id, action, kind: "semantic", status: action === "save" ? "saved" : "updated"}});
+      const records = await other.get("/api/memory/records?kind=semantic");
+      expect(records.status, JSON.stringify(records.body)).toBe(200);
+      const record = records.body.records.find(r => r.id === finished.body.result.memory_id);
+      expect(record).toMatchObject({id: finished.body.result.memory_id, record_version: finished.body.result.record_version});
       await page.locator('nav a[href="/runs"]').click();
       if (action === "update") await page.reload();
       const deletion = await other.command({operation_id: "away-delete", kind: "semantic", action: "delete", payload: {id: record.id}, expected_version: record.record_version});
+      expect(deletion.status, JSON.stringify(deletion.body)).toBe(200);
       expect(deletion.body.forgetting.state).toBe("complete");
       // Read failure is not absence, including outside the Memory page.
       expect(await page.evaluate(() => sessionStorage.getItem("alfred.memory.operations"))).toContain("AWAY_PRIVATE_BODY");

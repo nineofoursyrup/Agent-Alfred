@@ -1,3 +1,4 @@
+import {aggregationFacts} from "./aggregation.js";
 import { node, textBlocks } from "./dom.js";
 import { Pager } from "./pages.js";
 import { interval, originLabel, sourceGroups } from "./memory.js";
@@ -258,6 +259,7 @@ export function runsPage(root, progress, navigate, memory) {
                 : "过程记录不可用",
         ),
       );
+    if (evidence?.memory?.aggregation) aggregationFacts(detail, evidence.memory.aggregation, memory);
     if (evidence?.memory?.routing) {
       const routing = evidence.memory.routing;
       const section = node('section');

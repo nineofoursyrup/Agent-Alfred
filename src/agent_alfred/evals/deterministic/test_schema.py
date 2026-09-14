@@ -497,6 +497,7 @@ def test_migrate_writes_one_contiguous_ledger_row_per_version() -> None:
         (15,),
         (16,),
         (17,),
+        (18,),
     ]
 
 
@@ -1695,6 +1696,7 @@ def test_upgrading_a_version_1_database_lands_the_current_shape(commit: str) -> 
         (15,),
         (16,),
         (17,),
+        (18,),
     ]
     conn.close()
 
@@ -1900,6 +1902,7 @@ def test_a_failed_upgrade_in_a_caller_transaction_leaves_the_ledger_intact(
         (15,),
         (16,),
         (17,),
+        (18,),
     ]
     # Rolling back is still the caller's decision too, and it takes back the
     # caller's own write and nothing else.

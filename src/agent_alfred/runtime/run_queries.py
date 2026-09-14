@@ -23,7 +23,7 @@ def has_inflight_chat_run(
     sql = """
         SELECT 1 FROM runs
         WHERE runs.session_id = ?
-          AND runs.purpose = 'chat'
+          AND runs.purpose IN ('chat', 'aggregation')
           AND runs.phase IN (?, ?)
           {failed}
           {beyond}
@@ -57,7 +57,7 @@ def page_recorded_chat_run_keys(
     sql = """
         SELECT runs.activity_revision, runs.run_id FROM runs
         WHERE runs.session_id = ?
-          AND runs.purpose = 'chat'
+          AND runs.purpose IN ('chat', 'aggregation')
           AND EXISTS (
             SELECT 1 FROM agent_log WHERE agent_log.run_id = runs.run_id
           )

@@ -65,7 +65,7 @@ def recover_reply(
         projection is not None
         and projection.session_id == session_id
         and projection.run_id == run_id
-        and projection.purpose == "chat"
+        and projection.purpose in ("chat", "aggregation")
     ):
         if projection.reply_disposition == "no_reply":
             return RecoveredReply(
@@ -98,7 +98,8 @@ def recover_reply(
                      AND agent_log.session_id = runs.session_id
                      AND agent_log.role = 'assistant'
                    WHERE runs.run_id = ? AND runs.session_id = ?
-                     AND runs.purpose = 'chat' AND runs.phase = 'finished'
+                     AND runs.purpose IN ('chat', 'aggregation')
+                     AND runs.phase = 'finished'
                      AND runs.admission_state = 'admitted'""",
                 (run_id, session_id),
             ).fetchone()
@@ -148,7 +149,14 @@ def intentional_no_reply(encoded):
     """Only a persisted successful NoAction is an intentional missing answer."""
     if not encoded:
         return False
-    routing = json.loads(encoded).get("memory", {}).get("routing", {})
+    memory = json.loads(encoded).get("memory", {})
+    aggregation = memory.get("aggregation", {})
+    if (
+        aggregation.get("graph_result") == "NoAction"
+        and aggregation.get("reply_disposition") == "no_reply"
+    ):
+        return True
+    routing = memory.get("routing", {})
     return (
         routing.get("graph_result") == "NoAction"
         and routing.get("reply_disposition") == "no_reply"

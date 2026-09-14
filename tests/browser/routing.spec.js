@@ -13,13 +13,22 @@ test('CE-07/09/12: Behaviour, no reply, refresh and real restart', async ({page}
     const session = await page.evaluate(() => sessionStorage.getItem('alfred.session'));
     await page.getByRole('button', {name: '展开对话', exact: true}).click();
     await page.getByRole('textbox', {name: '消息'}).fill('不用回复');
+    const accepted = page.waitForResponse(r => r.url().endsWith('/api/runs') && r.request().method() === 'POST');
     await page.getByRole('button', {name: '发送', exact: true}).click();
+    const admission = await accepted, identity = await admission.json();
+    expect(admission.status(), JSON.stringify(identity)).toBe(202);
+    expect(identity).toMatchObject({run_id: expect.any(String), session_id: session});
     const messages = page.locator('#messages');
     await expect(messages.getByText('已结束 · 按要求未回复')).toBeVisible();
     await expect(messages.getByText('运行已结束', {exact:true})).toHaveCount(0);
+    // A no-reply terminal projection is visible before recording commits.
+    await expect(messages.getByText('已保存', {exact:true})).toBeVisible();
     const other = await api(page.request, server.origin);
     const runs = await other.get('/api/runs?filter=chat&limit=25');
-    const run = runs.body.runs.find(r => r.prompt_preview === '不用回复').run_id;
+    expect(runs.status, JSON.stringify(runs.body)).toBe(200);
+    const recorded = runs.body.runs.find(r => r.run_id === identity.run_id);
+    expect(recorded).toMatchObject({session_id: session, prompt_preview: '不用回复', phase: 'finished', outcome: 'completed'});
+    const run = recorded.run_id;
     await page.goto(`${server.origin}/runs/${run}`);
     await expect(page.getByText('user_requested_no_reply', {exact:false}).first()).toBeVisible();
     await server.restart();

@@ -309,6 +309,8 @@ class RuntimeHost:
         chat_graph_factory=None,
         behaviour_store=None,
         routing_graph_builder=None,
+        aggregation_sources=None,
+        aggregation_before_send=None,
         memory_notifier=None,
         extra_tools=(),
         tool_policies=None,
@@ -445,6 +447,9 @@ class RuntimeHost:
             database=self._store,
             coordinator=self,
             bind_run=self._bind_consolidation_retry,
+            capture_aggregation=lambda: dict(
+                persona=self._aggregation_persona.current(), settings=self._settings
+            ),
         )
         from agent_alfred.tools import ToolRegistry
         from agent_alfred.tools.calendar import CalendarTools
@@ -521,6 +526,27 @@ class RuntimeHost:
 
                 raise_if_rollback_pending(error)
                 self._routing_error = type(error).__name__
+        from agent_alfred.aggregation.graph import build_graph
+        from agent_alfred.aggregation.sources import AggregationSources, declarations
+
+        source_service = AggregationSources(
+            self._memory_service, self._store, project=self._redactor.redact_jsonable
+        )
+        self._aggregation_sources = (
+            aggregation_sources(source_service)
+            if callable(aggregation_sources)
+            else aggregation_sources or source_service
+        )
+        self._aggregation_persona = persona_tools
+        self._aggregation_tools = ToolRegistry(
+            declarations(
+                self._aggregation_sources, project=self._redactor.redact_jsonable
+            ),
+            clock=clock,
+            redactor=self._redactor,
+            metering=self._tool_metering,
+        )
+        self._aggregation_graph = build_graph(self._aggregation_tools)
         self._executor = RunExecutor(
             clock=clock,
             settings=settings,
@@ -537,6 +563,9 @@ class RuntimeHost:
             persona_tools=persona_tools,
             skill_tools=skill_tools,
             chat_graph_factory=chat_graph_factory,
+            aggregation_graph=self._aggregation_graph,
+            aggregation_tools=self._aggregation_tools,
+            aggregation_before_send=aggregation_before_send,
             factory=factory,
             support_recorder=SupportRecorder(
                 self._support_overrides, self._redactor, clock, support_rule
@@ -1278,6 +1307,10 @@ class RuntimeHost:
     def record_connection_observation(
         self, item, outcome: str, error: str | None
     ) -> None:
+        if item.request.purpose == "aggregation" and not item.memory_telemetry.get(
+            "input_attempts"
+        ):
+            return
         pool = getattr(self._factory, "transport_pool", None)
         if pool is None or outcome not in {"completed", "failed"}:
             return
@@ -1885,7 +1918,7 @@ class RuntimeHost:
     ) -> dict | None:
         from agent_alfred.runtime.evidence import read_evidence
 
-        return read_evidence(
+        value = read_evidence(
             self._store,
             self._redactor,
             run_id,
@@ -1895,6 +1928,14 @@ class RuntimeHost:
             computed_at=format_instant(self._clock.wall_utc()),
             accounting_attempts=accounting_attempts,
         )
+
+        if value and value.get("memory", {}).get("aggregation"):
+            from agent_alfred.aggregation.views import source_availability
+
+            value["memory"]["aggregation"] = source_availability(
+                value["memory"]["aggregation"], self._memory_service
+            )
+        return value
 
     def accounting_snapshot(self, filters):
         return self._accounting.create(
@@ -2074,7 +2115,7 @@ class RuntimeHost:
         """The MainBar's Run pairs and historic messages for one Session."""
         recording_failed = self._recording_failed_run_ids()
         with self._store.reading() as conn:
-            return runs.mainbar_pairs(
+            page = runs.mainbar_pairs(
                 conn,
                 session_id=session_id,
                 limit=limit,
@@ -2082,6 +2123,25 @@ class RuntimeHost:
                 redactor=self._redactor,
                 recording_failed_run_ids=recording_failed,
             )
+
+        from dataclasses import replace
+
+        from agent_alfred.aggregation.views import source_availability
+
+        return replace(
+            page,
+            items=tuple(
+                replace(
+                    item,
+                    aggregation=source_availability(
+                        item.aggregation, self._memory_service
+                    ),
+                )
+                if isinstance(item, runs.MainBarRunPair) and item.aggregation
+                else item
+                for item in page.items
+            ),
+        )
 
     def note_sink_disabled(self, sink: str, stage: str) -> None:
         """A transport reporting that it stopped working.
@@ -2286,6 +2346,34 @@ class RuntimeHost:
             return self.execute_mutation(self._tool_metering.recover)
         except MeteringError:
             return None, "metering_unconfirmed"
+
+    def aggregate(
+        self,
+        *,
+        session_id,
+        goal,
+        keywords,
+        sources,
+        gateway="cli",
+        stream=False,
+        wait_for_result=True,
+    ):
+        from agent_alfred.aggregation import AggregationRequest
+
+        request = AggregationRequest(session_id, goal, keywords, sources)
+        if not self.session_exists(request.session_id):
+            raise ValueError("session_not_found")
+        return self.submit(
+            SubmitRequest(
+                goal,
+                purpose="aggregation",
+                session_id=session_id,
+                gateway=gateway,
+                stream=stream,
+                wait_for_result=wait_for_result,
+                aggregation=request,
+            )
+        )
 
     def submit(self, request: SubmitRequest) -> SubmitResult:
         return self._admission.submit(request)

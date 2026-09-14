@@ -47,6 +47,7 @@ def main():
     parser.add_argument("--port", type=int, required=True)
     parser.add_argument("--state", type=Path, required=True)
     parser.add_argument("--threshold", type=int)
+    parser.add_argument("--working-memory-rounds", type=int)
     args = parser.parse_args()
     from agent_alfred.runtime.routing import build_routing_graph, project_context
 
@@ -58,7 +59,12 @@ def main():
 
         return build_routing_graph(tools, projection=projection)
 
+    from agent_alfred.settings import Settings
+
     dashboard = build_dashboard(
+        settings=Settings(working_memory_rounds=args.working_memory_rounds)
+        if args.working_memory_rounds is not None
+        else None,
         routing_graph_builder=build,
         state_dir=args.state,
         port=args.port,
