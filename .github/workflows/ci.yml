@@ -17,6 +17,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Offline routing regressions compare against a pinned ancestor.
+          fetch-depth: 0
 
       - name: Install uv (Python 3.14)
         uses: astral-sh/setup-uv@v6

@@ -126,6 +126,8 @@ class UnrecordedTerminalView:
     session_id: str | None
     prompt_preview: str | None
 
+    reply_disposition: str | None = None
+
 
 @dataclass(frozen=True)
 class RunStateSnapshot:
@@ -245,6 +247,15 @@ def snapshot_payload(
             None
             if snapshot.unrecorded_terminal_projection is None
             else {
+                **(
+                    {
+                        "reply_disposition": (
+                            snapshot.unrecorded_terminal_projection.reply_disposition
+                        )
+                    }
+                    if snapshot.unrecorded_terminal_projection.reply_disposition
+                    else {}
+                ),
                 "run_id": snapshot.unrecorded_terminal_projection.run_id,
                 "purpose": snapshot.unrecorded_terminal_projection.purpose,
                 "outcome": snapshot.unrecorded_terminal_projection.outcome,
@@ -308,8 +319,16 @@ def snapshot_from_payload(payload: object) -> RunStateSnapshot:
         projection = _parse_exact_object(
             projection,
             "unrecorded_terminal_projection",
-            _TERMINAL_PROJECTION_FIELDS,
+            _TERMINAL_PROJECTION_FIELDS
+            | ({"reply_disposition"} if "reply_disposition" in projection else set()),
         )
+    if projection is not None and projection.get("reply_disposition") not in (
+        None,
+        "reply",
+        "no_reply",
+        "reply_withheld",
+    ):
+        raise ValueError("invalid reply_disposition")
     return _validate_snapshot_relations(
         RunStateSnapshot(
             process_instance_id=_parse_required_nonempty_string(
@@ -343,6 +362,7 @@ def snapshot_from_payload(payload: object) -> RunStateSnapshot:
                 None
                 if projection is None
                 else UnrecordedTerminalView(
+                    reply_disposition=projection.get("reply_disposition"),
                     run_id=_parse_required_nonempty_string(
                         projection["run_id"], "run_id"
                     ),
@@ -536,6 +556,7 @@ def build_snapshot(
                 None
                 if projection is None
                 else UnrecordedTerminalView(
+                    reply_disposition=projection.reply_disposition,
                     run_id=projection.run_id,
                     purpose=projection.purpose,
                     outcome=projection.outcome,

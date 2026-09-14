@@ -5,6 +5,7 @@ import { interval, originLabel, sourceGroups } from "./memory.js";
 /** @typedef {{expanded: Map<string, Wire>, toggle: (ref: Wire) => void}} References */
 /** @param {Wire} run */
 export function outcomeLabel(run) {
+  if (run.reply_disposition === "no_reply") return "已结束 · 按要求未回复";
   const labels = /** @type {Record<string,string>} */ ({
     completed: "回复完成",
     max_steps: "受控停止",
@@ -257,6 +258,22 @@ export function runsPage(root, progress, navigate, memory) {
                 : "过程记录不可用",
         ),
       );
+    if (evidence?.memory?.routing) {
+      const routing = evidence.memory.routing;
+      const section = node('section');
+      section.append(node('h3', '消息分流'),
+        node('p', `${routing.route || '未执行图'} · ${routing.decision_reason || routing.fallback?.reason || ''}`),
+        node('p', `图结果：${routing.graph_result || '未执行'}；代际 ${routing.generation ?? '无'}`));
+      if (routing.reply_disposition === 'no_reply') section.append(node('p', '已结束 · 按要求未回复'));
+      if (routing.recoveries?.length) {
+        section.append(node('p', '上下文准备失败，已降级处理。'));
+        for (const recovery of routing.recoveries)
+          section.append(node('p', `${recovery.node_id} · ${recovery.code} · ${recovery.message} · ${recovery.side_effect_state}`));
+      }
+      if (routing.classification?.actual_model) section.append(node('p', `分类模型：${routing.classification.actual_model.endpoint_id} / ${routing.classification.actual_model.model_id}`));
+      if (routing.fallback?.decision !== 'not_needed') section.append(node('p', `普通回退：${routing.fallback?.decision} / ${routing.fallback?.reason}`));
+      detail.append(section);
+    }
     renderInputs(detail, evidence?.memory, references, evidence?.trace_incomplete ? "partial" : evidence?.trace_status);
     const selectedId = selectedRun.run_id;
     const confirmed = new Set(

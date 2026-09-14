@@ -263,6 +263,7 @@ class RunExecutor:
         step_count = 0
         duration_ms = 0
         all_results = []
+        fallback_start = None
         # A Session spans Runs and process restarts. Sessionless system Runs
         # get their own namespace; Step/Attempt identities never split it.
         conversation_id = (
@@ -458,11 +459,48 @@ class RunExecutor:
                 persona = self._persona_tools.current() if self._persona_tools else None
                 model = ModelRef(item.snapshot.endpoint_id, item.snapshot.model_id)
                 loop_result = None
-                if memory is not None and self._chat_graph_factory is not None:
+                routing = item.routing if memory is not None else None
+                graph_factory = self._chat_graph_factory
+                if routing is not None and (
+                    routing["settings"]["status"] != "ok" or routing["graph"] is None
+                ):
+                    from agent_alfred.events import Notice
+
+                    item.memory_telemetry["routing"] = dict(
+                        schema_version=1,
+                        settings=routing["settings"],
+                        graph_error=routing.get("graph_error"),
+                        classification={"status": "not_started"},
+                        fallback=dict(
+                            decision="allowed",
+                            reason="routing_unavailable",
+                            entered=False,
+                            model_requests=0,
+                        ),
+                        reply_disposition="reply",
+                    )
+                    self._events.emit(
+                        Notice(
+                            code="routing_unavailable",
+                            detail=(
+                                ("reason", "routing_unavailable"),
+                                ("decision", "allowed"),
+                            ),
+                        ),
+                        envelope,
+                    )
+                    graph_factory = None
+                elif routing is not None and routing["graph"] is not None:
+
+                    def graph_factory(**kw):
+                        return routing["graph"]
+
+                if memory is not None and graph_factory is not None:
                     from agent_alfred.runtime.chat_graph import run_chat_graph
 
                     loop_result = run_chat_graph(
-                        self._chat_graph_factory,
+                        graph_factory,
+                        routing=routing,
                         assistant=self._assistant,
                         client=ledger,
                         model=model,
@@ -479,6 +517,10 @@ class RunExecutor:
                         deadline=overall_abs,
                     )
                 if loop_result is None:
+                    fallback_start = len(all_results)
+                    routing_facts = item.memory_telemetry.get("routing")
+                    if routing_facts is not None:
+                        routing_facts["fallback"]["entered"] = True
                     loop_result = self._assistant.respond(
                         task,
                         client=ledger,
@@ -504,7 +546,7 @@ class RunExecutor:
                         memory=memory,
                         skills=skills,
                         absolute_deadline=overall_abs,
-                        memory_prepared=bool(self._chat_graph_factory and memory),
+                        memory_prepared=bool(graph_factory and memory),
                         tools=self._tools if item.request.purpose == "chat" else None,
                         tool_permission=item.memory_permission,
                         tool_state=item.memory_telemetry,
@@ -603,6 +645,34 @@ class RunExecutor:
             reply = None
             del exc
         finally:
+            routing_facts = item.memory_telemetry.get("routing")
+            if routing_facts is not None:
+                fallback = routing_facts["fallback"]
+                if fallback_start is not None and fallback.get("entered"):
+                    fallback["model_requests"] = sum(
+                        len(r.attempts) for r in all_results[fallback_start:]
+                    )
+                if (
+                    error
+                    and not fallback["entered"]
+                    and fallback["decision"] in ("not_needed", "allowed")
+                ):
+                    reason = (
+                        "cancelled"
+                        if outcome == "interrupted"
+                        else "overall_deadline"
+                        if error in ("overall_deadline", "input_deadline_exceeded")
+                        else "input_evidence_unavailable"
+                        if error
+                        in (
+                            "input_evidence_unavailable",
+                            "input_resolution_unavailable",
+                            "input_limit_exceeded",
+                        )
+                        else "forced_stop"
+                    )
+                    fallback.update(decision="blocked", reason=reason)
+                    routing_facts.setdefault("error", error)
             if self._file_tools is not None:
                 self._file_tools.set_run_deadline(float("inf"))
             receipts = item.memory_telemetry.pop("system_receipts", [])
@@ -903,7 +973,20 @@ class RunExecutor:
                 "SELECT COUNT(*) FROM agent_log WHERE session_id=? AND run_id IS NULL",
                 (session_id,),
             ).fetchone()[0]
-            excluded["incomplete"] = total - len(rows) + legacy
+            from agent_alfred.runtime.replies import intentional_no_reply
+
+            no_reply = sum(
+                intentional_no_reply(row[0])
+                for row in conn.execute(
+                    "SELECT telemetry FROM runs WHERE session_id=? AND purpose='chat' "
+                    "AND phase='finished' AND outcome='completed' "
+                    "AND admission_state='admitted'",
+                    (session_id,),
+                )
+            )
+            excluded["incomplete"] = total - len(rows) + legacy - no_reply
+            if no_reply:
+                excluded["intentional_no_reply"] = no_reply
         if self._memory_service is not None:
             from agent_alfred.runtime.memory import InputEvidenceError
 

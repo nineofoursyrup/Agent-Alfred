@@ -4,7 +4,7 @@ import { Stream } from "./stream.js";
 import { node, textBlocks } from "./dom.js";
 import { Progress } from "./progress.js";
 import { ConnectionNotices, Announcer } from "./notices.js";
-import { inbox, modelsPage, connectionsPage } from "./pages.js";
+import { inbox, modelsPage, connectionsPage, behaviourPage } from "./pages.js";
 import { runsPage, outcomeLabel } from "./runs.js";
 import { MemorySync, memoryPage, memoryReceipts } from "./memory.js";
 /** @typedef {Record<string, any>} Wire */
@@ -85,10 +85,11 @@ async function recoverReply(runId) {
         result.process_instance_id !== process ||
         result.session_id !== target ||
         result.run_id !== runId ||
-        typeof result.reply_text !== "string"
+        (typeof result.reply_text !== "string" && result.reply_disposition !== "no_reply")
       )
         throw new Error("正文未完整加载");
-      reply.text = result.reply_text;
+      reply.reply_disposition = result.reply_disposition;
+      reply.text = result.reply_disposition === "no_reply" ? undefined : result.reply_text;
       reply.skill_notice = result.skill_notice;
       reply.loading = false;
     } catch {
@@ -164,6 +165,7 @@ function renderMessages() {
       if (recorded.has(item.run_id)) continue;
       recorded.add(item.run_id);
       if (item.user) list.append(node("p", textBlocks(item.user)));
+      if (item.reply_disposition === "no_reply") list.append(node("small", "已结束 · 按要求未回复"));
       if (item.assistant) list.append(node("p", textBlocks(item.assistant)));
       if (item.skill_notice) list.append(node("p", item.skill_notice));
       list.append(node("small", "已保存"));
@@ -172,7 +174,7 @@ function renderMessages() {
   for (const [id, reply] of replies) {
     if (reply.session_id !== session || recorded.has(id)) continue;
     if (reply.user) list.append(node("p", reply.user));
-    if (reply.text !== undefined) list.append(node("p", reply.text));
+    if (reply.text !== undefined && reply.reply_disposition !== "no_reply") list.append(node("p", reply.text));
     if (reply.skill_notice) list.append(node("p", reply.skill_notice));
     if (reply.loading) {
       list.append(node("p", "正文未完整加载"));
@@ -187,7 +189,7 @@ function renderMessages() {
         reply.recording_state === "recorded"
           ? "已保存"
           : reply.recording_state === "failed"
-            ? "回复已收到但未保存"
+            ? (reply.reply_disposition === "no_reply" ? "本次运行未保存" : "回复已收到但未保存")
             : reply.recording_state === "pending"
               ? "正在保存"
               : "已接受",
@@ -347,17 +349,18 @@ const stream = new Stream(
           session_id: projection.session_id,
           user: old.user || projection.prompt_preview,
           outcome: projection.outcome,
+          reply_disposition: projection.reply_disposition || old.reply_disposition,
           recording_state: projection.recording_state,
-          loading: old.text === undefined,
+          loading: projection.reply_disposition !== "no_reply" && old.text === undefined,
         });
-        if (projection.session_id === session && old.text === undefined)
+        if (projection.session_id === session && old.text === undefined && projection.reply_disposition !== "no_reply")
           void recoverReply(projection.run_id);
         if (
           projection.recording_state === "failed" &&
           !alerted.has(projection.run_id)
         ) {
           alerted.add(projection.run_id);
-          element("alerts").textContent = "回复已收到但未保存";
+          element("alerts").textContent = projection.reply_disposition === "no_reply" ? "本次运行未保存" : "回复已收到但未保存";
         }
       }
       const stages = /** @type {Record<string,string>} */ ({
@@ -406,7 +409,8 @@ const stream = new Stream(
           session_id: envelope.session_id,
           outcome: event.outcome,
           skill_notice: event.skill_notice,
-          text: textBlocks(event.reply?.blocks) || event.error || "运行已结束",
+          reply_disposition: event.reply_disposition,
+          text: event.reply_disposition === "no_reply" ? undefined : textBlocks(event.reply?.blocks) || event.error || "运行已结束",
           recording_state: old.recording_state || "pending",
           loading: false,
         });
@@ -567,10 +571,11 @@ function route() {
   const isMemory = path === "/memory";
   const isTools = path === "/tools";
   const isOps = path === "/ops";
+  const isBehaviour = path === "/behaviour";
   accountingView?.close(); accountingView = null;
   connectionsView?.close(); connectionsView = null;
   const heading = document.createElement("h1");
-  heading.textContent = isTools ? "Tools 工具" : isOps ? "Ops 账本" : isRuns
+  heading.textContent = isBehaviour ? "Behaviour 行为" : isTools ? "Tools 工具" : isOps ? "Ops 账本" : isRuns
     ? "运行详情"
     : isModels
       ? "模型"
@@ -582,7 +587,8 @@ function route() {
   receipts.detach();
   element("page").replaceChildren(heading);
   runPage = null;
-  if (isTools) accountingView = toolsPage(element("page"), () => csrf);
+  if (isBehaviour) behaviourPage(element("page"), () => csrf);
+  else if (isTools) accountingView = toolsPage(element("page"), () => csrf);
   else if (isOps) accountingView = accountingPage(element("page"), () => csrf);
   else if (isModels) modelsPage(element("page"), () => csrf);
   else if (isConnections) connectionsView = connectionsPage(element("page"), () => csrf);

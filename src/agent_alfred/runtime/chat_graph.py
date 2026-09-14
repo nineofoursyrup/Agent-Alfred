@@ -32,8 +32,11 @@ def run_chat_graph(
     events,
     budget,
     deadline,
+    routing=None,
 ):
     memory._check_input_deadline(None)
+    if routing is not None and budget.remaining == 0:
+        return LoopResult("max_steps", None, None, budget.used, 0)
     if budget.remaining > 0:
         working_memory = memory.prepare(
             working_memory,
@@ -66,11 +69,28 @@ def run_chat_graph(
         persona=persona,
         memory=memory,
     )
+    context.model_bindings = {"answer": (client, model, assistant)}
     context.checkpoint()
     graph = factory(client=client, model=model, assistant=assistant, tools=tools)
+    inputs = {"task": task}
+    if routing is not None:
+        inputs.update(
+            prepared_context=memory.prepared_context(),
+            has_loaded_skills=bool(skills and skills.section),
+        )
+        item.memory_telemetry["routing"] = dict(
+            schema_version=1,
+            settings=routing["settings"],
+            generation=routing["generation"],
+            capabilities=routing["capabilities"],
+            classification={"status": "not_started"},
+            fallback={"decision": "not_needed", "entered": False, "model_requests": 0},
+            reply_disposition="reply",
+        )
     result_name = "Failed"
+    result = None
     try:
-        result = graph.invoke({"task": task}, context=context)
+        result = graph.invoke(inputs, context=context)
         result_name = type(result).__name__
     finally:
         # Input failures and cancellation propagate to the sole Run finalizer;
@@ -81,11 +101,94 @@ def run_chat_graph(
             "steps": [dict(step) for step in context.steps],
             "fallback": False,
         }
+        if routing is not None:
+            facts = item.memory_telemetry["routing"]
+            facts.update(context.graph_identity, graph_result=result_name)
+    if routing is not None:
+        from dataclasses import asdict
+
+        facts = item.memory_telemetry["routing"]
+        facts.update(
+            context.graph_identity,
+            graph_result=result_name,
+            recoveries=[asdict(r) for r in getattr(result, "recoveries", ())],
+        )
+        facts.update(thaw(context.committed_state.get("route_decision", {})))
     if isinstance(result, (Failed, BudgetExhausted)):
+        if routing is not None:
+            reason = (
+                (
+                    "overall_deadline"
+                    if result.forced_stop.error == "overall_deadline"
+                    else "forced_stop"
+                )
+                if isinstance(result, Failed) and result.forced_stop
+                else "context_invalid"
+                if context.context_invalid
+                else "side_effect_" + result.side_effect_state
+                if result.side_effect_state != "none"
+                else "budget_exhausted"
+                if budget.remaining == 0
+                else "graph_failed"
+            )
+            allowed = reason == "graph_failed"
+            facts["fallback"] = dict(
+                decision="allowed" if allowed else "blocked",
+                reason=reason,
+                entered=False,
+                model_requests=0,
+            )
+            facts["error"] = result.error.code
+            facts["side_effect_state"] = result.side_effect_state
+            from agent_alfred.events import EventEnvelope, Notice
+
+            events.emit(
+                Notice(
+                    code="routing_fallback",
+                    detail=(
+                        ("decision", facts["fallback"]["decision"]),
+                        ("reason", reason),
+                        ("graph_id", context.graph_identity.get("graph_id", "")),
+                    ),
+                ),
+                EventEnvelope(
+                    clock.monotonic(),
+                    item.run_id,
+                    item.session_id,
+                    None,
+                    None,
+                    None,
+                    item.request.gateway,
+                ),
+            )
+            if reason == "budget_exhausted":
+                return LoopResult(
+                    "max_steps",
+                    None,
+                    result.error.code,
+                    budget.used,
+                    context.duration_ms,
+                )
+            if context.context_invalid and not getattr(result, "forced_stop", None):
+                return LoopResult(
+                    "failed",
+                    text_message("assistant", "本次上下文失效，已停止后续模型和工具。"),
+                    "context_invalid",
+                    budget.used,
+                    context.duration_ms,
+                )
         if isinstance(result, Failed) and result.forced_stop is not None:
             stop = result.forced_stop
             return LoopResult(
-                stop.outcome, stop.reply, stop.error, budget.used, context.duration_ms
+                stop.outcome,
+                (
+                    text_message("assistant", "运行期限已到，未发送后续请求。")
+                    if stop.error == "overall_deadline"
+                    else stop.reply
+                ),
+                stop.error,
+                budget.used,
+                context.duration_ms,
             )
         context.checkpoint()
         if result.side_effect_state == "none":
@@ -101,6 +204,8 @@ def run_chat_graph(
             context.duration_ms,
         )
     if isinstance(result, NoAction):
+        if routing is not None:
+            facts.update(reply_disposition="no_reply", reason_code=result.reason_code)
         item.record_reply = False
         return LoopResult("completed", None, None, budget.used, context.duration_ms)
     if not isinstance(result, (Completed, CompletedWithRecovery)):

@@ -146,6 +146,7 @@ class MainBarRunPair:
     user_message: Message | None
     assistant_message: Message | None
     skill_notice: str | None = None
+    no_reply: bool = False
 
 
 @dataclass(frozen=True)
@@ -853,7 +854,10 @@ def _mainbar_pair(conn, row: _MainBarRunRow, redactor: Redactor) -> MainBarRunPa
     telemetry = conn.execute(
         "SELECT telemetry FROM runs WHERE run_id=?", (row.run_id,)
     ).fetchone()
+    from agent_alfred.runtime.replies import intentional_no_reply
+
     return MainBarRunPair(
+        no_reply=bool(telemetry and intentional_no_reply(telemetry[0])),
         skill_notice=_notice_from_telemetry(telemetry[0], redactor)
         if telemetry
         else None,

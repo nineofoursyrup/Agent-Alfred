@@ -110,6 +110,7 @@ export class Progress {
       !this.slot ||
       this.slot.session_id !== session ||
       this.slot.node_id === "skill_selector" ||
+      this.slot.node_id === "classify" ||
       this.slot.suppressed ||
       this.slot.terminal
     )

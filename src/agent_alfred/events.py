@@ -41,6 +41,8 @@ NoticeCode = Literal[
     "sink_disabled",
     "redaction_failed",
     "model_support_flipped",
+    "routing_fallback",
+    "routing_unavailable",
 ]
 NoticeLevel = Literal["info", "warning", "error"]
 
@@ -50,6 +52,8 @@ _DOMAIN_NOTICE_CODES = frozenset(
         "sink_disabled",
         "redaction_failed",
         "model_support_flipped",
+        "routing_fallback",
+        "routing_unavailable",
     }
 )
 
@@ -169,6 +173,7 @@ class RunStarted:
 
 @dataclass(frozen=True)
 class RunFinished:
+    reply_disposition: str | None = field(default=None, metadata={"omit_none": True})
     skill_notice: str | None = None
     finalization_reason: str | None = None
     not_executed_call_ids: tuple[str, ...] = ()
@@ -376,6 +381,7 @@ class NodeStarted:
 @dataclass(frozen=True)
 class NodeFinished:
     outcome: str
+    route_label: str | None = field(default=None, metadata={"omit_none": True})
     name: str = "node.finished"
     trace_policy: TracePolicy = "persist"
 
@@ -523,7 +529,11 @@ def event_json_default(value: object) -> object:
     if is_dataclass(value) and not isinstance(value, type):
         return {
             "_type": type(value).__name__,
-            **{f.name: getattr(value, f.name) for f in dc_fields(value)},
+            **{
+                f.name: getattr(value, f.name)
+                for f in dc_fields(value)
+                if not (f.metadata.get("omit_none") and getattr(value, f.name) is None)
+            },
         }
     raise TypeError(f"unserializable event payload part {type(value).__name__}")
 

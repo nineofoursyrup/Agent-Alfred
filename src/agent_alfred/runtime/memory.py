@@ -140,6 +140,48 @@ class RunMemory:
             self, listing, entries, budget, working_memory, overall_abs
         )
 
+    def classify(self, context, output_key):
+        from agent_alfred.runtime.routing_classifier import classify
+
+        return classify(self, context, output_key)
+
+    def prepared_context(self):
+        from agent_alfred.messages import blocks_to_jsonable
+
+        return dict(
+            context_version=1,
+            working_messages=[
+                dict(role=m.role, blocks=blocks_to_jsonable(m.blocks))
+                for m in self._history
+            ],
+            working_run_ids=list(self._groups),
+            selected_references=(
+                []
+                if self._references is None
+                else [dict(r) for r in self._references.selected_references]
+            ),
+            reference_text=(
+                None if self._references is None else self._references.reference_text
+            ),
+            tool_sources=self._evidence.explanation()["ledger_entries"],
+            tool_text=self._evidence.text,
+        )
+
+    def consume_projected_context(self, projected):
+        from agent_alfred.graph.types import thaw
+        from agent_alfred.messages import Message, blocks_from_jsonable
+
+        # Accept only the owner's prepared input plan; adopt the projected
+        # messages, then answer_request revalidates every source before sending.
+        value = thaw(projected)
+        if value != self.prepared_context():
+            raise InputEvidenceError("projected_context_changed")
+        self._history = tuple(
+            Message(m["role"], blocks_from_jsonable(m["blocks"]))
+            for m in value["working_messages"]
+        )
+        self._groups = tuple(value["working_run_ids"])
+
     def set_skills(self, snapshot):
         self._skills = snapshot
 
@@ -299,13 +341,13 @@ class RunMemory:
     def attempt_observer(self, step_index, purpose, request=None):
         references = (
             ()
-            if purpose == "gate" or self._result is None
+            if purpose in ("gate", "message_classifier") or self._result is None
             else (
                 () if self._references is None else self._references.selected_references
             )
         )
 
-        groups = tuple(self._groups)
+        groups = () if purpose == "message_classifier" else tuple(self._groups)
         ledger = (
             self._evidence.explanation()
             if purpose == "answer"

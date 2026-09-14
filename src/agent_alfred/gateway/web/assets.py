@@ -32,6 +32,7 @@ def page_asset(path: str) -> tuple[bytes, str] | None:
         "/ops",
         "/models",
         "/connections",
+        "/behaviour",
     } or path.startswith("/runs/"):
         name, content_type = "index.html", "text/html"
     elif path in ASSETS:

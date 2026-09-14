@@ -31,6 +31,7 @@ from agent_alfred.runtime.replies import (
     RecoveredReply,
     ReplyContextExpired,
     ReplyUnavailable,
+    ReplyWithheld,
 )
 from agent_alfred.runtime.sessions import (
     SessionInboxPage,
@@ -441,6 +442,29 @@ class DashboardApi:
         refresh = params.get("refresh") == "1"
         return 200, self._facade.models(expand=expand, refresh=refresh)
 
+    def behaviour(self):
+        return 200, self._facade.behaviour()
+
+    def mutate_behaviour(self, body):
+        from agent_alfred.runtime.behaviour import BehaviourError
+
+        try:
+            payload, reason = self._gate.execute(
+                lambda: self._facade.apply_behaviour(body)
+            )
+            if reason is not None:
+                return self._mutation_refusal(reason)
+            return 200, payload
+        except BehaviourError as exc:
+            status = (
+                409
+                if exc.code == "settings_conflict"
+                else (503 if exc.code == "settings_write_failed" else 400)
+            )
+            return status, dict(
+                code=exc.code, cause=exc.cause, backup_path=exc.backup_path
+            )
+
     def mutate_settings(self, body: dict[str, Any]) -> tuple[int, Any]:
         from agent_alfred.runtime.model_settings import ModelSettingsError
 
@@ -701,6 +725,11 @@ class DashboardApi:
             )
         except ReplyContextExpired:
             return 409, {"code": "reply_context_expired"}
+        except ReplyWithheld:
+            return 503, {
+                "code": "reply_withheld",
+                "reply_disposition": "reply_withheld",
+            }
         except ReplyUnavailable:
             return 503, {"code": "reply_unavailable"}
         return 200, {
@@ -708,6 +737,11 @@ class DashboardApi:
             "session_id": reply.session_id,
             "run_id": reply.run_id,
             "reply_text": reply.reply_text,
+            **(
+                {"reply_disposition": reply.reply_disposition}
+                if reply.reply_disposition
+                else {}
+            ),
             **({"skill_notice": reply.skill_notice} if reply.skill_notice else {}),
         }
 
@@ -868,6 +902,7 @@ def _mainbar_item_json(item) -> dict[str, Any]:
     if isinstance(item, runs.MainBarRunPair):
         return {
             "type": "run_pair",
+            **({"reply_disposition": "no_reply"} if item.no_reply else {}),
             **({"skill_notice": item.skill_notice} if item.skill_notice else {}),
             "run_id": item.run_id,
             "activity_revision": item.activity_revision,

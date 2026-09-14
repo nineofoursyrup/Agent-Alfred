@@ -14,6 +14,10 @@ class ReplyUnavailable(RuntimeError):
     """The requested complete reply cannot currently be read."""
 
 
+class ReplyWithheld(ReplyUnavailable):
+    """Known reply text was withheld by the redaction boundary."""
+
+
 class ReplyContextExpired(ReplyUnavailable):
     """The caller must synchronize with the new process before reading history."""
 
@@ -25,8 +29,9 @@ class RecoveredReply:
     process_instance_id: str
     session_id: str
     run_id: str
-    reply_text: str
+    reply_text: str | None
     skill_notice: str | None = None
+    reply_disposition: str | None = None
 
 
 def _redact_reply(redactor: Redactor, text: str) -> str:
@@ -62,7 +67,17 @@ def recover_reply(
         and projection.run_id == run_id
         and projection.purpose == "chat"
     ):
+        if projection.reply_disposition == "no_reply":
+            return RecoveredReply(
+                process_instance_id,
+                session_id,
+                run_id,
+                None,
+                reply_disposition="no_reply",
+            )
         if projection.reply_withheld:
+            if projection.reply_disposition is not None:
+                raise ReplyWithheld("reply withheld")
             raise ReplyUnavailable("reply unavailable")
         if projection.reply_text is not None:
             return RecoveredReply(
@@ -73,23 +88,28 @@ def recover_reply(
                 _redact_reply(redactor, projection.skill_notice)
                 if projection.skill_notice
                 else None,
+                reply_disposition=projection.reply_disposition,
             )
     try:
         with store.reading() as conn:
             row = conn.execute(
                 """SELECT agent_log.content, runs.telemetry FROM runs
-                   JOIN agent_log ON agent_log.run_id = runs.run_id
+                   LEFT JOIN agent_log ON agent_log.run_id = runs.run_id
                      AND agent_log.session_id = runs.session_id
+                     AND agent_log.role = 'assistant'
                    WHERE runs.run_id = ? AND runs.session_id = ?
                      AND runs.purpose = 'chat' AND runs.phase = 'finished'
-                     AND runs.admission_state = 'admitted'
-                     AND agent_log.role = 'assistant'""",
+                     AND runs.admission_state = 'admitted'""",
                 (run_id, session_id),
             ).fetchone()
     except (sqlite3.Error, RecordingUnavailable) as exc:
         raise ReplyUnavailable("reply unavailable") from exc
     if row is None:
         raise ReplyUnavailable("reply unavailable")
+    if intentional_no_reply(row[1]):
+        return RecoveredReply(
+            process_instance_id, session_id, run_id, None, reply_disposition="no_reply"
+        )
     try:
         raw = json.loads(row[0])
         if not isinstance(raw, list) or any(
@@ -107,6 +127,11 @@ def recover_reply(
         run_id,
         _redact_reply(redactor, message_plain_text(message)),
         _notice_from_telemetry(row[1], redactor),
+        reply_disposition=(
+            "reply"
+            if row[1] and json.loads(row[1]).get("memory", {}).get("routing")
+            else None
+        ),
     )
 
 
@@ -117,3 +142,15 @@ def _notice_from_telemetry(encoded, redactor):
         else None
     )
     return _redact_reply(redactor, value) if isinstance(value, str) else None
+
+
+def intentional_no_reply(encoded):
+    """Only a persisted successful NoAction is an intentional missing answer."""
+    if not encoded:
+        return False
+    routing = json.loads(encoded).get("memory", {}).get("routing", {})
+    return (
+        routing.get("graph_result") == "NoAction"
+        and routing.get("reply_disposition") == "no_reply"
+        and routing.get("reason_code") == "user_requested_no_reply"
+    )

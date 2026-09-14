@@ -23,6 +23,10 @@ class GraphCompileError(ValueError):
     pass
 
 
+class ContextInvalid(ValueError):
+    """Trusted business projection failure; survives provisional wave rollback."""
+
+
 class GraphInvariantError(RuntimeError):
     pass
 
