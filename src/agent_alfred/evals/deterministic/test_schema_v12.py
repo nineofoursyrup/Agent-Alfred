@@ -5,12 +5,13 @@ import sqlite3
 import pytest
 
 from agent_alfred import schema
+from agent_alfred._schema.migrations import _V3_RUNS
 from agent_alfred.evals.deterministic.test_schema import _TS, _migrate, _tables
 
 
 def test_v12_purpose_check_accepts_consolidation_and_keeps_v3_sql_frozen():
-    assert "consolidation" not in schema._V3_RUNS
-    assert "inference_probe" in schema._V3_RUNS
+    assert "consolidation" not in _V3_RUNS
+    assert "inference_probe" in _V3_RUNS
     conn = _migrate()
     assert schema.LATEST_MIGRATION_VERSION >= 12
     conn.execute(

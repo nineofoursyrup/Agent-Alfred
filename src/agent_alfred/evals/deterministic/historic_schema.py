@@ -37,6 +37,8 @@ the other twenty are shared verbatim by construction.
 
 from __future__ import annotations
 
+from typing import NamedTuple
+
 # A representative `applied_at` in the historic format: all three commits wrote
 # `datetime('now')`, whose output SQLite documents as UTC and renders naive and
 # space-separated. The value is 40f7f98's own commit time in UTC.
@@ -358,10 +360,18 @@ V1_40F7F98 = _v1(EVENTS_TABLE, TRACE_PRUNES_TABLE_40F7F98)
 V1_AE253B2 = _v1(EVENTS_TABLE, TRACE_PRUNES_TABLE_LATER)
 V1_6D7659C = _v1(CALENDAR_ENTRIES_TABLE, TRACE_PRUNES_TABLE_LATER)
 
+
+class HistoricSchema(NamedTuple):
+    """Published statements and the calendar table explicitly owned by that commit."""
+
+    statements: tuple[str, ...]
+    calendar_table: str
+
+
 # Keyed by the commit that published the shape, so a failure names the database
 # it came from rather than an index.
 V1_SCHEMAS = {
-    "40f7f98": V1_40F7F98,
-    "ae253b2": V1_AE253B2,
-    "6d7659c": V1_6D7659C,
+    "40f7f98": HistoricSchema(V1_40F7F98, "events"),
+    "ae253b2": HistoricSchema(V1_AE253B2, "events"),
+    "6d7659c": HistoricSchema(V1_6D7659C, "calendar_entries"),
 }
