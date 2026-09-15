@@ -1442,16 +1442,13 @@ def _normalized_master(conn: sqlite3.Connection) -> dict[str, str]:
 
 
 def _historic_calendar_table(commit: str) -> str:
-    statements = historic_schema.V1_SCHEMAS[commit]
-    if historic_schema.EVENTS_TABLE in statements:
-        return "events"
-    return "calendar_entries"
+    return historic_schema.V1_SCHEMAS[commit].calendar_table
 
 
 def _historic_database(commit: str) -> sqlite3.Connection:
     """A database exactly as `commit` left it: its DDL, its version 1 row."""
     conn = sqlite3.connect(":memory:")
-    for statement in historic_schema.V1_SCHEMAS[commit]:
+    for statement in historic_schema.V1_SCHEMAS[commit].statements:
         conn.execute(statement)
     conn.execute(
         "INSERT INTO schema_migrations (version, applied_at) VALUES (1, ?)",
