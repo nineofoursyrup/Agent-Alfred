@@ -2,6 +2,7 @@
 
 import _sqlite3
 import ctypes
+import faulthandler
 import json
 import os
 import sqlite3
@@ -18,6 +19,9 @@ from agent_alfred.evals.deterministic.test_database_http import (
     _execute,
     _post,
 )
+
+
+faulthandler.dump_traceback_later(15, exit=True)
 
 
 def report(kind, value):
@@ -86,3 +90,5 @@ with TemporaryDirectory() as directory:
             report("execute_exception", traceback.format_exc())
     finally:
         report("close", dashboard.close())
+
+faulthandler.cancel_dump_traceback_later()
