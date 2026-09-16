@@ -12,6 +12,7 @@ from agent_alfred.evals.deterministic.test_database_http import (
     _catalog,
     _dashboard,
     _execute,
+    _issue,
     _post,
     _status,
     _wake_fifo,
@@ -28,9 +29,8 @@ def executing_at(dashboard, tmp_path, stage, sql):
     ready = tmp_path / f"{stage}.fifo.ready"
     os.mkfifo(hold)
     os.mkfifo(ready)
-    ready_fd = os.open(ready, os.O_RDONLY | os.O_NONBLOCK)
     catalog = _catalog(dashboard)
-    query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+    query_id = _issue(dashboard)
     console = dashboard.host.database_console
     console._records[query_id].barriers = {stage: str(hold)}
     result = {}
@@ -57,6 +57,7 @@ def executing_at(dashboard, tmp_path, stage, sql):
             result["error"] = error
 
     thread = threading.Thread(target=execute)
+    ready_fd = os.open(ready, os.O_RDONLY | os.O_NONBLOCK)
     thread.start()
     try:
         assert select.select([ready_fd], [], [], 4)[0], result

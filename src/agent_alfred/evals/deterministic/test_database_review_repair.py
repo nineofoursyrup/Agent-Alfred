@@ -8,6 +8,7 @@ from agent_alfred.evals.deterministic.test_database_http import (
     _catalog,
     _dashboard,
     _execute,
+    _issue,
     _write,
 )
 from agent_alfred.runtime.work import SubmitRequest
@@ -152,7 +153,6 @@ def test_slow_tcp_receiver_releases_response_within_total_send_deadline(
     import threading
     import time
 
-    from agent_alfred.evals.deterministic.test_database_http import _post
     from agent_alfred.gateway.web.handler import DashboardHandler as Handler
 
     dashboard = _dashboard(tmp_path)
@@ -188,7 +188,7 @@ def test_slow_tcp_receiver_releases_response_within_total_send_deadline(
     sock.settimeout(4)
     try:
         catalog = _catalog(dashboard)
-        query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        query_id = _issue(dashboard)
         # Allowed SQL below 64KiB creates a 1.6MiB result, much larger than
         # the receiver's actual TCP window and the sender's socket buffer.
         raw = {
