@@ -14,7 +14,6 @@ jobs:
   check:
     name: lint / skills / env / tests
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,7 +21,7 @@ jobs:
           # Offline routing regressions compare against a pinned ancestor.
           fetch-depth: 0
 
-      - name: Install CPython with shared SQLite API
+      - name: Install CPython (Database requires its shared SQLite C API)
         uses: actions/setup-python@v6
         id: python
         with:
@@ -36,17 +35,47 @@ jobs:
       - name: Install package (dev and mcp extras)
         run: uv sync --python "${{ steps.python.outputs.python-path }}" --extra dev --extra mcp --locked
 
-      - name: Pure interpreter control without Database imports
-        run: |
-          ls -l .venv/bin/python
-          readlink -f .venv/bin/python
-          timeout --kill-after=5s 10s .venv/bin/python -u -c 'import sys; print(sys.executable); print(sys.version); print("CI01_STDLIB_CONTROL_COMPLETE", flush=True)'
+      - name: Lint
+        run: uv run ruff check
 
-      - name: Stdlib SQLite and empty environment child boundaries
-        run: timeout --kill-after=5s 15s .venv/bin/python -u scripts/diagnose_runtime.py
+      - name: Skill validation
+        run: uv run python scripts/check_skills.py
 
-      - name: Public HTTP and worker with process-group observation
-        run: timeout --kill-after=5s 30s .venv/bin/python -u scripts/diagnose_issue66.py
+      - name: .env.example consistency check
+        run: uv run python scripts/check_env_example.py
 
-      - name: First failed tests and same-engine proof with signal observation
-        run: timeout --kill-after=5s 40s .venv/bin/python -u scripts/diagnose_pytest.py
+      - name: Offline deterministic tests
+        run: uv run --extra mcp pytest
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Verify base and MCP artifact installations
+        run: uv run python scripts/check_mcp_installations.py --output /tmp/mcp-artifacts.json
+
+      - name: Install Node for Dashboard checks
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install Dashboard test tools
+        run: npm ci --ignore-scripts
+
+      - name: Dashboard typecheck
+        run: npm run typecheck
+
+      - name: Install test browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Offline Dashboard browser tests
+        run: npm run test:browser
+
+      - name: Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-failure-evidence
+          path: output/playwright/results/
+          retention-days: 7
+          if-no-files-found: ignore

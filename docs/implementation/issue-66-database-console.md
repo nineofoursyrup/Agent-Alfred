@@ -27,6 +27,16 @@
 
 强制临时文件构建已另行实测：从 [SQLite 官方 3.53.4 amalgamation](https://www.sqlite.org/2026/sqlite-amalgamation-3530400.zip) 编译 `-DSQLITE_TEMP_STORE=0`，源 ZIP SHA3-256 为 `628a44cfe82c66aed1ccbbe85a562d2e33ebe64b3288981ed76285612227934e`。真实库报告 `TEMP_STORE=0`，即使 `PRAGMA temp_store=MEMORY` 回读为 2，公共能力检查仍拒绝；把该真实只读连接接到 Dashboard 诊断入口后，目录 available=false，签发句柄 HTTP 503。正常 CI 用模拟该不可变编译选项的回归测试，不在 CI 下载或编译 SQLite。热 journal 场景则通过真实子进程未提交退出构造，验证只读诊断没有改写数据库／journal。
 
+## Python 构建能力
+
+Python 3.14 版本号本身不足以保证 Database 可用。该构建还必须让 `_sqlite3` 暴露同一 SQLite 引擎的公开 C API（包括 `sqlite3_hard_heap_limit64` 和逐行 cursor API），支持共享内存数据集，并通过已有 JSON、函数及内存临时存储核验。128 MiB 限额覆盖 worker 中该引擎的所有连接；不会另找一套 SQLite 库绕过能力检查，也不向 worker 继承父环境。
+
+CI-01 在 Linux 的 uv CPython 3.14.7 上实测 `_sqlite3` 为内建模块且进程不导出所需 C API；该构建的目录正确返回 `available=false`，句柄签发返回 HTTP 503 `database_unavailable`。这不代表所有 uv 提供的构建都相同，也不承诺所有 CPython 3.14 构建均受支持。不支持的构建继续明确不可用。
+
+CI 使用 `actions/setup-python` 返回的精确解释器路径创建环境，能力仍由真实 HTTP／worker 检查验证，不能仅凭安装工具名称判为可用。
+
+本地可用 `uv sync --python /absolute/path/to/python3.14 --extra dev --extra mcp --locked` 明确选定满足上述能力的构建，再运行下方门禁。发行包的四组隔离环境使用执行检查脚本的同一个 Python，以免安装检查隐式换用不同构建。`test_hard_heap_limit_applies_only_in_worker_process` 通过空环境子进程验证 Python 写入的共享内存行可被 C cursor 读取、两端限额均为 128 MiB、临时存储为内存且父进程限额未变。
+
 ## 完整本地门禁
 
 ```sh
