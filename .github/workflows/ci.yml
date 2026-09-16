@@ -14,6 +14,7 @@ jobs:
   check:
     name: lint / skills / env / tests
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -39,7 +40,9 @@ jobs:
         run: uv run python scripts/check_env_example.py
 
       - name: Offline deterministic tests
-        run: uv run --extra mcp pytest
+        run: |
+          uv run python scripts/diagnose_issue66.py
+          uv run --extra mcp pytest -x -vv -s src/agent_alfred/evals/deterministic/test_database_boundaries.py::test_mapped_error_checks_raw_source_before_mapping
 
       - name: Build distributions
         run: uv build
