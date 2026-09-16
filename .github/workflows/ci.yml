@@ -38,5 +38,5 @@ jobs:
 
       - name: First Database failure and runtime evidence
         run: |
-          uv run python scripts/diagnose_issue66.py
-          uv run --extra mcp pytest -x -vv -s src/agent_alfred/evals/deterministic/test_database_boundaries.py::test_mapped_error_checks_raw_source_before_mapping src/agent_alfred/evals/deterministic/test_database_console_sql.py::test_hard_heap_limit_applies_only_in_worker_process src/agent_alfred/evals/deterministic/test_database_console_sql.py::test_packaged_worker_entry_executes_select
+          timeout --kill-after=5s 30s .venv/bin/python -u scripts/diagnose_issue66.py
+          timeout --kill-after=5s 60s .venv/bin/python -m pytest -o faulthandler_timeout=20 -x -vv -s src/agent_alfred/evals/deterministic/test_database_boundaries.py::test_mapped_error_checks_raw_source_before_mapping src/agent_alfred/evals/deterministic/test_database_console_sql.py::test_hard_heap_limit_applies_only_in_worker_process src/agent_alfred/evals/deterministic/test_database_console_sql.py::test_packaged_worker_entry_executes_select
