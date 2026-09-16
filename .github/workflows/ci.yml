@@ -41,3 +41,6 @@ jobs:
           ls -l .venv/bin/python
           readlink -f .venv/bin/python
           timeout --kill-after=5s 10s .venv/bin/python -u -c 'import sys; print(sys.executable); print(sys.version); print("CI01_STDLIB_CONTROL_COMPLETE", flush=True)'
+
+      - name: Stdlib SQLite and empty environment child boundaries
+        run: timeout --kill-after=5s 15s .venv/bin/python -u scripts/diagnose_runtime.py
