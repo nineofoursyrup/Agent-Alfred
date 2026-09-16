@@ -75,8 +75,27 @@ for label, env in [
             "stderr": result.stderr,
         },
     )
+real_init = subprocess.Popen.__init__
+real_killpg = os.killpg
+parent_group = os.getpgrp()
+report("parent_process", {"pid": os.getpid(), "pgid": parent_group, "sid": os.getsid(0)})
+
+def observed_init(self, *args, **kwargs):
+    real_init(self, *args, **kwargs)
+    report("spawn", {"pid": self.pid, "pgid": os.getpgid(self.pid), "sid": os.getsid(self.pid), "new_session": kwargs.get("start_new_session")})
+
+def observed_killpg(group, sig):
+    report("killpg", {"group": group, "signal": sig, "parent_group": parent_group})
+    if group == parent_group:
+        raise OSError("CI01 safety guard: would kill parent process group")
+    return real_killpg(group, sig)
+
+subprocess.Popen.__init__ = observed_init
+os.killpg = observed_killpg
 with TemporaryDirectory() as directory:
+    report("before_dashboard", directory)
     dashboard = _dashboard(Path(directory))
+    report("dashboard_started", dashboard.port)
     try:
         catalog = _catalog(dashboard)
         report(

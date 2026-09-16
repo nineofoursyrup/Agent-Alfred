@@ -44,3 +44,6 @@ jobs:
 
       - name: Stdlib SQLite and empty environment child boundaries
         run: timeout --kill-after=5s 15s .venv/bin/python -u scripts/diagnose_runtime.py
+
+      - name: Public HTTP and worker with process-group observation
+        run: timeout --kill-after=5s 30s .venv/bin/python -u scripts/diagnose_issue66.py
