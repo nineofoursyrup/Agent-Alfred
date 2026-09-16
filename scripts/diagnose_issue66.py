@@ -30,7 +30,8 @@ report(
         "executable": sys.executable,
         "base_prefix": sys.base_prefix,
         "sqlite_version": sqlite3.sqlite_version,
-        "extension": _sqlite3.__file__,
+        "extension": getattr(_sqlite3, "__file__", None),
+        "extension_origin": _sqlite3.__spec__.origin,
         "LD_LIBRARY_PATH": os.environ.get("LD_LIBRARY_PATH"),
     },
 )
@@ -38,7 +39,9 @@ with sqlite3.connect(":memory:") as conn:
     report("compile_options", conn.execute("PRAGMA compile_options").fetchall())
 for name in ["sqlite3_hard_heap_limit64", "sqlite3_open_v2"]:
     try:
-        report(name, str(getattr(ctypes.CDLL(_sqlite3.__file__), name)))
+        report(
+            name, str(getattr(ctypes.CDLL(getattr(_sqlite3, "__file__", None)), name))
+        )
     except Exception:
         report(name, traceback.format_exc())
 report("heap_supported", sqlite_limits.hard_heap_limit_supported())
