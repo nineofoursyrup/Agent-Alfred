@@ -72,7 +72,10 @@ with TemporaryDirectory() as directory:
     dashboard = _dashboard(Path(directory))
     try:
         catalog = _catalog(dashboard)
-        report("catalog", {key: value for key, value in catalog.items() if key != "objects"})
+        report(
+            "catalog",
+            {key: value for key, value in catalog.items() if key != "objects"},
+        )
         report("issue", _post(dashboard, "/api/database/queries", {}))
         try:
             report("execute", _execute(dashboard, "SELECT 1 AS linux_probe"))
