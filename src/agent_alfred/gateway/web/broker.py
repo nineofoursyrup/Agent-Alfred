@@ -260,6 +260,14 @@ class _MemoryPatch:
 
 
 @dataclass(frozen=True)
+class _ProtectionPatch:
+    frame: PreparedFrames
+
+    def ingress_cost(self) -> FrameCost:
+        return self.frame.ingress_cost()
+
+
+@dataclass(frozen=True)
 class _PublishedEvent:
     """One published domain event on its way to the dispatcher.
 
@@ -664,6 +672,7 @@ class SSEBroker:
         self._instance = frames.validate_process_instance_id(process_instance_id)
         self._latest = snapshot
         self._memory_latest = None
+        self._protection_latest = None
         # Bound to the Host as soon as the Host exists -- see
         # :meth:`bind_session_check`. Until then there is no Session truth to
         # consult and, more to the point, no connection to answer for.
@@ -2113,6 +2122,7 @@ class SSEBroker:
                         )
                     latest = self._latest
                     memory_latest = self._memory_latest
+                    protection_latest = self._protection_latest
                     # Same binding as publish_state_patch: the step summary is
                     # shown only while it belongs to the snapshot's active Run.
                     active = latest.active_run
@@ -2147,6 +2157,8 @@ class SSEBroker:
                 startup.append(_patch_frames(latest, step, session_valid))
                 if memory_latest is not None:
                     startup.append(frames.memory_patch_frames(memory_latest))
+                if protection_latest is not None:
+                    startup.append(frames.protection_patch_frames(protection_latest))
                 built = tuple(startup)
                 boundary = (
                     nullcontext()
@@ -2441,6 +2453,30 @@ class SSEBroker:
             if handler is not None:
                 handler(failure)
             raise failure
+        if kick:
+            self._ingress.put_kick()
+        return offered
+
+    def publish_protection_patch(self, payload: dict) -> bool:
+        if (
+            set(payload)
+            != {"schema_version", "process_instance_id", "protection_version"}
+            or payload.get("schema_version") != 1
+            or payload.get("process_instance_id") != self._instance
+            or type(payload.get("protection_version")) is not str
+        ):
+            return False
+        prepared = _ProtectionPatch(frames.protection_patch_frames(payload))
+        kick = False
+        with self._lock:
+            if self._closed or self._stopping or self._fatal is not None:
+                return False
+            self._protection_latest = payload
+            self._state_epoch += 1
+            offered = self._ingress.offer(prepared)
+            if not offered:
+                self._disconnect_generation += 1
+                kick = self._arm_kick_locked()
         if kick:
             self._ingress.put_kick()
         return offered
@@ -2915,6 +2951,10 @@ class SSEBroker:
             for handle in handles:
                 if item.revision > handle.memory_revision_through:
                     handle.queue.offer(item.frame)
+            return
+        if isinstance(item, _ProtectionPatch):
+            for handle in handles:
+                handle.queue.offer(item.frame)
             return
         if isinstance(item, _BroadcastPatch):
             for handle in handles:

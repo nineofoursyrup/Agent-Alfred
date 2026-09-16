@@ -40,6 +40,7 @@ export class Stream {
       "transport_notice",
       "domain_event",
       "memory_patch",
+      "protection_patch",
     ]) {
       source.addEventListener(kind, (event) => {
         const currentEpoch = epoch;

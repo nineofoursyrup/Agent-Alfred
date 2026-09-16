@@ -8,6 +8,7 @@ import { ConnectionNotices, Announcer } from "./notices.js";
 import { inbox, modelsPage, connectionsPage, behaviourPage } from "./pages.js";
 import { runsPage, outcomeLabel } from "./runs.js";
 import { MemorySync, memoryPage, memoryReceipts } from "./memory.js";
+import { databasePage } from "./database.js";
 /** @typedef {Record<string, any>} Wire */
 /** @template {Element} T @param {string} id @returns {T} */
 function element(id) {
@@ -55,6 +56,7 @@ const memory = new MemorySync();
 const receipts = memoryReceipts(memory, () => csrf);
 /** @type {ReturnType<typeof runsPage>|null} */ let runPage = null;
 /** @type {ReturnType<typeof connectionsPage>|null} */ let connectionsView = null;
+/** @type {ReturnType<typeof databasePage>|null} */ let databaseView = null;
 const notices = new ConnectionNotices(element("connection"));
 const announcer = new Announcer(element("announcements"));
 const alerted = new Set();
@@ -320,6 +322,7 @@ const stream = new Stream(
         void memory.connected(instance);
         accountingView?.sync(instance);
         connectionsView?.sync(instance);
+        databaseView?.sync();
       }
       if (body.state_revision <= revision) return;
       notices.snapshot();
@@ -432,7 +435,10 @@ const stream = new Stream(
       progress.interrupt();
       notices.receive(body);
       renderMessages();
-    } else if (kind === "memory_patch") memory.patch(body);
+    } else if (kind === "memory_patch") {
+      memory.patch(body);
+      databaseView?.invalidate("memory");
+    } else if (kind === "protection_patch") databaseView?.invalidate("protection");
   },
   () => {
     connected = false;
@@ -440,6 +446,7 @@ const stream = new Stream(
     notices.disconnected();
     memory.disconnected();
     accountingView?.disconnect();
+    databaseView?.disconnect();
     renderMessages();
     updateSend();
   },
@@ -577,10 +584,12 @@ function route() {
   const isTools = path === "/tools";
   const isOps = path === "/ops";
   const isBehaviour = path === "/behaviour";
+  const isDatabase = path === "/database";
   accountingView?.close(); accountingView = null;
   connectionsView?.close(); connectionsView = null;
+  databaseView?.close(); databaseView = null;
   const heading = document.createElement("h1");
-  heading.textContent = isBehaviour ? "Behaviour 行为" : isTools ? "Tools 工具" : isOps ? "Ops 账本" : isRuns
+  heading.textContent = isDatabase ? "Database" : isBehaviour ? "Behaviour 行为" : isTools ? "Tools 工具" : isOps ? "Ops 账本" : isRuns
     ? "运行详情"
     : isModels
       ? "模型"
@@ -603,6 +612,12 @@ function route() {
       session: () => session,
       receipts,
     });
+  else if (isDatabase)
+    databaseView = databasePage(element("page"), {
+      csrf: () => csrf,
+      instance: () => instance,
+      connected: () => connected,
+    });
   else if (!isRuns) inbox(element("page"), resume);
   else runPage = runsPage(element("page"), progress, route, memory);
   if (connected) {
@@ -618,7 +633,9 @@ function route() {
       (href === "/models" && isModels) ||
       (href === "/connections" && isConnections) ||
       (href === "/memory" && isMemory) ||
-      (href === "/inbox" && !isRuns && !isModels && !isConnections && !isMemory && !isTools && !isOps);
+      (href === "/behaviour" && isBehaviour) ||
+      (href === "/database" && isDatabase) ||
+      (href === "/inbox" && !isRuns && !isModels && !isConnections && !isMemory && !isTools && !isOps && !isBehaviour && !isDatabase);
     if (current) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
   }
@@ -702,6 +719,8 @@ document.addEventListener("click", (event) => {
       link.pathname === "/memory" ||
       link.pathname === "/tools" ||
       link.pathname === "/ops" ||
+      link.pathname === "/behaviour" ||
+      link.pathname === "/database" ||
       link.pathname.startsWith("/runs/")
     ) ||
     event.ctrlKey ||
@@ -721,9 +740,14 @@ window.addEventListener("offline", () => {
   progress.interrupt();
   memory.disconnected();
   accountingView?.disconnect();
+  databaseView?.disconnect();
   updateSend();
 });
 window.addEventListener("online", () => stream.connect(session));
+window.addEventListener("pagehide", () => databaseView?.suspend());
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) databaseView?.restoredFromCache();
+});
 element("new-session").addEventListener("click", async () => {
   const button = /** @type {HTMLButtonElement} */ (element("new-session"));
   button.disabled = true;

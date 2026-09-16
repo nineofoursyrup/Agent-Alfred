@@ -386,6 +386,7 @@ class RuntimeHost:
             memory_notifier=memory_notifier, file_state=file_state,
             process_instance_id=process_instance_id,
         )
+        self.database_console = None
         from agent_alfred.memory.consolidation import ConsolidationLimits
 
         self._memory_service.consolidation._limits = ConsolidationLimits(
@@ -682,6 +683,41 @@ class RuntimeHost:
                 # not started, and it must never be mistaken for one.
                 self._start_error = exc
                 raise
+
+    def attach_database_console(self, console) -> None:
+        from contextlib import contextmanager
+
+        from agent_alfred.database_console.service import (
+            ConsoleCleanupPort,
+            DiagnosticProjection,
+        )
+
+        self.database_console = console
+        original = self._store.transaction
+
+        @contextmanager
+        def transaction():
+            console.note_writer()
+            with original() as conn:
+                yield conn
+
+        self._store.transaction = transaction
+        self._memory_service._projection_participants += (DiagnosticProjection(),)
+        inner = self._memory_service._cleanup_port
+        if inner is not None:
+            self._memory_service._cleanup_port = ConsoleCleanupPort(console, inner)
+        notifier = self._memory_service._memory_notifier
+
+        def notify(*args, **kwargs):
+            console.invalidate()
+            if notifier is not None:
+                return notifier(*args, **kwargs)
+
+        self._memory_service._memory_notifier = notify
+        self._redactor._on_change = lambda: (
+            console.invalidate(),
+            console._publish_protection(),
+        )
 
     def close(self, timeout: float | None = None) -> bool:
         """Stop admission, finish mutations and the worker, then release sinks.

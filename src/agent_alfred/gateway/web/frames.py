@@ -854,3 +854,8 @@ def state_patch_frames(body: dict) -> PreparedFrames:
 def memory_patch_frames(body: dict) -> PreparedFrames:
     """Body-free persisted-state invalidation, without domain seq/checkpoint."""
     return replace(_single_payload_frame("memory_patch", body), must_deliver=True)
+
+
+def protection_patch_frames(body: dict) -> PreparedFrames:
+    """Protection-rule version only; never carries keys."""
+    return replace(_single_payload_frame("protection_patch", body), must_deliver=True)

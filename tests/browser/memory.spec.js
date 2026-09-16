@@ -993,9 +993,23 @@ for (const committed of [false, true]) {
       });
       // Hold the automatic read-back so the restored unconfirmed state, and
       // then the user's own query, are both observable.
-      let answering = false;
-      await page.route("**/api/memory/operations?*", route =>
-        answering ? route.continue() : route.abort("connectionreset"));
+      // Gate on the actual DOM click, not the Node step before click().
+      // An automatic read can otherwise complete the receipt and remove its
+      // query button while Playwright is still checking actionability.
+      await page.addInitScript(() => {
+        window.receiptQueryActivated = false;
+        document.addEventListener("click", event => {
+          const button = event.target.closest?.("button");
+          if (button?.textContent === "查询结果" &&
+              button.closest('[aria-label="记忆操作回执"]'))
+            window.receiptQueryActivated = true;
+        }, {capture: true});
+      });
+      await page.route("**/api/memory/operations?*", async route => {
+        const answering = await page.evaluate(() =>
+          window.receiptQueryActivated === true).catch(() => false);
+        await (answering ? route.continue() : route.abort("connectionreset"));
+      });
       const panel = page.getByRole("tabpanel", {name: "语义记忆"});
       await panel.getByLabel("新主题").fill("恢复");
       await panel.getByLabel("新事实").fill("reload before any command response");
@@ -1007,7 +1021,6 @@ for (const committed of [false, true]) {
       const receipt = page.getByRole("region", {name: "记忆操作回执"})
         .locator("article", {hasText: bodies[0].operation_id});
       await expect(receipt).toContainText(/结果待确认（(?:interrupted|network)）/);
-      answering = true;
       await receipt.getByRole("button", {name: "查询结果", exact: true}).click();
       if (committed) {
         await expect(receipt).toContainText(/已保存 · ID .+ · 版本 1/);

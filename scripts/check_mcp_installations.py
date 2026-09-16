@@ -128,12 +128,55 @@ for configured in (False, True):
         assert len(model.requests) == 5
     finally:
         assert host.close()
+# Installed-package Dashboard and its real subprocess worker, not source imports.
+import socket, urllib.request
+from agent_alfred.wiring import build_dashboard
+with socket.socket() as listener:
+    listener.bind(("127.0.0.1", 0))
+    port = listener.getsockname()[1]
+model = ScriptedModel([])
+dashboard = build_dashboard(
+    state_dir=root / "diagnostic-dashboard", port=port,
+    factory=ScriptedModelFactory(model),
+)
+dashboard.start()
+try:
+    origin = f"http://127.0.0.1:{port}"
+    def http(path, body=None):
+        data = None if body is None else json.dumps(body).encode()
+        headers = {} if body is None else {
+            "Content-Type": "application/json",
+            "Origin": origin,
+            "x-agent-alfred-csrf": dashboard.csrf_token,
+        }
+        with urllib.request.urlopen(urllib.request.Request(
+            origin + path, data=data, headers=headers,
+        ), timeout=8) as response:
+            return response.status, response.read()
+    assert http("/database")[0] == 200
+    assert b"databasePage" in http("/assets/database.js")[1]
+    cat = json.loads(http("/api/database")[1])
+    assert cat["available"] and len(cat["objects"]) == 21
+    query_id = json.loads(http("/api/database/queries", {})[1])["query_id"]
+    identity = {key: cat[key] for key in (
+        "instance_id", "memory_revision", "protection_version"
+    )}
+    response = json.loads(http(f"/api/database/queries/{query_id}/execute", {
+        **identity, "sql": "SELECT count(*) AS n FROM diag_sessions",
+    })[1])
+    assert response["objects"] == ["diag_sessions"]
+    assert response["rows"][0][0] == {"type": "integer", "value": "0"}
+    assert model.requests == []
+    assert dashboard.host.database_console.released()
+finally:
+    assert dashboard.close()
 print(
     json.dumps(
         {
             "mode": sys.argv[1],
             "package": __import__("agent_alfred").__file__,
             "core": "PASS",
+            "database_dashboard": "PASS",
             "configured": "PASS",
             "unconfigured": "PASS",
         }
