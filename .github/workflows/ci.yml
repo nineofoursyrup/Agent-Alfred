@@ -36,7 +36,8 @@ jobs:
       - name: Install package (dev and mcp extras)
         run: uv sync --python "${{ steps.python.outputs.python-path }}" --extra dev --extra mcp --locked
 
-      - name: First Database failure and runtime evidence
+      - name: Pure interpreter control without Database imports
         run: |
-          timeout --kill-after=5s 30s .venv/bin/python -u scripts/diagnose_issue66.py
-          timeout --kill-after=5s 60s .venv/bin/python -m pytest -o faulthandler_timeout=20 -x -vv -s src/agent_alfred/evals/deterministic/test_database_boundaries.py::test_mapped_error_checks_raw_source_before_mapping src/agent_alfred/evals/deterministic/test_database_console_sql.py::test_hard_heap_limit_applies_only_in_worker_process src/agent_alfred/evals/deterministic/test_database_console_sql.py::test_packaged_worker_entry_executes_select
+          ls -l .venv/bin/python
+          readlink -f .venv/bin/python
+          timeout --kill-after=5s 10s .venv/bin/python -u -c 'import sys; print(sys.executable); print(sys.version); print("CI01_STDLIB_CONTROL_COMPLETE", flush=True)'
