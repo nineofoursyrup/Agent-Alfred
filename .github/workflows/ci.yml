@@ -48,8 +48,5 @@ jobs:
       - name: Public HTTP and worker with process-group observation
         run: timeout --kill-after=5s 30s .venv/bin/python -u scripts/diagnose_issue66.py
 
-      - name: Isolate pytest import
-        run: timeout --kill-after=5s 10s .venv/bin/python -u -c 'print("BEFORE_PYTEST_IMPORT", flush=True); import pytest; print("AFTER_PYTEST_IMPORT", pytest.__version__, flush=True)'
-
-      - name: Invoke the four failed tests directly without pytest runner
-        run: timeout --kill-after=5s 40s .venv/bin/python -u scripts/diagnose_direct.py
+      - name: First failed tests and same-engine proof with signal observation
+        run: timeout --kill-after=5s 40s .venv/bin/python -u scripts/diagnose_pytest.py

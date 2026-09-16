@@ -19,6 +19,7 @@ from agent_alfred.runtime.work import SubmitRequest
 @pytest.mark.parametrize(
     "value,code",
     [(b"bad type", "data_invalid"), ("x" * (2 * 1024 * 1024 + 1), "input_too_large")],
+    ids=["bad-type", "oversized-text"],
 )
 def test_mapped_error_checks_raw_source_before_mapping(tmp_path, value, code):
     dashboard = _dashboard(tmp_path)
@@ -210,6 +211,7 @@ def test_source_boolean_flag_rejects_out_of_domain_integer(tmp_path):
         ("x" * (2 * 1024 * 1024 + 1), "input_too_large"),
         ("unknown_state", "data_invalid"),
     ],
+    ids=["oversized-text", "unknown-state"],
 )
 def test_derived_forget_state_uses_bounded_validated_source(tmp_path, value, code):
     dashboard = _dashboard(tmp_path)
