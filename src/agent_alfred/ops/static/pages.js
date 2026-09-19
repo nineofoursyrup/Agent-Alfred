@@ -1,4 +1,5 @@
 import {topologyView} from "./topology.js";
+import {routingStatistics} from "./routing-statistics.js";
 import {aggregationForm} from "./aggregation.js";
 import { node, textBlocks } from "./dom.js";
 import { outcomeLabel } from "./runs.js";
@@ -706,8 +707,8 @@ export function modelsPage(root, csrf) {
     .then(render);
 }
 
-/** @param {HTMLElement} root @param {()=>string} csrf @param {()=>Wire} runtime @param {import("./memory.js").MemorySync} memory */
-export function behaviourPage(root, csrf, runtime, memory) {
+/** @param {HTMLElement} root @param {()=>string} csrf @param {()=>Wire} runtime @param {import("./memory.js").MemorySync} memory @param {()=>string} instance */
+export function behaviourPage(root, csrf, runtime, memory, instance) {
   const routing = node("section"); routing.setAttribute("aria-label", "消息分流");
   routing.append(node("h2", "消息分流"), node("p", "持续设置 · CLI/Web 共享。默认关闭；保存后下一 Run 生效。回复进入当前会话，静默时只记用户消息，不生成助手消息或长期记忆。"));
   root.append(routing);
@@ -727,6 +728,7 @@ export function behaviourPage(root, csrf, runtime, memory) {
     label, save, refresh, recover, notice);
   const views = [topologyView(routing, "message_routing", runtime, memory), topologyView(aggregation, "manual_aggregation", runtime, memory)];
 
+  const statistics = routingStatistics(routing, instance);
   async function read() {
     try {
       const response = await fetch('/api/behaviour');
@@ -768,5 +770,9 @@ export function behaviourPage(root, csrf, runtime, memory) {
   recover.addEventListener('click', () => void write('recover'));
   refresh.addEventListener('click', () => void read());
   void read();
-  return {close(){for (const view of views) view.close();}};
+  return {
+    sync() {statistics.sync();},
+    disconnect() {statistics.disconnect();},
+    close() {statistics.close(); for (const view of views) view.close();},
+  };
 }

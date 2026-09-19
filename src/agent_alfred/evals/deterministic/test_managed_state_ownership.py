@@ -1882,6 +1882,13 @@ def test_build_default_host_attach_publication_has_one_cleanup_owner(
             calls["state"] += 1
 
     class Connection:
+        def execute(self, statement):
+            assert statement == "PRAGMA database_list"
+            return self
+
+        def fetchone(self):
+            return (0, "main", "")
+
         def close(self) -> None:
             calls["connection"] += 1
 

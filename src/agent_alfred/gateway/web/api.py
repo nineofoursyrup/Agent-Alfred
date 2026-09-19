@@ -442,6 +442,17 @@ class DashboardApi:
         refresh = params.get("refresh") == "1"
         return 200, self._facade.models(expand=expand, refresh=refresh)
 
+    def routing_statistics(self, window="7d", *, cancelled=None):
+        from agent_alfred.routing_statistics.service import StatisticsError
+
+        try:
+            return 200, self._facade.routing_statistics(window, cancelled=cancelled)
+        except StatisticsError as exc:
+            from agent_alfred.resource_rollback import raise_if_rollback_pending
+
+            raise_if_rollback_pending(exc)
+            return exc.status, {"code": exc.code}
+
     def behaviour(self):
         return 200, self._facade.behaviour()
 

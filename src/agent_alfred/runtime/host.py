@@ -32,6 +32,7 @@ from agent_alfred.resource_rollback import (
     BackgroundCloseStep,
     OwnedLock,
     ResumableRollback,
+    RollbackSlot,
     dominant_error,
     thread_exit_confirmed,
     thread_start_effect_happened,
@@ -309,6 +310,7 @@ class RuntimeHost:
         chat_graph_factory=None,
         behaviour_store=None,
         routing_graph_builder=None,
+        routing_fallback_checkpoint=None,
         aggregation_sources=None,
         aggregation_before_send=None,
         memory_notifier=None,
@@ -318,6 +320,10 @@ class RuntimeHost:
     ):
         self._support_overrides = support_overrides or SupportOverrides()
         self._conn = conn
+        self._routing_statistics_cleanup = RollbackSlot()
+        self._routing_statistics_path = conn.execute(
+            "PRAGMA database_list"
+        ).fetchone()[2]
         self._factory = factory
         from agent_alfred.runtime.behaviour import BehaviourStore
         from agent_alfred.runtime.routing import build_routing_graph
@@ -571,6 +577,7 @@ class RuntimeHost:
             persona_tools=persona_tools,
             skill_tools=skill_tools,
             chat_graph_factory=chat_graph_factory,
+            routing_fallback_checkpoint=routing_fallback_checkpoint,
             aggregation_graph=self._aggregation_graph,
             aggregation_tools=self._aggregation_tools,
             aggregation_before_send=aggregation_before_send,
@@ -855,6 +862,7 @@ class RuntimeHost:
                 return False
             if not self._tool_history.close():
                 return False
+            self._routing_statistics_cleanup.close()
             if self._owned_resources is not None:
                 self._owned_resources.close()
             self._closed = True
@@ -1254,6 +1262,24 @@ class RuntimeHost:
             generation=self._routing_generation,
             capabilities=[capability_identity(t) for t in self._tools.declarations()],
         )
+
+    def routing_statistics(self, window="7d", *, cancelled=None):
+        from agent_alfred.routing_statistics.service import query_statistics
+
+        deadline = time.monotonic() + 2.0
+        try:
+            with self._lifecycle:
+                self._routing_statistics_cleanup.close()
+            return query_statistics(
+                self._routing_statistics_path, window=window,
+                as_of=self._clock.wall_utc(),
+                process_instance_id=self._process_instance_id, cancelled=cancelled,
+                _deadline=deadline,
+            )
+        except BaseException as exc:
+            with self._lifecycle:
+                self._routing_statistics_cleanup.capture_failure(exc)
+            raise
 
     def workflow_topology(self, workflow):
         if workflow == "message_routing":
@@ -2535,7 +2561,21 @@ class RuntimeHost:
         """Bind the retry intent in the accepted Run's own transaction."""
         request = item.request
         if request.purpose == "chat":
+            import json
+
+            from agent_alfred.routing_statistics import admission, initial_result
+
             item.routing = self.routing_snapshot()
+            settings = (
+                item.routing["settings"] if item.routing is not None
+                else self._behaviour.snapshot() if self._behaviour is not None
+                else {"status": "ok", "enabled": False}
+            )
+            conn.execute(
+                "UPDATE runs SET routing_admission=? WHERE run_id=?",
+                (json.dumps(admission(settings)), item.run_id),
+            )
+            item.memory_telemetry["routing_statistics"] = initial_result()
         if request.consolidation_trigger_run_id is not None:
             self._memory_service.consolidation.scheduling.bind_run(
                 conn, request.consolidation_trigger_run_id, request.message, item.run_id

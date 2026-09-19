@@ -459,6 +459,23 @@ class DashboardHandler(BaseHTTPRequestHandler):
             status, payload = api.connections()
             self._send(status, payload)
             return
+        if path == "/api/behaviour/routing-statistics":
+            import select
+
+            def cancelled():
+                try:
+                    ready, _, _ = select.select([self.connection], [], [], 0)
+                    return bool(ready) and self.connection.recv(
+                        1, socket.MSG_PEEK | socket.MSG_DONTWAIT
+                    ) == b""
+                except (OSError, ValueError):
+                    return True
+
+            status, payload = api.routing_statistics(
+                params.get("window", "7d"), cancelled=cancelled
+            )
+            self._send(status, payload)
+            return
         if path == "/api/behaviour":
             status, payload = api.behaviour()
             self._send(status, payload)

@@ -21,21 +21,21 @@ def test_ce04_registry_is_captured_once_and_next_call_uses_replacement(monkeypat
         markers.append("B")
         conn.execute("CREATE TABLE replacement (value TEXT)")
 
-    registry_b = (*original, schema.Migration(19, replacement, ("replacement",)))
+    registry_b = (*original, schema.Migration(20, replacement, ("replacement",)))
 
     def switch(conn):
-        markers.append("A19")
+        markers.append("A20")
         conn.execute("CREATE TABLE captured (value TEXT)")
         monkeypatch.setattr(schema, "MIGRATIONS", registry_b)
 
     def tail(conn):
-        markers.append("A20")
+        markers.append("A21")
         conn.execute("INSERT INTO captured VALUES ('tail ran')")
 
     registry_a = (
         *original,
-        schema.Migration(19, switch, ("captured",)),
-        schema.Migration(20, tail, ()),
+        schema.Migration(20, switch, ("captured",)),
+        schema.Migration(21, tail, ()),
     )
     monkeypatch.setattr(schema, "MIGRATIONS", registry_a)
     with sqlite3.connect(":memory:") as conn:
@@ -46,22 +46,22 @@ def test_ce04_registry_is_captured_once_and_next_call_uses_replacement(monkeypat
     conn.close()
     with sqlite3.connect(":memory:") as conn:
         schema.migrate(conn)
-        assert markers == ["A19", "A20"]
+        assert markers == ["A20", "A21"]
         assert _rows(conn, "captured") == [("tail ran",)]
+        assert conn.execute(
+            "SELECT max(version) FROM schema_migrations"
+        ).fetchone() == (21,)
+    conn.close()
+    with sqlite3.connect(":memory:") as conn:
+        schema.migrate(conn)
+        assert markers == ["A20", "A21", "B"]
+        assert _rows(conn, "replacement") == []
         assert conn.execute(
             "SELECT max(version) FROM schema_migrations"
         ).fetchone() == (20,)
     conn.close()
-    with sqlite3.connect(":memory:") as conn:
-        schema.migrate(conn)
-        assert markers == ["A19", "A20", "B"]
-        assert _rows(conn, "replacement") == []
-        assert conn.execute(
-            "SELECT max(version) FROM schema_migrations"
-        ).fetchone() == (19,)
-    conn.close()
     assert schema.MIGRATION_VERSIONS is versions
-    assert schema.LATEST_MIGRATION_VERSION == 18
+    assert schema.LATEST_MIGRATION_VERSION == 19
 
 
 
@@ -104,7 +104,7 @@ def test_ce07_rejected_databases_retain_all_schema_rows_and_ledger(initial):
             "empty-ledger": [],
             "gap": [1, 3],
             "illegal": [0],
-            "future": list(range(1, 20)),
+            "future": list(range(1, 21)),
         }[initial]
         conn.executemany(
             "INSERT INTO schema_migrations VALUES (?, 'original timestamp')",
@@ -146,7 +146,7 @@ def test_ce02_control_failure_rolls_back_only_pending_migrations(
         "MIGRATIONS",
         (
             *schema.MIGRATIONS,
-            schema.Migration(19, fail, ("partial", "partial_idx")),
+            schema.Migration(20, fail, ("partial", "partial_idx")),
         ),
     )
     with pytest.raises(KeyboardInterrupt) as raised:

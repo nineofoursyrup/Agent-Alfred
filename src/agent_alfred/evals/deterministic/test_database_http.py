@@ -2120,3 +2120,35 @@ def test_execute_budget_covers_later_stages(tmp_path, stage):
         _wake_fifo(hold)
         assert dashboard.close()
 
+
+
+def test_cancel_read_ready_after_pipe_release_keeps_http_409(tmp_path, monkeypatch):
+    """The cancel owner can close a ready pipe before communicate reads its fd."""
+    import subprocess
+
+    from agent_alfred.database_console.service import DatabaseConsole
+
+    stopping, closed = threading.Event(), threading.Event()
+    kill, reap = DatabaseConsole._kill, DatabaseConsole._reap
+    select_ready = subprocess._PopenSelector.select
+
+    def stop(*args, **kwargs):
+        stopping.set()
+        return kill(*args, **kwargs)
+
+    def release(*args, **kwargs):
+        result = reap(*args, **kwargs)
+        closed.set()
+        return result
+
+    def selected(*args, **kwargs):
+        result = select_ready(*args, **kwargs)
+        if stopping.is_set():
+            assert closed.wait(2)
+        return result
+
+    monkeypatch.setattr(DatabaseConsole, "_kill", stop)
+    monkeypatch.setattr(DatabaseConsole, "_reap", release)
+    monkeypatch.setattr(subprocess._PopenSelector, "select", selected)
+    test_cancel_running_extract_releases_within_one_second(tmp_path)
+    assert stopping.is_set() and closed.is_set()

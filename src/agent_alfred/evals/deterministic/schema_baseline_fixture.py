@@ -11,6 +11,10 @@ from pathlib import Path
 
 from agent_alfred import schema
 
+# This #35 differential checks the published v1-v18 contract. New migrations
+# have their own upgrade/data-preservation tests and must not rewrite this one.
+schema.MIGRATIONS = tuple(m for m in schema.MIGRATIONS if m.version <= 18)
+
 
 def snapshot(conn, old_versions):
     objects = conn.execute(
@@ -135,8 +139,13 @@ def contract():
             if name.isupper() and isinstance(value, (str, int, tuple, frozenset, dict)):
                 if name == "MIGRATIONS":
                     value = [
-                        (m.version, m.apply.__name__, m.managed_objects) for m in value
+                        (m.version, m.apply.__name__, m.managed_objects)
+                        for m in value if m.version <= 18
                     ]
+                elif name == "MIGRATION_VERSIONS":
+                    value = tuple(v for v in value if v <= 18)
+                elif name == "LATEST_MIGRATION_VERSION":
+                    value = 18
                 elif isinstance(value, frozenset):
                     value = sorted(value)
                 constants[name] = value

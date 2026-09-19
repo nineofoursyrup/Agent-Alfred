@@ -674,6 +674,15 @@ class DatabaseConsole:
         except subprocess.TimeoutExpired:
             self._kill(record, process, reason="query_timeout")
             raise ConsoleError("query_timeout") from None
+        except OSError, ValueError:
+            # A concurrent stop can close a pipe after communicate selected its
+            # fd. Preserve the recorded cancellation, not an incidental EBADF.
+            with self._lock:
+                stopped = record.error if record.stop.is_set() else None
+            if stopped not in {"query_cancelled", "query_timeout", "data_invalidated"}:
+                raise
+            self._reap(record, process, stopped)
+            raise ConsoleError(stopped) from None
         with self._lock:
             stopped = record.error
             status = record.status

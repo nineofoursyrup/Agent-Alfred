@@ -296,3 +296,8 @@ textarea {
 .topology li { margin-bottom: .65rem; }
 .topology button:focus-visible { outline: 3px solid #276be8; outline-offset: 2px; }
 @media (max-width: 600px) { .topology { padding: .4rem; } .topology-canvas { height: 260px; } .topology ul { padding-left: 1.2rem; } }
+
+.routing-statistics { overflow-wrap: anywhere; min-width: 0; }
+.routing-statistics summary { cursor: pointer; font-weight: 600; }
+.routing-statistics table { width: 100%; table-layout: fixed; }
+.routing-statistics th, .routing-statistics td { padding: .4rem; text-align: left; vertical-align: top; }

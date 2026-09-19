@@ -213,6 +213,7 @@ class RunExecutor:
         persona_tools=None,
         skill_tools=None,
         chat_graph_factory=None,
+        routing_fallback_checkpoint=None,
         aggregation_graph=None,
         aggregation_tools=None,
         aggregation_before_send=None,
@@ -221,6 +222,7 @@ class RunExecutor:
         self._aggregation_graph = aggregation_graph
         self._aggregation_tools = aggregation_tools
         self._chat_graph_factory = chat_graph_factory
+        self._routing_fallback_checkpoint = routing_fallback_checkpoint
         self._memory_service = memory_service
         self._skill_tools = skill_tools
         self._persona_tools = persona_tools
@@ -547,7 +549,16 @@ class RunExecutor:
                     fallback_start = len(all_results)
                     routing_facts = item.memory_telemetry.get("routing")
                     if routing_facts is not None:
+                        if self._routing_fallback_checkpoint is not None:
+                            self._routing_fallback_checkpoint("before")
                         routing_facts["fallback"]["entered"] = True
+                        stats = item.memory_telemetry.get("routing_statistics")
+                        if stats is not None:
+                            stats[
+                                "fallback" if stats["graph_entered"] else "bypass"
+                            ] = True
+                        if self._routing_fallback_checkpoint is not None:
+                            self._routing_fallback_checkpoint("entered")
                     loop_result = self._assistant.respond(
                         task,
                         client=ledger,
@@ -707,6 +718,9 @@ class RunExecutor:
                         else "forced_stop"
                     )
                     fallback.update(decision="blocked", reason=reason)
+                    stats = item.memory_telemetry.get("routing_statistics")
+                    if stats is not None:
+                        stats["blocked"] = reason
                     routing_facts.setdefault("error", error)
             if self._file_tools is not None:
                 self._file_tools.set_run_deadline(float("inf"))
