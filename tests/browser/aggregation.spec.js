@@ -111,12 +111,14 @@ test('aggregation CE-08: dropped accepted response does not resubmit or move Ses
     await expect.poll(() => page.evaluate(() => sessionStorage.getItem('alfred.session'))).not.toBe(session);
     const second = await page.evaluate(() => sessionStorage.getItem('alfred.session'));
     expect(second).not.toBe(session);
+    await server.send('hold-recording');
     let sent = 0;
+    let accepted;
     await page.route('**/api/runs', async route => {
       if (route.request().method() !== 'POST') return route.continue();
       sent++;
       const response = await route.fetch();
-      await acceptedRun(response, route.request().postDataJSON());
+      accepted = await acceptedRun(response, route.request().postDataJSON());
       await route.abort();
     });
     await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
@@ -124,9 +126,20 @@ test('aggregation CE-08: dropped accepted response does not resubmit or move Ses
     await expect(page.locator('#messages').getByText('已验证草稿 [[S1]]',{exact:true})).toHaveCount(0);
     await page.reload();
     const other = await api(page.request,server.origin);
-    const runs = await other.get('/api/runs?filter=chat&limit=25');
+    const pending = await other.get('/api/runs?filter=chat&limit=25');
+    expect(pending.status, JSON.stringify(pending)).toBe(200);
+    expect(pending.body.non_terminal).toMatchObject({run_id:accepted.run_id, session_id:session});
+    expect(pending.body.runs.some(r => r.run_id === accepted.run_id)).toBe(false);
+    await server.send('release-recording');
+    let runs;
+    await expect.poll(async () => {
+      runs = await other.get('/api/runs?filter=chat&limit=25');
+      expect(runs.status, JSON.stringify(runs)).toBe(200);
+      return runs.body.runs.find(r => r.run_id === accepted.run_id);
+    }).toMatchObject({run_id:accepted.run_id, phase:'finished', outcome:'completed'});
     const drafts = runs.body.runs.filter(r => r.purpose === 'aggregation');
     expect(drafts).toHaveLength(1);
+    expect(drafts[0].run_id).toBe(accepted.run_id);
     expect(drafts[0].session_id).toBe(session);
     expect(sent).toBe(1);
   } finally { await server.close(); }

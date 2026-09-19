@@ -45,9 +45,22 @@ export async function memoryServer({threshold = 10, prepare, spawnProcess = spaw
       throw new Error(`Memory server closed (code=${code}, signal=${signal}): ${stderr}`);
   }
   async function send(command) {
-    const done = new Promise(resolve => waiting.push({line: "ok " + command, resolve}));
-    server.stdin.write(command + "\n");
-    await done;
+    let waiter;
+    const done = new Promise(resolve => {
+      waiter = {line: "ok " + command, resolve};
+      waiting.push(waiter);
+    });
+    try {
+      if (server.exitCode === null && server.signalCode === null)
+        server.stdin.write(command + "\n");
+      await Promise.race([
+        done,
+        closed.then(([code, signal]) => {throw new Error(`Memory server closed during command ${command} (code=${code}, signal=${signal}): ${stderr}`);}),
+      ]);
+    } finally {
+      const index = waiting.indexOf(waiter);
+      if (index >= 0) waiting.splice(index, 1);
+    }
   }
   async function close() {
     try {

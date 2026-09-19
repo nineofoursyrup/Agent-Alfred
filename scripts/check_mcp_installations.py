@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -204,7 +205,7 @@ def main():
                     if k not in ("PYTHONPATH", "PYTHONHOME")
                 }
                 subprocess.run(
-                    ["uv", "venv", "--python", "3.14", str(root / "env")],
+                    ["uv", "venv", "--python", sys.executable, str(root / "env")],
                     check=True,
                     env=env,
                 )

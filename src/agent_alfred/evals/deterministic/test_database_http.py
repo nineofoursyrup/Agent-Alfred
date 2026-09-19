@@ -2,6 +2,7 @@
 
 import json
 import os
+import select
 import socket
 import threading
 import time
@@ -23,6 +24,24 @@ def _wake_fifo(path):
         os.close(os.open(path, os.O_WRONLY | os.O_NONBLOCK))
     except OSError:
         pass
+
+
+def _await_fifo(ready, result):
+    """Bound a real stage handshake; retain the HTTP outcome if it never arrives."""
+    arrived = os.open(ready, os.O_RDONLY | os.O_NONBLOCK)
+    if not select.select([arrived], [], [], 4)[0]:
+        os.close(arrived)
+        raise AssertionError(f"Database stage not reached: {result!r}")
+    return arrived
+
+
+def _issue(dashboard):
+    response = _post(dashboard, "/api/database/queries", {})
+    status, body, _head = response
+    assert status == 200, response
+    assert body["instance_id"] == dashboard.instance_id, response
+    assert isinstance(body["query_id"], str) and body["query_id"], response
+    return body["query_id"]
 
 
 def _exchange(port, raw, timeout):
@@ -198,7 +217,7 @@ def test_sql_rejected_does_not_echo_sql_or_write_source(tmp_path):
         catalog = json.loads(
             _request(dashboard.port, _get(dashboard.port, "/api/database"))[1]
         )
-        query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        query_id = _issue(dashboard)
         status, body, _head = _post(
             dashboard,
             f"/api/database/queries/{query_id}/execute",
@@ -225,7 +244,7 @@ def test_second_execute_is_busy_and_reused_handle_is_used(tmp_path):
         catalog = json.loads(
             _request(dashboard.port, _get(dashboard.port, "/api/database"))[1]
         )
-        first = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        first = _issue(dashboard)
         status, result, _head = _post(
             dashboard,
             f"/api/database/queries/{first}/execute",
@@ -267,7 +286,7 @@ def test_unknown_fields_rejected(tmp_path):
         catalog = json.loads(
             _request(dashboard.port, _get(dashboard.port, "/api/database"))[1]
         )
-        query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        query_id = _issue(dashboard)
         status, body, _head = _post(
             dashboard,
             f"/api/database/queries/{query_id}/execute",
@@ -286,14 +305,16 @@ def test_unknown_fields_rejected(tmp_path):
 
 
 def _catalog(dashboard):
-    return json.loads(
-        _request(dashboard.port, _get(dashboard.port, "/api/database"))[1]
-    )
+    head, raw = _request(dashboard.port, _get(dashboard.port, "/api/database"))
+    body = json.loads(raw)
+    assert head.startswith(b"HTTP/1.1 200"), (head, body)
+    assert body["instance_id"] == dashboard.instance_id, (head, body)
+    return body
 
 
 def _execute(dashboard, sql, catalog=None, timeout=None):
     catalog = catalog or _catalog(dashboard)
-    query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+    query_id = _issue(dashboard)
     return _post(
         dashboard,
         f"/api/database/queries/{query_id}/execute",
@@ -382,7 +403,7 @@ def test_cancel_unused_handle_blocks_execute(tmp_path):
     dashboard = _dashboard(tmp_path)
     try:
         catalog = _catalog(dashboard)
-        query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        query_id = _issue(dashboard)
         status, body, _head = _post(
             dashboard, f"/api/database/queries/{query_id}/cancel", {}
         )
@@ -407,7 +428,7 @@ def test_stale_protection_version_invalidates(tmp_path):
     dashboard = _dashboard(tmp_path)
     try:
         catalog = _catalog(dashboard)
-        query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        query_id = _issue(dashboard)
         dashboard.host._redactor.remember("another-loaded-secret", credential=True)
         status, body, _head = _post(
             dashboard,
@@ -451,7 +472,7 @@ def test_second_task_is_busy_while_first_is_at_extract_barrier(tmp_path):
     os.mkfifo(ready)
     try:
         catalog = _catalog(dashboard)
-        query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        query_id = _issue(dashboard)
         console = dashboard.host.database_console
         console._records[query_id].barriers = {"extract": str(hold)}
         result = {}
@@ -470,7 +491,7 @@ def test_second_task_is_busy_while_first_is_at_extract_barrier(tmp_path):
 
         worker = threading.Thread(target=run)
         worker.start()
-        arrived = os.open(ready, os.O_RDONLY)
+        arrived = _await_fifo(ready, result)
         busy = _execute(dashboard, "SELECT 2", catalog)
         release = os.open(hold, os.O_WRONLY)
         os.close(arrived)
@@ -510,7 +531,7 @@ def test_unused_handle_expires_on_monotonic_clock(tmp_path):
     try:
         catalog = _catalog(dashboard)
         del catalog
-        query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        query_id = _issue(dashboard)
         console = dashboard.host.database_console
         record = console._records[query_id]
         console._clock = FakeClock(monotonic_value=record.expires + 1)
@@ -575,7 +596,7 @@ def test_writer_priority_stops_source_extract(tmp_path):
     host = dashboard.host
     try:
         catalog = _catalog(dashboard)
-        query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        query_id = _issue(dashboard)
         host.database_console._records[query_id].barriers = {"extract": str(hold)}
         result = {}
 
@@ -593,7 +614,7 @@ def test_writer_priority_stops_source_extract(tmp_path):
 
         worker = threading.Thread(target=run)
         worker.start()
-        arrived = os.open(ready, os.O_RDONLY)
+        arrived = _await_fifo(ready, result)
         with host._store.transaction() as conn:
             conn.execute("BEGIN IMMEDIATE")
             conn.commit()
@@ -672,7 +693,7 @@ def test_slow_request_body_hits_one_second_io_limit(tmp_path):
     dashboard = _dashboard(tmp_path)
     try:
         catalog = _catalog(dashboard)
-        query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        query_id = _issue(dashboard)
         payload = json.dumps(
             {
                 "instance_id": catalog["instance_id"],
@@ -726,11 +747,11 @@ def test_invalidate_waits_for_in_flight_send_copy(tmp_path):
             try:
                 result["query"] = _execute(dashboard, "SELECT 1 AS n")
             except Exception as exc:
-                result["error"] = type(exc).__name__
+                result["error"] = repr(exc)
 
         worker = threading.Thread(target=run)
         worker.start()
-        arrived = os.open(ready, os.O_RDONLY)
+        arrived = _await_fifo(ready, result)
         assert console.released() is False
         assert console._sends
         console.invalidate_and_wait()
@@ -778,11 +799,11 @@ def test_forget_waits_until_send_copy_released(tmp_path):
             try:
                 result["query"] = _execute(dashboard, "SELECT fact FROM diag_facts")
             except Exception as exc:
-                result["error"] = type(exc).__name__
+                result["error"] = repr(exc)
 
         worker = threading.Thread(target=run)
         worker.start()
-        arrived = os.open(ready, os.O_RDONLY)
+        arrived = _await_fifo(ready, result)
         assert console.released() is False
         deleted = host._memory_service.execute(
             {
@@ -1054,7 +1075,7 @@ def test_snapshot_does_not_mix_objects_when_write_interleaves(tmp_path):
     host = dashboard.host
     try:
         catalog = _catalog(dashboard)
-        query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        query_id = _issue(dashboard)
         host.database_console._records[query_id].barriers = {
             "mid_extract": str(hold)
         }
@@ -1078,7 +1099,7 @@ def test_snapshot_does_not_mix_objects_when_write_interleaves(tmp_path):
 
         worker = threading.Thread(target=run)
         worker.start()
-        arrived = os.open(ready, os.O_RDONLY)
+        arrived = _await_fifo(ready, result)
         _write(
             host,
             lambda conn: insert_session(
@@ -1113,7 +1134,7 @@ def test_execute_budget_times_out_without_releasing_extract(tmp_path):
     os.mkfifo(ready)
     try:
         catalog = _catalog(dashboard)
-        query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        query_id = _issue(dashboard)
         dashboard.host.database_console._records[query_id].barriers = {
             "extract": str(hold)
         }
@@ -1147,7 +1168,7 @@ def test_cancel_running_extract_releases_within_one_second(tmp_path):
     console = dashboard.host.database_console
     try:
         catalog = _catalog(dashboard)
-        query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        query_id = _issue(dashboard)
         console._records[query_id].barriers = {"extract": str(hold)}
         result = {}
 
@@ -1166,7 +1187,7 @@ def test_cancel_running_extract_releases_within_one_second(tmp_path):
 
         worker = threading.Thread(target=run)
         worker.start()
-        arrived = os.open(ready, os.O_RDONLY)
+        arrived = _await_fifo(ready, result)
         started = time.monotonic()
         cancelled = _post(
             dashboard, f"/api/database/queries/{query_id}/cancel", {}
@@ -1202,7 +1223,7 @@ def test_kill_failure_pauses_new_queries(tmp_path, monkeypatch):
     monkeypatch.setattr(os, "killpg", boom)
     try:
         catalog = _catalog(dashboard)
-        query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        query_id = _issue(dashboard)
         console._records[query_id].barriers = {"extract": str(hold)}
         result = {}
 
@@ -1221,7 +1242,7 @@ def test_kill_failure_pauses_new_queries(tmp_path, monkeypatch):
 
         worker = threading.Thread(target=run)
         worker.start()
-        arrived = os.open(ready, os.O_RDONLY)
+        arrived = _await_fifo(ready, result)
         console.invalidate_and_wait()
         assert console._cleanup_failed is True
         issued = _post(dashboard, "/api/database/queries", {})
@@ -1270,7 +1291,7 @@ def test_lost_execute_body_status_has_no_result(tmp_path):
     dashboard = _dashboard(tmp_path)
     try:
         catalog = _catalog(dashboard)
-        query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        query_id = _issue(dashboard)
         payload = json.dumps(
             {
                 "instance_id": catalog["instance_id"],
@@ -1389,12 +1410,12 @@ def test_resource_counts_return_after_success_reject_cancel_and_timeout(
         assert _execute(dashboard, "SELECT 1")[0] == 200
         assert _execute(dashboard, "SELECT FROM")[0] == 400
         catalog = _catalog(dashboard)
-        query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        query_id = _issue(dashboard)
         cancelled = _post(
             dashboard, f"/api/database/queries/{query_id}/cancel", {}
         )
         assert cancelled[0] == 200
-        query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        query_id = _issue(dashboard)
         console._records[query_id].barriers = {"extract": str(hold)}
         status, body, _head = _post(
             dashboard,
@@ -1507,7 +1528,7 @@ def test_final_success_json_never_exceeds_two_mib_on_the_wire(tmp_path):
 def test_slow_drip_request_body_is_cut_at_one_second(tmp_path):
     dashboard = _dashboard(tmp_path)
     try:
-        query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        query_id = _issue(dashboard)
         header = (
             f"POST /api/database/queries/{query_id}/execute HTTP/1.1\r\n"
             f"Host: localhost:{dashboard.port}\r\n"
@@ -1528,7 +1549,7 @@ def test_slow_drip_request_body_is_cut_at_one_second(tmp_path):
                     sock.settimeout(3)
                     result["data"] = sock.recv(64)
                 except OSError as exc:
-                    result["error"] = type(exc).__name__
+                    result["error"] = repr(exc)
                 result["elapsed"] = time.monotonic() - started
                 done.set()
 
@@ -1677,7 +1698,7 @@ def test_protection_change_during_extract_invalidates(tmp_path):
     host = dashboard.host
     try:
         catalog = _catalog(dashboard)
-        query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        query_id = _issue(dashboard)
         host.database_console._records[query_id].barriers = {"extract": str(hold)}
         result = {}
 
@@ -1696,7 +1717,7 @@ def test_protection_change_during_extract_invalidates(tmp_path):
 
         worker = threading.Thread(target=run)
         worker.start()
-        arrived = os.open(ready, os.O_RDONLY)
+        arrived = _await_fifo(ready, result)
         host._redactor.remember("fresh-loaded-secret", credential=True)
         _wake_fifo(hold)
         os.close(arrived)
@@ -1751,7 +1772,7 @@ def test_begin_send_rejects_stale_protection_before_emit(tmp_path):
                     dashboard, "SELECT 'late-protection-secret' AS x"
                 )
             except Exception as exc:
-                result["error"] = type(exc).__name__
+                result["error"] = repr(exc)
 
         worker = threading.Thread(target=query)
         worker.start()
@@ -1878,7 +1899,7 @@ def test_remember_notify_failure_still_invalidates_old_handle(tmp_path):
     host = dashboard.host
     try:
         catalog = _catalog(dashboard)
-        query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        query_id = _issue(dashboard)
         inner = host._redactor._on_change
 
         def boom():
@@ -2075,7 +2096,7 @@ def test_execute_budget_covers_later_stages(tmp_path, stage):
     os.mkfifo(ready)
     try:
         catalog = _catalog(dashboard)
-        query_id = _post(dashboard, "/api/database/queries", {})[1]["query_id"]
+        query_id = _issue(dashboard)
         dashboard.host.database_console._records[query_id].barriers = {
             stage: str(hold)
         }

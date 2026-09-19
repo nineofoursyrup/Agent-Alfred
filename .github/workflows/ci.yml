@@ -21,13 +21,19 @@ jobs:
           # Offline routing regressions compare against a pinned ancestor.
           fetch-depth: 0
 
+      - name: Install CPython (Database requires its shared SQLite C API)
+        uses: actions/setup-python@v6
+        id: python
+        with:
+          python-version: "3.14"
+
       - name: Install uv (Python 3.14)
         uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.14"
 
       - name: Install package (dev and mcp extras)
-        run: uv sync --extra dev --extra mcp --locked
+        run: uv sync --python "${{ steps.python.outputs.python-path }}" --extra dev --extra mcp --locked
 
       - name: Lint
         run: uv run ruff check

@@ -332,14 +332,44 @@ def test_hard_heap_limit_applies_only_in_worker_process():
     from agent_alfred.database_console.sqlite_limits import current_hard_heap_limit
 
     before = current_hard_heap_limit()
-    script = (
-        "from agent_alfred.database_console.sqlite_limits import "
-        "apply_heap_limit, current_hard_heap_limit\n"
-        "apply_heap_limit()\n"
-        "print(current_hard_heap_limit())\n"
+    script = """
+import json
+from agent_alfred.database_console.sqlite_limits import (
+    apply_heap_limit, current_hard_heap_limit,
+)
+from agent_alfred.database_console.project import open_dataset
+from agent_alfred.database_console.cursor import DATASET_URI, query
+apply_heap_limit()
+conn = open_dataset(DATASET_URI)
+try:
+    conn.execute("INSERT INTO diag_sessions(session_id, created_at, activity_revision) "
+                 "VALUES ('same-engine', '2026-09-16T00:00:00Z', 0)")
+    conn.commit()
+    with query("SELECT session_id FROM diag_sessions") as cursor:
+        row = cursor.fetchone()
+        assert cursor.fetchone() is None
+    print(json.dumps({
+        "native_heap": current_hard_heap_limit(),
+        "dbapi_heap": conn.execute("PRAGMA hard_heap_limit").fetchone()[0],
+        "temp_store": conn.execute("PRAGMA temp_store").fetchone()[0],
+        "shared_row": row,
+    }))
+finally:
+    conn.close()
+"""
+    import json
+
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        env={}, capture_output=True, text=True, timeout=10
     )
-    out = subprocess.check_output([sys.executable, "-c", script], env={})
-    assert int(out.strip()) == SQLITE_HEAP_LIMIT
+    assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
+    assert json.loads(result.stdout) == {
+        "native_heap": SQLITE_HEAP_LIMIT,
+        "dbapi_heap": SQLITE_HEAP_LIMIT,
+        "temp_store": 2,
+        "shared_row": ["same-engine"],
+    }
     assert current_hard_heap_limit() == before
 
 
