@@ -278,10 +278,20 @@ test("real deletion rejects an old HTTP response delayed at the browser boundary
     await editor.fill("SELECT fact FROM diag_facts");
     await page.getByRole("button", {name: "执行", exact: true}).click();
     await ready;
-    const verified = page.waitForResponse(r => r.url().endsWith("/api/database"));
-    expect((await other.command({operation_id: "late-delete", kind: "semantic", action: "delete",
-      expected_version: 1, payload: {id: saved.body.result.memory_id}})).body.result.status).toBe("deleted");
-    expect((await verified).status()).toBe(200);
+    const deleted = await other.command({operation_id: "late-delete", kind: "semantic", action: "delete",
+      expected_version: 1, payload: {id: saved.body.result.memory_id}});
+    expect(deleted.body.result.status).toBe("deleted");
+    expect(deleted.body.forgetting.state).toBe("complete");
+    // Cleanup publishes intermediate revisions while writes can make reads
+    // unavailable. Verify the settled revision and the page's own recheck.
+    const verified = await other.get("/api/database");
+    expect(verified.status).toBe(200);
+    expect(verified.body).toMatchObject({available: true,
+      instance_id: deleted.body.process_instance_id,
+      memory_revision: String(deleted.body.memory_revision)});
+    await expect(page.getByRole("region", {name: "诊断对象目录"})).toContainText(
+      `记忆修订 ${verified.body.memory_revision} · 保护规则版本 ${verified.body.protection_version}`);
+    await expect(page.getByText("可执行", {exact: true})).toBeVisible();
     resume();
     await page.unrouteAll({behavior: "wait"});
     await expect(result).toBeEmpty();

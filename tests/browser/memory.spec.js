@@ -4,17 +4,21 @@ import {controlledEventSource, emit, state} from "./transport.js";
 
 // Records, from this point on, whether a text was ever rendered and whether
 // it came back after having been hidden -- not only whether it is absent now.
-async function watchText(page, text) {
-  await page.evaluate(text => {
+async function watchText(page, text, operationId = null) {
+  await page.evaluate(({text, operationId}) => {
     const seen = window.watched = {shown: false, hidden: false, returned: false};
     new MutationObserver(() => {
-      if (!document.body.textContent.includes(text)) seen.hidden = true;
+      // Receipt rows are replaced on render. Resolve the same operation on
+      // every mutation; another receipt's legitimate error is unrelated.
+      const root = operationId === null ? document.body
+        : document.querySelector(`article[data-operation="${CSS.escape(operationId)}"]`);
+      if (!root?.textContent.includes(text)) seen.hidden = true;
       else {
         seen.shown = true;
         if (seen.hidden) seen.returned = true;
       }
     }).observe(document.body, {childList: true, subtree: true, characterData: true});
-  }, text);
+  }, {text, operationId});
   return () => page.evaluate(() => window.watched);
 }
 
@@ -2065,7 +2069,7 @@ test("G2 v6: late abort is ignored and the coalesced query runs", async ({page})
     await scopes.getByRole("button", {name: "确认隔离所选范围", exact: true}).click();
     await expect.poll(() => page.evaluate(() => JSON.parse(sessionStorage.getItem("alfred.memory.operations")).find(e => e.action === "delete")?.forgetting?.state)).toBe("complete");
     await expect(receipt).toContainText("遗忘完成：条目、索引与受管副本均已清理并核实。");
-    const watched = await watchText(page, "清理进度暂不可读取");
+    const watched = await watchText(page, "清理进度暂不可读取", await receipt.getAttribute("data-operation"));
     release();
     await expect.poll(() => delivered).toBe(true);
     await expect.poll(() => reads).toBeGreaterThan(1);
@@ -2119,7 +2123,7 @@ test("G2 v6: late truncated-json is ignored and the coalesced query runs", async
     await scopes.getByRole("button", {name: "确认隔离所选范围", exact: true}).click();
     await expect.poll(() => page.evaluate(() => JSON.parse(sessionStorage.getItem("alfred.memory.operations")).find(e => e.action === "delete")?.forgetting?.state)).toBe("complete");
     await expect(receipt).toContainText("遗忘完成：条目、索引与受管副本均已清理并核实。");
-    const watched = await watchText(page, "清理进度暂不可读取");
+    const watched = await watchText(page, "清理进度暂不可读取", await receipt.getAttribute("data-operation"));
     release();
     await expect.poll(() => delivered).toBe(true);
     await expect.poll(() => reads).toBeGreaterThan(1);
