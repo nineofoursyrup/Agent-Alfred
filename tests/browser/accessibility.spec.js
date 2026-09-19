@@ -33,6 +33,8 @@ test("composition Enter does not send, Shift Enter inserts a newline, normal Ent
   await page.getByRole("button", { name: "新建会话", exact: true }).click();
   const input = page.getByRole("textbox", { name: "消息" });
   await input.fill("中文输入");
+  // Keyboard presses do not wait for the new session's SSE admission state.
+  await expect(page.getByRole("button", { name: "发送", exact: true })).toBeEnabled();
   const submissions = [];
   page.on("request", (request) => {
     if (request.method() === "POST" && request.url().endsWith("/api/runs"))
