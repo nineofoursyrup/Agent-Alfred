@@ -62,9 +62,12 @@ test('MCP SPEC-01 real HTTP recovery from invalid startup and stale preview',asy
     await a.goto(origin+'/connections');
     await expect(a.getByRole('region',{name:'MCP 服务器'})).toContainText('configuration_invalid');
     await control(s,{enabled:true});
+    const staleApply = await a.getByRole('button',{name:'应用 mcp.json',exact:true}).elementHandle();
     await a.getByRole('button',{name:'应用 mcp.json',exact:true}).click();
     await expect(a.getByText('Error: mcp_conflict',{exact:true})).toBeVisible();
     expect((await control(s)).requests).toHaveLength(0);
+    // The conflict notice precedes the refreshed preview and its new token.
+    await expect.poll(() => staleApply.evaluate(node => node.isConnected)).toBe(false);
     await a.getByRole('button',{name:'应用 mcp.json',exact:true}).click();
     await expect(a.locator('[data-mcp-server="test"]')).toContainText('已连接');
     expect((await control(s)).requests.filter(r=>r.method==='initialize')).toHaveLength(1);
