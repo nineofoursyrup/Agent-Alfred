@@ -445,6 +445,16 @@ class DashboardApi:
     def behaviour(self):
         return 200, self._facade.behaviour()
 
+    def workflow_topology(self, params):
+        workflow = params.get("workflow")
+        if workflow not in {"message_routing", "manual_aggregation"}:
+            return 400, {"code": "unknown_workflow"}
+        try:
+            return 200, self._facade.workflow_topology(workflow)
+        except Exception:
+            # No exception details, runtime body or credentials cross this seam.
+            return 503, {"code": "topology_read_failed"}
+
     def mutate_behaviour(self, body):
         from agent_alfred.runtime.behaviour import BehaviourError
 
