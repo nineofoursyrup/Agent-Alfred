@@ -310,12 +310,18 @@ for (const restarted of [false, true]) {
         const failed = a.waitForResponse(response => response.url().endsWith("/api/connections/reread"));
         await a.getByRole("button", {name:"重新读取 .env"}).click();
         expect((await failed).status()).toBe(400);
-        const refreshed = b.waitForResponse(response => response.url().endsWith("/api/connections"));
+        // An earlier SSE-triggered read may still be arriving. Bind the next
+        // request after the failed reread, then inspect that exact response.
+        const refreshed = b.waitForRequest(request => request.method() === "GET"
+          && request.url().endsWith("/api/connections"));
         await b.evaluate(() => window.dispatchEvent(new Event("focus")));
-        const snapshot = await (await refreshed).json();
+        const response = await (await refreshed).response();
+        expect(response.status()).toBe(200);
+        const snapshot = await response.json();
         expect(snapshot.integration_application).toBe("not_applied");
         if (restarted) expect(snapshot.process_instance_id).not.toBe(prior.process_instance_id);
         else {
+          expect(snapshot.process_instance_id).toBe(prior.process_instance_id);
           expect(snapshot.integration_revision).toBe(prior.integration_revision);
           expect(snapshot.connections_revision).toBeGreaterThan(prior.connections_revision);
         }
