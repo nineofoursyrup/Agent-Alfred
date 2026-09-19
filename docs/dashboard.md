@@ -1,6 +1,6 @@
 # Dashboard 开发与验证
 
-页面通过现有 Dashboard 服务提供，入口为 `/inbox`，运行页为 `/runs`，记忆页为 `/memory`。
+页面通过现有 Dashboard 服务提供，入口为 `/inbox`，运行页为 `/runs`，记忆页为 `/memory`，只读 SQL 诊断页为 `/database`。
 MainBar 属于壳层；页面导航不会新建 EventSource。Session 和草稿存放在
 当前标签页的 sessionStorage；新建和继续会话均需显式操作。
 
@@ -51,6 +51,13 @@ Token／费用只取持久化 Attempt 账目；缺失过程时以独立账目区
 读取上限为每 Run 32 MiB，超过时明确不加载，不返回截断冒充完整过程。
 它与持久 `trace_incomplete`、`outcome`、`recording_state` 分开显示。
 缺失 trace 不推断 Run 失败，也不凭 trace 推断已保存。
+
+## Database 只读 SQL 控制台
+
+规范见 #65 Resolution r1 与 [ADR-0040](adr/0040-protected-diagnostic-dataset.md)。页面 `/database` 固定查询当前实例受管库；用户 SQL 只在预先保护的短命诊断数据集上运行。
+
+HTTP：`GET /api/database`，`POST /api/database/queries`，`POST /api/database/queries/{id}/execute`，`POST /api/database/queries/{id}/cancel`，`GET /api/database/queries/{id}`。SQL 只走 POST，经过 CSRF。错误与状态不回显 SQL 或结果正文。
+
 
 现有模型提供有效的端点金额时呈现 exact；当前未安装价格解析器，
 没有金额及价格依据时返回 unknown。界面可呈现已解析 estimated 费用与逐维

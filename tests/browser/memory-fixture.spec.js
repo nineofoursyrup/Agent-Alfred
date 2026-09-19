@@ -34,3 +34,32 @@ for (const [code, signal] of [[0, null], [7, null], [null, "SIGTERM"]]) {
     else await expect(stopping).rejects.toThrow(`code=${code}, signal=${signal}): final shutdown diagnostic`);
   });
 }
+
+test("Memory fixture reports process failure while awaiting a command receipt", async () => {
+  const child = new EventEmitter();
+  child.stdout = new PassThrough();
+  child.stderr = new PassThrough();
+  child.stdin = new PassThrough();
+  child.exitCode = null;
+  child.signalCode = null;
+  const starting = memoryServer({spawnProcess: () => child});
+  await expect.poll(() => child.stdout.listenerCount("data")).toBeGreaterThan(0);
+  child.stdout.write("ready\n");
+  const server = await starting;
+  const sending = server.send("busy");
+  let settled = false;
+  void sending.then(() => {settled = true;}, () => {settled = true;});
+  child.exitCode = 1;
+  child.emit("exit", 1, null);
+  await new Promise(resolve => setImmediate(resolve));
+  expect(settled).toBe(false);
+  child.stderr.write("AssertionError: mutation gate is held");
+  child.stdout.end();
+  child.stderr.end();
+  child.emit("close", 1, null);
+  try {
+    await expect(sending).rejects.toThrow("command busy (code=1, signal=null): AssertionError: mutation gate is held");
+  } finally {
+    await expect(server.close()).rejects.toThrow("AssertionError: mutation gate is held");
+  }
+});

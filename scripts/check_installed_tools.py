@@ -69,8 +69,10 @@ with tempfile.TemporaryDirectory() as temp:
             snapshot["snapshot_id"], snapshot["runs"][0]["run_id"]
         )
         assert detail["run"]["tools"][0]["start_confirmation"] == "confirmed"
-        for asset in ("tools.js", "accounting.js"):
+        for asset in ("tools.js", "accounting.js", "database.js"):
             assert files("agent_alfred").joinpath("ops/static", asset).is_file()
+        worker = files("agent_alfred").joinpath("database_console", "worker.py")
+        assert worker.is_file()
         receipt = json.loads(model.requests[2].messages[-1].blocks[0].content[0].text)
         assert Path(receipt["path"]).read_text() == "installed draft\n"
         result = host.wait(host.submit(SubmitRequest(message="create skill")).run_id)

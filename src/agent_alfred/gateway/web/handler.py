@@ -20,11 +20,16 @@ Two rules shape the response headers:
 from __future__ import annotations
 
 import json
+import socket
 import threading
+import time
 from http.server import BaseHTTPRequestHandler
 from typing import Any
 from urllib.parse import parse_qs, unquote, urlsplit
 
+from agent_alfred.database_console.budget import HTTP_IO_S
+from agent_alfred.database_console.errors import SAFE_DETAIL
+from agent_alfred.gateway.web import database_api
 from agent_alfred.gateway.web.accounting_api import READS as ACCOUNTING_READS
 from agent_alfred.gateway.web.accounting_api import WRITES as ACCOUNTING_WRITES
 from agent_alfred.gateway.web.api import DashboardApi
@@ -101,11 +106,13 @@ class HandlerContext:
         api: DashboardApi,
         broker: Any,
         instance_id: str,
+        database: Any = None,
     ):
         self.guard = guard
         self.api = api
         self.broker = broker
         self.instance_id = instance_id
+        self.database = database
         self._requests = threading.Condition()
         self._stopping = False
         self._active_requests: dict[object, bool] = {}
@@ -136,8 +143,11 @@ class HandlerContext:
         """
         with self._requests:
             return self._requests.wait_for(
-                lambda: not self._active_requests if streams
-                else all(self._active_requests.values()),
+                lambda: (
+                    not self._active_requests
+                    if streams
+                    else all(self._active_requests.values())
+                ),
                 timeout=5.0 if timeout is None else max(0.0, timeout),
             )
 
@@ -236,7 +246,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return None, "body_not_json"
         try:
             payload = json.loads(body.decode("utf-8"))
-        except (ValueError, UnicodeDecodeError):
+        except ValueError, UnicodeDecodeError:
             return None, "body_not_json"
         if not isinstance(payload, dict):
             return None, "body_not_object"
@@ -298,9 +308,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
         finally:
             context.end_request(registration)
 
-    def _handle_admitted(
-        self, method: str, authorization: AuthorizedRequest
-    ) -> None:
+    def _handle_admitted(self, method: str, authorization: AuthorizedRequest) -> None:
         if method == "OPTIONS":
             self._send(405, {"code": "no_preflight"})
             return
@@ -430,6 +438,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
             status, payload = api.models(params)
             self._send(status, payload)
             return
+        if path == "/api/database" or path.startswith("/api/database/"):
+            self._database_call("GET", path, None)
+            return
         self._send(404, {"code": "not_found"})
 
     def _route_write(
@@ -520,6 +531,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
             status, payload = context.api.reread_env()
             self._send(status, payload)
             return
+        if path == "/api/database" or path.startswith("/api/database/"):
+            assert authorization.body_length is not None
+            self._database_call("POST", path, authorization.body_length)
+            return
         if path in (AUTH_PROBE_PATH, "/api/connections/mcp"):
             assert authorization.body_length is not None
             body, error = self._read_body(authorization.body_length)
@@ -535,6 +550,177 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._send(status, payload)
             return
         self._send(404, {"code": "not_found"})
+
+    def _database_call(self, method: str, path: str, body_length: int | None) -> None:
+        context = self._context
+        sock = self.connection
+        previous = sock.gettimeout()
+        clock = time.monotonic
+        read_deadline = clock() + HTTP_IO_S
+        lease = None
+        delivered = False
+        sending = False
+        database = context.database
+        try:
+            body = None
+            if method == "POST":
+                assert body_length is not None
+                body, error = self._read_limited(body_length, read_deadline, clock)
+                if error is not None:
+                    sending = True
+                    self._send_limited(
+                        400,
+                        {"code": error, "detail": "请求不被接受。"},
+                        clock() + HTTP_IO_S,
+                        clock,
+                    )
+                    return
+            status, payload = database_api.dispatch(database, method, path, body)
+            raw = None if payload is None else _dump(payload)
+            send_lease = None
+            if (
+                method == "POST"
+                and path.endswith("/execute")
+                and status == 200
+                and isinstance(payload, dict)
+                and payload.get("query_id")
+                and database is not None
+            ):
+                lease = database.begin_send(payload["query_id"], raw)
+                lease.sock = sock
+                if lease.cancel.is_set():
+                    status = 409
+                    payload = {
+                        "code": "data_invalidated",
+                        "detail": SAFE_DETAIL["data_invalidated"],
+                        "query_id": payload["query_id"],
+                    }
+                    raw = _dump(payload)
+                else:
+                    send_lease = lease
+            send_deadline = clock() + HTTP_IO_S
+            sending = True
+            self._send_limited(
+                status, payload, send_deadline, clock, raw=raw, lease=send_lease
+            )
+            delivered = True
+        except TimeoutError, socket.timeout:
+            self.close_connection = True
+            if sending:
+                # A partial response cannot be followed by a second HTTP
+                # response or a fresh IO budget on the same blocked socket.
+                return
+            error_deadline = clock() + HTTP_IO_S
+            try:
+                self._send_limited(
+                    503,
+                    {
+                        "code": "resource_limit",
+                        "detail": SAFE_DETAIL["resource_limit"],
+                    },
+                    error_deadline,
+                    clock,
+                )
+            except TimeoutError, OSError, socket.timeout:
+                pass
+        finally:
+            # Keep response ownership through encoding and socket handoff, then
+            # drop the actual body references before releasing the cleanup gate.
+            payload = raw = body = send_lease = None
+            if lease is not None and database is not None:
+                database.finish_send(lease, delivered=delivered)
+            lease = None
+            if database is not None and method == "POST" and path.endswith("/execute"):
+                from urllib.parse import unquote
+
+                database.release_response(unquote(path.split("/")[-2]))
+            try:
+                sock.settimeout(previous)
+            except OSError:
+                pass
+
+    def _read_limited(self, length: int, deadline: float, clock) -> tuple:
+        chunks = bytearray()
+        while len(chunks) < length:
+            left = deadline - clock()
+            if left <= 0:
+                raise TimeoutError
+            self.connection.settimeout(left)
+            remaining = length - len(chunks)
+            read1 = getattr(self.rfile, "read1", None)
+            if read1 is not None:
+                piece = read1(min(remaining, 65536))
+            else:
+                piece = self.rfile.read(min(remaining, 1))
+            if not piece:
+                self._request_body_pending = False
+                return None, "body_not_json"
+            chunks.extend(piece)
+        self._request_body_pending = False
+        try:
+            payload = json.loads(bytes(chunks).decode("utf-8"))
+        except ValueError, UnicodeDecodeError:
+            return None, "body_not_json"
+        if not isinstance(payload, dict):
+            return None, "body_not_object"
+        return payload, None
+
+    def _send_limited(
+        self,
+        status: int,
+        payload: Any,
+        deadline: float,
+        clock,
+        *,
+        raw: bytes | None = None,
+        lease=None,
+    ) -> None:
+        if lease is not None and lease.cancel.is_set() and status == 200:
+            self.close_connection = True
+            raise TimeoutError
+        body = (
+            b""
+            if payload is None and raw is None
+            else raw
+            if raw is not None
+            else _dump(payload)
+        )
+        left = deadline - clock()
+        if left <= 0:
+            raise TimeoutError
+        self.connection.settimeout(left)
+        extra: tuple[tuple[str, str], ...] = ()
+        if getattr(self, "_request_body_pending", False):
+            self.close_connection = True
+            extra = (("Connection", "close"),)
+        self.send_response(status)
+        for name, value in BASE_HEADERS:
+            self.send_header(name, value)
+        for name, value in extra:
+            self.send_header(name, value)
+        if payload is not None or raw is not None:
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if body and getattr(self, "command", None) != "HEAD":
+            self._write_limited(body, deadline, clock, lease)
+
+    def _write_limited(self, body: bytes, deadline: float, clock, lease) -> None:
+        view = memoryview(body)
+        offset = 0
+        while offset < len(view):
+            if lease is not None and lease.cancel.is_set():
+                self.close_connection = True
+                raise TimeoutError
+            left = deadline - clock()
+            if left <= 0:
+                raise TimeoutError
+            self.connection.settimeout(left)
+            written = self.wfile.write(view[offset : offset + 65536])
+            if not written:
+                raise TimeoutError
+            offset += written
+            self.wfile.flush()
 
     # -- the stream --------------------------------------------------------
 
@@ -634,6 +820,6 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
 
 def _dump(payload: Any) -> bytes:
-    return json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode(
-        "utf-8"
-    )
+    return json.dumps(
+        payload, ensure_ascii=False, separators=(",", ":"), allow_nan=False
+    ).encode("utf-8")

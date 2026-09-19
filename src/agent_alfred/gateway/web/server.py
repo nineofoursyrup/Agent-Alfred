@@ -349,9 +349,7 @@ class DashboardRuntime:
                         cleanup_failure,
                         (KeyboardInterrupt, SystemExit, GeneratorExit),
                     ):
-                        if isinstance(
-                            cleanup_failure.__cause__, IncompleteRollback
-                        ):
+                        if isinstance(cleanup_failure.__cause__, IncompleteRollback):
                             raise cleanup_failure
                         raise cleanup_failure from start_failure
                 self._state = "failed" if rollback_done else "closing"
@@ -384,6 +382,24 @@ class DashboardRuntime:
         # 5. The Host and the broker, around that one connection.
         host, broker = self._assemble(conn, self._instance_id)
         self._host, self._broker = host, broker
+        self._database = None
+        if hasattr(host, "attach_database_console"):
+            redactor = getattr(host, "_redactor", None)
+            memory = getattr(host, "_memory_service", None)
+            if redactor is None or memory is None:
+                raise RuntimeError("database console requires redactor and memory")
+            from agent_alfred.database_console.service import DatabaseConsole
+
+            console = DatabaseConsole(
+                instance_id=self._instance_id,
+                state=self._service.managed_state,
+                redactor=redactor,
+                memory_revision=lambda: memory.memory_revision,
+                clock=getattr(host, "_clock", None),
+                broker=broker,
+            )
+            host.attach_database_console(console)
+            self._database = console
         # Storing the pair is not yet owning it: the close path skips whatever
         # is still marked stopped, so these bits are what make this runtime an
         # effective owner. They fall first, and only then may the construction
@@ -407,6 +423,7 @@ class DashboardRuntime:
             api=DashboardApi(facade=host, trace_root=self._trace_root),
             broker=broker,
             instance_id=self._instance_id,
+            database=self._database,
         )
         self._handler_context = context
         service.attach_context(context)
@@ -487,6 +504,9 @@ class DashboardRuntime:
         """
         service = self._service
         context = self._handler_context
+        database = getattr(self, "_database", None)
+        if database is not None and not database.shutdown():
+            return False
         if context is not None:
             context.stop_requests()
         # 8. Stop accepting first: nothing new may arrive while the rest is

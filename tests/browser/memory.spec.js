@@ -578,6 +578,24 @@ test("A47: queue states and actions are explicit; busy is 409 and nothing bypass
     };
     const queue = page.getByRole("region", {name: "提炼队列"});
     const batch = label => queue.locator("article[data-batch]", {hasText: label});
+    const recorded = async row => {
+      const batchId = await row.getAttribute("data-batch");
+      const read = async () => batchPollResult(
+        await other.get("/api/memory/consolidation?batch_id=" + batchId), batchId,
+      );
+      let value;
+      await expect.poll(async () => {value = await read(); return value?.generation_run_id;}).toEqual(expect.any(String));
+      const runId = value.generation_run_id;
+      // A batch can fail or await approval before its generating Run records.
+      // Wait for that exact persisted Run, then the real admission release.
+      await expect.poll(async () => {
+        value = await read();
+        if (!value) return null;
+        expect(value.generation_run_id).toBe(runId);
+        return value.run;
+      }).toMatchObject({run_id: runId, finished_at: expect.any(String), outcome: expect.any(String)});
+      await expect(page.locator("#busy")).toBeHidden();
+    };
     const systemRuns = async () => (await other.get("/api/runs?filter=system&limit=25")).body.runs.length;
     await send("第一句闲聊");
     await send("第二句闲聊");
@@ -590,6 +608,7 @@ test("A47: queue states and actions are explicit; busy is 409 and nothing bypass
     await first.getByRole("button", {name: "查看候选", exact: true}).click();
     await expect(first.getByLabel("候选差异")).toContainText(`update ${id} · 饮食：Zephyr likes coriander（提炼改写）`);
     await expect(first.getByLabel("候选差异")).toContainText("情景摘要：浏览器提炼摘要");
+    await recorded(first);
     await server.send("busy");
     await first.getByRole("button", {name: "批准整批", exact: true}).click();
     await expect(queue.getByText("宿主正忙：操作未执行，也不会排队；请稍后手动重试。")).toBeVisible();
@@ -606,6 +625,7 @@ test("A47: queue states and actions are explicit; busy is 409 and nothing bypass
     await expect(second).toHaveCount(1, {timeout: 10000});
     const secondId = await second.getAttribute("data-batch");
     await second.getByRole("button", {name: "查看候选", exact: true}).click();
+    await recorded(second);
     expect((await other.command({
       operation_id: "target-edit", kind: "semantic", action: "update",
       payload: {id, fact: "Zephyr likes basil"}, expected_version: 1,
@@ -620,6 +640,7 @@ test("A47: queue states and actions are explicit; busy is 409 and nothing bypass
     const failed = batch("失败");
     await expect(failed).toHaveCount(1, {timeout: 10000});
     await expect(failed).toContainText("重试：候选仍有效时只重试提交；否则会重新调用主模型并可能产生费用。");
+    await recorded(failed);
     await server.send("busy");
     await failed.getByRole("button", {name: "重试", exact: true}).click();
     await expect(queue.getByText("宿主正忙：操作未执行，也不会排队；请稍后手动重试。")).toBeVisible();
@@ -641,6 +662,7 @@ test("A47: queue states and actions are explicit; busy is 409 and nothing bypass
     await send("第六句闲聊");
     const uncommitted = batch("失败");
     await expect(uncommitted).toHaveCount(1, {timeout: 10000});
+    await recorded(uncommitted);
     const runs = await systemRuns();
     await server.send("heal");
     await uncommitted.getByRole("button", {name: "重试", exact: true}).click();
@@ -653,6 +675,7 @@ test("A47: queue states and actions are explicit; busy is 409 and nothing bypass
     await send("第八句闲聊");
     const third = batch("待批准（覆盖人工保护记忆）");
     await expect(third).toHaveCount(1, {timeout: 10000});
+    await recorded(third);
     await third.getByRole("button", {name: "批准整批", exact: true}).click();
     await expect(queue.getByText("已完成：succeeded。")).toBeVisible();
     await expect(batch("已提交")).toHaveCount(3);
@@ -993,9 +1016,23 @@ for (const committed of [false, true]) {
       });
       // Hold the automatic read-back so the restored unconfirmed state, and
       // then the user's own query, are both observable.
-      let answering = false;
-      await page.route("**/api/memory/operations?*", route =>
-        answering ? route.continue() : route.abort("connectionreset"));
+      // Gate on the actual DOM click, not the Node step before click().
+      // An automatic read can otherwise complete the receipt and remove its
+      // query button while Playwright is still checking actionability.
+      await page.addInitScript(() => {
+        window.receiptQueryActivated = false;
+        document.addEventListener("click", event => {
+          const button = event.target.closest?.("button");
+          if (button?.textContent === "查询结果" &&
+              button.closest('[aria-label="记忆操作回执"]'))
+            window.receiptQueryActivated = true;
+        }, {capture: true});
+      });
+      await page.route("**/api/memory/operations?*", async route => {
+        const answering = await page.evaluate(() =>
+          window.receiptQueryActivated === true).catch(() => false);
+        await (answering ? route.continue() : route.abort("connectionreset"));
+      });
       const panel = page.getByRole("tabpanel", {name: "语义记忆"});
       await panel.getByLabel("新主题").fill("恢复");
       await panel.getByLabel("新事实").fill("reload before any command response");
@@ -1007,7 +1044,6 @@ for (const committed of [false, true]) {
       const receipt = page.getByRole("region", {name: "记忆操作回执"})
         .locator("article", {hasText: bodies[0].operation_id});
       await expect(receipt).toContainText(/结果待确认（(?:interrupted|network)）/);
-      answering = true;
       await receipt.getByRole("button", {name: "查询结果", exact: true}).click();
       if (committed) {
         await expect(receipt).toContainText(/已保存 · ID .+ · 版本 1/);
@@ -1041,6 +1077,9 @@ test("R08: more than twenty unanswered commands remain recoverable after reload"
     });
     const panel = page.getByRole("tabpanel", {name: "语义记忆"});
     const receipts = page.getByRole("region", {name: "记忆操作回执"});
+    // Start the recovery scenario only after the initial persisted revision
+    // has been verified; an invalidation correctly hides an unverified draft.
+    await expect(panel.getByText("记忆库为空。", {exact: true})).toBeVisible();
     await panel.getByLabel("新主题").fill("恢复");
     for (let i = 0; i < 21; i++) {
       await panel.getByLabel("新事实").fill(`unanswered fact ${i}`);

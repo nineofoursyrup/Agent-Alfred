@@ -147,6 +147,22 @@ h2 {
   background: #fff;
   border-radius: 12px;
 }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+th,
+td {
+  border: 1px solid #d3ddcf;
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+.sql-null {
+  color: #67756a;
+  font-style: italic;
+}
 #mainbar {
   position: fixed;
   bottom: 0;

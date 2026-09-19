@@ -74,20 +74,51 @@ _EVENT_PAYLOAD_TYPES = (
 
 
 class Redactor:
-    def __init__(self, secrets: Sequence[str], *, min_length: int = 8):
+    def __init__(
+        self,
+        secrets: Sequence[str],
+        *,
+        min_length: int = 8,
+        on_change=None,
+        approved: bool = False,
+    ):
         self._min_length = min_length
         self._lock = threading.Lock()
-        self._secrets = tuple(
-            secret for secret in secrets if secret and len(secret) >= min_length
-        )
+        self._on_change = on_change
+        self._version = 1
+        if approved:
+            self._secrets = tuple(secret for secret in secrets if secret)
+        else:
+            self._secrets = tuple(
+                secret for secret in secrets if secret and len(secret) >= min_length
+            )
+
+    @property
+    def min_length(self) -> int:
+        return self._min_length
+
+    @property
+    def secrets(self) -> tuple[str, ...]:
+        with self._lock:
+            return self._secrets
+
+    @property
+    def protection_version(self) -> str:
+        with self._lock:
+            return str(self._version)
 
     def remember(self, secret: str | None, *, credential: bool = False) -> None:
         """Only known credential inputs may bypass the ordinary length guard."""
         if not secret or (not credential and len(secret) < self._min_length):
             return
+        changed = False
         with self._lock:
             if secret not in self._secrets:
                 self._secrets = (*self._secrets, secret)
+                self._version += 1
+                changed = True
+        if changed and self._on_change is not None:
+            self._on_change()
 
     def redact_text(self, text: str) -> str:
         with self._lock:
