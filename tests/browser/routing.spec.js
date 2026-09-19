@@ -1,3 +1,4 @@
+import {observeTopology} from './topology-observation.js';
 import {test, expect} from '@playwright/test';
 import {memoryServer, api} from './memory-server.js';
 
@@ -126,6 +127,8 @@ test('CE-13: page fingerprint rejects external change and explicitly backs up re
     await expect(recover).toBeVisible();
     await writeFile(join(server.directory, 'behaviour.json'), 'broken B');
     await recover.click();
+    await expect(page.getByText(/settings_conflict/)).toBeVisible();
+    await observeTopology(page); // #75 CE-01: graph reads preserve the real conflict.
     await expect(page.getByText(/settings_conflict/)).toBeVisible();
     expect(await readFile(join(server.directory, 'behaviour.json'), 'utf8')).toBe('broken B');
     await page.getByRole('button', {name:'刷新设置'}).click();

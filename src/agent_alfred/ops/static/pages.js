@@ -1,3 +1,4 @@
+import {topologyView} from "./topology.js";
 import {routingStatistics} from "./routing-statistics.js";
 import {aggregationForm} from "./aggregation.js";
 import { node, textBlocks } from "./dom.js";
@@ -708,7 +709,10 @@ export function modelsPage(root, csrf) {
 
 /** @param {HTMLElement} root @param {()=>string} csrf @param {()=>Wire} runtime @param {import("./memory.js").MemorySync} memory @param {()=>string} instance */
 export function behaviourPage(root, csrf, runtime, memory, instance) {
-  aggregationForm(root, csrf, runtime, memory);
+  const routing = node("section"); routing.setAttribute("aria-label", "消息分流");
+  routing.append(node("h2", "消息分流"), node("p", "持续设置 · CLI/Web 共享。默认关闭；保存后下一 Run 生效。回复进入当前会话，静默时只记用户消息，不生成助手消息或长期记忆。"));
+  root.append(routing);
+  const aggregation = aggregationForm(root, csrf, runtime, memory);
   let state = /** @type {Wire} */ ({});
   const label = node('label', '启用消息分流');
   const enabled = document.createElement('input');
@@ -719,15 +723,19 @@ export function behaviourPage(root, csrf, runtime, memory, instance) {
   const save = node('button', '保存设置'); save.disabled = true;
   const refresh = node('button', '刷新设置');
   const recover = node('button', '备份原文件并恢复为关闭'); recover.hidden = true;
-  root.append(node('p', '默认关闭。启用后识别纯问候、致谢及明确无需回复的消息；实际任务仍进入完整回答。'),
+  const actual = node('p'); actual.setAttribute('role', 'status');
+  routing.append(actual, node('p', '默认关闭。启用后识别纯问候、致谢及明确无需回复的消息；实际任务仍进入完整回答。'),
     label, save, refresh, recover, notice);
-  const statistics = routingStatistics(root, instance);
+  const views = [topologyView(routing, "message_routing", runtime, memory), topologyView(aggregation, "manual_aggregation", runtime, memory)];
+
+  const statistics = routingStatistics(routing, instance);
   async function read() {
     try {
       const response = await fetch('/api/behaviour');
       if (!response.ok) throw new Error('读取失败');
       state = await response.json();
       if (!root.isConnected) return;
+      actual.textContent = state.status === 'ok' ? `已保存的分流设置：${state.enabled ? '开启' : '关闭'}。能查看结构不代表已经启用或可以成功执行。` : `分流设置未知 / ${state.status}。`;
       enabled.checked = state.enabled;
       enabled.disabled = state.status !== 'ok';
       save.disabled = state.status !== 'ok';
@@ -752,6 +760,7 @@ export function behaviourPage(root, csrf, runtime, memory, instance) {
         return;
       }
       state = result; enabled.checked = result.enabled;
+      actual.textContent = `已保存的分流设置：${state.enabled ? '开启' : '关闭'}。能查看结构不代表已经启用或可以成功执行。`;
       enabled.disabled = false; recover.hidden = true;
       notice.textContent = '已保存；下一 Run 生效。';
     } catch { notice.textContent = '保存结果未确认，请刷新核验。'; }
@@ -761,5 +770,9 @@ export function behaviourPage(root, csrf, runtime, memory, instance) {
   recover.addEventListener('click', () => void write('recover'));
   refresh.addEventListener('click', () => void read());
   void read();
-  return statistics;
+  return {
+    sync() {statistics.sync();},
+    disconnect() {statistics.disconnect();},
+    close() {statistics.close(); for (const view of views) view.close();},
+  };
 }

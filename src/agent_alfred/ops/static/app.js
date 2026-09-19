@@ -38,7 +38,6 @@ let instance = "";
 let revision = -1;
 let connected = false;
 /** @type {ReturnType<typeof toolsPage>|ReturnType<typeof accountingPage>|null} */ let accountingView = null;
-/** @type {ReturnType<typeof behaviourPage>|null} */ let behaviourView = null;
 let valid = false;
 let sending = false;
 let unavailable = false;
@@ -58,6 +57,7 @@ const receipts = memoryReceipts(memory, () => csrf);
 /** @type {ReturnType<typeof runsPage>|null} */ let runPage = null;
 /** @type {ReturnType<typeof connectionsPage>|null} */ let connectionsView = null;
 /** @type {ReturnType<typeof databasePage>|null} */ let databaseView = null;
+/** @type {ReturnType<typeof behaviourPage>|null} */ let behaviourView = null;
 const notices = new ConnectionNotices(element("connection"));
 const announcer = new Announcer(element("announcements"));
 const alerted = new Set();
@@ -579,6 +579,7 @@ function showDrawer() {
 }
 narrow.addEventListener("change", showDrawer);
 function route() {
+  runPage?.dispose();
   const path = location.pathname;
   const isRuns = path.startsWith("/runs");
   const isModels = path.startsWith("/models");
@@ -605,7 +606,7 @@ function route() {
   receipts.detach();
   element("page").replaceChildren(heading);
   runPage = null;
-  if (isBehaviour) behaviourView = behaviourPage(element("page"), () => csrf, () => ({active, connected, unavailable, projection:[...replies.values()].find(r => r.aggregation && r.recording_state !== "recorded")}), memory, () => instance);
+  if (isBehaviour) behaviourView = behaviourPage(element("page"), () => csrf, () => ({instance, active, connected, unavailable, projection:[...replies.values()].find(r => r.aggregation && r.recording_state !== "recorded")}), memory, () => instance);
   else if (isTools) accountingView = toolsPage(element("page"), () => csrf);
   else if (isOps) accountingView = accountingPage(element("page"), () => csrf);
   else if (isModels) modelsPage(element("page"), () => csrf);
@@ -623,7 +624,7 @@ function route() {
       connected: () => connected,
     });
   else if (!isRuns) inbox(element("page"), resume);
-  else runPage = runsPage(element("page"), progress, route, memory);
+  else runPage = runsPage(element("page"), progress, route, memory, () => csrf);
   if (connected) {
     runPage?.sync(active);
     connectionsView?.sync(instance);
@@ -752,6 +753,13 @@ window.addEventListener("online", () => stream.connect(session));
 window.addEventListener("pagehide", () => databaseView?.suspend());
 window.addEventListener("pageshow", (event) => {
   if (event.persisted) databaseView?.restoredFromCache();
+  if (event.persisted && runPage) {
+    connected = false;
+    stream.source?.close();
+    memory.disconnected();
+    route();
+    stream.connect(session);
+  }
 });
 element("new-session").addEventListener("click", async () => {
   const button = /** @type {HTMLButtonElement} */ (element("new-session"));

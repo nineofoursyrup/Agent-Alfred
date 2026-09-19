@@ -367,3 +367,54 @@ test('SPEC-03 CE-16 complete real a-p sample is identical over HTTP and page', a
     await expect(panel).toContainText('side_effect_occurred：1');
   } finally {await server.close();}
 });
+
+test('INTEGRATION-75 CE-14/15 statistics and both topologies retain independent state and close together', async ({page}) => {
+  const server = await memoryServer({script:'tests/browser/routing_server.py'});
+  let release;
+  try {
+    await page.goto(server.origin + '/behaviour');
+    await expect(page.getByRole('button', {name:'新建会话', exact:true})).toBeEnabled();
+    const routing = page.getByRole('region', {name:'消息分流', exact:true});
+    const aggregation = page.getByRole('region', {name:'手动聚合', exact:true});
+    await routing.getByRole('button', {name:'查看流程', exact:true}).click();
+    await aggregation.getByRole('button', {name:'查看流程', exact:true}).click();
+    await expect(routing.locator('svg [data-node-id]')).toHaveCount(9);
+    await expect(aggregation.locator('svg [data-node-id]')).toHaveCount(15);
+    await routing.getByRole('button', {name:'判断消息类型 · classify', exact:true}).click();
+    await routing.getByRole('button', {name:'放大', exact:true}).click();
+    const viewport = await routing.locator('svg').getAttribute('viewBox');
+    await page.getByRole('checkbox', {name:'启用消息分流'}).check();
+    await page.getByRole('textbox', {name:'聚合目标', exact:true}).fill('两个观察面板均不提交此草稿');
+    await routing.getByText('路由统计', {exact:true}).click();
+    await expect(routing.getByText('此范围内没有已准入的聊天 Run。')).toBeVisible();
+    await routing.getByLabel('统计范围').selectOption('all');
+    await expect(routing.getByText(/范围：全部/)).toBeVisible();
+    expect(await routing.locator('svg').getAttribute('viewBox')).toBe(viewport);
+    await expect(routing.getByRole('heading', {name:'判断消息类型 · classify', exact:true})).toBeVisible();
+    await expect(aggregation.locator('svg [data-node-id]')).toHaveCount(15);
+    await expect(page.getByRole('checkbox', {name:'启用消息分流'})).toBeChecked();
+    await expect(page.getByRole('textbox', {name:'聚合目标', exact:true})).toHaveValue('两个观察面板均不提交此草稿');
+    expect((await (await page.request.get(server.origin + '/api/behaviour')).json()).enabled).toBe(false);
+    expect((await (await page.request.get(server.origin + '/api/runs')).json()).runs).toEqual([]);
+    let captured = 0, ready;
+    const started = new Promise(resolve => ready = resolve);
+    const gate = new Promise(resolve => release = resolve);
+    const hold = async route => {
+      const response = await route.fetch();
+      if (++captured === 2) ready();
+      await gate; await route.fulfill({response}).catch(() => {});
+    };
+    await page.route('**/api/behaviour/topology?workflow=message_routing', hold);
+    await page.route('**/api/behaviour/routing-statistics*', hold);
+    await routing.getByRole('button', {name:'重新读取', exact:true}).click();
+    await routing.getByRole('button', {name:'刷新统计', exact:true}).click();
+    await started;
+    await page.getByRole('link', {name:'运行', exact:true}).click();
+    release(); await page.unrouteAll({behavior:'wait'});
+    await expect(page.locator('.topology, .routing-statistics')).toHaveCount(0);
+    await page.getByRole('link', {name:'Behaviour', exact:true}).click();
+    await expect(routing.getByRole('button', {name:'查看流程', exact:true})).toHaveAttribute('aria-expanded', 'false');
+    await expect(aggregation.getByRole('button', {name:'查看流程', exact:true})).toHaveAttribute('aria-expanded', 'false');
+    await expect(routing.getByRole('button', {name:'刷新统计', exact:true})).toBeHidden();
+  } finally {release?.(); await server.close();}
+});

@@ -4,11 +4,15 @@ from importlib.resources import files
 
 PAGE_POLICY = (
     "default-src 'none'; script-src 'self'; style-src 'self'; "
-    "connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+    "connect-src 'self'; frame-src 'self'; frame-ancestors 'none'; "
+    "base-uri 'none'; form-action 'self'"
 )
 
 ASSETS = {
     "/assets/routing-statistics.js": ("routing-statistics.js", "text/javascript"),
+
+    "/assets/trace_export.js": ("trace_export.js", "text/javascript"),
+    "/assets/topology.js": ("topology.js", "text/javascript"),
     "/assets/aggregation.js": ("aggregation.js", "text/javascript"),
     "/assets/tools.js": ("tools.js", "text/javascript"),
     "/assets/accounting.js": ("accounting.js", "text/javascript"),
