@@ -547,11 +547,39 @@ class RunExecutor:
                     )
                 if loop_result is None:
                     fallback_start = len(all_results)
+                    from agent_alfred.events import PathStage
+
                     routing_facts = item.memory_telemetry.get("routing")
+                    if (
+                        routing_facts is None
+                        and graph_factory is None
+                        and memory is not None
+                    ):
+                        self._events.emit(
+                            PathStage(
+                                "bypass",
+                                "disabled_by_config",
+                                True,
+                            ),
+                            envelope,
+                        )
                     if routing_facts is not None:
                         if self._routing_fallback_checkpoint is not None:
                             self._routing_fallback_checkpoint("before")
                         routing_facts["fallback"]["entered"] = True
+                        stage = (
+                            "fallback"
+                            if item.memory_telemetry.get("graph")
+                            else "bypass"
+                        )
+                        self._events.emit(
+                            PathStage(
+                                stage,
+                                routing_facts["fallback"].get("reason", "graph_failed"),
+                                True,
+                            ),
+                            envelope,
+                        )
                         stats = item.memory_telemetry.get("routing_statistics")
                         if stats is not None:
                             stats[

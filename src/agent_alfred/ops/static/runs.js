@@ -1,3 +1,4 @@
+import {topologyView} from "./topology.js";
 import {traceExport} from "./trace_export.js";
 import {aggregationFacts} from "./aggregation.js";
 import { node, textBlocks } from "./dom.js";
@@ -19,8 +20,8 @@ export function outcomeLabel(run) {
   );
 }
 
-/** @param {HTMLElement} root @param {import('./progress.js').Progress} progress @param {()=>void} navigate @param {import('./memory.js').MemorySync} memory @param {()=>string} csrf */
-export function runsPage(root, progress, navigate, memory, csrf) {
+/** @param {HTMLElement} root @param {import('./progress.js').Progress} progress @param {()=>void} navigate @param {import('./memory.js').MemorySync} memory @param {()=>string} csrf @param {()=>Wire} runtime */
+export function runsPage(root, progress, navigate, memory, csrf, runtime) {
   const context = new URLSearchParams(location.search);
   const filter = node("select");
   filter.setAttribute("aria-label", "运行筛选");
@@ -53,6 +54,7 @@ export function runsPage(root, progress, navigate, memory, csrf) {
     navigate();
   });
   let exportView = /** @type {ReturnType<typeof traceExport>|null} */ (null);
+  const pathView = selected ? topologyView(root, "run-path", runtime, memory, selected) : null;
   const seen = new Set();
   /** @type {Wire|null} */ let selectedRun = null;
   /** @type {Wire|null} */ let evidence = null;
@@ -344,7 +346,7 @@ export function runsPage(root, progress, navigate, memory, csrf) {
       }
     })();
   } else void pager.load();
-  return { update, loadEvidence, sync, dispose: () => exportView?.dispose() };
+  return { update, loadEvidence, sync, dispose: () => {exportView?.dispose();pathView?.close();} };
 }
 
 /** @param {HTMLElement} root @param {Wire[]} events @param {Wire[]} ledger @param {Wire} run @param {Set<string>} confirmed */
@@ -360,6 +362,7 @@ function renderEvidence(root, events, ledger, run, confirmed) {
   for (const [index, facts] of [...steps].sort((a, b) => a[0] - b[0])) {
     const section = node("section");
     section.className = "card";
+    section.id = `step-${index}`;
     section.append(node("h3", `Step ${index}`));
     const preparation = facts.find(fact => fact.payload.name === "step.started");
     const skillSystem = preparation?.payload.skill_system ||
@@ -406,6 +409,7 @@ function renderEvidence(root, events, ledger, run, confirmed) {
       const actual = Boolean(terminal || accounting || confirmed.has(id));
       const details = node("details");
       details.dataset.attempt = id;
+      details.id = `attempt-${id}`;
       const aborted = terminal?.payload.name === "attempt.aborted";
       details.className = !actual ? "input-preparation" : aborted ? "attempt aborted" : "attempt";
       details.open = !aborted;

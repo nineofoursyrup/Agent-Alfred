@@ -115,14 +115,16 @@ def test_ce10_routing_failure_aborts_entire_wave_without_recovery(mode):
     assert dict(result.committed_state) == {} and not seen
     assert route_calls == ([] if mode == "missing" else ["bad"])
     assert [e.payload.name for e in sink.events] == [
+        "path.captured",
         "graph.started",
         "node.started",
         "node.started",
         "node.aborted",
         "node.aborted",
+        "path.wave",
         "graph.finished",
     ]
-    assert [e.envelope.node_id for e in sink.events[3:5]] == ["a", "b"]
+    assert [e.envelope.node_id for e in sink.events[4:6]] == ["a", "b"]
 
 
 def test_ce02_no_action_has_recovery_without_output_or_sink():

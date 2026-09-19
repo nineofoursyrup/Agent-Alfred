@@ -68,6 +68,7 @@ def run_chat_graph(
         skills=skills,
         persona=persona,
         memory=memory,
+        publication_generation=routing["generation"] if routing else 1,
     )
     context.model_bindings = {"answer": (client, model, assistant)}
     context.checkpoint()
@@ -173,6 +174,10 @@ def run_chat_graph(
                     item.request.gateway,
                 ),
             )
+            if not allowed:
+                from agent_alfred.events import PathStage
+
+                context.emit(PathStage("fallback", reason, False))
             if reason == "budget_exhausted":
                 return LoopResult(
                     "max_steps",

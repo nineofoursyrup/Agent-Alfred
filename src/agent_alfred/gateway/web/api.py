@@ -392,6 +392,17 @@ class DashboardApi:
         return write(self._facade, path, body)
 
     @_map_read_errors
+    def run_path(self, params: dict[str, str]) -> tuple[int, Any]:
+        if "run_id" not in params:
+            return 400, {"code": "missing_run_id"}
+        if self._trace_root is None:
+            return 503, {"code": "evidence_unavailable"}
+        result = self._facade.read_run_path(
+            params["run_id"], trace_root=self._trace_root
+        )
+        return (404, {"code": "unknown_run"}) if result is None else (200, result)
+
+    @_map_read_errors
     def run_evidence(self, params: dict[str, str]) -> tuple[int, Any]:
         if "run_id" not in params:
             return 400, {"code": "missing_run_id"}

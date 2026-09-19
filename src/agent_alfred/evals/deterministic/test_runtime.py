@@ -2202,7 +2202,10 @@ def test_execution_runs_one_item_through_the_narrow_seams() -> None:
         "SELECT phase FROM runs WHERE run_id = 'exec-1'"
     ).fetchone() == ("running",)
     assert len(coordinator.marked) == 1
-    assert [event.payload.name for event in capture.events] == ["run.started"]
+    assert [event.payload.name for event in capture.events] == [
+        "run.started", "path.stage"
+    ]
+    assert capture.events[-1].payload.reason == "disabled_by_config"
     assert len(recorder.settled) == 1
     settled = recorder.settled[0]
     assert settled["item"].run_id == "exec-1"

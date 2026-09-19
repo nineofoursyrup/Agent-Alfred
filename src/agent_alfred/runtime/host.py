@@ -343,6 +343,10 @@ class RuntimeHost:
         self._settings = settings
         self._clock = clock
         self._fanout = fanout
+        from agent_alfred.runtime.run_path import RunPathSink
+
+        self._run_path = RunPathSink()
+        self._fanout.add_sink(self._run_path)
         self._process_instance_id = process_instance_id
         self._redactor = redactor or Redactor(secrets)
         self._fanout.bind_redactor(self._redactor)
@@ -1952,6 +1956,7 @@ class RuntimeHost:
                     return
                 release_owned = True
                 recorded = replace(summary, recording_state="recorded")
+                self._run_path.retire(run_id)
                 self._replace_terminal_state_locked(
                     owner_run_id=run_id,
                     coordinator_state="recording_pending",
@@ -2038,6 +2043,28 @@ class RuntimeHost:
                 return None
 
         return PriceChain(catalog=PinThenCatalog(), static=StaticPriceBook.packaged())
+
+    def read_run_path(self, run_id: str, *, trace_root: Path) -> dict | None:
+        from agent_alfred.runtime.run_path import read_path
+
+        with self._lock:
+            active = self._states.get().active_run
+            live = None
+            if (active is not None and active.run_id == run_id
+                    and active.recording_state != "recorded"):
+                captured = self._run_path.capture(run_id)
+                live = (captured, dict(
+                    phase=active.phase, outcome=active.outcome,
+                    recording_state=active.recording_state,
+                ))
+        if live is not None:
+            captured, run = live
+            state, events = self._run_path.materialize(captured)
+            live = state, events, run
+        return read_path(
+            self._store, self._redactor, run_id, trace_root,
+            self._process_instance_id, format_instant(self._clock.wall_utc()), live,
+        )
 
     def read_run_evidence(
         self, run_id: str, *, trace_root: Path, accounting_attempts: list | None = None

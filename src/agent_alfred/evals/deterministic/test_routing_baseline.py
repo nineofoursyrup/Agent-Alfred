@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tarfile
@@ -46,4 +47,29 @@ def test_ce01_exact_baseline_cli_requests_events_messages(tmp_path, mode):
         )
         assert process.returncode == 0, process.stderr
         results.append(json.loads(process.stdout))
-    assert results[0] == results[1]
+
+    # #81 adds observation-only path events. Compare every old business event,
+    # request, result and reference; generated identity offsets are immaterial.
+    def business_contract(value):
+        value["events"] = [
+            e for e in value["events"] if not e["payload"]["name"].startswith("path.")
+        ]
+        aliases = {}
+        for seq, event in enumerate(value["events"], 1):
+            event["seq"] = seq
+
+        def normalize(item):
+            if isinstance(item, dict):
+                return {k: normalize(v) for k, v in item.items()}
+            if isinstance(item, list):
+                return [normalize(v) for v in item]
+            if isinstance(item, str) and re.fullmatch(
+                r"(?:[0-9a-f]{32}|[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})",
+                item,
+            ):
+                return aliases.setdefault(item, f"identity-{len(aliases)}")
+            return item
+
+        return normalize(value)
+
+    assert business_contract(results[0]) == business_contract(results[1])
