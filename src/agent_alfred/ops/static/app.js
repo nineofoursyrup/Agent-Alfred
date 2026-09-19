@@ -577,6 +577,7 @@ function showDrawer() {
 }
 narrow.addEventListener("change", showDrawer);
 function route() {
+  runPage?.dispose();
   const path = location.pathname;
   const isRuns = path.startsWith("/runs");
   const isModels = path.startsWith("/models");
@@ -621,7 +622,7 @@ function route() {
       connected: () => connected,
     });
   else if (!isRuns) inbox(element("page"), resume);
-  else runPage = runsPage(element("page"), progress, route, memory);
+  else runPage = runsPage(element("page"), progress, route, memory, () => csrf);
   if (connected) {
     runPage?.sync(active);
     connectionsView?.sync(instance);
@@ -749,6 +750,13 @@ window.addEventListener("online", () => stream.connect(session));
 window.addEventListener("pagehide", () => databaseView?.suspend());
 window.addEventListener("pageshow", (event) => {
   if (event.persisted) databaseView?.restoredFromCache();
+  if (event.persisted && runPage) {
+    connected = false;
+    stream.source?.close();
+    memory.disconnected();
+    route();
+    stream.connect(session);
+  }
 });
 element("new-session").addEventListener("click", async () => {
   const button = /** @type {HTMLButtonElement} */ (element("new-session"));

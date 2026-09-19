@@ -118,6 +118,9 @@ test('aggregation CE-08: dropped accepted response does not resubmit or move Ses
     await expect.poll(() => page.evaluate(() => sessionStorage.getItem('alfred.session'))).not.toBe(session);
     const second = await page.evaluate(() => sessionStorage.getItem('alfred.session'));
     expect(second).not.toBe(session);
+    // Keep admission uncertainty observable before a real terminal projection
+    // legitimately advances MainBar to recording_pending.
+    await server.send('hold-model');
     await server.send('hold-recording');
     await page.clock.runFor(701); // Observe the real connected/idle state before submit.
     let sent = 0;
@@ -131,6 +134,15 @@ test('aggregation CE-08: dropped accepted response does not resubmit or move Ses
     });
     await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
     await expect(page.getByText(/准入未确认；请查看已有运行/)).toBeVisible();
+    await server.send('wait-stream');
+    expect(accepted.session_id).toBe(session);
+    expect(sent).toBe(1);
+    expect(await page.evaluate(() => sessionStorage.getItem('alfred.session'))).toBe(second);
+    await expect(page.getByRole('combobox',{name:'目标会话'})).toHaveValue(session);
+    await expect(page.getByRole('button',{name:'生成聚合草稿',exact:true})).toBeDisabled();
+    await server.send('release-model');
+    await expect(page.getByRole('region',{name:'当前运行'}).getByRole('link',{name:'查看当前运行'})).toHaveAttribute('href',new RegExp(`/runs/${accepted.run_id}\\?`));
+    expect(await page.evaluate(() => sessionStorage.getItem('alfred.session'))).toBe(second);
     // CI-01 / #75 CE-07: let the real recording projection arrive, then
     // deterministically execute the form's next observation poll.
     await expect(page.getByRole('region',{name:'当前运行',exact:true})).toContainText('正在保存');
@@ -144,6 +156,7 @@ test('aggregation CE-08: dropped accepted response does not resubmit or move Ses
     expect(sent).toBe(1);
     await expect(page.locator('#messages').getByText('已验证草稿 [[S1]]',{exact:true})).toHaveCount(0);
     await page.reload();
+    expect(await page.evaluate(() => sessionStorage.getItem('alfred.session'))).toBe(second);
     const other = await api(page.request,server.origin);
     const pending = await other.get('/api/runs?filter=chat&limit=25');
     expect(pending.status, JSON.stringify(pending)).toBe(200);
@@ -233,20 +246,63 @@ for (const surface of ['mainbar','behaviour','runs']) for (const timing of ['ope
   test(`STD-01/SPEC-01: ${surface} clears offline sources and ${timing} reads on delete`, async ({page}) => {
     const server = await memoryServer({script:'tests/browser/aggregation_server.py'});
     let release = () => {};
+    let releaseVerification = () => {};
     try {
       const {other,memoryId} = await prepareDraft(page,server);
       const accepted = page.waitForResponse(r => r.url().endsWith('/api/runs') && r.request().method() === 'POST');
       await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
       const {run_id} = await acceptedRun(await accepted);
       await expect(page.getByRole('button',{name:'生成聚合草稿',exact:true})).toBeEnabled();
-      if (surface === 'runs') await page.goto(server.origin+'/runs/'+run_id);
+      let verificationState;
+      let verificationArrived;
+      if (surface === 'runs') {
+        // A new page may render historical references before MemorySync has
+        // verified the live revision. Hold the real response at that boundary.
+        const verification = new Promise(resolve => {releaseVerification=resolve;});
+        let observed;
+        verificationArrived = new Promise(resolve => {observed=resolve;});
+        await page.route('**/api/memory/state',async route=>{
+          const response=await route.fetch();
+          expect(response.status()).toBe(200);
+          verificationState=await response.json();
+          expect(verificationState).toMatchObject({
+            process_instance_id:expect.any(String),memory_revision:expect.any(Number),
+          });
+          observed();await verification;await route.fulfill({response});
+        });
+        await page.goto(server.origin+'/runs/'+run_id);
+      }
       const area = surface === 'mainbar' ? page.locator('#messages') : surface === 'behaviour' ? page.getByRole('region',{name:'手动聚合',exact:true}) : page.getByRole('region',{name:'运行过程',exact:true});
       if (surface !== 'mainbar') {
         const collapse=page.getByRole('button',{name:'收起对话',exact:true});
         if (await collapse.isVisible()) await collapse.click();
       }
       const source = area.getByRole('button',{name:'语义记忆 S1',exact:true});
+      let reads=0;
+      page.on('request',request=>{
+        if (request.url().includes('/api/memory/record?')) reads++;
+      });
+      if (surface === 'runs') {
+        await verificationArrived;
+        await source.click();
+        await expect(area.getByText('离线或无法核验，原资料已隐藏。',{exact:true})).toBeVisible();
+        await expect(area.getByText('coffee source',{exact:true})).toHaveCount(0);
+        expect(reads).toBe(0);
+        releaseVerification();
+        await expect(area.getByText('资料已变化，请重新查看。',{exact:true})).toBeVisible();
+        await page.unroute('**/api/memory/state');
+      }
+      const firstRead=page.waitForResponse(response=>{
+        const url=new URL(response.url());
+        return url.pathname==='/api/memory/record' && url.searchParams.get('id')===memoryId;
+      });
       await source.click();
+      const recordResponse=await firstRead;
+      expect(recordResponse.status()).toBe(200);
+      const record=await recordResponse.json();
+      expect(record.record).toMatchObject({id:memoryId,record_version:1,fact:'coffee source'});
+      if (surface === 'runs') expect(record.memory_revision).toBe(verificationState.memory_revision);
+      expect(reads).toBe(1);
       await expect(area.getByText('coffee source',{exact:true})).toBeVisible();
       await page.evaluate(() => window.dispatchEvent(new Event('offline')));
       await expect(area.getByText('coffee source',{exact:true})).toHaveCount(0);
@@ -284,7 +340,7 @@ for (const surface of ['mainbar','behaviour','runs']) for (const timing of ['ope
       const expand=page.getByRole('button',{name:'展开对话',exact:true});
       if(await expand.isVisible()) await expand.click();
       await expect(page.locator('#messages').getByText('已验证草稿 [[S1]]',{exact:true})).toBeVisible();
-    } finally { release(); await server.close(); }
+    } finally { release(); releaseVerification(); await server.close(); }
   });
 }
 
