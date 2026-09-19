@@ -38,6 +38,7 @@ let instance = "";
 let revision = -1;
 let connected = false;
 /** @type {ReturnType<typeof toolsPage>|ReturnType<typeof accountingPage>|null} */ let accountingView = null;
+/** @type {ReturnType<typeof behaviourPage>|null} */ let behaviourView = null;
 let valid = false;
 let sending = false;
 let unavailable = false;
@@ -305,6 +306,7 @@ const stream = new Stream(
     if (kind === "state_patch") {
       if (first && instance !== body.process_instance_id) {
         instance = body.process_instance_id;
+        behaviourView?.sync();
         revision = -1;
         replies.clear();
         progress.clear();
@@ -447,6 +449,7 @@ const stream = new Stream(
     memory.disconnected();
     accountingView?.disconnect();
     databaseView?.disconnect();
+    behaviourView?.disconnect();
     renderMessages();
     updateSend();
   },
@@ -585,6 +588,7 @@ function route() {
   const isOps = path === "/ops";
   const isBehaviour = path === "/behaviour";
   const isDatabase = path === "/database";
+  behaviourView?.close(); behaviourView = null;
   accountingView?.close(); accountingView = null;
   connectionsView?.close(); connectionsView = null;
   databaseView?.close(); databaseView = null;
@@ -601,7 +605,7 @@ function route() {
   receipts.detach();
   element("page").replaceChildren(heading);
   runPage = null;
-  if (isBehaviour) behaviourPage(element("page"), () => csrf, () => ({active, connected, unavailable, projection:[...replies.values()].find(r => r.aggregation && r.recording_state !== "recorded")}), memory);
+  if (isBehaviour) behaviourView = behaviourPage(element("page"), () => csrf, () => ({active, connected, unavailable, projection:[...replies.values()].find(r => r.aggregation && r.recording_state !== "recorded")}), memory, () => instance);
   else if (isTools) accountingView = toolsPage(element("page"), () => csrf);
   else if (isOps) accountingView = accountingPage(element("page"), () => csrf);
   else if (isModels) modelsPage(element("page"), () => csrf);
@@ -741,6 +745,7 @@ window.addEventListener("offline", () => {
   memory.disconnected();
   accountingView?.disconnect();
   databaseView?.disconnect();
+  behaviourView?.disconnect();
   updateSend();
 });
 window.addEventListener("online", () => stream.connect(session));

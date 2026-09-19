@@ -87,6 +87,9 @@ def run_chat_graph(
             fallback={"decision": "not_needed", "entered": False, "model_requests": 0},
             reply_disposition="reply",
         )
+    stats = item.memory_telemetry.get("routing_statistics")
+    if routing is not None and stats is not None:
+        stats["graph_entered"] = True
     result_name = "Failed"
     result = None
     try:
@@ -102,6 +105,13 @@ def run_chat_graph(
             "fallback": False,
         }
         if routing is not None:
+            if stats is not None:
+                stats["route"] = context.committed_state.get(
+                    "route_decision", {}
+                ).get("route")
+                stats["recovered"] = (
+                    context.committed_state.get("context_recovery") is not None
+                )
             facts = item.memory_telemetry["routing"]
             facts.update(context.graph_identity, graph_result=result_name)
     if routing is not None:
@@ -132,6 +142,8 @@ def run_chat_graph(
                 else "graph_failed"
             )
             allowed = reason == "graph_failed"
+            if stats is not None and not allowed:
+                stats["blocked"] = reason
             facts["fallback"] = dict(
                 decision="allowed" if allowed else "blocked",
                 reason=reason,

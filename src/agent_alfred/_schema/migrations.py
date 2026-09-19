@@ -1093,6 +1093,10 @@ def _apply_v18(conn):
         conn.execute(statement)
 
 
+def _apply_v19(conn):
+    conn.execute("ALTER TABLE runs ADD COLUMN routing_admission TEXT")
+
+
 MIGRATIONS = (
     Migration(version=1, apply=_apply_v1, managed_objects=_V1_MANAGED_OBJECTS),
     # Renames and rebuilds only: every name it leaves behind is already v1's.
@@ -1149,6 +1153,7 @@ MIGRATIONS = (
         ),
     ),
     Migration(version=18, apply=_apply_v18, managed_objects=()),
+    Migration(version=19, apply=_apply_v19, managed_objects=()),
 )
 MIGRATION_VERSIONS = tuple(migration.version for migration in MIGRATIONS)
 LATEST_MIGRATION_VERSION = MIGRATION_VERSIONS[-1]

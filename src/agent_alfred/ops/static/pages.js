@@ -1,3 +1,4 @@
+import {routingStatistics} from "./routing-statistics.js";
 import {aggregationForm} from "./aggregation.js";
 import { node, textBlocks } from "./dom.js";
 import { outcomeLabel } from "./runs.js";
@@ -705,8 +706,8 @@ export function modelsPage(root, csrf) {
     .then(render);
 }
 
-/** @param {HTMLElement} root @param {()=>string} csrf @param {()=>Wire} runtime @param {import("./memory.js").MemorySync} memory */
-export function behaviourPage(root, csrf, runtime, memory) {
+/** @param {HTMLElement} root @param {()=>string} csrf @param {()=>Wire} runtime @param {import("./memory.js").MemorySync} memory @param {()=>string} instance */
+export function behaviourPage(root, csrf, runtime, memory, instance) {
   aggregationForm(root, csrf, runtime, memory);
   let state = /** @type {Wire} */ ({});
   const label = node('label', '启用消息分流');
@@ -720,6 +721,7 @@ export function behaviourPage(root, csrf, runtime, memory) {
   const recover = node('button', '备份原文件并恢复为关闭'); recover.hidden = true;
   root.append(node('p', '默认关闭。启用后识别纯问候、致谢及明确无需回复的消息；实际任务仍进入完整回答。'),
     label, save, refresh, recover, notice);
+  const statistics = routingStatistics(root, instance);
   async function read() {
     try {
       const response = await fetch('/api/behaviour');
@@ -759,4 +761,5 @@ export function behaviourPage(root, csrf, runtime, memory) {
   recover.addEventListener('click', () => void write('recover'));
   refresh.addEventListener('click', () => void read());
   void read();
+  return statistics;
 }

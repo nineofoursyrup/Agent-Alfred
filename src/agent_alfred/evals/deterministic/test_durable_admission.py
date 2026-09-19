@@ -64,7 +64,8 @@ def test_v4_preserves_v3_rows_and_classifies_only_positive_admission_evidence():
             ("unknown", "unconfirmed"),
         ]
         upgraded = conn.execute("SELECT * FROM runs ORDER BY run_id").fetchall()
-        assert [row[:-1] for row in upgraded] == original_runs
+        assert [row[:13] for row in upgraded] == original_runs
+        assert all(row[-1] is None for row in upgraded)  # v19 never backfills
         assert conn.execute("SELECT * FROM agent_log").fetchall() == original_messages
         assert (
             conn.execute(

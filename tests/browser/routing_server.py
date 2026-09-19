@@ -13,7 +13,13 @@ from agent_alfred.wiring import build_dashboard
 
 
 class RoutingModel:
+    def __init__(self):
+        self.failed = set()
+
     def respond(self, request, *, events=None, deadline=None):
+        from agent_alfred.messages import message_plain_text
+
+        task = message_plain_text(request.messages[-1])
         system = "\n".join(b.text for b in request.system or ())
         if system.startswith(SELECTOR_SYSTEM):
             text = '{"skills":["A","B","C"]}'
@@ -23,8 +29,21 @@ class RoutingModel:
             from agent_alfred.messages import message_plain_text
 
             task = message_plain_text(request.messages[-1])
-            text = "no_reply" if task == "不用回复" else "full"
+            if task == "STATS classifier failure":
+                raise RuntimeError("controlled classifier failure")
+            text = (
+                "greeting"
+                if task == "你好"
+                else "unknown"
+                if task == "STATS graph fallback"
+                else "no_reply"
+                if task == "不用回复"
+                else "full"
+            )
         else:
+            if task == "STATS full failure" and task not in self.failed:
+                self.failed.add(task)
+                raise RuntimeError("controlled answer failure")
             text = "离线路由回复"
         result = ScriptedModel([text]).respond(request, deadline=deadline)
         attempt = result.attempts[0]
@@ -59,9 +78,18 @@ def main():
 
         return build_routing_graph(tools, projection=projection)
 
+    import json
+    import sqlite3
+    from datetime import datetime
+
+    from agent_alfred.clock import FakeClock
     from agent_alfred.settings import Settings
 
+    clock = FakeClock() if (args.state / "fixed-clock").exists() else None
+    lock = None
+    saved = None
     dashboard = build_dashboard(
+        clock=clock,
         settings=Settings(working_memory_rounds=args.working_memory_rounds)
         if args.working_memory_rounds is not None
         else None,
@@ -75,8 +103,53 @@ def main():
         dashboard.start()
         print("ready", flush=True)
         for line in sys.stdin:
-            if line.strip() == "stop":
+            command = line.strip()
+            if command == "stop":
                 break
+            if command.startswith("clock "):
+                clock.wall = datetime.fromisoformat(command[6:])
+            if command == "lock":
+                lock = sqlite3.connect(args.state / "db.sqlite3")
+                lock.execute("PRAGMA journal_mode=DELETE")
+                lock.execute("BEGIN EXCLUSIVE")
+            if command == "offline-data":
+                (args.state / "db.sqlite3").rename(args.state / "offline.sqlite3")
+            if command == "online-data":
+                (args.state / "offline.sqlite3").rename(args.state / "db.sqlite3")
+            if command == "unlock":
+                lock.rollback()
+                lock.close()
+                lock = None
+            if command in (
+                "legacy",
+                "future-version",
+                "unknown-results",
+                "bad-time",
+                "restore-data",
+            ):
+                with sqlite3.connect(args.state / "db.sqlite3") as conn:
+                    if saved is None:
+                        saved = conn.execute(
+                            "SELECT run_id, routing_admission, telemetry, "
+                            "accepted_at FROM runs"
+                        ).fetchall()
+                    for run_id, admission, telemetry, accepted in saved:
+                        body = json.loads(telemetry)
+                        if command == "legacy":
+                            admission = None
+                        if command == "future-version":
+                            version = json.loads(admission)
+                            version["policy_version"] = "future"
+                            admission = json.dumps(version)
+                        if command == "unknown-results":
+                            body["memory"].pop("routing_statistics", None)
+                        if command == "bad-time":
+                            accepted = "invalid"
+                        conn.execute(
+                            "UPDATE runs SET routing_admission=?, telemetry=?, "
+                            "accepted_at=? WHERE run_id=?",
+                            (admission, json.dumps(body), accepted, run_id),
+                        )
             if line.strip() == "corrupt-context":
                 (args.state / "corrupt-context").touch()
             if line.strip() == "trim-traces":
@@ -84,6 +157,7 @@ def main():
                     trace.write_bytes(b"")
             if line.strip() == "repair-recording":
                 import sqlite3
+
                 with sqlite3.connect(args.state / "db.sqlite3") as conn:
                     conn.execute("DROP TRIGGER fail_recording")
             if line.strip() == "fail-recording":
@@ -97,6 +171,8 @@ def main():
                     )
             print("ok " + line.strip(), flush=True)
     finally:
+        if lock is not None:
+            lock.close()
         assert dashboard.close()
 
 

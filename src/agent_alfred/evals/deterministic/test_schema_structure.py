@@ -107,7 +107,7 @@ for version in (0, 12):
     schema.MIGRATIONS = registry
     schema.migrate(conn)
     latest = conn.execute('SELECT max(version) FROM schema_migrations').fetchone()
-    assert latest == (18,)
+    assert latest == (19,)
     conn.close()
 """
     source = Path(schema.__file__).resolve().parents[1]

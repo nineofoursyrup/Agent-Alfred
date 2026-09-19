@@ -282,3 +282,8 @@ textarea {
     transition: none !important;
   }
 }
+
+.routing-statistics { overflow-wrap: anywhere; min-width: 0; }
+.routing-statistics summary { cursor: pointer; font-weight: 600; }
+.routing-statistics table { width: 100%; table-layout: fixed; }
+.routing-statistics th, .routing-statistics td { padding: .4rem; text-align: left; vertical-align: top; }
