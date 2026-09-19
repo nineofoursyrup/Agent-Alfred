@@ -107,12 +107,14 @@ class HandlerContext:
         broker: Any,
         instance_id: str,
         database: Any = None,
+        trace_exports: Any = None,
     ):
         self.guard = guard
         self.api = api
         self.broker = broker
         self.instance_id = instance_id
         self.database = database
+        self.trace_exports = trace_exports
         self._requests = threading.Condition()
         self._stopping = False
         self._active_requests: dict[object, bool] = {}
@@ -290,6 +292,23 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     def _handle(self, method: str) -> None:
         context = self._context
+        if (
+            method == "POST"
+            and urlsplit(self.path).path == "/api/trace-exports/download"
+            and self.headers.get_content_type()
+                == "application/x-www-form-urlencoded"
+        ):
+            from agent_alfred.gateway.web.trace_export_api import native_authorize
+            registration = object()
+            try:
+                if context.begin_request(registration, stream=False):
+                    try:
+                        native_authorize(self)
+                    except (OSError, ValueError):
+                        self.close_connection = True
+            finally:
+                context.end_request(registration)
+            return
         authorization = context.guard.authorize(method=method, headers=self.headers)
         self._request_body_pending = authorization.body_declared
         if isinstance(authorization, Rejection):
@@ -313,6 +332,16 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._send(405, {"code": "no_preflight"})
             return
         path = urlsplit(self.path).path
+        if path == "/api/trace-exports" or path.startswith("/api/trace-exports/"):
+            from agent_alfred.gateway.web.trace_export_api import dispatch
+            body = None
+            if method == "POST":
+                body, error = self._read_body(authorization.body_length or 0)
+                if error:
+                    self._send(400, {"code": "invalid_request"})
+                    return
+            dispatch(self, method, path, body)
+            return
         if path == EVENTS_PATH and method == "GET":
             self._serve_events()
             return

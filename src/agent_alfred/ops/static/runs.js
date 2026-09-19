@@ -1,3 +1,4 @@
+import {traceExport} from "./trace_export.js";
 import {aggregationFacts} from "./aggregation.js";
 import { node, textBlocks } from "./dom.js";
 import { Pager } from "./pages.js";
@@ -18,8 +19,8 @@ export function outcomeLabel(run) {
   );
 }
 
-/** @param {HTMLElement} root @param {import('./progress.js').Progress} progress @param {()=>void} navigate @param {import('./memory.js').MemorySync} memory */
-export function runsPage(root, progress, navigate, memory) {
+/** @param {HTMLElement} root @param {import('./progress.js').Progress} progress @param {()=>void} navigate @param {import('./memory.js').MemorySync} memory @param {()=>string} csrf */
+export function runsPage(root, progress, navigate, memory, csrf) {
   const context = new URLSearchParams(location.search);
   const filter = node("select");
   filter.setAttribute("aria-label", "运行筛选");
@@ -51,6 +52,7 @@ export function runsPage(root, progress, navigate, memory) {
     history.pushState(null, "", `/runs?filter=${filter.value}`);
     navigate();
   });
+  let exportView = /** @type {ReturnType<typeof traceExport>|null} */ (null);
   const seen = new Set();
   /** @type {Wire|null} */ let selectedRun = null;
   /** @type {Wire|null} */ let evidence = null;
@@ -218,6 +220,7 @@ export function runsPage(root, progress, navigate, memory) {
   }
   function update() {
     if (!selectedRun || !root.isConnected) return;
+    if (selected && !exportView) exportView=traceExport(root,selected,csrf,memory);
     const events = new Map();
     for (const event of evidence?.events || []) events.set(event.seq, event);
     for (const [seq, event] of progress.events.get(selectedRun.run_id) || [])
@@ -341,7 +344,7 @@ export function runsPage(root, progress, navigate, memory) {
       }
     })();
   } else void pager.load();
-  return { update, loadEvidence, sync };
+  return { update, loadEvidence, sync, dispose: () => exportView?.dispose() };
 }
 
 /** @param {HTMLElement} root @param {Wire[]} events @param {Wire[]} ledger @param {Wire} run @param {Set<string>} confirmed */
