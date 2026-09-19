@@ -143,7 +143,7 @@ test('CE-13: page fingerprint rejects external change and explicitly backs up re
   } finally {await server.close();}
 });
 
-test('CE-01: disabled real browser conversation matches exact pre-routing baseline', async ({page}) => {
+test('CE-01: disabled real browser conversation matches exact pre-routing baseline', async ({browser}) => {
   const {spawn, execFileSync} = await import('node:child_process');
   const {mkdtemp, rm} = await import('node:fs/promises');
   const {tmpdir} = await import('node:os');
@@ -158,10 +158,13 @@ test('CE-01: disabled real browser conversation matches exact pre-routing baseli
     for (const source of [baseline, root]) {
       const server = await memoryServer({script:'tests/browser/skills_server.py',
         spawnProcess: (_command, args) => spawn(resolve(root, '.venv/bin/python'), args, {cwd:source})});
+      const context = await browser.newContext();
       try {
+        const page = await context.newPage();
+        // Both versions open this real stream only after consuming entry credentials.
+        const ready = page.waitForRequest(request => request.url() === server.origin + '/api/events');
         await page.goto(server.origin + '/inbox');
-        await page.evaluate(() => {sessionStorage.clear(); localStorage.clear();});
-        await page.reload();
+        await ready;
         await page.getByRole('button', {name:'新建会话', exact:true}).click();
         await expect(page.getByRole('textbox', {name:'消息'})).toBeEnabled();
         await page.getByRole('button', {name:'展开对话', exact:true}).click();
@@ -172,7 +175,9 @@ test('CE-01: disabled real browser conversation matches exact pre-routing baseli
         await page.reload();
         await expect(page.locator('#messages').getByText('离线 Skill 回复')).toBeVisible();
         texts.push(await page.locator('#messages').innerText());
-      } finally {await server.close();}
+      } finally {
+        try {await context.close();} finally {await server.close();}
+      }
     }
     expect(texts[1]).toBe(texts[0]);
   } finally {await rm(baseline, {recursive:true, force:true});}

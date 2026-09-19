@@ -1,5 +1,39 @@
 import { test, expect } from "@playwright/test";
 
+test("new Session stays disabled until the real entry credentials arrive", async ({ page }) => {
+  let release, captured;
+  const gate = new Promise(resolve => release = resolve);
+  const held = new Promise(resolve => captured = resolve);
+  const writes = [];
+  page.on("request", request => {
+    if (request.method() === "POST" && request.url().endsWith("/api/sessions"))
+      writes.push(request);
+  });
+  await page.route("**/api/entry", async route => {
+    const response = await route.fetch();
+    captured();
+    await gate;
+    await route.fulfill({ response });
+  });
+  try {
+    await page.goto("/");
+    await held;
+    const create = page.getByRole("button", { name: "新建会话", exact: true });
+    await expect(create).toBeDisabled();
+    expect(writes).toHaveLength(0);
+    release();
+    const created = page.waitForResponse(response =>
+      response.url().endsWith("/api/sessions") && response.request().method() === "POST",
+    );
+    await create.click();
+    expect((await created).status()).toBe(201);
+    expect(writes).toHaveLength(1);
+    await expect(page.getByRole("textbox", { name: "消息" })).toBeEnabled();
+  } finally {
+    release();
+  }
+});
+
 test("the narrow drawer is a keyboard-contained dialog that restores focus", async ({
   page,
 }) => {
