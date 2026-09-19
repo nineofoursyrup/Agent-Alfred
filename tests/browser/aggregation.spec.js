@@ -111,6 +111,9 @@ test('aggregation CE-08: dropped accepted response does not resubmit or move Ses
     await expect.poll(() => page.evaluate(() => sessionStorage.getItem('alfred.session'))).not.toBe(session);
     const second = await page.evaluate(() => sessionStorage.getItem('alfred.session'));
     expect(second).not.toBe(session);
+    // Keep admission uncertainty observable before a real terminal projection
+    // legitimately advances the form to recording_pending.
+    await server.send('hold-model');
     await server.send('hold-recording');
     let sent = 0;
     let accepted;
@@ -123,8 +126,19 @@ test('aggregation CE-08: dropped accepted response does not resubmit or move Ses
     });
     await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
     await expect(page.getByText(/准入未确认；请查看已有运行/)).toBeVisible();
+    await server.send('wait-stream');
+    expect(accepted.session_id).toBe(session);
+    expect(sent).toBe(1);
+    expect(await page.evaluate(() => sessionStorage.getItem('alfred.session'))).toBe(second);
+    await expect(page.getByRole('combobox',{name:'目标会话'})).toHaveValue(session);
+    await expect(page.getByRole('button',{name:'生成聚合草稿',exact:true})).toBeDisabled();
+    await server.send('release-model');
+    await expect(page.getByRole('region',{name:'手动聚合'}).getByRole('status')).toHaveText('正在保存…');
+    await expect(page.getByRole('region',{name:'当前运行'}).getByRole('link',{name:'查看当前运行'})).toHaveAttribute('href',new RegExp(`/runs/${accepted.run_id}\\?`));
+    expect(await page.evaluate(() => sessionStorage.getItem('alfred.session'))).toBe(second);
     await expect(page.locator('#messages').getByText('已验证草稿 [[S1]]',{exact:true})).toHaveCount(0);
     await page.reload();
+    expect(await page.evaluate(() => sessionStorage.getItem('alfred.session'))).toBe(second);
     const other = await api(page.request,server.origin);
     const pending = await other.get('/api/runs?filter=chat&limit=25');
     expect(pending.status, JSON.stringify(pending)).toBe(200);

@@ -1,5 +1,7 @@
 import {test, expect} from '@playwright/test';
 import {execFileSync} from 'node:child_process';
+import {readdir} from 'node:fs/promises';
+import {join} from 'node:path';
 
 test('real Run exports an inert share ZIP through native browser download', async ({page}) => {
   await page.goto('/');
@@ -68,24 +70,56 @@ test('AC18 AC24: another tab sees busy, leaving ready releases ownership',async(
 });
 
 test('AC24: delayed real creation response cannot restore a departed page',async({page})=>{
-  await createRun(page);
+  const server=await memoryServer({script:'tests/browser/trace_export_server.py'});
   let release,arrived;
   const gate=new Promise(r=>{release=r;}),ready=new Promise(r=>{arrived=r;});
-  let taskId;
-  await page.route('**/api/trace-exports',async route=>{
-    const response=await route.fetch();expect(response.status()).toBe(202);
-    taskId=(await response.json()).task_id;arrived();
-    await gate;await route.fulfill({response});
-  });
+  let task;
   try {
+    const runId=await fixtureRun(page,server,'export lifecycle');
+    await server.send('hold-read');
+    await page.route('**/api/trace-exports',async route=>{
+      const response=await route.fetch();expect(response.status()).toBe(202);
+      task=await response.json();arrived();
+      await gate;await route.fulfill({response});
+    });
     await page.getByRole('button',{name:'生成追踪导出',exact:true}).click();
     await ready;
+    await server.send('await-read');
     await page.getByRole('link',{name:'运行',exact:true}).click();
-    const cancel=page.waitForResponse(r=>r.url().endsWith(`/${taskId}/cancel`));
+    const cancel=page.waitForResponse(r=>r.url().endsWith(`/${task.task_id}/cancel`));
     release();
-    expect((await (await cancel).json()).cleanup).toBe('released');
+    const cancelled=await cancel;
+    expect(cancelled.status()).toBe(200);
+    expect(await cancelled.json()).toMatchObject({task_id:task.task_id,
+      instance_id:task.instance_id,state:'cleaning',reason:'cancelled',
+      cleanup:'pending',download_token:null});
+    await page.unroute('**/api/trace-exports');
+    await expect(page.getByRole('region',{name:'追踪导出'})).toHaveCount(0);
     await expect(page.getByRole('button',{name:'下载 ZIP',exact:true})).toHaveCount(0);
-  } finally {release();}
+    const {csrf_token}=await (await page.request.get(server.origin+'/api/entry')).json();
+    const blocked=await page.request.post(server.origin+'/api/trace-exports',{
+      headers:{'x-agent-alfred-csrf':csrf_token},
+      data:{run_id:runId,mode:'share',instance_id:task.instance_id},
+    });
+    expect(blocked.status()).toBe(409);
+    expect(await blocked.json()).toMatchObject({code:'busy'});
+    // Accepted cancellation cannot release a reader still inside real IO.
+    // Observe final cleanup only after the exact read has exited.
+    await server.send('release-read');
+    await expect.poll(async()=>{
+      const response=await page.request.get(server.origin+`/api/trace-exports/${task.task_id}`);
+      expect(response.status()).toBe(200);
+      return await response.json();
+    }).toMatchObject({task_id:task.task_id,state:'cancelled',reason:'cancelled',
+      cleanup:'released',download_token:null});
+    expect(await readdir(join(server.directory,'trace-exports'))).toEqual([]);
+    await expect(page.getByRole('region',{name:'追踪导出'})).toHaveCount(0);
+    await page.goto(server.origin+`/runs/${runId}`);
+    await page.getByRole('button',{name:'生成追踪导出',exact:true}).click();
+    await expect(page.getByRole('button',{name:'下载 ZIP',exact:true})).toBeVisible();
+    const download=await nativeZip(page);
+    zipManifest(await download.path(),'verified_complete');
+  } finally {release();await server.send('release-read');await server.close();}
 });
 
 import {memoryServer} from './memory-server.js';
