@@ -58,7 +58,7 @@ export function aggregationForm(root, csrf, runtime, sync) {
   const goal = node('textarea'); goal.setAttribute('aria-label','聚合目标');
   const keywords = node('input'); keywords.setAttribute('aria-label','聚合关键词');
   const choices = /** @type {Map<string,HTMLInputElement>} */ (new Map());
-  section.append(node('h2','手动聚合'), node('p','选择资料生成草稿，结果进入目标会话。再次生成会创建新运行。'));
+  section.append(node('h2','手动聚合'), node('p','单次动作 · 显式生成时固定目标会话与所选来源，草稿进入目标会话。草稿不自动进入工作窗口、后续聚合或提炼；再次生成会创建新运行。'));
   for (const [text, control] of /** @type {[string, HTMLElement][]} */ ([['目标会话',target],['聚合目标',goal],['聚合关键词',keywords]])) {
     const label = node('label',text); label.append(control); section.append(label);
   }
@@ -148,4 +148,5 @@ export function aggregationForm(root, csrf, runtime, sync) {
   });
   refresh.addEventListener('click', () => void sessions());
   void sessions(); void update();
+  return section;
 }

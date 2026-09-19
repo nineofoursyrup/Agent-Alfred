@@ -1,3 +1,4 @@
+import {observeTopology} from './topology-observation.js';
 import {test, expect} from '@playwright/test';
 import {memoryServer, api} from './memory-server.js';
 
@@ -82,10 +83,14 @@ test('aggregation CE-08/11: candidate hidden, recording pending busy and failed 
     const {run_id} = await response.json();
     await expect(page.getByRole('button',{name:'生成聚合草稿',exact:true})).toBeDisabled();
     await expect(page.locator('#messages')).not.toContainText('不得展示的候选流');
+    await observeTopology(page); // #75 CE-07: real model is still held.
+    await expect(page.getByRole('button',{name:'生成聚合草稿',exact:true})).toBeDisabled();
     const mutation = await other.command({operation_id:'busy',kind:'semantic',action:'save',payload:{subject:'x',fact:'y'}});
     expect(mutation.status).toBe(409);
     await server.send('release-model');
     await expect(page.locator('#messages').getByText('已验证草稿 [[S1]]',{exact:true})).toBeVisible();
+    await observeTopology(page); // #75 CE-07: real recording is still held.
+    await expect(page.getByRole('button',{name:'生成聚合草稿',exact:true})).toBeDisabled();
     const {csrf_token} = await (await page.request.get(server.origin+'/api/entry')).json();
     const again = await page.request.post(server.origin+'/api/runs',{headers:{'x-agent-alfred-csrf':csrf_token},data:{purpose:'aggregation',session_id:session,message:'again',keywords:'coffee',sources:['semantic']}});
     expect(again.status()).toBe(409);
@@ -123,6 +128,10 @@ test('aggregation CE-08: dropped accepted response does not resubmit or move Ses
     });
     await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
     await expect(page.getByText(/准入未确认；请查看已有运行/)).toBeVisible();
+    await observeTopology(page); // #75 CE-07: accepted 202 was lost; same request.
+    await expect(page.getByText(/准入未确认；请查看已有运行/)).toBeVisible();
+    await expect(page.getByRole('button',{name:'生成聚合草稿',exact:true})).toBeDisabled();
+    expect(sent).toBe(1);
     await expect(page.locator('#messages').getByText('已验证草稿 [[S1]]',{exact:true})).toHaveCount(0);
     await page.reload();
     const other = await api(page.request,server.origin);

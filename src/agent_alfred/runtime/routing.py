@@ -133,7 +133,11 @@ def join_route(state, context):
 
 
 def build_routing_graph(tools, *, projection=project_context, recovery=recover_context):
-    b = GraphBuilder("message_routing", tools=tools)
+    from agent_alfred.runtime.workflow_presentation import ROUTING_PRESENTATION
+
+    b = GraphBuilder(
+        "message_routing", tools=tools, presentation=ROUTING_PRESENTATION
+    )
     for key in ("task", "prepared_context", "has_loaded_skills"):
         b.declare_input(key)
     b.add_node(

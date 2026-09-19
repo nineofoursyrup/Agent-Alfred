@@ -239,7 +239,10 @@ textarea {
 @media (max-width: 640px) {
   .site-header {
     padding: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
   }
+  nav { flex-wrap: wrap; gap: 10px 16px; }
   main {
     padding: 0 16px calc(var(--mainbar-height, 280px) + 30px);
     margin-top: 24px;
@@ -282,3 +285,14 @@ textarea {
     transition: none !important;
   }
 }
+
+/* Read-only workflow observation stays within its business section. */
+.topology { margin: 1rem 0 2rem; padding: .8rem; border: 1px solid #8b93a0; border-radius: .5rem; min-width: 0; }
+.topology-controls { display: flex; flex-wrap: wrap; gap: .4rem; }
+.topology-canvas { display: block; width: 100%; height: 380px; border: 1px solid #8b93a0; touch-action: none; color: #273449; background: #fff; }
+.topology p, .topology li, .topology button { overflow-wrap: anywhere; }
+.topology button { white-space: normal; max-width: 100%; }
+.topology pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.topology li { margin-bottom: .65rem; }
+.topology button:focus-visible { outline: 3px solid #276be8; outline-offset: 2px; }
+@media (max-width: 600px) { .topology { padding: .4rem; } .topology-canvas { height: 260px; } .topology ul { padding-left: 1.2rem; } }

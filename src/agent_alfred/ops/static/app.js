@@ -57,6 +57,7 @@ const receipts = memoryReceipts(memory, () => csrf);
 /** @type {ReturnType<typeof runsPage>|null} */ let runPage = null;
 /** @type {ReturnType<typeof connectionsPage>|null} */ let connectionsView = null;
 /** @type {ReturnType<typeof databasePage>|null} */ let databaseView = null;
+/** @type {ReturnType<typeof behaviourPage>|null} */ let behaviourView = null;
 const notices = new ConnectionNotices(element("connection"));
 const announcer = new Announcer(element("announcements"));
 const alerted = new Set();
@@ -585,6 +586,7 @@ function route() {
   const isOps = path === "/ops";
   const isBehaviour = path === "/behaviour";
   const isDatabase = path === "/database";
+  behaviourView?.close(); behaviourView = null;
   accountingView?.close(); accountingView = null;
   connectionsView?.close(); connectionsView = null;
   databaseView?.close(); databaseView = null;
@@ -601,7 +603,7 @@ function route() {
   receipts.detach();
   element("page").replaceChildren(heading);
   runPage = null;
-  if (isBehaviour) behaviourPage(element("page"), () => csrf, () => ({active, connected, unavailable, projection:[...replies.values()].find(r => r.aggregation && r.recording_state !== "recorded")}), memory);
+  if (isBehaviour) behaviourView = behaviourPage(element("page"), () => csrf, () => ({instance, active, connected, unavailable, projection:[...replies.values()].find(r => r.aggregation && r.recording_state !== "recorded")}), memory);
   else if (isTools) accountingView = toolsPage(element("page"), () => csrf);
   else if (isOps) accountingView = accountingPage(element("page"), () => csrf);
   else if (isModels) modelsPage(element("page"), () => csrf);

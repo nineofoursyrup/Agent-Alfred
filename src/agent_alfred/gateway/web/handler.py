@@ -434,6 +434,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
             status, payload = api.behaviour()
             self._send(status, payload)
             return
+        if path == "/api/behaviour/topology":
+            status, payload = api.workflow_topology(params)
+            self._send(status, payload)
+            return
         if path == MODELS_PATH:
             status, payload = api.models(params)
             self._send(status, payload)
