@@ -24,7 +24,11 @@ REASONS = (
 
 
 def build_graph(tools):
-    b = GraphBuilder("manual_aggregation", tools=tools)
+    from agent_alfred.runtime.workflow_presentation import AGGREGATION_PRESENTATION
+
+    b = GraphBuilder(
+        "manual_aggregation", tools=tools, presentation=AGGREGATION_PRESENTATION
+    )
     b.declare_input("request")
     b.add_node(
         "aggregation_input",

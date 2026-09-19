@@ -326,6 +326,9 @@ class RuntimeHost:
         self._routing_graph = None
         self._routing_generation = 0
         self._routing_error = None
+        # A single reference publishes identity and immutable description together.
+        # Observers never enter Run admission or wait for graph compilation.
+        self._routing_publication = (None, 0)
         self._behaviour = behaviour_store or (
             BehaviourStore(file_state.path / "behaviour.json")
             if file_state is not None
@@ -523,6 +526,9 @@ class RuntimeHost:
             try:
                 self._routing_graph = self._routing_graph_builder(self._tools)
                 self._routing_generation += 1
+                self._routing_publication = (
+                    self._routing_graph, self._routing_generation
+                )
             except Exception as error:
                 from agent_alfred.resource_rollback import raise_if_rollback_pending
 
@@ -1248,6 +1254,27 @@ class RuntimeHost:
             generation=self._routing_generation,
             capabilities=[capability_identity(t) for t in self._tools.declarations()],
         )
+
+    def workflow_topology(self, workflow):
+        if workflow == "message_routing":
+            graph, generation = self._routing_publication
+        elif workflow == "manual_aggregation":
+            graph, generation = self._aggregation_graph, 1
+        else:
+            raise ValueError("unknown_workflow")
+        envelope = dict(
+            workflow=workflow,
+            graph_id=graph.graph_id if graph is not None else workflow,
+            process_instance_id=self._process_instance_id,
+            publication_generation=generation,
+            read_at=format_instant(self._clock.wall_utc()),
+        )
+        if graph is None:
+            return dict(
+                envelope, status="unavailable", reason="graph_not_published",
+                description=None,
+            )
+        return dict(envelope, status="available", description=graph.describe())
 
     def behaviour(self):
         if self._behaviour is None:
@@ -2353,6 +2380,7 @@ class RuntimeHost:
         self._routing_error = None
         self._routing_generation += 1
         self._tools = registry
+        self._routing_publication = (graph, self._routing_generation)
         if hasattr(self, "_executor"):
             self._executor._tools = registry
 

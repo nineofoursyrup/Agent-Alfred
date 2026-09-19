@@ -1,3 +1,4 @@
+import {observeTopology} from './topology-observation.js';
 import {test, expect} from '@playwright/test';
 import {memoryServer, api} from './memory-server.js';
 
@@ -82,10 +83,14 @@ test('aggregation CE-08/11: candidate hidden, recording pending busy and failed 
     const {run_id} = await response.json();
     await expect(page.getByRole('button',{name:'生成聚合草稿',exact:true})).toBeDisabled();
     await expect(page.locator('#messages')).not.toContainText('不得展示的候选流');
+    await observeTopology(page); // #75 CE-07: real model is still held.
+    await expect(page.getByRole('button',{name:'生成聚合草稿',exact:true})).toBeDisabled();
     const mutation = await other.command({operation_id:'busy',kind:'semantic',action:'save',payload:{subject:'x',fact:'y'}});
     expect(mutation.status).toBe(409);
     await server.send('release-model');
     await expect(page.locator('#messages').getByText('已验证草稿 [[S1]]',{exact:true})).toBeVisible();
+    await observeTopology(page); // #75 CE-07: real recording is still held.
+    await expect(page.getByRole('button',{name:'生成聚合草稿',exact:true})).toBeDisabled();
     const {csrf_token} = await (await page.request.get(server.origin+'/api/entry')).json();
     const again = await page.request.post(server.origin+'/api/runs',{headers:{'x-agent-alfred-csrf':csrf_token},data:{purpose:'aggregation',session_id:session,message:'again',keywords:'coffee',sources:['semantic']}});
     expect(again.status()).toBe(409);
@@ -104,6 +109,8 @@ test('aggregation CE-08/11: candidate hidden, recording pending busy and failed 
 });
 
 test('aggregation CE-08: dropped accepted response does not resubmit or move Session', async ({page}) => {
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
   const server = await memoryServer({script:'tests/browser/aggregation_server.py'});
   try {
     const {session} = await prepareDraft(page,server);
@@ -112,9 +119,10 @@ test('aggregation CE-08: dropped accepted response does not resubmit or move Ses
     const second = await page.evaluate(() => sessionStorage.getItem('alfred.session'));
     expect(second).not.toBe(session);
     // Keep admission uncertainty observable before a real terminal projection
-    // legitimately advances the form to recording_pending.
+    // legitimately advances MainBar to recording_pending.
     await server.send('hold-model');
     await server.send('hold-recording');
+    await page.clock.runFor(701); // Observe the real connected/idle state before submit.
     let sent = 0;
     let accepted;
     await page.route('**/api/runs', async route => {
@@ -133,9 +141,19 @@ test('aggregation CE-08: dropped accepted response does not resubmit or move Ses
     await expect(page.getByRole('combobox',{name:'目标会话'})).toHaveValue(session);
     await expect(page.getByRole('button',{name:'生成聚合草稿',exact:true})).toBeDisabled();
     await server.send('release-model');
-    await expect(page.getByRole('region',{name:'手动聚合'}).getByRole('status')).toHaveText('正在保存…');
     await expect(page.getByRole('region',{name:'当前运行'}).getByRole('link',{name:'查看当前运行'})).toHaveAttribute('href',new RegExp(`/runs/${accepted.run_id}\\?`));
     expect(await page.evaluate(() => sessionStorage.getItem('alfred.session'))).toBe(second);
+    // CI-01 / #75 CE-07: let the real recording projection arrive, then
+    // deterministically execute the form's next observation poll.
+    await expect(page.getByRole('region',{name:'当前运行',exact:true})).toContainText('正在保存');
+    await page.clock.runFor(701);
+    await expect(page.getByText(/准入未确认；请查看已有运行/)).toBeVisible();
+    await observeTopology(page); // #75 CE-07: accepted 202 was lost; same request.
+    await page.clock.runFor(1401);
+    await expect(page.getByText(/准入未确认；请查看已有运行/)).toBeVisible();
+    await expect(page.getByRole('link',{name:'查看已有运行',exact:true})).toBeVisible();
+    await expect(page.getByRole('button',{name:'生成聚合草稿',exact:true})).toBeDisabled();
+    expect(sent).toBe(1);
     await expect(page.locator('#messages').getByText('已验证草稿 [[S1]]',{exact:true})).toHaveCount(0);
     await page.reload();
     expect(await page.evaluate(() => sessionStorage.getItem('alfred.session'))).toBe(second);

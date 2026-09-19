@@ -10,6 +10,7 @@ PAGE_POLICY = (
 
 ASSETS = {
     "/assets/trace_export.js": ("trace_export.js", "text/javascript"),
+    "/assets/topology.js": ("topology.js", "text/javascript"),
     "/assets/aggregation.js": ("aggregation.js", "text/javascript"),
     "/assets/tools.js": ("tools.js", "text/javascript"),
     "/assets/accounting.js": ("accounting.js", "text/javascript"),
