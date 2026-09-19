@@ -105,7 +105,9 @@ export function aggregationForm(root, csrf, runtime, sync) {
     }
   }
   async function update() {
-    if (!section.isConnected) return;
+    // A global projection cannot confirm this form's lost admission response.
+    // Keep its warning and recovery link until the user reloads the page.
+    if (!section.isConnected || uncertain) return;
     try {
       const state = runtime();
       send.disabled = pending || uncertain || awaiting || Boolean(state.active) || !state.connected || state.unavailable;
@@ -117,6 +119,7 @@ export function aggregationForm(root, csrf, runtime, sync) {
         const response = await fetch('/api/run-evidence?' + new URLSearchParams({run_id:run}));
         if (response.ok) {
           const evidence = await response.json();
+          if (uncertain) return; // A prior observation may finish after admission became unknown.
           const facts = evidence.memory?.aggregation;
           if (facts) {
             awaiting = false;

@@ -109,6 +109,8 @@ test('aggregation CE-08/11: candidate hidden, recording pending busy and failed 
 });
 
 test('aggregation CE-08: dropped accepted response does not resubmit or move Session', async ({page}) => {
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
   const server = await memoryServer({script:'tests/browser/aggregation_server.py'});
   try {
     const {session} = await prepareDraft(page,server);
@@ -117,6 +119,7 @@ test('aggregation CE-08: dropped accepted response does not resubmit or move Ses
     const second = await page.evaluate(() => sessionStorage.getItem('alfred.session'));
     expect(second).not.toBe(session);
     await server.send('hold-recording');
+    await page.clock.runFor(701); // Observe the real connected/idle state before submit.
     let sent = 0;
     let accepted;
     await page.route('**/api/runs', async route => {
@@ -128,8 +131,15 @@ test('aggregation CE-08: dropped accepted response does not resubmit or move Ses
     });
     await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
     await expect(page.getByText(/准入未确认；请查看已有运行/)).toBeVisible();
-    await observeTopology(page); // #75 CE-07: accepted 202 was lost; same request.
+    // CI-01 / #75 CE-07: let the real recording projection arrive, then
+    // deterministically execute the form's next observation poll.
+    await expect(page.getByRole('region',{name:'当前运行',exact:true})).toContainText('正在保存');
+    await page.clock.runFor(701);
     await expect(page.getByText(/准入未确认；请查看已有运行/)).toBeVisible();
+    await observeTopology(page); // #75 CE-07: accepted 202 was lost; same request.
+    await page.clock.runFor(1401);
+    await expect(page.getByText(/准入未确认；请查看已有运行/)).toBeVisible();
+    await expect(page.getByRole('link',{name:'查看已有运行',exact:true})).toBeVisible();
     await expect(page.getByRole('button',{name:'生成聚合草稿',exact:true})).toBeDisabled();
     expect(sent).toBe(1);
     await expect(page.locator('#messages').getByText('已验证草稿 [[S1]]',{exact:true})).toHaveCount(0);
