@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import fields, is_dataclass, replace
 from decimal import Decimal
 from typing import Any
@@ -83,7 +84,7 @@ class Redactor:
         approved: bool = False,
     ):
         self._min_length = min_length
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._on_change = on_change
         self._version = 1
         if approved:
@@ -92,6 +93,12 @@ class Redactor:
             self._secrets = tuple(
                 secret for secret in secrets if secret and len(secret) >= min_length
             )
+
+    @contextmanager
+    def protection_guard(self):
+        """Linearize protected send admission with credential registration."""
+        with self._lock:
+            yield
 
     @property
     def min_length(self) -> int:

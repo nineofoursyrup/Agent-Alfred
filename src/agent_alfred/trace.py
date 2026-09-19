@@ -392,6 +392,11 @@ class RunBundleTraceSink:
             self._root_lease = None
         return True
 
+    def run_stopped(self, run_id: str) -> bool:
+        """Positive writer-retirement evidence; sealing alone is insufficient."""
+        with self._wake:
+            return run_id in self._terminated and run_id not in self._bundles
+
     # -- two-phase publish (ADR-0015) -------------------------------------
 
     def prepare(self, event: UnsequencedEvent) -> object:

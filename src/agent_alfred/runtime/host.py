@@ -387,6 +387,7 @@ class RuntimeHost:
             process_instance_id=process_instance_id,
         )
         self.database_console = None
+        self.trace_exports = None
         from agent_alfred.memory.consolidation import ConsolidationLimits
 
         self._memory_service.consolidation._limits = ConsolidationLimits(
@@ -684,6 +685,35 @@ class RuntimeHost:
                 self._start_error = exc
                 raise
 
+    def attach_trace_exports(self, state, trace_root):
+        from agent_alfred.trace_export.service import (
+            ExportCleanupPort,
+            ExportProjection,
+            TraceExports,
+        )
+
+        if self.trace_exports is not None:
+            return self.trace_exports
+        exports = TraceExports(self, state, trace_root)
+        self.trace_exports = exports
+        self._memory_service._projection_participants += (ExportProjection(),)
+        inner = self._memory_service._cleanup_port
+        if inner is not None:
+            self._memory_service._cleanup_port = ExportCleanupPort(exports, inner)
+        notifier = self._memory_service._memory_notifier
+        def notify(*args, **kwargs):
+            exports.invalidate()
+            if notifier is not None:
+                return notifier(*args, **kwargs)
+        self._memory_service._memory_notifier = notify
+        previous = self._redactor._on_change
+        def changed():
+            exports.invalidate()
+            if previous is not None:
+                previous()
+        self._redactor._on_change = changed
+        return exports
+
     def attach_database_console(self, console) -> None:
         from contextlib import contextmanager
 
@@ -714,10 +744,13 @@ class RuntimeHost:
                 return notifier(*args, **kwargs)
 
         self._memory_service._memory_notifier = notify
-        self._redactor._on_change = lambda: (
-            console.invalidate(),
-            console._publish_protection(),
-        )
+        previous_change = self._redactor._on_change
+        def changed():
+            console.invalidate()
+            console._publish_protection()
+            if previous_change is not None:
+                previous_change()
+        self._redactor._on_change = changed
 
     def close(self, timeout: float | None = None) -> bool:
         """Stop admission, finish mutations and the worker, then release sinks.
@@ -781,6 +814,10 @@ class RuntimeHost:
         # Settlement callbacks are owned by the recorder beyond the worker
         # frame. They must finish before FanOut or the database can close, and
         # before close() claims success for waiters that still need a result.
+        if self.trace_exports is not None and not self.trace_exports.close(
+            max(0.0, deadline - time.monotonic())
+        ):
+            return False
         if not self._recorder.retry_pending_settlements():
             return False
         if hasattr(self, "_mcp_control") and not self._mcp_control.close(deadline):

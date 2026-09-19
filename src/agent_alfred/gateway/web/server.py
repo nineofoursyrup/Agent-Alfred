@@ -400,6 +400,10 @@ class DashboardRuntime:
             )
             host.attach_database_console(console)
             self._database = console
+        if hasattr(host, "attach_trace_exports"):
+            host.attach_trace_exports(
+                self._service.managed_state, self._trace_root
+            )
         # Storing the pair is not yet owning it: the close path skips whatever
         # is still marked stopped, so these bits are what make this runtime an
         # effective owner. They fall first, and only then may the construction
@@ -424,6 +428,7 @@ class DashboardRuntime:
             broker=broker,
             instance_id=self._instance_id,
             database=self._database,
+            trace_exports=getattr(host, "trace_exports", None),
         )
         self._handler_context = context
         service.attach_context(context)
