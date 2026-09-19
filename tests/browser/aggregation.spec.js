@@ -228,20 +228,63 @@ for (const surface of ['mainbar','behaviour','runs']) for (const timing of ['ope
   test(`STD-01/SPEC-01: ${surface} clears offline sources and ${timing} reads on delete`, async ({page}) => {
     const server = await memoryServer({script:'tests/browser/aggregation_server.py'});
     let release = () => {};
+    let releaseVerification = () => {};
     try {
       const {other,memoryId} = await prepareDraft(page,server);
       const accepted = page.waitForResponse(r => r.url().endsWith('/api/runs') && r.request().method() === 'POST');
       await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
       const {run_id} = await acceptedRun(await accepted);
       await expect(page.getByRole('button',{name:'生成聚合草稿',exact:true})).toBeEnabled();
-      if (surface === 'runs') await page.goto(server.origin+'/runs/'+run_id);
+      let verificationState;
+      let verificationArrived;
+      if (surface === 'runs') {
+        // A new page may render historical references before MemorySync has
+        // verified the live revision. Hold the real response at that boundary.
+        const verification = new Promise(resolve => {releaseVerification=resolve;});
+        let observed;
+        verificationArrived = new Promise(resolve => {observed=resolve;});
+        await page.route('**/api/memory/state',async route=>{
+          const response=await route.fetch();
+          expect(response.status()).toBe(200);
+          verificationState=await response.json();
+          expect(verificationState).toMatchObject({
+            process_instance_id:expect.any(String),memory_revision:expect.any(Number),
+          });
+          observed();await verification;await route.fulfill({response});
+        });
+        await page.goto(server.origin+'/runs/'+run_id);
+      }
       const area = surface === 'mainbar' ? page.locator('#messages') : surface === 'behaviour' ? page.getByRole('region',{name:'手动聚合',exact:true}) : page.getByRole('region',{name:'运行过程',exact:true});
       if (surface !== 'mainbar') {
         const collapse=page.getByRole('button',{name:'收起对话',exact:true});
         if (await collapse.isVisible()) await collapse.click();
       }
       const source = area.getByRole('button',{name:'语义记忆 S1',exact:true});
+      let reads=0;
+      page.on('request',request=>{
+        if (request.url().includes('/api/memory/record?')) reads++;
+      });
+      if (surface === 'runs') {
+        await verificationArrived;
+        await source.click();
+        await expect(area.getByText('离线或无法核验，原资料已隐藏。',{exact:true})).toBeVisible();
+        await expect(area.getByText('coffee source',{exact:true})).toHaveCount(0);
+        expect(reads).toBe(0);
+        releaseVerification();
+        await expect(area.getByText('资料已变化，请重新查看。',{exact:true})).toBeVisible();
+        await page.unroute('**/api/memory/state');
+      }
+      const firstRead=page.waitForResponse(response=>{
+        const url=new URL(response.url());
+        return url.pathname==='/api/memory/record' && url.searchParams.get('id')===memoryId;
+      });
       await source.click();
+      const recordResponse=await firstRead;
+      expect(recordResponse.status()).toBe(200);
+      const record=await recordResponse.json();
+      expect(record.record).toMatchObject({id:memoryId,record_version:1,fact:'coffee source'});
+      if (surface === 'runs') expect(record.memory_revision).toBe(verificationState.memory_revision);
+      expect(reads).toBe(1);
       await expect(area.getByText('coffee source',{exact:true})).toBeVisible();
       await page.evaluate(() => window.dispatchEvent(new Event('offline')));
       await expect(area.getByText('coffee source',{exact:true})).toHaveCount(0);
@@ -279,7 +322,7 @@ for (const surface of ['mainbar','behaviour','runs']) for (const timing of ['ope
       const expand=page.getByRole('button',{name:'展开对话',exact:true});
       if(await expand.isVisible()) await expand.click();
       await expect(page.locator('#messages').getByText('已验证草稿 [[S1]]',{exact:true})).toBeVisible();
-    } finally { release(); await server.close(); }
+    } finally { release(); releaseVerification(); await server.close(); }
   });
 }
 
