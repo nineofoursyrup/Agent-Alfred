@@ -100,11 +100,13 @@ def test_bad_writes_shape_returns_closed_failure(writes):
     assert dict(result.committed_state) == {}
     assert seen == ["sibling"]
     assert [e.payload.name for e in sink.events] == [
+        "path.captured",
         "graph.started",
         "node.started",
         "node.started",
         "node.aborted",
         "node.aborted",
+        "path.wave",
         "graph.finished",
     ]
 

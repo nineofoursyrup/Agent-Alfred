@@ -133,17 +133,18 @@ def read_evidence(
     return projected
 
 
-def _read_trace(root: Path, run_id: str) -> tuple[str, list]:
+def _read_trace(root: Path, run_id: str, *, detailed=False) -> tuple[str, list]:
     digest = hashlib.sha256(run_id.encode()).hexdigest()[:32]
     try:
         candidates = list(root.glob(f"????-??-??/??????Z-{digest}"))
         if len(candidates) != 1:
-            return "unavailable", []
+            reason = "missing" if not candidates else "corrupt"
+            return reason if detailed else "unavailable", []
         bundle = candidates[0]
         if any(path.is_symlink() for path in (
             root, bundle.parent, bundle, bundle / "meta.json", bundle / "trace.jsonl"
         )):
-            return "unavailable", []
+            return "corrupt" if detailed else "unavailable", []
         with (bundle / "meta.json").open("rb") as source:
             metadata = json.loads(source.read(8193))
         created = datetime.fromisoformat(metadata["created_at"].replace("Z", "+00:00"))
@@ -154,7 +155,7 @@ def _read_trace(root: Path, run_id: str) -> tuple[str, list]:
             or created.strftime("%Y-%m-%d") != bundle.parent.name
             or created.strftime("%H%M%S") + "Z-" + digest != bundle.name
         ):
-            return "unavailable", []
+            return "corrupt" if detailed else "unavailable", []
         with (bundle / "trace.jsonl").open("rb") as source:
             data = source.read(MAX_TRACE_BYTES + 1)
         if len(data) > MAX_TRACE_BYTES:
@@ -169,12 +170,14 @@ def _read_trace(root: Path, run_id: str) -> tuple[str, list]:
             if (event["run_id"] != run_id
                     or event["process_instance_id"] != metadata["process_instance_id"]
                     or type(event["seq"]) is not int or event["seq"] <= previous):
-                return "unavailable", []
+                return "corrupt" if detailed else "unavailable", []
             previous = event["seq"]
         finished = events and events[-1]["payload_name"] == "run.finished"
         return ("available" if complete and finished else "partial"), events
+    except FileNotFoundError:
+        return "missing" if detailed else "unavailable", []
     except (OSError, ValueError, KeyError, TypeError):
-        return "unavailable", []
+        return "corrupt" if detailed else "unavailable", []
 
 
 def _safe_event(event: dict) -> dict:

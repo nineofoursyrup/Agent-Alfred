@@ -624,7 +624,7 @@ function route() {
       connected: () => connected,
     });
   else if (!isRuns) inbox(element("page"), resume);
-  else runPage = runsPage(element("page"), progress, route, memory, () => csrf);
+  else runPage = runsPage(element("page"), progress, route, memory, () => csrf, () => ({instance,connected}));
   if (connected) {
     runPage?.sync(active);
     connectionsView?.sync(instance);

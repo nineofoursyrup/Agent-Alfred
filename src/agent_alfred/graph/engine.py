@@ -10,6 +10,8 @@ from agent_alfred.events import (
     NodeFinished,
     NodeSkipped,
     NodeStarted,
+    PathCaptured,
+    WaveSettled,
 )
 from agent_alfred.loop.budget import RunBudget, StepBudgetExceeded
 from agent_alfred.runtime.memory import (
@@ -69,6 +71,18 @@ class CompiledGraph:
                 else "none",
                 freeze({}),
             )
+        # Capture the actual execution instance, before any node executes. No
+        # query or finalizer looks up today's graph to reconstruct history.
+        try:
+            captured = PathCaptured(
+                self.describe(), context.publication_generation,
+                tuple(tuple(n.node_id for n in wave) for wave in self.waves),
+                self.graph_id,
+            )
+        except Exception:
+            captured = None
+        if captured is not None:
+            context.emit(captured)
         context.emit(GraphStarted(self.graph_id, self.description["topology_hash"], 1))
         try:
             state = dict(freeze(inputs))
@@ -81,12 +95,26 @@ class CompiledGraph:
         statuses, decisions, errors = {}, {}, {}
         recoveries, terminals, started = [], [], []
         current_started = []
+        wave_index = None
 
         def failed(error, exhausted=False):
             for name in current_started:
                 context.emit(NodeAborted(error.code), name)
             context.abort(current_started)
-            context.emit(GraphFinished("BudgetExhausted" if exhausted else "Failed"))
+            if current_started and wave_index is not None:
+                context.emit(WaveSettled(
+                    wave_index, "aborted",
+                    tuple(dict(
+                        node_id=name,
+                        state=wave_status.get(name, "failed"
+                            if name == error.node_id else "aborted"),
+                        reason=error.code,
+                    ) for name in current_started), (), error.code,
+                ))
+            context.emit(GraphFinished(
+                "BudgetExhausted" if exhausted else "Failed", error.code,
+                tuple(n.node_id for n in self.nodes if n.node_id not in started),
+            ))
             side_effect = (
                 context.tools.side_effect_state(context.run_id)
                 if context.tools is not None
@@ -120,7 +148,7 @@ class CompiledGraph:
             return failed(
                 NodeError(None, "invalid_configuration", "node cannot be disabled")
             )
-        for wave in self.waves:
+        for wave_index, wave in enumerate(self.waves):
             snapshot = freeze(state)
             pending, wave_status, wave_edges, wave_errors = {}, {}, {}, {}
             current_started = []
@@ -285,6 +313,21 @@ class CompiledGraph:
                         NodeFinished(status, route_label=labels.get(node.node_id)),
                         node.node_id,
                     )
+            context.emit(WaveSettled(
+                wave_index, "committed",
+                tuple(dict(
+                    node_id=node.node_id, state=wave_status[node.node_id],
+                    reason=("disabled_by_config" if node.node_id in disabled
+                            else "all_inbound_not_taken")
+                    if wave_status[node.node_id] == "skipped"
+                    else wave_errors[node.node_id].code
+                    if node.node_id in wave_errors else None,
+                ) for node in wave),
+                tuple(dict(source=edge.source, target=edge.target,
+                           kind=edge.kind, label=edge.label,
+                           state="taken" if taken else "not_taken")
+                      for edge, taken in wave_edges.items()),
+            ))
             current_started = []
             statuses.update(wave_status)
             errors.update(wave_errors)
@@ -295,7 +338,7 @@ class CompiledGraph:
             )
         terminal = terminals[0].terminal
         if terminal.kind == "no_action":
-            context.emit(GraphFinished("NoAction"))
+            context.emit(GraphFinished("NoAction", terminal.reason_code))
             return NoAction(terminal.reason_code, tuple(recoveries))
         context.emit(
             GraphFinished("CompletedWithRecovery" if recoveries else "Completed")

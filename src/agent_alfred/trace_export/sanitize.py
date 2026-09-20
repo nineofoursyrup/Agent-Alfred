@@ -22,6 +22,9 @@ EVENT_TYPES = (
     events.ToolFinished,
     events.Notice,
     events.GateEvaluated,
+    events.PathCaptured,
+    events.WaveSettled,
+    events.PathStage,
     events.GraphStarted,
     events.GraphFinished,
     events.NodeStarted,
@@ -205,6 +208,11 @@ class Sanitizer:
         if name in SOURCE_VERSIONS and (
             type(payload.get("schema_version")) is not int
             or payload["schema_version"] != SOURCE_VERSIONS[name]
+        ):
+            raise ExportError("unsupported_format")
+        if name.startswith("path.") and (
+            type(payload.get("evidence_version")) is not int
+            or payload["evidence_version"] != 1
         ):
             raise ExportError("unsupported_format")
         for key in (

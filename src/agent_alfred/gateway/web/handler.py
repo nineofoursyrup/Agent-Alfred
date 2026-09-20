@@ -385,6 +385,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
             status, payload = api.accounting_read(path, params)
             self._send(status, payload)
             return
+        if path == "/api/run-path":
+            status, payload = api.run_path(params)
+            self._send(status, payload)
+            return
         if path == "/api/run-evidence":
             status, payload = api.run_evidence(params)
             self._send(status, payload)

@@ -81,6 +81,12 @@ export async function memoryServer({threshold = 10, prepare, spawnProcess = spaw
     directory,
     send,
     close,
+    async crashAndRestart() {
+      server.kill("SIGKILL");
+      await closed;
+      lines?.close();
+      await start();
+    },
     async restart() {
       await stop();
       await start();

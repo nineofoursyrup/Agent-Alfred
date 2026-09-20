@@ -35,6 +35,7 @@ class GraphRunContext:
     model_bindings: dict = field(default_factory=dict)
     committed_state: object = field(default_factory=dict)
     context_invalid: bool = False
+    publication_generation: int = 1
 
     def checkpoint(self):
         if self.deadline is not None and self.clock.monotonic() >= self.deadline:

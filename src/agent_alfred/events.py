@@ -358,6 +358,39 @@ class ToolProgress:
 
 
 @dataclass(frozen=True)
+class PathStage:
+    stage: str
+    reason: str
+    entered: bool
+    evidence_version: int = 1
+    name: str = "path.stage"
+    trace_policy: TracePolicy = "persist"
+
+
+@dataclass(frozen=True)
+class PathCaptured:
+    description: dict
+    publication_generation: int
+    waves: tuple
+    graph_id: str
+    evidence_version: int = 1
+    name: str = "path.captured"
+    trace_policy: TracePolicy = "persist"
+
+
+@dataclass(frozen=True)
+class WaveSettled:
+    wave: int
+    state: str
+    nodes: tuple
+    edges: tuple
+    reason: str | None = None
+    evidence_version: int = 1
+    name: str = "path.wave"
+    trace_policy: TracePolicy = "persist"
+
+
+@dataclass(frozen=True)
 class GraphStarted:
     graph_id: str
     topology_hash: str
@@ -369,6 +402,8 @@ class GraphStarted:
 @dataclass(frozen=True)
 class GraphFinished:
     outcome: str
+    reason: str | None = field(default=None, metadata={"omit_none": True})
+    not_started: tuple | None = field(default=None, metadata={"omit_none": True})
     name: str = "graph.finished"
     trace_policy: TracePolicy = "persist"
 
@@ -406,7 +441,10 @@ class NodeAborted:
 
 
 EventPayload = (
-    GraphStarted
+    PathCaptured
+    | PathStage
+    | WaveSettled
+    | GraphStarted
     | GraphFinished
     | NodeStarted
     | NodeFinished
@@ -929,6 +967,13 @@ class FanOutSink:
     @property
     def sinks(self) -> tuple[EventSink, ...]:
         return tuple(self._sinks)
+
+    def add_sink(self, sink: EventSink) -> None:
+        """Register a projection during construction, before any publication."""
+        if self._seq != 1:
+            raise RuntimeError("sinks must be installed before publication")
+        self._sinks.append(sink)
+        self._close_progress.append(_SinkCloseProgress(sink))
 
     def bind_redactor(self, redactor: Any | None) -> None:
         self._redactor = redactor
@@ -1616,6 +1661,14 @@ class FanOutSink:
         a sink the in-flight notice already names is covered by it, and a
         sink discovered twice is covered by the set it just joined.
         """
+        # A bounded projection must not retain a prefix as complete after the
+        # FanOut disables it. This notification does not publish or retry work.
+        mark_disabled = getattr(sink, "mark_disabled", None)
+        if mark_disabled is not None:
+            try:
+                mark_disabled(run_id)
+            except Exception:
+                pass
         process_fatal = isinstance(exc, ProcessFatalSinkError)
         if process_fatal:
             first_process_failure = sink.name not in self._process_disabled

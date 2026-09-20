@@ -24,6 +24,8 @@ from agent_alfred.events import (
     NodeSkipped,
     NodeStarted,
     Notice,
+    PathCaptured,
+    PathStage,
     RawToolArgumentFragment,
     RunFinished,
     RunStarted,
@@ -33,6 +35,7 @@ from agent_alfred.events import (
     ToolProgress,
     ToolStarted,
     UnsequencedEvent,
+    WaveSettled,
 )
 from agent_alfred.messages import (
     Message,
@@ -71,6 +74,7 @@ _EVENT_PAYLOAD_TYPES = (
     Notice,
     GateEvaluated,
     GraphStarted, GraphFinished, NodeStarted, NodeFinished, NodeSkipped, NodeAborted,
+    PathCaptured, PathStage, WaveSettled,
 )
 
 
