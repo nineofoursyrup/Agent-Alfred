@@ -3,7 +3,9 @@ import {memoryServer} from './memory-server.js';
 
 async function routingRun(page, server, message='解释图执行') {
   await page.goto(server.origin+'/behaviour');
-  await page.getByRole('checkbox',{name:'启用消息分流'}).check();
+  const enabled=page.getByRole('checkbox',{name:'启用消息分流'});
+  await expect(enabled).toBeEnabled();
+  await enabled.check();
   await page.getByRole('button',{name:'保存设置',exact:true}).click();
   await expect(page.getByText('已保存；下一 Run 生效。')).toBeVisible();
   const created=page.waitForResponse(r=>r.url().endsWith('/api/sessions')&&r.request().method()==='POST');
@@ -93,7 +95,23 @@ for(const viewport of [{width:1280,height:850},{width:390,height:844}]) test(`CE
 test('CE-08 latest request wins across reverse responses, reopen and Run navigation',async({page})=>{
   const server=await memoryServer({script:'tests/browser/routing_server.py'});
   try{
-    const a=await routingRun(page,server), b=await routingRun(page,server,'不用回复');
+    const a=await routingRun(page,server);
+    // The second read returns enabled=true only after the initial disabled,
+    // unchecked control is visible; preserve that real loading boundary.
+    const settingsSeen=barrier(),settingsRelease=barrier();
+    await page.route('**/api/behaviour',async route=>{
+      if(route.request().method()!=='GET')return route.continue();
+      const response=await route.fetch();expect((await response.json()).enabled).toBe(true);
+      settingsSeen.resolve();await settingsRelease.promise;await route.fulfill({response});
+    });
+    const second=routingRun(page,server,'不用回复');
+    try{
+      await settingsSeen.promise;
+      await expect(page.getByRole('checkbox',{name:'启用消息分流'})).toBeDisabled();
+      await expect(page.getByRole('checkbox',{name:'启用消息分流'})).not.toBeChecked();
+    }finally{settingsRelease.resolve();}
+    const b=await second;
+    await page.unroute('**/api/behaviour');
     await openPath(page,server.origin,a);
     const held=barrier(),seen=barrier();let use=true;
     await page.route(pathRoute,async route=>{
