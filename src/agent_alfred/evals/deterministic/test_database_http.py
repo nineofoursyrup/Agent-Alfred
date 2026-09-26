@@ -1397,7 +1397,7 @@ def test_recording_pause_still_allows_database_then_shutdown_releases(
 
 
 def test_resource_counts_return_after_success_reject_cancel_and_timeout(
-    tmp_path,
+    tmp_path, monkeypatch
 ):
     dashboard = _dashboard(tmp_path)
     hold = tmp_path / "res.fifo"
@@ -1405,6 +1405,20 @@ def test_resource_counts_return_after_success_reject_cancel_and_timeout(
     os.mkfifo(hold)
     os.mkfifo(ready)
     console = dashboard.host.database_console
+    release_entered = threading.Event()
+    release_allowed = threading.Event()
+    release_done = threading.Event()
+    original_release = console.release_response
+
+    def release(released_query_id):
+        if released_query_id != query_id:
+            original_release(released_query_id)
+            return
+        release_entered.set()
+        assert release_allowed.wait(3)
+        original_release(released_query_id)
+        release_done.set()
+
     try:
         before = len(os.listdir("/dev/fd"))
         assert _execute(dashboard, "SELECT 1")[0] == 200
@@ -1417,6 +1431,7 @@ def test_resource_counts_return_after_success_reject_cancel_and_timeout(
         assert cancelled[0] == 200
         query_id = _issue(dashboard)
         console._records[query_id].barriers = {"extract": str(hold)}
+        monkeypatch.setattr(console, "release_response", release)
         status, body, _head = _post(
             dashboard,
             f"/api/database/queries/{query_id}/execute",
@@ -1430,6 +1445,17 @@ def test_resource_counts_return_after_success_reject_cancel_and_timeout(
         )
         assert status == 504
         assert body["code"] == "query_timeout"
+        # Receiving Content-Length bytes does not join the handler's finally.
+        # Keep that scheduling window open, then await its real release before
+        # checking the resource counts; no worker or cleanup result is mocked.
+        assert release_entered.wait(1)
+        record = console._records[query_id]
+        assert record.process is None and record.owner is None
+        assert record.response_owner is not None and record.cleanup == "pending"
+        assert console._active == query_id and not console.released()
+        release_allowed.set()
+        assert release_done.wait(1)
+        assert console.released()
         assert console._active is None
         assert all(
             record.process is None or record.process.poll() is not None
@@ -1438,6 +1464,7 @@ def test_resource_counts_return_after_success_reject_cancel_and_timeout(
         after = len(os.listdir("/dev/fd"))
         assert after - before < 8
     finally:
+        release_allowed.set()
         _wake_fifo(hold)
         assert dashboard.close()
 

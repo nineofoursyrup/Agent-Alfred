@@ -43,3 +43,7 @@ output/playwright/
 
 # Local Issue 55 verification evidence and build environments
 /tmp/issue-55/
+
+# Local P2 account metadata and readback transfer (never deliver as Git)
+/infra/p2/config.local.json
+/infra/p2/state.local.json

@@ -1,0 +1,35 @@
+{
+  "schema": "p2-aws-execution-v1",
+  "source_merge_sha": "b7826a12144ec77e8656b01b02e49e0ce740f01e",
+  "region": "<AWS_REGION_UNPROVIDED>",
+  "accounts": {
+    "a": "<ISSUER_ACCOUNT_ID_UNPROVIDED>",
+    "b": "<RUNTIME_ACCOUNT_ID_UNPROVIDED>",
+    "c": "<ANCHOR_ACCOUNT_ID_UNPROVIDED>"
+  },
+  "admin_role_arns": {
+    "a": "<A_DEPLOYER_ROLE_ARN_UNPROVIDED>",
+    "b": "<B_DEPLOYER_ROLE_ARN_UNPROVIDED>",
+    "c": "<C_INDEPENDENT_DEPLOYER_ROLE_ARN_UNPROVIDED>"
+  },
+  "auditor_role_arns": {
+    "a": "<A_READ_ONLY_AUDITOR_ROLE_ARN_UNPROVIDED>",
+    "b": "<B_READ_ONLY_AUDITOR_ROLE_ARN_UNPROVIDED>",
+    "c": "<C_INDEPENDENT_READ_ONLY_AUDITOR_ROLE_ARN_UNPROVIDED>"
+  },
+  "operator_role_arn": "<A_SYNTHETIC_OPERATOR_ROLE_ARN_UNPROVIDED>",
+  "stack_prefix": "p2synthetic",
+  "expires_at_utc": "<TIME_UNPROVIDED>",
+  "budget": {
+    "currency": "<CURRENCY_UNPROVIDED>",
+    "approved_amount": "<AMOUNT_UNPROVIDED>",
+    "reviewed_upper_bound": "<ACCOUNT_REGION_QUOTE_UNPROVIDED>",
+    "tax_included": "<YES_OR_NO_UNPROVIDED>",
+    "duration_hours": "<DURATION_UNPROVIDED>",
+    "quote_source": "<AWS_ACCOUNT_REGION_PRICE_EVIDENCE_UNPROVIDED>"
+  },
+  "retention": {
+    "object_lock_days": "<UNPROVIDED>",
+    "log_days": "<UNPROVIDED>"
+  }
+}

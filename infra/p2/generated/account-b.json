@@ -1,0 +1,3616 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "P2 account B protected Authority, Dispatch, canary, and worker",
+  "Parameters": {
+    "CodeBucket": {
+      "Type": "String",
+      "AllowedPattern": "[a-z0-9][a-z0-9.-]{2,62}"
+    },
+    "CodeKey": {
+      "Type": "String"
+    },
+    "AAccountId": {
+      "Type": "String",
+      "AllowedPattern": "[0-9]{12}"
+    },
+    "CAccountId": {
+      "Type": "String",
+      "AllowedPattern": "[0-9]{12}"
+    },
+    "IssuerRoleArn": {
+      "Type": "String"
+    },
+    "IssuerKeyArn": {
+      "Type": "String"
+    },
+    "AuthorityRoleArn": {
+      "Type": "String"
+    },
+    "AuthorityRoleName": {
+      "Type": "String"
+    },
+    "IssuerQueueArn": {
+      "Type": "String"
+    },
+    "IssuerQueueUrl": {
+      "Type": "String"
+    },
+    "AnchorFunctionArn": {
+      "Type": "String"
+    },
+    "AIssuerVpceId": {
+      "Type": "String",
+      "Default": ""
+    },
+    "AuditBucketName": {
+      "Type": "String"
+    },
+    "LogRetentionDays": {
+      "Type": "Number",
+      "MinValue": 1,
+      "MaxValue": 365
+    },
+    "EnableTraffic": {
+      "Type": "String",
+      "Default": "false",
+      "AllowedPattern": "true|false"
+    },
+    "StopDispatch": {
+      "Type": "String",
+      "Default": "true",
+      "AllowedPattern": "true|false"
+    },
+    "ExpiresAtUtc": {
+      "Type": "String"
+    },
+    "SyntheticSecretValue": {
+      "Type": "String",
+      "NoEcho": true
+    },
+    "CanaryTokenSha256": {
+      "Type": "String",
+      "AllowedPattern": "[0-9a-f]{64}"
+    },
+    "ImageUri": {
+      "Type": "String",
+      "AllowedPattern": ".+@sha256:[0-9a-f]{64}"
+    },
+    "PackageSha256": {
+      "Type": "String",
+      "AllowedPattern": "[0-9a-f]{64}"
+    },
+    "InputSha256": {
+      "Type": "String",
+      "AllowedPattern": "[0-9a-f]{64}"
+    },
+    "ImageRepositoryArn": {
+      "Type": "String"
+    },
+    "S3PrefixListId": {
+      "Type": "String",
+      "AllowedPattern": "pl-[0-9a-f]+"
+    },
+    "DynamoPrefixListId": {
+      "Type": "String",
+      "AllowedPattern": "pl-[0-9a-f]+"
+    }
+  },
+  "Resources": {
+    "WorkerVpc": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.84.2.0/24",
+        "EnableDnsSupport": true,
+        "EnableDnsHostnames": true,
+        "Tags": [
+          {
+            "Key": "p2-owner",
+            "Value": "Worker"
+          }
+        ]
+      }
+    },
+    "WorkerSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "WorkerVpc"
+        },
+        "CidrBlock": "10.84.2.0/25",
+        "MapPublicIpOnLaunch": false,
+        "AvailabilityZone": {
+          "Fn::Select": [
+            0,
+            {
+              "Fn::GetAZs": ""
+            }
+          ]
+        }
+      }
+    },
+    "WorkerRoute": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "WorkerVpc"
+        }
+      }
+    },
+    "WorkerRouteAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "WorkerSubnet"
+        },
+        "RouteTableId": {
+          "Ref": "WorkerRoute"
+        }
+      }
+    },
+    "WorkerWorkloadSg": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Worker workload private egress only",
+        "VpcId": {
+          "Ref": "WorkerVpc"
+        },
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "192.0.2.0/32"
+          }
+        ]
+      }
+    },
+    "WorkerEndpointSg": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Worker endpoint 443 from workload",
+        "VpcId": {
+          "Ref": "WorkerVpc"
+        },
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "192.0.2.0/32"
+          }
+        ],
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "SourceSecurityGroupId": {
+              "Ref": "WorkerWorkloadSg"
+            }
+          }
+        ]
+      }
+    },
+    "WorkerEndpointEgress": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "WorkerWorkloadSg"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "DestinationSecurityGroupId": {
+          "Ref": "WorkerEndpointSg"
+        }
+      }
+    },
+    "WorkerEcrApiEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "WorkerVpc"
+        },
+        "VpcEndpointType": "Interface",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.ecr.api"
+        },
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "WorkerSubnet"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "WorkerEndpointSg"
+          }
+        ]
+      }
+    },
+    "WorkerEcrDkrEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "WorkerVpc"
+        },
+        "VpcEndpointType": "Interface",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.ecr.dkr"
+        },
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "WorkerSubnet"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "WorkerEndpointSg"
+          }
+        ]
+      }
+    },
+    "WorkerLogsEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "WorkerVpc"
+        },
+        "VpcEndpointType": "Interface",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.logs"
+        },
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "WorkerSubnet"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "WorkerEndpointSg"
+          }
+        ]
+      }
+    },
+    "WorkerExecuteApiEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "WorkerVpc"
+        },
+        "VpcEndpointType": "Interface",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.execute-api"
+        },
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "WorkerSubnet"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "WorkerEndpointSg"
+          }
+        ]
+      }
+    },
+    "WorkerS3Endpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "WorkerVpc"
+        },
+        "VpcEndpointType": "Gateway",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.s3"
+        },
+        "RouteTableIds": [
+          {
+            "Ref": "WorkerRoute"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": "s3:GetObject",
+              "Resource": {
+                "Fn::Sub": "arn:${AWS::Partition}:s3:::prod-${AWS::Region}-starport-layer-bucket/*"
+              },
+              "Principal": "*"
+            }
+          ]
+        }
+      }
+    },
+    "WorkerS3GatewayEgress": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "WorkerWorkloadSg"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "DestinationPrefixListId": {
+          "Ref": "S3PrefixListId"
+        }
+      }
+    },
+    "WorkerAllowedDns": {
+      "Type": "AWS::Route53Resolver::FirewallDomainList",
+      "Properties": {
+        "Name": "p2-worker-allowed",
+        "Domains": [
+          {
+            "Fn::Sub": "api.ecr.${AWS::Region}.amazonaws.com"
+          },
+          {
+            "Fn::Sub": "*.dkr.ecr.${AWS::Region}.amazonaws.com"
+          },
+          {
+            "Fn::Sub": "logs.${AWS::Region}.amazonaws.com"
+          },
+          {
+            "Fn::Sub": "*.execute-api.${AWS::Region}.amazonaws.com"
+          },
+          {
+            "Fn::Sub": "s3.${AWS::Region}.amazonaws.com"
+          },
+          {
+            "Fn::Sub": "*.s3.${AWS::Region}.amazonaws.com"
+          },
+          {
+            "Fn::Sub": "kms.${AWS::Region}.amazonaws.com"
+          },
+          {
+            "Fn::Sub": "secretsmanager.${AWS::Region}.amazonaws.com"
+          },
+          {
+            "Fn::Sub": "lambda.${AWS::Region}.amazonaws.com"
+          },
+          {
+            "Fn::Sub": "sts.${AWS::Region}.amazonaws.com"
+          },
+          {
+            "Fn::Sub": "dynamodb.${AWS::Region}.amazonaws.com"
+          }
+        ]
+      }
+    },
+    "WorkerAllDns": {
+      "Type": "AWS::Route53Resolver::FirewallDomainList",
+      "Properties": {
+        "Name": "p2-worker-all",
+        "Domains": [
+          "*"
+        ]
+      }
+    },
+    "WorkerDnsRules": {
+      "Type": "AWS::Route53Resolver::FirewallRuleGroup",
+      "Properties": {
+        "Name": "p2-worker-deny-default",
+        "FirewallRules": [
+          {
+            "Action": "ALLOW",
+            "FirewallDomainListId": {
+              "Ref": "WorkerAllowedDns"
+            },
+            "Priority": 10
+          },
+          {
+            "Action": "BLOCK",
+            "BlockResponse": "NXDOMAIN",
+            "FirewallDomainListId": {
+              "Ref": "WorkerAllDns"
+            },
+            "Priority": 100
+          }
+        ]
+      }
+    },
+    "WorkerDnsAssociation": {
+      "Type": "AWS::Route53Resolver::FirewallRuleGroupAssociation",
+      "Properties": {
+        "Name": "p2-worker-association",
+        "FirewallRuleGroupId": {
+          "Ref": "WorkerDnsRules"
+        },
+        "VpcId": {
+          "Ref": "WorkerVpc"
+        },
+        "Priority": 100,
+        "MutationProtection": "DISABLED"
+      }
+    },
+    "WorkerFlowLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/p2/${AWS::StackName}/worker/flow"
+        },
+        "RetentionInDays": {
+          "Ref": "LogRetentionDays"
+        }
+      }
+    },
+    "WorkerFlowRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "vpc-flow-logs.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "write-flow-only",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                    "logs:DescribeLogStreams"
+                  ],
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "WorkerFlowLogGroup",
+                      "Arn"
+                    ]
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "logs:DescribeLogGroups",
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "WorkerFlowLog": {
+      "Type": "AWS::EC2::FlowLog",
+      "Properties": {
+        "ResourceType": "VPC",
+        "ResourceId": {
+          "Ref": "WorkerVpc"
+        },
+        "TrafficType": "ALL",
+        "LogDestinationType": "cloud-watch-logs",
+        "LogGroupName": {
+          "Ref": "WorkerFlowLogGroup"
+        },
+        "DeliverLogsPermissionArn": {
+          "Fn::GetAtt": [
+            "WorkerFlowRole",
+            "Arn"
+          ]
+        }
+      }
+    },
+    "BrokerVpc": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.84.3.0/24",
+        "EnableDnsSupport": true,
+        "EnableDnsHostnames": true,
+        "Tags": [
+          {
+            "Key": "p2-owner",
+            "Value": "Broker"
+          }
+        ]
+      }
+    },
+    "BrokerSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "BrokerVpc"
+        },
+        "CidrBlock": "10.84.3.0/25",
+        "MapPublicIpOnLaunch": false,
+        "AvailabilityZone": {
+          "Fn::Select": [
+            0,
+            {
+              "Fn::GetAZs": ""
+            }
+          ]
+        }
+      }
+    },
+    "BrokerRoute": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "BrokerVpc"
+        }
+      }
+    },
+    "BrokerRouteAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "BrokerSubnet"
+        },
+        "RouteTableId": {
+          "Ref": "BrokerRoute"
+        }
+      }
+    },
+    "BrokerWorkloadSg": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Broker workload private egress only",
+        "VpcId": {
+          "Ref": "BrokerVpc"
+        },
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "192.0.2.0/32"
+          }
+        ]
+      }
+    },
+    "BrokerEndpointSg": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Broker endpoint 443 from workload",
+        "VpcId": {
+          "Ref": "BrokerVpc"
+        },
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "192.0.2.0/32"
+          }
+        ],
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "SourceSecurityGroupId": {
+              "Ref": "BrokerWorkloadSg"
+            }
+          }
+        ]
+      }
+    },
+    "BrokerEndpointEgress": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "BrokerWorkloadSg"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "DestinationSecurityGroupId": {
+          "Ref": "BrokerEndpointSg"
+        }
+      }
+    },
+    "BrokerSqsEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "BrokerVpc"
+        },
+        "VpcEndpointType": "Interface",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.sqs"
+        },
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "BrokerSubnet"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "BrokerEndpointSg"
+          }
+        ]
+      }
+    },
+    "BrokerLambdaEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "BrokerVpc"
+        },
+        "VpcEndpointType": "Interface",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.lambda"
+        },
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "BrokerSubnet"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "BrokerEndpointSg"
+          }
+        ]
+      }
+    },
+    "BrokerKmsEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "BrokerVpc"
+        },
+        "VpcEndpointType": "Interface",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.kms"
+        },
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "BrokerSubnet"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "BrokerEndpointSg"
+          }
+        ]
+      }
+    },
+    "BrokerDynamodbEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "BrokerVpc"
+        },
+        "VpcEndpointType": "Gateway",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.dynamodb"
+        },
+        "RouteTableIds": [
+          {
+            "Ref": "BrokerRoute"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "dynamodb:GetItem",
+                "dynamodb:PutItem"
+              ],
+              "Resource": {
+                "Fn::GetAtt": [
+                  "GrantTable",
+                  "Arn"
+                ]
+              },
+              "Principal": "*"
+            }
+          ]
+        }
+      }
+    },
+    "BrokerDynamodbGatewayEgress": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "BrokerWorkloadSg"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "DestinationPrefixListId": {
+          "Ref": "DynamoPrefixListId"
+        }
+      }
+    },
+    "BrokerAllowedDns": {
+      "Type": "AWS::Route53Resolver::FirewallDomainList",
+      "Properties": {
+        "Name": "p2-broker-allowed",
+        "Domains": [
+          {
+            "Fn::Sub": "sqs.${AWS::Region}.amazonaws.com"
+          },
+          {
+            "Fn::Sub": "lambda.${AWS::Region}.amazonaws.com"
+          },
+          {
+            "Fn::Sub": "kms.${AWS::Region}.amazonaws.com"
+          },
+          {
+            "Fn::Sub": "secretsmanager.${AWS::Region}.amazonaws.com"
+          },
+          {
+            "Fn::Sub": "*.execute-api.${AWS::Region}.amazonaws.com"
+          },
+          {
+            "Fn::Sub": "dynamodb.${AWS::Region}.amazonaws.com"
+          },
+          {
+            "Fn::Sub": "sts.${AWS::Region}.amazonaws.com"
+          }
+        ]
+      }
+    },
+    "BrokerAllDns": {
+      "Type": "AWS::Route53Resolver::FirewallDomainList",
+      "Properties": {
+        "Name": "p2-broker-all",
+        "Domains": [
+          "*"
+        ]
+      }
+    },
+    "BrokerDnsRules": {
+      "Type": "AWS::Route53Resolver::FirewallRuleGroup",
+      "Properties": {
+        "Name": "p2-broker-deny-default",
+        "FirewallRules": [
+          {
+            "Action": "ALLOW",
+            "FirewallDomainListId": {
+              "Ref": "BrokerAllowedDns"
+            },
+            "Priority": 10
+          },
+          {
+            "Action": "BLOCK",
+            "BlockResponse": "NXDOMAIN",
+            "FirewallDomainListId": {
+              "Ref": "BrokerAllDns"
+            },
+            "Priority": 100
+          }
+        ]
+      }
+    },
+    "BrokerDnsAssociation": {
+      "Type": "AWS::Route53Resolver::FirewallRuleGroupAssociation",
+      "Properties": {
+        "Name": "p2-broker-association",
+        "FirewallRuleGroupId": {
+          "Ref": "BrokerDnsRules"
+        },
+        "VpcId": {
+          "Ref": "BrokerVpc"
+        },
+        "Priority": 100,
+        "MutationProtection": "DISABLED"
+      }
+    },
+    "BrokerFlowLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/p2/${AWS::StackName}/broker/flow"
+        },
+        "RetentionInDays": {
+          "Ref": "LogRetentionDays"
+        }
+      }
+    },
+    "BrokerFlowRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "vpc-flow-logs.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "write-flow-only",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                    "logs:DescribeLogStreams"
+                  ],
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "BrokerFlowLogGroup",
+                      "Arn"
+                    ]
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "logs:DescribeLogGroups",
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "BrokerFlowLog": {
+      "Type": "AWS::EC2::FlowLog",
+      "Properties": {
+        "ResourceType": "VPC",
+        "ResourceId": {
+          "Ref": "BrokerVpc"
+        },
+        "TrafficType": "ALL",
+        "LogDestinationType": "cloud-watch-logs",
+        "LogGroupName": {
+          "Ref": "BrokerFlowLogGroup"
+        },
+        "DeliverLogsPermissionArn": {
+          "Fn::GetAtt": [
+            "BrokerFlowRole",
+            "Arn"
+          ]
+        }
+      }
+    },
+    "DispatchSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "BrokerVpc"
+        },
+        "CidrBlock": "10.84.3.128/25",
+        "MapPublicIpOnLaunch": false,
+        "AvailabilityZone": {
+          "Fn::Select": [
+            0,
+            {
+              "Fn::GetAZs": ""
+            }
+          ]
+        }
+      }
+    },
+    "DispatchRouteAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "DispatchSubnet"
+        },
+        "RouteTableId": {
+          "Ref": "BrokerRoute"
+        }
+      }
+    },
+    "DispatchSg": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "P2 dispatch separate egress",
+        "VpcId": {
+          "Ref": "BrokerVpc"
+        },
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "192.0.2.0/32"
+          }
+        ]
+      }
+    },
+    "CanarySg": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "P2 canary no application egress",
+        "VpcId": {
+          "Ref": "BrokerVpc"
+        },
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "192.0.2.0/32"
+          }
+        ]
+      }
+    },
+    "BrokerApiEndpointSg": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "P2 broker private REST endpoint",
+        "VpcId": {
+          "Ref": "BrokerVpc"
+        },
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "192.0.2.0/32"
+          }
+        ],
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "SourceSecurityGroupId": {
+              "Ref": "DispatchSg"
+            }
+          }
+        ]
+      }
+    },
+    "BrokerSecretEndpointSg": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "P2 secret endpoint Dispatch only",
+        "VpcId": {
+          "Ref": "BrokerVpc"
+        },
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "192.0.2.0/32"
+          }
+        ],
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "SourceSecurityGroupId": {
+              "Ref": "DispatchSg"
+            }
+          }
+        ]
+      }
+    },
+    "BrokerProbeSg": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "P2 Dispatch identity probe with protected endpoints",
+        "VpcId": {
+          "Ref": "BrokerVpc"
+        },
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "192.0.2.0/32"
+          }
+        ]
+      }
+    },
+    "BrokerProbeBrokerIngress": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "BrokerEndpointSg"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "SourceSecurityGroupId": {
+          "Ref": "BrokerProbeSg"
+        }
+      }
+    },
+    "BrokerProbeBrokerEgress": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "BrokerProbeSg"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "DestinationSecurityGroupId": {
+          "Ref": "BrokerEndpointSg"
+        }
+      }
+    },
+    "BrokerProbeSecretIngress": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "BrokerSecretEndpointSg"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "SourceSecurityGroupId": {
+          "Ref": "BrokerProbeSg"
+        }
+      }
+    },
+    "BrokerProbeSecretEgress": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "BrokerProbeSg"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "DestinationSecurityGroupId": {
+          "Ref": "BrokerSecretEndpointSg"
+        }
+      }
+    },
+    "BrokerProbeDynamoEgress": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "BrokerProbeSg"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "DestinationPrefixListId": {
+          "Ref": "DynamoPrefixListId"
+        }
+      }
+    },
+    "BrokerExecuteApiEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "BrokerVpc"
+        },
+        "VpcEndpointType": "Interface",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.execute-api"
+        },
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "BrokerSubnet"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "BrokerApiEndpointSg"
+          }
+        ]
+      }
+    },
+    "BrokerSecretsEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "BrokerVpc"
+        },
+        "VpcEndpointType": "Interface",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.secretsmanager"
+        },
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "DispatchSubnet"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "BrokerSecretEndpointSg"
+          }
+        ]
+      }
+    },
+    "BrokerProbeStsEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "BrokerVpc"
+        },
+        "VpcEndpointType": "Interface",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.sts"
+        },
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "BrokerSubnet"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "BrokerEndpointSg"
+          }
+        ]
+      }
+    },
+    "DispatchApiEgress": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "DispatchSg"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "DestinationSecurityGroupId": {
+          "Ref": "BrokerApiEndpointSg"
+        }
+      }
+    },
+    "DispatchSecretEgress": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "DispatchSg"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "DestinationSecurityGroupId": {
+          "Ref": "BrokerSecretEndpointSg"
+        }
+      }
+    },
+    "GrantTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "BillingMode": "PAY_PER_REQUEST",
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "PK",
+            "AttributeType": "S"
+          },
+          {
+            "AttributeName": "SK",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "PK",
+            "KeyType": "HASH"
+          },
+          {
+            "AttributeName": "SK",
+            "KeyType": "RANGE"
+          }
+        ],
+        "PointInTimeRecoverySpecification": {
+          "PointInTimeRecoveryEnabled": true
+        }
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "WorkerProbeSg": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "P2 same-role IAM probe private endpoints",
+        "VpcId": {
+          "Ref": "WorkerVpc"
+        },
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "192.0.2.0/32"
+          }
+        ]
+      }
+    },
+    "WorkerProbeEndpointSg": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "P2 IAM probe endpoint reachable only from probe tasks",
+        "VpcId": {
+          "Ref": "WorkerVpc"
+        },
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "192.0.2.0/32"
+          }
+        ],
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "SourceSecurityGroupId": {
+              "Ref": "WorkerProbeSg"
+            }
+          }
+        ]
+      }
+    },
+    "WorkerProbeInfrastructureIngress": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "WorkerEndpointSg"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "SourceSecurityGroupId": {
+          "Ref": "WorkerProbeSg"
+        }
+      }
+    },
+    "WorkerProbeInfrastructureEgress": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "WorkerProbeSg"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "DestinationSecurityGroupId": {
+          "Ref": "WorkerEndpointSg"
+        }
+      }
+    },
+    "WorkerProbeProtectedEgress": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "WorkerProbeSg"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "DestinationSecurityGroupId": {
+          "Ref": "WorkerProbeEndpointSg"
+        }
+      }
+    },
+    "WorkerProbeS3GatewayEgress": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "WorkerProbeSg"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "DestinationPrefixListId": {
+          "Ref": "S3PrefixListId"
+        }
+      }
+    },
+    "WorkerProbeDynamoGatewayEgress": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "WorkerProbeSg"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "DestinationPrefixListId": {
+          "Ref": "DynamoPrefixListId"
+        }
+      }
+    },
+    "WorkerProbeKmsEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "WorkerVpc"
+        },
+        "VpcEndpointType": "Interface",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.kms"
+        },
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "WorkerSubnet"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "WorkerProbeEndpointSg"
+          }
+        ]
+      }
+    },
+    "WorkerProbeSecretsmanagerEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "WorkerVpc"
+        },
+        "VpcEndpointType": "Interface",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.secretsmanager"
+        },
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "WorkerSubnet"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "WorkerProbeEndpointSg"
+          }
+        ]
+      }
+    },
+    "WorkerProbeLambdaEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "WorkerVpc"
+        },
+        "VpcEndpointType": "Interface",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.lambda"
+        },
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "WorkerSubnet"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "WorkerProbeEndpointSg"
+          }
+        ]
+      }
+    },
+    "WorkerProbeStsEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "WorkerVpc"
+        },
+        "VpcEndpointType": "Interface",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.sts"
+        },
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "WorkerSubnet"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "WorkerProbeEndpointSg"
+          }
+        ]
+      }
+    },
+    "WorkerProbeDynamoEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "WorkerVpc"
+        },
+        "VpcEndpointType": "Gateway",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.dynamodb"
+        },
+        "RouteTableIds": [
+          {
+            "Ref": "WorkerRoute"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "dynamodb:GetItem",
+                "dynamodb:PutItem"
+              ],
+              "Resource": {
+                "Fn::GetAtt": [
+                  "GrantTable",
+                  "Arn"
+                ]
+              },
+              "Principal": "*"
+            }
+          ]
+        }
+      }
+    },
+    "IssuerQueuePolicy": {
+      "Type": "AWS::SQS::QueuePolicy",
+      "Properties": {
+        "Queues": [
+          {
+            "Ref": "IssuerQueueUrl"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": "sqs:SendMessage",
+              "Resource": {
+                "Ref": "IssuerQueueArn"
+              },
+              "Condition": {
+                "ArnEquals": {
+                  "aws:PrincipalArn": {
+                    "Ref": "IssuerRoleArn"
+                  }
+                }
+              },
+              "Principal": {
+                "AWS": {
+                  "Fn::Sub": "arn:${AWS::Partition}:iam::${AAccountId}:root"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "SyntheticCanarySecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "Properties": {
+        "Description": "Synthetic P2 canary token; never a model credential",
+        "SecretString": {
+          "Ref": "SyntheticSecretValue"
+        }
+      }
+    },
+    "DispatchRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+          }
+        ],
+        "Policies": [
+          {
+            "PolicyName": "deny-function-code-eni-management",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Deny",
+                  "Action": [
+                    "ec2:CreateNetworkInterface",
+                    "ec2:DeleteNetworkInterface",
+                    "ec2:DescribeNetworkInterfaces",
+                    "ec2:DescribeSubnets",
+                    "ec2:DetachNetworkInterface",
+                    "ec2:AssignPrivateIpAddresses",
+                    "ec2:UnassignPrivateIpAddresses"
+                  ],
+                  "Resource": "*",
+                  "Condition": {
+                    "ArnLike": {
+                      "lambda:SourceFunctionArn": {
+                        "Fn::Sub": "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:p2-*"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "CanaryRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+          }
+        ],
+        "Policies": [
+          {
+            "PolicyName": "deny-function-code-eni-management",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Deny",
+                  "Action": [
+                    "ec2:CreateNetworkInterface",
+                    "ec2:DeleteNetworkInterface",
+                    "ec2:DescribeNetworkInterfaces",
+                    "ec2:DescribeSubnets",
+                    "ec2:DetachNetworkInterface",
+                    "ec2:AssignPrivateIpAddresses",
+                    "ec2:UnassignPrivateIpAddresses"
+                  ],
+                  "Resource": "*",
+                  "Condition": {
+                    "ArnLike": {
+                      "lambda:SourceFunctionArn": {
+                        "Fn::Sub": "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:p2-*"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "WorkerRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ecs-tasks.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        }
+      }
+    },
+    "ExecutorRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ecs-tasks.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        }
+      }
+    },
+    "TaskExecutionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ecs-tasks.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        }
+      }
+    },
+    "AuthorityFunctionLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/aws/lambda/p2-${AWS::StackName}-authorityfunction"
+        },
+        "RetentionInDays": {
+          "Ref": "LogRetentionDays"
+        }
+      }
+    },
+    "AuthorityFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": {
+          "Fn::Sub": "p2-${AWS::StackName}-authorityfunction"
+        },
+        "Runtime": "python3.14",
+        "Handler": "agent_alfred.p2.authority_handler.handler",
+        "Role": {
+          "Ref": "AuthorityRoleArn"
+        },
+        "Code": {
+          "S3Bucket": {
+            "Ref": "CodeBucket"
+          },
+          "S3Key": {
+            "Ref": "CodeKey"
+          }
+        },
+        "Timeout": 90,
+        "MemorySize": 512,
+        "VpcConfig": {
+          "SubnetIds": [
+            {
+              "Ref": "BrokerSubnet"
+            }
+          ],
+          "SecurityGroupIds": [
+            {
+              "Ref": "BrokerWorkloadSg"
+            }
+          ]
+        },
+        "Environment": {
+          "Variables": {
+            "P2_SYNTHETIC_ONLY": "1",
+            "P2_EXPIRES_AT": {
+              "Ref": "ExpiresAtUtc"
+            },
+            "P2_DEPLOYMENT_ACTIVE": {
+              "Ref": "EnableTraffic"
+            },
+            "P2_STOP_DISPATCH": {
+              "Ref": "StopDispatch"
+            },
+            "P2_GRANT_TABLE": {
+              "Ref": "GrantTable"
+            },
+            "P2_ANCHOR_FUNCTION_ARN": {
+              "Ref": "AnchorFunctionArn"
+            },
+            "P2_DISPATCH_FUNCTION_ARN": {
+              "Fn::Sub": "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:p2-${AWS::StackName}-dispatchfunction"
+            },
+            "P2_ISSUER_KMS_ARN": {
+              "Ref": "IssuerKeyArn"
+            },
+            "P2_ISSUER_QUEUE_ARN": {
+              "Ref": "IssuerQueueArn"
+            },
+            "P2_WORKER_ROLE_ARN": {
+              "Fn::GetAtt": [
+                "WorkerRole",
+                "Arn"
+              ]
+            },
+            "P2_EXECUTOR_ROLE_ARN": {
+              "Fn::GetAtt": [
+                "ExecutorRole",
+                "Arn"
+              ]
+            },
+            "P2_ISSUER_ROLE_ARN": {
+              "Ref": "IssuerRoleArn"
+            },
+            "P2_DISPATCH_ROLE_ARN": {
+              "Fn::GetAtt": [
+                "DispatchRole",
+                "Arn"
+              ]
+            }
+          }
+        },
+        "ReservedConcurrentExecutions": 2
+      }
+    },
+    "DispatchFunctionLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/aws/lambda/p2-${AWS::StackName}-dispatchfunction"
+        },
+        "RetentionInDays": {
+          "Ref": "LogRetentionDays"
+        }
+      }
+    },
+    "DispatchFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": {
+          "Fn::Sub": "p2-${AWS::StackName}-dispatchfunction"
+        },
+        "Runtime": "python3.14",
+        "Handler": "agent_alfred.p2.dispatch.handler",
+        "Role": {
+          "Fn::GetAtt": [
+            "DispatchRole",
+            "Arn"
+          ]
+        },
+        "Code": {
+          "S3Bucket": {
+            "Ref": "CodeBucket"
+          },
+          "S3Key": {
+            "Ref": "CodeKey"
+          }
+        },
+        "Timeout": 25,
+        "MemorySize": 256,
+        "VpcConfig": {
+          "SubnetIds": [
+            {
+              "Ref": "DispatchSubnet"
+            }
+          ],
+          "SecurityGroupIds": [
+            {
+              "Ref": "DispatchSg"
+            }
+          ]
+        },
+        "Environment": {
+          "Variables": {
+            "P2_SYNTHETIC_ONLY": "1",
+            "P2_EXPIRES_AT": {
+              "Ref": "ExpiresAtUtc"
+            },
+            "P2_DEPLOYMENT_ACTIVE": {
+              "Ref": "EnableTraffic"
+            },
+            "P2_STOP_DISPATCH": {
+              "Ref": "StopDispatch"
+            },
+            "P2_AUTHORITY_API_BASE": {
+              "Fn::Join": [
+                "",
+                [
+                  "https://",
+                  {
+                    "Ref": "AuthorityApi"
+                  },
+                  {
+                    "Fn::Sub": ".execute-api.${AWS::Region}.amazonaws.com/p2"
+                  }
+                ]
+              ]
+            },
+            "P2_CANARY_API_BASE": {
+              "Fn::Join": [
+                "",
+                [
+                  "https://",
+                  {
+                    "Ref": "CanaryApi"
+                  },
+                  {
+                    "Fn::Sub": ".execute-api.${AWS::Region}.amazonaws.com/p2"
+                  }
+                ]
+              ]
+            },
+            "P2_SYNTHETIC_SECRET_ARN": {
+              "Ref": "SyntheticCanarySecret"
+            }
+          }
+        },
+        "ReservedConcurrentExecutions": 2
+      }
+    },
+    "CanaryFunctionLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/aws/lambda/p2-${AWS::StackName}-canaryfunction"
+        },
+        "RetentionInDays": {
+          "Ref": "LogRetentionDays"
+        }
+      }
+    },
+    "CanaryFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": {
+          "Fn::Sub": "p2-${AWS::StackName}-canaryfunction"
+        },
+        "Runtime": "python3.14",
+        "Handler": "agent_alfred.p2.canary.handler",
+        "Role": {
+          "Fn::GetAtt": [
+            "CanaryRole",
+            "Arn"
+          ]
+        },
+        "Code": {
+          "S3Bucket": {
+            "Ref": "CodeBucket"
+          },
+          "S3Key": {
+            "Ref": "CodeKey"
+          }
+        },
+        "Timeout": 10,
+        "MemorySize": 256,
+        "VpcConfig": {
+          "SubnetIds": [
+            {
+              "Ref": "DispatchSubnet"
+            }
+          ],
+          "SecurityGroupIds": [
+            {
+              "Ref": "CanarySg"
+            }
+          ]
+        },
+        "Environment": {
+          "Variables": {
+            "P2_SYNTHETIC_ONLY": "1",
+            "P2_EXPIRES_AT": {
+              "Ref": "ExpiresAtUtc"
+            },
+            "P2_DEPLOYMENT_ACTIVE": {
+              "Ref": "EnableTraffic"
+            },
+            "P2_DISPATCH_ROLE_ARN": {
+              "Fn::GetAtt": [
+                "DispatchRole",
+                "Arn"
+              ]
+            },
+            "P2_CANARY_TOKEN_SHA256": {
+              "Ref": "CanaryTokenSha256"
+            }
+          }
+        },
+        "ReservedConcurrentExecutions": 2
+      }
+    },
+    "DispatchProbeFunctionLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/aws/lambda/p2-${AWS::StackName}-dispatchprobefunction"
+        },
+        "RetentionInDays": {
+          "Ref": "LogRetentionDays"
+        }
+      }
+    },
+    "DispatchProbeFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": {
+          "Fn::Sub": "p2-${AWS::StackName}-dispatchprobefunction"
+        },
+        "Runtime": "python3.14",
+        "Handler": "agent_alfred.p2.probe.handler",
+        "Role": {
+          "Fn::GetAtt": [
+            "DispatchRole",
+            "Arn"
+          ]
+        },
+        "Code": {
+          "S3Bucket": {
+            "Ref": "CodeBucket"
+          },
+          "S3Key": {
+            "Ref": "CodeKey"
+          }
+        },
+        "Timeout": 30,
+        "MemorySize": 256,
+        "VpcConfig": {
+          "SubnetIds": [
+            {
+              "Ref": "DispatchSubnet"
+            }
+          ],
+          "SecurityGroupIds": [
+            {
+              "Ref": "DispatchSg"
+            }
+          ]
+        },
+        "Environment": {
+          "Variables": {
+            "P2_SYNTHETIC_ONLY": "1",
+            "P2_EXPIRES_AT": {
+              "Ref": "ExpiresAtUtc"
+            },
+            "P2_PROBE_ONLY": "1",
+            "P2_PROBE_ROLE": "dispatch"
+          }
+        },
+        "ReservedConcurrentExecutions": 2
+      }
+    },
+    "DispatchIamProbeFunctionLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/aws/lambda/p2-${AWS::StackName}-dispatchiamprobefunction"
+        },
+        "RetentionInDays": {
+          "Ref": "LogRetentionDays"
+        }
+      }
+    },
+    "DispatchIamProbeFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": {
+          "Fn::Sub": "p2-${AWS::StackName}-dispatchiamprobefunction"
+        },
+        "Runtime": "python3.14",
+        "Handler": "agent_alfred.p2.probe.handler",
+        "Role": {
+          "Fn::GetAtt": [
+            "DispatchRole",
+            "Arn"
+          ]
+        },
+        "Code": {
+          "S3Bucket": {
+            "Ref": "CodeBucket"
+          },
+          "S3Key": {
+            "Ref": "CodeKey"
+          }
+        },
+        "Timeout": 30,
+        "MemorySize": 256,
+        "VpcConfig": {
+          "SubnetIds": [
+            {
+              "Ref": "BrokerSubnet"
+            }
+          ],
+          "SecurityGroupIds": [
+            {
+              "Ref": "BrokerProbeSg"
+            }
+          ]
+        },
+        "Environment": {
+          "Variables": {
+            "P2_SYNTHETIC_ONLY": "1",
+            "P2_EXPIRES_AT": {
+              "Ref": "ExpiresAtUtc"
+            },
+            "P2_PROBE_ONLY": "1",
+            "P2_PROBE_ROLE": "dispatch"
+          }
+        },
+        "ReservedConcurrentExecutions": 2
+      }
+    },
+    "AuthorityProbeFunctionLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/aws/lambda/p2-${AWS::StackName}-authorityprobefunction"
+        },
+        "RetentionInDays": {
+          "Ref": "LogRetentionDays"
+        }
+      }
+    },
+    "AuthorityProbeFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": {
+          "Fn::Sub": "p2-${AWS::StackName}-authorityprobefunction"
+        },
+        "Runtime": "python3.14",
+        "Handler": "agent_alfred.p2.probe.handler",
+        "Role": {
+          "Ref": "AuthorityRoleArn"
+        },
+        "Code": {
+          "S3Bucket": {
+            "Ref": "CodeBucket"
+          },
+          "S3Key": {
+            "Ref": "CodeKey"
+          }
+        },
+        "Timeout": 30,
+        "MemorySize": 256,
+        "VpcConfig": {
+          "SubnetIds": [
+            {
+              "Ref": "BrokerSubnet"
+            }
+          ],
+          "SecurityGroupIds": [
+            {
+              "Ref": "BrokerWorkloadSg"
+            }
+          ]
+        },
+        "Environment": {
+          "Variables": {
+            "P2_SYNTHETIC_ONLY": "1",
+            "P2_EXPIRES_AT": {
+              "Ref": "ExpiresAtUtc"
+            },
+            "P2_PROBE_ONLY": "1",
+            "P2_PROBE_ROLE": "authority"
+          }
+        },
+        "ReservedConcurrentExecutions": 2
+      }
+    },
+    "AuthorityIamProbeFunctionLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/aws/lambda/p2-${AWS::StackName}-authorityiamprobefunction"
+        },
+        "RetentionInDays": {
+          "Ref": "LogRetentionDays"
+        }
+      }
+    },
+    "AuthorityIamProbeFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": {
+          "Fn::Sub": "p2-${AWS::StackName}-authorityiamprobefunction"
+        },
+        "Runtime": "python3.14",
+        "Handler": "agent_alfred.p2.probe.handler",
+        "Role": {
+          "Ref": "AuthorityRoleArn"
+        },
+        "Code": {
+          "S3Bucket": {
+            "Ref": "CodeBucket"
+          },
+          "S3Key": {
+            "Ref": "CodeKey"
+          }
+        },
+        "Timeout": 30,
+        "MemorySize": 256,
+        "VpcConfig": {
+          "SubnetIds": [
+            {
+              "Ref": "BrokerSubnet"
+            }
+          ],
+          "SecurityGroupIds": [
+            {
+              "Ref": "BrokerProbeSg"
+            }
+          ]
+        },
+        "Environment": {
+          "Variables": {
+            "P2_SYNTHETIC_ONLY": "1",
+            "P2_EXPIRES_AT": {
+              "Ref": "ExpiresAtUtc"
+            },
+            "P2_PROBE_ONLY": "1",
+            "P2_PROBE_ROLE": "authority"
+          }
+        },
+        "ReservedConcurrentExecutions": 2
+      }
+    },
+    "AuthorityApi": {
+      "Type": "AWS::ApiGateway::RestApi",
+      "Properties": {
+        "EndpointConfiguration": {
+          "Types": [
+            "PRIVATE"
+          ],
+          "VpcEndpointIds": {
+            "Fn::If": [
+              "HasIssuerVpce",
+              [
+                {
+                  "Ref": "WorkerExecuteApiEndpoint"
+                },
+                {
+                  "Ref": "BrokerExecuteApiEndpoint"
+                },
+                {
+                  "Ref": "AIssuerVpceId"
+                }
+              ],
+              [
+                {
+                  "Ref": "WorkerExecuteApiEndpoint"
+                },
+                {
+                  "Ref": "BrokerExecuteApiEndpoint"
+                }
+              ]
+            ]
+          }
+        },
+        "Name": {
+          "Fn::Sub": "p2-${AWS::StackName}-authority"
+        },
+        "Policy": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": "execute-api:Invoke",
+              "Resource": "execute-api:/*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:SourceVpce": {
+                    "Fn::If": [
+                      "HasIssuerVpce",
+                      [
+                        {
+                          "Ref": "WorkerExecuteApiEndpoint"
+                        },
+                        {
+                          "Ref": "BrokerExecuteApiEndpoint"
+                        },
+                        {
+                          "Ref": "AIssuerVpceId"
+                        }
+                      ],
+                      [
+                        {
+                          "Ref": "WorkerExecuteApiEndpoint"
+                        },
+                        {
+                          "Ref": "BrokerExecuteApiEndpoint"
+                        }
+                      ]
+                    ]
+                  }
+                }
+              },
+              "Principal": "*"
+            }
+          ]
+        }
+      }
+    },
+    "AuthorityV1": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "AuthorityApi"
+        },
+        "ParentId": {
+          "Fn::GetAtt": [
+            "AuthorityApi",
+            "RootResourceId"
+          ]
+        },
+        "PathPart": "v1"
+      }
+    },
+    "AuthoritySubmitResource": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "AuthorityApi"
+        },
+        "ParentId": {
+          "Ref": "AuthorityV1"
+        },
+        "PathPart": "submit"
+      }
+    },
+    "AuthoritySubmitMethod": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "AuthorityApi"
+        },
+        "ResourceId": {
+          "Ref": "AuthoritySubmitResource"
+        },
+        "HttpMethod": "POST",
+        "AuthorizationType": "AWS_IAM",
+        "Integration": {
+          "Type": "AWS_PROXY",
+          "IntegrationHttpMethod": "POST",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/"
+                },
+                {
+                  "Fn::GetAtt": [
+                    "AuthorityFunction",
+                    "Arn"
+                  ]
+                },
+                "/invocations"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "AuthorityInvokeResource": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "AuthorityApi"
+        },
+        "ParentId": {
+          "Ref": "AuthorityV1"
+        },
+        "PathPart": "invoke"
+      }
+    },
+    "AuthorityInvokeMethod": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "AuthorityApi"
+        },
+        "ResourceId": {
+          "Ref": "AuthorityInvokeResource"
+        },
+        "HttpMethod": "POST",
+        "AuthorizationType": "AWS_IAM",
+        "Integration": {
+          "Type": "AWS_PROXY",
+          "IntegrationHttpMethod": "POST",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/"
+                },
+                {
+                  "Fn::GetAtt": [
+                    "AuthorityFunction",
+                    "Arn"
+                  ]
+                },
+                "/invocations"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "AuthorityFinishResource": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "AuthorityApi"
+        },
+        "ParentId": {
+          "Ref": "AuthorityV1"
+        },
+        "PathPart": "finish"
+      }
+    },
+    "AuthorityFinishMethod": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "AuthorityApi"
+        },
+        "ResourceId": {
+          "Ref": "AuthorityFinishResource"
+        },
+        "HttpMethod": "POST",
+        "AuthorizationType": "AWS_IAM",
+        "Integration": {
+          "Type": "AWS_PROXY",
+          "IntegrationHttpMethod": "POST",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/"
+                },
+                {
+                  "Fn::GetAtt": [
+                    "AuthorityFunction",
+                    "Arn"
+                  ]
+                },
+                "/invocations"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "AuthorityStatusResource": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "AuthorityApi"
+        },
+        "ParentId": {
+          "Ref": "AuthorityV1"
+        },
+        "PathPart": "status"
+      }
+    },
+    "AuthorityStatusMethod": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "AuthorityApi"
+        },
+        "ResourceId": {
+          "Ref": "AuthorityStatusResource"
+        },
+        "HttpMethod": "POST",
+        "AuthorizationType": "AWS_IAM",
+        "Integration": {
+          "Type": "AWS_PROXY",
+          "IntegrationHttpMethod": "POST",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/"
+                },
+                {
+                  "Fn::GetAtt": [
+                    "AuthorityFunction",
+                    "Arn"
+                  ]
+                },
+                "/invocations"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "AuthorityProposalResource": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "AuthorityApi"
+        },
+        "ParentId": {
+          "Ref": "AuthorityV1"
+        },
+        "PathPart": "proposal"
+      }
+    },
+    "AuthorityProposalMethod": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "AuthorityApi"
+        },
+        "ResourceId": {
+          "Ref": "AuthorityProposalResource"
+        },
+        "HttpMethod": "POST",
+        "AuthorizationType": "AWS_IAM",
+        "Integration": {
+          "Type": "AWS_PROXY",
+          "IntegrationHttpMethod": "POST",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/"
+                },
+                {
+                  "Fn::GetAtt": [
+                    "AuthorityFunction",
+                    "Arn"
+                  ]
+                },
+                "/invocations"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "AuthorityPreflightResource": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "AuthorityApi"
+        },
+        "ParentId": {
+          "Ref": "AuthorityV1"
+        },
+        "PathPart": "preflight"
+      }
+    },
+    "AuthorityPreflightMethod": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "AuthorityApi"
+        },
+        "ResourceId": {
+          "Ref": "AuthorityPreflightResource"
+        },
+        "HttpMethod": "POST",
+        "AuthorizationType": "AWS_IAM",
+        "Integration": {
+          "Type": "AWS_PROXY",
+          "IntegrationHttpMethod": "POST",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/"
+                },
+                {
+                  "Fn::GetAtt": [
+                    "AuthorityFunction",
+                    "Arn"
+                  ]
+                },
+                "/invocations"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "AuthorityDeployment": {
+      "Type": "AWS::ApiGateway::Deployment",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "AuthorityApi"
+        }
+      },
+      "DependsOn": [
+        "AuthoritySubmitMethod",
+        "AuthorityInvokeMethod",
+        "AuthorityFinishMethod",
+        "AuthorityStatusMethod",
+        "AuthorityProposalMethod",
+        "AuthorityPreflightMethod"
+      ]
+    },
+    "AuthorityIssuerDeployment": {
+      "Type": "AWS::ApiGateway::Deployment",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "AuthorityApi"
+        }
+      },
+      "DependsOn": [
+        "AuthoritySubmitMethod",
+        "AuthorityInvokeMethod",
+        "AuthorityFinishMethod",
+        "AuthorityStatusMethod",
+        "AuthorityProposalMethod",
+        "AuthorityPreflightMethod"
+      ],
+      "Condition": "HasIssuerVpce"
+    },
+    "AuthorityStage": {
+      "Type": "AWS::ApiGateway::Stage",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "AuthorityApi"
+        },
+        "DeploymentId": {
+          "Fn::If": [
+            "HasIssuerVpce",
+            {
+              "Ref": "AuthorityIssuerDeployment"
+            },
+            {
+              "Ref": "AuthorityDeployment"
+            }
+          ]
+        },
+        "StageName": "p2",
+        "MethodSettings": [
+          {
+            "ResourcePath": "/*",
+            "HttpMethod": "*",
+            "DataTraceEnabled": false,
+            "LoggingLevel": "OFF"
+          }
+        ]
+      }
+    },
+    "AuthorityApiLambdaPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "AuthorityFunction"
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Fn::Sub": "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:"
+              },
+              {
+                "Ref": "AuthorityApi"
+              },
+              "/*/*/v1/*"
+            ]
+          ]
+        }
+      }
+    },
+    "CanaryApi": {
+      "Type": "AWS::ApiGateway::RestApi",
+      "Properties": {
+        "EndpointConfiguration": {
+          "Types": [
+            "PRIVATE"
+          ],
+          "VpcEndpointIds": [
+            {
+              "Ref": "BrokerExecuteApiEndpoint"
+            }
+          ]
+        },
+        "Name": {
+          "Fn::Sub": "p2-${AWS::StackName}-canary"
+        },
+        "Policy": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": "execute-api:Invoke",
+              "Resource": "execute-api:/*",
+              "Condition": {
+                "StringEquals": {
+                  "aws:SourceVpce": [
+                    {
+                      "Ref": "BrokerExecuteApiEndpoint"
+                    }
+                  ]
+                }
+              },
+              "Principal": "*"
+            }
+          ]
+        }
+      }
+    },
+    "CanaryV1": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "CanaryApi"
+        },
+        "ParentId": {
+          "Fn::GetAtt": [
+            "CanaryApi",
+            "RootResourceId"
+          ]
+        },
+        "PathPart": "v1"
+      }
+    },
+    "CanaryCanaryResource": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "CanaryApi"
+        },
+        "ParentId": {
+          "Ref": "CanaryV1"
+        },
+        "PathPart": "canary"
+      }
+    },
+    "CanaryCanaryMethod": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "CanaryApi"
+        },
+        "ResourceId": {
+          "Ref": "CanaryCanaryResource"
+        },
+        "HttpMethod": "POST",
+        "AuthorizationType": "AWS_IAM",
+        "Integration": {
+          "Type": "AWS_PROXY",
+          "IntegrationHttpMethod": "POST",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/"
+                },
+                {
+                  "Fn::GetAtt": [
+                    "CanaryFunction",
+                    "Arn"
+                  ]
+                },
+                "/invocations"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "CanaryDeployment": {
+      "Type": "AWS::ApiGateway::Deployment",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "CanaryApi"
+        }
+      },
+      "DependsOn": [
+        "CanaryCanaryMethod"
+      ]
+    },
+    "CanaryStage": {
+      "Type": "AWS::ApiGateway::Stage",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "CanaryApi"
+        },
+        "DeploymentId": {
+          "Ref": "CanaryDeployment"
+        },
+        "StageName": "p2",
+        "MethodSettings": [
+          {
+            "ResourcePath": "/*",
+            "HttpMethod": "*",
+            "DataTraceEnabled": false,
+            "LoggingLevel": "OFF"
+          }
+        ]
+      }
+    },
+    "CanaryApiLambdaPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "CanaryFunction"
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Fn::Sub": "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:"
+              },
+              {
+                "Ref": "CanaryApi"
+              },
+              "/*/*/v1/*"
+            ]
+          ]
+        }
+      }
+    },
+    "AuthorityDataPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": {
+          "Fn::Sub": "p2-${AWS::StackName}-authoritydatapolicy"
+        },
+        "Roles": [
+          {
+            "Ref": "AuthorityRoleName"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "dynamodb:GetItem",
+                "dynamodb:PutItem"
+              ],
+              "Resource": {
+                "Fn::GetAtt": [
+                  "GrantTable",
+                  "Arn"
+                ]
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "sqs:ReceiveMessage",
+                "sqs:DeleteMessage",
+                "sqs:GetQueueAttributes"
+              ],
+              "Resource": {
+                "Ref": "IssuerQueueArn"
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": "kms:Verify",
+              "Resource": {
+                "Ref": "IssuerKeyArn"
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": "lambda:InvokeFunction",
+              "Resource": [
+                {
+                  "Ref": "AnchorFunctionArn"
+                },
+                {
+                  "Fn::GetAtt": [
+                    "DispatchFunction",
+                    "Arn"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "DispatchDataPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": {
+          "Fn::Sub": "p2-${AWS::StackName}-dispatchdatapolicy"
+        },
+        "Roles": [
+          {
+            "Ref": "DispatchRole"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": "secretsmanager:GetSecretValue",
+              "Resource": {
+                "Ref": "SyntheticCanarySecret"
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": "execute-api:Invoke",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::Sub": "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:"
+                      },
+                      {
+                        "Ref": "AuthorityApi"
+                      },
+                      "/p2/POST/v1/preflight"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::Sub": "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:"
+                      },
+                      {
+                        "Ref": "CanaryApi"
+                      },
+                      "/p2/POST/v1/canary"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "WorkerApiPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": {
+          "Fn::Sub": "p2-${AWS::StackName}-workerapipolicy"
+        },
+        "Roles": [
+          {
+            "Ref": "WorkerRole"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": "execute-api:Invoke",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::Sub": "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:"
+                      },
+                      {
+                        "Ref": "AuthorityApi"
+                      },
+                      "/p2/POST/v1/invoke"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::Sub": "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:"
+                      },
+                      {
+                        "Ref": "AuthorityApi"
+                      },
+                      "/p2/POST/v1/finish"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::Sub": "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:"
+                      },
+                      {
+                        "Ref": "AuthorityApi"
+                      },
+                      "/p2/POST/v1/status"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "ExecutorApiPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": {
+          "Fn::Sub": "p2-${AWS::StackName}-executorapipolicy"
+        },
+        "Roles": [
+          {
+            "Ref": "ExecutorRole"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": "execute-api:Invoke",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::Sub": "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:"
+                      },
+                      {
+                        "Ref": "AuthorityApi"
+                      },
+                      "/p2/POST/v1/submit"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::Sub": "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:"
+                      },
+                      {
+                        "Ref": "AuthorityApi"
+                      },
+                      "/p2/POST/v1/status"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "TaskLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/p2/${AWS::StackName}/tasks"
+        },
+        "RetentionInDays": {
+          "Ref": "LogRetentionDays"
+        }
+      }
+    },
+    "TaskExecutionPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": {
+          "Fn::Sub": "p2-${AWS::StackName}-taskexecutionpolicy"
+        },
+        "Roles": [
+          {
+            "Ref": "TaskExecutionRole"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": "ecr:GetAuthorizationToken",
+              "Resource": "*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "ecr:BatchGetImage",
+                "ecr:GetDownloadUrlForLayer"
+              ],
+              "Resource": {
+                "Ref": "ImageRepositoryArn"
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+              ],
+              "Resource": {
+                "Fn::GetAtt": [
+                  "TaskLogGroup",
+                  "Arn"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "WorkerCluster": {
+      "Type": "AWS::ECS::Cluster",
+      "Properties": {
+        "ClusterName": {
+          "Fn::Sub": "p2-${AWS::StackName}-controlled"
+        },
+        "ClusterSettings": [
+          {
+            "Name": "containerInsights",
+            "Value": "enabled"
+          }
+        ]
+      }
+    },
+    "ExecutorTask": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties": {
+        "Family": {
+          "Fn::Sub": "p2-${AWS::StackName}-executortask"
+        },
+        "Cpu": "256",
+        "Memory": "512",
+        "NetworkMode": "awsvpc",
+        "RequiresCompatibilities": [
+          "FARGATE"
+        ],
+        "RuntimePlatform": {
+          "CpuArchitecture": "X86_64",
+          "OperatingSystemFamily": "LINUX"
+        },
+        "TaskRoleArn": {
+          "Fn::GetAtt": [
+            "ExecutorRole",
+            "Arn"
+          ]
+        },
+        "ExecutionRoleArn": {
+          "Fn::GetAtt": [
+            "TaskExecutionRole",
+            "Arn"
+          ]
+        },
+        "ContainerDefinitions": [
+          {
+            "Name": "p2-controlled",
+            "Image": {
+              "Ref": "ImageUri"
+            },
+            "Essential": true,
+            "ReadonlyRootFilesystem": true,
+            "User": "10001",
+            "Environment": [
+              {
+                "Name": "P2_SYNTHETIC_ONLY",
+                "Value": "1"
+              },
+              {
+                "Name": "P2_PACKAGE_SHA256",
+                "Value": {
+                  "Ref": "PackageSha256"
+                }
+              },
+              {
+                "Name": "P2_INPUT_SHA256",
+                "Value": {
+                  "Ref": "InputSha256"
+                }
+              },
+              {
+                "Name": "P2_INPUT_PATH",
+                "Value": "/opt/p2/input.json"
+              },
+              {
+                "Name": "P2_AUTHORITY_API_BASE",
+                "Value": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "https://",
+                      {
+                        "Ref": "AuthorityApi"
+                      },
+                      {
+                        "Fn::Sub": ".execute-api.${AWS::Region}.amazonaws.com/p2"
+                      }
+                    ]
+                  ]
+                }
+              },
+              {
+                "Name": "P2_RUN_MODE",
+                "Value": "submit"
+              },
+              {
+                "Name": "AWS_REGION",
+                "Value": {
+                  "Ref": "AWS::Region"
+                }
+              },
+              {
+                "Name": "PYTHONDONTWRITEBYTECODE",
+                "Value": "1"
+              }
+            ],
+            "LogConfiguration": {
+              "LogDriver": "awslogs",
+              "Options": {
+                "awslogs-group": {
+                  "Ref": "TaskLogGroup"
+                },
+                "awslogs-region": {
+                  "Ref": "AWS::Region"
+                },
+                "awslogs-stream-prefix": "executortask"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "WorkerTask": {
+      "Type": "AWS::ECS::TaskDefinition",
+      "Properties": {
+        "Family": {
+          "Fn::Sub": "p2-${AWS::StackName}-workertask"
+        },
+        "Cpu": "256",
+        "Memory": "512",
+        "NetworkMode": "awsvpc",
+        "RequiresCompatibilities": [
+          "FARGATE"
+        ],
+        "RuntimePlatform": {
+          "CpuArchitecture": "X86_64",
+          "OperatingSystemFamily": "LINUX"
+        },
+        "TaskRoleArn": {
+          "Fn::GetAtt": [
+            "WorkerRole",
+            "Arn"
+          ]
+        },
+        "ExecutionRoleArn": {
+          "Fn::GetAtt": [
+            "TaskExecutionRole",
+            "Arn"
+          ]
+        },
+        "ContainerDefinitions": [
+          {
+            "Name": "p2-controlled",
+            "Image": {
+              "Ref": "ImageUri"
+            },
+            "Essential": true,
+            "ReadonlyRootFilesystem": true,
+            "User": "10001",
+            "Environment": [
+              {
+                "Name": "P2_SYNTHETIC_ONLY",
+                "Value": "1"
+              },
+              {
+                "Name": "P2_PACKAGE_SHA256",
+                "Value": {
+                  "Ref": "PackageSha256"
+                }
+              },
+              {
+                "Name": "P2_INPUT_SHA256",
+                "Value": {
+                  "Ref": "InputSha256"
+                }
+              },
+              {
+                "Name": "P2_INPUT_PATH",
+                "Value": "/opt/p2/input.json"
+              },
+              {
+                "Name": "P2_AUTHORITY_API_BASE",
+                "Value": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "https://",
+                      {
+                        "Ref": "AuthorityApi"
+                      },
+                      {
+                        "Fn::Sub": ".execute-api.${AWS::Region}.amazonaws.com/p2"
+                      }
+                    ]
+                  ]
+                }
+              },
+              {
+                "Name": "P2_RUN_MODE",
+                "Value": "invoke"
+              },
+              {
+                "Name": "AWS_REGION",
+                "Value": {
+                  "Ref": "AWS::Region"
+                }
+              },
+              {
+                "Name": "PYTHONDONTWRITEBYTECODE",
+                "Value": "1"
+              }
+            ],
+            "LogConfiguration": {
+              "LogDriver": "awslogs",
+              "Options": {
+                "awslogs-group": {
+                  "Ref": "TaskLogGroup"
+                },
+                "awslogs-region": {
+                  "Ref": "AWS::Region"
+                },
+                "awslogs-stream-prefix": "workertask"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "IssuerEventMapping": {
+      "Type": "AWS::Lambda::EventSourceMapping",
+      "Properties": {
+        "EventSourceArn": {
+          "Ref": "IssuerQueueArn"
+        },
+        "FunctionName": {
+          "Ref": "AuthorityFunction"
+        },
+        "BatchSize": 1,
+        "Enabled": true
+      },
+      "DependsOn": "AuthorityDataPolicy",
+      "Condition": "TrafficEnabled"
+    },
+    "AuditTrail": {
+      "Type": "AWS::CloudTrail::Trail",
+      "Properties": {
+        "TrailName": {
+          "Fn::Sub": "p2-${AWS::StackName}-audit"
+        },
+        "S3BucketName": {
+          "Ref": "AuditBucketName"
+        },
+        "IsLogging": true,
+        "EnableLogFileValidation": true,
+        "IsMultiRegionTrail": false,
+        "EventSelectors": [
+          {
+            "ReadWriteType": "All",
+            "IncludeManagementEvents": true,
+            "DataResources": []
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "WorkerVpcId": {
+      "Value": {
+        "Ref": "WorkerVpc"
+      }
+    },
+    "WorkerSubnetId": {
+      "Value": {
+        "Ref": "WorkerSubnet"
+      }
+    },
+    "WorkerWorkloadSgId": {
+      "Value": {
+        "Ref": "WorkerWorkloadSg"
+      }
+    },
+    "WorkerEcrApiEndpointId": {
+      "Value": {
+        "Ref": "WorkerEcrApiEndpoint"
+      }
+    },
+    "WorkerEcrDkrEndpointId": {
+      "Value": {
+        "Ref": "WorkerEcrDkrEndpoint"
+      }
+    },
+    "WorkerLogsEndpointId": {
+      "Value": {
+        "Ref": "WorkerLogsEndpoint"
+      }
+    },
+    "WorkerExecuteApiEndpointId": {
+      "Value": {
+        "Ref": "WorkerExecuteApiEndpoint"
+      }
+    },
+    "WorkerS3EndpointId": {
+      "Value": {
+        "Ref": "WorkerS3Endpoint"
+      }
+    },
+    "BrokerVpcId": {
+      "Value": {
+        "Ref": "BrokerVpc"
+      }
+    },
+    "BrokerSubnetId": {
+      "Value": {
+        "Ref": "BrokerSubnet"
+      }
+    },
+    "BrokerWorkloadSgId": {
+      "Value": {
+        "Ref": "BrokerWorkloadSg"
+      }
+    },
+    "BrokerSqsEndpointId": {
+      "Value": {
+        "Ref": "BrokerSqsEndpoint"
+      }
+    },
+    "BrokerLambdaEndpointId": {
+      "Value": {
+        "Ref": "BrokerLambdaEndpoint"
+      }
+    },
+    "BrokerKmsEndpointId": {
+      "Value": {
+        "Ref": "BrokerKmsEndpoint"
+      }
+    },
+    "BrokerDynamodbEndpointId": {
+      "Value": {
+        "Ref": "BrokerDynamodbEndpoint"
+      }
+    },
+    "AuthorityApiId": {
+      "Value": {
+        "Ref": "AuthorityApi"
+      }
+    },
+    "AuthorityApiBase": {
+      "Value": {
+        "Fn::Join": [
+          "",
+          [
+            "https://",
+            {
+              "Ref": "AuthorityApi"
+            },
+            {
+              "Fn::Sub": ".execute-api.${AWS::Region}.amazonaws.com/p2"
+            }
+          ]
+        ]
+      }
+    },
+    "CanaryApiId": {
+      "Value": {
+        "Ref": "CanaryApi"
+      }
+    },
+    "CanaryApiBase": {
+      "Value": {
+        "Fn::Join": [
+          "",
+          [
+            "https://",
+            {
+              "Ref": "CanaryApi"
+            },
+            {
+              "Fn::Sub": ".execute-api.${AWS::Region}.amazonaws.com/p2"
+            }
+          ]
+        ]
+      }
+    },
+    "AuditTrailArn": {
+      "Value": {
+        "Fn::Sub": "arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/p2-${AWS::StackName}-audit"
+      }
+    },
+    "AuthorityRoleArn": {
+      "Value": {
+        "Ref": "AuthorityRoleArn"
+      }
+    },
+    "DispatchRoleArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "DispatchRole",
+          "Arn"
+        ]
+      }
+    },
+    "WorkerRoleArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "WorkerRole",
+          "Arn"
+        ]
+      }
+    },
+    "ExecutorRoleArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "ExecutorRole",
+          "Arn"
+        ]
+      }
+    },
+    "IssuerQueueArn": {
+      "Value": {
+        "Ref": "IssuerQueueArn"
+      }
+    },
+    "IssuerQueueUrl": {
+      "Value": {
+        "Ref": "IssuerQueueUrl"
+      }
+    },
+    "WorkerClusterName": {
+      "Value": {
+        "Ref": "WorkerCluster"
+      }
+    },
+    "ExpectedCAccountId": {
+      "Value": {
+        "Ref": "CAccountId"
+      }
+    },
+    "WorkerTaskArn": {
+      "Value": {
+        "Ref": "WorkerTask"
+      }
+    },
+    "ExecutorTaskArn": {
+      "Value": {
+        "Ref": "ExecutorTask"
+      }
+    },
+    "TaskLogGroupName": {
+      "Value": {
+        "Ref": "TaskLogGroup"
+      }
+    },
+    "BrokerApiVpceId": {
+      "Value": {
+        "Ref": "BrokerExecuteApiEndpoint"
+      }
+    },
+    "AuthorityFunctionArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "AuthorityFunction",
+          "Arn"
+        ]
+      }
+    },
+    "DispatchFunctionArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "DispatchFunction",
+          "Arn"
+        ]
+      }
+    },
+    "DispatchProbeFunctionArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "DispatchProbeFunction",
+          "Arn"
+        ]
+      }
+    },
+    "DispatchIamProbeFunctionArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "DispatchIamProbeFunction",
+          "Arn"
+        ]
+      }
+    },
+    "AuthorityProbeFunctionArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "AuthorityProbeFunction",
+          "Arn"
+        ]
+      }
+    },
+    "AuthorityIamProbeFunctionArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "AuthorityIamProbeFunction",
+          "Arn"
+        ]
+      }
+    },
+    "WorkerProbeSgId": {
+      "Value": {
+        "Ref": "WorkerProbeSg"
+      }
+    },
+    "WorkerProbeDynamoEndpointId": {
+      "Value": {
+        "Ref": "WorkerProbeDynamoEndpoint"
+      }
+    },
+    "BrokerProbeSgId": {
+      "Value": {
+        "Ref": "BrokerProbeSg"
+      }
+    },
+    "DispatchSgId": {
+      "Value": {
+        "Ref": "DispatchSg"
+      }
+    },
+    "GrantTableName": {
+      "Value": {
+        "Ref": "GrantTable"
+      }
+    },
+    "SyntheticCanarySecretArn": {
+      "Value": {
+        "Ref": "SyntheticCanarySecret"
+      }
+    }
+  },
+  "Conditions": {
+    "TrafficEnabled": {
+      "Fn::Equals": [
+        {
+          "Ref": "EnableTraffic"
+        },
+        "true"
+      ]
+    },
+    "HasIssuerVpce": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            {
+              "Ref": "AIssuerVpceId"
+            },
+            ""
+          ]
+        }
+      ]
+    }
+  }
+}
