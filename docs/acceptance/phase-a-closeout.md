@@ -6,7 +6,7 @@
 
 - 整票基线：`da5a9e3fee6cf6b9e9254ba9c53d73b1ab63d7f0`（原 main）。本次交付范围为相对该基线的**全部本票代码、测试、文档、来源快照和覆盖清单**；c31→c34 的 14 路径只是末段 P1 增量。整票 Git/PR 身份和 CI 链接由 #84 验收评论回写，不能用 c34 哈希冒充整票提交。
 - 最后一次产品代码候选 c34：`89f6fe5ab29b344e7766612243933a0acc96ab170cca2c1694dbed9539f871ba`，703 文件，c34 acceptance **816 passed**、Ruff/build PASS、wheel/sdist 包文件各 501 匹配、隔离安装 wheel/sdist × base/MCP **4/4 PASS**。均为 macOS/CPython 3.14、合成授权与本机离线 wheelhouse 条件；实际日志、命令、时间和首次失败在原独立临时证据包 `trusted-authorization-p1-c34-r1`，未提交原始运行输出。
-- c32 全量 Python **5799 passed、1 requires_key deselected** 只复用到 c33/c34 未改的非 acceptance 范围；c34 受影响 acceptance 全集已重跑。c31 浏览器 **351 passed** 及 sync/skills/env/typecheck 仅复用到未改代码、锁文件、前端和设置。文档收尾须核对代码字节与 c34 一致、所有引用测试名存在，并以新临时库检查实际离线示例。PR CI 在最终提交上另行运行；这两组旧结果不伪称最终候选全量重跑。
+- c32 全量 Python **5799 passed、1 requires_key deselected** 只复用到 c33/c34 未改的非 acceptance 范围；c34 受影响 acceptance 全集已重跑。c31 浏览器 **351 passed** 及 sync/skills/env/typecheck 仅复用到未改代码、锁文件、前端和设置。最终提交的产品代码与 c34 字节一致；PR 首轮 Ubuntu CI 揭示 `test_actual_loaded_package_must_match_declared_candidate_before_clients` 原依赖“工作树代码尚未提交”的测试前提，提交后克隆当前分支时前提消失。后继候选在测试临时 clone 中显式制造包字节漂移，保留相同公共拒绝断言；首次 CI 失败见 [PR #93 run 36218260277](https://github.com/nineofoursyrup/Agent-Alfred/actions/runs/36218260277)，不改原日志。后继候选测试与评审及最终 PR/merge CI 另由 #84 评论读回，旧结果不伪称最终候选全量重跑。
 - `coverage-inventory.json` 的 1614 行、27 票、321 个定位到的 test selector 和 1293 个仍未精确绑定的义务，是 **2026-09-20 来源审计快照**。其 `current_status=NOT RUN` 是当时审计状态，不作当前测试结论；逐票产品缺口仍在清单，不能以 #84 离线机制完成消除。缺原始 standalone brief/“8 大类 30+”不编造。快照来源文件不因本次验收改写。
 - 本地 Ubuntu 验收沿用用户此前“Ubuntu 忽略”决定，记为 **NOT RUN**，不填 PASS；PR 触发的仓库必需 Ubuntu CI 仍必须实际通过，并在 #84 评论记录 PR head 与合并 SHA 两阶段结果。C2C 仍 **NOT REVIEWED**，原票未把它列为新增关票门槛。
 

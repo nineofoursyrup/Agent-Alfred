@@ -119,6 +119,10 @@ def test_actual_loaded_package_must_match_declared_candidate_before_clients(tmp_
     root = Path(__file__).resolve().parents[4]
     clone = tmp_path / "baseline"
     git(root, "clone", "--quiet", "--local", "--no-hardlinks", str(root), str(clone))
+    package_file = clone / "src/agent_alfred/evals/acceptance/judge.py"
+    package_file.write_text(
+        package_file.read_text() + "\n# Candidate-only byte drift.\n"
+    )
     batch = scored_fixture()
     batch["grades"] = []
     batch["candidate"] = capture(clone)
