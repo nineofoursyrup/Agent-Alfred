@@ -306,6 +306,8 @@ class RuntimeHost:
         credentials: CredentialOverlay | None = None,
         audit_key=None,
         file_state=None,
+        persona_read_observer=None,
+        file_publication_checkpoint=None,
         skill_builtin=None,
         chat_graph_factory=None,
         behaviour_store=None,
@@ -316,8 +318,11 @@ class RuntimeHost:
         memory_notifier=None,
         extra_tools=(),
         tool_policies=None,
+        local_tool_allowlist=None,
         tool_authorization_path=None,
     ):
+        # A restricted local Host never starts optional MCP subprocesses.
+        self._local_tool_allowlist = local_tool_allowlist
         self._support_overrides = support_overrides or SupportOverrides()
         self._conn = conn
         self._routing_statistics_cleanup = RollbackSlot()
@@ -474,9 +479,14 @@ class RuntimeHost:
         from agent_alfred.tools.persona import PersonaTools
         from agent_alfred.tools.skills import SkillTools
 
-        self._file_tools = FileTools(self._store, file_state, clock)
+        self._file_tools = FileTools(
+            self._store, file_state, clock,
+            publication_checkpoint=file_publication_checkpoint,
+        )
 
-        persona_tools = PersonaTools(self._file_tools, settings)
+        persona_tools = PersonaTools(
+            self._file_tools, settings, read_observer=persona_read_observer
+        )
         skill_tools = SkillTools(self._file_tools, builtin=skill_builtin)
         self._skill_catalog = skill_tools.catalog
         self._external_tools = ExternalToolLedger(self._store, clock)
@@ -504,8 +514,7 @@ class RuntimeHost:
             file_state.path if file_state is not None else None,
             self._credential_env(), clock, self._redactor,
         )
-        tools = ToolRegistry(
-            (
+        declarations = (
                 *CalendarTools(self._store, clock).declarations(),
                 *MemoryTools(self._memory_service).declarations(),
                 *self._file_tools.declarations(),
@@ -513,7 +522,15 @@ class RuntimeHost:
                 *skill_tools.declarations(),
                 *self._integrations.declarations(),
                 *extra_tools,
-            ),
+            )
+        if local_tool_allowlist is not None:
+            allowed = set(local_tool_allowlist)
+            local = {t.name for t in declarations if t.effect != "external"}
+            if len(allowed) != len(local_tool_allowlist) or allowed - local:
+                raise ValueError("invalid_local_tool_allowlist")
+            declarations = tuple(t for t in declarations if t.name in allowed)
+        tools = ToolRegistry(
+            declarations,
             clock=clock,
             redactor=self._redactor,
             policies={**self._integrations.policies(), **(tool_policies or {})},
@@ -2358,6 +2375,8 @@ class RuntimeHost:
 
         self._mcp.on_unavailable = self._suspend_mcp_server
         self._mcp_control = MCPControl(self)
+        if self._local_tool_allowlist is not None:
+            return
         self._mcp.start()
         try:
             self._publish_mcp()

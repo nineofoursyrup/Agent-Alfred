@@ -672,9 +672,61 @@ class ToolRegistry:
         truncated = len(audit) > self._limit
         model = audit
         if truncated:
-            model = audit[: self._limit] + (
-                f"\n[truncated original_bytes={original_bytes} sha256={digest}]"
-            )
+            array_shaped = audit.lstrip().startswith("[")
+            model = "[]" if array_shaped else audit[: self._limit]
+            complete_rows = False
+            # Parse only bounded JSON arrays. Reuse exact source spans: decoding and
+            # re-encoding could change numbers or reveal an escaped credential.
+            decoder = json.JSONDecoder(object_pairs_hook=_unique_projection_object)
+            try:
+                rows = (
+                    decoder.decode(audit)
+                    if array_shaped and len(audit) <= 1048576
+                    else None
+                )
+            except ValueError, RecursionError:
+                rows = None
+            if isinstance(rows, list):
+                parts = []
+                size = 2  # brackets
+                cursor = len(audit) - len(audit.lstrip()) + 1
+                try:
+                    for index in range(len(rows)):
+                        while audit[cursor].isspace():
+                            cursor += 1
+                        value, end = decoder.raw_decode(audit, cursor)
+                        part = audit[cursor:end]
+                        # A JSON escape can decode to a loaded secret after the
+                        # earlier audit-text redaction. Hide this row and the rest.
+                        if self._redactor.redact_jsonable(value) != value:
+                            break
+                        extra = len(part) + bool(parts)
+                        if size + extra > self._limit:
+                            break
+                        parts.append(part)
+                        size += extra
+                        cursor = end
+                        while audit[cursor].isspace():
+                            cursor += 1
+                        if index + 1 < len(rows):
+                            cursor += 1  # validated comma
+                except ValueError, IndexError, RecursionError, TypeError:
+                    parts = []
+                model = "[" + ",".join(parts) + "]"
+                complete_rows = bool(parts)
+                truncated = len(parts) < len(rows)
+            if truncated:
+                boundary = (
+                    "visible JSON rows are complete; omitted rows are unknown"
+                    if complete_rows
+                    else "no JSON rows shown; omitted rows are unknown"
+                    if array_shaped
+                    else "visible prefix may end mid-field; omitted content is unknown"
+                )
+                model += (
+                    f"\n[truncated original_bytes={original_bytes} sha256={digest}; "
+                    f"{boundary}]"
+                )
         execution = ToolExecution(
             ToolResultBlock(
                 call.id, (TextBlock(model),), isinstance(outcome, ToolFailure)
@@ -730,6 +782,16 @@ class ToolRegistry:
                 envelope,
             )
         return execution
+
+
+def _unique_projection_object(pairs):
+    """Do not publish source members that last-key-wins decoding would hide."""
+    value = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError("duplicate_json_key")
+        value[key] = item
+    return value
 
 
 @contextmanager

@@ -25,7 +25,7 @@ def operation_id(context):
 
 
 class FileTools:
-    def __init__(self, store, state, clock):
+    def __init__(self, store, state, clock, *, publication_checkpoint=None):
         self._store = store
         self._state = state
         self._clock = clock
@@ -33,6 +33,7 @@ class FileTools:
         self._nested_cleanup = RollbackSlot()
         self._deadline = float("inf")
         self._publication_op = None
+        self._publication_checkpoint = publication_checkpoint
 
     @property
     def state_path(self):
@@ -125,6 +126,8 @@ class FileTools:
             # Existing targets are first preserved under an operation-specific
             # name in recover(); publication itself always protects late arrivals.
             self.record_publication_attempt()
+            if self._publication_checkpoint is not None:
+                self._publication_checkpoint(self._publication_op)
             directory.create_bytes(
                 PurePath(relative.name),
                 content.encode("utf-8"),

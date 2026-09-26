@@ -3,6 +3,7 @@
 from collections.abc import Sequence
 from typing import Protocol
 
+from agent_alfred.memory import chinese_recall
 from agent_alfred.memory.storage import (
     SQLiteStore,
     canonical,
@@ -99,7 +100,11 @@ class SQLiteSemanticStore(SQLiteStore):
             params.append(query.subject)
         sql += (" WHERE " + " AND ".join(where)) if where else ""
         rows = self._rows(sql + f" ORDER BY {order} LIMIT ?", (*params, query.limit))
-        return tuple(FactHit(self._record(row)) for row in rows)
+        method = None
+        if not rows and query.text is not None:
+            rows = chinese_recall.search_rows(self, query.text, subject=query.subject)
+            method = chinese_recall.METHOD
+        return tuple(FactHit(self._record(row), method) for row in rows[:query.limit])
 
     def update(
         self,

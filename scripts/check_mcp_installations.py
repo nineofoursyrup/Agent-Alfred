@@ -1,6 +1,7 @@
 """Verify wheel/sdist in isolated base and MCP environments, outside the source tree."""
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -9,7 +10,7 @@ import tempfile
 from pathlib import Path
 
 SMOKE = r'''
-import importlib.util, json, sys
+import importlib.util, json, sys, hashlib
 from pathlib import Path
 from agent_alfred.connections import CredentialOverlay
 from agent_alfred.model import ScriptedModel, ScriptedModelFactory
@@ -17,6 +18,15 @@ from agent_alfred.wiring import build_default_host
 from agent_alfred.runtime.host import SubmitRequest
 
 root = Path.cwd()
+package = Path(__import__('agent_alfred').__file__).resolve().parent
+assert package.is_relative_to(Path(sys.prefix).resolve())
+expected = json.loads(Path(sys.argv[2]).read_text())
+for relative, expected_hash in expected.items():
+    actual_hash = hashlib.sha256((package / relative).read_bytes()).hexdigest()
+    assert actual_hash == expected_hash
+assert not any(Path(p).resolve().is_relative_to(Path(sys.argv[3]).resolve())
+               for p in sys.path if p)
+
 assert "site-packages" in str(Path(__import__("agent_alfred").__file__))
 from agent_alfred.graph import (
     GraphBuilder, GraphRegistry, NodeOutcome, TerminalSpec, fn_node,
@@ -129,6 +139,26 @@ for configured in (False, True):
         assert len(model.requests) == 5
     finally:
         assert host.close()
+# Installed CLI -> Host -> real local draft tool and durable file.
+from io import StringIO
+from agent_alfred.gateway.cli import run_injected
+from agent_alfred.messages import ToolCallBlock
+from agent_alfred.model import ModelResult, ModelResponse, AttemptRecord, Usage
+call = ModelResult(
+    (AttemptRecord('installed-draft', False, 'committed', Usage()),),
+    ModelResponse((ToolCallBlock('installed-draft', 'draft_message',
+                                 {'body': 'installed draft'}),),
+                  'tool_use', ModelRef('opencode-go', 'deepseek-v4-flash')), None)
+cli_state = root / 'installed-cli'
+cli_model = ScriptedModel([
+    '{"retrieve":false,"query":null,"reason_code":"greeting"}', call, 'draft saved'])
+cli_host = build_default_host(state_dir=cli_state,
+    factory=ScriptedModelFactory(cli_model), credentials=CredentialOverlay({}, None))
+out = StringIO()
+assert run_injected(cli_host, 'make a local draft', out=out) == 0
+assert 'draft saved' in out.getvalue()
+drafts = list((cli_state / 'outbox').glob('*.md'))
+assert len(drafts) == 1 and drafts[0].read_text() == 'installed draft\n'
 # Installed-package Dashboard and its real subprocess worker, not source imports.
 import socket, urllib.request
 from agent_alfred.wiring import build_dashboard
@@ -176,8 +206,13 @@ print(
         {
             "mode": sys.argv[1],
             "package": __import__("agent_alfred").__file__,
-            "core": "PASS",
+            "core": "PASS", "cli": "PASS", "files": "PASS",
             "database_dashboard": "PASS",
+            "import_path": str(package), "python_path": sys.executable,
+            "cwd": str(root), "source_contamination": False,
+            "prefix": sys.prefix,
+            "sys_path": [str(Path(p).resolve()) for p in sys.path if p],
+            "package_files": expected,
             "configured": "PASS",
             "unconfigured": "PASS",
         }
@@ -194,6 +229,13 @@ def main():
     artifacts = sorted(args.dist.resolve().glob("agent_alfred-*"))
     assert any(p.suffix == ".whl" for p in artifacts)
     assert any(p.name.endswith(".tar.gz") for p in artifacts)
+    source_root = Path(__file__).resolve().parents[1]
+    package_root = source_root / "src" / "agent_alfred"
+    expected = {
+        str(p.relative_to(package_root)): hashlib.sha256(p.read_bytes()).hexdigest()
+        for p in package_root.rglob("*")
+        if p.is_file() and "__pycache__" not in p.parts and p.suffix != ".pyc"
+    }
     results = []
     for artifact in artifacts:
         for mode in ("base", "mcp"):
@@ -217,17 +259,34 @@ def main():
                     env=env,
                     cwd=root,
                 )
+                expected_path = root / "expected.json"
+                expected_path.write_text(json.dumps(expected))
                 smoke = root / "smoke.py"
                 smoke.write_text(SMOKE)
                 result = subprocess.run(
-                    [str(python), str(smoke), mode],
+                    [
+                        str(python),
+                        str(smoke),
+                        mode,
+                        str(expected_path),
+                        str(source_root),
+                    ],
                     env=env,
                     cwd=root,
                     check=True,
                     capture_output=True,
                     text=True,
                 )
-                results.append({"artifact": artifact.name, **json.loads(result.stdout)})
+                results.append(
+                    {
+                        "artifact": artifact.name,
+                        "kind": "wheel" if artifact.suffix == ".whl" else "sdist",
+                        "artifact_sha256": hashlib.sha256(
+                            artifact.read_bytes()
+                        ).hexdigest(),
+                        **json.loads(result.stdout),
+                    }
+                )
                 print(json.dumps(results[-1]), flush=True)
     args.output.write_text(json.dumps(results, indent=2))
 

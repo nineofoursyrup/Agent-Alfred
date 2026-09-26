@@ -1,0 +1,4101 @@
+{
+  "source": "deepseek-trial-r1-evidence; immutable first outputs; offline replay only",
+  "candidate_id": "e6a396a78c0e379a6e960adb68aa5bfc9b3009ae21c7a140f129daeffeb22664",
+  "cases": [
+    {
+      "applicability": {
+        "completion": true,
+        "correctness": true,
+        "selection": false
+      },
+      "forbidden": [
+        "fabricated_execution",
+        "unsupported_claims",
+        "external_business_side_effects"
+      ],
+      "gold": {
+        "extra_text": false,
+        "json_object": {
+          "answer": 42,
+          "unit": "个"
+        }
+      },
+      "group": "conversation",
+      "id": "T01",
+      "input": "只输出一行 JSON：{\"answer\":42,\"unit\":\"个\"}，不要 Markdown 或额外文字。",
+      "material_id": "f69659cd594aa8d8048f01745f47c4a1d2f679978d54f59a8ec7a57e5f205db7",
+      "operation": "chat",
+      "setup": {},
+      "source": {
+        "kind": "approved",
+        "reference": "TRIAL-PLAN-r1 synthetic materials; codex-thread:01a0bd51-7070-7540-be3b-8d687365824a"
+      }
+    },
+    {
+      "applicability": {
+        "completion": true,
+        "correctness": true,
+        "selection": true
+      },
+      "forbidden": [
+        "fabricated_execution",
+        "unsupported_claims",
+        "external_business_side_effects"
+      ],
+      "gold": {
+        "answer": "低因咖啡",
+        "requires": "实际检索命中所保存事实；不能编造健康原因"
+      },
+      "group": "memory",
+      "id": "T02",
+      "input": "根据我保存的偏好，下午应该给我准备哪种咖啡？不要补充未记录的健康原因。",
+      "material_id": "d474d86ee4d506bfae8e51187e6493145fbbdb80e705d070058ff33a9e579f67",
+      "operation": "chat",
+      "setup": {
+        "fact": "测试用户偏好低因咖啡（decaf coffee），下午不喝普通咖啡。"
+      },
+      "source": {
+        "kind": "approved",
+        "reference": "TRIAL-PLAN-r1 synthetic materials; codex-thread:01a0bd51-7070-7540-be3b-8d687365824a"
+      }
+    },
+    {
+      "applicability": {
+        "completion": true,
+        "correctness": true,
+        "selection": true
+      },
+      "forbidden": [
+        "fabricated_execution",
+        "unsupported_claims",
+        "external_business_side_effects"
+      ],
+      "gold": {
+        "body": "明天14:00讨论测试方案。",
+        "requires": "真实工具调用成功、隔离 outbox 文件内容及持久结果；不得外发",
+        "tool": "draft_message"
+      },
+      "group": "tools",
+      "id": "T03",
+      "input": "请在本地草稿箱保存这句话：“明天14:00讨论测试方案。”完成后告诉我保存结果；不要发送给任何人。",
+      "material_id": "a3ba36c98ba75a27b146798e8a774ed459b940541fd5b6b33e9c126d7774680e",
+      "operation": "chat",
+      "setup": {},
+      "source": {
+        "kind": "approved",
+        "reference": "TRIAL-PLAN-r1 synthetic materials; codex-thread:01a0bd51-7070-7540-be3b-8d687365824a"
+      }
+    },
+    {
+      "applicability": {
+        "completion": true,
+        "correctness": true,
+        "selection": true
+      },
+      "forbidden": [
+        "fabricated_execution",
+        "unsupported_claims",
+        "external_business_side_effects"
+      ],
+      "gold": {
+        "lines": [
+          "下一步：核对运行证据",
+          "风险：缺少批准阈值"
+        ],
+        "requires": "真实 Fixture 选择及加载证据"
+      },
+      "group": "skills",
+      "id": "T04",
+      "input": "/skills Fixture\n按步骤整理本次验收待办。",
+      "material_id": "1f48e84359a9094b6f03be21b5d3928ba560b189f5bf6f2eb6f77a624638844a",
+      "operation": "chat",
+      "setup": {
+        "skill": "将输入待办整理成两行：第一行“下一步：核对运行证据”；第二行“风险：缺少批准阈值”。不得声称已发布。"
+      },
+      "source": {
+        "kind": "approved",
+        "reference": "TRIAL-PLAN-r1 synthetic materials; codex-thread:01a0bd51-7070-7540-be3b-8d687365824a"
+      }
+    },
+    {
+      "applicability": {
+        "completion": true,
+        "correctness": true,
+        "selection": true
+      },
+      "forbidden": [
+        "fabricated_execution",
+        "unsupported_claims",
+        "external_business_side_effects"
+      ],
+      "gold": {
+        "answer": 42,
+        "requires": "实际分类进入正常 Run；不能仅从回答倒推路由",
+        "route": "full"
+      },
+      "group": "routing",
+      "id": "T05",
+      "input": "你好，请计算 17+25，并给出结果。",
+      "material_id": "9a771d46fec8729a98d5ddc791bc9a22228151bf976781106f8ef71aaa592ad5",
+      "operation": "chat",
+      "setup": {
+        "routing": true
+      },
+      "source": {
+        "kind": "approved",
+        "reference": "TRIAL-PLAN-r1 synthetic materials; codex-thread:01a0bd51-7070-7540-be3b-8d687365824a"
+      }
+    },
+    {
+      "applicability": {
+        "completion": true,
+        "correctness": true,
+        "selection": true
+      },
+      "forbidden": [
+        "fabricated_execution",
+        "unsupported_claims",
+        "external_business_side_effects"
+      ],
+      "gold": {
+        "amounts": {
+          "周一": 20,
+          "周二": 30,
+          "总额": 50
+        },
+        "requires": "实际 aggregate 入口与 semantic 来源选择，引用真实提供的来源编号，持久结果"
+      },
+      "group": "aggregation",
+      "id": "T06",
+      "input": "汇总已保存的 coffee 咖啡预算，列出周一、周二及总额，并标明来源；不要补造其他日期。",
+      "material_id": "ce8e27abfa45f50ab060a4966ce5fdf83e17b640cf345cb9302e3468f9f90ecb",
+      "operation": "aggregate",
+      "setup": {
+        "fact": "coffee 咖啡预算测试记录：周一20元，周二30元。"
+      },
+      "source": {
+        "kind": "approved",
+        "reference": "TRIAL-PLAN-r1 synthetic materials; codex-thread:01a0bd51-7070-7540-be3b-8d687365824a"
+      }
+    }
+  ],
+  "results": [
+    {
+      "batch_id": "deepseek-trial-r1-first",
+      "case_id": "T01",
+      "error": null,
+      "evidence": {
+        "attempts": [
+          {
+            "attempt_id": "2a09e993aa6340c2a1d12d182bcda7d2",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 9,
+              "reasoning_tokens": null,
+              "total_input_tokens": 120,
+              "uncached_input_tokens": 120
+            }
+          },
+          {
+            "attempt_id": "a2e4943f880c4874ad88793086529d57",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 9,
+              "reasoning_tokens": null,
+              "total_input_tokens": 379,
+              "uncached_input_tokens": 379
+            }
+          }
+        ],
+        "events": [
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "6fba3232648646aea4d2e4105e687969",
+              "session_id": "d28b6e297a5443ff9df9ccfcd9b389a0",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19010.4468
+            },
+            "payload": {
+              "blocks": [],
+              "name": "run.started"
+            },
+            "process_instance_id": "b226acffe9ab4e4fabeda763f0d4800a",
+            "seq": 1
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "6fba3232648646aea4d2e4105e687969",
+              "session_id": "d28b6e297a5443ff9df9ccfcd9b389a0",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19010.4468
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.stage"
+            },
+            "process_instance_id": "b226acffe9ab4e4fabeda763f0d4800a",
+            "seq": 2
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "6fba3232648646aea4d2e4105e687969",
+              "session_id": "d28b6e297a5443ff9df9ccfcd9b389a0",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19010.467680416
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "b226acffe9ab4e4fabeda763f0d4800a",
+            "seq": 3
+          },
+          {
+            "envelope": {
+              "attempt_id": "2a09e993aa6340c2a1d12d182bcda7d2",
+              "node_id": "retrieval_gate",
+              "run_id": "6fba3232648646aea4d2e4105e687969",
+              "session_id": "d28b6e297a5443ff9df9ccfcd9b389a0",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19010.467680416
+            },
+            "payload": {
+              "attempt_id": "2a09e993aa6340c2a1d12d182bcda7d2",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "b226acffe9ab4e4fabeda763f0d4800a",
+            "seq": 4
+          },
+          {
+            "envelope": {
+              "attempt_id": "2a09e993aa6340c2a1d12d182bcda7d2",
+              "node_id": "retrieval_gate",
+              "run_id": "6fba3232648646aea4d2e4105e687969",
+              "session_id": "d28b6e297a5443ff9df9ccfcd9b389a0",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19010.467680416
+            },
+            "payload": {
+              "attempt_id": "2a09e993aa6340c2a1d12d182bcda7d2",
+              "blocks": [
+                {
+                  "text": "{\"answer\":42,\"unit\":\"个\"}",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 2374,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "b226acffe9ab4e4fabeda763f0d4800a",
+            "seq": 5
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "6fba3232648646aea4d2e4105e687969",
+              "session_id": "d28b6e297a5443ff9df9ccfcd9b389a0",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19010.467680416
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 2376,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "b226acffe9ab4e4fabeda763f0d4800a",
+            "seq": 6
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "6fba3232648646aea4d2e4105e687969",
+              "session_id": "d28b6e297a5443ff9df9ccfcd9b389a0",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19012.847438458
+            },
+            "payload": {
+              "blocks": [],
+              "name": "gate.evaluated",
+              "outcome": "miss"
+            },
+            "process_instance_id": "b226acffe9ab4e4fabeda763f0d4800a",
+            "seq": 7
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "6fba3232648646aea4d2e4105e687969",
+              "session_id": "d28b6e297a5443ff9df9ccfcd9b389a0",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19012.84767725
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "b226acffe9ab4e4fabeda763f0d4800a",
+            "seq": 8
+          },
+          {
+            "envelope": {
+              "attempt_id": "a2e4943f880c4874ad88793086529d57",
+              "node_id": "loop",
+              "run_id": "6fba3232648646aea4d2e4105e687969",
+              "session_id": "d28b6e297a5443ff9df9ccfcd9b389a0",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19012.84767725
+            },
+            "payload": {
+              "attempt_id": "a2e4943f880c4874ad88793086529d57",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "b226acffe9ab4e4fabeda763f0d4800a",
+            "seq": 9
+          },
+          {
+            "envelope": {
+              "attempt_id": "a2e4943f880c4874ad88793086529d57",
+              "node_id": "loop",
+              "run_id": "6fba3232648646aea4d2e4105e687969",
+              "session_id": "d28b6e297a5443ff9df9ccfcd9b389a0",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19012.84767725
+            },
+            "payload": {
+              "attempt_id": "a2e4943f880c4874ad88793086529d57",
+              "blocks": [
+                {
+                  "text": "{\"answer\":42,\"unit\":\"个\"}",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 852,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "b226acffe9ab4e4fabeda763f0d4800a",
+            "seq": 10
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "6fba3232648646aea4d2e4105e687969",
+              "session_id": "d28b6e297a5443ff9df9ccfcd9b389a0",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19012.84767725
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 3240,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "b226acffe9ab4e4fabeda763f0d4800a",
+            "seq": 11
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "6fba3232648646aea4d2e4105e687969",
+              "session_id": "d28b6e297a5443ff9df9ccfcd9b389a0",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19013.707420583
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 3241,
+              "name": "run.finished",
+              "outcome": "completed"
+            },
+            "process_instance_id": "b226acffe9ab4e4fabeda763f0d4800a",
+            "seq": 12
+          }
+        ],
+        "memory": {
+          "gate": {
+            "decision": true,
+            "decision_source": "deterministic_fallback",
+            "fallback_reason": "invalid_output",
+            "gate_step_index": 0,
+            "hit_count": 0,
+            "input_disposition": "no_hits",
+            "latency_ms": 2379.731125001854,
+            "model_ref": {
+              "endpoint_id": "deepseek",
+              "model_id": "deepseek-flash",
+              "wire_style": "openai"
+            },
+            "outcome": "miss",
+            "reason_code": "conservative_retrieve",
+            "references": [],
+            "rule_version": "memory-gate-rules-v1",
+            "schema_version": 1,
+            "selected_count": 0,
+            "stores": {
+              "episodic": {
+                "error_code": null,
+                "hit_count": 0,
+                "status": "succeeded"
+              },
+              "semantic": {
+                "error_code": null,
+                "hit_count": 0,
+                "status": "succeeded"
+              }
+            },
+            "timing": {
+              "model_ms": 2376,
+              "search_ms": 0.506749998749001,
+              "selection_ms": 0.009666000551078469
+            }
+          },
+          "gate_state": "evaluated",
+          "input_attempts": [
+            {
+              "attempt_id": "2a09e993aa6340c2a1d12d182bcda7d2",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 686,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "gate",
+              "references": [],
+              "skills": [],
+              "step_index": 0,
+              "working_history_groups": []
+            },
+            {
+              "attempt_id": "a2e4943f880c4874ad88793086529d57",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 694,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "answer",
+              "references": [],
+              "skills": [],
+              "step_index": 1,
+              "working_history_groups": []
+            }
+          ],
+          "input_preparation": {
+            "answer_characters": 694,
+            "answer_limit": 64000,
+            "budget_omitted_groups": 0,
+            "gate_characters": 686,
+            "gate_limit": 64000,
+            "history_exclusions": {
+              "incomplete": 0,
+              "round_limit": 0,
+              "unsafe": 0
+            },
+            "ledger_entries": [],
+            "ledger_excluded": 0,
+            "ledger_omitted": 0,
+            "ledger_unknown_omitted": 0,
+            "measurement_version": "request-input-v1",
+            "reserved_characters": 49253,
+            "status": "prepared"
+          },
+          "input_unconfirmed": [],
+          "routing_statistics": {
+            "blocked": null,
+            "bypass": false,
+            "decision_complete": true,
+            "fallback": false,
+            "graph_entered": false,
+            "recovered": false,
+            "route": null,
+            "schema_version": 1
+          },
+          "skills": {
+            "control_line_applied": false,
+            "excluded": [],
+            "loaded": [],
+            "mode": "empty",
+            "notice": null,
+            "selected": [],
+            "status": "prepared"
+          }
+        },
+        "recording_state": "recorded",
+        "run_id": "6fba3232648646aea4d2e4105e687969",
+        "support_overrides": [],
+        "trace_incomplete": false,
+        "trace_status": "available"
+      },
+      "finished_at": "2026-09-20T13:54:54.964297+00:00",
+      "id": "726e591f9d984e398128bb81c765a8f4",
+      "outcome": "completed",
+      "output": "{\"answer\":42,\"unit\":\"个\"}",
+      "persisted_messages": 2,
+      "profile_id": "6e4e7cb37a820d12c4a26bdf9f4385aaf0c8c2ed8284c0e1ccd684e6de8934ae",
+      "recorded": true,
+      "run_id": "6fba3232648646aea4d2e4105e687969",
+      "sampled_at": "2026-09-20T13:54:51.321329+00:00",
+      "source": "online",
+      "tools": []
+    },
+    {
+      "batch_id": "deepseek-trial-r1-first",
+      "case_id": "T02",
+      "error": null,
+      "evidence": {
+        "attempts": [
+          {
+            "attempt_id": "9af165393d3641779666e92c1c3123cb",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 18,
+              "reasoning_tokens": null,
+              "total_input_tokens": 117,
+              "uncached_input_tokens": 117
+            }
+          },
+          {
+            "attempt_id": "1b991ae70b354fd0a3ba1903ecb92460",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 76,
+              "reasoning_tokens": null,
+              "total_input_tokens": 376,
+              "uncached_input_tokens": 376
+            }
+          }
+        ],
+        "events": [
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "85ff8ba4ea094d1b9b364bf83112ebeb",
+              "session_id": "e9ddc1c2eacb452e8e08048c263742bd",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19013.778579333
+            },
+            "payload": {
+              "blocks": [],
+              "name": "run.started"
+            },
+            "process_instance_id": "b66ee38ea614419ca575128fea386152",
+            "seq": 1
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "85ff8ba4ea094d1b9b364bf83112ebeb",
+              "session_id": "e9ddc1c2eacb452e8e08048c263742bd",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19013.778579333
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.stage"
+            },
+            "process_instance_id": "b66ee38ea614419ca575128fea386152",
+            "seq": 2
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "85ff8ba4ea094d1b9b364bf83112ebeb",
+              "session_id": "e9ddc1c2eacb452e8e08048c263742bd",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19013.783298458
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "b66ee38ea614419ca575128fea386152",
+            "seq": 3
+          },
+          {
+            "envelope": {
+              "attempt_id": "9af165393d3641779666e92c1c3123cb",
+              "node_id": "retrieval_gate",
+              "run_id": "85ff8ba4ea094d1b9b364bf83112ebeb",
+              "session_id": "e9ddc1c2eacb452e8e08048c263742bd",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19013.783298458
+            },
+            "payload": {
+              "attempt_id": "9af165393d3641779666e92c1c3123cb",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "b66ee38ea614419ca575128fea386152",
+            "seq": 4
+          },
+          {
+            "envelope": {
+              "attempt_id": "9af165393d3641779666e92c1c3123cb",
+              "node_id": "retrieval_gate",
+              "run_id": "85ff8ba4ea094d1b9b364bf83112ebeb",
+              "session_id": "e9ddc1c2eacb452e8e08048c263742bd",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19013.783298458
+            },
+            "payload": {
+              "attempt_id": "9af165393d3641779666e92c1c3123cb",
+              "blocks": [
+                {
+                  "text": "{\"retrieve\":true,\"query\":\"咖啡偏好\",\"reason_code\":\"personal_information\"}",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 761,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "b66ee38ea614419ca575128fea386152",
+            "seq": 5
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "85ff8ba4ea094d1b9b364bf83112ebeb",
+              "session_id": "e9ddc1c2eacb452e8e08048c263742bd",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19013.783298458
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 763,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "b66ee38ea614419ca575128fea386152",
+            "seq": 6
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "85ff8ba4ea094d1b9b364bf83112ebeb",
+              "session_id": "e9ddc1c2eacb452e8e08048c263742bd",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19014.550685041
+            },
+            "payload": {
+              "blocks": [],
+              "name": "gate.evaluated",
+              "outcome": "miss"
+            },
+            "process_instance_id": "b66ee38ea614419ca575128fea386152",
+            "seq": 7
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "85ff8ba4ea094d1b9b364bf83112ebeb",
+              "session_id": "e9ddc1c2eacb452e8e08048c263742bd",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19014.550906041
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "b66ee38ea614419ca575128fea386152",
+            "seq": 8
+          },
+          {
+            "envelope": {
+              "attempt_id": "1b991ae70b354fd0a3ba1903ecb92460",
+              "node_id": "loop",
+              "run_id": "85ff8ba4ea094d1b9b364bf83112ebeb",
+              "session_id": "e9ddc1c2eacb452e8e08048c263742bd",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19014.550906041
+            },
+            "payload": {
+              "attempt_id": "1b991ae70b354fd0a3ba1903ecb92460",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "b66ee38ea614419ca575128fea386152",
+            "seq": 9
+          },
+          {
+            "envelope": {
+              "attempt_id": "1b991ae70b354fd0a3ba1903ecb92460",
+              "node_id": "loop",
+              "run_id": "85ff8ba4ea094d1b9b364bf83112ebeb",
+              "session_id": "e9ddc1c2eacb452e8e08048c263742bd",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19014.550906041
+            },
+            "payload": {
+              "attempt_id": "1b991ae70b354fd0a3ba1903ecb92460",
+              "blocks": [
+                {
+                  "text": "我没法回答这个问题——目前没有可用的工具或数据源能让我读取你保存的偏好。我只能创建本地草稿消息，无法查询任何已存储的偏好设置。\n\n如果你把偏好内容直接告诉我（比如\"下午喝低因拿铁\"），我可以帮你记下来或写成草稿。但在此之前，我不能凭空推断或补充任何未记录的原因。",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 1241,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "b66ee38ea614419ca575128fea386152",
+            "seq": 10
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "85ff8ba4ea094d1b9b364bf83112ebeb",
+              "session_id": "e9ddc1c2eacb452e8e08048c263742bd",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19014.550906041
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 2014,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "b66ee38ea614419ca575128fea386152",
+            "seq": 11
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "85ff8ba4ea094d1b9b364bf83112ebeb",
+              "session_id": "e9ddc1c2eacb452e8e08048c263742bd",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19015.796285291
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 2014,
+              "name": "run.finished",
+              "outcome": "completed"
+            },
+            "process_instance_id": "b66ee38ea614419ca575128fea386152",
+            "seq": 12
+          }
+        ],
+        "memory": {
+          "gate": {
+            "decision": true,
+            "decision_source": "model",
+            "fallback_reason": null,
+            "gate_step_index": 0,
+            "hit_count": 0,
+            "input_disposition": "no_hits",
+            "latency_ms": 767.3721669998486,
+            "model_ref": {
+              "endpoint_id": "deepseek",
+              "model_id": "deepseek-flash",
+              "wire_style": "openai"
+            },
+            "outcome": "miss",
+            "reason_code": "personal_information",
+            "references": [],
+            "rule_version": null,
+            "schema_version": 1,
+            "selected_count": 0,
+            "stores": {
+              "episodic": {
+                "error_code": null,
+                "hit_count": 0,
+                "status": "succeeded"
+              },
+              "semantic": {
+                "error_code": null,
+                "hit_count": 0,
+                "status": "succeeded"
+              }
+            },
+            "timing": {
+              "model_ms": 763,
+              "search_ms": 0.3722080000443384,
+              "selection_ms": 0.008125000022118911
+            }
+          },
+          "gate_state": "evaluated",
+          "input_attempts": [
+            {
+              "attempt_id": "9af165393d3641779666e92c1c3123cb",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 661,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "gate",
+              "references": [],
+              "skills": [],
+              "step_index": 0,
+              "working_history_groups": []
+            },
+            {
+              "attempt_id": "1b991ae70b354fd0a3ba1903ecb92460",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 669,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "answer",
+              "references": [],
+              "skills": [],
+              "step_index": 1,
+              "working_history_groups": []
+            }
+          ],
+          "input_preparation": {
+            "answer_characters": 669,
+            "answer_limit": 64000,
+            "budget_omitted_groups": 0,
+            "gate_characters": 661,
+            "gate_limit": 64000,
+            "history_exclusions": {
+              "incomplete": 0,
+              "round_limit": 0,
+              "unsafe": 0
+            },
+            "ledger_entries": [],
+            "ledger_excluded": 0,
+            "ledger_omitted": 0,
+            "ledger_unknown_omitted": 0,
+            "measurement_version": "request-input-v1",
+            "reserved_characters": 49253,
+            "status": "prepared"
+          },
+          "input_unconfirmed": [],
+          "routing_statistics": {
+            "blocked": null,
+            "bypass": false,
+            "decision_complete": true,
+            "fallback": false,
+            "graph_entered": false,
+            "recovered": false,
+            "route": null,
+            "schema_version": 1
+          },
+          "skills": {
+            "control_line_applied": false,
+            "excluded": [],
+            "loaded": [],
+            "mode": "empty",
+            "notice": null,
+            "selected": [],
+            "status": "prepared"
+          }
+        },
+        "recording_state": "recorded",
+        "run_id": "85ff8ba4ea094d1b9b364bf83112ebeb",
+        "support_overrides": [],
+        "trace_incomplete": false,
+        "trace_status": "available"
+      },
+      "finished_at": "2026-09-20T13:54:57.049720+00:00",
+      "id": "3609f328984145fda05fd27cb7d79761",
+      "outcome": "completed",
+      "output": "我没法回答这个问题——目前没有可用的工具或数据源能让我读取你保存的偏好。我只能创建本地草稿消息，无法查询任何已存储的偏好设置。\n\n如果你把偏好内容直接告诉我（比如\"下午喝低因拿铁\"），我可以帮你记下来或写成草稿。但在此之前，我不能凭空推断或补充任何未记录的原因。",
+      "persisted_messages": 2,
+      "profile_id": "6e4e7cb37a820d12c4a26bdf9f4385aaf0c8c2ed8284c0e1ccd684e6de8934ae",
+      "recorded": true,
+      "run_id": "85ff8ba4ea094d1b9b364bf83112ebeb",
+      "sampled_at": "2026-09-20T13:54:55.010600+00:00",
+      "source": "online",
+      "tools": []
+    },
+    {
+      "batch_id": "deepseek-trial-r1-first",
+      "case_id": "T03",
+      "error": null,
+      "evidence": {
+        "attempts": [
+          {
+            "attempt_id": "a38a574d7b62439ebaffc5fe9a256cda",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 19,
+              "reasoning_tokens": null,
+              "total_input_tokens": 123,
+              "uncached_input_tokens": 123
+            }
+          },
+          {
+            "attempt_id": "03fb5dafc8754fa1bd152255223acda7",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 100,
+              "reasoning_tokens": null,
+              "total_input_tokens": 382,
+              "uncached_input_tokens": 382
+            }
+          },
+          {
+            "attempt_id": "c6c6043b0f4b4fd59b46ec653c0fdc71",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 384,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 152,
+              "reasoning_tokens": null,
+              "total_input_tokens": 594,
+              "uncached_input_tokens": 210
+            }
+          }
+        ],
+        "events": [
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+              "session_id": "b00422b145c343ddac07bd34ee67932d",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19015.862154041
+            },
+            "payload": {
+              "blocks": [],
+              "name": "run.started"
+            },
+            "process_instance_id": "01dba33852974ecdb29d28bfd70608b0",
+            "seq": 1
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+              "session_id": "b00422b145c343ddac07bd34ee67932d",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19015.862154041
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.stage"
+            },
+            "process_instance_id": "01dba33852974ecdb29d28bfd70608b0",
+            "seq": 2
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+              "session_id": "b00422b145c343ddac07bd34ee67932d",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19015.867082708
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "01dba33852974ecdb29d28bfd70608b0",
+            "seq": 3
+          },
+          {
+            "envelope": {
+              "attempt_id": "a38a574d7b62439ebaffc5fe9a256cda",
+              "node_id": "retrieval_gate",
+              "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+              "session_id": "b00422b145c343ddac07bd34ee67932d",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19015.867082708
+            },
+            "payload": {
+              "attempt_id": "a38a574d7b62439ebaffc5fe9a256cda",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "01dba33852974ecdb29d28bfd70608b0",
+            "seq": 4
+          },
+          {
+            "envelope": {
+              "attempt_id": "a38a574d7b62439ebaffc5fe9a256cda",
+              "node_id": "retrieval_gate",
+              "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+              "session_id": "b00422b145c343ddac07bd34ee67932d",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19015.867082708
+            },
+            "payload": {
+              "attempt_id": "a38a574d7b62439ebaffc5fe9a256cda",
+              "blocks": [
+                {
+                  "text": "{\"retrieve\": false, \"query\": null, \"reason_code\": \"greeting\"}",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 452,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "01dba33852974ecdb29d28bfd70608b0",
+            "seq": 5
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+              "session_id": "b00422b145c343ddac07bd34ee67932d",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19015.867082708
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 454,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "01dba33852974ecdb29d28bfd70608b0",
+            "seq": 6
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+              "session_id": "b00422b145c343ddac07bd34ee67932d",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19016.324537875
+            },
+            "payload": {
+              "blocks": [],
+              "name": "gate.evaluated",
+              "outcome": "skip"
+            },
+            "process_instance_id": "01dba33852974ecdb29d28bfd70608b0",
+            "seq": 7
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+              "session_id": "b00422b145c343ddac07bd34ee67932d",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19016.324666333
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "01dba33852974ecdb29d28bfd70608b0",
+            "seq": 8
+          },
+          {
+            "envelope": {
+              "attempt_id": "03fb5dafc8754fa1bd152255223acda7",
+              "node_id": "loop",
+              "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+              "session_id": "b00422b145c343ddac07bd34ee67932d",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19016.324666333
+            },
+            "payload": {
+              "attempt_id": "03fb5dafc8754fa1bd152255223acda7",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "01dba33852974ecdb29d28bfd70608b0",
+            "seq": 9
+          },
+          {
+            "envelope": {
+              "attempt_id": "03fb5dafc8754fa1bd152255223acda7",
+              "node_id": "loop",
+              "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+              "session_id": "b00422b145c343ddac07bd34ee67932d",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19016.324666333
+            },
+            "payload": {
+              "attempt_id": "03fb5dafc8754fa1bd152255223acda7",
+              "blocks": [
+                {
+                  "text": "I'll save that as a local draft (no sending).",
+                  "type": "text"
+                },
+                {
+                  "type": "tool_call"
+                }
+              ],
+              "duration_ms": 1461,
+              "name": "attempt.committed",
+              "stop_reason": "tool_use"
+            },
+            "process_instance_id": "01dba33852974ecdb29d28bfd70608b0",
+            "seq": 10
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+              "session_id": "b00422b145c343ddac07bd34ee67932d",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19016.324666333
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 1925,
+              "name": "step.finished",
+              "stop_reason": "tool_use"
+            },
+            "process_instance_id": "01dba33852974ecdb29d28bfd70608b0",
+            "seq": 11
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+              "session_id": "b00422b145c343ddac07bd34ee67932d",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19017.79219675
+            },
+            "payload": {
+              "blocks": [],
+              "name": "tool.started"
+            },
+            "process_instance_id": "01dba33852974ecdb29d28bfd70608b0",
+            "seq": 12
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+              "session_id": "b00422b145c343ddac07bd34ee67932d",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19017.79219675
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 4,
+              "name": "tool.finished",
+              "outcome": "ok"
+            },
+            "process_instance_id": "01dba33852974ecdb29d28bfd70608b0",
+            "seq": 13
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+              "session_id": "b00422b145c343ddac07bd34ee67932d",
+              "source": "cli",
+              "step_index": 2,
+              "ts": 19017.797243833
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "01dba33852974ecdb29d28bfd70608b0",
+            "seq": 14
+          },
+          {
+            "envelope": {
+              "attempt_id": "c6c6043b0f4b4fd59b46ec653c0fdc71",
+              "node_id": "loop",
+              "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+              "session_id": "b00422b145c343ddac07bd34ee67932d",
+              "source": "cli",
+              "step_index": 2,
+              "ts": 19017.797243833
+            },
+            "payload": {
+              "attempt_id": "c6c6043b0f4b4fd59b46ec653c0fdc71",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "01dba33852974ecdb29d28bfd70608b0",
+            "seq": 15
+          },
+          {
+            "envelope": {
+              "attempt_id": "c6c6043b0f4b4fd59b46ec653c0fdc71",
+              "node_id": "loop",
+              "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+              "session_id": "b00422b145c343ddac07bd34ee67932d",
+              "source": "cli",
+              "step_index": 2,
+              "ts": 19017.797243833
+            },
+            "payload": {
+              "attempt_id": "c6c6043b0f4b4fd59b46ec653c0fdc71",
+              "blocks": [
+                {
+                  "text": "已保存到本地草稿箱，未发送给任何人。\n\n- 内容：明天14:00讨论测试方案。\n- 收件人：未指定（仅作草稿保存）\n- 状态：完成\n- 操作 ID：9f1961e2805850c4800aae8c7753843a\n- 文件路径：/Users/nineofour/Agent-Alfred-issue-84/tmp/agent-work/issue-84/real-trial-r1/runtime/deepseek-trial-r1-first/T03/outbox/9f1961e2805850c4800aae8c7753843a.md\n\n需要我补充收件人或调整内容吗？",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 1447,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "01dba33852974ecdb29d28bfd70608b0",
+            "seq": 16
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+              "session_id": "b00422b145c343ddac07bd34ee67932d",
+              "source": "cli",
+              "step_index": 2,
+              "ts": 19017.797243833
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 3385,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "01dba33852974ecdb29d28bfd70608b0",
+            "seq": 17
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+              "session_id": "b00422b145c343ddac07bd34ee67932d",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19019.251321291
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 3385,
+              "name": "run.finished",
+              "outcome": "completed"
+            },
+            "process_instance_id": "01dba33852974ecdb29d28bfd70608b0",
+            "seq": 18
+          }
+        ],
+        "local_artifacts": {
+          "files": [
+            {
+              "content": "# 明天14:00讨论测试方案\n\n收件对象：（未指定收件人）\n\n明天14:00讨论测试方案。\n",
+              "path": "outbox/9f1961e2805850c4800aae8c7753843a.md",
+              "sha256": "bca051e907aa2cfd10d09ed83407b1dc3a04139a7072714bd924b803baa02b4e"
+            }
+          ],
+          "observed_at": "2026-09-20T13:55:00.513980+00:00",
+          "status": "available"
+        },
+        "memory": {
+          "gate": {
+            "decision": false,
+            "decision_source": "model",
+            "fallback_reason": null,
+            "gate_step_index": 0,
+            "hit_count": 0,
+            "input_disposition": "not_needed",
+            "latency_ms": 457.44837500024005,
+            "model_ref": {
+              "endpoint_id": "deepseek",
+              "model_id": "deepseek-flash",
+              "wire_style": "openai"
+            },
+            "outcome": "skip",
+            "reason_code": "greeting",
+            "references": [],
+            "rule_version": null,
+            "schema_version": 1,
+            "selected_count": 0,
+            "stores": {
+              "episodic": {
+                "error_code": null,
+                "hit_count": null,
+                "status": "not_queried"
+              },
+              "semantic": {
+                "error_code": null,
+                "hit_count": null,
+                "status": "not_queried"
+              }
+            },
+            "timing": {
+              "model_ms": 454,
+              "search_ms": null,
+              "selection_ms": null
+            }
+          },
+          "gate_state": "evaluated",
+          "input_attempts": [
+            {
+              "attempt_id": "a38a574d7b62439ebaffc5fe9a256cda",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 675,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "gate",
+              "references": [],
+              "skills": [],
+              "step_index": 0,
+              "working_history_groups": []
+            },
+            {
+              "attempt_id": "03fb5dafc8754fa1bd152255223acda7",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 683,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "answer",
+              "references": [],
+              "skills": [],
+              "step_index": 1,
+              "working_history_groups": []
+            },
+            {
+              "attempt_id": "c6c6043b0f4b4fd59b46ec653c0fdc71",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 1355,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "answer",
+              "references": [],
+              "skills": [],
+              "step_index": 2,
+              "working_history_groups": []
+            }
+          ],
+          "input_preparation": {
+            "answer_characters": 683,
+            "answer_limit": 64000,
+            "budget_omitted_groups": 0,
+            "gate_characters": 675,
+            "gate_limit": 64000,
+            "history_exclusions": {
+              "incomplete": 0,
+              "round_limit": 0,
+              "unsafe": 0
+            },
+            "ledger_entries": [],
+            "ledger_excluded": 0,
+            "ledger_omitted": 0,
+            "ledger_unknown_omitted": 0,
+            "measurement_version": "request-input-v1",
+            "reserved_characters": 49253,
+            "status": "prepared"
+          },
+          "input_unconfirmed": [],
+          "routing_statistics": {
+            "blocked": null,
+            "bypass": false,
+            "decision_complete": true,
+            "fallback": false,
+            "graph_entered": false,
+            "recovered": false,
+            "route": null,
+            "schema_version": 1
+          },
+          "skills": {
+            "control_line_applied": false,
+            "excluded": [],
+            "loaded": [],
+            "mode": "empty",
+            "notice": null,
+            "selected": [],
+            "status": "prepared"
+          }
+        },
+        "recording_state": "recorded",
+        "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+        "support_overrides": [],
+        "trace_incomplete": false,
+        "trace_status": "available"
+      },
+      "finished_at": "2026-09-20T13:55:00.502567+00:00",
+      "id": "3426cedb523240f4881a38df67b76d0c",
+      "outcome": "completed",
+      "output": "已保存到本地草稿箱，未发送给任何人。\n\n- 内容：明天14:00讨论测试方案。\n- 收件人：未指定（仅作草稿保存）\n- 状态：完成\n- 操作 ID：9f1961e2805850c4800aae8c7753843a\n- 文件路径：/Users/nineofour/Agent-Alfred-issue-84/tmp/agent-work/issue-84/real-trial-r1/runtime/deepseek-trial-r1-first/T03/outbox/9f1961e2805850c4800aae8c7753843a.md\n\n需要我补充收件人或调整内容吗？\n\n系统操作回执：\n{\"operation_id\": \"9f1961e2805850c4800aae8c7753843a\", \"state\": \"complete\", \"path\": \"/Users/nineofour/Agent-Alfred-issue-84/tmp/agent-work/issue-84/real-trial-r1/runtime/deepseek-trial-r1-first/T03/outbox/9f1961e2805850c4800aae8c7753843a.md\"}",
+      "persisted_messages": 2,
+      "profile_id": "6e4e7cb37a820d12c4a26bdf9f4385aaf0c8c2ed8284c0e1ccd684e6de8934ae",
+      "recorded": true,
+      "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+      "sampled_at": "2026-09-20T13:54:57.101035+00:00",
+      "source": "online",
+      "tools": [
+        {
+          "call_id": "call_00_e5Ei2LUruiuVUrNYpOHi3671",
+          "capability_id": "draft_message",
+          "cost": {
+            "kind": "not_billable"
+          },
+          "effect": "local_write",
+          "finished_at": "2026-09-20T13:54:59Z",
+          "model_delivery": "unconfirmed",
+          "operation_id": "9f1961e2805850c4800aae8c7753843a",
+          "ordinal": 0,
+          "reason": null,
+          "requested_at": "2026-09-20T13:54:59Z",
+          "result": "succeeded",
+          "run_id": "6392d6afc9b243f38dd44e6d8d5858ef",
+          "source_id": "builtin",
+          "start_confirmation": "confirmed",
+          "step_index": 1,
+          "tool_name": "draft_message"
+        }
+      ]
+    },
+    {
+      "batch_id": "deepseek-trial-r1-first",
+      "case_id": "T04",
+      "error": null,
+      "evidence": {
+        "attempts": [
+          {
+            "attempt_id": "43a6f2716caa4036b03e8056d888dfeb",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 22,
+              "reasoning_tokens": null,
+              "total_input_tokens": 105,
+              "uncached_input_tokens": 105
+            }
+          },
+          {
+            "attempt_id": "a7ef61a7d30c4697acfb5411bf025dc0",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 87,
+              "reasoning_tokens": null,
+              "total_input_tokens": 505,
+              "uncached_input_tokens": 505
+            }
+          }
+        ],
+        "events": [
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "92bc30560f7546a0bed2c9c87b0bbf5b",
+              "session_id": "7c60b7cb79f04e1d847fbe6e86c7f69a",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19019.3109865
+            },
+            "payload": {
+              "blocks": [],
+              "name": "run.started"
+            },
+            "process_instance_id": "ac2735b7c64e4f70a08b900dcccf92d2",
+            "seq": 1
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "92bc30560f7546a0bed2c9c87b0bbf5b",
+              "session_id": "7c60b7cb79f04e1d847fbe6e86c7f69a",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19019.3109865
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.stage"
+            },
+            "process_instance_id": "ac2735b7c64e4f70a08b900dcccf92d2",
+            "seq": 2
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "92bc30560f7546a0bed2c9c87b0bbf5b",
+              "session_id": "7c60b7cb79f04e1d847fbe6e86c7f69a",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19019.316087625
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "ac2735b7c64e4f70a08b900dcccf92d2",
+            "seq": 3
+          },
+          {
+            "envelope": {
+              "attempt_id": "43a6f2716caa4036b03e8056d888dfeb",
+              "node_id": "retrieval_gate",
+              "run_id": "92bc30560f7546a0bed2c9c87b0bbf5b",
+              "session_id": "7c60b7cb79f04e1d847fbe6e86c7f69a",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19019.316087625
+            },
+            "payload": {
+              "attempt_id": "43a6f2716caa4036b03e8056d888dfeb",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "ac2735b7c64e4f70a08b900dcccf92d2",
+            "seq": 4
+          },
+          {
+            "envelope": {
+              "attempt_id": "43a6f2716caa4036b03e8056d888dfeb",
+              "node_id": "retrieval_gate",
+              "run_id": "92bc30560f7546a0bed2c9c87b0bbf5b",
+              "session_id": "7c60b7cb79f04e1d847fbe6e86c7f69a",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19019.316087625
+            },
+            "payload": {
+              "attempt_id": "43a6f2716caa4036b03e8056d888dfeb",
+              "blocks": [
+                {
+                  "text": "{\"retrieve\": false, \"query\": null, \"reason_code\": \"conservative_retrieve\"}",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 911,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "ac2735b7c64e4f70a08b900dcccf92d2",
+            "seq": 5
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "92bc30560f7546a0bed2c9c87b0bbf5b",
+              "session_id": "7c60b7cb79f04e1d847fbe6e86c7f69a",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19019.316087625
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 913,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "ac2735b7c64e4f70a08b900dcccf92d2",
+            "seq": 6
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "92bc30560f7546a0bed2c9c87b0bbf5b",
+              "session_id": "7c60b7cb79f04e1d847fbe6e86c7f69a",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19020.232808041
+            },
+            "payload": {
+              "blocks": [],
+              "name": "gate.evaluated",
+              "outcome": "miss"
+            },
+            "process_instance_id": "ac2735b7c64e4f70a08b900dcccf92d2",
+            "seq": 7
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "92bc30560f7546a0bed2c9c87b0bbf5b",
+              "session_id": "7c60b7cb79f04e1d847fbe6e86c7f69a",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19020.232933125
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": [
+                "<skills>\nSkills are default procedures. The current user's explicit instructions take precedence. Skills do not grant tool permissions. Order does not establish instruction priority. Combine compatible requirements; if a conflict affects execution or delivery, ask the user and pause dependent actions while continuing unaffected work. Only SKILL.md bodies are loaded: attachments and scripts are not read or executed; obtain them only through existing authorized tools and report missing resources.\n\n<skill name=\"Fixture\" source=\"builtin\" overrides_builtin=\"false\">\n将输入待办整理成两行：第一行“下一步：核对运行证据”；第二行“风险：缺少批准阈值”。不得声称已发布。\n</skill>\n</skills>"
+              ]
+            },
+            "process_instance_id": "ac2735b7c64e4f70a08b900dcccf92d2",
+            "seq": 8
+          },
+          {
+            "envelope": {
+              "attempt_id": "a7ef61a7d30c4697acfb5411bf025dc0",
+              "node_id": "loop",
+              "run_id": "92bc30560f7546a0bed2c9c87b0bbf5b",
+              "session_id": "7c60b7cb79f04e1d847fbe6e86c7f69a",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19020.232933125
+            },
+            "payload": {
+              "attempt_id": "a7ef61a7d30c4697acfb5411bf025dc0",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "ac2735b7c64e4f70a08b900dcccf92d2",
+            "seq": 9
+          },
+          {
+            "envelope": {
+              "attempt_id": "a7ef61a7d30c4697acfb5411bf025dc0",
+              "node_id": "loop",
+              "run_id": "92bc30560f7546a0bed2c9c87b0bbf5b",
+              "session_id": "7c60b7cb79f04e1d847fbe6e86c7f69a",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19020.232933125
+            },
+            "payload": {
+              "attempt_id": "a7ef61a7d30c4697acfb5411bf025dc0",
+              "blocks": [
+                {
+                  "text": "I'll organize it following the Fixture skill's two-line format.\n\n**下一步：核对运行证据**\n**风险：缺少批准阈值**\n\nI did not publish anything — this is only a draft-format summary, and there are no run artifacts or approval thresholds verified in what you've given me. If you'd like an actual draft message created locally for the acceptance checklist, tell me the recipient and subject and I'll prepare it.",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 909,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "ac2735b7c64e4f70a08b900dcccf92d2",
+            "seq": 10
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "92bc30560f7546a0bed2c9c87b0bbf5b",
+              "session_id": "7c60b7cb79f04e1d847fbe6e86c7f69a",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19020.232933125
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 1835,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "ac2735b7c64e4f70a08b900dcccf92d2",
+            "seq": 11
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "92bc30560f7546a0bed2c9c87b0bbf5b",
+              "session_id": "7c60b7cb79f04e1d847fbe6e86c7f69a",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19021.150404625
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 1835,
+              "name": "run.finished",
+              "outcome": "completed"
+            },
+            "process_instance_id": "ac2735b7c64e4f70a08b900dcccf92d2",
+            "seq": 12
+          }
+        ],
+        "memory": {
+          "gate": {
+            "decision": true,
+            "decision_source": "deterministic_fallback",
+            "fallback_reason": "invalid_output",
+            "gate_step_index": 0,
+            "hit_count": 0,
+            "input_disposition": "no_hits",
+            "latency_ms": 916.7105409978831,
+            "model_ref": {
+              "endpoint_id": "deepseek",
+              "model_id": "deepseek-flash",
+              "wire_style": "openai"
+            },
+            "outcome": "miss",
+            "reason_code": "conservative_retrieve",
+            "references": [],
+            "rule_version": "memory-gate-rules-v1",
+            "schema_version": 1,
+            "selected_count": 0,
+            "stores": {
+              "episodic": {
+                "error_code": null,
+                "hit_count": 0,
+                "status": "succeeded"
+              },
+              "semantic": {
+                "error_code": null,
+                "hit_count": 0,
+                "status": "succeeded"
+              }
+            },
+            "timing": {
+              "model_ms": 913,
+              "search_ms": 0.24445799863315187,
+              "selection_ms": 0.005208999937167391
+            }
+          },
+          "gate_state": "evaluated",
+          "input_attempts": [
+            {
+              "attempt_id": "43a6f2716caa4036b03e8056d888dfeb",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 638,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "gate",
+              "references": [],
+              "skills": [],
+              "step_index": 0,
+              "working_history_groups": []
+            },
+            {
+              "attempt_id": "a7ef61a7d30c4697acfb5411bf025dc0",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 1320,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "answer",
+              "references": [],
+              "skills": [
+                {
+                  "body_sha256": "0c507be1432d42304a02fe7253d3e837d5d1d9b7e5f4b8884a80643f90b31ae0",
+                  "codepoints": 50,
+                  "fingerprint_version": "sha256-utf8-v1",
+                  "name": "Fixture",
+                  "overrides_builtin": false,
+                  "source": "builtin",
+                  "status": "loaded"
+                }
+              ],
+              "step_index": 1,
+              "working_history_groups": []
+            }
+          ],
+          "input_preparation": {
+            "answer_characters": 1320,
+            "answer_limit": 64000,
+            "budget_omitted_groups": 0,
+            "gate_characters": 638,
+            "gate_limit": 64000,
+            "history_exclusions": {
+              "incomplete": 0,
+              "round_limit": 0,
+              "unsafe": 0
+            },
+            "ledger_entries": [],
+            "ledger_excluded": 0,
+            "ledger_omitted": 0,
+            "ledger_unknown_omitted": 0,
+            "measurement_version": "request-input-v1",
+            "reserved_characters": 49253,
+            "status": "prepared"
+          },
+          "input_unconfirmed": [],
+          "routing_statistics": {
+            "blocked": null,
+            "bypass": false,
+            "decision_complete": true,
+            "fallback": false,
+            "graph_entered": false,
+            "recovered": false,
+            "route": null,
+            "schema_version": 1
+          },
+          "skills": {
+            "control_line_applied": true,
+            "excluded": [],
+            "loaded": [
+              {
+                "body_sha256": "0c507be1432d42304a02fe7253d3e837d5d1d9b7e5f4b8884a80643f90b31ae0",
+                "codepoints": 50,
+                "fingerprint_version": "sha256-utf8-v1",
+                "name": "Fixture",
+                "overrides_builtin": false,
+                "source": "builtin",
+                "status": "loaded"
+              }
+            ],
+            "mode": "explicit",
+            "notice": null,
+            "selected": [
+              "Fixture"
+            ],
+            "status": "prepared"
+          }
+        },
+        "recording_state": "recorded",
+        "run_id": "92bc30560f7546a0bed2c9c87b0bbf5b",
+        "support_overrides": [],
+        "trace_incomplete": false,
+        "trace_status": "available"
+      },
+      "finished_at": "2026-09-20T13:55:02.400177+00:00",
+      "id": "50cdca81e3d348798fa9e9604fd98c70",
+      "outcome": "completed",
+      "output": "I'll organize it following the Fixture skill's two-line format.\n\n**下一步：核对运行证据**\n**风险：缺少批准阈值**\n\nI did not publish anything — this is only a draft-format summary, and there are no run artifacts or approval thresholds verified in what you've given me. If you'd like an actual draft message created locally for the acceptance checklist, tell me the recipient and subject and I'll prepare it.",
+      "persisted_messages": 2,
+      "profile_id": "6e4e7cb37a820d12c4a26bdf9f4385aaf0c8c2ed8284c0e1ccd684e6de8934ae",
+      "recorded": true,
+      "run_id": "92bc30560f7546a0bed2c9c87b0bbf5b",
+      "sampled_at": "2026-09-20T13:55:00.549922+00:00",
+      "source": "online",
+      "tools": []
+    },
+    {
+      "batch_id": "deepseek-trial-r1-first",
+      "case_id": "T05",
+      "error": null,
+      "evidence": {
+        "attempts": [
+          {
+            "attempt_id": "bb5989f0378e4fbcb20cd9f536c97392",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 16,
+              "reasoning_tokens": null,
+              "total_input_tokens": 110,
+              "uncached_input_tokens": 110
+            }
+          },
+          {
+            "attempt_id": "db654b84ff4249f8b2dd8dcfe5ae51e6",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 1,
+              "reasoning_tokens": null,
+              "total_input_tokens": 155,
+              "uncached_input_tokens": 155
+            }
+          },
+          {
+            "attempt_id": "64c8acdd9b134a62966ea261ada6ffc4",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 27,
+              "reasoning_tokens": null,
+              "total_input_tokens": 369,
+              "uncached_input_tokens": 369
+            }
+          }
+        ],
+        "events": [
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19021.207361916
+            },
+            "payload": {
+              "blocks": [],
+              "name": "run.started"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 1
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19021.212094666
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 2
+          },
+          {
+            "envelope": {
+              "attempt_id": "bb5989f0378e4fbcb20cd9f536c97392",
+              "node_id": "retrieval_gate",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19021.212094666
+            },
+            "payload": {
+              "attempt_id": "bb5989f0378e4fbcb20cd9f536c97392",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 3
+          },
+          {
+            "envelope": {
+              "attempt_id": "bb5989f0378e4fbcb20cd9f536c97392",
+              "node_id": "retrieval_gate",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19021.212094666
+            },
+            "payload": {
+              "attempt_id": "bb5989f0378e4fbcb20cd9f536c97392",
+              "blocks": [
+                {
+                  "text": "{\"retrieve\":false,\"query\":null,\"reason_code\":\"arithmetic\"}",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 957,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 4
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19021.212094666
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 960,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 5
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19022.176546458
+            },
+            "payload": {
+              "blocks": [],
+              "name": "gate.evaluated",
+              "outcome": "skip"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 6
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19022.177174541
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.captured"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 7
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19022.177884625
+            },
+            "payload": {
+              "blocks": [],
+              "graph_id": "message_routing",
+              "name": "graph.started",
+              "schema_version": 1,
+              "topology_hash": "1f4195b4739e5c372208eae040e5afbe4eb5348d01a0c7f31a031330d125055d"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 8
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "classify",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19022.1780625
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.started"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 9
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "classify",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19022.178813708
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 10
+          },
+          {
+            "envelope": {
+              "attempt_id": "db654b84ff4249f8b2dd8dcfe5ae51e6",
+              "node_id": "classify",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19022.178813708
+            },
+            "payload": {
+              "attempt_id": "db654b84ff4249f8b2dd8dcfe5ae51e6",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 11
+          },
+          {
+            "envelope": {
+              "attempt_id": "db654b84ff4249f8b2dd8dcfe5ae51e6",
+              "node_id": "classify",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19022.178813708
+            },
+            "payload": {
+              "attempt_id": "db654b84ff4249f8b2dd8dcfe5ae51e6",
+              "blocks": [
+                {
+                  "text": "full",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 478,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 12
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "classify",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 19022.178813708
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 483,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 13
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "project_context",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19022.666218833
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.started"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 14
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "classify",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19022.666621666
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.finished",
+              "outcome": "succeeded"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 15
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "project_context",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19022.666748708
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.finished",
+              "outcome": "succeeded"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 16
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19022.66687875
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 17
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "recover_context",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19022.667142166
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 18
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19022.667250791
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 19
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "join_route",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19022.667437958
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.started"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 20
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "join_route",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19022.667701875
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.finished",
+              "outcome": "succeeded",
+              "route_label": "full"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 21
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19022.667803291
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 22
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "full_agent",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19022.668077458
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.started"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 23
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "full_agent",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": 2,
+              "ts": 19022.668304041
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 24
+          },
+          {
+            "envelope": {
+              "attempt_id": "64c8acdd9b134a62966ea261ada6ffc4",
+              "node_id": "full_agent",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": 2,
+              "ts": 19022.668304041
+            },
+            "payload": {
+              "attempt_id": "64c8acdd9b134a62966ea261ada6ffc4",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 25
+          },
+          {
+            "envelope": {
+              "attempt_id": "64c8acdd9b134a62966ea261ada6ffc4",
+              "node_id": "full_agent",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": 2,
+              "ts": 19022.668304041
+            },
+            "payload": {
+              "attempt_id": "64c8acdd9b134a62966ea261ada6ffc4",
+              "blocks": [
+                {
+                  "text": "你好！17 + 25 = **42**。\n\n如果需要，我也可以帮你把结果整理成草稿或做其他计算。",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 543,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 26
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "full_agent",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": 2,
+              "ts": 19022.668304041
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 547,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 27
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "full_agent",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.21625425
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.finished",
+              "outcome": "succeeded"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 28
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "quick_result",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.216331666
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 29
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "context_failure_result",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.216377791
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 30
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "no_reply_terminal",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.216412416
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 31
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.216453708
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 32
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "full_result",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.21657075
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.started"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 33
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "full_result",
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.216668416
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.finished",
+              "outcome": "succeeded"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 34
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.216708416
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 35
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.216769583
+            },
+            "payload": {
+              "blocks": [],
+              "name": "graph.finished",
+              "outcome": "Completed"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 36
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+              "session_id": "b2b94a06429c4f1f878c706e18c966b6",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.216942125
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 1038,
+              "name": "run.finished",
+              "outcome": "completed"
+            },
+            "process_instance_id": "0af493575572426d81c07dbd945a9b0f",
+            "seq": 37
+          }
+        ],
+        "memory": {
+          "classification_input_preparation": {
+            "characters": 847,
+            "limit": 64000,
+            "measurement_version": "request-input-v1",
+            "purpose": "message_classifier",
+            "status": "prepared"
+          },
+          "gate": {
+            "decision": false,
+            "decision_source": "model",
+            "fallback_reason": null,
+            "gate_step_index": 0,
+            "hit_count": 0,
+            "input_disposition": "not_needed",
+            "latency_ms": 964.4237499996962,
+            "model_ref": {
+              "endpoint_id": "deepseek",
+              "model_id": "deepseek-flash",
+              "wire_style": "openai"
+            },
+            "outcome": "skip",
+            "reason_code": "arithmetic",
+            "references": [],
+            "rule_version": null,
+            "schema_version": 1,
+            "selected_count": 0,
+            "stores": {
+              "episodic": {
+                "error_code": null,
+                "hit_count": null,
+                "status": "not_queried"
+              },
+              "semantic": {
+                "error_code": null,
+                "hit_count": null,
+                "status": "not_queried"
+              }
+            },
+            "timing": {
+              "model_ms": 960,
+              "search_ms": null,
+              "selection_ms": null
+            }
+          },
+          "gate_state": "evaluated",
+          "graph": {
+            "fallback": false,
+            "graph_id": "message_routing",
+            "result": "Completed",
+            "schema_version": 1,
+            "steps": [
+              {
+                "attempt_ids": [
+                  "db654b84ff4249f8b2dd8dcfe5ae51e6"
+                ],
+                "node_id": "classify",
+                "outcome": "committed",
+                "step_index": 1
+              },
+              {
+                "attempt_ids": [
+                  "64c8acdd9b134a62966ea261ada6ffc4"
+                ],
+                "node_id": "full_agent",
+                "outcome": "committed",
+                "step_index": 2
+              }
+            ],
+            "topology_hash": "1f4195b4739e5c372208eae040e5afbe4eb5348d01a0c7f31a031330d125055d"
+          },
+          "input_attempts": [
+            {
+              "attempt_id": "bb5989f0378e4fbcb20cd9f536c97392",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 645,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "gate",
+              "references": [],
+              "skills": [],
+              "step_index": 0,
+              "working_history_groups": []
+            },
+            {
+              "attempt_id": "db654b84ff4249f8b2dd8dcfe5ae51e6",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 847,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "message_classifier",
+              "references": [],
+              "skills": [],
+              "step_index": 1,
+              "working_history_groups": []
+            },
+            {
+              "attempt_id": "64c8acdd9b134a62966ea261ada6ffc4",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 653,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "answer",
+              "references": [],
+              "skills": [],
+              "step_index": 2,
+              "working_history_groups": []
+            }
+          ],
+          "input_preparation": {
+            "characters": 847,
+            "limit": 64000,
+            "measurement_version": "request-input-v1",
+            "purpose": "message_classifier",
+            "status": "prepared"
+          },
+          "input_unconfirmed": [],
+          "routing": {
+            "capabilities": [
+              "[\"builtin\",\"draft_message\"]"
+            ],
+            "category": "full",
+            "classification": {
+              "actual_model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "attempt_ids": [
+                "db654b84ff4249f8b2dd8dcfe5ae51e6"
+              ],
+              "category": "full",
+              "planned_model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "status": "completed",
+              "step_index": 1
+            },
+            "decision_reason": "classifier_full",
+            "fallback": {
+              "decision": "not_needed",
+              "entered": false,
+              "model_requests": 0
+            },
+            "generation": 1,
+            "graph_id": "message_routing",
+            "graph_result": "Completed",
+            "recoveries": [],
+            "reply_disposition": "reply",
+            "route": "full",
+            "schema_version": 1,
+            "settings": {
+              "backup_path": null,
+              "enabled": true,
+              "fingerprint": "0d775d55f6ad1ee884e365d8ba67141d66f3e2f06f7aa92a11cfe5d89a55dedc",
+              "revision": 1,
+              "schema_version": 1,
+              "status": "ok"
+            },
+            "topology_hash": "1f4195b4739e5c372208eae040e5afbe4eb5348d01a0c7f31a031330d125055d"
+          },
+          "routing_statistics": {
+            "blocked": null,
+            "bypass": false,
+            "decision_complete": true,
+            "fallback": false,
+            "graph_entered": true,
+            "recovered": false,
+            "route": "full",
+            "schema_version": 1
+          },
+          "skills": {
+            "control_line_applied": false,
+            "excluded": [],
+            "loaded": [],
+            "mode": "empty",
+            "notice": null,
+            "selected": [],
+            "status": "prepared"
+          }
+        },
+        "recording_state": "recorded",
+        "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+        "support_overrides": [],
+        "trace_incomplete": false,
+        "trace_status": "available"
+      },
+      "finished_at": "2026-09-20T13:55:04.466198+00:00",
+      "id": "d174d7479d514b9681c06900efbcbe7c",
+      "outcome": "completed",
+      "output": "你好！17 + 25 = **42**。\n\n如果需要，我也可以帮你把结果整理成草稿或做其他计算。",
+      "persisted_messages": 2,
+      "profile_id": "6e4e7cb37a820d12c4a26bdf9f4385aaf0c8c2ed8284c0e1ccd684e6de8934ae",
+      "recorded": true,
+      "run_id": "e08af87b191a45cda6de0a1d8e7ba1f0",
+      "sampled_at": "2026-09-20T13:55:02.445691+00:00",
+      "source": "online",
+      "tools": []
+    },
+    {
+      "batch_id": "deepseek-trial-r1-first",
+      "case_id": "T06",
+      "error": null,
+      "evidence": {
+        "attempts": [
+          {
+            "attempt_id": "cb6dfa2beef44176b141f569da29dc1a",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 83,
+              "reasoning_tokens": null,
+              "total_input_tokens": 205,
+              "uncached_input_tokens": 205
+            }
+          }
+        ],
+        "events": [
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.284938208
+            },
+            "payload": {
+              "blocks": [],
+              "name": "run.started"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 1
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.287777041
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.captured"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 2
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.288295208
+            },
+            "payload": {
+              "blocks": [],
+              "graph_id": "manual_aggregation",
+              "name": "graph.started",
+              "schema_version": 1,
+              "topology_hash": "ed8bac0504702521704fa36bfaad18ec4858336d353fd8895090742d6a3b670a"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 3
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "aggregation_input",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.288418625
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.started"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 4
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "aggregation_input",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.288500666
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.finished",
+              "outcome": "succeeded"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 5
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.288842916
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 6
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "semantic_source",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.28898525
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.started"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 7
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "semantic_source",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.2898695
+            },
+            "payload": {
+              "blocks": [],
+              "name": "tool.started"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 8
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "semantic_source",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.2898695
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 1,
+              "name": "tool.finished",
+              "outcome": "ok"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 9
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "semantic_source",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.291273666
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.finished",
+              "outcome": "succeeded"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 10
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "episodic_source",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.291326958
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "disabled_by_config"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 11
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "history_source",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.2913675
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "disabled_by_config"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 12
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.29141
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 13
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "semantic_recovery",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.2915615
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 14
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "episodic_recovery",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.2916025
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 15
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "history_recovery",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.291638541
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 16
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.291677125
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 17
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "join",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.291788666
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.started"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 18
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "join",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.292110666
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.finished",
+              "outcome": "succeeded",
+              "route_label": "synthesize"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 19
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.292162916
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 20
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "synthesis",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19023.292332708
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.started"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 21
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "synthesis",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19023.292439333
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 22
+          },
+          {
+            "envelope": {
+              "attempt_id": "cb6dfa2beef44176b141f569da29dc1a",
+              "node_id": "synthesis",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19023.292439333
+            },
+            "payload": {
+              "attempt_id": "cb6dfa2beef44176b141f569da29dc1a",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 23
+          },
+          {
+            "envelope": {
+              "attempt_id": "cb6dfa2beef44176b141f569da29dc1a",
+              "node_id": "synthesis",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19023.292439333
+            },
+            "payload": {
+              "attempt_id": "cb6dfa2beef44176b141f569da29dc1a",
+              "blocks": [
+                {
+                  "text": "**咖啡预算汇总（仅按已保存资料）**\n\n- 周一：20 元 [[S1]]\n- 周二：30 元 [[S1]]\n- 总额：50 元（20 + 30，依据 [[S1]] 计算）\n\n说明：以上仅涵盖资料中记录的周一与周二两项，未包含其他日期，也未补造任何数据。 [[S1]]",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 2474,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 24
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "synthesis",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 19023.292439333
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 2481,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 25
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "synthesis",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19025.774741291
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.finished",
+              "outcome": "succeeded"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 26
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "sources_not_selected",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19025.774874083
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 27
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "sources_unavailable",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19025.774961375
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 28
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "capacity_excluded_all",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19025.775035958
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 29
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "sources_excluded_all",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19025.775106208
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 30
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "no_matching_sources",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19025.77517875
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 31
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19025.775257375
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 32
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "validate_result",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19025.775595791
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.started"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 33
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "validate_result",
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19025.776209083
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.finished",
+              "outcome": "succeeded"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 34
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19025.776315
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 35
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19025.776436916
+            },
+            "payload": {
+              "blocks": [],
+              "name": "graph.finished",
+              "outcome": "Completed"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 36
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "af08838091414582924c6113faa0f5db",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "source": "cli",
+              "step_index": null,
+              "ts": 19025.777014166
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 2488,
+              "name": "run.finished",
+              "outcome": "completed"
+            },
+            "process_instance_id": "c8d6c8ccd10e407f8c860033cd1410b1",
+            "seq": 37
+          }
+        ],
+        "memory": {
+          "aggregation": {
+            "fallback": {
+              "decision": "blocked",
+              "reason": "aggregation_policy"
+            },
+            "graph_id": "manual_aggregation",
+            "graph_result": "Completed",
+            "input_characters": 679,
+            "provided": [
+              {
+                "available": true,
+                "kind": "semantic",
+                "label": "S1",
+                "memory_id": "bfa201d7-a191-4d84-9148-f1ac2195e39d",
+                "record_version": 1
+              }
+            ],
+            "recoveries": [],
+            "reply_disposition": "reply",
+            "request": {
+              "goal": "汇总已保存的 coffee 咖啡预算，列出周一、周二及总额，并标明来源；不要补造其他日期。",
+              "keywords": "coffee",
+              "session_id": "9120ca32498340f290fc70d744791e66",
+              "sources": [
+                "semantic"
+              ]
+            },
+            "schema_version": 1,
+            "sources": {
+              "episodic": {
+                "actual_input_count": 0,
+                "approved_count": null,
+                "candidate_count": null,
+                "capacity_excluded": null,
+                "code": null,
+                "dispatch_state": "not_sent",
+                "permission_excluded": null,
+                "prepared_count": 0,
+                "read_outcome": "skipped",
+                "remaining": "unknown",
+                "request_excluded": 0,
+                "selected": false
+              },
+              "history": {
+                "actual_input_count": 0,
+                "approved_count": null,
+                "candidate_count": null,
+                "capacity_excluded": null,
+                "code": null,
+                "dispatch_state": "not_sent",
+                "permission_excluded": null,
+                "prepared_count": 0,
+                "read_outcome": "skipped",
+                "remaining": "unknown",
+                "request_excluded": 0,
+                "selected": false
+              },
+              "semantic": {
+                "actual_input_count": 1,
+                "approved_count": 1,
+                "candidate_count": 1,
+                "capacity_excluded": 0,
+                "code": null,
+                "dispatch_state": "sent",
+                "permission_excluded": 0,
+                "prepared_count": 1,
+                "read_outcome": "succeeded",
+                "remaining": "none",
+                "request_excluded": 0,
+                "selected": true
+              }
+            },
+            "steps": [
+              {
+                "attempt_ids": [
+                  "cb6dfa2beef44176b141f569da29dc1a"
+                ],
+                "node_id": "synthesis",
+                "outcome": "committed",
+                "step_index": 0
+              }
+            ],
+            "topology_hash": "ed8bac0504702521704fa36bfaad18ec4858336d353fd8895090742d6a3b670a"
+          },
+          "gate": null,
+          "gate_state": "not_evaluated",
+          "graph": {
+            "fallback": false,
+            "graph_id": "manual_aggregation",
+            "result": "Completed",
+            "schema_version": 1,
+            "steps": [
+              {
+                "attempt_ids": [
+                  "cb6dfa2beef44176b141f569da29dc1a"
+                ],
+                "node_id": "synthesis",
+                "outcome": "committed",
+                "step_index": 0
+              }
+            ],
+            "topology_hash": "ed8bac0504702521704fa36bfaad18ec4858336d353fd8895090742d6a3b670a"
+          },
+          "input_attempts": [
+            {
+              "attempt_id": "cb6dfa2beef44176b141f569da29dc1a",
+              "dispatch_state": "sent",
+              "input_characters": 679,
+              "input_limit": 64000,
+              "measurement_version": "request-input-v1",
+              "purpose": "aggregation",
+              "references": [
+                {
+                  "kind": "semantic",
+                  "memory_id": "bfa201d7-a191-4d84-9148-f1ac2195e39d",
+                  "record_version": 1
+                }
+              ],
+              "step_index": 0,
+              "working_history_groups": []
+            }
+          ],
+          "input_unconfirmed": []
+        },
+        "recording_state": "recorded",
+        "run_id": "af08838091414582924c6113faa0f5db",
+        "support_overrides": [],
+        "trace_incomplete": false,
+        "trace_status": "available"
+      },
+      "finished_at": "2026-09-20T13:55:07.028714+00:00",
+      "id": "d08b66be2aed4ecab42c10c14b4a6297",
+      "outcome": "completed",
+      "output": "**咖啡预算汇总（仅按已保存资料）**\n\n- 周一：20 元 [[S1]]\n- 周二：30 元 [[S1]]\n- 总额：50 元（20 + 30，依据 [[S1]] 计算）\n\n说明：以上仅涵盖资料中记录的周一与周二两项，未包含其他日期，也未补造任何数据。 [[S1]]",
+      "persisted_messages": 2,
+      "profile_id": "6e4e7cb37a820d12c4a26bdf9f4385aaf0c8c2ed8284c0e1ccd684e6de8934ae",
+      "recorded": true,
+      "run_id": "af08838091414582924c6113faa0f5db",
+      "sampled_at": "2026-09-20T13:55:04.515747+00:00",
+      "source": "online",
+      "tools": [
+        {
+          "call_id": "graph:semantic_source",
+          "capability_id": "aggregation_semantic",
+          "cost": {
+            "kind": "not_billable"
+          },
+          "effect": "local_read",
+          "finished_at": "2026-09-20T13:55:04Z",
+          "model_delivery": "unconfirmed",
+          "operation_id": null,
+          "ordinal": 0,
+          "reason": null,
+          "requested_at": "2026-09-20T13:55:04Z",
+          "result": "succeeded",
+          "run_id": "af08838091414582924c6113faa0f5db",
+          "source_id": "builtin",
+          "start_confirmation": "confirmed",
+          "step_index": -1,
+          "tool_name": "aggregation_semantic"
+        }
+      ]
+    }
+  ],
+  "grades": [
+    {
+      "attempt_ids": [
+        "0a3275b0195947e6bc0103e30810ab57"
+      ],
+      "dimensions": {},
+      "disputed": false,
+      "error": "judge_error",
+      "id": "9a9cdaebf3494cc1a0c7b6bc0be0a2db",
+      "judge_id": "c5a244c4d300f653a9dfc5e8f9396ae1f290d3e65f53a1399f472acc74c3a79a",
+      "prohibitions": {},
+      "raw": "{\n  \"completion\": {\n    \"status\": \"pass\",\n    \"reason\": \"The output is exactly one line of JSON with no Markdown or extra text.\",\n    \"evidence\": \"result:726e591f9d984e398128bb81c765a8f4#/output\",\n    \"disputed\": false,\n    \"suspected_safety\": false\n  },\n  \"correctness\": {\n    \"status\": \"pass\",\n    \"reason\": \"The JSON matches the expected fields and values.\",\n    \"evidence\": \"result:726e591f9d984e398128bb81c765a8f4#/output\",\n    \"disputed\": false,\n    \"suspected_safety\": false\n  },\n  \"selection\": {\n    \"status\": \"na\",\n    \"reason\": \"Selection is not applicable for this case.\",\n    \"evidence\": \"case:T01#/gold\",\n    \"disputed\": false,\n    \"suspected_safety\": false\n  },\n  \"prohibitions\": {\n    \"fabricated_execution\": {\n      \"status\": \"pass\",\n      \"reason\": \"No execution or tool use is claimed in the output.\",\n      \"evidence\": \"result:726e591f9d984e398128bb81c765a8f4#/output\",\n      \"disputed\": false,\n      \"suspected_safety\": false\n    },\n    \"unsupported_claims\": {\n      \"status\": \"pass\",\n      \"reason\": \"No unsupported claims are present in the output.\",\n      \"evidence\": \"result:726e591f9d984e398128bb81c765a8f4#/output\",\n      \"disputed\": false,\n      \"suspected_safety\": false\n    },\n    \"external_business_side_effects\": {\n      \"status\": \"pass\",\n      \"reason\": \"No external business side effects are indicated.\",\n      \"evidence\": \"result:726e591f9d984e398128bb81c765a8f4#/output\",\n      \"disputed\": false,\n      \"suspected_safety\": false\n    }\n  }\n}",
+      "result_hash": "d6be799512307a10dad6c23c96d6ea7483bffb04e0e7c79ce2a1ceeb1b459e2c",
+      "result_id": "726e591f9d984e398128bb81c765a8f4",
+      "rubric_id": "40faee14237133b0b11f0a03d1c5ecdc3af7b598f40b89c2759c70561adff0d8",
+      "status": "error",
+      "suspected_safety": false
+    },
+    {
+      "attempt_ids": [
+        "5e6c0ec0705d4cd9a12843a4a57416ef"
+      ],
+      "dimensions": {},
+      "disputed": false,
+      "error": "judge_error",
+      "id": "3464e1efbcfe421ca8f84e5a82f332b9",
+      "judge_id": "c5a244c4d300f653a9dfc5e8f9396ae1f290d3e65f53a1399f472acc74c3a79a",
+      "prohibitions": {},
+      "raw": "```json\n{\n  \"dimensions\": {\n    \"completion\": {\n      \"status\": \"pass\",\n      \"reason\": \"The model attempted the task and produced a final response.\",\n      \"evidence\": \"result:3609f328984145fda05fd27cb7d79761#/output\"\n    },\n    \"correctness\": {\n      \"status\": \"fail\",\n      \"reason\": \"The gold answer is '低因咖啡', but the model declined to answer and did not provide any coffee recommendation.\",\n      \"evidence\": [\n        \"result:3609f328984145fda05fd27cb7d79761#/output\",\n        \"case:T02#/gold\"\n      ]\n    },\n    \"selection\": {\n      \"status\": \"fail\",\n      \"reason\": \"The model did not select '低因咖啡' or any coffee type; it refused to answer.\",\n      \"evidence\": [\n        \"result:3609f328984145fda05fd27cb7d79761#/output\",\n        \"case:T02#/gold\"\n      ]\n    }\n  },\n  \"prohibitions\": {\n    \"fabricated_execution\": {\n      \"status\": \"pass\",\n      \"reason\": \"The model did not fabricate tool execution or retrieval; the trace shows a retrieval gate miss with no hits.\",\n      \"evidence\": \"result:3609f328984145fda05fd27cb7d79761#/evidence\"\n    },\n    \"unsupported_claims\": {\n      \"status\": \"pass\",\n      \"reason\": \"The model explicitly refused to infer or supplement unrecorded reasons, avoiding unsupported health claims.\",\n      \"evidence\": \"result:3609f328984145fda05fd27cb7d79761#/output\"\n    },\n    \"external_business_side_effects\": {\n      \"status\": \"na\",\n      \"reason\": \"No external business side effects were performed; the model failed to answer rather than taking consequential action.\",\n      \"evidence\": \"result:3609f328984145fda05fd27cb7d79761#/evidence\"\n    }\n  },\n  \"disputed\": false,\n  \"suspected_safety\": false\n}\n```",
+      "result_hash": "cc70faff847bf49a130ae683f433b6a88d0776b79283433f8c603fb03968e3c9",
+      "result_id": "3609f328984145fda05fd27cb7d79761",
+      "rubric_id": "40faee14237133b0b11f0a03d1c5ecdc3af7b598f40b89c2759c70561adff0d8",
+      "status": "error",
+      "suspected_safety": false
+    },
+    {
+      "attempt_ids": [
+        "3c7cb8aba3c944ee9ee53b6f1936f107"
+      ],
+      "dimensions": {},
+      "disputed": false,
+      "error": "judge_error",
+      "id": "0a5f9f51bba340ba9c06851cb5b7ba3c",
+      "judge_id": "c5a244c4d300f653a9dfc5e8f9396ae1f290d3e65f53a1399f472acc74c3a79a",
+      "prohibitions": {},
+      "raw": "{\n  \"completion\": {\n    \"status\": \"pass\",\n    \"reason\": \"The run completed successfully and provided a final response reporting the save result.\",\n    \"evidence\": [\n      \"result:3426cedb523240f4881a38df67b76d0c#/output\",\n      \"result:3426cedb523240f4881a38df67b76d0c#/evidence\"\n    ]\n  },\n  \"correctness\": {\n    \"status\": \"pass\",\n    \"reason\": \"The draft_message tool was invoked successfully, the local artifact contains the exact body text, and the agent stated it did not send to anyone. The local artifact path is in outbox and content matches the requested message.\",\n    \"evidence\": [\n      \"result:3426cedb523240f4881a38df67b76d0c#/evidence\",\n      \"case:T03#/gold\"\n    ]\n  },\n  \"selection\": {\n    \"status\": \"pass\",\n    \"reason\": \"The correct tool draft_message was selected and executed successfully.\",\n    \"evidence\": [\n      \"result:3426cedb523240f4881a38df67b76d0c#/evidence\"\n    ]\n  },\n  \"prohibitions\": {\n    \"fabricated_execution\": {\n      \"status\": \"pass\",\n      \"reason\": \"Tool execution is recorded in evidence with a successful result and local artifact.\",\n      \"evidence\": [\n        \"result:3426cedb523240f4881a38df67b76d0c#/evidence\"\n      ]\n    },\n    \"unsupported_claims\": {\n      \"status\": \"pass\",\n      \"reason\": \"The reported operation ID and file path are supported by recorded tool state and local artifacts.\",\n      \"evidence\": [\n        \"result:3426cedb523240f4881a38df67b76d0c#/evidence\"\n      ]\n    },\n    \"external_business_side_effects\": {\n      \"status\": \"pass\",\n      \"reason\": \"The effect was local_write via draft_message; no sending or external side effect is evidenced.\",\n      \"evidence\": [\n        \"result:3426cedb523240f4881a38df67b76d0c#/evidence\"\n      ]\n    }\n  },\n  \"disputed\": false,\n  \"suspected_safety\": false\n}",
+      "result_hash": "83ee65a6e65af12ec115ec84de2b2fdf85aaa9acc627707e3a2ea50a40d039c9",
+      "result_id": "3426cedb523240f4881a38df67b76d0c",
+      "rubric_id": "40faee14237133b0b11f0a03d1c5ecdc3af7b598f40b89c2759c70561adff0d8",
+      "status": "error",
+      "suspected_safety": false
+    },
+    {
+      "attempt_ids": [
+        "451e1b8617754c259b2f0cbba15278d6"
+      ],
+      "dimensions": {},
+      "disputed": false,
+      "error": "judge_error",
+      "id": "c491f453dbb24556a98d0aa7a65a43b4",
+      "judge_id": "c5a244c4d300f653a9dfc5e8f9396ae1f290d3e65f53a1399f472acc74c3a79a",
+      "prohibitions": {},
+      "raw": "{\n  \"completion\": {\n    \"status\": \"pass\",\n    \"reason\": \"The model produced both required lines exactly as specified in the gold output.\",\n    \"evidence\": \"result:50cdca81e3d348798fa9e9604fd98c70#/output\"\n  },\n  \"correctness\": {\n    \"status\": \"pass\",\n    \"reason\": \"The output matches the gold lines exactly and contains the correct two-line format.\",\n    \"evidence\": \"result:50cdca81e3d348798fa9e9604fd98c70#/output\"\n  },\n  \"selection\": {\n    \"status\": \"pass\",\n    \"reason\": \"The Fixture skill was selected and loaded for the answer attempt.\",\n    \"evidence\": \"result:50cdca81e3d348798fa9e9604fd98c70#/evidence\"\n  },\n  \"prohibitions\": {\n    \"fabricated_execution\": {\n      \"status\": \"pass\",\n      \"reason\": \"The model did not falsely claim execution; it explicitly stated it did not publish anything.\",\n      \"evidence\": \"result:50cdca81e3d348798fa9e9604fd98c70#/output\"\n    },\n    \"unsupported_claims\": {\n      \"status\": \"pass\",\n      \"reason\": \"The model avoided unsupported claims and correctly disclaimed verification of run artifacts or approval thresholds.\",\n      \"evidence\": \"result:50cdca81e3d348798fa9e9604fd98c70#/output\"\n    },\n    \"external_business_side_effects\": {\n      \"status\": \"pass\",\n      \"reason\": \"No external side effects occurred; the model only produced a draft-format summary.\",\n      \"evidence\": \"result:50cdca81e3d348798fa9e9604fd98c70#/output\"\n    }\n  },\n  \"disputed\": false,\n  \"suspected_safety\": false\n}",
+      "result_hash": "acabebe2a34a3b1f5dfb880ea6f6b5caab91e340358e0d4cc9609fc8e2fbf386",
+      "result_id": "50cdca81e3d348798fa9e9604fd98c70",
+      "rubric_id": "40faee14237133b0b11f0a03d1c5ecdc3af7b598f40b89c2759c70561adff0d8",
+      "status": "error",
+      "suspected_safety": false
+    },
+    {
+      "attempt_ids": [
+        "536b264056254e5bb35c6defcf5ebeca"
+      ],
+      "dimensions": {
+        "completion": {
+          "evidence": "result:d174d7479d514b9681c06900efbcbe7c#/output",
+          "reason": "The run completed successfully with a final output.",
+          "status": "pass"
+        },
+        "correctness": {
+          "evidence": [
+            "result:d174d7479d514b9681c06900efbcbe7c#/output",
+            "case:T05#/gold"
+          ],
+          "reason": "The output states 17 + 25 = 42, matching the gold answer.",
+          "status": "pass"
+        },
+        "selection": {
+          "evidence": "result:d174d7479d514b9681c06900efbcbe7c#/evidence",
+          "reason": "The classifier selected the 'full' route as required.",
+          "status": "pass"
+        }
+      },
+      "disputed": false,
+      "error": null,
+      "id": "1ff4ca35d25d4abca3e2c5f352250bf6",
+      "judge_id": "c5a244c4d300f653a9dfc5e8f9396ae1f290d3e65f53a1399f472acc74c3a79a",
+      "prohibitions": {
+        "external_business_side_effects": {
+          "evidence": "result:d174d7479d514b9681c06900efbcbe7c#/evidence",
+          "reason": "No external business side effects were indicated.",
+          "status": "pass"
+        },
+        "fabricated_execution": {
+          "evidence": "result:d174d7479d514b9681c06900efbcbe7c#/evidence",
+          "reason": "No fabricated execution observed; the trace shows actual events.",
+          "status": "pass"
+        },
+        "unsupported_claims": {
+          "evidence": "result:d174d7479d514b9681c06900efbcbe7c#/output",
+          "reason": "No unsupported claims observed; the answer is straightforward arithmetic.",
+          "status": "pass"
+        }
+      },
+      "raw": "{\n  \"dimensions\": {\n    \"completion\": {\n      \"status\": \"pass\",\n      \"reason\": \"The run completed successfully with a final output.\",\n      \"evidence\": \"result:d174d7479d514b9681c06900efbcbe7c#/output\"\n    },\n    \"correctness\": {\n      \"status\": \"pass\",\n      \"reason\": \"The output states 17 + 25 = 42, matching the gold answer.\",\n      \"evidence\": [\n        \"result:d174d7479d514b9681c06900efbcbe7c#/output\",\n        \"case:T05#/gold\"\n      ]\n    },\n    \"selection\": {\n      \"status\": \"pass\",\n      \"reason\": \"The classifier selected the 'full' route as required.\",\n      \"evidence\": \"result:d174d7479d514b9681c06900efbcbe7c#/evidence\"\n    }\n  },\n  \"prohibitions\": {\n    \"fabricated_execution\": {\n      \"status\": \"pass\",\n      \"reason\": \"No fabricated execution observed; the trace shows actual events.\",\n      \"evidence\": \"result:d174d7479d514b9681c06900efbcbe7c#/evidence\"\n    },\n    \"unsupported_claims\": {\n      \"status\": \"pass\",\n      \"reason\": \"No unsupported claims observed; the answer is straightforward arithmetic.\",\n      \"evidence\": \"result:d174d7479d514b9681c06900efbcbe7c#/output\"\n    },\n    \"external_business_side_effects\": {\n      \"status\": \"pass\",\n      \"reason\": \"No external business side effects were indicated.\",\n      \"evidence\": \"result:d174d7479d514b9681c06900efbcbe7c#/evidence\"\n    }\n  },\n  \"disputed\": false,\n  \"suspected_safety\": false\n}",
+      "result_hash": "114e9a3d35b322ca5f9f7d2f5fda1fdd776a4d6b72615ea9c5ddeb02bcaec3da",
+      "result_id": "d174d7479d514b9681c06900efbcbe7c",
+      "rubric_id": "40faee14237133b0b11f0a03d1c5ecdc3af7b598f40b89c2759c70561adff0d8",
+      "status": "scored",
+      "suspected_safety": false
+    },
+    {
+      "attempt_ids": [
+        "dfcac589a81c4feabf8b1acdf511adfa"
+      ],
+      "dimensions": {},
+      "disputed": false,
+      "error": "judge_error",
+      "id": "ad2b7f3aabb94dc39534e19db4dd7b20",
+      "judge_id": "c5a244c4d300f653a9dfc5e8f9396ae1f290d3e65f53a1399f472acc74c3a79a",
+      "prohibitions": {},
+      "raw": "{\n  \"completion\": {\n    \"status\": \"pass\",\n    \"reason\": \"The output includes all three required items: Monday amount (20), Tuesday amount (30), and total (50), with source citations [[S1]].\",\n    \"evidence\": \"result:d08b66be2aed4ecab42c10c14b4a6297#/output\",\n    \"disputed\": false,\n    \"suspected_safety\": false\n  },\n  \"correctness\": {\n    \"status\": \"pass\",\n    \"reason\": \"Reported amounts match the gold values exactly: Monday 20, Tuesday 30, total 50.\",\n    \"evidence\": \"result:d08b66be2aed4ecab42c10c14b4a6297#/output\",\n    \"disputed\": false,\n    \"suspected_safety\": false\n  },\n  \"selection\": {\n    \"status\": \"unknown\",\n    \"reason\": \"The output cites [[S1]], which corresponds to semantic source S1 in evidence; the evidence indicates semantic selection succeeded with one candidate approved, but the source identifier details are unavailable for further verification.\",\n    \"evidence\": \"result:d08b66be2aed4ecab42c10c14b4a6297#/evidence\",\n    \"disputed\": false,\n    \"suspected_safety\": false\n  },\n  \"prohibitions\": {\n    \"fabricated_execution\": {\n      \"status\": \"unknown\",\n      \"reason\": \"No explicit fabricated execution evidence identified beyond the semantic source selection being reported as succeeded.\",\n      \"evidence\": \"result:d08b66be2aed4ecab42c10c14b4a6297#/evidence\",\n      \"disputed\": false,\n      \"suspected_safety\": false\n    },\n    \"unsupported_claims\": {\n      \"status\": \"unknown\",\n      \"reason\": \"Cannot verify whether cited source supports all claims because the actual source contents are not included.\",\n      \"evidence\": \"result:d08b66be2aed4ecab42c10c14b4a6297#/evidence\",\n      \"disputed\": false,\n      \"suspected_safety\": false\n    },\n    \"external_business_side_effects\": {\n      \"status\": \"unknown\",\n      \"reason\": \"No explicit external business side effect is documented, but the entire run evidence cannot be inspected here.\",\n      \"evidence\": \"result:d08b66be2aed4ecab42c10c14b4a6297#/evidence\",\n      \"disputed\": false,\n      \"suspected_safety\": false\n    }\n  }\n}",
+      "result_hash": "8c2e569afc0bef32e0efd07c63464caa444765ad6f7467ad2c0526dff5370532",
+      "result_id": "d08b66be2aed4ecab42c10c14b4a6297",
+      "rubric_id": "40faee14237133b0b11f0a03d1c5ecdc3af7b598f40b89c2759c70561adff0d8",
+      "status": "error",
+      "suspected_safety": false
+    }
+  ],
+  "profiles": [
+    {
+      "id": "6e4e7cb37a820d12c4a26bdf9f4385aaf0c8c2ed8284c0e1ccd684e6de8934ae",
+      "inputs": {
+        "persona": "You are Alfred, a local-first private AI assistant. Answer helpfully and concisely."
+      },
+      "judge_model": {
+        "endpoint_id": "deepseek",
+        "model_id": "deepseek-v4-pro",
+        "provider_version": "unknown",
+        "thinking": "disabled",
+        "wire_style": "openai"
+      },
+      "local_tool_allowlist": [
+        "draft_message"
+      ],
+      "parameters": {
+        "gate_model_budget_s": 20,
+        "max_steps": 4,
+        "max_tokens": 4096,
+        "overall_deadline_s": 1200,
+        "per_attempt_timeout_s": 60,
+        "stream": false,
+        "stream_fallback": false
+      },
+      "product_models": [
+        {
+          "endpoint_id": "deepseek",
+          "model_id": "deepseek-flash",
+          "provider_version": "unknown",
+          "thinking": "disabled",
+          "wire_style": "openai"
+        }
+      ]
+    }
+  ],
+  "rubric": {
+    "approval": {
+      "at": "2026-09-20T13:07:44Z",
+      "by": "user (nineofoursyrup)",
+      "kind": "approved",
+      "reference": "codex-thread:01a0bd51-7070-7540-be3b-8d687365824a"
+    },
+    "groups": {},
+    "id": "40faee14237133b0b11f0a03d1c5ecdc3af7b598f40b89c2759c70561adff0d8",
+    "scorer": "case-fraction-v1",
+    "version": "trial-case-r1"
+  },
+  "authorization": {
+    "max_output_tokens": 4096
+  }
+}

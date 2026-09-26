@@ -264,6 +264,150 @@ def test_model_projection_uses_central_redactor_before_truncation():
     assert "secre" not in result.block.content[0].text
 
 
+def _project_array_through_public_registry(audit, *, limit, redactor=None):
+    import hashlib
+    from dataclasses import replace
+
+    from agent_alfred.events import CapturingSink, FanOutSink
+    from agent_alfred.messages import TextBlock, ToolCallBlock
+    from agent_alfred.redact import Redactor
+    from agent_alfred.tools import ToolContext
+
+    redactor = redactor or Redactor(())
+    sink = CapturingSink()
+    events = FanOutSink([sink], process_instance_id="projection", redactor=redactor)
+    registry = ToolRegistry(
+        (
+            replace(
+                declaration(),
+                fn=lambda args, ctx: ToolSuccess((TextBlock(audit),)),
+            ),
+        ),
+        clock=FakeClock(),
+        redactor=redactor,
+        model_content_limit=limit,
+    )
+    execution = registry.execute(
+        ToolCallBlock("c", "read", {}),
+        ToolContext("r", 0, "c", "cli", 30),
+        events=events,
+    )
+    finished = sink.events[-1].payload
+    assert finished.name == "tool.finished"
+    assert finished.model_content == execution.block.content[0].text
+    assert finished.audit_content == redactor.redact_text(audit)
+    assert finished.original_bytes == len(finished.audit_content.encode("utf-8"))
+    assert (
+        finished.content_digest
+        == hashlib.sha256(finished.audit_content.encode("utf-8")).hexdigest()
+    )
+    return execution.block.content[0].text
+
+
+@pytest.mark.parametrize(
+    "row_template",
+    [
+        '{"note":"SECRET","note":"safe"}',
+        '{"nested":[{"note":"SECRET","note":"safe"}]}',
+        '{"note":"SECRET","\\u006eote":"safe"}',
+        '{"note":"old","note":"safe"}',
+    ],
+    ids=["original-st01", "nested-object", "escaped-key", "nonsensitive"],
+)
+def test_array_projection_rejects_duplicate_members_before_publication(row_template):
+    from agent_alfred.redact import Redactor
+
+    secret = "review-hidden-key-1234"
+    escaped = "".join(f"\\u{ord(char):04x}" for char in secret)
+    row = row_template.replace("SECRET", escaped)
+    audit = " " * 100 + "[" + row + ',{"tail":"' + "x" * 500 + '"}]'
+
+    projected = _project_array_through_public_registry(
+        audit, limit=180, redactor=Redactor((secret,))
+    )
+
+    assert projected.startswith("[]\n[truncated ")
+    assert secret not in projected
+    assert escaped not in projected
+    assert "omitted rows are unknown" in projected
+
+
+def test_array_projection_rejects_duplicates_even_in_omitted_rows():
+    audit = '[{"note":"visible"},{"padding":"' + "x" * 500
+    audit += '","nested":{"note":"old","note":"safe"}}]'
+
+    projected = _project_array_through_public_registry(audit, limit=40)
+
+    assert projected.startswith("[]\n[truncated ")
+    assert "omitted rows are unknown" in projected
+
+
+def test_array_projection_keeps_complete_source_spans_and_unknown_boundary():
+    row = (
+        '{"note":"visible","number":1.234567890123456789,'
+        '"nested":{"note":"\\u006f\\u006b"}}'
+    )
+    audit = " " * 100 + "[" + row + ',{"tail":"' + "x" * 500 + '"}]'
+
+    projected = _project_array_through_public_registry(audit, limit=180)
+
+    assert projected.split("\n[truncated ", 1)[0] == "[" + row + "]"
+    assert "visible JSON rows are complete; omitted rows are unknown" in projected
+
+
+def test_array_projection_within_limit_retains_original_text():
+    audit = '  [{"number":1.234567890123456789,"note":"\\u006f\\u006b"}]  '
+
+    projected = _project_array_through_public_registry(audit, limit=180)
+
+    assert projected == audit
+
+
+def test_nonarray_projection_retains_existing_prefix_boundary():
+    audit = "ordinary text " * 40
+
+    projected = _project_array_through_public_registry(audit, limit=40)
+
+    assert projected.split("\n[truncated ", 1)[0] == audit[:40]
+    assert "visible prefix may end mid-field; omitted content is unknown" in projected
+
+
+def test_array_projection_preserves_exact_numeric_token():
+    audit = '[{"value":1.234567890123456789},{"value":2,"note":"tail"}]'
+
+    projected = _project_array_through_public_registry(audit, limit=36)
+
+    assert "1.234567890123456789" in projected
+    assert '"note"' not in projected
+    assert "omitted rows are unknown" in projected
+
+
+def test_array_projection_does_not_decode_escaped_registered_secret():
+    from agent_alfred.redact import Redactor
+
+    secret = "skFAKE123"
+    escaped = "".join(f"\\u{ord(char):04x}" for char in secret)
+    audit = '[{"note":"' + escaped + '"},{"note":"tail"}]'
+
+    projected = _project_array_through_public_registry(
+        audit, limit=75, redactor=Redactor((secret,))
+    )
+
+    assert secret not in projected
+    assert escaped not in projected
+    assert "omitted rows are unknown" in projected
+
+
+def test_oversized_array_projection_omits_partial_rows():
+    audit = '[{"id":1},{"memo":"' + ("x" * 1048600) + '"}]'
+
+    projected = _project_array_through_public_registry(audit, limit=35)
+
+    assert projected.startswith("[]\n[truncated ")
+    assert '"memo"' not in projected
+    assert "omitted rows are unknown" in projected
+
+
 def test_calendar_same_operation_replays_but_new_call_can_repeat_action():
     import sqlite3
     import threading

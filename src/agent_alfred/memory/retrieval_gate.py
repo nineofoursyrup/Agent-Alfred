@@ -295,6 +295,10 @@ def retrieve(
             evidence["latency_ms"] = max(0.0, (clock() - started_at) * 1000)
             return GateResult(evidence, None, (), "memory_storage_error")
         stores[kind].update(status="succeeded", hit_count=len(hits))
+        from agent_alfred.memory.chinese_recall import METHOD
+
+        if any(hit.relevance == METHOD for hit in hits):
+            stores[kind]["retrieval_method"] = METHOD
     evidence["timing"]["search_ms"] = max(0.0, (clock() - search_start) * 1000)
     selection_start = clock()
     selected_items, selected = [], []

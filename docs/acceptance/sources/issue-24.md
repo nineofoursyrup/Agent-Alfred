@@ -1,0 +1,466 @@
+# #24 决定：程序性记忆的匹配信号与注入时机
+
+来源：https://github.com/nineofoursyrup/Agent-Alfred/issues/24
+
+## Question
+
+程序性记忆（Skill）的**匹配信号**与**注入时机**。
+
+[决定：三类记忆的后端 Protocol](https://github.com/nineofoursyrup/Agent-Alfred/issues/5) 已定死了 `SkillCatalog` 的形状——`list() -> Sequence[SkillMeta]`、`load(name) -> str`（frontmatter 之后未经改写的正文）、名称只经已构建索引解析、用户目录同名整体覆盖内置且显式标记、同目录重名启动即失败、目录可注入。本票只定「拿到目录之后怎么用」。
+
+需要定的：
+
+- **匹配信号**：按什么判断某个 Skill 与当前这一轮相关？名称 / `description` / frontmatter 里的触发词 / 前一步的工具调用？还是交给模型自己从一份清单里挑？
+- **判断者是谁**：确定性匹配（关键词、正则）、检索门那个小模型、还是主模型？若用模型，**解析失败的确定性回退**是什么（与 [#17](https://github.com/nineofoursyrup/Agent-Alfred/issues/17) 的检索门回退同一类问题，回退函数不得只返回常量）。
+- **注入位置**：进系统提示词、还是作为一条历史消息、还是作为工具结果？系统提示词是**请求级**输入、永不入历史（`CONTEXT.md`「消息与内容块」），因此注入位置直接决定 Skill 正文会不会污染后续轮次。
+- **注入时机与生命周期**：每个 Run 判一次，还是每个 Step 重判？一旦注入，是否在整个 Run 内保持？
+- **注入几个、多长**：正文是完整 Markdown，可能很长。是否设上限、超限怎么办（截断需显式标记，不得静默降级）。
+- **`overrides_builtin` 在注入时怎么体现**：模型看到的是否要写明「这是用户改写过的版本」？
+- **Dashboard 上怎么看见**：哪一页显示「本轮加载了哪些 Skill、为什么」。它与检索门的 skip/hit 展示是同一类可观测性。
+
+### 已定前提（不重新裁决）
+
+- `SkillCatalog` 的方法集、覆盖规则、路径安全约束：见 [#5](https://github.com/nineofoursyrup/Agent-Alfred/issues/5) §12。
+- 内置目录随包分发在 `src/agent_alfred/skills/builtin/`，用户目录默认 `~/.agent_alfred/skills/`，两者均可注入。
+- 程序性记忆**不在记忆库的可替换框架里**：没有写入方，不进 `transaction_mode` / 幂等 / 遗忘那一套。
+
+### 交付
+
+匹配算法、注入位置与生命周期、失败回退规则写进 resolution comment，并给出离线确定性测试要断言的清单。
+
+
+## Comment https://github.com/nineofoursyrup/Agent-Alfred/issues/24#issuecomment-5654273925
+
+<!-- issue-24-skill-spec-r1 -->
+# SKILL-SPEC-r1：程序性记忆的选择、注入与运行证据
+
+## Problem Statement
+
+用户已经能维护和查看 Skill，但聊天尚不能可靠地选择、加载并使用它们。用户不知道某份流程为何被使用、是否真的送进模型，也无法预见多份长文档、模型故障或跨轮继承会怎样影响回答。只把目录接到提示词上，会引入错误套用流程、输入超限、重复选择、预算被判断步骤耗尽以及历史证据失真的问题。
+
+## Solution
+
+在 CLI 和 Dashboard 的用户聊天 Run 中提供明确指定、禁用和自动发现三条一致路径。在回答前选择一次 Skill，把完整正文作为请求级 system 的独立区段，在整个 Run 中保持；下一 Run 重新判断。选择失败有确定性的保守回退，明确指定失败不能静默忽略，运行详情能区分选择、加载、准备和真实发送。聊天经 Graph 执行或合法回退到普通循环时沿用同一选择、Step 预算和总截止时间。
+
+本文是 #24 的唯一实施与验收合同，身份 **SKILL-SPEC-r1**；Q1–Q28 保持访谈编号，CE-01–CE-30 是本次对已确认行为的验收编号化，首次在本文分配，没有撤销或重编号既有 #24 CE。正文自包含，源码和旧规格链接用于来源与回归定位，不需要访问私有聊天或未发布 companion 才能实施。发布时以完整 resolution comment 为远端权威，本文为逐字本地镜像；修订须更新版本与摘要，不并行维护两份不同合同。
+
+## User Stories
+
+1. As a 聊天用户, I want 明确指定或禁用本次 Skill, so that 本次流程由我控制且错误名称不会被忽略。（Q1、Q4、Q24）
+2. As a 聊天用户, I want 系统根据任务和近期上下文自动发现适用 Skill, so that 不必每次记住名称。（Q5、Q6、Q13、Q14）
+3. As a 聊天用户, I want 当前明确要求和既有工具权限得到尊重, so that Skill 不会替我授权动作或暗定冲突优先级。（Q2、Q12）
+4. As a 聊天用户, I want 一次 Run 使用稳定的完整流程而下一 Run 重新选择, so that 中途行为不会因文件变动或重复判断漂移。（Q3、Q7、Q25）
+5. As a 聊天用户, I want 在选择故障、内容超限或目录不可用时得到准确结果, so that 能区分降级回答和未完成的明确要求。（Q10、Q11、Q15、Q16、Q21、Q25）
+6. As a 聊天用户, I want 判断步骤不耗掉最后一个回答 Step，取消和总超时被遵守, so that 预算有限时仍保有回答机会且停止请求不会被忽略。（Q18、Q19、Q20）
+7. As a 使用聊天 Graph 的用户, I want 各 Assistant 节点和合法回退共享 Skill 与预算, so that 换执行路径不会重新选择或扩大额度。（Q8、Q23）
+8. As a 用户, I want 查看本 Run 使用 Skill 的来源、降级和真实发送证据, so that 当前目录与当时版本不会混为一谈。（Q9、Q22）
+9. As a Skill 作者, I want 明确正文、附件、重启生效与容量边界，并获得可复制示例, so that 能写出 v1 实际可用的自包含 Skill。（Q17、Q25、Q26、Q27）
+10. As a 维护者, I want 用真实产品链路和确定性模型边界验证以上行为, so that 空目录、私有 helper 或假 UI 结果不能冒充完整交付。（Q28）
+
+## Implementation Decisions
+
+### 来源、确认与基线
+
+- S0：本次 #24 grilling。用户依次对 Q1–Q3、Q4–Q9、Q10–Q12、Q13–Q17、Q18–Q23、Q24–Q28 回复“都按建议”，随后对整体结论回复“确认”。后续明确调用 `to-spec` 授权整理及 tracker 发布；不是新的设计访谈或产品实施授权。
+- S5：[#5 §12 SkillCatalog](https://github.com/nineofoursyrup/Agent-Alfred/issues/5#issuecomment-5428337164)。`list() -> Sequence[SkillMeta]`、`load(name) -> str`；name/description/source/overrides_builtin；索引解析名称，用户同名整体覆盖内置并显式标记，同目录重名启动失败，目录可注入，正文为 frontmatter 后原样文本。
+- S16：[#16 Implementation Decisions §1–§7 与 V01–V19](https://github.com/nineofoursyrup/Agent-Alfred/issues/16)。完整安全会话组、规范 JSON 计量、检索预留、来源登记和真实 Attempt 说明继续有效；Q18/Q20 的明确修订见下表。
+- S17/S31：[#17 验收 A12–A24](https://github.com/nineofoursyrup/Agent-Alfred/issues/17)及[#31 R03–R07、R09、R12、R15 与 A12–A24、A41–A42、A49–A51](https://github.com/nineofoursyrup/Agent-Alfred/issues/31#issuecomment-5588135839)。Skill 目录展示已有、匹配与运行证据归 #24；隔离与无证不发送的边界仍适用于选择器读取的会话。
+- S25：[GRAPH-SPEC-r1](https://github.com/nineofoursyrup/Agent-Alfred/blob/5d16e21d876eb67994bb3a3b5d6c121689a10652/docs/design/issue-25-graph-spec.md)。保留 Graph 副作用三态、固定收尾、预算共享、波撤销不退实耗及 finalizer 独占记录。其 CE-06/07/08/15/16 是本票 Graph 回归来源，不能用新增 Skill 覆盖原合同。
+- 固定核查基线：`5d16e21d876eb67994bb3a3b5d6c121689a10652`。实施前重新核对远端、原生依赖、认领与实际 worktree；基线事实不冒充未来已实现行为。
+
+| 既有条款 | 本次明确修订或保留 | 来源 |
+|---|---|---|
+| #17 A15、#31 A15：max_steps=1 被检索门耗完 | 替换为模型判断仅在 remaining>=2 时启动；1 Step 留给回答，0 仍无模型请求。原 A15 的“不把 selected 冒充发送”保留。旧通过记录不证明新行为。 | Q18；CE-16 |
+| #16 §4：gate/首次回答共同窗口及预留 | 前置独立 Skill 选择器窗口；正文加载后仍让 gate/首次回答共用安全窗口。两个阶段允许不同，不向 gate 注入正文，不因空召回补回历史。 | Q6、Q7、Q20；CE-18/19 |
+| #31 A42：尚无 Skill 匹配，页面不能伪造 | 新增实际运行证据后更新“尚无匹配”的过时文案；只读目录、重启生效、无页内编辑/注入控制均保留。 | Q9、Q25；CE-03/22 |
+| #25 不承担完整 Host 聊天 Graph 接线 | 本票承担已确认的 Skill 一次选择、真实聊天 Graph 共享与总截止时间接线；不新增选图 UI 或业务 workflow，不放宽回退许可。 | Q8、Q23；CE-25/26 |
+
+### Q1–Q4：入口、指令效力与生命周期
+
+- **Q1**：明确点名和自动发现并存。明确点名是必须处理的选择请求；无法完成时不能悄悄按普通聊天继续。
+- **Q2**：Skill 是默认执行流程，当前用户明确要求优先；不得改变既有工具授权。用户覆盖内置是内容替换，不提升指令权限。system 包装中须明确这条层级；任意 Markdown 冲突识别属于模型行为，不声称提供静态完备证明。
+- **Q3**：每个聊天 Run 开始时选择一次，选择与正文快照在本 Run 中固定；不因 Step 或工具结果重选/追加。下一 Run 重新判断，安全近期会话可提供语境，但不自动继承已加载集合。
+- **Q4**：明确指定时只使用指定集合，不自动加其他 Skill。首行 `/skills A B` 指定、`/skills off` 禁用；普通自然语言仅属于自动发现输入，提到名称不等于强制调用。未知指定名称准备失败。命令精确语法由 Q24 规定。
+
+### Q5–Q6：选择器及其输入
+
+- **Q5**：新增独立结构化 Skill 选择调用，复用当前检索门模型配置/路由；未指派 gate 模型沿既有规则用主模型，已明确指派但不可用则规则回退，不能暗换模型。它只返回名称，不输出业务回答、不暴露或执行工具，不混进检索门的 retrieve/hit/skip 指标。选择器占共享 Step/时间预算并记录所有真实 Attempt 的 Token/费用；明确指定、禁用、空目录不调用选择模型。重试/流式回退沿既有模型链，不为格式修复额外调用。
+- **Q6**：选择器只读当前有效任务、按既有来源安全规则筛出的当前 Session 近期完整会话组，以及 name/description 清单。无 Skill 正文、长期记忆召回结果或历史工具账摘要；无新增 triggers；不读取本 Run 尚未发生的工具结果。使用既有完整组/N/隔离与发送前来源登记，不建立旁路历史读取。来源无法核实或登记失败必须阻止无证发送，不能作为普通模型选择失败吞掉。
+
+### Q7–Q9：注入、执行范围和 UI
+
+- **Q7**：独立 Skill 区段加入回答请求的 system；正文逐码点保留，包装列明 name、builtin/user、overrides_builtin 与 Q2/Q12。不得把正文转成对话消息/工具结果或写入 agent_log。选择器和记忆检索门的 system 都不含此区段；同 Run 的每个回答 Step/Attempt 携同一份正文与顺序。当前时间等既有请求级字段仍依原合同更新，不要求整个 system 字符串完全相同。
+- **Q8**：CLI/Web 的用户聊天 Run 启用；聊天 Graph 中的 Assistant 节点共享父 Run 选择，不按节点重选。提炼、probe 等系统任务默认不启用。本票不让纯分类 llm_node 自动获得 Skill 指令，已确认注入对象是回答/Assistant 路径。
+- **Q9**：运行详情“本次输入”区分：选择方式（explicit/model/fallback/disabled/empty/unavailable）、所选名称与顺序、来源/覆盖、加载状态、入模容量排除、准备失败及每个真实 Attempt 的实际携带。模型选择只解释“选择器选中”，不编造语义理由、置信度或模型未返回的解释。回退显示规则原因；未知不填零。Memory 页继续只读当前目录与正文；MainBar 仅准备失败或降级时提示，不给每个正常回答插入技能播报。部分自动跳过也须可见；选择器合法空列表不算故障。
+
+### Q10–Q14：保守回退、容量与结果校验
+
+- **Q10**：模型不可用、普通调用失败、局部超时或结构解析错误进入确定性保守回退，优先漏选而非误选。回退依据当前任务和目录计算，不能恒定为空或全部。无匹配可普通回答，但保留降级状态。取消、总截止、来源/登记失败和输入准备失败不属于可吞掉的普通错误。
+- **Q11**：固定上限为最多 3 个不同名称、每篇原样正文 8,000 Unicode 码点、完整 Skill 注入区段 16,000 码点（包含名称、来源、覆盖、指令及分隔包装）。整篇加载，绝不截断。等于上限可用，超过不可用；组合上限按实际构造区段重算，不能简单相加正文。完整模型请求仍经 #16 规范 JSON 输入计量，转义开销另计，正文限制不是 Token 承诺。
+- **Q12**：加载顺序只决定排序与容量，不授予隐含指令优先级。兼容要求合用；模型识别出影响执行/交付的冲突，向用户澄清并暂停依赖该选择的操作，不受影响的工作可继续。此行为由明确包装提示和既有工具权限共同支持，不增加静态通用冲突检测器。
+- **Q13**：回退只匹配当前任务中“使用 NAME”“用 NAME”“按 NAME”“use NAME”的直接表达，NAME 必须完整、区分大小写地等于目录键；排除代码块、行内代码及含否定表达的同一分句。不按 description 关键词、名称片段、历史中的指令猜测；按首次出现顺序去重，按 Q11 最多取前 3 个，超额候选记录数量排除。目录内容不同可改变结果。
+
+  为使上述词法规则可直接实现，以下是机械展开，不引入语义分类器：中文动词后允许空格/tab 为零或多个，英文 use 不区分大小写且须独立词并跟至少一个空格/tab；名称后不能跟 `[a-zA-Z0-9_-]`，不作 casefold/NFKC 或路径解析。先排除 Markdown fenced/indented code、code spans、blockquote，再按 `，,。.!！?？;；` 与换行分句；英文 `use` 的匹配前也须词边界。否定采用有限保守表：中文 `不`、`别`、`勿`、`禁止`、`无需`、`无须`；英文独立词 `no`、`not`、`never`、`without` 及 `don't`/`don’t`，英文比较不区分大小写。命中否定的整分句不选；名称自身中的字符不作为否定表达。此规则宁可丢弃复杂表达，不宣称理解双重否定或所有自然语言引述；新增词法行为须附固定夹具，不能未经裁决改成泛关键词推断。
+- **Q14**：选择器响应为单个 JSON 对象，唯一字段 `skills`，值为长度 0–3 的字符串数组；名称精确属于发送清单，唯一且按相关性排序。合法空数组是正常未选择，不回退。未知名称、重复、超数、额外字段、重复 JSON 键、夹带说明或 fenced JSON、非字符串项均使整个结果无效。拒绝工具调用产出；不从非法输出里捡合法项、不新增纠错调用。保留发生过的 Attempt 与成本。
+
+### Q15–Q17：加载失败与附件范围
+
+- **Q15**：明确指定先按首次出现去重；数量超限、未知名称、任何 load 失败、单篇或组合超限，整个请求准备失败，在回答模型/工具执行前给出名称及安全原因；不留下半份已使用集合。用户修正后新提交，不在原 Run 自动降为普通回答。
+- **Q16**：自动选择（model 或 fallback）按选中顺序逐份加载；load 失败、单篇过长或加入后区段超限，跳过并记录，继续检查后面已选项。无候补搜索、无再次选择调用；全部跳过可普通回答并说明降级。集合完成后冻结，后续总输入不足不能撤掉 Skill，依既有历史/证据裁剪规则处理，仍不足就明确失败、不重跑副作用。准备与已发送的区分保留真实既有 selector Attempt，不把“回答零请求”写成整 Run 零实耗。
+- **Q17**：只加载 SKILL.md 正文，不递归附件，不据引用自动执行脚本。辅助文件只有在已有获准工具实际取得时才能使用；取不到须说明缺项，不能声称完整执行。路径引用不扩大 Catalog 的索引边界，Skill 加载器不读仓库外任意路径。
+
+### Q18–Q20：Step、时间和两阶段输入
+
+- **Q18**：顺序为 Skill 选择 → 记忆检索门 → 回答。两个判断各自仅在共享 remaining>=2 且仍有时间/模型可用时调用模型，否则走各自既有/本票确定性回退；不会为了保留“判断必调”而用掉最后一个回答 Step。0 Step 任何模型均不请求；正常空记忆/安全输入夹具下，1 Step 是回退/回退/回答，2 Step 是 selector/gate回退/回答，至少3 Step 可 selector/gate/回答。明确指定、禁用或空目录不消耗 selector Step，空出的额度可以被 gate 使用。取得的 StepLease 无论成败不退，重试共用 Lease；不保证一个回答 Step 足以完成多工具或多节点任务。
+- **Q19**：复用 `gate_model_budget_s`，默认 5 秒，选择器局部 deadline=min(本次选择开始+配置时长, Run绝对deadline)。重试不重置期限。普通故障/局部超时回退；用户取消或 Run 总截止立即进入既有终止/收尾，禁止下一请求或业务节点。总截止存在时全 Run 传同一个绝对单调时刻，不在 Graph/Assistant/回退间重新获得相对时长；未配置总体上限仍沿既有语义。先前已执行的工具不假称取消、回滚或未发生。
+- **Q20**：阶段一，为 selector 构造自身安全窗口及规范请求，复用 gate 输入限额（未单独配置则继承通用 input_character_limit）；不先为最大 Skill 正文挤掉历史。清单受 Q21，按完整历史组从旧到新裁剪后，固定任务/清单/包装仍不能容纳，则 selector 输入准备失败、不发送，不能以模型故障名义吞预算错误。阶段二，实际选择/加载结束后，以真实 Skill system、当前问题、工具声明、安全工具证据及长期记忆最大预留，按 #16 的规则计算 gate 与首次回答共同安全窗口。两阶段窗口可不同且分别记证据。gate system 不含 Skill；回答 system 含 Skill；不因召回少、Skip 或实际小于预留而补回旧历史。后续 Step 保持 Skill，安全失效处理始终优先；来源不确定不作为“零历史”继续。预算耗尽仍可让 gate 走确定性规则查真实 Store，但不绕开 Store 失败、全命中不可装入等既有停止条件。
+
+### Q21–Q23：清单、证据与 Graph
+
+- **Q21**：完整有效目录按 name 的确定性 ASCII 顺序生成仅有 name/description 的清单；最多 100 项，紧凑 JSON 序列化后最多 16,000 Unicode 码点，使用 #16 的非 ASCII 不强制转义、固定键序与无额外空白规则。任一超限则整个自动模型选择跳过，回退在真实有效索引上按 Q13 进行；不截 description、不只发送前缀。上限不改变 Catalog 有效性，不影响明确指定任意合法名称；实际完整 selector 请求另受 Q20 限制。
+- **Q22**：system 沿现有中央 fail-closed 脱敏后进入持久 trace。新增 Skill 元数据记录名称、来源/覆盖、正文指纹、码点数、选择方式与结果，不增正文日志/会话副本。正文指纹用原样正文 UTF-8 的 SHA-256，保留版本说明；所有新字段同样过中央脱敏，不用散列或错误文本绕过脱敏。删改文件不追溯擦除旧 trace；历史查看基于当时证据，不拿当前 Catalog 回填旧正文。被裁剪、不完整或缺失时显示不可用/未知。`StepStarted` 是准备证据，不单独证明网络已发送；真实 Attempt/传输记录才证明实际携带。沿既有 ModelResult/账本计量，不从可能缺席的事件反推成本。新 selector 的会话输入照样参加持久消费关联，防止绕过遗忘隔离。
+- **Q23**：聊天 Run 在进入 Graph 前形成不可变 Skill 快照，经最小上下文接线传给全部 Assistant 节点；图内节点不重新跑 selector，不复制新预算。合法普通回退沿用同一快照、剩余 RunBudget、绝对 deadline。保留 S25 的 none/occurred/unknown 与固定收尾限制：有副作用或未知、强制收尾、用户取消或总体超时均不能靠回退重做。无动作终点不为使用 Skill 伪造回答。补必要 Host/Graph 集成，不重做 Graph 的记忆策略、调度或选图产品 UI。
+
+### Q24–Q28：语法、快照、配置与交付
+
+- **Q24**：仅识别当前请求物理第一行的 `/skills` 控制行，命令后用空格/tab 分隔名称，名称满足现有 `[a-zA-Z0-9_-]{1,64}` 并按原大小写索引。`/skills off`（唯一未加引号 token）禁用；`/skills "off"` 指定名为 off 的 Skill；多个名称中 off 是名称。双引号仅包裹合法名称，不启用 shell 展开、反斜线转义或路径语法。去除控制行后剩余任务须含非空白文本。空列表、未闭合引号/非法字符/额外控制语法均错误；第二行或代码块中的相同文字是普通任务内容而非命令。原始用户请求依既有会话保存策略保留，不覆盖/改写历史原文；selector/gate/answer 均用去掉控制行的有效任务。历史模型投影剥离以前确实识别的控制行，保留原 Run 来源身份和其余内容，不让旧命令决定新 Run 模式；无效或普通文字不能被错当已生效命令剥除。
+- **Q25**：目录空正常跳过，不可用自动降级、明确指定失败，禁用不需要访问 Catalog。保持同目录重复/非法目录的启动失败规则，不把配置错误兜成空目录；运行时 absent/unavailable 的状态与成功构造的空目录分开。Catalog 启动快照，外部文件编辑及 create_skill 后重启才加载，本票无热重载。
+- **Q26**：数量/正文/区段/清单限制为明确文档化的 v1 固定规则，无新设置项。复用 gate 模型和局部时限；现有设置说明明确同时用于 Skill 自动选择与记忆检索门。通用和 gate 输入限额沿原配置优先级，不新增第三套配置。
+- **Q27**：不创作随包内置的 Skill 内容集；文档提供可复制、符合现有校验、自包含的单份 SKILL.md 示例及安装/重启/指定运行步骤。验收目录包含真实非空内置/用户文件与覆盖，不以空目录 PASS 证明功能。
+- **Q28**：真实目录、解析、Host、SQLite/FTS、Registry、Graph、记录、HTTP/SSE 和浏览器执行；仅模型外部边界用 ScriptedModel/可控本地传输。覆盖下述 CE，运行项目适用门禁，不沿用其他 Issue 的豁免。离线证明协议/执行，不宣称证明真实模型的语义选择质量。
+
+### 模块与接口责任
+
+在 Run 输入准备边界集中实现控制解析、选择、加载与不可变快照；接入 `RuntimeHost.submit` 的既有准入、配置捕获与 finalizer，不由 UI、单个 Graph 节点或工具分别持有选择权。Catalog 的方法集不扩张，未新增触发词字段。Assistant 接收已准备的快照，分别构造回答与 gate system，Graph 上下文传递同一不可变值及绝对 deadline。内部类型与文件布局由实施者按现有惯例选择。
+
+模型选择是独立 purpose/阶段，拥有自己的真实 Attempt 与输入来源证据，不写 tool_ledger 伪造工具动作。最小解释元数据通过既有 Run 查询、记录与 SSE 暴露，遵守 process_instance_id、state_revision、记录 pending/recorded/failed 和迟到响应约束。持久字段优先复用已有 Run 输入/遥测结构；确需 schema 变更则新增编号迁移，不修改已发布迁移，不替调用方 commit/rollback。无额外会话存储或持久 Skill 正文库。
+
+固定源码接缝均基于上述基线：`skills/catalog.py`，`runtime/host.py`、`runtime/execution.py`、`runtime/memory.py`、`runtime/input_budget.py`，`loop/assistant.py`、`loop/budget.py`，`graph/context.py`、`graph/nodes.py`，`gateway/web/memory_api.py`、运行详情查询/页面，`events.py`、`trace.py`、`redact.py`。遵守 CONTEXT.md 的 Run/Step/Attempt、工作记忆/运行转录、程序性记忆、覆盖术语；ADR-0003/0005/0009/0012/0024/0026 的脱敏、权限、事务、预算、收尾与准入所有权不变。
+
+## Testing Decisions
+
+测试合同已由 Q28 及整体确认批准。以下测试均为未来必需验收，本文不声称观察到缺陷或已经 PASS。
+
+1. **P1 完整 Run：** RuntimeHost.submit → 既有 wait/结果查询 → 真实记录读取。临时真实 Skill 目录、SQLite/FTS、会话与来源服务、Registry、RunBudget、事件汇和 finalizer；模型通过可注入 ModelClientFactory/ScriptedModel 驱动。断言实际 ModelRequest、可见结局、持久输入来源/账与原始会话，不用私有 helper 调用次数替代公开行为。
+2. **P2 实际发送：** 复用 Adapter + 本地 MockTransport/受控传输与 Attempt 观察 seam。验证首个真实网络往返之前的证据登记、重试/流式回退、编码或登记失败零发送、已发送失败的成本保留。传输捕获结果不能由 ScriptedModel 自称“已发送”代替。
+3. **P3 用户入口：** 同一 Host 的真实 CLI 和 HTTP/SSE + Playwright 浏览器。测试命令、结果、运行详情、本次输入、Memory 目录、reload/重启/重连/迟到响应。HTTP 状态与错误身份先校验再读字段；不使用静态 JSON 伪造产品后端。沿用现有错误结局及入口映射，不为本票臆造第二套记录状态。
+4. **P4 Graph：** 真实 GraphBuilder/compile/invoke/GraphRegistry、Assistant、RunBudget 与 Host 聊天执行适配，通过现有可注入生产接缝选择测试图；至少两个 Assistant 节点、合法回退及禁止回退各一条。不要求新增用户选图 UI，不能 mock GraphResult 或把节点私测当全 Run 接线。
+5. **P5 文档/安装：** 可复制示例经实际 SKILL 校验和临时安装目录运行；wheel/sdist 在干净环境验证相关资源、导入及运行入口。
+
+时间、取消、文件/传输故障与页面迟到响应通过注入 Clock、Event/barrier、受控 IO 在精确边界排序；不用 sleep 或概率竞态。成功加载必须来自真实文件；异常分支可在 Catalog/文件外部读取边界注入故障，不能替换选择器、预算、加载筛选或持久化业务结果。
+
+先例（基线目录 `src/agent_alfred/evals/deterministic/`）：`test_memory_page_http.py`、`test_runtime_memory_gate.py`、`test_gate_client_routing.py`、`test_gate_attempt_preservation.py`、`test_memory_input_attempts.py`、`test_graph_nodes.py`、`test_graph_recording.py`、`test_graph_review_regressions.py`、`test_host_lifecycle.py`。扩展既有浏览器链路，不以自建 UI mock 替代它。
+
+适用门禁依据固定主线 `.github/workflows/ci.yml`：`uv sync --extra dev --extra mcp --locked`；`uv run ruff check`；`uv run python scripts/check_skills.py`；`uv run python scripts/check_env_example.py`；`uv run --extra mcp pytest`；`uv build`；`uv run python scripts/check_mcp_installations.py --output <artifact-report-path>`；`npm ci --ignore-scripts`、`npm run typecheck`、必要 Chromium 安装后 `npm run test:browser`。保留 wheel/sdist 基础与 MCP extra 干净安装验收。Linux CI 无本票豁免；无法运行的必需检查如实记 NOT RUN/BLOCKED，不列为通过。实施还需固定候选的独立 Standards/Spec 双轴；不因规格发布宣称已有审查结论。真实计费模型运行需另行授权。
+
+## Critical Counterexamples
+
+本节是唯一权威反例定义。所有 CE 的确认来源为 S0 对所列 Q 的逐项及整体确认；编号与测试展开属于等义整理。每条均 **CONFIRMED / NOT RUN**。测试应保留原始请求、实际模型输入与 public 结果证据；只有满足前提和时序才可计为该 CE 通过。
+
+### CE-01 明确指定与禁用不调用选择器
+- 来源：Q1/Q4/Q24。前提：真实 Catalog 有 A、B、off；模型可用且预算充分。
+- 操作：依次提交 `/skills A A B\n整理材料`、`/skills off\n整理材料`、`/skills "off"\n整理材料`。
+- 预期：分别固定 A/B、空集合、off；顺序去重，不自动追加，三条均无 selector Attempt；禁用时 Catalog 读取故障也不阻止任务。原文入会话、有效任务进模型；记忆 gate 仍可按自身规则运行。
+- 接缝/控制：P1+P3，捕获实际三类请求和持久记录；不同 Run 隔离。
+
+### CE-02 指定错误不能部分执行
+- 来源：Q4/Q15/Q24。前提：A 有效，Missing 不存在，四个不同有效名称另备。
+- 操作：分别提交 A+Missing、四个名称、空命令、未闭合引号、只有控制行无任务、路径形名称；再修正为有效 A+任务重提交。
+- 预期：错误项准备失败，零 selector/gate/answer 发送与工具副作用，原因可操作，无半份“已使用”；修正后的新 Run 正常。重复去重后不超3不误拒绝。
+- 接缝/控制：P1+P2+P3；真实目录，传输计数及操作账为证据。
+
+### CE-03 启动快照与覆盖
+- 来源：S5、S31/A41/A42、Q7/Q25。前提：内置 A 与用户 A 正文不同。
+- 操作：启动→指定 A→编辑/删除文件→同进程新 Run→重启→新 Run；另测同目录重名、非法路径/符号链接启动。
+- 预期：用户正文整体取代内置且包装/页面标覆盖；同进程保持旧快照，重启才变；配置失败不伪装空目录。Catalog load 不拼接用户路径。
+- 接缝/控制：P1+P3；实际文件及进程生命周期，无目录结果 mock。
+
+### CE-04 选择器输入和正常空选择
+- 来源：Q5/Q6/Q14。前提：有不同 description 的 A/B、同 Session 安全历史、另一 Session、被隔离组、长期记忆及工具账标记。
+- 操作：自动模式捕获 selector 输入，先返回合法 B/A，再在新 Run 返回空数组。
+- 预期：仅有效任务、安全近期会话和完整 name/description 清单，无其他 Session/隔离/正文/召回/工具账标记；第一次按 B/A 加载，第二次无回退、不伪造故障；selector 无工具能力。
+- 接缝/控制：P1+P2，真实来源服务及确定性输出。
+
+### CE-05 结构输出整体作废
+- 来源：Q10/Q14。前提：自动模式，任务“使用 A”，目录有 A/B。
+- 操作：逐个输入未知名、重复名、4项、非字符串、额外键、重复 JSON 键、代码围栏、夹带解释、工具调用结果。
+- 预期：每个结果整体无效，不提取部分合法项；进入 Q13，仅依任务匹配 A；无格式修复追加模型调用，已产生 Attempt 费用保留。
+- 接缝/控制：P1+P2；固定响应表，对照合法空数组。
+
+### CE-06 回退不是常量或片段匹配
+- 来源：Q10/Q13。前提：选择模型故障，目录 A、AB、B。
+- 操作：分别输入“使用 A”“用 B”“按 AB”“use A”“普通问题”“使用 ABC”；更换目录去掉 A 再测；输入四份直接表达再测限数。
+- 预期：分别 A、B、AB、A、空、空；目录无 A 不匹配；按首次出现去重只取前三，排除可见。不因 description 重合加载额外项。
+- 接缝/控制：P1，真实不同目录和请求，固定模型故障。
+
+### CE-07 否定和代码示例不能触发回退
+- 来源：Q13。前提：A/B 存在，模型不可用。
+- 操作：依次输入“不要使用 A”“use A, do not use B”、代码块/行内代码/引用块中的“使用 A”，以及“不要使用 A；使用 B”。
+- 预期：依次空、A、空、B；更长名称不匹配短名，跨分句否定不污染另一分句。无泛语义准确率承诺。
+- 接缝/控制：P1；词法正反夹具覆盖大小写、标点与名称边界。
+
+### CE-08 清单边界不能静默裁前缀
+- 来源：Q21/Q26。前提：真实目录依次100/101项，以及序列化清单16,000/16,001码点；名称顺序故意打乱。
+- 操作：自动任务及同目录明确指定末尾名称。
+- 预期：等号允许完整清单按名称排序发送；超出整体不发 selector，直接回退且有原因；不截 description、不取前100。明确指定仍可用，目录未被判无效。
+- 接缝/控制：P1+P2；真实文件，独立构造临界值，核对捕获序列化输入。
+
+### CE-09 指定正文与区段超限
+- 来源：Q11/Q15。前提：8,000/8,001码点正文；包装后区段16,000/16,001；其他输入足够小。
+- 操作：明确指定临界单篇及多篇组合。
+- 预期：等号完整通过，超出整 Run 准备失败，无回答/工具执行、不截正文或隐去其中一份；UTF-8字节数不替代码点。
+- 接缝/控制：P1+P2；含中文/emoji/组合字符和真实包装的固定夹具。
+
+### CE-10 自动跳长项仍检查后项
+- 来源：Q11/Q16。前提：返回 A/B/C，A正常，B单篇或加入后区段超限，C可装入。
+- 操作：选择完成→逐项装入→回答。
+- 预期：A/C 全文进入，B的具体排除原因可见；不是遇B即停，也不另找D、不二次选择。最终固定集合在后续 Step 不变。
+- 接缝/控制：P1+P3；实际文件尺寸，捕获 system 与页面说明。
+
+### CE-11 加载失败的两种结果
+- 来源：Q15/Q16。前提：选中 A/B，B 的公开 load 边界故障；另测全失败。
+- 操作：明确指定与自动选择分别运行。
+- 预期：指定整体失败，自动保留可用A/全失败则无Skill普通回答且提示；不泄露原始异常敏感值，前置 selector 已有费用不丢失。
+- 接缝/控制：P1+P3；仅在读取边界注入受控故障，加载筛选为真实实现。
+
+### CE-12 正文载体与优先级
+- 来源：Q2/Q7/Q12。前提：正文含独特换行/空格标记及互相冲突的两份流程。
+- 操作：明确指定→捕获 selector/gate/answer与会话；脚本回答请求澄清且不调用依赖该决定的工具。
+- 预期：完整正文仅在回答system独立区段，元数据与当前用户优先、冲突澄清提示存在；agent_log 无自动复制正文。只证明包装/通路与脚本执行，不冒称真实模型必能识别任意冲突。
+- 接缝/控制：P1+P2；正文逐码点比较，真实会话/工具账。
+
+### CE-13 同 Run 固定与下一 Run 重选
+- 来源：Q3/Q7。前提：一个 Run 含工具往返两个回答Step及网络重试。
+- 操作：首步后触发文件变更/产生新的任务线索，再运行第二步；下一 Run 改任务并让 selector 选另一份。
+- 预期：本Run不重选/不追加，所有回答Attempt正文与顺序固定；下一Run重新判断，无上次加载集合强制继承。时间字段可按现有逻辑更新。
+- 接缝/控制：P1+P2，Event 排定变更时机。
+
+### CE-14 控制行不污染后续模型历史
+- 来源：Q24。前提：已保存一次有效指定和一次 off 命令的完整会话组，另有普通代码示例。
+- 操作：下一Run无控制行；再测第二行命令、围栏中的命令和无效旧命令。
+- 预期：原始会话未改，模型历史投影仅剥离确实识别的控制行，来源Run身份保留；本次重新自动选择，普通文本未被执行/错删。
+- 接缝/控制：P1+P3；真实跨Run会话与输入证据。
+
+### CE-15 空目录、不可用与禁用
+- 来源：Q5/Q25。前提：分别空Catalog、无可用Catalog、读取故障。
+- 操作：自动/指定/off 三模式。
+- 预期：空目录正常不调selector；不可用自动降级、指定失败；off不依赖目录，无假“空目录”或“命中0”的故障报告。
+- 接缝/控制：P1+P3；启动路径与运行时不可用分开测试，不吞非法配置。
+
+### CE-16 0/1/2/3 Step 及绕过选择
+- 来源：Q18；替代 S17/S31 A15 的旧1Step预期。前提：小输入、空记忆、模型成功，目录非空。
+- 操作：以0/1/2/3预算自动运行，再测明确指定、off、空目录的2Step。
+- 预期：0零模型；1仅回答；2为selector+回答；3为selector+gate+回答。两个模型判断不足额度走规则，不退已取Lease。绕过selector的2Step允许gate+回答。
+- 接缝/控制：P1+P2；按purpose、真实Attempt与剩余预算核对，不按事件数量猜。
+
+### CE-17 局部超时、总超时、取消
+- 来源：Q19。前提：可控单调时钟、selector阻塞及重试。
+- 操作：分别仅局部期限到、Run总期限到、用户取消，然后释放迟到结果。
+- 预期：只有局部超时允许规则回退后继续；总体截止/取消无后续模型或业务节点，迟到成功不恢复；重试期限不重置，先前实耗保留。
+- 接缝/控制：P1+P2/P4，FakeClock与barrier，不用真实等待凑超时。
+
+### CE-18 两阶段窗口与记忆预留
+- 来源：Q6/Q7/Q20；S16 §4/V07–V09。前提：较长但合法Skill、安全N组历史、空/满两种检索结果。
+- 操作：捕获selector窗口→加载正文→冻结gate/首答共同窗口→分别空/满召回。
+- 预期：selector可比后两者多历史且有实际来源证据；gate不含Skill、首答含；后两者共享安全窗口，空召回不补历史；预留按规范JSON转义上界计算。
+- 接缝/控制：P1+P2；真实SQLite/FTS和统一计量，不mock预算成功。
+
+### CE-19 固定输入放不下不能吞为模型失败
+- 来源：Q11/Q20；S16 V05/V06/V09/V14。前提：分别selector固定输入超限、已加载Skill+固定回答输入+预留超限、后续工具转录增长超限。
+- 操作：逐步耗尽可裁历史/工具证据，再尝试对应模型请求。
+- 预期：该请求发送前明确失败，不能以回退吞掉固定输入错误或裁Skill/当前任务/人格/工具声明；先前真实selector/工具成本保留，已执行动作不重跑、不虚造新Attempt。
+- 接缝/控制：P1+P2，临界等号/加一码点及控制字符转义夹具。
+
+### CE-20 selector 来源失效与登记失败
+- 来源：Q6/Q20/Q22；S16 §5/V17、S31 R09/A49。前提：候选历史含来源，冻结后在发送前隔离或令持久消费登记失败。
+- 操作：用barrier将失效/故障排在实际发送之前；再测selector成功发送后历史消费关联。
+- 预期：不携失效正文、无法确认不当零历史、不无证发送；成功selector每个Attempt都有实际安全来源，不能绕过遗忘的传递使用链。
+- 接缝/控制：P1+P2；真实共享命令/SQLite与发送边界。
+
+### CE-21 StepStarted 不证明发送
+- 来源：Q9/Q22。前提：准备完成并产生StepStarted，在编码或发送前登记处失败；另一分支真实发送后失败/重试。
+- 操作：分别执行并读取运行详情、费用和trace。
+- 预期：前者只显示准备/失败，不造网络Attempt或实际发送；后者保留每次真实Attempt及费用，unknown不填0，选择状态不冒充发送。
+- 接缝/控制：P2+P3；捕获本地传输及持久结果交叉验证。
+
+### CE-22 trace 历史与当前文件分离
+- 来源：Q9/Q22/Q25。前提：实际使用A并完成记录，含已加载测试secret的正文，随后文件改版/删除。
+- 操作：重启看旧Run；另测trace裁剪和不完整。
+- 预期：旧版本依据当时脱敏trace，不取当前A冒充；secret不泄露，新元数据无正文副本；缺证据显示不可用/未知，未承诺删文件会擦历史trace。
+- 接缝/控制：P1+P3；真实trace存储/保留接口与文件变更。
+
+### CE-23 页面重连与迟到响应
+- 来源：Q9/Q22/Q28。前提：A Run显示自动跳过/准备失败信息，切换到B或重启宿主，旧响应被barrier挂起。
+- 操作：重连/重载后释放旧响应。
+- 预期：名称、状态和Attempt始终归属正确Run/实例，旧响应不能覆盖新页面；正常回答无重复技能播报，降级和失败可见，费用不靠SSE完整性重建。
+- 接缝/控制：P3；真实HTTP/SSE、本地Host与浏览器事件同步。
+
+### CE-24 Skill 不授予工具权限或附件能力
+- 来源：Q2/Q17。前提：Skill要求外部工具或引用辅助脚本；工具未授权/不可用且附件未读取。
+- 操作：ScriptedModel尝试调用工具，或返回缺文件说明。
+- 预期：真实Registry依既有权限拒绝，无外部副作用；加载器仅正文、不解析路径读附件/执行脚本；包装与说明不声称已获得附件。原有create_skill能力不取消。
+- 接缝/控制：P1；真实Registry及受控外部端口计数，文件标记不得自动被读。
+
+### CE-25 真实聊天 Graph 共享选择
+- 来源：Q8/Q23；S25 CE-15/16。前提：真实编译图含两个Assistant节点，父Run预算充足。
+- 操作：Host聊天进入图，两节点均发生回答；记录整体回复。
+- 预期：整个Run仅一次selector，所有Assistant请求含同快照；节点身份、真实费用、剩余预算与总deadline一致；finalizer仅存实际交付的一组会话，节点候选不多写历史。
+- 接缝/控制：P1+P4，真实执行适配/Graph/SQLite，模型仅边界替换。
+
+### CE-26 Graph 回退不重选、不重复副作用
+- 来源：Q18/Q19/Q23；S25 CE-06/07/08/15/16。前提：分别副作用none、occurred、unknown及强制收尾/取消/总超时图；已有selector消耗。
+- 操作：在不同终止边界令图失败并走既有外层回退判定。
+- 预期：只有既有允许回退的none路径可继续，同快照/剩余预算/deadline且无第二selector；其他不得回退重做。预算不足如实停止；波撤销不退费用；无动作终点不伪造回答。
+- 接缝/控制：P1+P4+P2，真实工具账/受控节点失败与时钟。
+
+### CE-27 系统任务不带 Skill
+- 来源：Q8。前提：Catalog非空且最近聊天用过A。
+- 操作：执行真实提炼/probe入口及独立Graph分类模型路径。
+- 预期：无继承的Skill正文和selector调用，不因历史使用记录激活；原维护任务功能/账本不变。
+- 接缝/控制：P1/P4；分别捕获对应模型请求，不用空目录规避。
+
+### CE-28 同一规范作用于 CLI 和 Web
+- 来源：Q4/Q9/Q24/Q28。前提：同Host、分别创建合法Session。
+- 操作：从CLI和真实Web提交相同有效/无效/禁用命令，完成并续接Session。
+- 预期：模式、错误、正文与容量规则一致，不串会话；原始输入可查，输入说明准确；保持准入409/记录失败503及唯一finalizer既有约束，不新增旁路执行。
+- 接缝/控制：P1+P3；CLI真实入口、HTTP/SSE、临时数据库。
+
+### CE-29 文档示例可运行与配置复用
+- 来源：Q26/Q27。前提：干净临时用户目录、空内置目录、文档示例、不同gate模型指派。
+- 操作：复制示例→校验→启动→指定/自动运行；更换既有gate配置后按其重载规则新Run。
+- 预期：示例自包含、真实可加载，未新增内置内容集或第三套设置；模型/时间配置同时影响选择器与gate，指派失败不暗换模型，清单上限未限制Catalog自身。
+- 接缝/控制：P1+P5；实际示例文件与工厂捕获；不调用计费服务。
+
+### CE-30 回归、打包与证据缺失
+- 来源：Q28；S5/S16/S17/S31/S25及项目门禁。
+- 操作：当前候选运行适用离线/浏览器/构建/安装门禁；核对旧A15替代及其它来源场景未被误删；让部分证据缺失验证报告。
+- 预期：结果绑定同一候选及SKILL-SPEC-r1，未运行明确NOT RUN/BLOCKED，未评审不写PASS；不借用#21/#25的Linux豁免或旧测试数字，不以离线结果声称真实语义选择质量。
+- 接缝/控制：P1–P5及固定候选门禁报告；本次规格发布不运行产品测试。
+
+## Readiness and Open Decisions
+
+- **总体设计：CONFIRMED。** S0 的 Q1–Q28、上述公开测试边界、确定性控制与排除项已逐项及整体批准。本次仅将编号、固定词法/JSON规则与精确预期机械展开，没有另作产品取舍。
+- **规格：READY FOR IMPLEMENTATION / ready-for-agent。** 本票范围没有未决产品选择、必需验收延期或阻塞；所有Q与CE都有来源和结果。实现尚未开始，30个CE全部NOT RUN，双轴NOT REVIEWED。
+- **发布与施工路由分开。** #24 保持决策票 `wayfinder:grilling`；本次发布resolution comment，不将它静默改成施工票、不关闭它。远端是否应用ready-for-agent标签以读回记录为准；标签不授权产品写入。后续由调度者在获得相应授权后关闭决策票并按地图graduate独立施工票/分配执行者；本次不创建执行任务。
+- **授权：** to-spec授权本规格与tracker发布；无实现、真实付费模型调用、Git提交/推送、合并、发布应用、关闭票或新建施工票授权。施工需接续同一状态入口及规格身份。
+- **状态入口：** `/Users/nineofour/Agent-Alfred-issue-24-design/tmp/agent-work/issue-24/LOOP.md`，唯一维护者为本设计主会话；规范内容以本节开头的身份和发布hash核对，LOOP只记录状态不替代验收。
+
+## Out of Scope
+
+- 改变Catalog方法集、triggers字段、同名合并规则、程序性记忆变成可替换Store或引入遗忘/事务体系。（S5、Q6）
+- 跨Run强制继承、每Step/每节点重选、根据后续工具结果自动追加、热重载。（Q3、Q8、Q25）
+- 新容量设置页/字段、内置Skill内容集、递归附件加载、通用资源工具和脚本执行框架。（Q17、Q26、Q27）
+- 新Graph记忆策略、用户选图UI、业务workflow、放宽副作用或强制收尾后的回退条件。（Q23、S25）
+- 通用Markdown冲突静态检测器、保证所有自然语言否定/引述均可理解、声称ScriptedModel证明真实语义选择质量。（Q10、Q12、Q13、Q28）
+- 删除用户Skill文件时追溯擦除旧trace；新增正文副本或不经中央脱敏的记录通道。（Q22）
+- 本次进行任何产品实施或发布动作；不沿用其它Issue的Linux/门禁豁免。（Q28及本次授权范围）
+
+## Further Notes
+
+### 完整覆盖索引
+
+| 决定 | 验收 |
+|---|---|
+| Q1/Q4/Q24 | CE-01/02/14/28 |
+| Q2/Q12 | CE-12/24 |
+| Q3/Q7 | CE-03/12/13/18 |
+| Q5/Q6 | CE-01/04/16/20/29 |
+| Q8/Q23 | CE-25/26/27 |
+| Q9/Q22 | CE-10/11/20/21/22/23/28 |
+| Q10/Q13/Q14 | CE-05/06/07/17 |
+| Q11/Q15/Q16 | CE-02/09/10/11/19 |
+| Q17 | CE-24 |
+| Q18/Q19/Q20 | CE-16/17/18/19/20/26 |
+| Q21 | CE-08 |
+| Q25 | CE-03/15/22 |
+| Q26/Q27 | CE-08/29 |
+| Q28 | CE-01–CE-30 |
+
+本票新分配CE与旧票同编号不构成身份冲突：引用旧票须带票号，例如 #25/CE-15、#31/A15。本次没有删除必需案例；#17/#31 A15 的行为替代、#31 A42 的新能力补充均已明示。其它旧票验收仍归原票，本票只验证新增路径及受影响回归，不能把其它票的未完成工作静默纳入或豁免。
+
+交接最低信息：本文远端URL与SKILL-SPEC-r1/hash、同一LOOP路径/revision、固定基线、Q/CE覆盖索引、批准/排除项、下一负责者及当前产品NOT STARTED。证据快照与发布读回仅作审计，不是第二份可变验收定义。
+
+
+## Comment https://github.com/nineofoursyrup/Agent-Alfred/issues/24#issuecomment-5655138173
+
+<!-- issue-24-closeout:skill-c3-e81bac5ede2c -->
+# #24 实施验收与交付完成
+
+聊天已支持自动 Skill 选择、首行 `/skills A B` 指定和 `/skills off` 禁用。每个 Run 固定一次正文快照，普通循环与聊天 Graph 共享选择、预算及截止时间；运行详情保留选择、加载、输入准备、实际 Attempt、费用和当时的脱敏证据。
+
+依据 [SKILL-SPEC-r1](https://github.com/nineofoursyrup/Agent-Alfred/issues/24#issuecomment-5654273925)，Q1–Q28 与 CE-01–CE-30 均已完成验收，规格正文未修改。规格 SHA-256：`dd36c6458e84346503f48dfacb8d54099364c9884a3c2d03423b0522b90977af`。
+
+## 候选与交付身份
+
+- 候选：`skill-c3-e81bac5ede2c`，52 个文件；提交前、提交后及合并前的逐文件 bytes/type/mode、scope 检查均 PASS。
+- 提交：`3e9e6882a345cb16c4c25baa9eba35823f583f0c`；原基线：`5d16e21d876eb67994bb3a3b5d6c121689a10652`。
+- [PR #61](https://github.com/nineofoursyrup/Agent-Alfred/pull/61) 已转正式并合并；实际 [merge commit](https://github.com/nineofoursyrup/Agent-Alfred/commit/8ba7192ee84533aef3deb8453d8fa7364d67f48b)：`8ba7192ee84533aef3deb8453d8fa7364d67f48b`。
+- 实际合并 tree `7909220f6adb3c48f85693a0fd8daba1db109c59` 与已评审提交及 PR CI 测试树一致；main 包含该合并提交。
+- manifest 聚合 SHA-256：`e81bac5ede2cafad751125b2e19399eb91dff615467c0d1741b0c291eea2050c`；原完整 diff SHA-256：`33c179502e7972784ca17bab50468a4c468256a3dba0c53674c97591390f04b1`。
+
+## 独立双轴评审
+
+同一候选 Standards **PASS**、Spec **PASS**，未解决阻塞 **0**。两轴独立核对 Linux API/原始日志、52 个工作区文件及 Git blob/tree，没有互相借用结论。历史 INCOMPLETE 报告保留，最终 Linux 核销报告补齐其唯一证据缺口。
+
+| 发现 | 关闭证据 |
+|---|---|
+| STD-01 | 真实 Host/Graph 删除成功回执在总截止时间到达后保留；动作前到期不执行删除。 |
+| STD-02、SPEC-03 | 同候选 Linux 全门禁通过；逐字日志及 Git 树绑定独立核验。 |
+| SPEC-01 | CommonMark fence、引用延续与 inline code 不作为回退请求；真实 selector 路径回归。 |
+| SPEC-02 | Graph 固定输入失败或取消保留 wave abort、graph terminal 与 node_id 持久证据及实际费用。 |
+| SPEC-04 | 补齐 HTTP 重试+工具+文件变化+下一Run、完整转义检索+长Skill、selector实耗后Graph取消、真实设置重载影响双判断组合。 |
+
+最终两份报告内容哈希（原文保留于本次交付证据包）：
+- `standards-linux-review.md`：`ffec8993b67292eeabbbc906a204bfec8d2cd245e208bbf5ee78ad767f538610`。
+- `spec-linux-review.md`：`8892da1e317dd90fd48c708df8c129e419b750594c03fd05d52a3e51a6a4db54`。
+
+## 两阶段 CI 与本地验证
+
+- macOS：4309 Python passed / 1 deselected、180 browser passed；静态校验、构建和四种干净安装通过。
+- [PR CI 34772161135](https://github.com/nineofoursyrup/Agent-Alfred/actions/runs/34772161135)：SUCCESS；head `3e9e6882a345cb16c4c25baa9eba35823f583f0c`，实际 checkout `3c8cbe786e0ad1dec2a7cf5b71aaeb340db2c1a1`，测试 tree 与候选一致；4309 Python passed / 1 deselected、180 browser passed。
+- [合并后 CI 34773351509](https://github.com/nineofoursyrup/Agent-Alfred/actions/runs/34773351509)：SUCCESS，event=`push`，head=`8ba7192ee84533aef3deb8453d8fa7364d67f48b`；4309 Python passed / 1 deselected（449.38s），180 browser passed（3.7m）；全部步骤 completed/success，原始日志 SHA-256 `79bbdf2d4bcbe4c0f793ab94630bc2dcc6156174cc2b5709b642434139041c08`。
+- 门禁包含 locked dev+MCP 安装、Ruff、Skill/env 校验、全离线 pytest、wheel/sdist 构建、wheel/sdist × base/MCP 四组合干净安装、npm/typecheck、真实 Chromium 浏览器测试。
+
+## CE 逐项核对
+
+表中链接绑定实际合并提交，行为预期以权威规格为准。测试使用真实 Host/Registry/Loop/Graph/SQLite/HTTP/SSE/浏览器链，模型、传输及文件故障按规格认可的边界控制；不以 mock 内部业务路径替代验收。
+
+| 反例与验收 | 结果 | 主要已执行证据 |
+|---|---|---|
+| CE-01 明确指定与禁用不调用选择器 | PASS | [test_runtime_skills.py:102](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L102) |
+| CE-02 指定错误不能部分执行 | PASS | [test_runtime_skills.py:140](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L140) |
+| CE-03 启动快照与覆盖 | PASS | [test_skill_boundaries.py:109](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_boundaries.py#L109)；[test_runtime_skills.py:155](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L155)；[memory.spec.js](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/tests/browser/memory.spec.js)；[skills.spec.js](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/tests/browser/skills.spec.js) |
+| CE-04 选择器输入和正常空选择 | PASS | [test_skill_boundaries.py:23](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_boundaries.py#L23)；[test_runtime_skills.py:215](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L215) |
+| CE-05 结构输出整体作废 | PASS | [test_skill_boundaries.py:89](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_boundaries.py#L89)；[test_runtime_skills.py:268](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L268) |
+| CE-06 回退不是常量或片段匹配 | PASS | [test_runtime_skills.py:308](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L308) |
+| CE-07 否定和代码示例不能触发回退 | PASS | [test_runtime_skills.py:308](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L308)；[test_skill_review_regressions.py:52](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_review_regressions.py#L52) |
+| CE-08 清单边界不能静默裁前缀 | PASS | [test_runtime_skills.py:347](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L347)；[test_runtime_skills.py:399](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L399) |
+| CE-09 指定正文与区段超限 | PASS | [test_runtime_skills.py:174](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L174)；[test_runtime_skills.py:415](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L415) |
+| CE-10 自动跳长项仍检查后项 | PASS | [test_runtime_skills.py:324](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L324)；[test_runtime_skills.py:415](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L415) |
+| CE-11 加载失败的两种结果 | PASS | [test_runtime_skills.py:371](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L371) |
+| CE-12 正文载体与优先级 | PASS | [test_skill_boundaries.py:129](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_boundaries.py#L129)；[test_runtime_skills.py:155](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L155) |
+| CE-13 同 Run 固定与下一 Run 重选 | PASS | [test_runtime_skills.py:536](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L536)；[test_skill_acceptance_combinations.py:35](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_acceptance_combinations.py#L35) |
+| CE-14 控制行不污染后续模型历史 | PASS | [test_runtime_skills.py:453](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L453) |
+| CE-15 空目录、不可用与禁用 | PASS | [test_skill_delivery.py:223](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_delivery.py#L223)；[test_runtime_skills.py:477](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L477) |
+| CE-16 0/1/2/3 Step 及绕过选择 | PASS | [test_runtime_skills.py:196](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L196) |
+| CE-17 局部超时、总超时、取消 | PASS | [test_skill_input_attempts.py:35](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_input_attempts.py#L35)；[test_skill_input_attempts.py:98](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_input_attempts.py#L98)；[test_skill_selector_attempt_preservation.py:23](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_selector_attempt_preservation.py#L23) |
+| CE-18 两阶段窗口与记忆预留 | PASS | [test_runtime_skills.py:495](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L495)；[test_skill_acceptance_combinations.py:148](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_acceptance_combinations.py#L148) |
+| CE-19 固定输入放不下不能吞为模型失败 | PASS | [test_skill_input_attempts.py:149](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_input_attempts.py#L149)；[test_skill_input_attempts.py:163](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_input_attempts.py#L163)；[test_skill_delivery.py:268](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_delivery.py#L268)；[test_skill_review_regressions.py:191](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_review_regressions.py#L191) |
+| CE-20 selector 来源失效与登记失败 | PASS | [test_skill_input_attempts.py:35](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_input_attempts.py#L35)；[test_skill_input_attempts.py:181](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_input_attempts.py#L181) |
+| CE-21 StepStarted 不证明发送 | PASS | [test_skill_input_attempts.py:35](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_input_attempts.py#L35)；[test_skill_selector_attempt_preservation.py:23](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_selector_attempt_preservation.py#L23)；[skills.spec.js](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/tests/browser/skills.spec.js)；[runs.spec.js](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/tests/browser/runs.spec.js) |
+| CE-22 trace 历史与当前文件分离 | PASS | [test_skill_delivery.py:32](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_delivery.py#L32)；[skills.spec.js](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/tests/browser/skills.spec.js) |
+| CE-23 页面重连与迟到响应 | PASS | [skills.spec.js](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/tests/browser/skills.spec.js) |
+| CE-24 Skill 不授予工具权限或附件能力 | PASS | [test_runtime_skills.py:536](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L536) |
+| CE-25 真实聊天 Graph 共享选择 | PASS | [test_runtime_skill_graph.py:58](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skill_graph.py#L58) |
+| CE-26 Graph 回退不重选、不重复副作用 | PASS | [test_runtime_skill_graph.py:94](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skill_graph.py#L94)；[test_runtime_skill_graph.py:145](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skill_graph.py#L145)；[test_runtime_skill_graph.py:205](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skill_graph.py#L205)；[test_runtime_skill_graph.py:239](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skill_graph.py#L239)；[test_skill_review_regressions.py:191](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_review_regressions.py#L191)；[test_skill_review_regressions.py:73](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_review_regressions.py#L73)；[test_skill_review_regressions.py:287](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_review_regressions.py#L287) |
+| CE-27 系统任务不带 Skill | PASS | [test_runtime_skills.py:606](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skills.py#L606)；[test_runtime_skill_graph.py:239](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_runtime_skill_graph.py#L239) |
+| CE-28 同一规范作用于 CLI 和 Web | PASS | [test_skill_delivery.py:108](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_delivery.py#L108)；[skills.spec.js](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/tests/browser/skills.spec.js) |
+| CE-29 文档示例可运行与配置复用 | PASS | [test_skill_delivery.py:185](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_delivery.py#L185)；[test_skill_delivery.py:233](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_delivery.py#L233)；[check_mcp_installations.py](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/scripts/check_mcp_installations.py)；[test_skill_acceptance_combinations.py:238](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/src/agent_alfred/evals/deterministic/test_skill_acceptance_combinations.py#L238) |
+| CE-30 回归、打包与证据缺失 | PASS | [ci.yml](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/.github/workflows/ci.yml) |
+
+## 使用与范围
+
+- [使用指南](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/docs/skills.md)、[自包含示例](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/docs/examples/skills/checklist/SKILL.md)、[完整规格镜像](https://github.com/nineofoursyrup/Agent-Alfred/blob/8ba7192ee84533aef3deb8453d8fa7364d67f48b/docs/design/issue-24-skill-spec.md)。
+- 真实计费模型调用及语义质量评估：**NOT RUN**，属于本票已批准的离线验收范围；不以离线通过声称实际模型的语义选择准确率。
+- 本票承担已确认的聊天 Graph Skill 共享接线，保留 #25 的副作用、回退与收尾契约；不代表 #26/#27、选图 UI、业务 workflow 或其他相邻票交付完成。
+- 本次按用户整票收尾授权执行；两阶段 CI 完成并读回后发布此验收总结，再以 `completed` 原因关闭准确 Issue #24。

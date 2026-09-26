@@ -176,6 +176,8 @@ def _trace_sink(
 def build_host(
     *,
     routing_graph_builder=None,
+    persona_read_observer=None,
+    file_publication_checkpoint=None,
     aggregation_before_send=None,
     before_recording_commit=None,
     conn: sqlite3.Connection,
@@ -196,6 +198,7 @@ def build_host(
     skill_builtin=None,
     extra_tools=(),
     tool_policies=None,
+    local_tool_allowlist=None,
 ) -> RuntimeHost:
     settings = settings or Settings()
     clock = clock or SystemClock()
@@ -239,6 +242,8 @@ def build_host(
             else AuditKey.load_or_create(audit_key_path, redactor)
         )
         host = RuntimeHost(
+            persona_read_observer=persona_read_observer,
+            file_publication_checkpoint=file_publication_checkpoint,
             routing_graph_builder=routing_graph_builder,
             aggregation_before_send=aggregation_before_send,
             before_recording_commit=before_recording_commit,
@@ -248,6 +253,7 @@ def build_host(
             conn=conn,
             extra_tools=extra_tools,
             tool_policies=tool_policies,
+            local_tool_allowlist=local_tool_allowlist,
             factory=factory,
             settings=settings,
             clock=clock,
@@ -432,7 +438,10 @@ def build_dashboard(
 def build_default_host(
     *,
     state_dir: Path | None = None,
+    persona_read_observer=None,
+    file_publication_checkpoint=None,
     skill_builtin=None,
+    local_tool_allowlist=None,
     settings: Settings | None = None,
     factory: ModelClientFactory | None = None,
     credentials: CredentialOverlay | None = None,
@@ -466,6 +475,9 @@ def build_default_host(
         )
         model_settings.load()
         host = build_host(
+            persona_read_observer=persona_read_observer,
+            file_publication_checkpoint=file_publication_checkpoint,
+            local_tool_allowlist=local_tool_allowlist,
             conn=conn,
             factory=factory,
             settings=settings,

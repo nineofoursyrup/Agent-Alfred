@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Protocol
 
+from agent_alfred.memory import chinese_recall
 from agent_alfred.memory.storage import (
     SQLiteStore,
     canonical,
@@ -154,6 +155,10 @@ class SQLiteEpisodicStore(SQLiteStore):
         # Parse timestamps before ordering/filtering: legacy rows can use any
         # valid offset, and SQLite date conversion loses microsecond precision.
         rows = self._rows(sql, params)
+        method = None
+        if not rows and query.text is not None:
+            rows = chinese_recall.search_rows(self, query.text)
+            method = chinese_recall.METHOD
         selected = []
         for row in rows:
             record = self._record(row)
@@ -175,7 +180,9 @@ class SQLiteEpisodicStore(SQLiteStore):
         )
         if query.text is not None:
             selected.sort(key=lambda item: item[0]["rank"])
-        return tuple(EpisodeHit(record) for _, record in selected[: query.limit])
+        return tuple(
+            EpisodeHit(record, method) for _, record in selected[: query.limit]
+        )
 
     def update(
         self,

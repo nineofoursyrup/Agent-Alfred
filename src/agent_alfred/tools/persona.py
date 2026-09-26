@@ -11,9 +11,10 @@ TARGET = "persona/persona.md"
 
 
 class PersonaTools:
-    def __init__(self, files, settings):
+    def __init__(self, files, settings, *, read_observer=None):
         self._files = files
         self._settings = settings
+        self._read_observer = read_observer
 
     def current(self):
         if self._settings.persona_file is not None or self._files.state_path is None:
@@ -62,7 +63,7 @@ class PersonaTools:
     def _read(self, args, context):
         context.checkpoint()
         content = self.current()
-        return ToolSuccess(
+        result = ToolSuccess(
             (
                 TextBlock(
                     json.dumps(
@@ -77,6 +78,9 @@ class PersonaTools:
                 ),
             )
         )
+        if self._read_observer is not None:
+            self._read_observer(self, result, context)
+        return result
 
     def update(self, args, context):
         with self._files.tool_deadline(context):

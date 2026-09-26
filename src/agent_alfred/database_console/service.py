@@ -679,7 +679,9 @@ class DatabaseConsole:
             # fd. Preserve the recorded cancellation, not an incidental EBADF.
             with self._lock:
                 stopped = record.error if record.stop.is_set() else None
-            if stopped not in {"query_cancelled", "query_timeout", "data_invalidated"}:
+            if stopped not in {
+                "query_cancelled", "query_timeout", "data_invalidated", "cleanup_failed"
+            }:
                 raise
             self._reap(record, process, stopped)
             raise ConsoleError(stopped) from None
@@ -782,24 +784,27 @@ class DatabaseConsole:
             if process.poll() is None:
                 os.killpg(os.getpgid(process.pid), 9)
         except OSError:
-            with self._lock:
-                self._cleanup_failed = True
-                self._admission = False
-                record.cleanup = "failed"
-                record.status = "failed"
-                record.error = "cleanup_failed"
+            self._fail_cleanup(record, process)
             return
         try:
             process.wait(timeout=max(0.0, deadline - self._clock.monotonic()))
         except subprocess.TimeoutExpired:
-            with self._lock:
-                self._cleanup_failed = True
-                self._admission = False
-                record.cleanup = "failed"
-                record.status = "failed"
-                record.error = "cleanup_failed"
+            self._fail_cleanup(record, process)
             return
         self._reap(record, process, reason)
+
+    def _fail_cleanup(self, record: QueryRecord, process: subprocess.Popen) -> None:
+        with self._lock:
+            # A concurrent owner may have completed the real release while this
+            # stop/pipe operation was in flight. Its late error owns no state.
+            if record.process is not process and record.owner is not process:
+                return
+            self._cleanup_failed = True
+            self._admission = False
+            record.cleanup = "failed"
+            record.status = "failed"
+            record.error = "cleanup_failed"
+            self._cv.notify_all()
 
     def _reap(
         self, record: QueryRecord, process: subprocess.Popen, status: str
@@ -811,12 +816,7 @@ class DatabaseConsole:
                 if pipe is not None and not pipe.closed:
                     pipe.close()
         except OSError:
-            with self._lock:
-                self._cleanup_failed = True
-                self._admission = False
-                record.cleanup = "failed"
-                record.status = "failed"
-                record.error = "cleanup_failed"
+            self._fail_cleanup(record, process)
             return
         with self._lock:
             record.process = None
