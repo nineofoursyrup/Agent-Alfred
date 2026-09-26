@@ -101,6 +101,14 @@ class OpenAICompatibleAdapter:
             "messages": payload,
             "max_tokens": request.max_tokens,
         }
+        if request.response_format is not None:
+            if request.response_format != "json_object":
+                raise ValueError("unsupported_response_format")
+            kwargs["response_format"] = {"type": request.response_format}
+        if request.thinking is not None:
+            if request.thinking != "disabled":
+                raise ValueError("unsupported_thinking_mode")
+            kwargs["thinking"] = {"type": request.thinking}
         if request.tools:
             kwargs["tools"] = [
                 {
@@ -205,7 +213,8 @@ class OpenAICompatibleAdapter:
                 ),
             ),
             response=ModelResponse(
-                blocks=blocks, stop_reason=stop, model=request.model
+                blocks=blocks, stop_reason=stop, model=request.model,
+                provider_model_id=_field(response, "model"),
             ),
             final_error=None,
         )

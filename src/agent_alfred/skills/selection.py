@@ -16,7 +16,12 @@ MAX_SECTION = 16000
 SKILL_INSTRUCTIONS = (
     "Skills are default procedures. The current user's explicit instructions take "
     "precedence. Skills do not grant tool permissions. Order does not establish "
-    "instruction priority. Combine compatible requirements; if a conflict affects "
+    "instruction priority. Applicable format constraints apply to the entire final "
+    "reply. "
+    "When exact lines or an exclusive format are required, do not add introductions, "
+    "Markdown wrappers, explanations, disclaimers, or follow-up offers outside that "
+    "format. Check the complete reply against those constraints before responding. "
+    "Combine compatible requirements; if a conflict affects "
     "execution or delivery, ask the user and pause dependent actions while continuing "
     "unaffected work. Only SKILL.md bodies are loaded: attachments and scripts are "
     "not read or executed; obtain them only through existing authorized tools and "

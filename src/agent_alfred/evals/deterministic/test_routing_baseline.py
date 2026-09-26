@@ -48,6 +48,34 @@ def test_ce01_exact_baseline_cli_requests_events_messages(tmp_path, mode):
         assert process.returncode == 0, process.stderr
         results.append(json.loads(process.stdout))
 
+    # #84 deliberately strengthens the generic Skill format instruction. Amend
+    # only the old expected request and step.started text by the approved literal;
+    # every other byte of the business contract remains compared below.
+    expected = results[0]
+    systems = [r["system"] for r in expected["requests"]] + [
+        e["payload"]["system"]
+        for e in expected["events"]
+        if e["payload"]["name"] == "step.started"
+    ]
+    sections = [
+        block
+        for system in systems
+        for block in system
+        if block.get("text", "").startswith("<skills>\n")
+    ]
+    assert len(sections) == (2 if mode in ("explicit", "automatic") else 0)
+    anchor = "instruction priority. Combine compatible requirements;"
+    amendment = (
+        "instruction priority. Applicable format constraints apply to the entire "
+        "final reply. When exact lines or an exclusive format are required, do not "
+        "add introductions, Markdown wrappers, explanations, disclaimers, or "
+        "follow-up offers outside that format. Check the complete reply against "
+        "those constraints before responding. Combine compatible requirements;"
+    )
+    for section in sections:
+        assert section["text"].count(anchor) == 1
+        section["text"] = section["text"].replace(anchor, amendment, 1)
+
     # #81 adds observation-only path events. Compare every old business event,
     # request, result and reference; generated identity offsets are immaterial.
     def business_contract(value):

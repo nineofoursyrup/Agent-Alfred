@@ -96,6 +96,7 @@ class ModelResponse:
     blocks: tuple[Block, ...]
     stop_reason: StopReason
     model: ModelRef
+    provider_model_id: str | None = None
 
     def __post_init__(self) -> None:
         parse_stop_reason(self.stop_reason)
@@ -187,6 +188,9 @@ class ModelRequest:
     tools: tuple[ToolSpec, ...] = ()
     max_tokens: int | None = None
     tool_choice: ToolChoice = "auto"
+    # Optional OpenAI-wire mode; omission preserves the endpoint's default.
+    thinking: Literal["disabled"] | None = None
+    response_format: Literal["json_object"] | None = None
     # Called by the Adapter after local encoding, immediately at request start.
     # This business evidence is independent of optional event delivery.
     on_attempt_started: Callable[[str], None] | None = field(

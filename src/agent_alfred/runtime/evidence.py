@@ -197,7 +197,8 @@ def _safe_event(event: dict) -> dict:
     }
     if payload.get("name", "").startswith(("graph.", "node.")):
         selected.update({key: payload[key] for key in (
-            "graph_id", "topology_hash", "schema_version", "result", "reason"
+            "graph_id", "topology_hash", "schema_version", "result", "reason",
+            "route_label",
         ) if key in payload})
     if payload.get("code") == "model_support_flipped":
         selected.update(

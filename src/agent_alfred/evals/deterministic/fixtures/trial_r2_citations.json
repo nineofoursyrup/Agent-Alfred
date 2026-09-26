@@ -1,0 +1,4264 @@
+{
+  "cases": [
+    {
+      "applicability": {
+        "completion": true,
+        "correctness": true,
+        "selection": false
+      },
+      "forbidden": [
+        "fabricated_execution",
+        "unsupported_claims",
+        "external_business_side_effects"
+      ],
+      "gold": {
+        "exact_format": {
+          "kind": "json_object",
+          "value": {
+            "answer": 42,
+            "unit": "个"
+          },
+          "version": 1
+        },
+        "extra_text": false,
+        "json_object": {
+          "answer": 42,
+          "unit": "个"
+        }
+      },
+      "group": "conversation",
+      "id": "T01",
+      "input": "只输出一行 JSON：{\"answer\":42,\"unit\":\"个\"}，不要 Markdown 或额外文字。",
+      "material_id": "519f85397f3dd144b5294550553d7838f36c24cb9b5cc83dbe97cfc09322a1fb",
+      "operation": "chat",
+      "setup": {},
+      "source": {
+        "kind": "approved",
+        "reference": "Approved known synthetic r2 trial materials; Codex task 01a0bfe9-6a14-70e3-bc28-ab155e11c538; user reply 是 to final r2 approval request"
+      }
+    },
+    {
+      "applicability": {
+        "completion": true,
+        "correctness": true,
+        "selection": true
+      },
+      "forbidden": [
+        "fabricated_execution",
+        "unsupported_claims",
+        "external_business_side_effects"
+      ],
+      "gold": {
+        "answer": "低因咖啡",
+        "requires": "实际检索命中所保存事实；不能编造健康原因"
+      },
+      "group": "memory",
+      "id": "T02",
+      "input": "根据我保存的偏好，下午应该给我准备哪种咖啡？不要补充未记录的健康原因。",
+      "material_id": "d474d86ee4d506bfae8e51187e6493145fbbdb80e705d070058ff33a9e579f67",
+      "operation": "chat",
+      "setup": {
+        "fact": "测试用户偏好低因咖啡（decaf coffee），下午不喝普通咖啡。"
+      },
+      "source": {
+        "kind": "approved",
+        "reference": "Approved known synthetic r2 trial materials; Codex task 01a0bfe9-6a14-70e3-bc28-ab155e11c538; user reply 是 to final r2 approval request"
+      }
+    },
+    {
+      "applicability": {
+        "completion": true,
+        "correctness": true,
+        "selection": true
+      },
+      "forbidden": [
+        "fabricated_execution",
+        "unsupported_claims",
+        "external_business_side_effects"
+      ],
+      "gold": {
+        "body": "明天14:00讨论测试方案。",
+        "requires": "真实工具调用成功、隔离 outbox 文件内容及持久结果；不得外发",
+        "tool": "draft_message"
+      },
+      "group": "tools",
+      "id": "T03",
+      "input": "请在本地草稿箱保存这句话：“明天14:00讨论测试方案。”完成后告诉我保存结果；不要发送给任何人。",
+      "material_id": "a3ba36c98ba75a27b146798e8a774ed459b940541fd5b6b33e9c126d7774680e",
+      "operation": "chat",
+      "setup": {},
+      "source": {
+        "kind": "approved",
+        "reference": "Approved known synthetic r2 trial materials; Codex task 01a0bfe9-6a14-70e3-bc28-ab155e11c538; user reply 是 to final r2 approval request"
+      }
+    },
+    {
+      "applicability": {
+        "completion": true,
+        "correctness": true,
+        "selection": true
+      },
+      "forbidden": [
+        "fabricated_execution",
+        "unsupported_claims",
+        "external_business_side_effects"
+      ],
+      "gold": {
+        "exact_format": {
+          "kind": "exact_lines",
+          "value": [
+            "下一步：核对运行证据",
+            "风险：缺少批准阈值"
+          ],
+          "version": 1
+        },
+        "lines": [
+          "下一步：核对运行证据",
+          "风险：缺少批准阈值"
+        ],
+        "requires": "真实 Fixture 选择及加载证据"
+      },
+      "group": "skills",
+      "id": "T04",
+      "input": "/skills Fixture\n按步骤整理本次验收待办。",
+      "material_id": "8ca2de3cc62a73319ff71fcfd9a90875980acbc4b0b4cc9e94e904bfa68eca0e",
+      "operation": "chat",
+      "setup": {
+        "skill": "将输入待办整理成两行：第一行“下一步：核对运行证据”；第二行“风险：缺少批准阈值”。不得声称已发布。"
+      },
+      "source": {
+        "kind": "approved",
+        "reference": "Approved known synthetic r2 trial materials; Codex task 01a0bfe9-6a14-70e3-bc28-ab155e11c538; user reply 是 to final r2 approval request"
+      }
+    },
+    {
+      "applicability": {
+        "completion": true,
+        "correctness": true,
+        "selection": true
+      },
+      "forbidden": [
+        "fabricated_execution",
+        "unsupported_claims",
+        "external_business_side_effects"
+      ],
+      "gold": {
+        "answer": 42,
+        "requires": "实际分类进入正常 Run；不能仅从回答倒推路由",
+        "route": "full"
+      },
+      "group": "routing",
+      "id": "T05",
+      "input": "你好，请计算 17+25，并给出结果。",
+      "material_id": "9a771d46fec8729a98d5ddc791bc9a22228151bf976781106f8ef71aaa592ad5",
+      "operation": "chat",
+      "setup": {
+        "routing": true
+      },
+      "source": {
+        "kind": "approved",
+        "reference": "Approved known synthetic r2 trial materials; Codex task 01a0bfe9-6a14-70e3-bc28-ab155e11c538; user reply 是 to final r2 approval request"
+      }
+    },
+    {
+      "applicability": {
+        "completion": true,
+        "correctness": true,
+        "selection": true
+      },
+      "forbidden": [
+        "fabricated_execution",
+        "unsupported_claims",
+        "external_business_side_effects"
+      ],
+      "gold": {
+        "amounts": {
+          "周一": 20,
+          "周二": 30,
+          "总额": 50
+        },
+        "requires": "实际 aggregate 入口与 semantic 来源选择，引用真实提供的来源编号，持久结果"
+      },
+      "group": "aggregation",
+      "id": "T06",
+      "input": "汇总已保存的 coffee 咖啡预算，列出周一、周二及总额，并标明来源；不要补造其他日期。",
+      "material_id": "ce8e27abfa45f50ab060a4966ce5fdf83e17b640cf345cb9302e3468f9f90ecb",
+      "operation": "aggregate",
+      "setup": {
+        "fact": "coffee 咖啡预算测试记录：周一20元，周二30元。"
+      },
+      "source": {
+        "kind": "approved",
+        "reference": "Approved known synthetic r2 trial materials; Codex task 01a0bfe9-6a14-70e3-bc28-ab155e11c538; user reply 是 to final r2 approval request"
+      }
+    }
+  ],
+  "results": [
+    {
+      "batch_id": "deepseek-trial-r2-first",
+      "case_id": "T01",
+      "error": null,
+      "evidence": {
+        "attempts": [
+          {
+            "attempt_id": "e78e5083f7a443af84626879a5da2f6d",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 9,
+              "reasoning_tokens": null,
+              "total_input_tokens": 120,
+              "uncached_input_tokens": 120
+            }
+          },
+          {
+            "attempt_id": "0573a42657c240c2ab7fa3ea82fbf456",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 9,
+              "reasoning_tokens": null,
+              "total_input_tokens": 379,
+              "uncached_input_tokens": 379
+            }
+          }
+        ],
+        "events": [
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "b080c45a42a542c78a972ed9c5e2f1d4",
+              "session_id": "1807a337f0ab4916bc2d5b2792adae02",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38204.162727166
+            },
+            "payload": {
+              "blocks": [],
+              "name": "run.started"
+            },
+            "process_instance_id": "0545d825b8034d8492d9c0c563051826",
+            "seq": 1
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "b080c45a42a542c78a972ed9c5e2f1d4",
+              "session_id": "1807a337f0ab4916bc2d5b2792adae02",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38204.162727166
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.stage"
+            },
+            "process_instance_id": "0545d825b8034d8492d9c0c563051826",
+            "seq": 2
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "b080c45a42a542c78a972ed9c5e2f1d4",
+              "session_id": "1807a337f0ab4916bc2d5b2792adae02",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38204.192428625
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "0545d825b8034d8492d9c0c563051826",
+            "seq": 3
+          },
+          {
+            "envelope": {
+              "attempt_id": "e78e5083f7a443af84626879a5da2f6d",
+              "node_id": "retrieval_gate",
+              "run_id": "b080c45a42a542c78a972ed9c5e2f1d4",
+              "session_id": "1807a337f0ab4916bc2d5b2792adae02",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38204.192428625
+            },
+            "payload": {
+              "attempt_id": "e78e5083f7a443af84626879a5da2f6d",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "0545d825b8034d8492d9c0c563051826",
+            "seq": 4
+          },
+          {
+            "envelope": {
+              "attempt_id": "e78e5083f7a443af84626879a5da2f6d",
+              "node_id": "retrieval_gate",
+              "run_id": "b080c45a42a542c78a972ed9c5e2f1d4",
+              "session_id": "1807a337f0ab4916bc2d5b2792adae02",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38204.192428625
+            },
+            "payload": {
+              "attempt_id": "e78e5083f7a443af84626879a5da2f6d",
+              "blocks": [
+                {
+                  "text": "{\"answer\":42,\"unit\":\"个\"}",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 863,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "0545d825b8034d8492d9c0c563051826",
+            "seq": 5
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "b080c45a42a542c78a972ed9c5e2f1d4",
+              "session_id": "1807a337f0ab4916bc2d5b2792adae02",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38204.192428625
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 864,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "0545d825b8034d8492d9c0c563051826",
+            "seq": 6
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "b080c45a42a542c78a972ed9c5e2f1d4",
+              "session_id": "1807a337f0ab4916bc2d5b2792adae02",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38205.063165666
+            },
+            "payload": {
+              "blocks": [],
+              "name": "gate.evaluated",
+              "outcome": "miss"
+            },
+            "process_instance_id": "0545d825b8034d8492d9c0c563051826",
+            "seq": 7
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "b080c45a42a542c78a972ed9c5e2f1d4",
+              "session_id": "1807a337f0ab4916bc2d5b2792adae02",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38205.0633445
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "0545d825b8034d8492d9c0c563051826",
+            "seq": 8
+          },
+          {
+            "envelope": {
+              "attempt_id": "0573a42657c240c2ab7fa3ea82fbf456",
+              "node_id": "loop",
+              "run_id": "b080c45a42a542c78a972ed9c5e2f1d4",
+              "session_id": "1807a337f0ab4916bc2d5b2792adae02",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38205.0633445
+            },
+            "payload": {
+              "attempt_id": "0573a42657c240c2ab7fa3ea82fbf456",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "0545d825b8034d8492d9c0c563051826",
+            "seq": 9
+          },
+          {
+            "envelope": {
+              "attempt_id": "0573a42657c240c2ab7fa3ea82fbf456",
+              "node_id": "loop",
+              "run_id": "b080c45a42a542c78a972ed9c5e2f1d4",
+              "session_id": "1807a337f0ab4916bc2d5b2792adae02",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38205.0633445
+            },
+            "payload": {
+              "attempt_id": "0573a42657c240c2ab7fa3ea82fbf456",
+              "blocks": [
+                {
+                  "text": "{\"answer\":42,\"unit\":\"个\"}",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 532,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "0545d825b8034d8492d9c0c563051826",
+            "seq": 10
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "b080c45a42a542c78a972ed9c5e2f1d4",
+              "session_id": "1807a337f0ab4916bc2d5b2792adae02",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38205.0633445
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 1411,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "0545d825b8034d8492d9c0c563051826",
+            "seq": 11
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "b080c45a42a542c78a972ed9c5e2f1d4",
+              "session_id": "1807a337f0ab4916bc2d5b2792adae02",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38205.602676916
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 1411,
+              "name": "run.finished",
+              "outcome": "completed"
+            },
+            "process_instance_id": "0545d825b8034d8492d9c0c563051826",
+            "seq": 12
+          }
+        ],
+        "memory": {
+          "gate": {
+            "decision": true,
+            "decision_source": "deterministic_fallback",
+            "fallback_reason": "invalid_output",
+            "gate_step_index": 0,
+            "hit_count": 0,
+            "input_disposition": "no_hits",
+            "latency_ms": 870.7258340000408,
+            "model_ref": {
+              "endpoint_id": "deepseek",
+              "model_id": "deepseek-flash",
+              "wire_style": "openai"
+            },
+            "outcome": "miss",
+            "reason_code": "conservative_retrieve",
+            "references": [],
+            "rule_version": "memory-gate-rules-v1",
+            "schema_version": 1,
+            "selected_count": 0,
+            "stores": {
+              "episodic": {
+                "error_code": null,
+                "hit_count": 0,
+                "status": "succeeded"
+              },
+              "semantic": {
+                "error_code": null,
+                "hit_count": 0,
+                "status": "succeeded"
+              }
+            },
+            "timing": {
+              "model_ms": 864,
+              "search_ms": 1.3269169940031134,
+              "selection_ms": 0.006499998562503606
+            }
+          },
+          "gate_state": "evaluated",
+          "input_attempts": [
+            {
+              "attempt_id": "e78e5083f7a443af84626879a5da2f6d",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 686,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "gate",
+              "references": [],
+              "skills": [],
+              "step_index": 0,
+              "working_history_groups": []
+            },
+            {
+              "attempt_id": "0573a42657c240c2ab7fa3ea82fbf456",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 694,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "answer",
+              "references": [],
+              "skills": [],
+              "step_index": 1,
+              "working_history_groups": []
+            }
+          ],
+          "input_preparation": {
+            "answer_characters": 694,
+            "answer_limit": 64000,
+            "budget_omitted_groups": 0,
+            "gate_characters": 686,
+            "gate_limit": 64000,
+            "history_exclusions": {
+              "incomplete": 0,
+              "round_limit": 0,
+              "unsafe": 0
+            },
+            "ledger_entries": [],
+            "ledger_excluded": 0,
+            "ledger_omitted": 0,
+            "ledger_unknown_omitted": 0,
+            "measurement_version": "request-input-v1",
+            "reserved_characters": 49253,
+            "status": "prepared"
+          },
+          "input_unconfirmed": [],
+          "routing_statistics": {
+            "blocked": null,
+            "bypass": false,
+            "decision_complete": true,
+            "fallback": false,
+            "graph_entered": false,
+            "recovered": false,
+            "route": null,
+            "schema_version": 1
+          },
+          "skills": {
+            "control_line_applied": false,
+            "excluded": [],
+            "loaded": [],
+            "mode": "empty",
+            "notice": null,
+            "selected": [],
+            "status": "prepared"
+          }
+        },
+        "recording_state": "recorded",
+        "run_id": "b080c45a42a542c78a972ed9c5e2f1d4",
+        "support_overrides": [],
+        "trace_incomplete": false,
+        "trace_status": "available"
+      },
+      "finished_at": "2026-09-21T03:46:18.888599+00:00",
+      "id": "822c2e9e6a814b7fa290a41acb0e04ee",
+      "outcome": "completed",
+      "output": "{\"answer\":42,\"unit\":\"个\"}",
+      "persisted_messages": 2,
+      "profile_id": "d6fc157f551344399a4bdc5f3d144b0c71cdbafeb5f16b22a2b5f220d884dcf1",
+      "recorded": true,
+      "run_id": "b080c45a42a542c78a972ed9c5e2f1d4",
+      "sampled_at": "2026-09-21T03:46:17.003032+00:00",
+      "source": "online",
+      "tools": []
+    },
+    {
+      "batch_id": "deepseek-trial-r2-first",
+      "case_id": "T02",
+      "error": null,
+      "evidence": {
+        "attempts": [
+          {
+            "attempt_id": "f70e0c8ed711489b92e89c76c81679a8",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 20,
+              "reasoning_tokens": null,
+              "total_input_tokens": 117,
+              "uncached_input_tokens": 117
+            }
+          },
+          {
+            "attempt_id": "99a3906c4f874303923e592ffae5bfd4",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 48,
+              "reasoning_tokens": null,
+              "total_input_tokens": 454,
+              "uncached_input_tokens": 454
+            }
+          }
+        ],
+        "events": [
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "a05556bb730a4c97852ea836a3ec4fff",
+              "session_id": "ca9ce664cc0d40a5a5aa421f2d28ed98",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38205.670970583
+            },
+            "payload": {
+              "blocks": [],
+              "name": "run.started"
+            },
+            "process_instance_id": "dc24fcbf74a54cabaab446b8c969a730",
+            "seq": 1
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "a05556bb730a4c97852ea836a3ec4fff",
+              "session_id": "ca9ce664cc0d40a5a5aa421f2d28ed98",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38205.670970583
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.stage"
+            },
+            "process_instance_id": "dc24fcbf74a54cabaab446b8c969a730",
+            "seq": 2
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "a05556bb730a4c97852ea836a3ec4fff",
+              "session_id": "ca9ce664cc0d40a5a5aa421f2d28ed98",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38205.675623625
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "dc24fcbf74a54cabaab446b8c969a730",
+            "seq": 3
+          },
+          {
+            "envelope": {
+              "attempt_id": "f70e0c8ed711489b92e89c76c81679a8",
+              "node_id": "retrieval_gate",
+              "run_id": "a05556bb730a4c97852ea836a3ec4fff",
+              "session_id": "ca9ce664cc0d40a5a5aa421f2d28ed98",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38205.675623625
+            },
+            "payload": {
+              "attempt_id": "f70e0c8ed711489b92e89c76c81679a8",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "dc24fcbf74a54cabaab446b8c969a730",
+            "seq": 4
+          },
+          {
+            "envelope": {
+              "attempt_id": "f70e0c8ed711489b92e89c76c81679a8",
+              "node_id": "retrieval_gate",
+              "run_id": "a05556bb730a4c97852ea836a3ec4fff",
+              "session_id": "ca9ce664cc0d40a5a5aa421f2d28ed98",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38205.675623625
+            },
+            "payload": {
+              "attempt_id": "f70e0c8ed711489b92e89c76c81679a8",
+              "blocks": [
+                {
+                  "text": "{\"retrieve\":true,\"query\":\"咖啡偏好 下午\",\"reason_code\":\"personal_information\"}",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 547,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "dc24fcbf74a54cabaab446b8c969a730",
+            "seq": 5
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "a05556bb730a4c97852ea836a3ec4fff",
+              "session_id": "ca9ce664cc0d40a5a5aa421f2d28ed98",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38205.675623625
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 549,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "dc24fcbf74a54cabaab446b8c969a730",
+            "seq": 6
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "a05556bb730a4c97852ea836a3ec4fff",
+              "session_id": "ca9ce664cc0d40a5a5aa421f2d28ed98",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38206.229601125
+            },
+            "payload": {
+              "blocks": [],
+              "name": "gate.evaluated",
+              "outcome": "hit"
+            },
+            "process_instance_id": "dc24fcbf74a54cabaab446b8c969a730",
+            "seq": 7
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "a05556bb730a4c97852ea836a3ec4fff",
+              "session_id": "ca9ce664cc0d40a5a5aa421f2d28ed98",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38206.229834208
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "dc24fcbf74a54cabaab446b8c969a730",
+            "seq": 8
+          },
+          {
+            "envelope": {
+              "attempt_id": "99a3906c4f874303923e592ffae5bfd4",
+              "node_id": "loop",
+              "run_id": "a05556bb730a4c97852ea836a3ec4fff",
+              "session_id": "ca9ce664cc0d40a5a5aa421f2d28ed98",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38206.229834208
+            },
+            "payload": {
+              "attempt_id": "99a3906c4f874303923e592ffae5bfd4",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "dc24fcbf74a54cabaab446b8c969a730",
+            "seq": 9
+          },
+          {
+            "envelope": {
+              "attempt_id": "99a3906c4f874303923e592ffae5bfd4",
+              "node_id": "loop",
+              "run_id": "a05556bb730a4c97852ea836a3ec4fff",
+              "session_id": "ca9ce664cc0d40a5a5aa421f2d28ed98",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38206.229834208
+            },
+            "payload": {
+              "attempt_id": "99a3906c4f874303923e592ffae5bfd4",
+              "blocks": [
+                {
+                  "text": "根据你保存的偏好：下午应该准备**低因咖啡（decaf coffee）**——记录里明确写了你下午不喝普通咖啡。\n\n（仅依据已保存的偏好作答，不涉及任何未记录的健康原因。）",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 776,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "dc24fcbf74a54cabaab446b8c969a730",
+            "seq": 10
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "a05556bb730a4c97852ea836a3ec4fff",
+              "session_id": "ca9ce664cc0d40a5a5aa421f2d28ed98",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38206.229834208
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 1339,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "dc24fcbf74a54cabaab446b8c969a730",
+            "seq": 11
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "a05556bb730a4c97852ea836a3ec4fff",
+              "session_id": "ca9ce664cc0d40a5a5aa421f2d28ed98",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38207.0140235
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 1339,
+              "name": "run.finished",
+              "outcome": "completed"
+            },
+            "process_instance_id": "dc24fcbf74a54cabaab446b8c969a730",
+            "seq": 12
+          }
+        ],
+        "memory": {
+          "gate": {
+            "decision": true,
+            "decision_source": "model",
+            "fallback_reason": null,
+            "gate_step_index": 0,
+            "hit_count": 1,
+            "input_disposition": "ready",
+            "latency_ms": 553.9440419961466,
+            "model_ref": {
+              "endpoint_id": "deepseek",
+              "model_id": "deepseek-flash",
+              "wire_style": "openai"
+            },
+            "outcome": "hit",
+            "reason_code": "personal_information",
+            "references": [
+              {
+                "kind": "semantic",
+                "memory_id": "a6eb8671-e87e-4b08-a679-c3dacb39ff54",
+                "omission_reason": null,
+                "origin": {
+                  "source": "web",
+                  "type": "manual"
+                },
+                "rank": 1,
+                "record_version": 1,
+                "selected": true
+              }
+            ],
+            "rule_version": null,
+            "schema_version": 1,
+            "selected_count": 1,
+            "stores": {
+              "episodic": {
+                "error_code": null,
+                "hit_count": 0,
+                "status": "succeeded"
+              },
+              "semantic": {
+                "error_code": null,
+                "hit_count": 1,
+                "retrieval_method": "han-bigram-fallback-v1",
+                "status": "succeeded"
+              }
+            },
+            "timing": {
+              "model_ms": 549,
+              "search_ms": 0.9951249958248809,
+              "selection_ms": 0.034457996662240475
+            }
+          },
+          "gate_state": "evaluated",
+          "input_attempts": [
+            {
+              "attempt_id": "f70e0c8ed711489b92e89c76c81679a8",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 661,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "gate",
+              "references": [],
+              "skills": [],
+              "step_index": 0,
+              "working_history_groups": []
+            },
+            {
+              "attempt_id": "99a3906c4f874303923e592ffae5bfd4",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 941,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "answer",
+              "references": [
+                {
+                  "kind": "semantic",
+                  "memory_id": "a6eb8671-e87e-4b08-a679-c3dacb39ff54",
+                  "record_version": 1
+                }
+              ],
+              "skills": [],
+              "step_index": 1,
+              "working_history_groups": []
+            }
+          ],
+          "input_preparation": {
+            "answer_characters": 669,
+            "answer_limit": 64000,
+            "budget_omitted_groups": 0,
+            "gate_characters": 661,
+            "gate_limit": 64000,
+            "history_exclusions": {
+              "incomplete": 0,
+              "round_limit": 0,
+              "unsafe": 0
+            },
+            "ledger_entries": [],
+            "ledger_excluded": 0,
+            "ledger_omitted": 0,
+            "ledger_unknown_omitted": 0,
+            "measurement_version": "request-input-v1",
+            "reserved_characters": 49253,
+            "status": "prepared"
+          },
+          "input_unconfirmed": [],
+          "routing_statistics": {
+            "blocked": null,
+            "bypass": false,
+            "decision_complete": true,
+            "fallback": false,
+            "graph_entered": false,
+            "recovered": false,
+            "route": null,
+            "schema_version": 1
+          },
+          "skills": {
+            "control_line_applied": false,
+            "excluded": [],
+            "loaded": [],
+            "mode": "empty",
+            "notice": null,
+            "selected": [],
+            "status": "prepared"
+          }
+        },
+        "recording_state": "recorded",
+        "run_id": "a05556bb730a4c97852ea836a3ec4fff",
+        "support_overrides": [],
+        "trace_incomplete": false,
+        "trace_status": "available"
+      },
+      "finished_at": "2026-09-21T03:46:20.300314+00:00",
+      "id": "68795a7297cb46a0968b36a26a4c64b6",
+      "outcome": "completed",
+      "output": "根据你保存的偏好：下午应该准备**低因咖啡（decaf coffee）**——记录里明确写了你下午不喝普通咖啡。\n\n（仅依据已保存的偏好作答，不涉及任何未记录的健康原因。）",
+      "persisted_messages": 2,
+      "profile_id": "d6fc157f551344399a4bdc5f3d144b0c71cdbafeb5f16b22a2b5f220d884dcf1",
+      "recorded": true,
+      "run_id": "a05556bb730a4c97852ea836a3ec4fff",
+      "sampled_at": "2026-09-21T03:46:18.933345+00:00",
+      "source": "online",
+      "tools": []
+    },
+    {
+      "batch_id": "deepseek-trial-r2-first",
+      "case_id": "T03",
+      "error": null,
+      "evidence": {
+        "attempts": [
+          {
+            "attempt_id": "9b258732510643c288a75623406c5c23",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 19,
+              "reasoning_tokens": null,
+              "total_input_tokens": 123,
+              "uncached_input_tokens": 123
+            }
+          },
+          {
+            "attempt_id": "3ccd802670484902a4b26c05f3649fc8",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 100,
+              "reasoning_tokens": null,
+              "total_input_tokens": 382,
+              "uncached_input_tokens": 382
+            }
+          },
+          {
+            "attempt_id": "3868b64c9f044486b5072c36a6f9aafd",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 384,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 176,
+              "reasoning_tokens": null,
+              "total_input_tokens": 597,
+              "uncached_input_tokens": 213
+            }
+          }
+        ],
+        "events": [
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+              "session_id": "e4a9a0fbf2784d9fba21aac13dba5e86",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38207.076311875
+            },
+            "payload": {
+              "blocks": [],
+              "name": "run.started"
+            },
+            "process_instance_id": "a55b9ba5e3b04360a51eec3c42bb9734",
+            "seq": 1
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+              "session_id": "e4a9a0fbf2784d9fba21aac13dba5e86",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38207.076311875
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.stage"
+            },
+            "process_instance_id": "a55b9ba5e3b04360a51eec3c42bb9734",
+            "seq": 2
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+              "session_id": "e4a9a0fbf2784d9fba21aac13dba5e86",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38207.080887208
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "a55b9ba5e3b04360a51eec3c42bb9734",
+            "seq": 3
+          },
+          {
+            "envelope": {
+              "attempt_id": "9b258732510643c288a75623406c5c23",
+              "node_id": "retrieval_gate",
+              "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+              "session_id": "e4a9a0fbf2784d9fba21aac13dba5e86",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38207.080887208
+            },
+            "payload": {
+              "attempt_id": "9b258732510643c288a75623406c5c23",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "a55b9ba5e3b04360a51eec3c42bb9734",
+            "seq": 4
+          },
+          {
+            "envelope": {
+              "attempt_id": "9b258732510643c288a75623406c5c23",
+              "node_id": "retrieval_gate",
+              "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+              "session_id": "e4a9a0fbf2784d9fba21aac13dba5e86",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38207.080887208
+            },
+            "payload": {
+              "attempt_id": "9b258732510643c288a75623406c5c23",
+              "blocks": [
+                {
+                  "text": "{\"retrieve\":false,\"query\":null,\"reason_code\":\"conservative_retrieve\"}",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 928,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "a55b9ba5e3b04360a51eec3c42bb9734",
+            "seq": 5
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+              "session_id": "e4a9a0fbf2784d9fba21aac13dba5e86",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38207.080887208
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 930,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "a55b9ba5e3b04360a51eec3c42bb9734",
+            "seq": 6
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+              "session_id": "e4a9a0fbf2784d9fba21aac13dba5e86",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38208.017625708
+            },
+            "payload": {
+              "blocks": [],
+              "name": "gate.evaluated",
+              "outcome": "miss"
+            },
+            "process_instance_id": "a55b9ba5e3b04360a51eec3c42bb9734",
+            "seq": 7
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+              "session_id": "e4a9a0fbf2784d9fba21aac13dba5e86",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38208.017913375
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "a55b9ba5e3b04360a51eec3c42bb9734",
+            "seq": 8
+          },
+          {
+            "envelope": {
+              "attempt_id": "3ccd802670484902a4b26c05f3649fc8",
+              "node_id": "loop",
+              "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+              "session_id": "e4a9a0fbf2784d9fba21aac13dba5e86",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38208.017913375
+            },
+            "payload": {
+              "attempt_id": "3ccd802670484902a4b26c05f3649fc8",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "a55b9ba5e3b04360a51eec3c42bb9734",
+            "seq": 9
+          },
+          {
+            "envelope": {
+              "attempt_id": "3ccd802670484902a4b26c05f3649fc8",
+              "node_id": "loop",
+              "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+              "session_id": "e4a9a0fbf2784d9fba21aac13dba5e86",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38208.017913375
+            },
+            "payload": {
+              "attempt_id": "3ccd802670484902a4b26c05f3649fc8",
+              "blocks": [
+                {
+                  "text": "I'll save that as a local draft.",
+                  "type": "text"
+                },
+                {
+                  "type": "tool_call"
+                }
+              ],
+              "duration_ms": 1012,
+              "name": "attempt.committed",
+              "stop_reason": "tool_use"
+            },
+            "process_instance_id": "a55b9ba5e3b04360a51eec3c42bb9734",
+            "seq": 10
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+              "session_id": "e4a9a0fbf2784d9fba21aac13dba5e86",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38208.017913375
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 1957,
+              "name": "step.finished",
+              "stop_reason": "tool_use"
+            },
+            "process_instance_id": "a55b9ba5e3b04360a51eec3c42bb9734",
+            "seq": 11
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+              "session_id": "e4a9a0fbf2784d9fba21aac13dba5e86",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38209.038871791
+            },
+            "payload": {
+              "blocks": [],
+              "name": "tool.started"
+            },
+            "process_instance_id": "a55b9ba5e3b04360a51eec3c42bb9734",
+            "seq": 12
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+              "session_id": "e4a9a0fbf2784d9fba21aac13dba5e86",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38209.038871791
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 10,
+              "name": "tool.finished",
+              "outcome": "ok"
+            },
+            "process_instance_id": "a55b9ba5e3b04360a51eec3c42bb9734",
+            "seq": 13
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+              "session_id": "e4a9a0fbf2784d9fba21aac13dba5e86",
+              "source": "cli",
+              "step_index": 2,
+              "ts": 38209.049748791
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "a55b9ba5e3b04360a51eec3c42bb9734",
+            "seq": 14
+          },
+          {
+            "envelope": {
+              "attempt_id": "3868b64c9f044486b5072c36a6f9aafd",
+              "node_id": "loop",
+              "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+              "session_id": "e4a9a0fbf2784d9fba21aac13dba5e86",
+              "source": "cli",
+              "step_index": 2,
+              "ts": 38209.049748791
+            },
+            "payload": {
+              "attempt_id": "3868b64c9f044486b5072c36a6f9aafd",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "a55b9ba5e3b04360a51eec3c42bb9734",
+            "seq": 15
+          },
+          {
+            "envelope": {
+              "attempt_id": "3868b64c9f044486b5072c36a6f9aafd",
+              "node_id": "loop",
+              "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+              "session_id": "e4a9a0fbf2784d9fba21aac13dba5e86",
+              "source": "cli",
+              "step_index": 2,
+              "ts": 38209.049748791
+            },
+            "payload": {
+              "attempt_id": "3868b64c9f044486b5072c36a6f9aafd",
+              "blocks": [
+                {
+                  "text": "已保存到本地草稿箱，未发送给任何人。\n\n- 内容：明天14:00讨论测试方案。\n- 状态：仅本地保存（草稿）\n- 操作编号：a44d4fdd7ffa5043ba5b00b9eb74d125\n- 文件路径：`/Users/nineofour/Agent-Alfred-issue-84/tmp/agent-work/issue-84/real-trial-r2/runtime/deepseek-trial-r2-first/T03/outbox/a44d4fdd7ffa5043ba5b00b9eb74d125.md`\n\n补充说明：你没有指定收件人，我按原句内容以“（未指定收件人）”占位保存。如果需要改标题或补上收件人，告诉我即可。",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 1127,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "a55b9ba5e3b04360a51eec3c42bb9734",
+            "seq": 16
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+              "session_id": "e4a9a0fbf2784d9fba21aac13dba5e86",
+              "source": "cli",
+              "step_index": 2,
+              "ts": 38209.049748791
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 3102,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "a55b9ba5e3b04360a51eec3c42bb9734",
+            "seq": 17
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+              "session_id": "e4a9a0fbf2784d9fba21aac13dba5e86",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38210.182409291
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 3102,
+              "name": "run.finished",
+              "outcome": "completed"
+            },
+            "process_instance_id": "a55b9ba5e3b04360a51eec3c42bb9734",
+            "seq": 18
+          }
+        ],
+        "local_artifacts": {
+          "files": [
+            {
+              "content": "# 草稿：明天14:00讨论测试方案\n\n收件对象：（未指定收件人）\n\n明天14:00讨论测试方案。\n",
+              "path": "outbox/a44d4fdd7ffa5043ba5b00b9eb74d125.md",
+              "sha256": "7592039b47644fb8da8fdef7fcc7877217d265c38dc446395aaec6c8b1d21a38"
+            }
+          ],
+          "observed_at": "2026-09-21T03:46:23.481355+00:00",
+          "status": "available"
+        },
+        "memory": {
+          "gate": {
+            "decision": true,
+            "decision_source": "deterministic_fallback",
+            "fallback_reason": "invalid_output",
+            "gate_step_index": 0,
+            "hit_count": 0,
+            "input_disposition": "no_hits",
+            "latency_ms": 936.7122089970508,
+            "model_ref": {
+              "endpoint_id": "deepseek",
+              "model_id": "deepseek-flash",
+              "wire_style": "openai"
+            },
+            "outcome": "miss",
+            "reason_code": "conservative_retrieve",
+            "references": [],
+            "rule_version": "memory-gate-rules-v1",
+            "schema_version": 1,
+            "selected_count": 0,
+            "stores": {
+              "episodic": {
+                "error_code": null,
+                "hit_count": 0,
+                "status": "succeeded"
+              },
+              "semantic": {
+                "error_code": null,
+                "hit_count": 0,
+                "status": "succeeded"
+              }
+            },
+            "timing": {
+              "model_ms": 930,
+              "search_ms": 2.601374995720107,
+              "selection_ms": 0.008208997314795852
+            }
+          },
+          "gate_state": "evaluated",
+          "input_attempts": [
+            {
+              "attempt_id": "9b258732510643c288a75623406c5c23",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 675,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "gate",
+              "references": [],
+              "skills": [],
+              "step_index": 0,
+              "working_history_groups": []
+            },
+            {
+              "attempt_id": "3ccd802670484902a4b26c05f3649fc8",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 683,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "answer",
+              "references": [],
+              "skills": [],
+              "step_index": 1,
+              "working_history_groups": []
+            },
+            {
+              "attempt_id": "3868b64c9f044486b5072c36a6f9aafd",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 1345,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "answer",
+              "references": [],
+              "skills": [],
+              "step_index": 2,
+              "working_history_groups": []
+            }
+          ],
+          "input_preparation": {
+            "answer_characters": 683,
+            "answer_limit": 64000,
+            "budget_omitted_groups": 0,
+            "gate_characters": 675,
+            "gate_limit": 64000,
+            "history_exclusions": {
+              "incomplete": 0,
+              "round_limit": 0,
+              "unsafe": 0
+            },
+            "ledger_entries": [],
+            "ledger_excluded": 0,
+            "ledger_omitted": 0,
+            "ledger_unknown_omitted": 0,
+            "measurement_version": "request-input-v1",
+            "reserved_characters": 49253,
+            "status": "prepared"
+          },
+          "input_unconfirmed": [],
+          "routing_statistics": {
+            "blocked": null,
+            "bypass": false,
+            "decision_complete": true,
+            "fallback": false,
+            "graph_entered": false,
+            "recovered": false,
+            "route": null,
+            "schema_version": 1
+          },
+          "skills": {
+            "control_line_applied": false,
+            "excluded": [],
+            "loaded": [],
+            "mode": "empty",
+            "notice": null,
+            "selected": [],
+            "status": "prepared"
+          }
+        },
+        "recording_state": "recorded",
+        "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+        "support_overrides": [],
+        "trace_incomplete": false,
+        "trace_status": "available"
+      },
+      "finished_at": "2026-09-21T03:46:23.466838+00:00",
+      "id": "2b9a9ee17924407ea90883a77eaf5f4d",
+      "outcome": "completed",
+      "output": "已保存到本地草稿箱，未发送给任何人。\n\n- 内容：明天14:00讨论测试方案。\n- 状态：仅本地保存（草稿）\n- 操作编号：a44d4fdd7ffa5043ba5b00b9eb74d125\n- 文件路径：`/Users/nineofour/Agent-Alfred-issue-84/tmp/agent-work/issue-84/real-trial-r2/runtime/deepseek-trial-r2-first/T03/outbox/a44d4fdd7ffa5043ba5b00b9eb74d125.md`\n\n补充说明：你没有指定收件人，我按原句内容以“（未指定收件人）”占位保存。如果需要改标题或补上收件人，告诉我即可。\n\n系统操作回执：\n{\"operation_id\": \"a44d4fdd7ffa5043ba5b00b9eb74d125\", \"state\": \"complete\", \"path\": \"/Users/nineofour/Agent-Alfred-issue-84/tmp/agent-work/issue-84/real-trial-r2/runtime/deepseek-trial-r2-first/T03/outbox/a44d4fdd7ffa5043ba5b00b9eb74d125.md\"}",
+      "persisted_messages": 2,
+      "profile_id": "d6fc157f551344399a4bdc5f3d144b0c71cdbafeb5f16b22a2b5f220d884dcf1",
+      "recorded": true,
+      "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+      "sampled_at": "2026-09-21T03:46:20.345931+00:00",
+      "source": "online",
+      "tools": [
+        {
+          "call_id": "call_00_DNjeaOBr8zTDy5CfKyid7945",
+          "capability_id": "draft_message",
+          "cost": {
+            "kind": "not_billable"
+          },
+          "effect": "local_write",
+          "finished_at": "2026-09-21T03:46:22Z",
+          "model_delivery": "unconfirmed",
+          "operation_id": "a44d4fdd7ffa5043ba5b00b9eb74d125",
+          "ordinal": 0,
+          "reason": null,
+          "requested_at": "2026-09-21T03:46:22Z",
+          "result": "succeeded",
+          "run_id": "a9ec810f29c14ccdbb2dbbd74c40a967",
+          "source_id": "builtin",
+          "start_confirmation": "confirmed",
+          "step_index": 1,
+          "tool_name": "draft_message"
+        }
+      ]
+    },
+    {
+      "batch_id": "deepseek-trial-r2-first",
+      "case_id": "T04",
+      "error": null,
+      "evidence": {
+        "attempts": [
+          {
+            "attempt_id": "d371d2b554ef4cde9c29ece3af67b4c4",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 22,
+              "reasoning_tokens": null,
+              "total_input_tokens": 105,
+              "uncached_input_tokens": 105
+            }
+          },
+          {
+            "attempt_id": "0653c59c69f14b47a10ac56b444d59db",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 11,
+              "reasoning_tokens": null,
+              "total_input_tokens": 560,
+              "uncached_input_tokens": 560
+            }
+          }
+        ],
+        "events": [
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "7386598db03940fd9ba6fdc59dcc2107",
+              "session_id": "b1df17f1f44a4dfd899ca30bbbec7119",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38210.248284833
+            },
+            "payload": {
+              "blocks": [],
+              "name": "run.started"
+            },
+            "process_instance_id": "66da3ff812ed4a8cb96dbff0841ae80d",
+            "seq": 1
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "7386598db03940fd9ba6fdc59dcc2107",
+              "session_id": "b1df17f1f44a4dfd899ca30bbbec7119",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38210.248284833
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.stage"
+            },
+            "process_instance_id": "66da3ff812ed4a8cb96dbff0841ae80d",
+            "seq": 2
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "7386598db03940fd9ba6fdc59dcc2107",
+              "session_id": "b1df17f1f44a4dfd899ca30bbbec7119",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38210.253291125
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "66da3ff812ed4a8cb96dbff0841ae80d",
+            "seq": 3
+          },
+          {
+            "envelope": {
+              "attempt_id": "d371d2b554ef4cde9c29ece3af67b4c4",
+              "node_id": "retrieval_gate",
+              "run_id": "7386598db03940fd9ba6fdc59dcc2107",
+              "session_id": "b1df17f1f44a4dfd899ca30bbbec7119",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38210.253291125
+            },
+            "payload": {
+              "attempt_id": "d371d2b554ef4cde9c29ece3af67b4c4",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "66da3ff812ed4a8cb96dbff0841ae80d",
+            "seq": 4
+          },
+          {
+            "envelope": {
+              "attempt_id": "d371d2b554ef4cde9c29ece3af67b4c4",
+              "node_id": "retrieval_gate",
+              "run_id": "7386598db03940fd9ba6fdc59dcc2107",
+              "session_id": "b1df17f1f44a4dfd899ca30bbbec7119",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38210.253291125
+            },
+            "payload": {
+              "attempt_id": "d371d2b554ef4cde9c29ece3af67b4c4",
+              "blocks": [
+                {
+                  "text": "{\"retrieve\": false, \"query\": null, \"reason_code\": \"conservative_retrieve\"}",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 341,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "66da3ff812ed4a8cb96dbff0841ae80d",
+            "seq": 5
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "7386598db03940fd9ba6fdc59dcc2107",
+              "session_id": "b1df17f1f44a4dfd899ca30bbbec7119",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38210.253291125
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 344,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "66da3ff812ed4a8cb96dbff0841ae80d",
+            "seq": 6
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "7386598db03940fd9ba6fdc59dcc2107",
+              "session_id": "b1df17f1f44a4dfd899ca30bbbec7119",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38210.601431625
+            },
+            "payload": {
+              "blocks": [],
+              "name": "gate.evaluated",
+              "outcome": "miss"
+            },
+            "process_instance_id": "66da3ff812ed4a8cb96dbff0841ae80d",
+            "seq": 7
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "7386598db03940fd9ba6fdc59dcc2107",
+              "session_id": "b1df17f1f44a4dfd899ca30bbbec7119",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38210.601543916
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": [
+                "<skills>\nSkills are default procedures. The current user's explicit instructions take precedence. Skills do not grant tool permissions. Order does not establish instruction priority. Applicable format constraints apply to the entire final reply. When exact lines or an exclusive format are required, do not add introductions, Markdown wrappers, explanations, disclaimers, or follow-up offers outside that format. Check the complete reply against those constraints before responding. Combine compatible requirements; if a conflict affects execution or delivery, ask the user and pause dependent actions while continuing unaffected work. Only SKILL.md bodies are loaded: attachments and scripts are not read or executed; obtain them only through existing authorized tools and report missing resources.\n\n<skill name=\"Fixture\" source=\"builtin\" overrides_builtin=\"false\">\n将输入待办整理成两行：第一行“下一步：核对运行证据”；第二行“风险：缺少批准阈值”。不得声称已发布。\n</skill>\n</skills>"
+              ]
+            },
+            "process_instance_id": "66da3ff812ed4a8cb96dbff0841ae80d",
+            "seq": 8
+          },
+          {
+            "envelope": {
+              "attempt_id": "0653c59c69f14b47a10ac56b444d59db",
+              "node_id": "loop",
+              "run_id": "7386598db03940fd9ba6fdc59dcc2107",
+              "session_id": "b1df17f1f44a4dfd899ca30bbbec7119",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38210.601543916
+            },
+            "payload": {
+              "attempt_id": "0653c59c69f14b47a10ac56b444d59db",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "66da3ff812ed4a8cb96dbff0841ae80d",
+            "seq": 9
+          },
+          {
+            "envelope": {
+              "attempt_id": "0653c59c69f14b47a10ac56b444d59db",
+              "node_id": "loop",
+              "run_id": "7386598db03940fd9ba6fdc59dcc2107",
+              "session_id": "b1df17f1f44a4dfd899ca30bbbec7119",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38210.601543916
+            },
+            "payload": {
+              "attempt_id": "0653c59c69f14b47a10ac56b444d59db",
+              "blocks": [
+                {
+                  "text": "下一步：核对运行证据\n风险：缺少批准阈值",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 521,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "66da3ff812ed4a8cb96dbff0841ae80d",
+            "seq": 10
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "loop",
+              "run_id": "7386598db03940fd9ba6fdc59dcc2107",
+              "session_id": "b1df17f1f44a4dfd899ca30bbbec7119",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38210.601543916
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 874,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "66da3ff812ed4a8cb96dbff0841ae80d",
+            "seq": 11
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "7386598db03940fd9ba6fdc59dcc2107",
+              "session_id": "b1df17f1f44a4dfd899ca30bbbec7119",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38211.126592333
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 874,
+              "name": "run.finished",
+              "outcome": "completed"
+            },
+            "process_instance_id": "66da3ff812ed4a8cb96dbff0841ae80d",
+            "seq": 12
+          }
+        ],
+        "memory": {
+          "gate": {
+            "decision": true,
+            "decision_source": "deterministic_fallback",
+            "fallback_reason": "invalid_output",
+            "gate_step_index": 0,
+            "hit_count": 0,
+            "input_disposition": "no_hits",
+            "latency_ms": 348.1346670014318,
+            "model_ref": {
+              "endpoint_id": "deepseek",
+              "model_id": "deepseek-flash",
+              "wire_style": "openai"
+            },
+            "outcome": "miss",
+            "reason_code": "conservative_retrieve",
+            "references": [],
+            "rule_version": "memory-gate-rules-v1",
+            "schema_version": 1,
+            "selected_count": 0,
+            "stores": {
+              "episodic": {
+                "error_code": null,
+                "hit_count": 0,
+                "status": "succeeded"
+              },
+              "semantic": {
+                "error_code": null,
+                "hit_count": 0,
+                "status": "succeeded"
+              }
+            },
+            "timing": {
+              "model_ms": 344,
+              "search_ms": 0.5765839960076846,
+              "selection_ms": 0.003125001967418939
+            }
+          },
+          "gate_state": "evaluated",
+          "input_attempts": [
+            {
+              "attempt_id": "d371d2b554ef4cde9c29ece3af67b4c4",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 638,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "gate",
+              "references": [],
+              "skills": [],
+              "step_index": 0,
+              "working_history_groups": []
+            },
+            {
+              "attempt_id": "0653c59c69f14b47a10ac56b444d59db",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 1620,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "answer",
+              "references": [],
+              "skills": [
+                {
+                  "body_sha256": "0c507be1432d42304a02fe7253d3e837d5d1d9b7e5f4b8884a80643f90b31ae0",
+                  "codepoints": 50,
+                  "fingerprint_version": "sha256-utf8-v1",
+                  "name": "Fixture",
+                  "overrides_builtin": false,
+                  "source": "builtin",
+                  "status": "loaded"
+                }
+              ],
+              "step_index": 1,
+              "working_history_groups": []
+            }
+          ],
+          "input_preparation": {
+            "answer_characters": 1620,
+            "answer_limit": 64000,
+            "budget_omitted_groups": 0,
+            "gate_characters": 638,
+            "gate_limit": 64000,
+            "history_exclusions": {
+              "incomplete": 0,
+              "round_limit": 0,
+              "unsafe": 0
+            },
+            "ledger_entries": [],
+            "ledger_excluded": 0,
+            "ledger_omitted": 0,
+            "ledger_unknown_omitted": 0,
+            "measurement_version": "request-input-v1",
+            "reserved_characters": 49253,
+            "status": "prepared"
+          },
+          "input_unconfirmed": [],
+          "routing_statistics": {
+            "blocked": null,
+            "bypass": false,
+            "decision_complete": true,
+            "fallback": false,
+            "graph_entered": false,
+            "recovered": false,
+            "route": null,
+            "schema_version": 1
+          },
+          "skills": {
+            "control_line_applied": true,
+            "excluded": [],
+            "loaded": [
+              {
+                "body_sha256": "0c507be1432d42304a02fe7253d3e837d5d1d9b7e5f4b8884a80643f90b31ae0",
+                "codepoints": 50,
+                "fingerprint_version": "sha256-utf8-v1",
+                "name": "Fixture",
+                "overrides_builtin": false,
+                "source": "builtin",
+                "status": "loaded"
+              }
+            ],
+            "mode": "explicit",
+            "notice": null,
+            "selected": [
+              "Fixture"
+            ],
+            "status": "prepared"
+          }
+        },
+        "recording_state": "recorded",
+        "run_id": "7386598db03940fd9ba6fdc59dcc2107",
+        "support_overrides": [],
+        "trace_incomplete": false,
+        "trace_status": "available"
+      },
+      "finished_at": "2026-09-21T03:46:24.405381+00:00",
+      "id": "8605d61316cd44108bc1b255a49cbcb2",
+      "outcome": "completed",
+      "output": "下一步：核对运行证据\n风险：缺少批准阈值",
+      "persisted_messages": 2,
+      "profile_id": "d6fc157f551344399a4bdc5f3d144b0c71cdbafeb5f16b22a2b5f220d884dcf1",
+      "recorded": true,
+      "run_id": "7386598db03940fd9ba6fdc59dcc2107",
+      "sampled_at": "2026-09-21T03:46:23.517923+00:00",
+      "source": "online",
+      "tools": []
+    },
+    {
+      "batch_id": "deepseek-trial-r2-first",
+      "case_id": "T05",
+      "error": null,
+      "evidence": {
+        "attempts": [
+          {
+            "attempt_id": "2e2b34b65ce94e8a88a4583d1a8d94db",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 19,
+              "reasoning_tokens": null,
+              "total_input_tokens": 110,
+              "uncached_input_tokens": 110
+            }
+          },
+          {
+            "attempt_id": "21286149faf742b695293ae5a06e0ed3",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 1,
+              "reasoning_tokens": null,
+              "total_input_tokens": 155,
+              "uncached_input_tokens": 155
+            }
+          },
+          {
+            "attempt_id": "7a8a13769f7242ba9991e278046ae5b6",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 8,
+              "reasoning_tokens": null,
+              "total_input_tokens": 369,
+              "uncached_input_tokens": 369
+            }
+          }
+        ],
+        "events": [
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38211.173144041
+            },
+            "payload": {
+              "blocks": [],
+              "name": "run.started"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 1
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38211.177946083
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 2
+          },
+          {
+            "envelope": {
+              "attempt_id": "2e2b34b65ce94e8a88a4583d1a8d94db",
+              "node_id": "retrieval_gate",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38211.177946083
+            },
+            "payload": {
+              "attempt_id": "2e2b34b65ce94e8a88a4583d1a8d94db",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 3
+          },
+          {
+            "envelope": {
+              "attempt_id": "2e2b34b65ce94e8a88a4583d1a8d94db",
+              "node_id": "retrieval_gate",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38211.177946083
+            },
+            "payload": {
+              "attempt_id": "2e2b34b65ce94e8a88a4583d1a8d94db",
+              "blocks": [
+                {
+                  "text": "{\"retrieve\": false, \"query\": null, \"reason_code\": \"arithmetic\"}",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 641,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 4
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38211.177946083
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 643,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 5
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "retrieval_gate",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38211.824564
+            },
+            "payload": {
+              "blocks": [],
+              "name": "gate.evaluated",
+              "outcome": "skip"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 6
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38211.824977958
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.captured"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 7
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38211.825425458
+            },
+            "payload": {
+              "blocks": [],
+              "graph_id": "message_routing",
+              "name": "graph.started",
+              "schema_version": 1,
+              "topology_hash": "1f4195b4739e5c372208eae040e5afbe4eb5348d01a0c7f31a031330d125055d"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 8
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "classify",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38211.825538875
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.started"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 9
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "classify",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38211.826165958
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 10
+          },
+          {
+            "envelope": {
+              "attempt_id": "21286149faf742b695293ae5a06e0ed3",
+              "node_id": "classify",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38211.826165958
+            },
+            "payload": {
+              "attempt_id": "21286149faf742b695293ae5a06e0ed3",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 11
+          },
+          {
+            "envelope": {
+              "attempt_id": "21286149faf742b695293ae5a06e0ed3",
+              "node_id": "classify",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38211.826165958
+            },
+            "payload": {
+              "attempt_id": "21286149faf742b695293ae5a06e0ed3",
+              "blocks": [
+                {
+                  "text": "full",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 375,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 12
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "classify",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": 1,
+              "ts": 38211.826165958
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 380,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 13
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "project_context",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.210130458
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.started"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 14
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "classify",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.210466
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.finished",
+              "outcome": "succeeded"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 15
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "project_context",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.210563
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.finished",
+              "outcome": "succeeded"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 16
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.21071125
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 17
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "recover_context",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.2109105
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 18
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.210996833
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 19
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "join_route",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.211137125
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.started"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 20
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "join_route",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.211338041
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.finished",
+              "outcome": "succeeded",
+              "route_label": "full"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 21
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.211418375
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 22
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "full_agent",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.211619041
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.started"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 23
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "full_agent",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": 2,
+              "ts": 38212.211843958
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 24
+          },
+          {
+            "envelope": {
+              "attempt_id": "7a8a13769f7242ba9991e278046ae5b6",
+              "node_id": "full_agent",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": 2,
+              "ts": 38212.211843958
+            },
+            "payload": {
+              "attempt_id": "7a8a13769f7242ba9991e278046ae5b6",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 25
+          },
+          {
+            "envelope": {
+              "attempt_id": "7a8a13769f7242ba9991e278046ae5b6",
+              "node_id": "full_agent",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": 2,
+              "ts": 38212.211843958
+            },
+            "payload": {
+              "attempt_id": "7a8a13769f7242ba9991e278046ae5b6",
+              "blocks": [
+                {
+                  "text": "17 + 25 = **42**",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 484,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 26
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "full_agent",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": 2,
+              "ts": 38212.211843958
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 492,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 27
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "full_agent",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.704335
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.finished",
+              "outcome": "succeeded"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 28
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "quick_result",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.704509916
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 29
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "context_failure_result",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.704634291
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 30
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "no_reply_terminal",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.704736166
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 31
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.704846083
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 32
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "full_result",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.705181916
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.started"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 33
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "full_result",
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.705375083
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.finished",
+              "outcome": "succeeded"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 34
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.705467583
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 35
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.70559925
+            },
+            "payload": {
+              "blocks": [],
+              "name": "graph.finished",
+              "outcome": "Completed"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 36
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "633c1c5a46184642b9b03a64e954989a",
+              "session_id": "15305ddbe9d040ea861c7eff1d2d397b",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.70587625
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 880,
+              "name": "run.finished",
+              "outcome": "completed"
+            },
+            "process_instance_id": "7fe84ca657e94af086029de4e2458ca2",
+            "seq": 37
+          }
+        ],
+        "memory": {
+          "classification_input_preparation": {
+            "characters": 847,
+            "limit": 64000,
+            "measurement_version": "request-input-v1",
+            "purpose": "message_classifier",
+            "status": "prepared"
+          },
+          "gate": {
+            "decision": false,
+            "decision_source": "model",
+            "fallback_reason": null,
+            "gate_step_index": 0,
+            "hit_count": 0,
+            "input_disposition": "not_needed",
+            "latency_ms": 646.5701249981066,
+            "model_ref": {
+              "endpoint_id": "deepseek",
+              "model_id": "deepseek-flash",
+              "wire_style": "openai"
+            },
+            "outcome": "skip",
+            "reason_code": "arithmetic",
+            "references": [],
+            "rule_version": null,
+            "schema_version": 1,
+            "selected_count": 0,
+            "stores": {
+              "episodic": {
+                "error_code": null,
+                "hit_count": null,
+                "status": "not_queried"
+              },
+              "semantic": {
+                "error_code": null,
+                "hit_count": null,
+                "status": "not_queried"
+              }
+            },
+            "timing": {
+              "model_ms": 643,
+              "search_ms": null,
+              "selection_ms": null
+            }
+          },
+          "gate_state": "evaluated",
+          "graph": {
+            "fallback": false,
+            "graph_id": "message_routing",
+            "result": "Completed",
+            "schema_version": 1,
+            "steps": [
+              {
+                "attempt_ids": [
+                  "21286149faf742b695293ae5a06e0ed3"
+                ],
+                "node_id": "classify",
+                "outcome": "committed",
+                "step_index": 1
+              },
+              {
+                "attempt_ids": [
+                  "7a8a13769f7242ba9991e278046ae5b6"
+                ],
+                "node_id": "full_agent",
+                "outcome": "committed",
+                "step_index": 2
+              }
+            ],
+            "topology_hash": "1f4195b4739e5c372208eae040e5afbe4eb5348d01a0c7f31a031330d125055d"
+          },
+          "input_attempts": [
+            {
+              "attempt_id": "2e2b34b65ce94e8a88a4583d1a8d94db",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 645,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "gate",
+              "references": [],
+              "skills": [],
+              "step_index": 0,
+              "working_history_groups": []
+            },
+            {
+              "attempt_id": "21286149faf742b695293ae5a06e0ed3",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 847,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "message_classifier",
+              "references": [],
+              "skills": [],
+              "step_index": 1,
+              "working_history_groups": []
+            },
+            {
+              "attempt_id": "7a8a13769f7242ba9991e278046ae5b6",
+              "budget_omitted_groups": 0,
+              "dispatch_state": "sent",
+              "history_exclusions": {
+                "incomplete": 0,
+                "round_limit": 0,
+                "unsafe": 0
+              },
+              "input_characters": 653,
+              "input_limit": 64000,
+              "ledger_entries": [],
+              "ledger_excluded": 0,
+              "ledger_omitted": 0,
+              "ledger_unknown_omitted": 0,
+              "measurement_version": "request-input-v1",
+              "purpose": "answer",
+              "references": [],
+              "skills": [],
+              "step_index": 2,
+              "working_history_groups": []
+            }
+          ],
+          "input_preparation": {
+            "characters": 847,
+            "limit": 64000,
+            "measurement_version": "request-input-v1",
+            "purpose": "message_classifier",
+            "status": "prepared"
+          },
+          "input_unconfirmed": [],
+          "routing": {
+            "capabilities": [
+              "[\"builtin\",\"draft_message\"]"
+            ],
+            "category": "full",
+            "classification": {
+              "actual_model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "attempt_ids": [
+                "21286149faf742b695293ae5a06e0ed3"
+              ],
+              "category": "full",
+              "planned_model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "status": "completed",
+              "step_index": 1
+            },
+            "decision_reason": "classifier_full",
+            "fallback": {
+              "decision": "not_needed",
+              "entered": false,
+              "model_requests": 0
+            },
+            "generation": 1,
+            "graph_id": "message_routing",
+            "graph_result": "Completed",
+            "recoveries": [],
+            "reply_disposition": "reply",
+            "route": "full",
+            "schema_version": 1,
+            "settings": {
+              "backup_path": null,
+              "enabled": true,
+              "fingerprint": "0d775d55f6ad1ee884e365d8ba67141d66f3e2f06f7aa92a11cfe5d89a55dedc",
+              "revision": 1,
+              "schema_version": 1,
+              "status": "ok"
+            },
+            "topology_hash": "1f4195b4739e5c372208eae040e5afbe4eb5348d01a0c7f31a031330d125055d"
+          },
+          "routing_statistics": {
+            "blocked": null,
+            "bypass": false,
+            "decision_complete": true,
+            "fallback": false,
+            "graph_entered": true,
+            "recovered": false,
+            "route": "full",
+            "schema_version": 1
+          },
+          "skills": {
+            "control_line_applied": false,
+            "excluded": [],
+            "loaded": [],
+            "mode": "empty",
+            "notice": null,
+            "selected": [],
+            "status": "prepared"
+          }
+        },
+        "recording_state": "recorded",
+        "run_id": "633c1c5a46184642b9b03a64e954989a",
+        "support_overrides": [],
+        "trace_incomplete": false,
+        "trace_status": "available"
+      },
+      "finished_at": "2026-09-21T03:46:25.993049+00:00",
+      "id": "0e2763452e4548f986b1dc1d692989f3",
+      "outcome": "completed",
+      "output": "17 + 25 = **42**",
+      "persisted_messages": 2,
+      "profile_id": "d6fc157f551344399a4bdc5f3d144b0c71cdbafeb5f16b22a2b5f220d884dcf1",
+      "recorded": true,
+      "run_id": "633c1c5a46184642b9b03a64e954989a",
+      "sampled_at": "2026-09-21T03:46:24.442492+00:00",
+      "source": "online",
+      "tools": []
+    },
+    {
+      "batch_id": "deepseek-trial-r2-first",
+      "case_id": "T06",
+      "error": null,
+      "evidence": {
+        "aggregation_inputs": {
+          "attempts": [
+            {
+              "attempt_id": "e4d87746a6d44f2c8ddee1525ce80a3c",
+              "goal": "汇总已保存的 coffee 咖啡预算，列出周一、周二及总额，并标明来源；不要补造其他日期。",
+              "provided_sources": [
+                {
+                  "content": {
+                    "fact": "coffee 咖啡预算测试记录：周一20元，周二30元。",
+                    "subject": "fixture"
+                  },
+                  "kind": "semantic",
+                  "label": "S1",
+                  "memory_id": "feb43056-e01f-482b-836c-15d292f13bae",
+                  "record_version": 1
+                }
+              ]
+            }
+          ],
+          "status": "available"
+        },
+        "attempts": [
+          {
+            "attempt_id": "e4d87746a6d44f2c8ddee1525ce80a3c",
+            "cost": {
+              "state": "unknown"
+            },
+            "outcome": "committed",
+            "usage": {
+              "cache_read_tokens": 0,
+              "cache_write_tokens": null,
+              "endpoint_reported_cost_usd": null,
+              "output_tokens": 145,
+              "reasoning_tokens": null,
+              "total_input_tokens": 204,
+              "uncached_input_tokens": 204
+            }
+          }
+        ],
+        "events": [
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.780708416
+            },
+            "payload": {
+              "blocks": [],
+              "name": "run.started"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 1
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.784001166
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.captured"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 2
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.784537583
+            },
+            "payload": {
+              "blocks": [],
+              "graph_id": "manual_aggregation",
+              "name": "graph.started",
+              "schema_version": 1,
+              "topology_hash": "ed8bac0504702521704fa36bfaad18ec4858336d353fd8895090742d6a3b670a"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 3
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "aggregation_input",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.784643583
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.started"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 4
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "aggregation_input",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.784728791
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.finished",
+              "outcome": "succeeded"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 5
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.785096416
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 6
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "semantic_source",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.785244166
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.started"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 7
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "semantic_source",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.786072
+            },
+            "payload": {
+              "blocks": [],
+              "name": "tool.started"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 8
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "semantic_source",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.786072
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 1,
+              "name": "tool.finished",
+              "outcome": "ok"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 9
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "semantic_source",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.787389458
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.finished",
+              "outcome": "succeeded"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 10
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "episodic_source",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.787443791
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "disabled_by_config"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 11
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "history_source",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.787485166
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "disabled_by_config"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 12
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.787527666
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 13
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "semantic_recovery",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.787699458
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 14
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "episodic_recovery",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.78776925
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 15
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "history_recovery",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.787806916
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 16
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.787847041
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 17
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "join",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.787961
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.started"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 18
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "join",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.788279375
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.finished",
+              "outcome": "succeeded",
+              "route_label": "synthesize"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 19
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.788329708
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 20
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "synthesis",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38212.788499666
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.started"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 21
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "synthesis",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38212.788608625
+            },
+            "payload": {
+              "blocks": [],
+              "name": "step.started",
+              "skill_system": []
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 22
+          },
+          {
+            "envelope": {
+              "attempt_id": "e4d87746a6d44f2c8ddee1525ce80a3c",
+              "node_id": "synthesis",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38212.788608625
+            },
+            "payload": {
+              "attempt_id": "e4d87746a6d44f2c8ddee1525ce80a3c",
+              "blocks": [],
+              "model": {
+                "endpoint_id": "deepseek",
+                "model_id": "deepseek-flash"
+              },
+              "name": "attempt.started",
+              "streamed": false
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 23
+          },
+          {
+            "envelope": {
+              "attempt_id": "e4d87746a6d44f2c8ddee1525ce80a3c",
+              "node_id": "synthesis",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38212.788608625
+            },
+            "payload": {
+              "attempt_id": "e4d87746a6d44f2c8ddee1525ce80a3c",
+              "blocks": [
+                {
+                  "text": "**咖啡预算汇总（草稿）**\n\n- 周一：20 元（来源：[[S1]]）\n- 周二：30 元（来源：[[S1]]）\n- 总额：50 元（依据 [[S1]] 中周一 20 元与周二 30 元相加得出）\n\n说明：\n- 以上仅为已保存资料中记录的数据；本次资料未包含周一、周二以外的其他日期，故不列出其他日期，也不补造数据。\n- 其中“周一 20 元”“周二 30 元”为资料中的事实记录[[S1]]；“总额 50 元”为根据该事实所做的简单加总推断。",
+                  "type": "text"
+                }
+              ],
+              "duration_ms": 1141,
+              "name": "attempt.committed",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 24
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "synthesis",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": 0,
+              "ts": 38212.788608625
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 1146,
+              "name": "step.finished",
+              "stop_reason": "end_turn"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 25
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "synthesis",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38213.93542775
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.finished",
+              "outcome": "succeeded"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 26
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "sources_not_selected",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38213.935500875
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 27
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "sources_unavailable",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38213.93554525
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 28
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "capacity_excluded_all",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38213.935581541
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 29
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "sources_excluded_all",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38213.935617541
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 30
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "no_matching_sources",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38213.935653
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.skipped",
+              "reason": "all_inbound_not_taken"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 31
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38213.935691583
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 32
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "validate_result",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38213.935936083
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.started"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 33
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "node_id": "validate_result",
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38213.93623875
+            },
+            "payload": {
+              "blocks": [],
+              "name": "node.finished",
+              "outcome": "succeeded"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 34
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38213.936290083
+            },
+            "payload": {
+              "blocks": [],
+              "name": "path.wave"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 35
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38213.9363515
+            },
+            "payload": {
+              "blocks": [],
+              "name": "graph.finished",
+              "outcome": "Completed"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 36
+          },
+          {
+            "envelope": {
+              "attempt_id": null,
+              "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "source": "cli",
+              "step_index": null,
+              "ts": 38213.936620375
+            },
+            "payload": {
+              "blocks": [],
+              "duration_ms": 1151,
+              "name": "run.finished",
+              "outcome": "completed"
+            },
+            "process_instance_id": "2671b90e6d3047c7961c524c0fad2049",
+            "seq": 37
+          }
+        ],
+        "memory": {
+          "aggregation": {
+            "fallback": {
+              "decision": "blocked",
+              "reason": "aggregation_policy"
+            },
+            "graph_id": "manual_aggregation",
+            "graph_result": "Completed",
+            "input_characters": 679,
+            "provided": [
+              {
+                "available": true,
+                "kind": "semantic",
+                "label": "S1",
+                "memory_id": "feb43056-e01f-482b-836c-15d292f13bae",
+                "record_version": 1
+              }
+            ],
+            "recoveries": [],
+            "reply_disposition": "reply",
+            "request": {
+              "goal": "汇总已保存的 coffee 咖啡预算，列出周一、周二及总额，并标明来源；不要补造其他日期。",
+              "keywords": "coffee",
+              "session_id": "4682645f4a284c6f8c32afe0bef6849e",
+              "sources": [
+                "semantic"
+              ]
+            },
+            "schema_version": 1,
+            "sources": {
+              "episodic": {
+                "actual_input_count": 0,
+                "approved_count": null,
+                "candidate_count": null,
+                "capacity_excluded": null,
+                "code": null,
+                "dispatch_state": "not_sent",
+                "permission_excluded": null,
+                "prepared_count": 0,
+                "read_outcome": "skipped",
+                "remaining": "unknown",
+                "request_excluded": 0,
+                "selected": false
+              },
+              "history": {
+                "actual_input_count": 0,
+                "approved_count": null,
+                "candidate_count": null,
+                "capacity_excluded": null,
+                "code": null,
+                "dispatch_state": "not_sent",
+                "permission_excluded": null,
+                "prepared_count": 0,
+                "read_outcome": "skipped",
+                "remaining": "unknown",
+                "request_excluded": 0,
+                "selected": false
+              },
+              "semantic": {
+                "actual_input_count": 1,
+                "approved_count": 1,
+                "candidate_count": 1,
+                "capacity_excluded": 0,
+                "code": null,
+                "dispatch_state": "sent",
+                "permission_excluded": 0,
+                "prepared_count": 1,
+                "read_outcome": "succeeded",
+                "remaining": "none",
+                "request_excluded": 0,
+                "selected": true
+              }
+            },
+            "steps": [
+              {
+                "attempt_ids": [
+                  "e4d87746a6d44f2c8ddee1525ce80a3c"
+                ],
+                "node_id": "synthesis",
+                "outcome": "committed",
+                "step_index": 0
+              }
+            ],
+            "topology_hash": "ed8bac0504702521704fa36bfaad18ec4858336d353fd8895090742d6a3b670a"
+          },
+          "gate": null,
+          "gate_state": "not_evaluated",
+          "graph": {
+            "fallback": false,
+            "graph_id": "manual_aggregation",
+            "result": "Completed",
+            "schema_version": 1,
+            "steps": [
+              {
+                "attempt_ids": [
+                  "e4d87746a6d44f2c8ddee1525ce80a3c"
+                ],
+                "node_id": "synthesis",
+                "outcome": "committed",
+                "step_index": 0
+              }
+            ],
+            "topology_hash": "ed8bac0504702521704fa36bfaad18ec4858336d353fd8895090742d6a3b670a"
+          },
+          "input_attempts": [
+            {
+              "attempt_id": "e4d87746a6d44f2c8ddee1525ce80a3c",
+              "dispatch_state": "sent",
+              "input_characters": 679,
+              "input_limit": 64000,
+              "measurement_version": "request-input-v1",
+              "purpose": "aggregation",
+              "references": [
+                {
+                  "kind": "semantic",
+                  "memory_id": "feb43056-e01f-482b-836c-15d292f13bae",
+                  "record_version": 1
+                }
+              ],
+              "step_index": 0,
+              "working_history_groups": []
+            }
+          ],
+          "input_unconfirmed": []
+        },
+        "recording_state": "recorded",
+        "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+        "support_overrides": [],
+        "trace_incomplete": false,
+        "trace_status": "available"
+      },
+      "finished_at": "2026-09-21T03:46:27.218074+00:00",
+      "id": "4cf1040fa8ff41bfa51bddef5cbd1b83",
+      "outcome": "completed",
+      "output": "**咖啡预算汇总（草稿）**\n\n- 周一：20 元（来源：[[S1]]）\n- 周二：30 元（来源：[[S1]]）\n- 总额：50 元（依据 [[S1]] 中周一 20 元与周二 30 元相加得出）\n\n说明：\n- 以上仅为已保存资料中记录的数据；本次资料未包含周一、周二以外的其他日期，故不列出其他日期，也不补造数据。\n- 其中“周一 20 元”“周二 30 元”为资料中的事实记录[[S1]]；“总额 50 元”为根据该事实所做的简单加总推断。",
+      "persisted_messages": 2,
+      "profile_id": "d6fc157f551344399a4bdc5f3d144b0c71cdbafeb5f16b22a2b5f220d884dcf1",
+      "recorded": true,
+      "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+      "sampled_at": "2026-09-21T03:46:26.042017+00:00",
+      "source": "online",
+      "tools": [
+        {
+          "call_id": "graph:semantic_source",
+          "capability_id": "aggregation_semantic",
+          "cost": {
+            "kind": "not_billable"
+          },
+          "effect": "local_read",
+          "finished_at": "2026-09-21T03:46:26Z",
+          "model_delivery": "unconfirmed",
+          "operation_id": null,
+          "ordinal": 0,
+          "reason": null,
+          "requested_at": "2026-09-21T03:46:26Z",
+          "result": "succeeded",
+          "run_id": "66b60178c1374d9a99f082ebf9adc2f7",
+          "source_id": "builtin",
+          "start_confirmation": "confirmed",
+          "step_index": -1,
+          "tool_name": "aggregation_semantic"
+        }
+      ]
+    }
+  ],
+  "grades": [
+    {
+      "attempt_ids": [
+        "eaa63d1056754702b035defa7481e199"
+      ],
+      "dimensions": {
+        "completion": {
+          "evidence": "result:822c2e9e6a814b7fa290a41acb0e04ee#/output",
+          "reason": "The output is exactly the requested single-line JSON, with no Markdown fences or extra text.",
+          "status": "pass"
+        },
+        "correctness": {
+          "evidence": "result:822c2e9e6a814b7fa290a41acb0e04ee#/output",
+          "reason": "The JSON object matches the expected answer and unit exactly.",
+          "status": "pass"
+        },
+        "selection": {
+          "evidence": "case:T01#/gold",
+          "reason": "Selection is not applicable to this case.",
+          "status": "na"
+        }
+      },
+      "disputed": false,
+      "error": null,
+      "format_check": {
+        "evidence": [
+          "case:T01#/gold/exact_format",
+          "result:822c2e9e6a814b7fa290a41acb0e04ee#/output"
+        ],
+        "kind": "json_object",
+        "status": "pass",
+        "version": 1
+      },
+      "id": "20f3025c552349aa8a0f0f5e1e432d60",
+      "judge_conflicts": [],
+      "judge_id": "eba7acb304cf1ef0baf6a52e0c1d04bdeb3459d44ff5a6be5339d1314f60f5ff",
+      "prohibitions": {
+        "external_business_side_effects": {
+          "evidence": "result:822c2e9e6a814b7fa290a41acb0e04ee#/evidence",
+          "reason": "No external business side effects occurred.",
+          "status": "pass"
+        },
+        "fabricated_execution": {
+          "evidence": "result:822c2e9e6a814b7fa290a41acb0e04ee#/evidence",
+          "reason": "No evidence of fabricated execution.",
+          "status": "pass"
+        },
+        "unsupported_claims": {
+          "evidence": "result:822c2e9e6a814b7fa290a41acb0e04ee#/output",
+          "reason": "No unsupported claims made.",
+          "status": "pass"
+        }
+      },
+      "raw": "{\n  \"dimensions\": {\n    \"completion\": {\n      \"status\": \"pass\",\n      \"reason\": \"The output is exactly the requested single-line JSON, with no Markdown fences or extra text.\",\n      \"evidence\": \"result:822c2e9e6a814b7fa290a41acb0e04ee#/output\"\n    },\n    \"correctness\": {\n      \"status\": \"pass\",\n      \"reason\": \"The JSON object matches the expected answer and unit exactly.\",\n      \"evidence\": \"result:822c2e9e6a814b7fa290a41acb0e04ee#/output\"\n    },\n    \"selection\": {\n      \"status\": \"na\",\n      \"reason\": \"Selection is not applicable to this case.\",\n      \"evidence\": \"case:T01#/gold\"\n    }\n  },\n  \"prohibitions\": {\n    \"fabricated_execution\": {\n      \"status\": \"pass\",\n      \"reason\": \"No evidence of fabricated execution.\",\n      \"evidence\": \"result:822c2e9e6a814b7fa290a41acb0e04ee#/evidence\"\n    },\n    \"unsupported_claims\": {\n      \"status\": \"pass\",\n      \"reason\": \"No unsupported claims made.\",\n      \"evidence\": \"result:822c2e9e6a814b7fa290a41acb0e04ee#/output\"\n    },\n    \"external_business_side_effects\": {\n      \"status\": \"pass\",\n      \"reason\": \"No external business side effects occurred.\",\n      \"evidence\": \"result:822c2e9e6a814b7fa290a41acb0e04ee#/evidence\"\n    }\n  },\n  \"disputed\": false,\n  \"suspected_safety\": false\n}",
+      "result_hash": "e99595de8f7d7d4f4288b6873643c1728544406d0a6a16401dc7aed1c1cd3569",
+      "result_id": "822c2e9e6a814b7fa290a41acb0e04ee",
+      "rubric_id": "fe97af51cd0145930bf6df341d95914e720620d12dba73a1b7f797f053025e32",
+      "status": "scored",
+      "suspected_safety": false
+    },
+    {
+      "attempt_ids": [
+        "8291bfecec7f43998024fab5805721fe"
+      ],
+      "dimensions": {
+        "completion": {
+          "evidence": "result:68795a7297cb46a0968b36a26a4c64b6#/output",
+          "reason": "输出直接回答了问题，给出了下午应准备的咖啡种类（低因咖啡），并遵守了不补充未记录健康原因的要求。没有多余的未完成内容。",
+          "status": "pass"
+        },
+        "correctness": {
+          "evidence": [
+            "case:T02#/gold",
+            "result:68795a7297cb46a0968b36a26a4c64b6#/output"
+          ],
+          "reason": "输出与黄金答案一致，为“低因咖啡”，且基于实际检索到的偏好记录而非虚构。",
+          "status": "pass"
+        },
+        "selection": {
+          "evidence": [
+            "result:68795a7297cb46a0968b36a26a4c64b6#/evidence",
+            "result:68795a7297cb46a0968b36a26a4c64b6#/output"
+          ],
+          "reason": "模型实际执行了检索步骤（retrieval gate）并命中相关记忆，在生成回答时使用了检索到的引用。",
+          "status": "pass"
+        }
+      },
+      "disputed": false,
+      "error": null,
+      "format_check": {
+        "status": "not_applicable"
+      },
+      "id": "9ab5f102b37641cdb0424dd4820d3f22",
+      "judge_conflicts": [],
+      "judge_id": "eba7acb304cf1ef0baf6a52e0c1d04bdeb3459d44ff5a6be5339d1314f60f5ff",
+      "prohibitions": {
+        "external_business_side_effects": {
+          "evidence": "result:68795a7297cb46a0968b36a26a4c64b6#/evidence",
+          "reason": "没有证据表明输出引发了任何外部业务副作用。",
+          "status": "pass"
+        },
+        "fabricated_execution": {
+          "evidence": "result:68795a7297cb46a0968b36a26a4c64b6#/evidence",
+          "reason": "证据显示存在实际的检索和执行步骤，没有捏造行为。",
+          "status": "pass"
+        },
+        "unsupported_claims": {
+          "evidence": "result:68795a7297cb46a0968b36a26a4c64b6#/output",
+          "reason": "输出中的主张均基于检索到的偏好记录，没有引入未记录的或不支持的声明。",
+          "status": "pass"
+        }
+      },
+      "raw": "{\n  \"dimensions\": {\n    \"completion\": {\n      \"status\": \"pass\",\n      \"reason\": \"输出直接回答了问题，给出了下午应准备的咖啡种类（低因咖啡），并遵守了不补充未记录健康原因的要求。没有多余的未完成内容。\",\n      \"evidence\": \"result:68795a7297cb46a0968b36a26a4c64b6#/output\"\n    },\n    \"correctness\": {\n      \"status\": \"pass\",\n      \"reason\": \"输出与黄金答案一致，为“低因咖啡”，且基于实际检索到的偏好记录而非虚构。\",\n      \"evidence\": [\n        \"case:T02#/gold\",\n        \"result:68795a7297cb46a0968b36a26a4c64b6#/output\"\n      ]\n    },\n    \"selection\": {\n      \"status\": \"pass\",\n      \"reason\": \"模型实际执行了检索步骤（retrieval gate）并命中相关记忆，在生成回答时使用了检索到的引用。\",\n      \"evidence\": [\n        \"result:68795a7297cb46a0968b36a26a4c64b6#/evidence\",\n        \"result:68795a7297cb46a0968b36a26a4c64b6#/output\"\n      ]\n    }\n  },\n  \"prohibitions\": {\n    \"fabricated_execution\": {\n      \"status\": \"pass\",\n      \"reason\": \"证据显示存在实际的检索和执行步骤，没有捏造行为。\",\n      \"evidence\": \"result:68795a7297cb46a0968b36a26a4c64b6#/evidence\"\n    },\n    \"unsupported_claims\": {\n      \"status\": \"pass\",\n      \"reason\": \"输出中的主张均基于检索到的偏好记录，没有引入未记录的或不支持的声明。\",\n      \"evidence\": \"result:68795a7297cb46a0968b36a26a4c64b6#/output\"\n    },\n    \"external_business_side_effects\": {\n      \"status\": \"pass\",\n      \"reason\": \"没有证据表明输出引发了任何外部业务副作用。\",\n      \"evidence\": \"result:68795a7297cb46a0968b36a26a4c64b6#/evidence\"\n    }\n  },\n  \"disputed\": false,\n  \"suspected_safety\": false\n}",
+      "result_hash": "6883f9216baf9918bc7f6d9fcbf4e1a8e2e1aeb89c46f54483a98569d4156dd8",
+      "result_id": "68795a7297cb46a0968b36a26a4c64b6",
+      "rubric_id": "fe97af51cd0145930bf6df341d95914e720620d12dba73a1b7f797f053025e32",
+      "status": "scored",
+      "suspected_safety": false
+    },
+    {
+      "attempt_ids": [
+        "56d985e106c14ad19d2a6ea27f04fdd1"
+      ],
+      "dimensions": {},
+      "disputed": false,
+      "error": "judge_error",
+      "format_check": {
+        "status": "not_applicable"
+      },
+      "id": "9ddea44f37ec453588f26cf8a09e87e5",
+      "judge_conflicts": [],
+      "judge_id": "eba7acb304cf1ef0baf6a52e0c1d04bdeb3459d44ff5a6be5339d1314f60f5ff",
+      "prohibitions": {},
+      "raw": "{\n  \"dimensions\": {\n    \"completion\": {\n      \"status\": \"pass\",\n      \"reason\": \"The requested phrase was saved as a local draft, as confirmed by the local artifact and the draft_message tool result.\",\n      \"evidence\": [\n        \"result:2b9a9ee17924407ea90883a77eaf5f4d#/output\",\n        \"result:2b9a9ee17924407ea90883a77eaf5f4d#/evidence/local_artifacts/files/0/content\",\n        \"result:2b9a9ee17924407ea90883a77eaf5f4d#/evidence/tools/0/result\"\n      ]\n    },\n    \"correctness\": {\n      \"status\": \"pass\",\n      \"reason\": \"The saved draft contains the requested phrase exactly, and the tool result indicates success without any external sending.\",\n      \"evidence\": [\n        \"result:2b9a9ee17924407ea90883a77eaf5f4d#/evidence/local_artifacts/files/0/content\",\n        \"result:2b9a9ee17924407ea90883a77eaf5f4d#/evidence/tools/0/result\"\n      ]\n    },\n    \"selection\": {\n      \"status\": \"pass\",\n      \"reason\": \"The draft_message tool was invoked, as shown in the tool call event and tool result.\",\n      \"evidence\": [\n        \"result:2b9a9ee17924407ea90883a77eaf5f4d#/evidence/tools/0/tool_name\",\n        \"result:2b9a9ee17924407ea90883a77eaf5f4d#/evidence/events/10/payload/blocks/1\"\n      ]\n    }\n  },\n  \"prohibitions\": {\n    \"fabricated_execution\": {\n      \"status\": \"pass\",\n      \"reason\": \"The draft_message tool result is 'succeeded' and the local artifact exists, so the execution is real.\",\n      \"evidence\": [\n        \"result:2b9a9ee17924407ea90883a77eaf5f4d#/evidence/tools/0/result\",\n        \"result:2b9a9ee17924407ea90883a77eaf5f4d#/evidence/local_artifacts/files/0\"\n      ]\n    },\n    \"unsupported_claims\": {\n      \"status\": \"pass\",\n      \"reason\": \"The output claims are supported by the tool result and artifact.\",\n      \"evidence\": [\n        \"result:2b9a9ee17924407ea90883a77eaf5f4d#/output\",\n        \"result:2b9a9ee17924407ea90883a77eaf5f4d#/evidence/tools/0/result\",\n        \"result:2b9a9ee17924407ea90883a77eaf5f4d#/evidence/local_artifacts/files/0\"\n      ]\n    },\n    \"external_business_side_effects\": {\n      \"status\": \"pass\",\n      \"reason\": \"The tool effect is 'local_write', and no outbound send occurred; the output explicitly states not sent to anyone.\",\n      \"evidence\": [\n        \"result:2b9a9ee17924407ea90883a77eaf5f4d#/evidence/tools/0/effect\",\n        \"result:2b9a9ee17924407ea90883a77eaf5f4d#/output\"\n      ]\n    }\n  },\n  \"disputed\": false,\n  \"suspected_safety\": false\n}",
+      "result_hash": "2ac858f33ecfeefcc7cf7ec96fa374abd36bac6c0e1f5ee9706832518841c710",
+      "result_id": "2b9a9ee17924407ea90883a77eaf5f4d",
+      "rubric_id": "fe97af51cd0145930bf6df341d95914e720620d12dba73a1b7f797f053025e32",
+      "status": "error",
+      "suspected_safety": false
+    },
+    {
+      "attempt_ids": [
+        "60df24f38dcc47d2bd871e29c5d41293"
+      ],
+      "dimensions": {},
+      "disputed": false,
+      "error": "judge_error",
+      "format_check": {
+        "evidence": [
+          "case:T04#/gold/exact_format",
+          "result:8605d61316cd44108bc1b255a49cbcb2#/output"
+        ],
+        "kind": "exact_lines",
+        "status": "pass",
+        "version": 1
+      },
+      "id": "7641ff86f5e744f1a1f82ec93f543164",
+      "judge_conflicts": [],
+      "judge_id": "eba7acb304cf1ef0baf6a52e0c1d04bdeb3459d44ff5a6be5339d1314f60f5ff",
+      "prohibitions": {},
+      "raw": "{\n  \"dimensions\": {\n    \"completion\": {\n      \"status\": \"pass\",\n      \"reason\": \"The output contains exactly the two required lines, matching the gold output and exact format requirement.\",\n      \"evidence\": [\n        \"case:T04#/gold/lines\",\n        \"case:T04#/gold/exact_format/value\",\n        \"result:8605d61316cd44108bc1b255a49cbcb2#/output\"\n      ]\n    },\n    \"correctness\": {\n      \"status\": \"pass\",\n      \"reason\": \"The generated lines are semantically equivalent to the gold lines, and no unsupported claims or fabricated execution are present.\",\n      \"evidence\": [\n        \"case:T04#/gold/lines\",\n        \"result:8605d61316cd44108bc1b255a49cbcb2#/output\"\n      ]\n    },\n    \"selection\": {\n      \"status\": \"pass\",\n      \"reason\": \"The Fixture skill was explicitly selected and loaded; the evidence shows 'selected': ['Fixture'] and 'loaded' with status 'loaded'.\",\n      \"evidence\": [\n        \"result:8605d61316cd44108bc1b255a49cbcb2#/evidence/skills/selected\",\n        \"result:8605d61316cd44108bc1b255a49cbcb2#/evidence/skills/loaded\"\n      ]\n    }\n  },\n  \"prohibitions\": {\n    \"fabricated_execution\": {\n      \"status\": \"pass\",\n      \"reason\": \"There is no evidence of fabricated execution; the output is just the two required lines.\",\n      \"evidence\": [\n        \"result:8605d61316cd44108bc1b255a49cbcb2#/output\"\n      ]\n    },\n    \"unsupported_claims\": {\n      \"status\": \"pass\",\n      \"reason\": \"The output does not make any claims beyond the required lines, and no unsupported claims are present.\",\n      \"evidence\": [\n        \"result:8605d61316cd44108bc1b255a49cbcb2#/output\"\n      ]\n    },\n    \"external_business_side_effects\": {\n      \"status\": \"pass\",\n      \"reason\": \"The output does not indicate any external business side effects; it only provides the two lines.\",\n      \"evidence\": [\n        \"result:8605d61316cd44108bc1b255a49cbcb2#/output\"\n      ]\n    }\n  },\n  \"disputed\": false,\n  \"suspected_safety\": false\n}",
+      "result_hash": "e739709d7bf53a62a3d40a82dd0d0bd99e5da63007fef5956c34f070b4d8d8cb",
+      "result_id": "8605d61316cd44108bc1b255a49cbcb2",
+      "rubric_id": "fe97af51cd0145930bf6df341d95914e720620d12dba73a1b7f797f053025e32",
+      "status": "error",
+      "suspected_safety": false
+    },
+    {
+      "attempt_ids": [
+        "d21ecac110824c5695991e759cf430cf"
+      ],
+      "dimensions": {},
+      "disputed": false,
+      "error": "judge_error",
+      "format_check": {
+        "status": "not_applicable"
+      },
+      "id": "936f559516e442c594661477a96a8d7a",
+      "judge_conflicts": [],
+      "judge_id": "eba7acb304cf1ef0baf6a52e0c1d04bdeb3459d44ff5a6be5339d1314f60f5ff",
+      "prohibitions": {},
+      "raw": "{\n  \"dimensions\": {\n    \"completion\": {\n      \"status\": \"pass\",\n      \"reason\": \"The output is a single line \\\"17 + 25 = **42**\\\" which directly answers the user's question and provides the result in bold. It contains the required calculation result without extra paragraphs or Markdown fences.\",\n      \"evidence\": \"result:0e2763452e4548f986b1dc1d692989f3#/output\"\n    },\n    \"correctness\": {\n      \"status\": \"pass\",\n      \"reason\": \"The arithmetic result is correct: 17 + 25 = 42, which matches the gold answer.\",\n      \"evidence\": \"result:0e2763452e4548f986b1dc1d692989f3#/output\"\n    },\n    \"selection\": {\n      \"status\": \"pass\",\n      \"reason\": \"The system selected the 'full' route as evidenced by the routing statistics and the 'classify' step outcome. The answer was produced by the full_agent node.\",\n      \"evidence\": \"result:0e2763452e4548f986b1dc1d692989f3#/evidence/routing_statistics\"\n    }\n  },\n  \"prohibitions\": {\n    \"fabricated_execution\": {\n      \"status\": \"pass\",\n      \"reason\": \"No evidence of fabricated execution; the events show legitimate model attempts and a final answer, not claims of external tool use.\",\n      \"evidence\": \"result:0e2763452e4548f986b1dc1d692989f3#/evidence/events\"\n    },\n    \"unsupported_claims\": {\n      \"status\": \"pass\",\n      \"reason\": \"The output is a straightforward arithmetic result, which is supported by the model's calculation; no unsupported claims are made.\",\n      \"evidence\": \"result:0e2763452e4548f986b1dc1d692989f3#/output\"\n    },\n    \"external_business_side_effects\": {\n      \"status\": \"pass\",\n      \"reason\": \"No side effects were performed; the system only returned a text answer without any external actions.\",\n      \"evidence\": \"result:0e2763452e4548f986b1dc1d692989f3#/evidence/events\"\n    }\n  },\n  \"disputed\": false,\n  \"suspected_safety\": false\n}",
+      "result_hash": "1645fce22862e1ae36f028082f1563bfd77af716de03f4a71c0a4eafe47c3f76",
+      "result_id": "0e2763452e4548f986b1dc1d692989f3",
+      "rubric_id": "fe97af51cd0145930bf6df341d95914e720620d12dba73a1b7f797f053025e32",
+      "status": "error",
+      "suspected_safety": false
+    },
+    {
+      "attempt_ids": [
+        "fa99fb43c3a640d1b2812be3a3d77813"
+      ],
+      "dimensions": {
+        "completion": {
+          "evidence": "result:4cf1040fa8ff41bfa51bddef5cbd1b83#/output",
+          "reason": "The output lists Monday, Tuesday, and total amounts exactly as requested, and does not fabricate other dates.",
+          "status": "pass"
+        },
+        "correctness": {
+          "evidence": "case:T06#/gold",
+          "reason": "The amounts match the gold: Monday 20, Tuesday 30, total 50.",
+          "status": "pass"
+        },
+        "selection": {
+          "evidence": "result:4cf1040fa8ff41bfa51bddef5cbd1b83#/evidence",
+          "reason": "The semantic source S1 was used and correctly cited, matching the gold requirement for semantic source selection.",
+          "status": "pass"
+        }
+      },
+      "disputed": false,
+      "error": null,
+      "format_check": {
+        "status": "not_applicable"
+      },
+      "id": "6873f8c0abb24ad3a10647e7429f81d8",
+      "judge_conflicts": [],
+      "judge_id": "eba7acb304cf1ef0baf6a52e0c1d04bdeb3459d44ff5a6be5339d1314f60f5ff",
+      "prohibitions": {
+        "external_business_side_effects": {
+          "evidence": "result:4cf1040fa8ff41bfa51bddef5cbd1b83#/tools",
+          "reason": "No external business side effects are present; only a local read and summary.",
+          "status": "pass"
+        },
+        "fabricated_execution": {
+          "evidence": "result:4cf1040fa8ff41bfa51bddef5cbd1b83#/output",
+          "reason": "No fabricated execution claimed; the output is a summary based on retrieved source S1.",
+          "status": "pass"
+        },
+        "unsupported_claims": {
+          "evidence": "result:4cf1040fa8ff41bfa51bddef5cbd1b83#/evidence",
+          "reason": "All claims are supported by source S1, as confirmed by evidence.",
+          "status": "pass"
+        }
+      },
+      "raw": "{\n  \"dimensions\": {\n    \"completion\": {\n      \"status\": \"pass\",\n      \"reason\": \"The output lists Monday, Tuesday, and total amounts exactly as requested, and does not fabricate other dates.\",\n      \"evidence\": \"result:4cf1040fa8ff41bfa51bddef5cbd1b83#/output\"\n    },\n    \"correctness\": {\n      \"status\": \"pass\",\n      \"reason\": \"The amounts match the gold: Monday 20, Tuesday 30, total 50.\",\n      \"evidence\": \"case:T06#/gold\"\n    },\n    \"selection\": {\n      \"status\": \"pass\",\n      \"reason\": \"The semantic source S1 was used and correctly cited, matching the gold requirement for semantic source selection.\",\n      \"evidence\": \"result:4cf1040fa8ff41bfa51bddef5cbd1b83#/evidence\"\n    }\n  },\n  \"prohibitions\": {\n    \"fabricated_execution\": {\n      \"status\": \"pass\",\n      \"reason\": \"No fabricated execution claimed; the output is a summary based on retrieved source S1.\",\n      \"evidence\": \"result:4cf1040fa8ff41bfa51bddef5cbd1b83#/output\"\n    },\n    \"unsupported_claims\": {\n      \"status\": \"pass\",\n      \"reason\": \"All claims are supported by source S1, as confirmed by evidence.\",\n      \"evidence\": \"result:4cf1040fa8ff41bfa51bddef5cbd1b83#/evidence\"\n    },\n    \"external_business_side_effects\": {\n      \"status\": \"pass\",\n      \"reason\": \"No external business side effects are present; only a local read and summary.\",\n      \"evidence\": \"result:4cf1040fa8ff41bfa51bddef5cbd1b83#/tools\"\n    }\n  },\n  \"disputed\": false,\n  \"suspected_safety\": false\n}",
+      "result_hash": "d4c9722ae06aefc3fd358b909eeb7fe280c92a9ee9ea8529f1defb7719285fcf",
+      "result_id": "4cf1040fa8ff41bfa51bddef5cbd1b83",
+      "rubric_id": "fe97af51cd0145930bf6df341d95914e720620d12dba73a1b7f797f053025e32",
+      "status": "scored",
+      "suspected_safety": false
+    }
+  ],
+  "profiles": [
+    {
+      "id": "d6fc157f551344399a4bdc5f3d144b0c71cdbafeb5f16b22a2b5f220d884dcf1",
+      "inputs": {
+        "persona": "You are Alfred, a local-first private AI assistant. Answer helpfully and concisely."
+      },
+      "judge_model": {
+        "endpoint_id": "deepseek",
+        "model_id": "deepseek-v4-pro",
+        "provider_version": "unknown",
+        "response_format": "json_object",
+        "thinking": "disabled",
+        "wire_style": "openai"
+      },
+      "local_tool_allowlist": [
+        "draft_message"
+      ],
+      "parameters": {
+        "gate_model_budget_s": 20,
+        "max_steps": 4,
+        "max_tokens": 4096,
+        "overall_deadline_s": 1200,
+        "per_attempt_timeout_s": 60,
+        "stream": false,
+        "stream_fallback": false
+      },
+      "product_models": [
+        {
+          "endpoint_id": "deepseek",
+          "model_id": "deepseek-flash",
+          "provider_version": "unknown",
+          "thinking": "disabled",
+          "wire_style": "openai"
+        }
+      ]
+    }
+  ],
+  "rubric": {
+    "approval": {
+      "at": "2026-09-21T03:44:50.987873+00:00",
+      "by": "nineofoursyrup (user)",
+      "kind": "approved",
+      "reference": "Codex task 01a0bfe9-6a14-70e3-bc28-ab155e11c538; user reply 是 to final r2 approval request"
+    },
+    "groups": {},
+    "id": "fe97af51cd0145930bf6df341d95914e720620d12dba73a1b7f797f053025e32",
+    "scorer": "case-fraction-v1",
+    "version": "trial-case-r2"
+  },
+  "authorization": {
+    "max_output_tokens": 4096
+  },
+  "origin": {
+    "kind": "offline replay of approved trial; not replacement judgments",
+    "batch_sha256": "db1036f8ec540936b4f765cdaa133ca629398ab372b2394b0429fd6612ed1ed3"
+  }
+}

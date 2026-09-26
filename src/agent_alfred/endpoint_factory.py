@@ -61,12 +61,14 @@ class _RouteClient:
 
 class EndpointClientFactory:
     def __init__(
-        self, *, clock, endpoints=None, support_overrides=None, http_client=None
+        self, *, clock, endpoints=None, support_overrides=None, http_client=None,
+        max_retries=1,
     ):
         self._clock = clock
         self._endpoints = list_endpoints() if endpoints is None else tuple(endpoints)
         self.support_overrides = support_overrides or SupportOverrides()
         self._http_client = http_client
+        self._max_retries = max_retries
         self._pool = VersionedTransportPool(
             self._build_transport, close=lambda client: client.close()
         )
@@ -186,4 +188,5 @@ class EndpointClientFactory:
             ),
             clock=self._clock,
             sleeper=SystemSleeper(),
+            max_retries=self._max_retries,
         )
