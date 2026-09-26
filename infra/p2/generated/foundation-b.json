@@ -1,0 +1,170 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "P2 account B bootstrap",
+  "Parameters": {},
+  "Resources": {
+    "CodeBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "IgnorePublicAcls": true,
+          "BlockPublicPolicy": true,
+          "RestrictPublicBuckets": true
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "AuthorityRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+          }
+        ],
+        "Policies": [
+          {
+            "PolicyName": "deny-function-code-eni-management",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Deny",
+                  "Action": [
+                    "ec2:CreateNetworkInterface",
+                    "ec2:DeleteNetworkInterface",
+                    "ec2:DescribeNetworkInterfaces",
+                    "ec2:DescribeSubnets",
+                    "ec2:DetachNetworkInterface",
+                    "ec2:AssignPrivateIpAddresses",
+                    "ec2:UnassignPrivateIpAddresses"
+                  ],
+                  "Resource": "*",
+                  "Condition": {
+                    "ArnLike": {
+                      "lambda:SourceFunctionArn": {
+                        "Fn::Sub": "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:p2-*"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "IssuerDlq": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "MessageRetentionPeriod": 1209600
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "IssuerQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "VisibilityTimeout": 180,
+        "RedrivePolicy": {
+          "deadLetterTargetArn": {
+            "Fn::GetAtt": [
+              "IssuerDlq",
+              "Arn"
+            ]
+          },
+          "maxReceiveCount": 2
+        }
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "WorkerRepository": {
+      "Type": "AWS::ECR::Repository",
+      "Properties": {
+        "ImageScanningConfiguration": {
+          "ScanOnPush": true
+        },
+        "ImageTagMutability": "IMMUTABLE",
+        "EncryptionConfiguration": {
+          "EncryptionType": "AES256"
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "CodeBucketName": {
+      "Value": {
+        "Ref": "CodeBucket"
+      }
+    },
+    "AuthorityRoleName": {
+      "Value": {
+        "Ref": "AuthorityRole"
+      }
+    },
+    "AuthorityRoleArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "AuthorityRole",
+          "Arn"
+        ]
+      }
+    },
+    "IssuerQueueArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "IssuerQueue",
+          "Arn"
+        ]
+      }
+    },
+    "IssuerQueueUrl": {
+      "Value": {
+        "Ref": "IssuerQueue"
+      }
+    },
+    "IssuerDlqUrl": {
+      "Value": {
+        "Ref": "IssuerDlq"
+      }
+    },
+    "ImageRepositoryArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "WorkerRepository",
+          "Arn"
+        ]
+      }
+    },
+    "ImageRepositoryUri": {
+      "Value": {
+        "Fn::Sub": "${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${WorkerRepository}"
+      }
+    }
+  }
+}

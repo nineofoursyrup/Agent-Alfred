@@ -1,0 +1,837 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "P2 account A synthetic issuer, operator-only signing root",
+  "Parameters": {
+    "CodeBucket": {
+      "Type": "String",
+      "AllowedPattern": "[a-z0-9][a-z0-9.-]{2,62}"
+    },
+    "CodeKey": {
+      "Type": "String"
+    },
+    "BAccountId": {
+      "Type": "String",
+      "AllowedPattern": "[0-9]{12}"
+    },
+    "AuthorityApiId": {
+      "Type": "String"
+    },
+    "IssuerQueueArn": {
+      "Type": "String"
+    },
+    "IssuerQueueUrl": {
+      "Type": "String"
+    },
+    "OperatorRoleArn": {
+      "Type": "String",
+      "AllowedPattern": "arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_-]+"
+    },
+    "IssuerRoleArn": {
+      "Type": "String"
+    },
+    "IssuerRoleName": {
+      "Type": "String"
+    },
+    "SigningKeyArn": {
+      "Type": "String"
+    },
+    "AuditBucketName": {
+      "Type": "String"
+    },
+    "LogRetentionDays": {
+      "Type": "Number",
+      "MinValue": 1,
+      "MaxValue": 365
+    },
+    "EnableTraffic": {
+      "Type": "String",
+      "Default": "false",
+      "AllowedPattern": "true|false"
+    },
+    "ExpiresAtUtc": {
+      "Type": "String"
+    }
+  },
+  "Resources": {
+    "IssuerVpc": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.84.1.0/24",
+        "EnableDnsSupport": true,
+        "EnableDnsHostnames": true,
+        "Tags": [
+          {
+            "Key": "p2-owner",
+            "Value": "Issuer"
+          }
+        ]
+      }
+    },
+    "IssuerSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "IssuerVpc"
+        },
+        "CidrBlock": "10.84.1.0/25",
+        "MapPublicIpOnLaunch": false,
+        "AvailabilityZone": {
+          "Fn::Select": [
+            0,
+            {
+              "Fn::GetAZs": ""
+            }
+          ]
+        }
+      }
+    },
+    "IssuerRoute": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "IssuerVpc"
+        }
+      }
+    },
+    "IssuerRouteAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "IssuerSubnet"
+        },
+        "RouteTableId": {
+          "Ref": "IssuerRoute"
+        }
+      }
+    },
+    "IssuerWorkloadSg": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Issuer workload private egress only",
+        "VpcId": {
+          "Ref": "IssuerVpc"
+        },
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "192.0.2.0/32"
+          }
+        ]
+      }
+    },
+    "IssuerEndpointSg": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Issuer endpoint 443 from workload",
+        "VpcId": {
+          "Ref": "IssuerVpc"
+        },
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "192.0.2.0/32"
+          }
+        ],
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "SourceSecurityGroupId": {
+              "Ref": "IssuerWorkloadSg"
+            }
+          }
+        ]
+      }
+    },
+    "IssuerEndpointEgress": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "IssuerWorkloadSg"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "DestinationSecurityGroupId": {
+          "Ref": "IssuerEndpointSg"
+        }
+      }
+    },
+    "IssuerKmsEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "IssuerVpc"
+        },
+        "VpcEndpointType": "Interface",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.kms"
+        },
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "IssuerSubnet"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "IssuerEndpointSg"
+          }
+        ]
+      }
+    },
+    "IssuerSqsEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "IssuerVpc"
+        },
+        "VpcEndpointType": "Interface",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.sqs"
+        },
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "IssuerSubnet"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "IssuerEndpointSg"
+          }
+        ]
+      }
+    },
+    "IssuerExecuteApiEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "IssuerVpc"
+        },
+        "VpcEndpointType": "Interface",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.execute-api"
+        },
+        "PrivateDnsEnabled": true,
+        "SubnetIds": [
+          {
+            "Ref": "IssuerSubnet"
+          }
+        ],
+        "SecurityGroupIds": [
+          {
+            "Ref": "IssuerEndpointSg"
+          }
+        ]
+      }
+    },
+    "IssuerAllowedDns": {
+      "Type": "AWS::Route53Resolver::FirewallDomainList",
+      "Properties": {
+        "Name": "p2-issuer-allowed",
+        "Domains": [
+          {
+            "Fn::Sub": "kms.${AWS::Region}.amazonaws.com"
+          },
+          {
+            "Fn::Sub": "sqs.${AWS::Region}.amazonaws.com"
+          },
+          {
+            "Fn::Sub": "*.execute-api.${AWS::Region}.amazonaws.com"
+          }
+        ]
+      }
+    },
+    "IssuerAllDns": {
+      "Type": "AWS::Route53Resolver::FirewallDomainList",
+      "Properties": {
+        "Name": "p2-issuer-all",
+        "Domains": [
+          "*"
+        ]
+      }
+    },
+    "IssuerDnsRules": {
+      "Type": "AWS::Route53Resolver::FirewallRuleGroup",
+      "Properties": {
+        "Name": "p2-issuer-deny-default",
+        "FirewallRules": [
+          {
+            "Action": "ALLOW",
+            "FirewallDomainListId": {
+              "Ref": "IssuerAllowedDns"
+            },
+            "Priority": 10
+          },
+          {
+            "Action": "BLOCK",
+            "BlockResponse": "NXDOMAIN",
+            "FirewallDomainListId": {
+              "Ref": "IssuerAllDns"
+            },
+            "Priority": 100
+          }
+        ]
+      }
+    },
+    "IssuerDnsAssociation": {
+      "Type": "AWS::Route53Resolver::FirewallRuleGroupAssociation",
+      "Properties": {
+        "Name": "p2-issuer-association",
+        "FirewallRuleGroupId": {
+          "Ref": "IssuerDnsRules"
+        },
+        "VpcId": {
+          "Ref": "IssuerVpc"
+        },
+        "Priority": 100,
+        "MutationProtection": "DISABLED"
+      }
+    },
+    "IssuerFlowLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/p2/${AWS::StackName}/issuer/flow"
+        },
+        "RetentionInDays": {
+          "Ref": "LogRetentionDays"
+        }
+      }
+    },
+    "IssuerFlowRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "vpc-flow-logs.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "write-flow-only",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                    "logs:DescribeLogStreams"
+                  ],
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "IssuerFlowLogGroup",
+                      "Arn"
+                    ]
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "logs:DescribeLogGroups",
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "IssuerFlowLog": {
+      "Type": "AWS::EC2::FlowLog",
+      "Properties": {
+        "ResourceType": "VPC",
+        "ResourceId": {
+          "Ref": "IssuerVpc"
+        },
+        "TrafficType": "ALL",
+        "LogDestinationType": "cloud-watch-logs",
+        "LogGroupName": {
+          "Ref": "IssuerFlowLogGroup"
+        },
+        "DeliverLogsPermissionArn": {
+          "Fn::GetAtt": [
+            "IssuerFlowRole",
+            "Arn"
+          ]
+        }
+      }
+    },
+    "IssuerFunctionLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/aws/lambda/p2-${AWS::StackName}-issuerfunction"
+        },
+        "RetentionInDays": {
+          "Ref": "LogRetentionDays"
+        }
+      }
+    },
+    "IssuerFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": {
+          "Fn::Sub": "p2-${AWS::StackName}-issuerfunction"
+        },
+        "Runtime": "python3.14",
+        "Handler": "agent_alfred.p2.issuer.handler",
+        "Role": {
+          "Ref": "IssuerRoleArn"
+        },
+        "Code": {
+          "S3Bucket": {
+            "Ref": "CodeBucket"
+          },
+          "S3Key": {
+            "Ref": "CodeKey"
+          }
+        },
+        "Timeout": 30,
+        "MemorySize": 256,
+        "VpcConfig": {
+          "SubnetIds": [
+            {
+              "Ref": "IssuerSubnet"
+            }
+          ],
+          "SecurityGroupIds": [
+            {
+              "Ref": "IssuerWorkloadSg"
+            }
+          ]
+        },
+        "Environment": {
+          "Variables": {
+            "P2_SYNTHETIC_ONLY": "1",
+            "P2_EXPIRES_AT": {
+              "Ref": "ExpiresAtUtc"
+            },
+            "P2_DEPLOYMENT_ACTIVE": {
+              "Ref": "EnableTraffic"
+            },
+            "P2_OPERATOR_ROLE_ARN": {
+              "Ref": "OperatorRoleArn"
+            },
+            "P2_SYNTHETIC_KMS_ARN": {
+              "Ref": "SigningKeyArn"
+            },
+            "P2_ISSUER_QUEUE_URL": {
+              "Ref": "IssuerQueueUrl"
+            },
+            "P2_AUTHORITY_API_BASE": {
+              "Fn::Join": [
+                "",
+                [
+                  "https://",
+                  {
+                    "Ref": "AuthorityApiId"
+                  },
+                  {
+                    "Fn::Sub": ".execute-api.${AWS::Region}.amazonaws.com/p2"
+                  }
+                ]
+              ]
+            }
+          }
+        },
+        "ReservedConcurrentExecutions": 2
+      }
+    },
+    "IssuerActionPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": {
+          "Fn::Sub": "p2-${AWS::StackName}-issueractionpolicy"
+        },
+        "Roles": [
+          {
+            "Ref": "IssuerRoleName"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": "kms:Sign",
+              "Resource": {
+                "Ref": "SigningKeyArn"
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": "sqs:SendMessage",
+              "Resource": {
+                "Ref": "IssuerQueueArn"
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": "execute-api:Invoke",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:execute-api:${AWS::Region}:"
+                    },
+                    {
+                      "Ref": "BAccountId"
+                    },
+                    ":",
+                    {
+                      "Ref": "AuthorityApiId"
+                    },
+                    "/p2/POST/v1/proposal"
+                  ]
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "IssuerApi": {
+      "Type": "AWS::ApiGateway::RestApi",
+      "Properties": {
+        "EndpointConfiguration": {
+          "Types": [
+            "REGIONAL"
+          ]
+        },
+        "Name": {
+          "Fn::Sub": "p2-${AWS::StackName}-issuer"
+        },
+        "Policy": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": "execute-api:Invoke",
+              "Resource": "execute-api:/*",
+              "Principal": {
+                "AWS": {
+                  "Ref": "OperatorRoleArn"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "IssuerV1": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "IssuerApi"
+        },
+        "ParentId": {
+          "Fn::GetAtt": [
+            "IssuerApi",
+            "RootResourceId"
+          ]
+        },
+        "PathPart": "v1"
+      }
+    },
+    "IssuerProposalResource": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "IssuerApi"
+        },
+        "ParentId": {
+          "Ref": "IssuerV1"
+        },
+        "PathPart": "proposal"
+      }
+    },
+    "IssuerProposalMethod": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "IssuerApi"
+        },
+        "ResourceId": {
+          "Ref": "IssuerProposalResource"
+        },
+        "HttpMethod": "GET",
+        "AuthorizationType": "AWS_IAM",
+        "Integration": {
+          "Type": "AWS_PROXY",
+          "IntegrationHttpMethod": "POST",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/"
+                },
+                {
+                  "Fn::GetAtt": [
+                    "IssuerFunction",
+                    "Arn"
+                  ]
+                },
+                "/invocations"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "IssuerIssueResource": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "IssuerApi"
+        },
+        "ParentId": {
+          "Ref": "IssuerV1"
+        },
+        "PathPart": "issue"
+      }
+    },
+    "IssuerIssueMethod": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "IssuerApi"
+        },
+        "ResourceId": {
+          "Ref": "IssuerIssueResource"
+        },
+        "HttpMethod": "POST",
+        "AuthorizationType": "AWS_IAM",
+        "Integration": {
+          "Type": "AWS_PROXY",
+          "IntegrationHttpMethod": "POST",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/"
+                },
+                {
+                  "Fn::GetAtt": [
+                    "IssuerFunction",
+                    "Arn"
+                  ]
+                },
+                "/invocations"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "IssuerRevokeResource": {
+      "Type": "AWS::ApiGateway::Resource",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "IssuerApi"
+        },
+        "ParentId": {
+          "Ref": "IssuerV1"
+        },
+        "PathPart": "revoke"
+      }
+    },
+    "IssuerRevokeMethod": {
+      "Type": "AWS::ApiGateway::Method",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "IssuerApi"
+        },
+        "ResourceId": {
+          "Ref": "IssuerRevokeResource"
+        },
+        "HttpMethod": "POST",
+        "AuthorizationType": "AWS_IAM",
+        "Integration": {
+          "Type": "AWS_PROXY",
+          "IntegrationHttpMethod": "POST",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                {
+                  "Fn::Sub": "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/"
+                },
+                {
+                  "Fn::GetAtt": [
+                    "IssuerFunction",
+                    "Arn"
+                  ]
+                },
+                "/invocations"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "IssuerDeployment": {
+      "Type": "AWS::ApiGateway::Deployment",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "IssuerApi"
+        }
+      },
+      "DependsOn": [
+        "IssuerProposalMethod",
+        "IssuerIssueMethod",
+        "IssuerRevokeMethod"
+      ]
+    },
+    "IssuerStage": {
+      "Type": "AWS::ApiGateway::Stage",
+      "Properties": {
+        "RestApiId": {
+          "Ref": "IssuerApi"
+        },
+        "DeploymentId": {
+          "Ref": "IssuerDeployment"
+        },
+        "StageName": "p2",
+        "MethodSettings": [
+          {
+            "ResourcePath": "/*",
+            "HttpMethod": "*",
+            "DataTraceEnabled": false,
+            "LoggingLevel": "OFF"
+          }
+        ]
+      }
+    },
+    "IssuerApiLambdaPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "IssuerFunction"
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Fn::Sub": "arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:"
+              },
+              {
+                "Ref": "IssuerApi"
+              },
+              "/*/*/v1/*"
+            ]
+          ]
+        }
+      }
+    },
+    "AuditTrail": {
+      "Type": "AWS::CloudTrail::Trail",
+      "Properties": {
+        "TrailName": {
+          "Fn::Sub": "p2-${AWS::StackName}-audit"
+        },
+        "S3BucketName": {
+          "Ref": "AuditBucketName"
+        },
+        "IsLogging": true,
+        "EnableLogFileValidation": true,
+        "IsMultiRegionTrail": false,
+        "EventSelectors": [
+          {
+            "ReadWriteType": "All",
+            "IncludeManagementEvents": true,
+            "DataResources": []
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "IssuerVpcId": {
+      "Value": {
+        "Ref": "IssuerVpc"
+      }
+    },
+    "IssuerSubnetId": {
+      "Value": {
+        "Ref": "IssuerSubnet"
+      }
+    },
+    "IssuerWorkloadSgId": {
+      "Value": {
+        "Ref": "IssuerWorkloadSg"
+      }
+    },
+    "IssuerKmsEndpointId": {
+      "Value": {
+        "Ref": "IssuerKmsEndpoint"
+      }
+    },
+    "IssuerSqsEndpointId": {
+      "Value": {
+        "Ref": "IssuerSqsEndpoint"
+      }
+    },
+    "IssuerExecuteApiEndpointId": {
+      "Value": {
+        "Ref": "IssuerExecuteApiEndpoint"
+      }
+    },
+    "IssuerApiId": {
+      "Value": {
+        "Ref": "IssuerApi"
+      }
+    },
+    "IssuerApiBase": {
+      "Value": {
+        "Fn::Join": [
+          "",
+          [
+            "https://",
+            {
+              "Ref": "IssuerApi"
+            },
+            {
+              "Fn::Sub": ".execute-api.${AWS::Region}.amazonaws.com/p2"
+            }
+          ]
+        ]
+      }
+    },
+    "AuditTrailArn": {
+      "Value": {
+        "Fn::Sub": "arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/p2-${AWS::StackName}-audit"
+      }
+    },
+    "IssuerRoleArn": {
+      "Value": {
+        "Ref": "IssuerRoleArn"
+      }
+    },
+    "SigningKeyArn": {
+      "Value": {
+        "Ref": "SigningKeyArn"
+      }
+    }
+  }
+}

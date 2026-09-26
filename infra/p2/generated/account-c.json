@@ -1,0 +1,969 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "P2 account C independent monotonic anchor and locked audit",
+  "Parameters": {
+    "CodeBucket": {
+      "Type": "String",
+      "AllowedPattern": "[a-z0-9][a-z0-9.-]{2,62}"
+    },
+    "CodeKey": {
+      "Type": "String"
+    },
+    "AAdminRoleArn": {
+      "Type": "String",
+      "AllowedPattern": "arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+"
+    },
+    "BAdminRoleArn": {
+      "Type": "String",
+      "AllowedPattern": "arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+"
+    },
+    "CAdminRoleArn": {
+      "Type": "String",
+      "AllowedPattern": "arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+"
+    },
+    "AuthorityRoleArn": {
+      "Type": "String",
+      "AllowedPattern": "arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_-]+"
+    },
+    "AAccountId": {
+      "Type": "String",
+      "AllowedPattern": "[0-9]{12}"
+    },
+    "BAccountId": {
+      "Type": "String",
+      "AllowedPattern": "[0-9]{12}"
+    },
+    "RetentionDays": {
+      "Type": "Number",
+      "MinValue": 1,
+      "MaxValue": 365
+    },
+    "LogRetentionDays": {
+      "Type": "Number",
+      "MinValue": 1,
+      "MaxValue": 365
+    },
+    "S3PrefixListId": {
+      "Type": "String",
+      "AllowedPattern": "pl-[0-9a-f]+"
+    },
+    "DynamoPrefixListId": {
+      "Type": "String",
+      "AllowedPattern": "pl-[0-9a-f]+"
+    }
+  },
+  "Resources": {
+    "PreflightSignerKey": {
+      "Type": "AWS::KMS::Key",
+      "Properties": {
+        "KeySpec": "ECC_NIST_P256",
+        "KeyUsage": "SIGN_VERIFY",
+        "Enabled": true,
+        "EnableKeyRotation": false,
+        "KeyPolicy": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": "kms:*",
+              "Resource": "*",
+              "Principal": {
+                "AWS": {
+                  "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
+                }
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": "kms:Sign",
+              "Resource": "*",
+              "Principal": {
+                "AWS": {
+                  "Ref": "CAdminRoleArn"
+                }
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": "kms:Verify",
+              "Resource": "*",
+              "Principal": {
+                "AWS": [
+                  {
+                    "Ref": "AAdminRoleArn"
+                  },
+                  {
+                    "Ref": "BAdminRoleArn"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "AnchorVpc": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.84.4.0/24",
+        "EnableDnsSupport": true,
+        "EnableDnsHostnames": true,
+        "Tags": [
+          {
+            "Key": "p2-owner",
+            "Value": "Anchor"
+          }
+        ]
+      }
+    },
+    "AnchorSubnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "AnchorVpc"
+        },
+        "CidrBlock": "10.84.4.0/25",
+        "MapPublicIpOnLaunch": false,
+        "AvailabilityZone": {
+          "Fn::Select": [
+            0,
+            {
+              "Fn::GetAZs": ""
+            }
+          ]
+        }
+      }
+    },
+    "AnchorRoute": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "AnchorVpc"
+        }
+      }
+    },
+    "AnchorRouteAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "AnchorSubnet"
+        },
+        "RouteTableId": {
+          "Ref": "AnchorRoute"
+        }
+      }
+    },
+    "AnchorWorkloadSg": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Anchor workload private egress only",
+        "VpcId": {
+          "Ref": "AnchorVpc"
+        },
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "192.0.2.0/32"
+          }
+        ]
+      }
+    },
+    "AnchorEndpointSg": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Anchor endpoint 443 from workload",
+        "VpcId": {
+          "Ref": "AnchorVpc"
+        },
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "192.0.2.0/32"
+          }
+        ],
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "SourceSecurityGroupId": {
+              "Ref": "AnchorWorkloadSg"
+            }
+          }
+        ]
+      }
+    },
+    "AnchorEndpointEgress": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "AnchorWorkloadSg"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "DestinationSecurityGroupId": {
+          "Ref": "AnchorEndpointSg"
+        }
+      }
+    },
+    "AnchorS3Endpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "AnchorVpc"
+        },
+        "VpcEndpointType": "Gateway",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.s3"
+        },
+        "RouteTableIds": [
+          {
+            "Ref": "AnchorRoute"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": "s3:ListBucketVersions",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "AuditBucket",
+                  "Arn"
+                ]
+              },
+              "Principal": "*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:GetObject",
+                "s3:GetObjectVersion",
+                "s3:GetObjectRetention",
+                "s3:PutObject",
+                "s3:PutObjectRetention"
+              ],
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    {
+                      "Fn::GetAtt": [
+                        "AuditBucket",
+                        "Arn"
+                      ]
+                    },
+                    "/anchors/*"
+                  ]
+                ]
+              },
+              "Principal": "*"
+            }
+          ]
+        }
+      }
+    },
+    "AnchorS3GatewayEgress": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "AnchorWorkloadSg"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "DestinationPrefixListId": {
+          "Ref": "S3PrefixListId"
+        }
+      }
+    },
+    "AnchorDynamodbEndpoint": {
+      "Type": "AWS::EC2::VPCEndpoint",
+      "Properties": {
+        "VpcId": {
+          "Ref": "AnchorVpc"
+        },
+        "VpcEndpointType": "Gateway",
+        "ServiceName": {
+          "Fn::Sub": "com.amazonaws.${AWS::Region}.dynamodb"
+        },
+        "RouteTableIds": [
+          {
+            "Ref": "AnchorRoute"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "dynamodb:GetItem",
+                "dynamodb:UpdateItem"
+              ],
+              "Resource": {
+                "Fn::GetAtt": [
+                  "AnchorTable",
+                  "Arn"
+                ]
+              },
+              "Principal": "*"
+            }
+          ]
+        }
+      }
+    },
+    "AnchorDynamodbGatewayEgress": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "AnchorWorkloadSg"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": 443,
+        "ToPort": 443,
+        "DestinationPrefixListId": {
+          "Ref": "DynamoPrefixListId"
+        }
+      }
+    },
+    "AnchorAllowedDns": {
+      "Type": "AWS::Route53Resolver::FirewallDomainList",
+      "Properties": {
+        "Name": "p2-anchor-allowed",
+        "Domains": [
+          {
+            "Fn::Sub": "s3.${AWS::Region}.amazonaws.com"
+          },
+          {
+            "Fn::Sub": "dynamodb.${AWS::Region}.amazonaws.com"
+          }
+        ]
+      }
+    },
+    "AnchorAllDns": {
+      "Type": "AWS::Route53Resolver::FirewallDomainList",
+      "Properties": {
+        "Name": "p2-anchor-all",
+        "Domains": [
+          "*"
+        ]
+      }
+    },
+    "AnchorDnsRules": {
+      "Type": "AWS::Route53Resolver::FirewallRuleGroup",
+      "Properties": {
+        "Name": "p2-anchor-deny-default",
+        "FirewallRules": [
+          {
+            "Action": "ALLOW",
+            "FirewallDomainListId": {
+              "Ref": "AnchorAllowedDns"
+            },
+            "Priority": 10
+          },
+          {
+            "Action": "BLOCK",
+            "BlockResponse": "NXDOMAIN",
+            "FirewallDomainListId": {
+              "Ref": "AnchorAllDns"
+            },
+            "Priority": 100
+          }
+        ]
+      }
+    },
+    "AnchorDnsAssociation": {
+      "Type": "AWS::Route53Resolver::FirewallRuleGroupAssociation",
+      "Properties": {
+        "Name": "p2-anchor-association",
+        "FirewallRuleGroupId": {
+          "Ref": "AnchorDnsRules"
+        },
+        "VpcId": {
+          "Ref": "AnchorVpc"
+        },
+        "Priority": 100,
+        "MutationProtection": "DISABLED"
+      }
+    },
+    "AnchorFlowLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/p2/${AWS::StackName}/anchor/flow"
+        },
+        "RetentionInDays": {
+          "Ref": "LogRetentionDays"
+        }
+      }
+    },
+    "AnchorFlowRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "vpc-flow-logs.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "write-flow-only",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                    "logs:DescribeLogStreams"
+                  ],
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "AnchorFlowLogGroup",
+                      "Arn"
+                    ]
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "logs:DescribeLogGroups",
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "AnchorFlowLog": {
+      "Type": "AWS::EC2::FlowLog",
+      "Properties": {
+        "ResourceType": "VPC",
+        "ResourceId": {
+          "Ref": "AnchorVpc"
+        },
+        "TrafficType": "ALL",
+        "LogDestinationType": "cloud-watch-logs",
+        "LogGroupName": {
+          "Ref": "AnchorFlowLogGroup"
+        },
+        "DeliverLogsPermissionArn": {
+          "Fn::GetAtt": [
+            "AnchorFlowRole",
+            "Arn"
+          ]
+        }
+      }
+    },
+    "AnchorTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "BillingMode": "PAY_PER_REQUEST",
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "PK",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "PK",
+            "KeyType": "HASH"
+          }
+        ],
+        "PointInTimeRecoverySpecification": {
+          "PointInTimeRecoveryEnabled": true
+        }
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "AuditBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "ObjectLockEnabled": true,
+        "ObjectLockConfiguration": {
+          "ObjectLockEnabled": "Enabled",
+          "Rule": {
+            "DefaultRetention": {
+              "Mode": "COMPLIANCE",
+              "Days": {
+                "Ref": "RetentionDays"
+              }
+            }
+          }
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "IgnorePublicAcls": true,
+          "BlockPublicPolicy": true,
+          "RestrictPublicBuckets": true
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        }
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "AnchorRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Sub": "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+          }
+        ],
+        "Policies": [
+          {
+            "PolicyName": "deny-function-code-eni-management",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Deny",
+                  "Action": [
+                    "ec2:CreateNetworkInterface",
+                    "ec2:DeleteNetworkInterface",
+                    "ec2:DescribeNetworkInterfaces",
+                    "ec2:DescribeSubnets",
+                    "ec2:DetachNetworkInterface",
+                    "ec2:AssignPrivateIpAddresses",
+                    "ec2:UnassignPrivateIpAddresses"
+                  ],
+                  "Resource": "*",
+                  "Condition": {
+                    "ArnLike": {
+                      "lambda:SourceFunctionArn": {
+                        "Fn::Sub": "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:p2-*"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "AnchorFunctionLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": {
+          "Fn::Sub": "/aws/lambda/p2-${AWS::StackName}-anchorfunction"
+        },
+        "RetentionInDays": {
+          "Ref": "LogRetentionDays"
+        }
+      }
+    },
+    "AnchorFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "FunctionName": {
+          "Fn::Sub": "p2-${AWS::StackName}-anchorfunction"
+        },
+        "Runtime": "python3.14",
+        "Handler": "agent_alfred.p2.anchor.handler",
+        "Role": {
+          "Fn::GetAtt": [
+            "AnchorRole",
+            "Arn"
+          ]
+        },
+        "Code": {
+          "S3Bucket": {
+            "Ref": "CodeBucket"
+          },
+          "S3Key": {
+            "Ref": "CodeKey"
+          }
+        },
+        "Timeout": 45,
+        "MemorySize": 256,
+        "VpcConfig": {
+          "SubnetIds": [
+            {
+              "Ref": "AnchorSubnet"
+            }
+          ],
+          "SecurityGroupIds": [
+            {
+              "Ref": "AnchorWorkloadSg"
+            }
+          ]
+        },
+        "Environment": {
+          "Variables": {
+            "P2_SYNTHETIC_ONLY": "1",
+            "P2_ANCHOR_TABLE": {
+              "Ref": "AnchorTable"
+            },
+            "P2_ANCHOR_BUCKET": {
+              "Ref": "AuditBucket"
+            },
+            "P2_RETENTION_DAYS": {
+              "Ref": "RetentionDays"
+            }
+          }
+        },
+        "ReservedConcurrentExecutions": 2
+      }
+    },
+    "AnchorDataPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": {
+          "Fn::Sub": "p2-${AWS::StackName}-anchordatapolicy"
+        },
+        "Roles": [
+          {
+            "Ref": "AnchorRole"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "dynamodb:GetItem",
+                "dynamodb:UpdateItem"
+              ],
+              "Resource": {
+                "Fn::GetAtt": [
+                  "AnchorTable",
+                  "Arn"
+                ]
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:ListBucketVersions"
+              ],
+              "Resource": {
+                "Fn::GetAtt": [
+                  "AuditBucket",
+                  "Arn"
+                ]
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:GetObject",
+                "s3:GetObjectVersion",
+                "s3:GetObjectRetention",
+                "s3:PutObject",
+                "s3:PutObjectRetention"
+              ],
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    {
+                      "Fn::GetAtt": [
+                        "AuditBucket",
+                        "Arn"
+                      ]
+                    },
+                    "/anchors/*"
+                  ]
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    "AuthorityInvokePermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Ref": "AnchorFunction"
+        },
+        "Principal": {
+          "Ref": "AuthorityRoleArn"
+        }
+      }
+    },
+    "AuditBucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "AuditBucket"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": "s3:GetBucketAcl",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "AuditBucket",
+                  "Arn"
+                ]
+              },
+              "Condition": {
+                "StringLike": {
+                  "aws:SourceArn": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/p2-*-audit"
+                    },
+                    {
+                      "Fn::Sub": [
+                        "arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${External}:trail/p2-*-audit",
+                        {
+                          "External": {
+                            "Ref": "AAccountId"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "Fn::Sub": [
+                        "arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${External}:trail/p2-*-audit",
+                        {
+                          "External": {
+                            "Ref": "BAccountId"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              "Principal": {
+                "Service": "cloudtrail.amazonaws.com"
+              }
+            },
+            {
+              "Effect": "Allow",
+              "Action": "s3:PutObject",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    {
+                      "Fn::GetAtt": [
+                        "AuditBucket",
+                        "Arn"
+                      ]
+                    },
+                    "/AWSLogs/*"
+                  ]
+                ]
+              },
+              "Condition": {
+                "StringEquals": {
+                  "s3:x-amz-acl": "bucket-owner-full-control"
+                },
+                "StringLike": {
+                  "aws:SourceArn": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/p2-*-audit"
+                    },
+                    {
+                      "Fn::Sub": [
+                        "arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${External}:trail/p2-*-audit",
+                        {
+                          "External": {
+                            "Ref": "AAccountId"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "Fn::Sub": [
+                        "arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${External}:trail/p2-*-audit",
+                        {
+                          "External": {
+                            "Ref": "BAccountId"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              "Principal": {
+                "Service": "cloudtrail.amazonaws.com"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "AuditTrail": {
+      "Type": "AWS::CloudTrail::Trail",
+      "Properties": {
+        "TrailName": {
+          "Fn::Sub": "p2-${AWS::StackName}-audit"
+        },
+        "S3BucketName": {
+          "Ref": "AuditBucket"
+        },
+        "IsLogging": true,
+        "EnableLogFileValidation": true,
+        "IsMultiRegionTrail": false,
+        "EventSelectors": [
+          {
+            "ReadWriteType": "All",
+            "IncludeManagementEvents": true,
+            "DataResources": [
+              {
+                "Type": "AWS::S3::Object",
+                "Values": [
+                  {
+                    "Fn::Join": [
+                      "",
+                      [
+                        {
+                          "Fn::GetAtt": [
+                            "AuditBucket",
+                            "Arn"
+                          ]
+                        },
+                        "/anchors/"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "Type": "AWS::DynamoDB::Table",
+                "Values": [
+                  {
+                    "Fn::GetAtt": [
+                      "AnchorTable",
+                      "Arn"
+                    ]
+                  }
+                ]
+              },
+              {
+                "Type": "AWS::Lambda::Function",
+                "Values": [
+                  {
+                    "Fn::GetAtt": [
+                      "AnchorFunction",
+                      "Arn"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "DependsOn": "AuditBucketPolicy"
+    }
+  },
+  "Outputs": {
+    "AnchorVpcId": {
+      "Value": {
+        "Ref": "AnchorVpc"
+      }
+    },
+    "AnchorSubnetId": {
+      "Value": {
+        "Ref": "AnchorSubnet"
+      }
+    },
+    "AnchorWorkloadSgId": {
+      "Value": {
+        "Ref": "AnchorWorkloadSg"
+      }
+    },
+    "AnchorS3EndpointId": {
+      "Value": {
+        "Ref": "AnchorS3Endpoint"
+      }
+    },
+    "AnchorDynamodbEndpointId": {
+      "Value": {
+        "Ref": "AnchorDynamodbEndpoint"
+      }
+    },
+    "AuditTrailArn": {
+      "Value": {
+        "Fn::Sub": "arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/p2-${AWS::StackName}-audit"
+      }
+    },
+    "AnchorFunctionArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "AnchorFunction",
+          "Arn"
+        ]
+      }
+    },
+    "AnchorTableArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "AnchorTable",
+          "Arn"
+        ]
+      }
+    },
+    "AnchorTableName": {
+      "Value": {
+        "Ref": "AnchorTable"
+      }
+    },
+    "AuditBucketName": {
+      "Value": {
+        "Ref": "AuditBucket"
+      }
+    },
+    "PreflightSignerKeyArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "PreflightSignerKey",
+          "Arn"
+        ]
+      }
+    }
+  }
+}
