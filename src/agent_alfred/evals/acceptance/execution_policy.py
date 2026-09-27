@@ -131,7 +131,7 @@ def validate_profile(profile):
 
 def policy(batch):
     """Return effective execution behavior without adding fields to old profiles."""
-    if batch["schema_version"] == 3:
+    if batch["schema_version"] in (3, 4):
         for profile in batch["profiles"]:
             validate_profile(profile)
         value = batch["profiles"][0]["execution_policy"]

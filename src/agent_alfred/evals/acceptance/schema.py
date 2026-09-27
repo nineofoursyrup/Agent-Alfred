@@ -31,9 +31,10 @@ def identifier(value):
 def validate_envelope(batch):
     if type(batch.get("schema_version")) is not int:
         raise ValueError("unknown_schema_or_contract")
-    if (
-        batch.get("schema_version") not in (1, 2, 3)
-        or batch.get("contract") != CONTRACT
+    if batch.get("schema_version") not in (1, 2, 3, 4) or batch.get("contract") != (
+        "V1-ACCEPTANCE-OFFLINE-SUPPLEMENT-SPEC-r1"
+        if batch["schema_version"] == 4
+        else CONTRACT
     ):
         raise ValueError("unknown_schema_or_contract")
     identifier(batch["batch_id"])
@@ -113,7 +114,7 @@ def validate(batch):
             raise ValueError("duplicate_prohibition")
         if case["group"] not in (*GROUPS, "consolidation"):
             raise ValueError("invalid_group")
-        if case["material_id"] != digest(
+        if batch["schema_version"] != 4 and case["material_id"] != digest(
             {"input": case["input"], "gold": case["gold"]}
         ):
             raise ValueError("material_identity_mismatch")
@@ -168,25 +169,30 @@ def validate(batch):
                 or model["wire_style"] != "openai"
                 or model["endpoint_id"] != "deepseek"
                 or model in models
-                or batch["schema_version"] not in (2, 3)
+                or batch["schema_version"] not in (2, 3, 4)
             ):
                 raise ValueError("unsupported_response_format")
             if "thinking" in model and (
                 model["thinking"] != "disabled"
                 or model["wire_style"] != "openai"
                 or model["endpoint_id"] != "deepseek"
-                or batch["schema_version"] not in (2, 3)
+                or batch["schema_version"] not in (2, 3, 4)
             ):
                 raise ValueError("unsupported_thinking_mode")
         if profile["id"] != digest({k: v for k, v in profile.items() if k != "id"}):
             raise ValueError("profile_identity_mismatch")
-    if batch["schema_version"] == 3:
+    if batch["schema_version"] in (3, 4):
         from . import semantic_rules
         from .case_setup import validate_setup
         from .execution_policy import policy, validate_profile
 
         policy(batch)
-        semantic_rules.validate(batch)
+        if batch["schema_version"] == 3:
+            semantic_rules.validate(batch)
+        else:
+            from .supplement_schema import validate as validate_supplement
+
+            validate_supplement(batch)
         for profile in batch["profiles"]:
             validate_profile(profile)
             for case in batch["cases"]:
@@ -234,9 +240,12 @@ def validate(batch):
         validate_grade_raw(grade, case)
         validate_evidence(grade, batch, results_by_id[grade["result_id"]])
     unique(batch["adjudications"], "id")
-    unique(batch["adjudications"], "grade_id")
+    if batch["schema_version"] != 4:
+        unique(batch["adjudications"], "grade_id")
     grade_ids = {g["id"] for g in batch["grades"]}
     for ruling in batch["adjudications"]:
+        if batch["schema_version"] == 4:
+            continue
         validate_scores(ruling)
         if ruling["grade_id"] not in grade_ids:
             raise ValueError("broken_adjudication_reference")
@@ -279,7 +288,8 @@ def validate(batch):
     validate_proofs(batch)
     from .reviews import validate as validate_reviews
 
-    validate_reviews(batch)
+    if batch["schema_version"] != 4:
+        validate_reviews(batch)
     from .review_policy import validate_role_independence
 
     validate_role_independence(batch)
@@ -395,11 +405,23 @@ def calibration_identity(batch):
             "rubric",
         )
     }
-    if batch["schema_version"] == 3:
+    if batch["schema_version"] in (3, 4):
         evidence.update(
             semantic_rubric=batch["semantic_rubric"],
             review_policy=batch["review_policy"],
             seen_families=batch["seen_families"],
+        )
+    if batch["schema_version"] == 4:
+        evidence.update(
+            {
+                k: batch[k]
+                for k in (
+                    "manifest",
+                    "seen_materials",
+                    "judge_tests",
+                    "judge_test_results",
+                )
+            }
         )
     # Keep the historical identity byte-for-byte when no review extension exists.
     for key in ("review_disputes", "review_adjudications"):
@@ -412,6 +434,6 @@ def scoring_rubric(batch):
     """The judge sees semantic rules only; legacy schemas keep the full rubric."""
     return (
         batch["semantic_rubric"]
-        if batch.get("schema_version", 1) == 3
+        if batch.get("schema_version", 1) in (3, 4)
         else batch["rubric"]
     )

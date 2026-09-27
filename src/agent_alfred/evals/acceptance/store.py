@@ -13,8 +13,9 @@ from .schema import digest, encode, identifier, scoring_rubric, validate
 
 
 class EvidenceStore:
-    def __init__(self, root):
+    def __init__(self, root, *, decision_source=None):
         self.root = Path(os.path.abspath(root))
+        self.decision_source = decision_source
 
     def import_batch(self, batch):
         ensure_safe(batch)
@@ -118,6 +119,21 @@ class EvidenceStore:
         review_adjudications=(),
     ):
         original = self.read(batch_id)
+        if original["schema_version"] == 4:
+            from .supplement_store import revise
+
+            return revise(
+                self,
+                original,
+                new_id,
+                grades=grades,
+                adjudications=adjudications,
+                gates=gates,
+                execution=execution,
+                configuration=configuration,
+                reviews=reviews,
+                review_adjudications=review_adjudications,
+            )
         revised = deepcopy(original)
         revised["batch_id"] = identifier(new_id)
         revised["parent"] = {
@@ -189,6 +205,10 @@ class EvidenceStore:
         def read_link(identity):
             return self._read(identity, seen, verified)
 
+        if batch["schema_version"] == 4:
+            from .supplement_store import validate_links
+
+            return validate_links(batch, read_link, store=self)
         parent = None
         if batch["parent"]:
             parent = read_link(batch["parent"]["batch_id"])

@@ -50,6 +50,45 @@ class SimulationAuthority:
         self._dispatchers = {}
         self._save({"revision": 0, "grants": {}, "quarantined": []})
 
+    def issue_decision(self, request, *, subject, decision, reason, evidence=()):
+        """Issue a synthetic material/quality decision, never an execution grant."""
+        from .supplement_decisions import validate_event
+        from .supplement_schema import closed, signed
+
+        closed(request, "object_type object_id object_sha256 manifest")
+        if not subject.startswith("simulation:"):
+            raise ValueError("synthetic_source_required")
+        with self._lock:
+            state = self._read()
+            reference = self._issuer + ":decision:" + secrets.token_hex(16)
+            event = signed(
+                {
+                    "version": 1,
+                    "kind": "synthetic_user_decision",
+                    "subject": subject,
+                    "source_ref": reference,
+                    "at": self.clock.wall_utc().isoformat(),
+                    "decision": decision,
+                    **deepcopy(request),
+                    "reason": reason,
+                    "evidence": list(evidence),
+                }
+            )
+            validate_event(event)
+            state.setdefault("decisions", {})[reference] = deepcopy(event)
+            state["revision"] += 1
+            self._save(state)
+            return event
+
+    def read_decision(self, source_ref):
+        """Read-only verification against the live simulator's anchored state."""
+        with self._lock:
+            state = self._read()
+            try:
+                return deepcopy(state.get("decisions", {})[source_ref])
+            except KeyError:
+                raise ValueError("decision_source_unverifiable") from None
+
     def _load(self):
         path = self.root / "state.json"
         info = path.lstat()

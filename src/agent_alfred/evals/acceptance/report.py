@@ -65,7 +65,11 @@ def consolidation(rows):
     }
 
 
-def quality(batch, now):
+def quality(batch, now, *, decision_source=None):
+    if batch["schema_version"] == 4:
+        from .supplement_quality import quality as supplement_quality
+
+        return supplement_quality(batch, now, decision_source)
     from .reviews import assess
 
     failures, blockers, counts = [], [], {}
@@ -253,7 +257,7 @@ def quality(batch, now):
     }
 
 
-def report(batch, *, now=None, candidate_root=None, store=None):
+def report(batch, *, now=None, candidate_root=None, store=None, decision_source=None):
     from .safety import ensure_safe
 
     ensure_safe(batch)
@@ -261,7 +265,19 @@ def report(batch, *, now=None, candidate_root=None, store=None):
     now = now or datetime.now(UTC)
     if now.tzinfo is None:
         raise ValueError("timezone_required")
-    evaluated = quality(batch, now)
+    if decision_source is None and store is not None:
+        decision_source = store.decision_source
+    if batch["schema_version"] == 4:
+        from .supplement_quality import quality as supplement_quality
+
+        calibration_source = None
+        if store is not None and batch["calibration"] is not None:
+            calibration_source = store._validate_links(batch, ())
+        evaluated = supplement_quality(
+            batch, now, decision_source, calibration=calibration_source
+        )
+    else:
+        evaluated = quality(batch, now, decision_source=decision_source)
     from .gates import engineering
 
     offline = engineering(batch)
@@ -295,6 +311,10 @@ def report(batch, *, now=None, candidate_root=None, store=None):
             release_blockers.append("runtime_candidate_mismatch")
             offline["blockers"].append("runtime_candidate_mismatch")
             offline.update(axis(offline["failures"], offline["blockers"]))
+    if batch["schema_version"] == 4:
+        from .supplement_report import release_blockers as supplement_blockers
+
+        release_blockers.extend(supplement_blockers(batch, now, store, decision_source))
     if not batch["simulation"]:
         if store is None:
             release_blockers.append("calibration_package_not_verified")
@@ -310,7 +330,9 @@ def report(batch, *, now=None, candidate_root=None, store=None):
         from .semantic_rules import case_approval_valid
 
         case_approval = batch.get("case_set_approval")
-        if not case_approval or case_approval.get("cases_sha256") != digest(
+        if batch["schema_version"] == 4:
+            pass  # Schema4 source-verified approvals were evaluated above.
+        elif not case_approval or case_approval.get("cases_sha256") != digest(
             batch["cases"]
         ):
             release_blockers.append("case_set_approval_missing")
@@ -351,6 +373,8 @@ def report(batch, *, now=None, candidate_root=None, store=None):
     if batch["phase"] == "trial":
         release_blockers.append("trial_not_release_evidence")
     return {
+        "schema_version": batch["schema_version"],
+        "contract": batch["contract"],
         "batch_id": batch["batch_id"],
         "candidate_id": batch["candidate_id"],
         "simulation": batch["simulation"],

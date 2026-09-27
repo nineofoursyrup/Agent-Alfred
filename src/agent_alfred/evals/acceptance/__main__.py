@@ -23,6 +23,7 @@ def main():
         "command",
         choices=[
             "prepare",
+            "summary",
             "proposal",
             "regrade",
             "recover",
@@ -40,6 +41,17 @@ def main():
             "verify",
             "delete",
         ],
+    )
+    parser.add_argument("--schema-version", type=int, choices=[1, 4], default=1)
+    parser.add_argument(
+        "--summary-stage",
+        choices=["materials", "results", "calibration", "thresholds"],
+        default="materials",
+    )
+    parser.add_argument(
+        "--phase",
+        choices=["offline_fixture", "calibration", "formal"],
+        default="offline_fixture",
     )
     parser.add_argument("--store")
     parser.add_argument("--batch")
@@ -100,12 +112,23 @@ def dispatch(args):
 
         if not args.output_scope or not args.operations:
             raise ValueError("proposal_scope_required")
-        return proposal(validate(read_json(args.input)), output_scope=args.output_scope,
-                        operations=args.operations)
+        return proposal(
+            validate(read_json(args.input)),
+            output_scope=args.output_scope,
+            operations=args.operations,
+        )
     if args.command == "prepare":
         from .candidate import capture
         from .examples import offline_batch
 
+        if args.schema_version == 4:
+            from .examples_v4 import supplement_batch
+
+            return supplement_batch(
+                capture(args.candidate_root),
+                phase=args.phase,
+                prefix=args.batch or "supplement",
+            )
         batch = offline_batch(capture(args.candidate_root))
         from .judge_protocol import current_profile
 
@@ -117,10 +140,21 @@ def dispatch(args):
         batch = validate(read_json(args.input))
         from .authorization_history import assess
 
-        return {"valid": True, "validation_scope": "schema_only",
-                "batch_id": batch["batch_id"], "authorization": assess(batch),
-                "online_executable": False}
+        return {
+            "valid": True,
+            "validation_scope": "schema_only",
+            "batch_id": batch["batch_id"],
+            "authorization": assess(batch),
+            "online_executable": False,
+        }
     store = EvidenceStore(args.store)
+    if args.command == "summary":
+        from .supplement_decisions import make_summary
+
+        batch = store.read(args.batch)
+        if batch["schema_version"] != 4:
+            raise ValueError("supplement_summary_requires_schema4")
+        return make_summary(batch, args.summary_stage, store=store)
     if args.command == "delete":
         store.delete(args.batch)
         return {"batch_id": args.batch, "deleted": True}
@@ -148,7 +182,10 @@ def dispatch(args):
         batch = read_json(args.input)
         store.import_batch(batch)
     elif args.command in (
-        "import-grades", "adjudicate", "import-reviews", "adjudicate-reviews"
+        "import-grades",
+        "adjudicate",
+        "import-reviews",
+        "adjudicate-reviews",
     ):
         imported = read_json(args.input)
         batch = store.revise(

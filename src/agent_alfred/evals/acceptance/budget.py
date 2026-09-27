@@ -29,7 +29,7 @@ def binding(batch):
         "rubric": digest(batch["rubric"]),
     }
 
-    if batch["schema_version"] == 3:
+    if batch["schema_version"] in (3, 4):
         value.update(
             {
                 key: digest(batch.get(key))
@@ -38,6 +38,19 @@ def binding(batch):
                     "review_policy",
                     "aggregation_policy",
                     "seen_families",
+                )
+            }
+        )
+    if batch["schema_version"] == 4:
+        value.update(
+            {
+                k: digest(batch[k])
+                for k in (
+                    "manifest",
+                    "seen_materials",
+                    "judge_tests",
+                    "summaries",
+                    "user_decisions",
                 )
             }
         )
@@ -101,7 +114,7 @@ class AuthorizedBatch:
             raise ValueError("new_regrade_budget_required")
         self.clock = clock or SystemClock()
         if (
-            batch["schema_version"] == 3
+            batch["schema_version"] in (3, 4)
             and datetime.fromisoformat(auth["at"]) > self.clock.wall_utc()
         ):
             raise ValueError("authorization_after_execution")
@@ -124,7 +137,7 @@ class AuthorizedBatch:
         self.requests = deepcopy(batch.get("requests", []))
         self.journal = None
         self.trial = batch["phase"] == "trial"
-        self.single_attempt = batch["schema_version"] == 3
+        self.single_attempt = batch["schema_version"] in (3, 4)
         self.execution_policy = policy(batch)
         self.infrastructure_stop_reason = (
             "trial_infrastructure_failure"
@@ -584,6 +597,11 @@ def validate_formal_approval_timing(batch, source, *, started_at=None):
 def validate_execution_materials(batch, store, *, started_at=None):
     """Resolve approved materials before any client can spend the batch budget."""
     store._validate_links(batch, ())
+    if batch["schema_version"] == 4:
+        from .supplement_report import validate_execution
+
+        validate_execution(batch, store, started_at)
+        return
     if batch["simulation"]:
         return
     from .review_policy import approval_valid
