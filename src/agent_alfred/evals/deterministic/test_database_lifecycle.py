@@ -116,8 +116,21 @@ def test_real_worker_row_limit_probe_does_not_hide_cancel_or_timeout(tmp_path, a
         assert dashboard.close()
 
 
-def test_real_sql_error_in_tail_is_not_successful_row_truncation(tmp_path):
+def test_real_sql_error_in_tail_is_not_successful_row_truncation(tmp_path, monkeypatch):
     dashboard = _dashboard(tmp_path)
+    console = dashboard.host.database_console
+    release_entered = threading.Event()
+    allow_release = threading.Event()
+    release_done = threading.Event()
+    release_response = console.release_response
+
+    def held_release(query_id):
+        release_entered.set()
+        assert allow_release.wait(4)
+        release_response(query_id)
+        release_done.set()
+
+    monkeypatch.setattr(console, "release_response", held_release)
     try:
         seed_sessions(dashboard)
         status, body, _ = _execute(
@@ -130,8 +143,14 @@ def test_real_sql_error_in_tail_is_not_successful_row_truncation(tmp_path):
         )
         assert status == 400 and body["code"] == "sql_error", body
         assert "rows" not in body
-        assert dashboard.host.database_console.released()
+        # Reading the complete body can precede the handler's final cleanup.
+        assert release_entered.wait(4)
+        assert not console.released()
+        allow_release.set()
+        assert release_done.wait(4)
+        assert console.released()
     finally:
+        allow_release.set()
         assert dashboard.close()
 
 
