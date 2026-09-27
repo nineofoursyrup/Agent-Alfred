@@ -34,7 +34,7 @@ INSTRUCTIONS = (
 )
 
 
-def judge_result(batch, case, result, client, *, secrets=()):
+def judge_result(batch, case, result, client, *, secrets=(), producer=None, clock=None):
     try:
         matching_results = [
             candidate
@@ -85,6 +85,21 @@ def judge_result(batch, case, result, client, *, secrets=()):
         "format_check": exact_format.check(case, result),
         "judge_conflicts": [],
     }
+    if batch.get("schema_version", 1) == 4:
+        from datetime import UTC, datetime
+
+        now = clock or (lambda: datetime.now(UTC))
+        grade.update(
+            obligations={},
+            producer=producer
+            or {
+                "instance_id": "client-" + str(id(client)),
+                "model": model["model_id"],
+                "reference": "injected-judge-client",
+            },
+            started_at=now().isoformat(),
+            completed_at=now().isoformat(),
+        )
     payload = {
         "case_id": case["id"],
         "input": case["input"],
@@ -99,7 +114,12 @@ def judge_result(batch, case, result, client, *, secrets=()):
     protocol = judge_protocol.protocol(batch)
     instructions = INSTRUCTIONS
     if protocol:
-        if protocol != judge_protocol.descriptor():
+        expected_protocol = (
+            judge_protocol.supplement_descriptor()
+            if batch.get("schema_version", 1) == 4
+            else judge_protocol.descriptor()
+        )
+        if protocol != expected_protocol:
             raise ValueError("judge_protocol_mismatch")
         sources, refs = judge_protocol.material(batch, case, result)
         payload = {
@@ -114,6 +134,8 @@ def judge_result(batch, case, result, client, *, secrets=()):
         grade["catalog_id"] = digest(refs)
         grade["material_id"] = digest(sources)
         instructions = judge_protocol.INSTRUCTIONS
+        if batch.get("schema_version", 1) == 4:
+            instructions += judge_protocol.SUPPLEMENT_INSTRUCTIONS
     ensure_safe(payload, secrets=secrets)
     if rubric is None:
         grade["error"] = "rubric_missing"
@@ -142,12 +164,7 @@ def judge_result(batch, case, result, client, *, secrets=()):
         validate_evidence(value, batch, result)
         if protocol:
             judge_protocol.validate_references(value, refs)
-        grade.update(
-            {
-                k: value[k]
-                for k in ("dimensions", "prohibitions", "disputed", "suspected_safety")
-            }
-        )
+        grade.update({k: value[k] for k in value})
         grade["status"] = "scored"
         grade["judge_conflicts"] = exact_format.conflicts(grade["format_check"], grade)
     except ModelCallInterrupted as error:
@@ -155,4 +172,6 @@ def judge_result(batch, case, result, client, *, secrets=()):
         grade["error"] = "judge_interrupted"
     except Exception:
         grade["error"] = "judge_error"
+    if batch.get("schema_version", 1) == 4:
+        grade["completed_at"] = now().isoformat()
     return grade

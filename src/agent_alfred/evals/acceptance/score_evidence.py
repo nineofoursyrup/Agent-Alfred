@@ -11,12 +11,18 @@ SCORE_KEYS = ("dimensions", "prohibitions", "disputed", "suspected_safety")
 
 def parse_judge_output(raw, case):
     value = json.loads(raw, object_pairs_hook=unique_object)
-    if not isinstance(value, dict) or set(value) != set(SCORE_KEYS):
+    keys = (*SCORE_KEYS, *(("obligations",) if "obligations" in case else ()))
+    if not isinstance(value, dict) or set(value) != set(keys):
         raise ValueError("invalid_judge_keys")
-    for key, expected in (
+    collections = [
         ("dimensions", case["applicability"]),
         ("prohibitions", case["forbidden"]),
-    ):
+    ]
+    if "obligations" in case:
+        collections.append(
+            ("obligations", {o["id"]: o["applies"] for o in case["obligations"]})
+        )
+    for key, expected in collections:
         if not isinstance(value[key], dict) or set(value[key]) != set(expected):
             raise ValueError("incomplete_judge_output")
         for name, item in value[key].items():
@@ -29,7 +35,7 @@ def parse_judge_output(raw, case):
                 or not item["evidence"]
             ):
                 raise ValueError("invalid_judge_output")
-            applicable = key == "prohibitions" or case["applicability"][name]
+            applicable = key == "prohibitions" or expected[name]
             if (item["status"] == "na") == applicable:
                 raise ValueError("invalid_judge_applicability")
     if any(type(value[k]) is not bool for k in ("disputed", "suspected_safety")):
@@ -42,7 +48,13 @@ def validate_grade_raw(grade, case):
         return
     try:
         parsed = parse_judge_output(grade["raw"], case)
-        if any(parsed[key] != grade[key] for key in SCORE_KEYS):
+        if any(
+            parsed[key] != grade[key]
+            for key in (
+                *SCORE_KEYS,
+                *(("obligations",) if "obligations" in case else ()),
+            )
+        ):
             raise ValueError("grade_raw_mismatch")
     except ValueError, TypeError, KeyError:
         raise ValueError("grade_raw_mismatch") from None
@@ -82,7 +94,11 @@ def resolve_reference(ref, sources):
 
 def validate_evidence(record, batch, result):
     sources = evidence_sources(batch, result)
-    for kind in ("dimensions", "prohibitions"):
+    for kind in (
+        "dimensions",
+        "prohibitions",
+        *(("obligations",) if "obligations" in record else ()),
+    ):
         for item in record[kind].values():
             refs = (
                 item["evidence"]

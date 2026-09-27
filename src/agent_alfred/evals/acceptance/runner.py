@@ -76,7 +76,7 @@ def _run(batch, workspace, *, budget=None, factory=None, credentials=None):
             except ValueError:
                 result["stop_reason"] = budget.stop_reason or "batch_budget_exhausted"
                 break
-        if batch["schema_version"] == 3:
+        if batch["schema_version"] in (3, 4):
             from .case_setup import SimulatedModel
 
             offline_model = SimulatedModel
@@ -89,7 +89,7 @@ def _run(batch, workspace, *, budget=None, factory=None, credentials=None):
             **profile["parameters"],
             persona=profile["inputs"]["persona"],
         )
-        if batch["schema_version"] == 3:
+        if batch["schema_version"] in (3, 4):
             from .case_setup import effective_settings
 
             settings = effective_settings(case["setup"], profile)
@@ -120,7 +120,9 @@ def _run(batch, workspace, *, budget=None, factory=None, credentials=None):
                 _rollback=_rollback,
                 fault_fixture=(
                     case["setup"].get("fault_fixture")
-                    if batch["schema_version"] == 3 and not preparing and not recovering
+                    if batch["schema_version"] in (3, 4)
+                    and not preparing
+                    and not recovering
                     else None
                 ),
                 observations=fault_observations,
@@ -137,7 +139,7 @@ def _run(batch, workspace, *, budget=None, factory=None, credentials=None):
                 skill_builtin=builtin,
                 local_tool_allowlist=(
                     case["setup"]["local_tool_allowlist"]
-                    if batch["schema_version"] == 3
+                    if batch["schema_version"] in (3, 4)
                     else profile.get("local_tool_allowlist")
                 ),
                 factory=(
@@ -155,7 +157,7 @@ def _run(batch, workspace, *, budget=None, factory=None, credentials=None):
             )
 
         setup_evidence = None
-        if batch["schema_version"] == 3:
+        if batch["schema_version"] in (3, 4):
             from .artifacts import local_business, tool_projections
             from .case_setup import (
                 install_skills,
@@ -196,9 +198,9 @@ def _run(batch, workspace, *, budget=None, factory=None, credentials=None):
             host = build(_rollback=owner.rollback)
             host.start()
             sampled_at = datetime.now(UTC).isoformat()
-            if batch["schema_version"] != 3:
+            if batch["schema_version"] not in (3, 4):
                 session = host.create_session()
-            if batch["schema_version"] == 3:
+            if batch["schema_version"] in (3, 4):
                 setup_evidence = {
                     "status": "verified",
                     "source": "simulation",
@@ -238,12 +240,12 @@ def _run(batch, workspace, *, budget=None, factory=None, credentials=None):
                     goal=case["input"],
                     keywords=(
                         case["setup"]["aggregate"]["keywords"]
-                        if batch["schema_version"] == 3
+                        if batch["schema_version"] in (3, 4)
                         else "coffee"
                     ),
                     sources=(
                         case["setup"]["aggregate"]["sources"]
-                        if batch["schema_version"] == 3
+                        if batch["schema_version"] in (3, 4)
                         else ("semantic",)
                     ),
                 )
@@ -324,7 +326,7 @@ def _run(batch, workspace, *, budget=None, factory=None, credentials=None):
                 for message in page.messages
             )
             record["persisted_messages"] = len(page.messages)
-            if batch["schema_version"] == 3:
+            if batch["schema_version"] in (3, 4):
                 if (
                     case["setup"].get("fault_fixture") == "file_publication_unknown_v1"
                     and fault_observations
@@ -351,7 +353,7 @@ def _run(batch, workspace, *, budget=None, factory=None, credentials=None):
             owner.fail(failure)
         else:
             owner.rollback.close()
-        if batch["schema_version"] == 3:
+        if batch["schema_version"] in (3, 4):
             record["evidence"]["local_business"] = local_business(
                 state,
                 settings,
@@ -365,7 +367,7 @@ def _run(batch, workspace, *, budget=None, factory=None, credentials=None):
             )
         if (batch["phase"] == "trial" and case["group"] == "tools") or batch[
             "schema_version"
-        ] == 3:
+        ] in (3, 4):
             from .artifacts import drafts
 
             artifacts = drafts(state)
