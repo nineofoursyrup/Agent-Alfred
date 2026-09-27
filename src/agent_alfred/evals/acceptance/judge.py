@@ -34,7 +34,18 @@ INSTRUCTIONS = (
 )
 
 
-def judge_result(batch, case, result, client, *, secrets=(), producer=None, clock=None):
+def judge_result(
+    batch,
+    case,
+    result,
+    client,
+    *,
+    secrets=(),
+    producer=None,
+    clock=None,
+    max_output_tokens=None,
+    conversation_id=None,
+):
     try:
         matching_results = [
             candidate
@@ -144,9 +155,15 @@ def judge_result(batch, case, result, client, *, secrets=(), producer=None, cloc
         model=ModelRef(model["endpoint_id"], model["model_id"]),
         system=(TextBlock(instructions),),
         messages=(Message("user", (TextBlock(json.dumps(payload)),)),),
-        max_tokens=batch["authorization"]["max_output_tokens"],
+        max_tokens=(
+            max_output_tokens
+            if max_output_tokens is not None
+            else batch["authorization"]["max_output_tokens"]
+        ),
         tool_choice="none",
         response_format=model.get("response_format"),
+        thinking=model.get("thinking"),
+        conversation_id=conversation_id,
     )
     try:
         response = client.respond(request)

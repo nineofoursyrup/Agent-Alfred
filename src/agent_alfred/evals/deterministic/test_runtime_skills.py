@@ -3,6 +3,7 @@
 import json
 import sqlite3
 from contextlib import contextmanager
+from dataclasses import replace
 
 import pytest
 
@@ -14,6 +15,7 @@ from agent_alfred.messages import message_plain_text
 from agent_alfred.model import ScriptedModel, ScriptedModelFactory
 from agent_alfred.runtime.config import MutableAssignmentProvider
 from agent_alfred.runtime.host import RuntimeHost, SubmitRequest
+from agent_alfred.runtime.input_budget import input_characters
 from agent_alfred.settings import Settings
 
 SKIP = '{"retrieve":false,"query":null,"reason_code":"greeting"}'
@@ -498,11 +500,12 @@ def test_ce18_selector_window_precedes_actual_skill_and_shared_gate_answer_windo
 ):
     skill(tmp_path / "builtin", "A", "长" * 7900)
     settings = Settings(input_character_limit=22000, per_store_character_budget=500)
+    # The old pair fits the selector but overflows an answer with the loaded Skill.
     with runtime(
         tmp_path,
         [
             SKIP,
-            "old" * 1000,
+            "old" * 2000,
             '{"skills":["A"]}',
             '{"retrieve":true,"query":"coriander","reason_code":"personal_information"}'
             if retrieve
@@ -519,6 +522,7 @@ def test_ce18_selector_window_precedes_actual_skill_and_shared_gate_answer_windo
 
             save_fact(host)
         _, result = submit(host, "hello", first.session_id)
+        assert result.outcome == "completed"
         inputs = result.memory_telemetry["input_attempts"]
         assert inputs[0]["working_history_groups"] == [first.run_id]
         assert (
@@ -531,6 +535,20 @@ def test_ce18_selector_window_precedes_actual_skill_and_shared_gate_answer_windo
         assert [message_plain_text(m) for m in model.requests[-2].messages] == ["hello"]
         assert message_plain_text(model.requests[-1].messages[-1]) == "hello"
         assert bool(inputs[-1]["references"]) is retrieve
+
+        # Prove the fixture needs trimming using the actual public model input,
+        # without depending on the implementation's retrieval placeholder.
+        selector, gate, answer = model.requests[-3:]
+        untrimmed = replace(
+            answer, messages=(*selector.messages[:-1], *answer.messages)
+        )
+        assert input_characters(untrimmed) > settings.input_character_limit
+        without_skill = replace(untrimmed, system=untrimmed.system[:-1])
+        assert input_characters(without_skill) <= settings.input_character_limit
+        assert all(
+            input_characters(request) <= settings.input_character_limit
+            for request in (selector, gate, answer)
+        )
 
 
 def test_ce13_ce24_run_snapshot_survives_tool_roundtrip_without_granting_authority(

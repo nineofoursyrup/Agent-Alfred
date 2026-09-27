@@ -66,315 +66,16 @@ def _run(batch, workspace, *, budget=None, factory=None, credentials=None):
     result = deepcopy(batch)
     root = Path(workspace) / identifier(batch["batch_id"])
     root.mkdir(parents=True, exist_ok=False)
-    profile = batch["profiles"][0]
     for case in batch["cases"]:
-        state = root / case["id"]
-        state.mkdir()
         if budget is not None:
             try:
                 budget.check()
             except ValueError:
                 result["stop_reason"] = budget.stop_reason or "batch_budget_exhausted"
                 break
-        if batch["schema_version"] in (3, 4):
-            from .case_setup import SimulatedModel
-
-            offline_model = SimulatedModel
-        else:
-            offline_model = ScriptedModel
-        model = (
-            offline_model(list(scripted(case["script"]))) if factory is None else None
+        record = _run_case(
+            batch, case, root, budget=budget, factory=factory, credentials=credentials
         )
-        settings = Settings(
-            **profile["parameters"],
-            persona=profile["inputs"]["persona"],
-        )
-        if batch["schema_version"] in (3, 4):
-            from .case_setup import effective_settings
-
-            settings = effective_settings(case["setup"], profile)
-        builtin = root / ("skills-" + case["id"])
-        builtin.mkdir()
-        if "skill" in case["setup"]:
-            skill = builtin / "Fixture"
-            skill.mkdir()
-            (skill / "SKILL.md").write_text(
-                "---\nname: Fixture\ndescription: Synthetic procedure\n---\n"
-                + case["setup"]["skill"],
-                encoding="utf-8",
-            )
-        _configure_models(state, profile)
-
-        case_factory = factory or ScriptedModelFactory(model)
-        capture = (
-            InputCapture(case_factory) if case["operation"] == "aggregate" else None
-        )
-
-        fault_observations = []
-        recovery_model = ScriptedModel([])
-
-        def build(*, _rollback, preparing=False, recovering=False):
-            from .case_setup import build_case_host
-
-            return build_case_host(
-                _rollback=_rollback,
-                fault_fixture=(
-                    case["setup"].get("fault_fixture")
-                    if batch["schema_version"] in (3, 4)
-                    and not preparing
-                    and not recovering
-                    else None
-                ),
-                observations=fault_observations,
-                state_dir=state,
-                settings=(
-                    replace(
-                        settings,
-                        gate_input_character_limit=None,
-                        consolidation_source_threshold=100,
-                    )
-                    if preparing
-                    else settings
-                ),
-                skill_builtin=builtin,
-                local_tool_allowlist=(
-                    case["setup"]["local_tool_allowlist"]
-                    if batch["schema_version"] in (3, 4)
-                    else profile.get("local_tool_allowlist")
-                ),
-                factory=(
-                    ScriptedModelFactory(seed_model(case["setup"]))
-                    if preparing
-                    else ScriptedModelFactory(recovery_model)
-                    if recovering
-                    else capture or case_factory
-                ),
-                credentials=(
-                    CredentialOverlay({}, None)
-                    if preparing or recovering
-                    else credentials or CredentialOverlay({}, None)
-                ),
-            )
-
-        setup_evidence = None
-        if batch["schema_version"] in (3, 4):
-            from .artifacts import local_business, tool_projections
-            from .case_setup import (
-                install_skills,
-                prepare_calendar,
-                prepare_memory,
-                prepare_persona,
-                prepare_session,
-                seed_model,
-                verify_calendar,
-                verify_memory,
-                verify_runtime_setup,
-                verify_session,
-                verify_skills,
-            )
-
-            persona_receipt = prepare_persona(state, settings, case["setup"])
-            owner = ConstructionOwner()
-            try:
-                preparing = build(preparing=True, _rollback=owner.rollback)
-                preparing.start()
-                memory_rows = prepare_memory(preparing, case["setup"])
-                session, session_rows = prepare_session(preparing, case["setup"])
-            except BaseException as failure:
-                owner.fail(failure)
-            else:
-                owner.rollback.close()
-            calendar_receipts = prepare_calendar(state, case["setup"])
-            before_business = local_business(state, settings)
-            verify_calendar(case["setup"], before_business)
-            if (
-                "persona" in case["setup"]
-                and before_business["persona"]["content"] != case["setup"]["persona"]
-            ):
-                raise ValueError("setup_persona_readback_mismatch")
-            install_skills(builtin, case["setup"])
-        owner = ConstructionOwner()
-        try:
-            host = build(_rollback=owner.rollback)
-            host.start()
-            sampled_at = datetime.now(UTC).isoformat()
-            if batch["schema_version"] not in (3, 4):
-                session = host.create_session()
-            if batch["schema_version"] in (3, 4):
-                setup_evidence = {
-                    "status": "verified",
-                    "source": "simulation",
-                    "memory": verify_memory(host, case["setup"], memory_rows),
-                    "calendar_receipts": calendar_receipts,
-                    "business": before_business,
-                    "persona_receipt": persona_receipt,
-                    "session_seed": verify_session(
-                        host, session, case["setup"], session_rows
-                    ),
-                    "aggregate": case["setup"].get("aggregate"),
-                    "skills": verify_skills(host, case["setup"]),
-                    "limits": case["setup"].get("limits", {}),
-                }
-            if "fact" in case["setup"]:
-                host.memory_service.execute(
-                    {
-                        "operation_id": uuid.uuid4().hex,
-                        "action": "save",
-                        "kind": "semantic",
-                        "payload": {
-                            "subject": "fixture",
-                            "fact": case["setup"]["fact"],
-                        },
-                    },
-                    CommandContext(ManualOrigin("web"), "web"),
-                )
-            if case["setup"].get("routing"):
-                host.apply_behaviour(
-                    {"action": "save", "expected_revision": 0, "enabled": True}
-                )
-            if setup_evidence is not None:
-                setup_evidence.update(verify_runtime_setup(host, case["setup"]))
-            if case["operation"] == "aggregate":
-                accepted = host.aggregate(
-                    session_id=session,
-                    goal=case["input"],
-                    keywords=(
-                        case["setup"]["aggregate"]["keywords"]
-                        if batch["schema_version"] in (3, 4)
-                        else "coffee"
-                    ),
-                    sources=(
-                        case["setup"]["aggregate"]["sources"]
-                        if batch["schema_version"] in (3, 4)
-                        else ("semantic",)
-                    ),
-                )
-            else:
-                accepted = host.submit(SubmitRequest(case["input"], session_id=session))
-            if accepted.kind != "accepted":
-                raise ValueError("fixture_admission_failed")
-            settled = host.wait(accepted.run_id)
-            evidence = host.read_run_evidence(
-                accepted.run_id, trace_root=state / "traces"
-            )
-            if setup_evidence is not None:
-                if case["setup"].get("fault_fixture"):
-                    from .fault_fixtures import action_coverage
-
-                    setup_evidence["fault_fixture"] = {
-                        "id": case["setup"]["fault_fixture"],
-                        "triggered": bool(fault_observations),
-                        "status": (
-                            "triggered" if fault_observations else "not_triggered"
-                        ),
-                        "observations": list(fault_observations),
-                        **action_coverage(
-                            case["setup"]["fault_fixture"],
-                            fault_observations,
-                            host.tool_requests(accepted.run_id),
-                        ),
-                    }
-                evidence["setup"] = setup_evidence
-                evidence["tool_projections"] = tool_projections(
-                    host, state, accepted.run_id
-                )
-                from .artifacts import drafts
-
-                evidence["local_artifacts_before_reopen"] = drafts(state)
-            if capture is not None:
-                evidence["aggregation_inputs"] = capture.aggregation_evidence(evidence)
-            output = message_plain_text(settled.reply) if settled.reply else None
-            record = {
-                "id": uuid.uuid4().hex,
-                "batch_id": batch["batch_id"],
-                "case_id": case["id"],
-                "profile_id": profile["id"],
-                "source": "offline_fixture" if batch["simulation"] else "online",
-                "sampled_at": sampled_at,
-                "finished_at": datetime.now(UTC).isoformat(),
-                "run_id": accepted.run_id,
-                "outcome": settled.outcome,
-                "output": output,
-                "error": settled.error,
-                "evidence": evidence,
-                "tools": host.tool_requests(accepted.run_id),
-                "recorded": False,
-            }
-            if case["setup"].get("fault_fixture") == "file_publication_unknown_v1":
-                from .artifacts import seal_observation
-
-                page = host.open_session(session, page_size=20)
-                record["recorded"] = any(
-                    message.run_id == accepted.run_id and message.role == "assistant"
-                    for message in page.messages
-                )
-                ensure_safe(record, secrets=loaded_secrets)
-                evidence["setup"]["fault_fixture"]["original_observation"] = (
-                    seal_observation(state, record)
-                )
-        except BaseException as failure:
-            owner.fail(failure)
-        else:
-            owner.rollback.close()
-        owner = ConstructionOwner()
-        try:
-            reopened = build(_rollback=owner.rollback, recovering=True)
-            reopened.start()
-            page = reopened.open_session(session, page_size=20)
-            record["recorded"] = any(
-                message.run_id == accepted.run_id and message.role == "assistant"
-                for message in page.messages
-            )
-            record["persisted_messages"] = len(page.messages)
-            if batch["schema_version"] in (3, 4):
-                if (
-                    case["setup"].get("fault_fixture") == "file_publication_unknown_v1"
-                    and fault_observations
-                ):
-                    from .fault_fixtures import observe_recovery
-
-                    recovery = observe_recovery(
-                        reopened,
-                        state,
-                        fault_observations[0]["operation_id"],
-                        recovery_model,
-                    )
-                    record["evidence"]["setup"]["fault_fixture"]["recovery"] = recovery
-                record["evidence"]["tool_verifications_after_reopen"] = [
-                    {
-                        **reopened.tool_verification(
-                            accepted.run_id, row["step_index"], row["call_id"]
-                        ),
-                        "collected_at": datetime.now(UTC).isoformat(),
-                    }
-                    for row in record["tools"]
-                ]
-        except BaseException as failure:
-            owner.fail(failure)
-        else:
-            owner.rollback.close()
-        if batch["schema_version"] in (3, 4):
-            record["evidence"]["local_business"] = local_business(
-                state,
-                settings,
-                operation_ids=[
-                    row["operation_id"]
-                    for row in record["tools"]
-                    if row.get("operation_id")
-                    and row["tool_name"]
-                    in ("draft_message", "update_persona", "create_skill")
-                ],
-            )
-        if (batch["phase"] == "trial" and case["group"] == "tools") or batch[
-            "schema_version"
-        ] in (3, 4):
-            from .artifacts import drafts
-
-            artifacts = drafts(state)
-            record["evidence"]["local_artifacts"] = artifacts
-            if artifacts["status"] == "unavailable" and budget is not None:
-                budget.stop_reason = "trial_isolation_failure"
-        ensure_safe(record, secrets=loaded_secrets)
         if budget is not None and budget.journal:
             budget.journal("product_result", record)
         result["results"].append(record)
@@ -385,6 +86,351 @@ def _run(batch, workspace, *, budget=None, factory=None, credentials=None):
             result["stop_reason"] = budget.stop_reason
     ensure_safe(result, secrets=loaded_secrets)
     return validate(result)
+
+
+def _run_case(
+    batch,
+    case,
+    root,
+    *,
+    budget=None,
+    factory=None,
+    credentials=None,
+    synthetic_replay=False,
+    capture_all=False,
+    clock=None,
+):
+    """One fresh Host. Admission and first-run ownership belong to its caller.
+
+    Keep the complete frozen batch in scope; a one-case schema4 batch is invalid.
+    Mock execution on real materials has no actual sampling timestamp.
+    """
+    now = clock or (lambda: datetime.now(UTC))
+    loaded_secrets = credential_secrets(credentials.values()) if credentials else ()
+    root = Path(root)
+    root.mkdir(parents=True, exist_ok=True)
+    state = root / case["id"]
+    state.mkdir()
+    profile = batch["profiles"][0]
+    if batch["schema_version"] in (3, 4):
+        from .case_setup import SimulatedModel
+
+        offline_model = SimulatedModel
+    else:
+        offline_model = ScriptedModel
+    model = offline_model(list(scripted(case["script"]))) if factory is None else None
+    settings = Settings(
+        **profile["parameters"],
+        persona=profile["inputs"]["persona"],
+    )
+    if batch["schema_version"] in (3, 4):
+        from .case_setup import effective_settings
+
+        settings = effective_settings(case["setup"], profile)
+    builtin = root / ("skills-" + case["id"])
+    builtin.mkdir()
+    if "skill" in case["setup"]:
+        skill = builtin / "Fixture"
+        skill.mkdir()
+        (skill / "SKILL.md").write_text(
+            "---\nname: Fixture\ndescription: Synthetic procedure\n---\n"
+            + case["setup"]["skill"],
+            encoding="utf-8",
+        )
+    _configure_models(state, profile)
+
+    case_factory = factory or ScriptedModelFactory(model)
+    capture = (
+        InputCapture(case_factory)
+        if capture_all or case["operation"] == "aggregate"
+        else None
+    )
+
+    fault_observations = []
+    recovery_model = ScriptedModel([])
+
+    def build(*, _rollback, preparing=False, recovering=False):
+        from .case_setup import build_case_host
+
+        return build_case_host(
+            _rollback=_rollback,
+            fault_fixture=(
+                case["setup"].get("fault_fixture")
+                if batch["schema_version"] in (3, 4)
+                and not preparing
+                and not recovering
+                else None
+            ),
+            observations=fault_observations,
+            state_dir=state,
+            settings=(
+                replace(
+                    settings,
+                    gate_input_character_limit=None,
+                    consolidation_source_threshold=100,
+                )
+                if preparing
+                else settings
+            ),
+            skill_builtin=builtin,
+            local_tool_allowlist=(
+                case["setup"]["local_tool_allowlist"]
+                if batch["schema_version"] in (3, 4)
+                else profile.get("local_tool_allowlist")
+            ),
+            factory=(
+                ScriptedModelFactory(seed_model(case["setup"]))
+                if preparing
+                else ScriptedModelFactory(recovery_model)
+                if recovering
+                else capture or case_factory
+            ),
+            credentials=(
+                CredentialOverlay({}, None)
+                if preparing or recovering
+                else credentials or CredentialOverlay({}, None)
+            ),
+        )
+
+    setup_evidence = None
+    if batch["schema_version"] in (3, 4):
+        from .artifacts import local_business, tool_projections
+        from .case_setup import (
+            install_skills,
+            prepare_calendar,
+            prepare_memory,
+            prepare_persona,
+            prepare_session,
+            seed_model,
+            verify_calendar,
+            verify_memory,
+            verify_runtime_setup,
+            verify_session,
+            verify_skills,
+        )
+
+        persona_receipt = prepare_persona(state, settings, case["setup"])
+        owner = ConstructionOwner()
+        try:
+            preparing = build(preparing=True, _rollback=owner.rollback)
+            preparing.start()
+            memory_rows = prepare_memory(preparing, case["setup"])
+            session, session_rows = prepare_session(preparing, case["setup"])
+        except BaseException as failure:
+            owner.fail(failure)
+        else:
+            owner.rollback.close()
+        calendar_receipts = prepare_calendar(state, case["setup"])
+        before_business = local_business(state, settings)
+        verify_calendar(case["setup"], before_business)
+        if (
+            "persona" in case["setup"]
+            and before_business["persona"]["content"] != case["setup"]["persona"]
+        ):
+            raise ValueError("setup_persona_readback_mismatch")
+        install_skills(builtin, case["setup"])
+    owner = ConstructionOwner()
+    try:
+        host = build(_rollback=owner.rollback)
+        host.start()
+        observed_at = now().isoformat()
+        sampled_at = None if synthetic_replay else observed_at
+        if batch["schema_version"] not in (3, 4):
+            session = host.create_session()
+        if batch["schema_version"] in (3, 4):
+            setup_evidence = {
+                "status": "verified",
+                "source": "simulation",
+                "memory": verify_memory(host, case["setup"], memory_rows),
+                "calendar_receipts": calendar_receipts,
+                "business": before_business,
+                "persona_receipt": persona_receipt,
+                "session_seed": verify_session(
+                    host, session, case["setup"], session_rows
+                ),
+                "aggregate": case["setup"].get("aggregate"),
+                "skills": verify_skills(host, case["setup"]),
+                "limits": case["setup"].get("limits", {}),
+            }
+        if "fact" in case["setup"]:
+            host.memory_service.execute(
+                {
+                    "operation_id": uuid.uuid4().hex,
+                    "action": "save",
+                    "kind": "semantic",
+                    "payload": {
+                        "subject": "fixture",
+                        "fact": case["setup"]["fact"],
+                    },
+                },
+                CommandContext(ManualOrigin("web"), "web"),
+            )
+        if case["setup"].get("routing"):
+            host.apply_behaviour(
+                {"action": "save", "expected_revision": 0, "enabled": True}
+            )
+        if setup_evidence is not None:
+            setup_evidence.update(verify_runtime_setup(host, case["setup"]))
+        if case["operation"] == "aggregate":
+            accepted = host.aggregate(
+                session_id=session,
+                goal=case["input"],
+                keywords=(
+                    case["setup"]["aggregate"]["keywords"]
+                    if batch["schema_version"] in (3, 4)
+                    else "coffee"
+                ),
+                sources=(
+                    case["setup"]["aggregate"]["sources"]
+                    if batch["schema_version"] in (3, 4)
+                    else ("semantic",)
+                ),
+            )
+        else:
+            accepted = host.submit(SubmitRequest(case["input"], session_id=session))
+        if accepted.kind != "accepted":
+            raise ValueError("fixture_admission_failed")
+        settled = host.wait(accepted.run_id)
+        evidence = host.read_run_evidence(accepted.run_id, trace_root=state / "traces")
+        if setup_evidence is not None:
+            if case["setup"].get("fault_fixture"):
+                from .fault_fixtures import action_coverage
+
+                setup_evidence["fault_fixture"] = {
+                    "id": case["setup"]["fault_fixture"],
+                    "triggered": bool(fault_observations),
+                    "status": ("triggered" if fault_observations else "not_triggered"),
+                    "observations": list(fault_observations),
+                    **action_coverage(
+                        case["setup"]["fault_fixture"],
+                        fault_observations,
+                        host.tool_requests(accepted.run_id),
+                    ),
+                }
+            evidence["setup"] = setup_evidence
+            evidence["tool_projections"] = tool_projections(
+                host, state, accepted.run_id
+            )
+            from .artifacts import drafts
+
+            evidence["local_artifacts_before_reopen"] = drafts(state)
+        if capture is not None and case["operation"] == "aggregate":
+            evidence["aggregation_inputs"] = capture.aggregation_evidence(evidence)
+        output = message_plain_text(settled.reply) if settled.reply else None
+        record = {
+            "id": uuid.uuid4().hex,
+            "batch_id": batch["batch_id"],
+            "case_id": case["id"],
+            "profile_id": profile["id"],
+            "source": (
+                "simulation"
+                if synthetic_replay
+                else "offline_fixture"
+                if batch["simulation"]
+                else "online"
+            ),
+            "sampled_at": sampled_at,
+            "finished_at": now().isoformat(),
+            "run_id": accepted.run_id,
+            "outcome": settled.outcome,
+            "output": output,
+            "error": settled.error,
+            "evidence": evidence,
+            "tools": host.tool_requests(accepted.run_id),
+            "recorded": False,
+        }
+        if case["setup"].get("fault_fixture") == "file_publication_unknown_v1":
+            from .artifacts import seal_observation
+
+            page = host.open_session(session, page_size=20)
+            record["recorded"] = any(
+                message.run_id == accepted.run_id and message.role == "assistant"
+                for message in page.messages
+            )
+            ensure_safe(record, secrets=loaded_secrets)
+            evidence["setup"]["fault_fixture"]["original_observation"] = (
+                seal_observation(state, record)
+            )
+    except BaseException as failure:
+        owner.fail(failure)
+    else:
+        owner.rollback.close()
+    owner = ConstructionOwner()
+    try:
+        reopened = build(_rollback=owner.rollback, recovering=True)
+        reopened.start()
+        page = reopened.open_session(session, page_size=20)
+        record["recorded"] = any(
+            message.run_id == accepted.run_id and message.role == "assistant"
+            for message in page.messages
+        )
+        record["persisted_messages"] = len(page.messages)
+        if batch["schema_version"] in (3, 4):
+            if (
+                case["setup"].get("fault_fixture") == "file_publication_unknown_v1"
+                and fault_observations
+            ):
+                from .fault_fixtures import observe_recovery
+
+                recovery = observe_recovery(
+                    reopened,
+                    state,
+                    fault_observations[0]["operation_id"],
+                    recovery_model,
+                )
+                record["evidence"]["setup"]["fault_fixture"]["recovery"] = recovery
+            record["evidence"]["tool_verifications_after_reopen"] = [
+                {
+                    **reopened.tool_verification(
+                        accepted.run_id, row["step_index"], row["call_id"]
+                    ),
+                    "collected_at": now().isoformat(),
+                }
+                for row in record["tools"]
+            ]
+    except BaseException as failure:
+        owner.fail(failure)
+    else:
+        owner.rollback.close()
+    if batch["schema_version"] in (3, 4):
+        record["evidence"]["local_business"] = local_business(
+            state,
+            settings,
+            operation_ids=[
+                row["operation_id"]
+                for row in record["tools"]
+                if row.get("operation_id")
+                and row["tool_name"]
+                in ("draft_message", "update_persona", "create_skill")
+            ],
+        )
+    if (batch["phase"] == "trial" and case["group"] == "tools") or batch[
+        "schema_version"
+    ] in (3, 4):
+        from .artifacts import drafts
+
+        artifacts = drafts(state)
+        record["evidence"]["local_artifacts"] = artifacts
+        if artifacts["status"] == "unavailable" and budget is not None:
+            budget.stop_reason = "trial_isolation_failure"
+    ensure_safe(record, secrets=loaded_secrets)
+    if capture_all:
+        from .controlled.contract import wire_payload
+        from .schema import digest
+
+        evidence["captured_inputs"] = [
+            {"attempt_id": key, "host_request_sha256": digest(wire_payload(request))}
+            for key, request in capture.attempts.items()
+        ]
+    if synthetic_replay:
+        evidence["execution_provenance"] = {
+            "mode": "SYNTHETIC_REPLAY",
+            "actual_sampled_at": None,
+            "fixture_observed_at": observed_at,
+            "real_sample": False,
+            "seed_calls": "declared_setup_only_no_product_semantic_work",
+        }
+    return record
 
 
 def _configure_models(state, profile):

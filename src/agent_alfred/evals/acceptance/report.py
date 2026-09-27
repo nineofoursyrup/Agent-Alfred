@@ -339,18 +339,34 @@ def report(batch, *, now=None, candidate_root=None, store=None, decision_source=
         elif not case_approval_valid(batch):
             release_blockers.append("case_set_approval_missing")
     if not batch["simulation"] and batch["phase"] == "formal" and batch["results"]:
-        first_sample = min(instant(r["sampled_at"]) for r in batch["results"])
+        sample_times = [
+            instant(r["sampled_at"])
+            for r in batch["results"]
+            if r["sampled_at"] is not None
+        ]
+        first_sample = min(sample_times) if sample_times else None
+        if len(sample_times) != len(batch["results"]):
+            release_blockers.append("actual_sample_time_missing")
         for proof in (
             batch.get("case_set_approval"),
             (scoring_rubric(batch) or {}).get("approval"),
             (batch.get("aggregation_policy") or {}).get("approval"),
         ):
-            if proof and instant(proof["at"]) > first_sample:
+            if (
+                proof
+                and first_sample is not None
+                and instant(proof["at"]) > first_sample
+            ):
                 release_blockers.append("approval_after_formal_sampling")
     calibration = batch["calibration"]
     if store is not None and calibration and "batch_id" in calibration:
         source = store.read(calibration["batch_id"])
         for result in source["results"]:
+            if result["sampled_at"] is None:
+                release_blockers.append(
+                    "calibration_sample_invalid:" + result["case_id"]
+                )
+                continue
             sampled, finished = (
                 instant(result["sampled_at"]),
                 instant(result["finished_at"]),
