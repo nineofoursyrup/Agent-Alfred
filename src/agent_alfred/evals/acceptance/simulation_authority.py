@@ -85,9 +85,51 @@ class SimulationAuthority:
         with self._lock:
             state = self._read()
             try:
+                if source_ref in state.get("revoked_decisions", []):
+                    raise ValueError("decision_source_unverifiable")
                 return deepcopy(state.get("decisions", {})[source_ref])
             except KeyError:
                 raise ValueError("decision_source_unverifiable") from None
+
+    def revoke_decision(self, source_ref):
+        """Synthetic withdrawal; keep the original event in anchored history."""
+        with self._lock:
+            state = self._read()
+            if source_ref not in state.get("decisions", {}):
+                raise ValueError("decision_source_unverifiable")
+            state.setdefault("revoked_decisions", []).append(source_ref)
+            state["revision"] += 1
+            self._save(state)
+
+    def issue_execution_decision(self, request, *, subject, decision, reason, evidence):
+        """Fixture for versioned run/checkpoint decisions; never a real grant."""
+        from .execution_decisions import validate_execution_event, validate_request
+        from .supplement_schema import signed
+
+        validate_request(request)
+        if not subject.startswith("simulation:"):
+            raise ValueError("synthetic_source_required")
+        with self._lock:
+            state = self._read()
+            reference = self._issuer + ":decision:" + secrets.token_hex(16)
+            event = signed(
+                {
+                    "version": 1,
+                    "kind": "synthetic_execution_decision",
+                    "subject": subject,
+                    "source_ref": reference,
+                    "at": self.clock.wall_utc().isoformat(),
+                    "decision": decision,
+                    "request": deepcopy(request),
+                    "reason": reason,
+                    "evidence": list(evidence),
+                }
+            )
+            validate_execution_event(event)
+            state.setdefault("decisions", {})[reference] = deepcopy(event)
+            state["revision"] += 1
+            self._save(state)
+            return event
 
     def _load(self):
         path = self.root / "state.json"

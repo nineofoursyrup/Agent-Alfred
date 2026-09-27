@@ -107,7 +107,8 @@ def test_restart_retains_complete_window_and_other_sessions_do_not_contribute(tm
         conn.close()
 
 
-def test_full_retrieval_budgets_include_second_json_escaping():
+@pytest.mark.parametrize("character_budget", [4000, 8000])
+def test_full_retrieval_budgets_include_second_json_escaping(character_budget):
     import json
 
     from agent_alfred.memory.commands import CommandContext
@@ -117,10 +118,13 @@ def test_full_retrieval_budgets_include_second_json_escaping():
         '{"retrieve":true,"query":"coriander","reason_code":"personal_information"}'
     )
     context = CommandContext(origin=ManualOrigin("web"), source="web")
-    with runtime([retrieve, "answer"]) as (host, model, _):
+    with runtime(
+        [retrieve, "answer"],
+        settings=Settings(per_store_character_budget=character_budget),
+    ) as (host, model, _):
         for kind in ("semantic", "episodic"):
             field = "fact" if kind == "semantic" else "summary"
-            payload = {field: "coriander"}
+            payload = {field: 'coriander"\\\0\n\t中'}
             if kind == "semantic":
                 payload["subject"] = "herb"
             else:
@@ -137,18 +141,18 @@ def test_full_retrieval_budgets_include_second_json_escaping():
                 context,
             )
             assert saved["status"] == "saved"
-            # Fixed public reference fields: build a fixture exactly at 4000,
-            # with quotes whose second encoding must consume extra capacity.
+            # Fill both encoded store budgets, including quotes, backslashes,
+            # control characters and Unicode. The second encoding must fit too.
             item = {
                 "id": saved["memory_id"],
                 "version": 2,
                 **payload,
                 "origin": {"type": "manual", "source": "web"},
             }
-            remaining = 4000 - len(
+            remaining = character_budget - len(
                 json.dumps([item], ensure_ascii=False, separators=(",", ":"))
             )
-            body = "coriander" + '"' * (remaining // 2) + "a" * (remaining % 2)
+            body = payload[field] + '"' * (remaining // 2) + "a" * (remaining % 2)
             changed = host.memory_service.execute(
                 {
                     "operation_id": "fill-" + kind,
@@ -165,7 +169,7 @@ def test_full_retrieval_budgets_include_second_json_escaping():
         reference = message_plain_text(model.requests[-1].messages[0])
         for line in reference.splitlines():
             if line.startswith(("semantic=", "episodic=")):
-                assert len(line.split("=", 1)[1]) == 4000
+                assert len(line.split("=", 1)[1]) == character_budget
         actual = result.memory_telemetry["input_attempts"][-1]
         assert actual["input_characters"] > len(reference) + 3000
         assert actual["input_characters"] <= actual["input_limit"]
@@ -432,7 +436,7 @@ def test_actual_input_evidence_survives_a_failed_final_recording(tmp_path):
 def test_common_window_is_trimmed_before_gate_and_not_refilled_after_skip():
     with runtime(
         [SKIP, "first answer", SKIP, "next answer"],
-        settings=Settings(input_character_limit=64000),
+        settings=Settings(input_character_limit=28000),
     ) as (host, model, _):
         first = host.submit(SubmitRequest("h" * 7000))
         assert host.wait(first.run_id).outcome == "completed"

@@ -25,6 +25,7 @@ def main():
             "prepare",
             "summary",
             "proposal",
+            "source-preflight",
             "regrade",
             "recover",
             "validate",
@@ -40,6 +41,8 @@ def main():
             "report",
             "verify",
             "delete",
+            "materials-export",
+            "materials-preflight",
         ],
     )
     parser.add_argument("--schema-version", type=int, choices=[1, 4], default=1)
@@ -61,8 +64,17 @@ def main():
     parser.add_argument("--workspace")
     parser.add_argument("--candidate-root")
     parser.add_argument("--output-scope")
+    parser.add_argument("--package-manifest-sha256")
+    parser.add_argument("--approved-batch")
+    parser.add_argument("--subject")
     parser.add_argument("--operations", nargs="+", choices=["product", "judge"])
     parser.add_argument("--operation", choices=["product", "judge"])
+    parser.add_argument("--material-scope")
+    parser.add_argument("--manifest-sha256")
+    parser.add_argument("--allowed-material-object", action="append", default=[])
+    parser.add_argument("--batch-path")
+    parser.add_argument("--proposal-path")
+    parser.add_argument("--evidence-store-path")
     parser.add_argument(
         "--gate",
         choices=[
@@ -107,6 +119,31 @@ def main():
 
 
 def dispatch(args):
+    if args.command in ("materials-export", "materials-preflight"):
+        from .materials import (
+            ProtectedMaterialStore,
+            export_materials,
+            preflight_materials,
+            read_reference,
+        )
+
+        vault = ProtectedMaterialStore(args.store, scope=args.material_scope)
+        if args.command == "materials-export":
+            return export_materials(
+                args.input,
+                vault=vault,
+                manifest_sha256=args.manifest_sha256,
+                batch_path=args.batch_path,
+                proposal_path=args.proposal_path,
+                evidence_store_path=args.evidence_store_path,
+            )
+        return preflight_materials(
+            read_reference(args.input),
+            vault=vault,
+            allowed_objects=set(args.allowed_material_object),
+            expected_manifest_sha256=args.manifest_sha256,
+            output=args.workspace,
+        )
     if args.command == "proposal":
         from .admission import proposal
 
@@ -148,6 +185,18 @@ def dispatch(args):
             "online_executable": False,
         }
     store = EvidenceStore(args.store)
+    if args.command == "source-preflight":
+        from .execution_decisions import source_preflight
+
+        if not args.package_manifest_sha256:
+            raise ValueError("package_manifest_required")
+        return source_preflight(
+            store,
+            args.batch,
+            package_manifest_sha256=args.package_manifest_sha256,
+            approved_batch_id=args.approved_batch,
+            subject=args.subject,
+        )
     if args.command == "summary":
         from .supplement_decisions import make_summary
 

@@ -196,10 +196,12 @@ class RunMemory:
             self._settings.gate_input_character_limit
             or self._settings.input_character_limit
         )
-        # A source character can occupy six JSON characters (a control escape).
-        # Both per-store budgets include complete encoded entries. The reference
-        # heading, store names, separators and partial marker are bounded by 200.
-        reserved_text = "\0" * (2 * self._settings.per_store_character_budget + 200)
+        # Both store budgets already measure JSON-encoded entries, with control
+        # characters escaped. Embedding that text expands quotes/backslashes by
+        # at most two; raw NULs would incorrectly reserve a second sixfold escape.
+        # The heading, store names, separators and partial marker fit within 200
+        # encoded characters. Actual complete input is still checked before IO.
+        reserved_text = "\\" * (2 * self._settings.per_store_character_budget + 200)
         while True:
             gate = self._request("gate")
             answer = self._request("answer")

@@ -2,6 +2,7 @@
 
 import json
 import shutil
+from dataclasses import replace
 from pathlib import Path
 
 import httpx2
@@ -27,6 +28,7 @@ from agent_alfred.runtime.config import (
     MutableAssignmentProvider,
     StoreBackedSnapshotProvider,
 )
+from agent_alfred.runtime.input_budget import input_characters
 from agent_alfred.runtime.model_settings import ModelSettingsStore
 from agent_alfred.settings import DEFAULT_ENDPOINT_ID, OPENCODE_API_KEY_ENV, Settings
 from agent_alfred.stream_fallback import StreamFallback
@@ -158,7 +160,7 @@ def test_ce18_long_skill_with_empty_or_full_escaped_retrieval_freezes_same_windo
         tmp_path,
         [
             SKIP,
-            "old" * 2500,
+            "old" * 10000,
             '{"skills":["A"]}',
             lookup if retrieve else SKIP,
             "answer",
@@ -233,6 +235,18 @@ def test_ce18_long_skill_with_empty_or_full_escaped_retrieval_freezes_same_windo
             ]
             assert lengths == [4000, 4000]
         assert all(a["input_characters"] <= a["input_limit"] for a in inputs)
+
+        # Full escaped retrieval really overflows if the selector's old pair is
+        # restored. Empty retrieval fits, but must keep the same frozen window.
+        selector, _, answer = model.requests[-3:]
+        untrimmed = replace(
+            answer, messages=(*selector.messages[:-1], *answer.messages)
+        )
+        assert (
+            input_characters(untrimmed) > settings.input_character_limit
+        ) is retrieve
+        without_skill = replace(untrimmed, system=untrimmed.system[:-1])
+        assert input_characters(without_skill) <= settings.input_character_limit
 
 
 def test_ce29_existing_settings_change_reloads_both_judgments_for_next_run(tmp_path):

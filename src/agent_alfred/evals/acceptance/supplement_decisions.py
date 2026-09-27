@@ -505,7 +505,11 @@ def approval(batch, stage, source, now, *, _calibration=None):
 
 
 def cutoff(batch, inherited=None):
-    times = [instant(r["sampled_at"]) for r in batch["results"]]
+    times = [
+        instant(r["sampled_at"])
+        for r in batch["results"]
+        if r["sampled_at"] is not None
+    ]
     times += [instant(r["started_at"]) for r in batch["judge_test_results"]]
     times += [instant(v) for v in (batch.get("budget_started_at"), inherited) if v]
     return min(times) if times else None

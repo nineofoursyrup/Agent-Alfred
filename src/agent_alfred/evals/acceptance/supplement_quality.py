@@ -121,13 +121,15 @@ def quality(
         else:
             if product_failed:
                 failures.append("product_failed:" + cid)
-            if (
+            if result["sampled_at"] is None:
+                blockers.append("actual_sample_time_missing:" + cid)
+            elif (
                 not instant(result["sampled_at"])
                 <= instant(result["finished_at"])
                 <= now
             ):
                 blockers.append("invalid_sample_time:" + cid)
-            if now - instant(result["sampled_at"]) > timedelta(days=7):
+            elif now - instant(result["sampled_at"]) > timedelta(days=7):
                 blockers.append("stale_sample:" + cid)
             evidence = result["evidence"]
             if (
