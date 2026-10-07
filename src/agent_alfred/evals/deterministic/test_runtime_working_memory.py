@@ -503,7 +503,13 @@ def test_zero_window_keeps_real_prior_tool_evidence_out_of_the_gate():
         settings=Settings(working_memory_rounds=0),
     ) as (host, model, _):
         first = host.submit(SubmitRequest("create appointment"))
-        assert host.wait(first.run_id).outcome == "completed"
+        first_result = host.wait(first.run_id)
+        assert first_result.outcome == "completed"
+        # Current actions belong to this Run's transcript, not its prior ledger.
+        assert all(
+            entry["ledger_entries"] == []
+            for entry in first_result.memory_telemetry["input_attempts"]
+        )
         second = host.submit(SubmitRequest("hello", session_id=first.session_id))
         result = host.wait(second.run_id)
         assert result.outcome == "completed"
@@ -512,7 +518,10 @@ def test_zero_window_keeps_real_prior_tool_evidence_out_of_the_gate():
         assert "create_event" in summary
         assert "succeeded" in summary
         assert "private appointment" not in summary
-        assert result.memory_telemetry["input_attempts"][-1]["ledger_entries"]
+        entries = result.memory_telemetry["input_attempts"][-1]["ledger_entries"]
+        assert len(entries) == 1
+        assert entries[0]["source_run"] == first.run_id
+        assert entries[0]["action"] == "create_event"
 
 
 def test_tool_step_growth_stops_without_repeating_the_action():
@@ -1271,3 +1280,363 @@ def test_trace_identity_accepts_either_durable_proof_without_confirming_sources(
             conn.execute("DROP TRIGGER reject_final")
         with runtime([], database=database) as (host, _, _):
             check_evidence(host.read_run_evidence(submitted.run_id, trace_root=root))
+
+
+def test_mixed_history_filters_before_n_complete_groups_at_gate_and_answer(tmp_path):
+    import json
+
+    from agent_alfred.clock import FakeClock
+    from agent_alfred.evals.deterministic.test_runtime import _host
+    from agent_alfred.evals.deterministic.test_runtime_tools import calls
+    from agent_alfred.managed_state import ManagedStateDirectory
+    from agent_alfred.memory.commands import CommandContext
+    from agent_alfred.memory.types import ManualOrigin
+    from agent_alfred.messages import ToolCallBlock
+    from agent_alfred.model import ScriptedModel, ScriptedModelFactory
+    from agent_alfred.runtime.config import MutableAssignmentProvider
+    from agent_alfred.trace import RunBundleTraceSink
+
+    save = ToolCallBlock(
+        "latest-save", "save_fact", {"subject": "latest", "fact": "isolated body"}
+    )
+    model = ScriptedModel(
+        [
+            SKIP,
+            "answer 0",
+            KeyboardInterrupt(),
+            SKIP,
+            "answer 1",
+            "probe only",
+            SKIP,
+            "answer 2",
+            SKIP,
+            calls(save),
+            "isolated answer",
+            SKIP,
+            "final",
+        ]
+    )
+    trace = RunBundleTraceSink(
+        root=ManagedStateDirectory.acquire_trace_root(tmp_path / "traces"),
+        clock=FakeClock(),
+        process_instance_id="proc-test",
+    )
+    host, conn, capture = _host(
+        factory=ScriptedModelFactory(model),
+        extra_sinks=[trace],
+        settings=Settings(working_memory_rounds=2),
+        snapshot_provider=MutableAssignmentProvider(
+            endpoint_id="test", model_id="m", wire_style="openai", api_key="test-key"
+        ),
+    )
+    # The production trace is the durable sink; the observer is best effort,
+    # as in the existing runtime(..., extra_sinks=...) fixture.
+    capture.flush_at_run_end = False
+    host.start()
+    try:
+        safe = []
+        session_id = host.create_session()
+        for number in range(3):
+            admitted = host.submit(
+                SubmitRequest(f"question {number}", session_id=session_id)
+            )
+            assert host.wait(admitted.run_id).outcome == "completed"
+            safe.append(admitted.run_id)
+            if number < 2:
+                # Imported old rows have no Run identity; two opposite roles
+                # must not be stitched into an artificial conversation group.
+                conn.execute(
+                    "INSERT INTO agent_log "
+                    "(session_id,role,content,source,created_at,run_id) "
+                    "VALUES (?,?,?,'web','2026-09-10T00:00:00Z',NULL)",
+                    (
+                        session_id,
+                        "user" if number == 0 else "assistant",
+                        json.dumps([{"type": "text", "text": f"legacy {number}"}]),
+                    ),
+                )
+                conn.commit()
+            if number == 0:
+                interrupted = host.submit(
+                    SubmitRequest("unfinished", session_id=session_id)
+                )
+                assert host.wait(interrupted.run_id).outcome == "interrupted"
+            elif number == 1:
+                probe = host.submit(
+                    SubmitRequest(
+                        "probe",
+                        purpose="inference_probe",
+                        endpoint_id="test",
+                        model_id="m",
+                    )
+                )
+                assert host.wait(probe.run_id).outcome == "completed"
+        latest = host.submit(SubmitRequest("remember latest", session_id=session_id))
+        assert host.wait(latest.run_id).outcome == "completed"
+        receipt = json.loads(model.requests[-1].messages[-1].blocks[0].content[0].text)
+        deleted = host.memory_service.execute(
+            {
+                "operation_id": "delete-latest",
+                "kind": "semantic",
+                "action": "delete",
+                "payload": {"id": receipt["memory_id"]},
+                "expected_version": 1,
+            },
+            CommandContext(origin=ManualOrigin("web"), source="web"),
+        )
+        assert "error" not in deleted
+        restricted = host.memory_service.forgetting.evaluate_history(
+            (latest.run_id,), purpose="working_window"
+        )
+        assert restricted["allowed"] == []
+        final = host.submit(SubmitRequest("current", session_id=session_id))
+        result = host.wait(final.run_id)
+        assert result.outcome == "completed"
+        history = ["question 1", "answer 1", "question 2", "answer 2"]
+        assert [message_plain_text(m) for m in model.requests[-2].messages] == [
+            *history,
+            "current",
+        ]
+        answer_messages = [message_plain_text(m) for m in model.requests[-1].messages]
+        assert answer_messages[:4] == history
+        assert answer_messages[-1] == "current"
+        assert json.loads(answer_messages[-2].split("\n", 2)[-1]) == []
+        assert "隔离、暂停或失效排除 1 条" in answer_messages[-2]
+        attempts = result.memory_telemetry["input_attempts"]
+        assert [item["purpose"] for item in attempts] == ["gate", "answer"]
+        assert all(item["working_history_groups"] == safe[-2:] for item in attempts)
+        assert all(
+            item["history_exclusions"]
+            == {"incomplete": 3, "unsafe": 1, "round_limit": 1}
+            for item in attempts
+        )
+        # Automatic exclusion does not erase the human-readable session record.
+        assert (
+            conn.execute(
+                "SELECT count(*) FROM agent_log WHERE session_id=? AND run_id IS NULL",
+                (session_id,),
+            ).fetchone()[0]
+            == 2
+        )
+        assert (
+            conn.execute(
+                "SELECT count(*) FROM agent_log WHERE run_id=?", (latest.run_id,)
+            ).fetchone()[0]
+            == 2
+        )
+    finally:
+        host.close()
+        conn.close()
+
+
+def test_complete_chat_input_exact_limit_counts_persona_tools_and_result_wrapper():
+    import json
+    from dataclasses import replace
+
+    from agent_alfred.evals.deterministic.test_runtime_tools import calls
+    from agent_alfred.messages import TextBlock, ToolCallBlock, ToolResultBlock
+    from agent_alfred.runtime.input_budget import serialize_input
+
+    text = '汉字 e\u0301 🧭\0\n\t "\\ nested'
+    settings = Settings(input_character_limit=200000, persona="persona " + text)
+    action = ToolCallBlock(
+        "exact-create",
+        "create_event",
+        {"title": text, "starts_at": "2026-09-10T12:00:00+08:00"},
+    )
+
+    def execute(limit):
+        # The transcript grows beyond the retrieval reservation only after the
+        # first tool action, so the actual-send boundary is tested independently.
+        with runtime(
+            [SKIP, calls(action, TextBlock("payload " * 4000)), "done"],
+            settings=replace(settings, input_character_limit=limit),
+        ) as (host, model, _):
+            result = host.wait(host.submit(SubmitRequest(text)).run_id)
+            return result, tuple(model.requests)
+
+    baseline, requests = execute(settings.input_character_limit)
+    assert baseline.outcome == "completed"
+    full = serialize_input(requests[-1])
+    decoded = json.loads(full)
+    assert "🧭" in full and "\\u0000" in full
+    assert any(text in block["text"] for block in decoded["system"])
+    calendar_schema = next(
+        tool["input_schema"]
+        for tool in decoded["tools"]
+        if tool["name"] == "create_event"
+    )
+    assert calendar_schema["properties"]["title"]["type"] == "string"
+    assert any(
+        isinstance(block, ToolResultBlock)
+        for message in requests[-1].messages
+        for block in message.blocks
+    )
+    exact = len(full)
+    assert (
+        exact
+        > baseline.memory_telemetry["input_preparation"]["answer_characters"]
+        + baseline.memory_telemetry["input_preparation"]["reserved_characters"]
+    )
+    equal, equal_requests = execute(exact)
+    assert equal.outcome == "completed"
+    assert serialize_input(equal_requests[-1]) == full
+    evidence = equal.memory_telemetry["input_attempts"][-1]
+    assert evidence["input_characters"] == evidence["input_limit"] == exact
+    overflow, overflow_requests = execute(exact - 1)
+    assert overflow.outcome == "failed"
+    assert overflow.error == "input_limit_exceeded"
+    assert len(overflow_requests) == 2  # gate and first answer, no repeated action
+    failure = overflow.memory_telemetry["input_failure"]
+    assert failure["characters"] == exact and failure["limit"] == exact - 1
+    assert len(overflow.memory_telemetry["input_attempts"]) == 2
+
+
+def test_retrieval_reservation_alone_can_stop_before_gate():
+    with runtime([SKIP, "ok"]) as (host, _, _):
+        baseline = host.wait(host.submit(SubmitRequest("hello")).run_id)
+        preparation = baseline.memory_telemetry["input_preparation"]
+        fixed = preparation["answer_characters"]
+        reserved = preparation["reserved_characters"]
+        assert reserved > 0 and preparation["gate_characters"] < fixed
+    for delta, expected in ((0, "completed"), (-1, "failed")):
+        limit = fixed + reserved + delta
+        assert fixed < limit
+        with runtime([SKIP, "ok"], settings=Settings(input_character_limit=limit)) as (
+            host,
+            model,
+            _,
+        ):
+            result = host.wait(host.submit(SubmitRequest("hello")).run_id)
+            assert result.outcome == expected
+            observed = result.memory_telemetry["input_preparation"]
+            assert observed["answer_characters"] == fixed
+            assert observed["reserved_characters"] == reserved
+            if delta == 0:
+                assert len(model.requests) == 2
+                assert (
+                    result.memory_telemetry["input_attempts"][-1]["input_characters"]
+                    == fixed
+                )
+            else:
+                assert result.error == "input_limit_exceeded"
+                assert observed["status"] == "failed"
+                assert model.requests == []
+                assert result.memory_telemetry["input_attempts"] == []
+
+
+def test_first_oversized_unknown_ledger_entry_does_not_skip_to_ordinary():
+    import json
+
+    from agent_alfred.evals.deterministic.test_runtime import _host
+    from agent_alfred.model import ScriptedModel, ScriptedModelFactory
+
+    model = ScriptedModel([SKIP, "first", SKIP, "next"])
+    host, conn, _ = _host(
+        factory=ScriptedModelFactory(model), settings=Settings(working_memory_rounds=0)
+    )
+    host.start()
+    try:
+        first = host.submit(SubmitRequest("hello"))
+        assert host.wait(first.run_id).outcome == "completed"
+        for name, status in (("ordinary", "succeeded"), ("x" * 4100, "unknown")):
+            conn.execute(
+                "INSERT INTO tool_ledger "
+                "(tool_name,fingerprint,effect,status,run_id,session_id,created_at) "
+                "VALUES (?,?,'external',?,?,?,'2026-09-10T00:00:00Z')",
+                (name, status, status, first.run_id, first.session_id),
+            )
+        conn.commit()
+        result = host.wait(
+            host.submit(SubmitRequest("next", session_id=first.session_id)).run_id
+        )
+        assert result.outcome == "completed"
+        actual = result.memory_telemetry["input_attempts"][-1]
+        assert actual["ledger_entries"] == []
+        assert actual["ledger_omitted"] == 2
+        assert actual["ledger_unknown_omitted"] == 1
+        summary = message_plain_text(model.requests[-1].messages[0])
+        assert len(summary) <= 4000
+        assert "因限额省略 2 条，其中结果未知 1 条" in summary
+        assert "缺少记录不能证明动作未发生" in summary
+        assert json.loads(summary.split("\n", 2)[-1]) == []
+    finally:
+        host.close()
+        conn.close()
+
+
+def test_budget_trims_complete_history_then_ordinary_then_unknown_ledger():
+    import json
+    from dataclasses import replace
+
+    from agent_alfred.evals.deterministic.test_runtime import _host
+    from agent_alfred.model import ScriptedModel, ScriptedModelFactory
+    from agent_alfred.runtime.input_budget import serialize_input
+
+    def execute(limit):
+        model = ScriptedModel([SKIP, "historical answer " * 400, SKIP, "next"])
+        host, conn, _ = _host(
+            factory=ScriptedModelFactory(model),
+            settings=Settings(working_memory_rounds=1, input_character_limit=limit),
+        )
+        host.start()
+        try:
+            first = host.submit(SubmitRequest("old"))
+            assert host.wait(first.run_id).outcome == "completed"
+            for name, status in (
+                ("ordinary " * 30, "succeeded"),
+                ("unknown " * 30, "unknown"),
+            ):
+                conn.execute(
+                    "INSERT INTO tool_ledger "
+                    "(tool_name,fingerprint,effect,status,run_id,session_id,"
+                    "created_at) "
+                    "VALUES (?,?,'external',?,?,?,'2026-09-10T00:00:00Z')",
+                    (name, status, status, first.run_id, first.session_id),
+                )
+            conn.commit()
+            result = host.wait(
+                host.submit(
+                    SubmitRequest("current", session_id=first.session_id)
+                ).run_id
+            )
+            assert result.outcome == "completed"
+            return result, tuple(model.requests[-2:])
+        finally:
+            host.close()
+            conn.close()
+
+    baseline, requests = execute(64000)
+    full = baseline.memory_telemetry["input_preparation"]
+    assert full["budget_omitted_groups"] == 0
+    assert [entry["status"] for entry in full["ledger_entries"]] == [
+        "unknown",
+        "succeeded",
+    ]
+    # Set a budget for the independently observable request with exactly the
+    # complete historical pair removed. No ledger truncation algorithm is copied.
+    limit = (
+        len(serialize_input(replace(requests[-1], messages=requests[-1].messages[2:])))
+        + full["reserved_characters"]
+    )
+    for expected_statuses, omitted, unknown_omitted in (
+        (["unknown", "succeeded"], 0, 0),
+        (["unknown"], 1, 0),
+        ([], 2, 1),
+    ):
+        result, requests = execute(limit)
+        prepared = result.memory_telemetry["input_preparation"]
+        actual = result.memory_telemetry["input_attempts"][-1]
+        assert prepared["budget_omitted_groups"] == 1
+        assert actual["working_history_groups"] == []
+        assert [entry["status"] for entry in actual["ledger_entries"]] == (
+            expected_statuses
+        )
+        assert actual["ledger_omitted"] == omitted
+        assert actual["ledger_unknown_omitted"] == unknown_omitted
+        assert [message_plain_text(m) for m in requests[0].messages] == ["current"]
+        summary = message_plain_text(requests[-1].messages[0])
+        assert json.loads(summary.split("\n", 2)[-1]) == actual["ledger_entries"]
+        assert f"因限额省略 {omitted} 条，其中结果未知 {unknown_omitted} 条" in summary
+        assert "缺少记录不能证明动作未发生" in summary
+        limit = prepared["answer_characters"] + prepared["reserved_characters"] - 1

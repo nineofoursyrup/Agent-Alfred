@@ -438,7 +438,7 @@ class _SimulationDispatchClient:
         if request.max_tokens > self._profile_token_limit:
             raise ValueError("approval_profile_mismatch")
         from agent_alfred.model import NamedToolChoice, tool_schema_jsonable
-        from agent_alfred.openai_compatible import _to_wire_messages
+        from agent_alfred.openai_wire import to_wire_messages
 
         from .schema import digest
 
@@ -452,7 +452,7 @@ class _SimulationDispatchClient:
         request_digest = digest(
             {
                 "model": asdict(signed_request.model),
-                "messages": _to_wire_messages(signed_request),
+                "messages": to_wire_messages(signed_request),
                 "tools": [
                     {
                         "name": tool.name,

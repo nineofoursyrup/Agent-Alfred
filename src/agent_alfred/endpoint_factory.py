@@ -2,11 +2,8 @@
 
 from types import SimpleNamespace
 
-from agent_alfred.anthropic_native import AnthropicAdapter
-from agent_alfred.attempt_io import install_http_boundary
 from agent_alfred.endpoints import ModelRoute, list_endpoints, resolve_model
 from agent_alfred.model import EndpointUnconfigured, ModelRef, ModelUnsupported
-from agent_alfred.openai_compatible import OpenAICompatibleAdapter
 from agent_alfred.request_headers import opencode_headers
 from agent_alfred.resource_rollback import ResumableRollback
 from agent_alfred.retry import RetryPolicy, SystemSleeper
@@ -18,12 +15,14 @@ from agent_alfred.support_overrides import SupportOverrides
 class _RouteClient:
     """Keep the table's exact relative path while the SDK owns HTTP and SSE."""
 
-    def __init__(self, sdk, route, response_type, stream_type, *, owns_http):
+    def __init__(
+        self, sdk, route, response_type, stream_type, *, owns_http, install_boundary,
+    ):
         self._sdk = sdk
         self._route = route
         self._response_type = response_type
         self._stream_type = stream_type
-        install_http_boundary(sdk)
+        install_boundary(sdk)
         self._close_owner = ResumableRollback()
         if owns_http:
             self._close_owner.own(sdk)
@@ -122,6 +121,8 @@ class EndpointClientFactory:
         return endpoint, route
 
     def _build_transport(self, snapshot):
+        from agent_alfred.attempt_io import install_http_boundary
+
         endpoint, route = self._route(snapshot)
         options = dict(
             base_url=endpoint.base_url, api_key=snapshot.api_key, max_retries=0
@@ -149,6 +150,7 @@ class EndpointClientFactory:
                 ChatCompletion,
                 TerminalStream,
                 owns_http=self._http_client is None,
+                install_boundary=install_http_boundary,
             )
         from anthropic import Anthropic, Stream
         from anthropic.types import Message, RawMessageStreamEvent
@@ -159,18 +161,24 @@ class EndpointClientFactory:
             Message,
             Stream[RawMessageStreamEvent],
             owns_http=self._http_client is None,
+            install_boundary=install_http_boundary,
         )
 
     def create(self, snapshot):
         if not snapshot.api_key or not snapshot.api_key.strip():
             raise EndpointUnconfigured("endpoint_unconfigured")
         endpoint, route = self._route(snapshot)
+        if route.style == "openai":
+            from agent_alfred.openai_compatible import OpenAICompatibleAdapter
+
+            adapter = OpenAICompatibleAdapter
+        else:
+            from agent_alfred.anthropic_native import AnthropicAdapter
+
+            adapter = AnthropicAdapter
         request_headers = opencode_headers(endpoint, route)
         transport = self._pool.client_for(snapshot)
         model = ModelRef(snapshot.endpoint_id, snapshot.model_id)
-        adapter = {"openai": OpenAICompatibleAdapter, "anthropic": AnthropicAdapter}[
-            route.style
-        ]
         return RetryPolicy(
             StreamFallback(
                 adapter(

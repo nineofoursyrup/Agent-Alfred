@@ -18,6 +18,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+local-calibration = [
+    "tokenizers==0.22.2", # Data-only, pinned local judge input estimator.
+]
 p2 = [
     "boto3>=1.42,<2",
 ]
@@ -38,6 +41,7 @@ dev = [
     "boto3>=1.42,<2", # Offline P2 SDK request and error-contract tests.
     "ruff==0.16.4",
     "pytest>=9.1.1",
+    "tokenizers==0.22.2",
 ]
 
 [project.scripts]

@@ -1,0 +1,262 @@
+{
+  "contract": "V1-AGENT-ONLY-CLOSEOUT-20261007-r1",
+  "scope": "Inspected required engineering invariants; not a PASS for every historical coverage-inventory row. Execution/reuse is bound separately to the delivery candidate.",
+  "groups": [
+    {
+      "group": "storage",
+      "source_issues": [
+        12,
+        35
+      ],
+      "test_selectors": [
+        "src/agent_alfred/evals/deterministic/test_schema.py::test_migrate_twice_leaves_identical_schema",
+        "src/agent_alfred/evals/deterministic/test_schema.py::test_migrate_does_not_commit_the_callers_transaction",
+        "src/agent_alfred/evals/deterministic/test_schema_baseline.py::test_ce01_published_ddl_data_and_public_signatures_match_baseline",
+        "src/agent_alfred/evals/deterministic/test_schema_boundaries.py::test_ce07_rejected_databases_retain_all_schema_rows_and_ledger"
+      ]
+    },
+    {
+      "group": "model_and_settings",
+      "source_issues": [
+        13,
+        14,
+        34
+      ],
+      "test_selectors": [
+        "src/agent_alfred/evals/deterministic/test_loop.py::test_scripted_model_drives_the_same_loop_as_production",
+        "src/agent_alfred/evals/deterministic/test_loop.py::test_max_steps_does_not_call_the_model",
+        "src/agent_alfred/evals/deterministic/test_endpoint_factory.py::test_factory_honors_style_path_and_single_auth",
+        "src/agent_alfred/evals/deterministic/test_endpoint_factory.py::test_unconfigured_and_unsupported_fail_before_transport_construction",
+        "src/agent_alfred/evals/deterministic/test_catalog.py::test_missing_key_does_not_send_a_catalog_request",
+        "src/agent_alfred/evals/deterministic/test_catalog.py::test_failed_refresh_keeps_last_success_as_stale",
+        "src/agent_alfred/evals/deterministic/test_models_page.py::test_user_declared_unknown_label_does_not_say_supported",
+        "src/agent_alfred/evals/deterministic/test_model_settings_host.py::test_catalog_failure_leaves_assignment_and_scripted_chat_accepted"
+      ]
+    },
+    {
+      "group": "cost_and_trace",
+      "source_issues": [
+        15
+      ],
+      "test_selectors": [
+        "src/agent_alfred/evals/deterministic/test_cost_projection.py::test_endpoint_reported_cost_is_exact_and_skips_price_components",
+        "src/agent_alfred/evals/deterministic/test_cost_projection.py::test_missing_price_for_positive_tokens_is_unknown_without_default",
+        "src/agent_alfred/evals/deterministic/test_cost_projection.py::test_allocated_tokens_with_prices_are_estimated_per_dimension",
+        "src/agent_alfred/evals/deterministic/test_trace_sink.py::test_default_production_host_writes_a_bundle_with_run_finished",
+        "src/agent_alfred/evals/deterministic/test_trace_sink.py::test_commit_exception_marks_trace_incomplete_and_delivers_the_reply"
+      ]
+    },
+    {
+      "group": "host_sessions",
+      "source_issues": [
+        16,
+        28,
+        36
+      ],
+      "test_selectors": [
+        "src/agent_alfred/evals/deterministic/test_runtime.py::test_scripted_chat_run_records_one_message_pair_and_run_telemetry",
+        "src/agent_alfred/evals/deterministic/test_runtime.py::test_second_submit_while_busy_is_409_and_does_not_insert_a_run",
+        "src/agent_alfred/evals/deterministic/test_sessions.py::test_only_historic_messages_page_by_id_and_stay_verbatim",
+        "src/agent_alfred/evals/deterministic/test_sessions.py::test_title_uses_the_earliest_approved_chat_run_preview",
+        "src/agent_alfred/evals/deterministic/test_web_cli_serve.py::test_the_cli_and_the_web_compete_for_one_coordinator",
+        "src/agent_alfred/evals/deterministic/test_web_cli_serve.py::test_cli_session_resumes_after_restart_without_reading_other_sessions",
+        "src/agent_alfred/evals/deterministic/test_web_cli_serve.py::test_cli_unknown_session_refuses_without_creating_or_sending",
+        "src/agent_alfred/evals/deterministic/test_web_cli_serve.py::test_cli_session_refuses_busy_before_reading_a_locked_store",
+        "src/agent_alfred/evals/deterministic/test_web_cli_serve.py::test_cli_session_maps_store_failure_before_or_after_preflight"
+      ]
+    },
+    {
+      "group": "memory_store_and_gate",
+      "source_issues": [
+        17
+      ],
+      "test_selectors": [
+        "src/agent_alfred/evals/deterministic/test_memory_stores.py::test_save_is_searchable_and_preserves_first_spelling",
+        "src/agent_alfred/evals/deterministic/test_memory_stores.py::test_store_delete_is_versioned_hard_delete_and_faults_remain_faults",
+        "src/agent_alfred/evals/deterministic/test_memory_commands.py::test_receipt_storage_failure_rolls_back_record_and_fts",
+        "src/agent_alfred/evals/deterministic/test_runtime_memory_gate.py::test_real_fts_reference_is_between_work_window_and_current_question_only",
+        "src/agent_alfred/evals/deterministic/test_memory_statistics.py::test_known_four_states_have_distinct_denominators"
+      ]
+    },
+    {
+      "group": "consolidation_mirrors",
+      "source_issues": [
+        18
+      ],
+      "test_selectors": [
+        "src/agent_alfred/evals/deterministic/test_memory_consolidation_service.py::test_atomic_success_writes_facts_episode_and_source_markers",
+        "src/agent_alfred/evals/deterministic/test_memory_consolidation_service.py::test_rollback_after_intermediate_write_keeps_chat_and_drops_facts",
+        "src/agent_alfred/evals/deterministic/test_memory_consolidation_service.py::test_delete_then_approve_does_not_revive_and_approve_then_delete_stays_deleted",
+        "src/agent_alfred/evals/deterministic/test_memory_consolidation_runtime.py::test_below_threshold_does_not_send",
+        "src/agent_alfred/evals/deterministic/test_memory_mirrors.py::test_delete_file_failure_keeps_receipt_and_forbids_old_preview",
+        "src/agent_alfred/evals/deterministic/test_memory_mirrors.py::test_late_source_after_delete_removes_unsafe_copy_from_real_mirrors"
+      ]
+    },
+    {
+      "group": "tools_ops",
+      "source_issues": [
+        19,
+        55
+      ],
+      "test_selectors": [
+        "src/agent_alfred/evals/deterministic/test_tool_registry.py::test_external_policy",
+        "src/agent_alfred/evals/deterministic/test_tool_registry.py::test_expired_budget_never_starts_and_context_carries_absolute_deadline",
+        "src/agent_alfred/evals/deterministic/test_runtime_tools.py::test_deleted_memory_stops_batch_and_model_with_body_free_system_receipt",
+        "src/agent_alfred/evals/deterministic/test_runtime_tools.py::test_memory_edit_invalidates_reference_before_next_step",
+        "src/agent_alfred/evals/deterministic/test_file_tools.py::test_draft_creates_independent_utf8_files_and_durable_receipt",
+        "src/agent_alfred/evals/deterministic/test_file_tools.py::test_published_file_failure_stops_run_and_restart_recovers_same_operation",
+        "src/agent_alfred/evals/deterministic/test_ops_acceptance.py::test_stable_capability_rename_and_different_source_do_not_reassign_history",
+        "src/agent_alfred/evals/deterministic/test_ops_acceptance.py::test_two_services_credits_unknown_and_local_free_are_separate",
+        "src/agent_alfred/evals/deterministic/test_ops_acceptance.py::test_restart_keeps_only_provable_start_facts"
+      ]
+    },
+    {
+      "group": "integration_mcp",
+      "source_issues": [
+        20,
+        21
+      ],
+      "test_selectors": [
+        "src/agent_alfred/evals/deterministic/test_integrations.py::test_ce01_unconfigured_guidance_reaches_next_step",
+        "src/agent_alfred/evals/deterministic/test_integrations.py::test_ce09_invalid_inputs_send_nothing",
+        "src/agent_alfred/evals/deterministic/test_mcp.py::test_ce01_launch_permission_is_separate",
+        "src/agent_alfred/evals/deterministic/test_mcp.py::test_ce11_real_host_result_matrix",
+        "src/agent_alfred/evals/deterministic/test_mcp.py::test_ce02_ce10_replacement_retires_allowance_persistently"
+      ]
+    },
+    {
+      "group": "skills",
+      "source_issues": [
+        24
+      ],
+      "test_selectors": [
+        "src/agent_alfred/evals/deterministic/test_runtime_skills.py::test_ce01_explicit_and_off_use_only_requested_bodies",
+        "src/agent_alfred/evals/deterministic/test_runtime_skills.py::test_ce04_selector_reads_only_catalog_and_safe_history_not_bodies",
+        "src/agent_alfred/evals/deterministic/test_runtime_skills.py::test_ce13_ce24_run_snapshot_survives_tool_roundtrip_without_granting_authority"
+      ]
+    },
+    {
+      "group": "graph",
+      "source_issues": [
+        25
+      ],
+      "test_selectors": [
+        "src/agent_alfred/evals/deterministic/test_graph.py::test_ce01_handled_failure_commits_sibling_and_recovers_next_wave",
+        "src/agent_alfred/evals/deterministic/test_graph.py::test_ce10_routing_failure_aborts_entire_wave_without_recovery",
+        "src/agent_alfred/evals/deterministic/test_graph.py::test_ce02_no_action_has_recovery_without_output_or_sink",
+        "src/agent_alfred/evals/deterministic/test_graph_recording.py::test_ce16_only_final_graph_reply_is_recorded_with_all_attempts"
+      ]
+    },
+    {
+      "group": "routing_statistics",
+      "source_issues": [
+        26,
+        76
+      ],
+      "test_selectors": [
+        "src/agent_alfred/evals/deterministic/test_message_routing.py::test_ce02_03_04_actual_routing_and_classifier_input",
+        "src/agent_alfred/evals/deterministic/test_message_routing.py::test_ce06_real_local_write_then_failure_never_repeats",
+        "src/agent_alfred/evals/deterministic/test_routing_statistics.py::test_ce01_committed_decisions_and_actual_fallback_have_separate_denominators",
+        "src/agent_alfred/evals/deterministic/test_routing_statistics.py::test_ce07_failed_final_transaction_stays_pending_then_unknown_after_restart"
+      ]
+    },
+    {
+      "group": "aggregation",
+      "source_issues": [
+        27
+      ],
+      "test_selectors": [
+        "src/agent_alfred/evals/deterministic/test_aggregation.py::test_ce02_no_sources_is_zero_step_no_action",
+        "src/agent_alfred/evals/deterministic/test_aggregation.py::test_ce05_14_selected_memory_is_only_input_and_single_step",
+        "src/agent_alfred/evals/deterministic/test_aggregation.py::test_ce07_invalid_draft_is_not_delivered_or_repaired"
+      ]
+    },
+    {
+      "group": "forgetting_ui",
+      "source_issues": [
+        45,
+        46
+      ],
+      "test_selectors": [
+        "src/agent_alfred/evals/deterministic/test_forgetting.py::test_known_closure_is_atomic_and_survives_restart",
+        "src/agent_alfred/evals/deterministic/test_forgetting.py::test_partial_scopes_freeze_exact_history_and_keep_unknown_after_restart",
+        "src/agent_alfred/evals/deterministic/test_memory_page_http.py::test_scope_confirmation_and_cleanup_retry_use_server_snapshots",
+        "src/agent_alfred/evals/deterministic/test_memory_page_http.py::test_conflicts_keep_versions_and_delete_answers_without_body",
+        "src/agent_alfred/evals/deterministic/test_memory_sse.py::test_memory_patch_no_seq_checkpoint_or_body_and_reconnect_does_not_rewind"
+      ]
+    },
+    {
+      "group": "database",
+      "source_issues": [
+        66
+      ],
+      "test_selectors": [
+        "src/agent_alfred/evals/deterministic/test_database_console_sql.py::test_inspect_sql_rejects_forbidden_shapes",
+        "src/agent_alfred/evals/deterministic/test_database_console_sql.py::test_authorizer_rejects_functions_and_schema",
+        "src/agent_alfred/evals/deterministic/test_database_lifecycle.py::test_real_sql_error_in_tail_is_not_successful_row_truncation",
+        "src/agent_alfred/evals/deterministic/test_database_lifecycle.py::test_real_forgetting_waits_for_worker_cleanup"
+      ]
+    },
+    {
+      "group": "trace_export",
+      "source_issues": [
+        70
+      ],
+      "test_selectors": [
+        "src/agent_alfred/evals/deterministic/test_trace_export.py::test_share_export_is_readable_and_does_not_contain_source_identity",
+        "src/agent_alfred/evals/deterministic/test_trace_export.py::test_ce01_missing_referenced_artifact_does_not_become_complete",
+        "src/agent_alfred/evals/deterministic/test_trace_export_http.py::test_ce09_real_forgetting_does_not_complete_while_zip_remains"
+      ]
+    },
+    {
+      "group": "topology_path",
+      "source_issues": [
+        75,
+        81
+      ],
+      "test_selectors": [
+        "src/agent_alfred/evals/deterministic/test_behaviour_topology.py::test_ce02_ce05_ce16_published_graphs_are_read_only_even_when_disabled",
+        "src/agent_alfred/evals/deterministic/test_run_path.py::test_ce10_real_routing_saved_path_contains_bound_topology_and_decisions",
+        "src/agent_alfred/evals/deterministic/test_run_path.py::test_ce04_atomic_wave_fact_is_required_before_commit_claim"
+      ]
+    },
+    {
+      "group": "acceptance_evidence",
+      "source_issues": [
+        84,
+        95,
+        98
+      ],
+      "test_selectors": [
+        "src/agent_alfred/evals/deterministic/test_acceptance.py::test_fixture_runs_real_host_and_reopens_saved_replies",
+        "src/agent_alfred/evals/deterministic/test_acceptance.py::test_group_failures_missing_judge_and_disputes_are_not_averaged",
+        "src/agent_alfred/evals/deterministic/test_acceptance.py::test_regrade_and_rerun_cannot_replace_first_product_results",
+        "src/agent_alfred/evals/deterministic/test_acceptance_supplement.py::test_critical_failure_and_unknown_cannot_be_diluted",
+        "src/agent_alfred/evals/deterministic/test_acceptance_supplement.py::test_denominator_includes_unrun_and_extra_obligations_do_not_add_votes"
+      ]
+    },
+    {
+      "group": "local_adapter_review_repairs",
+      "source_issues": [
+        98,
+        105,
+        106
+      ],
+      "review_findings": [
+        "ST-01",
+        "ST-02"
+      ],
+      "test_selectors": [
+        "src/agent_alfred/evals/deterministic/test_local_resource_ownership.py::test_local_aggregate_backend_handoff_keeps_cleanup_and_first_failure",
+        "src/agent_alfred/evals/deterministic/test_local_resource_ownership.py::test_local_aggregate_return_remains_owned_by_callers_rollback",
+        "src/agent_alfred/evals/deterministic/test_local_resource_ownership.py::test_local_parent_construction_failure_releases_backend_without_losing_cause",
+        "src/agent_alfred/evals/deterministic/test_local_runner.py::test_frames_pipe_writes_respect_deadline_and_preserve_complete_payload",
+        "src/agent_alfred/evals/deterministic/test_local_resource_ownership.py::test_local_runtime_dependency_return_keeps_actual_caller_ownership",
+        "src/agent_alfred/evals/deterministic/test_local_resource_ownership.py::test_local_install_and_owner_cli_returns_keep_cleanup_reachable",
+        "src/agent_alfred/evals/deterministic/test_local_resource_ownership.py::test_local_owner_cli_retains_first_failure_and_completed_close_progress",
+        "src/agent_alfred/evals/deterministic/test_local_resource_ownership.py::test_local_main_preserves_unfinished_cleanup_until_caller_retry",
+        "src/agent_alfred/evals/deterministic/test_local_resource_ownership.py::test_local_main_reports_only_after_cleanup_and_preserves_process_control"
+      ]
+    }
+  ]
+}

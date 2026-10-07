@@ -156,7 +156,19 @@ def validate(batch):
         if len(models) not in (1, 2):
             raise ValueError("product_assignments_required")
         judge = judge_model(batch, profile)
-        if any(m["model_id"] == judge["model_id"] for m in models):
+        same_model_policy = batch.get("judge_profile", {}).get("independence_policy")
+        if same_model_policy is not None and (
+            batch["schema_version"] != 4
+            or same_model_policy != "distinct_instances_same_model"
+            or any(
+                m["endpoint_id"] != "deepseek" or m["model_id"] != "deepseek-flash"
+                for m in [*models, judge]
+            )
+        ):
+            raise ValueError("judge_independence_policy_invalid")
+        if same_model_policy is None and any(
+            m["model_id"] == judge["model_id"] for m in models
+        ):
             raise ValueError("judge_same_model")
         for model in [*models, judge]:
             for key in ("endpoint_id", "model_id", "wire_style", "provider_version"):

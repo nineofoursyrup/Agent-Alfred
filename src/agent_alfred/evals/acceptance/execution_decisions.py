@@ -23,6 +23,7 @@ from .supplement_reviews import assess_disputes
 from .supplement_schema import closed, identity, signed, text
 
 CONTRACT = "V1-REAL-CALIBRATION-DECISIONS-r1"
+ADVISORY_RUN_CONTRACT = "V2-LOCAL-ADVISORY-RUN-DECISION"
 APPROVED_SUMMARY_ID = "9db180c708fda2d8e95fac974a9aa1b42364fcbf18a130726e0a16140220c355"
 APPROVED_SUMMARY_SHA256 = (
     "d994472fa16b68b87d35ccb1176fef040c7e96b3406418f108f3b443e2254273"
@@ -230,20 +231,27 @@ def source_preflight(
     return result
 
 
-def run_request(binding, *, job_id, plan_sha256, budget_sha256):
+def run_request(binding, *, job_id, plan_sha256, budget_sha256, disclosure=None):
     """An exact initial run decision request, distinct from material approval."""
     _validate_binding(binding)
-    request = signed(
-        {
-            "version": 1,
-            "contract": CONTRACT,
-            "scope": "run",
-            "binding_sha256": digest(binding),
-            "job_id": job_id,
-            "plan_sha256": plan_sha256,
-            "budget_sha256": budget_sha256,
-        }
-    )
+    body = {
+        "version": disclosure["version"] if disclosure is not None else 1,
+        "contract": (
+            "V3-LOCAL-FLASH-RUN-DECISION"
+            if disclosure is not None and disclosure.get("version") == 3
+            else ADVISORY_RUN_CONTRACT
+            if disclosure is not None
+            else CONTRACT
+        ),
+        "scope": "run",
+        "binding_sha256": digest(binding),
+        "job_id": job_id,
+        "plan_sha256": plan_sha256,
+        "budget_sha256": budget_sha256,
+    }
+    if disclosure is not None:
+        body["disclosure"] = deepcopy(disclosure)
+    request = signed(body)
     validate_request(request)
     return request
 
@@ -334,9 +342,15 @@ def validate_request(request):
         "material_dispute",
     ):
         raise ValueError("invalid_execution_decision_request")
+    version = request.get("version")
+    if type(version) is not int or version not in (1, 2, 3):
+        raise ValueError("unknown_execution_decision_version")
+    if version >= 2 and request["scope"] != "run":
+        raise ValueError("unknown_execution_decision_version")
     fields = "id version contract scope binding_sha256 "
     fields += {
-        "run": "job_id plan_sha256 budget_sha256",
+        "run": "job_id plan_sha256 budget_sha256"
+        + (" disclosure" if version >= 2 else ""),
         "checkpoint": "job_id run_decision judge_summary_sha256 disputes_sha256 "
         "remaining_budget_sha256",
         "material_dispute": "dispute_sha256 adjudication_sha256 accepted_use "
@@ -344,10 +358,27 @@ def validate_request(request):
     }[request["scope"]]
     closed(request, fields, "invalid_execution_decision_request")
     identity(request)
-    if type(request["version"]) is not int or request["version"] != 1:
-        raise ValueError("unknown_execution_decision_version")
-    if request["contract"] != CONTRACT:
+    if (
+        request["contract"]
+        != {
+            1: CONTRACT,
+            2: ADVISORY_RUN_CONTRACT,
+            3: "V3-LOCAL-FLASH-RUN-DECISION",
+        }[version]
+    ):
         raise ValueError("invalid_execution_decision_request")
+    if version >= 2:
+        from .controlled.contract import advisory_run_disclosure, integer
+
+        disclosure = request["disclosure"]
+        if type(disclosure) is not dict:
+            raise ValueError("advisory_run_disclosure_invalid")
+        target = integer(disclosure.get("target_units"), minimum=1)
+        change = disclosure.get("judge_profile_change") if version == 3 else None
+        if version == 3 and change is None:
+            raise ValueError("advisory_run_disclosure_invalid")
+        if disclosure != advisory_run_disclosure(target, judge_profile_change=change):
+            raise ValueError("advisory_run_disclosure_invalid")
     if request["scope"] != "material_dispute":
         text(request["job_id"])
     elif request["accepted_use"] != "judge_diagnostic_only" or request[
@@ -404,10 +435,10 @@ class DecisionAdmission:
         self.dispute_scope_refs = tuple(dispute_scope_refs)
 
     def _source(self, binding):
-        from .controlled.runtime import InstalledDecisionSource
+        from .controlled.runtime import is_installed_source
         from .simulation_authority import SimulationAuthority
 
-        if type(self.source) is InstalledDecisionSource:
+        if is_installed_source(self.source):
             self.source.authorize(binding, self.subject)
             return self.source
         if (
@@ -431,9 +462,9 @@ class DecisionAdmission:
         return self.store.read(binding["batch"]["batch_id"])
 
     def _installed_scope_event(self, source, request, now):
-        from .controlled.runtime import InstalledDecisionSource
+        from .controlled.runtime import is_installed_source
 
-        if type(source) is not InstalledDecisionSource:
+        if not is_installed_source(source):
             return None
         event = source.read_scoped_decision(request)
         validate_event(event)
@@ -509,11 +540,18 @@ class DecisionAdmission:
                     raise ValueError("material_dispute_scope_unverifiable")
                 dispute["accepted_use"] = "judge_diagnostic_only"
                 dispute["scope_decision"] = matches[-1]
-        return {
+        from .controlled.local_source import LocalDecisionSource
+
+        local = type(source) is LocalDecisionSource
+        report = {
             "version": 1,
             "source_status": "VERIFIED_SYNTHETIC_ONLY"
             if binding["simulation"]
-            else "VERIFIED_INSTALLED_SOURCE",
+            else (
+                "VERIFIED_INSTALLED_OWNER_SOURCE"
+                if local
+                else "VERIFIED_INSTALLED_SOURCE"
+            ),
             "binding": deepcopy(binding),
             "material_decision": deepcopy(event),
             "disputes": deepcopy(disputes),
@@ -524,6 +562,15 @@ class DecisionAdmission:
             "release_eligible": False,
             "run_decision_required": True,
         }
+        if local:
+            report.update(
+                contract="V1-LOCAL-DECISION-READBACK",
+                version=2,
+                trust_profile="owner_trusted_local",
+                independent_administrator_source=False,
+                original_historical_event_verified=False,
+            )
+        return report
 
     def _read_execution(self, source_ref, binding, now):
         try:

@@ -424,10 +424,8 @@ class DurableExecutionAnchor(DocumentLedger):
         return [event for _, event in rows]
 
 
-class SQLiteDocuments:
-    """Single-writer SQLite transactions, reopenable from independent processes."""
-
-    synthetic_only = True
+class SQLiteDocumentStorage:
+    """Shared SQLite document algorithm; this class confers no installation trust."""
 
     def __init__(self, path, *, _rollback=None):
         self.path = Path(path)
@@ -574,6 +572,12 @@ class SQLiteDocuments:
         with self.lock:
             if self.db is not None:
                 self.db.close()
+
+
+class SQLiteDocuments(SQLiteDocumentStorage):
+    """Unprotected local fixture, never a production installation."""
+
+    synthetic_only = True
 
 
 class SQLiteExecutionStore(DurableExecutionStore):

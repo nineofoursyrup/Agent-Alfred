@@ -3,14 +3,20 @@
 from copy import deepcopy
 
 from agent_alfred.model import ModelRequest, NamedToolChoice, tool_schema_jsonable
-from agent_alfred.openai_compatible import _to_wire_messages
+from agent_alfred.openai_wire import to_wire_messages
 
 from ..schema import digest, encode, hash_value
 from ..supplement_decisions import instant
+from .local_tokens import JUDGE_INPUT_MEASUREMENT
 
 CONTRACT = "V1-CONTROLLED-CALIBRATION"
+ADVISORY_CONTRACT = "V2-LOCAL-ADVISORY-CALIBRATION"
+FLASH_CONTRACT = "V3-LOCAL-FLASH-CALIBRATION"
+FLASH_POLICY = "flash_only"
+FLASH_LIMITS = {"flash": 576, "pro": 0, "total": 576, "per_case": 16}
 URL = "https://api.deepseek.com/chat/completions"
 USD_SCALE = 10**12  # integer picodollars; no binary floating point in the ledger
+MAX_CONTROL_BYTES = 64 * 1024
 CAP_UNITS = 25 * USD_SCALE
 LIMITS = {"flash": 480, "pro": 96, "total": 576, "per_case": 16}
 MODELS = {
@@ -27,6 +33,134 @@ KINDS = {
 }
 PHASES = ("diagnostic", "checkpoint", "product", "grading", "closed")
 COVERAGE = ["input", "output", "cache", "reasoning", "request", "other", "tax", "fx"]
+ADVISORY_BUDGET = "advisory_dispatch"
+ADVISORY_RISKS = [
+    "actual_input_tokens_may_exceed_preflight",
+    "final_charge_may_exceed_planned_amount",
+    "no_proven_final_bill_ceiling",
+]
+ADVISORY_NOTICE_ZH = (
+    "USD25仅为本地计划派发阈值，供应商最终账单可能超过USD25，"
+    "且没有已证明的最高超支额；Flash20000/Pro24000仅是完整请求的本地输入预检估计阈值，"
+    "实际计费输入token可能超出，须以响应usage事后核验。"
+)
+
+
+def flash_input_policy():
+    return {
+        "contract": "V1-LOCAL-FLASH-INPUT-BY-PURPOSE",
+        "product_max": 20000,
+        "product_measurement": "original_complete_wire_utf8_planning_estimate",
+        "judge_max": 32000,
+        "judge_measurement": deepcopy(JUDGE_INPUT_MEASUREMENT),
+    }
+
+
+def input_limit(plan, operation):
+    if operation["kind"] not in KINDS:
+        raise ValueError("controlled_operation_invalid")
+    if plan.get("model_policy") == FLASH_POLICY:
+        policy = plan["input_policy"]
+        return policy["product_max" if is_product(operation) else "judge_max"]
+    return MODELS[model_group(plan, operation)][1]
+
+
+def advisory_run_disclosure(target_units, *, judge_profile_change=None):
+    integer(target_units, minimum=1, maximum=CAP_UNITS)
+    value = {
+        "contract": "V2-LOCAL-ADVISORY-RUN-DISCLOSURE",
+        "version": 2,
+        "budget_policy": ADVISORY_BUDGET,
+        "target_units": target_units,
+        "target_currency": "USD",
+        "flash_input_preflight_max": MODELS["flash"][1],
+        "pro_input_preflight_max": MODELS["pro"][1],
+        "final_bill_ceiling_proven": False,
+        "actual_input_ceiling_proven": False,
+        "risks": list(ADVISORY_RISKS),
+        "notice_zh": ADVISORY_NOTICE_ZH,
+    }
+    if judge_profile_change is not None:
+        validate_profile_change(judge_profile_change)
+        value.update(
+            contract="V3-LOCAL-FLASH-RUN-DISCLOSURE",
+            version=3,
+            model_policy=FLASH_POLICY,
+            judge_profile_change=deepcopy(judge_profile_change),
+            limits=dict(FLASH_LIMITS),
+            product_attempt_limit=480,
+            judge_attempt_limit=96,
+            output_max=MODELS["flash"][2],
+            input_policy=flash_input_policy(),
+            cross_model_independence=False,
+            schema4_material_approval_inherited=False,
+            notice_zh=(
+                "本独立批次所有产品、裁判和盲复核仅使用deepseek-flash；"
+                "产品/辅助沿用原字节估计和输入预检20000；裁判/盲复核输入预检32000，"
+                "使用固定官方V4分词数据和tokenizers0.22.2计数完整wire再加256。"
+                "所有输出8192，thinking disabled，无重试或fallback。"
+                "总Attempt576（产品及辅助480、裁判及复核96），总时限10800秒；"
+                "实例独立但不具跨模型独立性。原Pro证据、争议、未知费用保留。"
+                "本次精确运行批准含模型差异，不继承新profile的schema4材料批准，"
+                "不替代诊断后的质量检查点。USD25仅为本地计划派发阈值，"
+                "最终账单可能超过USD25且无已证明的最高超支额；"
+                "实际计费输入token可能超出预检，须以usage事后核验。"
+            ),
+        )
+        value.pop("pro_input_preflight_max")
+        value.pop("flash_input_preflight_max")
+    return value
+
+
+def is_product(operation):
+    return operation["kind"] in ("product", "auxiliary")
+
+
+def model_group(plan, operation):
+    return (
+        "flash"
+        if plan.get("model_policy") == FLASH_POLICY
+        else KINDS[operation["kind"]][1]
+    )
+
+
+def group_for_model(model):
+    for group, (identity, _, _) in MODELS.items():
+        if identity == model:
+            return group
+    raise ValueError("controlled_model_invalid")
+
+
+def flash_profile(profile):
+    result = deepcopy(profile)
+    result["model"]["model_id"] = MODELS["flash"][0]
+    result["independence_policy"] = "distinct_instances_same_model"
+    result.pop("id", None)
+    return signed(result)
+
+
+def validate_profile_change(change):
+    exact(change, "before after", "runtime_judge_profile_mismatch")
+    before = change["before"]
+    if (
+        type(before) is not dict
+        or before.get("id") != digest({k: v for k, v in before.items() if k != "id"})
+        or type(before.get("model")) is not dict
+        or before["model"].get("endpoint_id") != "deepseek"
+        or before["model"].get("model_id") != MODELS["pro"][0]
+        or change["after"] != flash_profile(before)
+    ):
+        raise ValueError("runtime_judge_profile_mismatch")
+
+
+def effective_judge_profile(plan, original):
+    if plan.get("model_policy") != FLASH_POLICY:
+        return deepcopy(original)
+    change = plan["judge_profile_change"]
+    validate_profile_change(change)
+    if change["before"] != original:
+        raise ValueError("runtime_judge_profile_mismatch")
+    return deepcopy(change["after"])
 
 
 def exact(value, fields, error="controlled_contract_invalid"):
@@ -63,7 +197,7 @@ def wire_payload(request):
         raise ValueError("model_request_required")
     payload = {
         "model": request.model.model_id,
-        "messages": _to_wire_messages(request),
+        "messages": to_wire_messages(request),
         "max_tokens": request.max_tokens,
         "thinking": {"type": request.thinking},
         "stream": False,
@@ -92,13 +226,12 @@ def wire_payload(request):
     return payload
 
 
-def validate_payload(payload, operation):
-    group = KINDS[operation["kind"]][1]
+def validate_payload(payload, operation, *, plan=None):
+    group = model_group(plan or {}, operation)
+    judge = not is_product(operation)
     model, _, output = MODELS[group]
     required = {"model", "messages", "max_tokens", "thinking", "stream"}
-    optional = {"tools", "tool_choice"} | (
-        {"response_format"} if group == "pro" else set()
-    )
+    optional = {"tools", "tool_choice"} | ({"response_format"} if judge else set())
     if (
         type(payload) is not dict
         or set(payload) - required - optional
@@ -108,9 +241,7 @@ def validate_payload(payload, operation):
         or type(payload["max_tokens"]) is not int
         or payload["thinking"] != {"type": "disabled"}
         or payload["stream"] is not False
-        or (
-            group == "pro" and payload.get("response_format") != {"type": "json_object"}
-        )
+        or (judge and payload.get("response_format") != {"type": "json_object"})
         or type(payload["messages"]) is not list
         or not payload["messages"]
         or ("tools" in payload) != ("tool_choice" in payload)
@@ -132,41 +263,58 @@ def execution_plan(
     cap_units=CAP_UNITS,
     execution_mode="authorized",
     runtime_candidate=None,
+    budget_policy=None,
+    flash_judge_profile=None,
 ):
     candidate_id = (
         digest(runtime_candidate)
         if runtime_candidate is not None
         else binding["candidate_id"]
     )
-    value = signed(
-        {
-            "contract": CONTRACT,
-            "version": 1,
-            "binding_sha256": digest(binding),
-            "candidate_id": candidate_id,
-            "material_candidate_id": binding["candidate_id"],
-            "runtime_candidate": deepcopy(runtime_candidate),
-            "candidate_change": {
-                "before": binding["candidate_id"],
-                "after": candidate_id,
+    if budget_policy not in (None, ADVISORY_BUDGET):
+        raise ValueError("controlled_budget_policy_invalid")
+    body = {
+        "contract": ADVISORY_CONTRACT if budget_policy == ADVISORY_BUDGET else CONTRACT,
+        "version": 2 if budget_policy == ADVISORY_BUDGET else 1,
+        "binding_sha256": digest(binding),
+        "candidate_id": candidate_id,
+        "material_candidate_id": binding["candidate_id"],
+        "runtime_candidate": deepcopy(runtime_candidate),
+        "candidate_change": {
+            "before": binding["candidate_id"],
+            "after": candidate_id,
+        },
+        "material_ref": deepcopy(material_ref),
+        "worker": worker,
+        "controller": controller,
+        "operations": deepcopy(operations),
+        "pricing": deepcopy(pricing),
+        "initial_phase": initial_phase,
+        "limits": dict(LIMITS),
+        "cap_units": cap_units,
+        "total_seconds": 10800,
+        "attempt_seconds": 120,
+        "run_seconds": 900,
+        "endpoint": URL,
+        "retries": 0,
+        "fallback": False,
+        "execution_mode": execution_mode,
+    }
+    if budget_policy == ADVISORY_BUDGET:
+        body["budget_policy"] = ADVISORY_BUDGET
+    if flash_judge_profile is not None:
+        body.update(
+            contract=FLASH_CONTRACT,
+            version=3,
+            model_policy=FLASH_POLICY,
+            input_policy=flash_input_policy(),
+            limits=dict(FLASH_LIMITS),
+            judge_profile_change={
+                "before": deepcopy(flash_judge_profile),
+                "after": flash_profile(flash_judge_profile),
             },
-            "material_ref": deepcopy(material_ref),
-            "worker": worker,
-            "controller": controller,
-            "operations": deepcopy(operations),
-            "pricing": deepcopy(pricing),
-            "initial_phase": initial_phase,
-            "limits": dict(LIMITS),
-            "cap_units": cap_units,
-            "total_seconds": 10800,
-            "attempt_seconds": 120,
-            "run_seconds": 900,
-            "endpoint": URL,
-            "retries": 0,
-            "fallback": False,
-            "execution_mode": execution_mode,
-        }
-    )
+        )
+    value = signed(body)
     validate_plan(value)
     return value
 
@@ -174,13 +322,19 @@ def execution_plan(
 def initial_budget(plan):
     """The exact initial budget object covered by the #100 run decision."""
     validate_plan(plan)
-    return {
+    budget = {
         "cap_units": plan["cap_units"],
         "limits": deepcopy(plan["limits"]),
         "total_seconds": plan["total_seconds"],
         "currency": "USD",
         "scale": USD_SCALE,
     }
+    if plan["version"] >= 2:
+        budget["budget_policy"] = ADVISORY_BUDGET
+        budget["final_bill_ceiling_proven"] = False
+    if plan["version"] == 3:
+        budget["input_policy"] = deepcopy(plan["input_policy"])
+    return budget
 
 
 def operation_for(batch, *, operation_id, kind, object_id, instance_id, max_calls=1):
@@ -210,20 +364,28 @@ def operation_for(batch, *, operation_id, kind, object_id, instance_id, max_call
 
 
 def validate_plan(plan):
+    if type(plan) is not dict:
+        raise ValueError("controlled_contract_invalid")
+    version = plan.get("version")
+    if type(version) is not int or version not in (1, 2, 3):
+        raise ValueError("controlled_plan_invalid")
     exact(
         plan,
         "id contract version binding_sha256 candidate_id material_candidate_id "
         "runtime_candidate candidate_change material_ref "
         "worker controller operations pricing initial_phase limits cap_units "
         "total_seconds attempt_seconds "
-        "run_seconds endpoint retries fallback execution_mode",
+        "run_seconds endpoint retries fallback execution_mode"
+        + (" budget_policy" if version >= 2 else "")
+        + (" model_policy judge_profile_change input_policy" if version == 3 else ""),
     )
     if (
         plan["id"] != digest({k: v for k, v in plan.items() if k != "id"})
-        or plan["contract"] != CONTRACT
+        or plan["contract"]
+        != {1: CONTRACT, 2: ADVISORY_CONTRACT, 3: FLASH_CONTRACT}[version]
         or type(plan["version"]) is not int
-        or plan["version"] != 1
-        or plan["limits"] != LIMITS
+        or plan["version"] != version
+        or plan["limits"] != (FLASH_LIMITS if version == 3 else LIMITS)
         or plan["endpoint"] != URL
         or plan["total_seconds"] != 10800
         or plan["attempt_seconds"] != 120
@@ -240,9 +402,22 @@ def validate_plan(plan):
         )
     ):
         raise ValueError("controlled_plan_invalid")
+    if version >= 2 and (
+        plan["budget_policy"] != ADVISORY_BUDGET
+        or plan["execution_mode"] != "authorized"
+        or plan["runtime_candidate"] is None
+        or plan["cap_units"] != CAP_UNITS
+    ):
+        raise ValueError("controlled_budget_policy_invalid")
     integer(plan["cap_units"], minimum=1, maximum=CAP_UNITS)
-    for value in plan["limits"].values():
-        integer(value, minimum=1)
+    for key, value in plan["limits"].items():
+        integer(value, minimum=0 if version == 3 and key == "pro" else 1)
+    if version == 3:
+        if digest(plan["input_policy"]) != digest(flash_input_policy()):
+            raise ValueError("controlled_input_policy_invalid")
+        if plan["model_policy"] != FLASH_POLICY:
+            raise ValueError("controlled_model_policy_invalid")
+        validate_profile_change(plan["judge_profile_change"])
     for key in ("binding_sha256", "candidate_id", "material_candidate_id"):
         hash_value(plan[key])
     if plan["candidate_change"] != {
@@ -272,9 +447,8 @@ def validate_plan(plan):
         if op["kind"] not in KINDS or op["id"] in ids:
             raise ValueError("controlled_operation_invalid")
         ids.add(op["id"])
-        group = KINDS[op["kind"]][1]
-        integer(op["max_calls"], minimum=1, maximum=16 if group == "flash" else 1)
-        if group == "pro":
+        integer(op["max_calls"], minimum=1, maximum=16 if is_product(op) else 1)
+        if not is_product(op):
             if op["instance_id"] in instances:
                 raise ValueError("judge_instance_reused")
             instances.add(op["instance_id"])
@@ -292,29 +466,44 @@ def validate_plan(plan):
         )
     ):
         raise ValueError("controlled_plan_quota_exceeded")
-    if type(plan["pricing"]) is not dict or set(plan["pricing"]) != {"flash", "pro"}:
+    if type(plan["pricing"]) is not dict or set(plan["pricing"]) != (
+        {"flash"} if version == 3 else {"flash", "pro"}
+    ):
         raise ValueError("billing_unverifiable")
     for group, terms in plan["pricing"].items():
-        validate_terms(terms, group)
+        validate_terms(terms, group, advisory=version >= 2)
 
 
-def validate_terms(terms, group):
+def validate_terms(terms, group, *, advisory=False):
     exact(
         terms,
         "version model currency input_per_million output_per_million request_fee "
         "other_fee tax_numerator tax_denominator fx_numerator fx_denominator quantum "
-        "coverage valid_from valid_until evidence",
+        "coverage valid_from valid_until evidence"
+        + (" planning_only source_currency source_price_ref risks" if advisory else ""),
         "billing_unverifiable",
     )
     if (
         type(terms["version"]) is not int
-        or terms["version"] != 1
+        or terms["version"] != (2 if advisory else 1)
         or terms["currency"] != "USD"
         or terms["model"] != MODELS[group][0]
         or terms["coverage"] != COVERAGE
         or not terms["evidence"]
     ):
         raise ValueError("billing_unverifiable")
+    if advisory and (
+        terms["planning_only"] is not True
+        or terms["source_currency"] != "CNY"
+        or terms["risks"] != ADVISORY_RISKS
+        or type(terms["input_per_million"]) is not int
+        or terms["input_per_million"] <= 0
+        or type(terms["output_per_million"]) is not int
+        or terms["output_per_million"] <= 0
+    ):
+        raise ValueError("billing_unverifiable")
+    if advisory:
+        hash_value(terms["source_price_ref"])
     for key in (
         "input_per_million",
         "output_per_million",

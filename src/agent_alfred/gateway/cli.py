@@ -30,6 +30,7 @@ from agent_alfred.messages import message_plain_text
 from agent_alfred.model import ModelClientFactory
 from agent_alfred.render import ReplyRenderer, render_markdown_reply
 from agent_alfred.runtime.host import RuntimeHost, SubmitRequest
+from agent_alfred.runtime.recording import RecordingUnavailable
 from agent_alfred.settings import (
     ENV_MAX_STEPS,
     ENV_MAX_TOKENS,
@@ -198,7 +199,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--aggregate", metavar="GOAL", help="Generate an explicit aggregation draft"
     )
-    parser.add_argument("--session", help="Existing target Session for aggregation")
+    parser.add_argument(
+        "--session", help="Resume an existing chat Session or target it for aggregation"
+    )
     parser.add_argument(
         "--keywords", default="", help="Explicit memory search keywords"
     )
@@ -423,24 +426,43 @@ def _chat_in_the_foreground(
                     host, args, out, stream=settings.stream
                 )
             else:
-                created = DashboardApi(facade=host).create_session()
-                if created.session_id is None:
-                    _print_session_creation_failure(created.code, out)
-                elif args.message is not None:
+                session_id = getattr(args, "session", None)
+                if session_id is None:
+                    created = DashboardApi(facade=host).create_session()
+                    session_id = created.session_id
+                    if session_id is None:
+                        _print_session_creation_failure(created.code, out)
+                elif refusal := _existing_session_refusal(host, session_id):
+                    _print_submit_failure(refusal, out)
+                    session_id = None
+                if session_id is not None and args.message is not None:
                     result = _one_shot(
                         host,
                         args.message,
-                        created.session_id,
+                        session_id,
                         out,
                         stream=settings.stream,
                     )
-                else:
-                    result = _repl(host, created.session_id, stream=settings.stream)
+                elif session_id is not None:
+                    result = _repl(host, session_id, stream=settings.stream)
     finally:
         close_complete = _close_runtime_preserving_control(runtime, out)
     if failure is not None:
         return failure
     return result if close_complete else 1
+
+
+def _existing_session_refusal(host: RuntimeHost, session_id: str) -> str | None:
+    # Refuse before a Store read can wait on a recording-pending finalizer.
+    # This is only an observation; submit still reserves the authoritative gate.
+    kind, _ = host.admission_observe()
+    if kind != "admissible":
+        return kind
+    try:
+        exists = host.session_exists(session_id)
+    except RecordingUnavailable:
+        return "recording_unavailable"
+    return None if exists else "unknown_session"
 
 
 def serve_dashboard(

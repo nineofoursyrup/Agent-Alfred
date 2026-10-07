@@ -320,6 +320,7 @@ class RuntimeHost:
         tool_policies=None,
         local_tool_allowlist=None,
         tool_authorization_path=None,
+        _run_id_factory=None,
     ):
         # A restricted local Host never starts optional MCP subprocesses.
         self._local_tool_allowlist = local_tool_allowlist
@@ -459,6 +460,7 @@ class RuntimeHost:
             after_recorded=self._schedule_saved_chat,
         )
         self._admission = RunAdmission(
+            _run_id_factory=_run_id_factory,
             clock=clock,
             settings=settings,
             redactor=self._redactor,

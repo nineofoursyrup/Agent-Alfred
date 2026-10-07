@@ -116,7 +116,7 @@ def pipeline_fixture(tmp_path, *, prepare_checkpoint=True):
                 }
             )
             content = json.dumps(raw)
-        elif payload["model"] == "deepseek-flash":
+        elif "response_format" not in payload:
             # A valid empty model result is a first business failure, not an
             # infrastructure/send failure. Later cases must still run.
             system = payload["messages"][0]["content"]
@@ -181,6 +181,8 @@ def pipeline_fixture(tmp_path, *, prepare_checkpoint=True):
         operations_override=calibration_operations(batch),
         mode="authorized",
     )
+    f["wire"] = wire
+    f["mock_handler"] = send
     if not prepare_checkpoint:
         return f
     old = f["authority"]

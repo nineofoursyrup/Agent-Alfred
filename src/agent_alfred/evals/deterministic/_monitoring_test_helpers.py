@@ -98,7 +98,8 @@ def interrupt_instruction_once(
 
 @contextmanager
 def interrupt_py_return_once(
-    name: str, code: CodeType, failure: BaseException
+    name: str, code: CodeType, failure: BaseException,
+    *, when: Callable[[FrameType], bool] | None = None,
 ) -> Iterator[list[bool]]:
     """Raise once from one function's exact ``PY_RETURN`` event."""
     armed = [True]
@@ -109,6 +110,8 @@ def interrupt_py_return_once(
         ) -> None:
             del offset, result
             if armed[0] and actual_code is code:
+                if when is not None and not when(sys._getframe(1)):
+                    return
                 armed[0] = False
                 raise failure
 

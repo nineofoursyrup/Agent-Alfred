@@ -11,6 +11,7 @@ from agent_alfred.evals.acceptance.controlled_diagnostics import (
 )
 from agent_alfred.evals.acceptance.examples_v4 import supplement_batch
 from agent_alfred.evals.acceptance.schema import digest
+from agent_alfred.evals.acceptance.score_evidence import resolve_reference
 from agent_alfred.evals.acceptance.supplement_schema import signed
 from agent_alfred.evals.deterministic.test_controlled_execution import fixture
 
@@ -123,6 +124,18 @@ def test_complete_diagnostics_stop_at_checkpoint_without_product_or_extra_review
         sent_original = json.loads(f["wire"][index]["messages"][-1]["content"])
         sent_blind = json.loads(f["wire"][18 + index]["messages"][-1]["content"])
         assert sent_original == sent_blind
+        for payload in (f["wire"][index], f["wire"][18 + index]):
+            instructions = payload["messages"][0]["content"]
+            # The actual wire must teach the source-scoped grammar accepted
+            # by the unchanged parser, not only ask for "JSON pointers".
+            for field in sent_original["sources"]["judge-material"]:
+                ref = "judge-material#/" + field
+                assert ref in instructions
+                assert resolve_reference(ref, sent_original["sources"])
+        blind_instructions = f["wire"][18 + index]["messages"][0]["content"]
+        assert "response_schema" in blind_instructions
+        assert "original test" in blind_instructions
+        assert "current response" in blind_instructions
         assert set(sent_original["sources"]["judge-material"]) == {
             "task",
             "gold",
@@ -263,6 +276,10 @@ def test_bad_raw_reviews_and_confirmed_miss_remain_fail_with_other_blockers(tmp_
             '{"label":"pass","reason":"wrong citation",'
             '"evidence":["judge-material#/missing"]}'
         ),
+        5: (
+            '{"label":"unknown","reason":"root pointer observed in real run",'
+            '"evidence":["/sources/judge-material/answer"]}'
+        ),
         23: "",
     }
 
@@ -275,6 +292,7 @@ def test_bad_raw_reviews_and_confirmed_miss_remain_fail_with_other_blockers(tmp_
     report = f["driver"].run()
     assert len(f["wire"]) == 36 and report["complete"]
     assert report["errors"]
+    assert report["slots"][5]["result"]["error"] == "broken_score_evidence"
     for index, raw in originals.items():
         slot = report["slots"][index % 18]
         assert slot["result" if index < 18 else "blind"]["raw"] == raw
@@ -296,6 +314,17 @@ def test_bad_raw_reviews_and_confirmed_miss_remain_fail_with_other_blockers(tmp_
     assert assessed["blockers"] and assessed["failures"]
     with pytest.raises(ValueError, match="checkpoint_diagnostic_blocked"):
         f["driver"].continue_with("unknown", adjudication_refs=[event["source_ref"]])
+    assert f["authority"].status("controlled-job")["state"]["counts"]["flash"] == 0
+
+    # Even fresh fixture approvals for all disputes and the exact checkpoint
+    # cannot clear a malformed first response or permit a replacement call.
+    approved, refs = approve_checkpoint(f)
+    dismissed = f["driver"].checkpoint(adjudication_refs=refs)
+    assert not dismissed["failures"]
+    assert any("broken_score_evidence" in item for item in dismissed["blockers"])
+    with pytest.raises(ValueError, match="checkpoint_diagnostic_blocked"):
+        f["driver"].continue_with(approved["source_ref"], adjudication_refs=refs)
+    assert len(f["wire"]) == 36
     assert f["authority"].status("controlled-job")["state"]["counts"]["flash"] == 0
 
 

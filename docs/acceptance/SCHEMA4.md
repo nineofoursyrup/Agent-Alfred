@@ -1,3 +1,5 @@
+> 当前工程关闭合同为 [V1-AGENT-ONLY-CLOSEOUT-20261007-r1](AGENT-ONLY-CLOSEOUT.md)。本页定义 schema4 的版本化证据与真实质量／运行守卫；这些守卫不因工程票关闭而放宽。缺真实质量、材料或批准时 `quality` / `v1_release` 仍如实 FAIL / BLOCKED / UNKNOWN，不能用 Issue completed 改写批次。当前离线义务及历史条款归档见[补遗](agent-only-obligations.md)。
+
 # Schema4：关键义务、裁判检验与用户摘要决定
 
 合同：`V1-ACCEPTANCE-OFFLINE-SUPPLEMENT-SPEC-r1`，对应 [#95](https://github.com/nineofoursyrup/Agent-Alfred/issues/95)。这是离线机制；合成响应、合成用户事件和同模型复核一致都不证明真实材料或 judge 质量。schema1/2/3 保持各自的校验及批准含义，不能仅改版本升级。

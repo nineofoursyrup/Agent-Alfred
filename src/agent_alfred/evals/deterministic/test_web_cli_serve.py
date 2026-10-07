@@ -5,16 +5,22 @@ from __future__ import annotations
 import io
 import os
 import socket
+import sqlite3
 import stat
 import subprocess
 import threading
 
 import pytest
 
+from agent_alfred import schema
 from agent_alfred.clock import FakeClock
 from agent_alfred.database import open_database as file_database
 from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
     free_loopback_port,
+)
+from agent_alfred.evals.deterministic._web_runtime_test_helpers import (
+    FailNextSessionCommit,
+    build_runtime_host,
 )
 from agent_alfred.evals.deterministic._web_startup_test_helpers import (
     managed_process_lock,
@@ -933,3 +939,233 @@ def test_the_serve_flag_runs_the_serve_path(tmp_path, monkeypatch) -> None:
     assert cli_module.main(["--serve", "--port", "1234"]) == 0
     assert seen["port"] == 1234
     assert not [key for key in seen if "host" in key or "bind" in key]
+
+
+@pytest.mark.parametrize("mode", ["message", "repl"])
+def test_cli_session_resumes_after_restart_without_reading_other_sessions(
+    tmp_path, monkeypatch, capsys, mode
+):
+    from agent_alfred.gateway import cli as cli_module
+    from agent_alfred.messages import message_plain_text
+
+    snapshots = []
+
+    class ObservedRuntime(_CapturingRuntime):
+        def close(self, *args, **kwargs):
+            page = self.host.list_sessions(limit=10, cursor=None)
+            snapshots.append(tuple(item.session_id for item in page.sessions))
+            return super().close(*args, **kwargs)
+
+    def build(**kwargs):
+        return ObservedRuntime(build_dashboard(**kwargs, open_database=file_database))
+
+    def invoke(message, *, session=None, repl=False):
+        model = ScriptedModel([_GATE_DECISION, "answer " + message])
+        argv = ["--state-dir", str(tmp_path), "--port", str(free_loopback_port())]
+        if session is not None:
+            argv.extend(["--session", session])
+        if repl:
+            monkeypatch.setattr("sys.stdin", io.StringIO(message + "\n"))
+        else:
+            argv.extend(["-m", message])
+        code = cli_module.main(argv, factory=ScriptedModelFactory(model), build=build)
+        return code, model
+
+    assert invoke("original")[0] == 0
+    first_session = snapshots[-1][0]
+    assert invoke("unrelated")[0] == 0
+    assert len(snapshots[-1]) == 2
+    code, model = invoke("resumed", session=first_session, repl=mode == "repl")
+    assert code == 0
+    assert len(snapshots[-1]) == 2
+    for request in model.requests:
+        assert [message_plain_text(message) for message in request.messages] == [
+            "original",
+            "answer original",
+            "resumed",
+        ]
+    assert "answer resumed" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("mode", ["message", "repl"])
+def test_cli_unknown_session_refuses_without_creating_or_sending(
+    tmp_path, monkeypatch, capsys, mode
+):
+    from agent_alfred.gateway import cli as cli_module
+
+    captured = []
+
+    class ObservedRuntime(_CapturingRuntime):
+        def close(self, *args, **kwargs):
+            captured.append(self.host.list_sessions(limit=10, cursor=None))
+            return super().close(*args, **kwargs)
+
+    def build(**kwargs):
+        return ObservedRuntime(build_dashboard(**kwargs, open_database=file_database))
+
+    model = ScriptedModel([_GATE_DECISION, "must not send"])
+    argv = [
+        "--state-dir",
+        str(tmp_path),
+        "--port",
+        str(free_loopback_port()),
+        "--session",
+        "not-an-existing-session",
+    ]
+    if mode == "message":
+        argv.extend(["-m", "hello"])
+    else:
+        monkeypatch.setattr("sys.stdin", io.StringIO("hello\n"))
+    code = cli_module.main(
+        argv,
+        factory=ScriptedModelFactory(model),
+        build=build,
+    )
+    assert code == 1
+    assert model.requests == []
+    assert captured[-1].sessions == ()
+    assert captured[-1].non_terminal is None
+    assert "Admission failed (unknown_session)" in capsys.readouterr().out
+
+
+class _SessionAdmissionRuntime:
+    descriptor = EntryDescriptor("offline-session-admission", 1, 17717)
+
+    def __init__(self, host):
+        self.host = host
+        self.closed = False
+
+    def start(self):
+        return self.descriptor
+
+    def close(self, *, timeout=None):
+        self.closed = True
+        return True
+
+
+def _invoke_existing_session(runtime, session_id, mode, monkeypatch):
+    from agent_alfred.gateway import cli as cli_module
+
+    monkeypatch.setattr("dotenv.find_dotenv", lambda **kwargs: "")
+    argv = ["--session", session_id]
+    if mode == "message":
+        argv.extend(["-m", "must be refused"])
+    else:
+        monkeypatch.setattr("sys.stdin", io.StringIO("must be refused\n"))
+    return cli_module.main(argv, build=lambda **kwargs: runtime)
+
+
+@pytest.mark.parametrize("mode", ["message", "repl"])
+def test_cli_session_refuses_busy_before_reading_a_locked_store(
+    monkeypatch, capsys, mode
+):
+    """The public command answers while the previous finalizer still owns SQL."""
+    inner = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(inner)
+
+    class HeldFinalize:
+        entered = threading.Event()
+        release = threading.Event()
+        armed = False
+
+        def execute(self, sql, parameters=()):
+            if self.armed and "UPDATE runs" in sql and "finished_at" in sql:
+                self.armed = False
+                self.entered.set()
+                assert self.release.wait(5), "finalizer was not released"
+            return inner.execute(sql, parameters)
+
+        def __getattr__(self, name):
+            return getattr(inner, name)
+
+    conn = HeldFinalize()
+    host, _ = build_runtime_host(conn=conn)
+    host.start()
+    runtime = _SessionAdmissionRuntime(host)
+    done = threading.Event()
+    results, failures = [], []
+    thread = None
+    try:
+        session_id = host.create_session()
+        conn.armed = True
+        first = host.submit(SubmitRequest("first", session_id=session_id))
+        assert conn.entered.wait(3)
+        assert host.snapshot().coordinator_state == "recording_pending"
+
+        def invoke():
+            try:
+                results.append(
+                    _invoke_existing_session(runtime, session_id, mode, monkeypatch)
+                )
+            except BaseException as failure:
+                failures.append(failure)
+            finally:
+                done.set()
+
+        thread = threading.Thread(target=invoke)
+        thread.start()
+        assert done.wait(1), "CLI waited for the held Store instead of refusing"
+        assert failures == [] and results == [1]
+        assert runtime.closed
+        assert "Busy: a Run is already in progress." in capsys.readouterr().out
+        assert not conn.release.is_set()
+        conn.release.set()
+        thread.join(3)
+        host.wait(first.run_id)
+        assert inner.execute("SELECT count(*) FROM runs").fetchone() == (1,)
+        assert inner.execute("SELECT count(*) FROM sessions").fetchone() == (1,)
+    finally:
+        conn.release.set()
+        if thread is not None:
+            thread.join(3)
+            assert not thread.is_alive()
+        host.close()
+        inner.close()
+
+
+@pytest.mark.parametrize("mode", ["message", "repl"])
+@pytest.mark.parametrize("failure_at", ["before_cli", "session_read"])
+def test_cli_session_maps_store_failure_before_or_after_preflight(
+    monkeypatch, capsys, mode, failure_at
+):
+    inner = sqlite3.connect(":memory:", check_same_thread=False)
+    schema.migrate(inner)
+    conn = FailNextSessionCommit(inner)
+    host, _ = build_runtime_host(conn=conn)
+    host.start()
+    fault_rows = []
+    try:
+        session_id = host.create_session()
+
+        def make_unavailable():
+            conn.fail_next_commit = conn.fail_next_rollback = True
+            host.submit(SubmitRequest("faulting transaction", session_id=session_id))
+            assert host.admission_observe()[0] == "recording_unavailable"
+            fault_rows.append(inner.execute("SELECT count(*) FROM runs").fetchone())
+
+        class FailDuringRead:
+            def session_exists(self, selected):
+                make_unavailable()
+                return host.session_exists(selected)
+
+            def __getattr__(self, name):
+                return getattr(host, name)
+
+        if failure_at == "before_cli":
+            make_unavailable()
+        runtime = _SessionAdmissionRuntime(
+            FailDuringRead() if failure_at == "session_read" else host
+        )
+        assert _invoke_existing_session(runtime, session_id, mode, monkeypatch) == 1
+        rendered = capsys.readouterr().out
+        assert "Recording unavailable; refusing new Runs." in rendered
+        assert "injected" not in rendered
+        assert runtime.closed
+        assert len(fault_rows) == 1
+        assert inner.execute("SELECT count(*) FROM runs").fetchone() == fault_rows[0]
+        assert inner.execute("SELECT count(*) FROM sessions").fetchone() == (1,)
+    finally:
+        if inner.in_transaction:
+            inner.rollback()
+        host.close()
+        inner.close()

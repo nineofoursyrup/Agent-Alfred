@@ -125,7 +125,10 @@ def validate_shapes(batch):
     )
     if set(batch) - allowed:
         raise ValueError("unknown_schema3_field")
-    if set(batch["judge_profile"]) != {"id", "model", "protocol"}:
+    profile_fields = {"id", "model", "protocol"}
+    if batch["schema_version"] == 4 and "independence_policy" in batch["judge_profile"]:
+        profile_fields.add("independence_policy")
+    if set(batch["judge_profile"]) != profile_fields:
         raise ValueError("unknown_judge_profile_field")
     for profile in batch["profiles"]:
         if set(profile) != set(
