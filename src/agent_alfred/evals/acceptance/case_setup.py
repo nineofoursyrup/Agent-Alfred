@@ -461,6 +461,8 @@ def verify_skills(host, setup):
 
 def build_case_host(
     *,
+    _run_id_factory=None,
+    clock=None,
     state_dir,
     settings,
     skill_builtin,
@@ -479,6 +481,8 @@ def build_case_host(
         from .fault_fixtures import persona_conflict, publication_unknown
 
         return build_default_host(
+            clock=clock,
+            _run_id_factory=_run_id_factory,
             persona_read_observer=(
                 persona_conflict(observations)
                 if fault_fixture == "persona_version_conflict_v1"
@@ -531,6 +535,8 @@ def build_case_host(
         models = ModelSettingsStore(state_dir / "model_settings.json")
         models.load()
         host = build_host(
+            clock=clock,
+            _run_id_factory=_run_id_factory,
             conn=conn,
             settings=settings,
             skill_builtin=skill_builtin,

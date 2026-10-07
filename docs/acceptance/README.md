@@ -1,3 +1,11 @@
+# v1 当前验收与历史证据机制
+
+当前工程关闭采用 [V1-AGENT-ONLY-CLOSEOUT-20261007-r1](AGENT-ONLY-CLOSEOUT.md)：必要代码与文档进入 main，适用离线验证、独立双轴评审和交付读回完成后，可关闭总地图及相关票。真实模型、judge、盲复核、metadata、认证、部署和实际隔离测试均不在本轮范围；真实运行与质量守卫继续保留。
+
+总地图的剩余离线断言与 `CONTEXT.md` / ADR 义务见[当前义务补遗](agent-only-obligations.md)。历史 coverage 的 INCOMPLETE / NOT RUN 仍是原审计状态，不被整体改写成 PASS。旧文中的 `v1_release`、真实完成条件和权限描述须按[合同替代关系](AGENT-ONLY-CLOSEOUT.md#历史合同与替代关系)解释；工程关闭不签发运行、质量或发布许可。
+
+以下是阶段 A 及后续 schema 的机制说明与历史合同；其数据格式、FAIL 优先、授权拒绝和不可变证据规则继续有效。旧真实关闭前提已由当前合同替代。
+
 # v1 阶段 A 验收证据
 
 入口：`python -m agent_alfred.evals.acceptance`。当前可执行的准备、模拟、导入和报告示例均为离线操作；下文保留的在线命令仅说明历史格式，当前不可执行。`offline_engineering` 与 `v1_release` 独立。缺真实质量证据、批准阈值、正式金标、当前平台门禁或逐项需求证据时，发布保持 `BLOCKED`。已证实违规优先显示 `FAIL`，同时保留所有 blockers。阶段 A 完成不等于 v1 发布通过。

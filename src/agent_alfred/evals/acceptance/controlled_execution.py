@@ -22,13 +22,21 @@ from agent_alfred.model import (
 from agent_alfred.openai_compatible import _decode_message, _stop_reason
 
 from .controlled.contract import (
+    ADVISORY_BUDGET,
     KINDS,
     MODELS,
     PHASES,
+    advisory_run_disclosure,
     cost_units,
+    effective_judge_profile,
     exact,
+    flash_input_policy,
+    group_for_model,
     initial_budget,
+    input_limit,
     integer,
+    is_product,
+    model_group,
     text,
     validate_payload,
     validate_plan,
@@ -36,9 +44,9 @@ from .controlled.contract import (
     wire_payload,
 )
 from .controlled.runtime import (
-    InstalledRuntime,
     SyntheticRuntime,
     TransportFailure,
+    is_installed_runtime,
     validate_runtime,
 )
 from .controlled.store import ZERO, MemoryExecutionAnchor, MemoryExecutionStore
@@ -56,6 +64,34 @@ from .supplement_decisions import instant
 
 def utc_now():
     return datetime.now(UTC)
+
+
+def completed_response(row):
+    """A usable response is distinct from an independently verified final bill."""
+    return row["outcome"] == "completed" and (
+        row["send_state"] == "SETTLED"
+        or (
+            row["send_state"] == "RESPONSE_VERIFIED"
+            and row.get("liability_state") == "RESERVED"
+            and row.get("actual_units") is None
+        )
+    )
+
+
+def reserved_units(row):
+    return (
+        row["planned_units"]
+        if row.get("budget_basis") == ADVISORY_BUDGET
+        else row["worst_units"]
+    )
+
+
+def preflight_input(row):
+    return (
+        row["input_estimate"]
+        if row.get("budget_basis") == ADVISORY_BUDGET
+        else row["input_bound"]
+    )
 
 
 class ControlledAuthority:
@@ -89,7 +125,7 @@ class ControlledAuthority:
         self.worker, self.controller, self.subject = worker, controller, subject
         self.dispute_scope_refs, self.now = tuple(dispute_scope_refs), now
         self.before_intent = before_intent
-        if type(runtime) is InstalledRuntime and (
+        if is_installed_runtime(runtime) and (
             type(store) is MemoryExecutionStore
             or type(anchor) is MemoryExecutionAnchor
             or before_intent is not None
@@ -101,6 +137,16 @@ class ControlledAuthority:
         validate_runtime(self.runtime)
         if self.store is None or self.anchor is None:
             raise ValueError("execution_ledger_required")
+        from .controlled.local_runtime import LocalInstalledRuntime
+
+        if type(self.runtime) is LocalInstalledRuntime and (
+            self.store is not self.runtime.store
+            or self.anchor is not self.runtime.anchor
+            or self.worker != self.runtime.config["worker"]
+            or self.controller != self.runtime.config["controller"]
+            or self.subject != self.runtime.config["subject"]
+        ):
+            raise ValueError("real_execution_prerequisites_unverified")
 
     def persistence_call(self, job_id, operation, *args, **kwargs):
         """Trusted controller IO scoped by its authenticated job, never object data.
@@ -223,6 +269,14 @@ class ControlledAuthority:
             state["job_id"], evidence.read, binding["batch"]["batch_id"]
         )
         proof = self.runtime.check(plan, binding, batch, now)
+        if plan.get("budget_policy") == ADVISORY_BUDGET:
+            for row in self.persistence_call(
+                state["job_id"], self.store.list_attempts, state["job_id"]
+            ):
+                if row[
+                    "send_state"
+                ] == "RESPONSE_VERIFIED" and self.runtime.visible_final_charge(row):
+                    raise ValueError("final_charge_reconciliation_required")
         if plan["execution_mode"] != "synthetic_capacity" and state["phase"] in (
             "product",
             "grading",
@@ -240,6 +294,42 @@ class ControlledAuthority:
             **plan,
             "_permission_valid_until": proof.get("identities", {}).get("valid_until"),
         }
+
+    def _reconcile_visible_final_charges(self, state):
+        """Settle deposited bills before the next action without renewing its grant."""
+        from .controlled.local_runtime import LocalInstalledRuntime
+
+        if type(self.runtime) is not LocalInstalledRuntime:
+            return state
+        job_id = state["job_id"]
+        try:
+            plan = self.persistence_call(
+                job_id, self.store.get_object, state["plan_ref"]
+            )
+            if plan.get("budget_policy") != ADVISORY_BUDGET:
+                return state
+            for row in self.persistence_call(job_id, self.store.list_attempts, job_id):
+                if row[
+                    "send_state"
+                ] != "RESPONSE_VERIFIED" or not self.runtime.visible_final_charge(row):
+                    continue
+                response = self.persistence_call(
+                    job_id, self.store.get_object, row["response_ref"]
+                )
+                self._settle(job_id, row["attempt_id"], response)
+                state = self._verified(job_id)
+                self._active(state)
+        except BaseException as error:
+            current = self._verified(job_id)
+            if current["state"] == "ACTIVE":
+                self._stop(
+                    current,
+                    str(error)
+                    if isinstance(error, ValueError)
+                    else type(error).__name__,
+                )
+            raise
+        return state
 
     def _verify_source(self, plan, binding, evidence, reader, request, source_ref, now):
         if plan["execution_mode"] == "synthetic_capacity" and (
@@ -288,6 +378,11 @@ class ControlledAuthority:
             raise ValueError("job_already_submitted")
         plan = deepcopy(proposal_ref["plan"])
         validate_plan(plan)
+        if plan.get("budget_policy") == ADVISORY_BUDGET:
+            from .controlled.local_runtime import LocalInstalledRuntime
+
+            if type(self.runtime) is not LocalInstalledRuntime:
+                raise ValueError("advisory_budget_local_runtime_required")
         if plan["worker"] != self.worker or plan["controller"] != self.controller:
             raise ValueError("worker_identity_mismatch")
         if plan["material_ref"] != proposal_ref["material_ref"]:
@@ -325,6 +420,14 @@ class ControlledAuthority:
             job_id=job_id,
             plan_sha256=digest(plan),
             budget_sha256=digest(budget),
+            disclosure=(
+                advisory_run_disclosure(
+                    plan["cap_units"],
+                    judge_profile_change=plan.get("judge_profile_change"),
+                )
+                if plan.get("budget_policy") == ADVISORY_BUDGET
+                else None
+            ),
         )
         now = self.now()
         reader = DecisionAdmission(
@@ -390,6 +493,7 @@ class ControlledAuthority:
         return self.status(job_id)
 
     def _validate_objects(self, plan, batch):
+        effective_judge_profile(plan, batch["judge_profile"])
         cases = {c["id"]: c for c in batch["cases"]}
         tests = {t["id"]: t for t in batch["judge_tests"]}
         for operation in plan["operations"]:
@@ -434,6 +538,8 @@ class ControlledAuthority:
 
     def _action(self, state, kind, mutate, *, permission=True, validate=None):
         """Fence before reading time/source; clear only in the action's CAS."""
+        self._active(state)
+        state = self._reconcile_visible_final_charges(state)
         self._active(state)
         fenced = deepcopy(state)
         fenced.update(state="SUSPENDED", stop_reason="time_check_pending")
@@ -523,7 +629,7 @@ class ControlledAuthority:
         payload = wire_payload(request)
         if request.model.endpoint_id != "deepseek":
             raise ValueError("controlled_endpoint_mismatch")
-        validate_payload(payload, operation)
+        validate_payload(payload, operation, plan=plan)
         from .controlled_diagnostics import validate_projection
 
         validate_projection(self, state, operation, payload)
@@ -600,7 +706,7 @@ class ControlledAuthority:
             or digest(prepared["payload"]) != request_descriptor["payload_sha256"]
         ):
             raise ValueError("prepared_request_mismatch")
-        validate_payload(prepared["payload"], operation)
+        validate_payload(prepared["payload"], operation, plan=plan)
         if (
             self.persistence_call(job_id, self.store.get_attempt, job_id, attempt_id)
             is not None
@@ -621,16 +727,21 @@ class ControlledAuthority:
         )
         if consumed:
             raise ValueError("prepared_request_consumed")
-        group = KINDS[operation["kind"]][1]
+        group = model_group(plan, operation)
 
         def reserve(changed, now):
             quote = self.runtime.quote(plan, operation, prepared["payload"], now)
+            advisory = plan.get("budget_policy") == ADVISORY_BUDGET
             exact(
                 quote,
-                "payload_sha256 input_tokens terms token_evidence identity_evidence",
+                "payload_sha256 "
+                + ("budget_policy input_estimate" if advisory else "input_tokens")
+                + " terms token_evidence identity_evidence",
                 "billing_unverifiable",
             )
-            validate_terms(quote["terms"], group)
+            if advisory and quote["budget_policy"] != ADVISORY_BUDGET:
+                raise ValueError("billing_or_token_proof_mismatch")
+            validate_terms(quote["terms"], group, advisory=advisory)
             if (
                 quote["payload_sha256"] != prepared["payload_sha256"]
                 or not quote["token_evidence"]
@@ -641,13 +752,21 @@ class ControlledAuthority:
             terms = quote["terms"]
             if not instant(terms["valid_from"]) <= now < instant(terms["valid_until"]):
                 raise ValueError("billing_price_expired")
-            integer(quote["input_tokens"], maximum=MODELS[group][1])
-            worst = cost_units(terms, quote["input_tokens"], MODELS[group][2])
+            planned_input = (
+                quote["input_estimate"] if advisory else quote["input_tokens"]
+            )
+            integer(planned_input, maximum=input_limit(plan, operation))
+            worst = cost_units(terms, planned_input, MODELS[group][2])
             if (
                 changed["spent_units"] + changed["pending_units"] + worst
                 > plan["cap_units"]
             ):
-                raise ValueError("amount_cap_exceeded")
+                reason = (
+                    "plan_dispatch_target_exceeded"
+                    if advisory
+                    else "amount_cap_exceeded"
+                )
+                raise ValueError(reason)
             if (
                 changed["counts"][group] >= plan["limits"][group]
                 or changed["counts"]["total"] >= plan["limits"]["total"]
@@ -655,7 +774,9 @@ class ControlledAuthority:
             ):
                 raise ValueError("request_quota_exhausted")
             case_id = operation["case_id"]
-            if group == "flash":
+            if is_product(operation):
+                if sum(changed["case_counts"].values()) >= 480:
+                    raise ValueError("product_quota_exhausted")
                 if changed["case_counts"].get(case_id, 0) >= plan["limits"]["per_case"]:
                     raise ValueError("case_quota_exhausted")
                 started = changed["case_started_at"].setdefault(
@@ -688,9 +809,7 @@ class ControlledAuthority:
                 "quote_ref": self.persistence_call(
                     job_id, self.store.put_object, quote
                 ),
-                "worst_units": worst,
                 "actual_units": None,
-                "input_bound": quote["input_tokens"],
                 "output_bound": MODELS[group][2],
                 "send_state": "RESERVED",
                 "outcome": "unknown",
@@ -703,10 +822,20 @@ class ControlledAuthority:
                     instant(changed["started_at"]) + timedelta(seconds=10800),
                     instant(changed["case_started_at"][case_id])
                     + timedelta(seconds=900)
-                    if group == "flash"
+                    if is_product(operation)
                     else now + timedelta(seconds=120),
                 ).isoformat(),
             }
+            if advisory:
+                row.update(
+                    budget_basis=ADVISORY_BUDGET,
+                    planned_units=worst,
+                    input_estimate=planned_input,
+                )
+                if "input_policy" in plan:
+                    row["input_policy"] = deepcopy(plan["input_policy"])
+            else:
+                row.update(worst_units=worst, input_bound=planned_input)
             return row, {"attempt_id": attempt_id}
 
         self._action(state, "RESERVE", reserve)
@@ -877,10 +1006,11 @@ class ControlledAuthority:
                     job_id, self.store.get_object, row["response_ref"]
                 ),
             }
-        if (
-            current["active_attempt"] != attempt_id
-            or current["pending_units"] < row["worst_units"]
-        ):
+        if row["send_state"] == "RESPONSE_VERIFIED":
+            return self._settle_reserved_liability(current, row, response)
+        if current["active_attempt"] != attempt_id or current[
+            "pending_units"
+        ] < reserved_units(row):
             raise ValueError("settlement_attempt_not_active")
         original_error = row.get("error")
         response_ref = self.persistence_call(job_id, self.store.put_object, response)
@@ -907,8 +1037,10 @@ class ControlledAuthority:
             usage = raw.get("usage")
             if type(usage) is not dict:
                 raise ValueError("usage_unknown")
+            advisory = row.get("budget_basis") == ADVISORY_BUDGET
             actual_input = integer(
-                usage.get("prompt_tokens"), maximum=row["input_bound"]
+                usage.get("prompt_tokens"),
+                maximum=None if advisory else preflight_input(row),
             )
             actual_output = integer(
                 usage.get("completion_tokens"), maximum=row["output_bound"]
@@ -919,15 +1051,58 @@ class ControlledAuthority:
                 job_id, self.store.get_object, row["quote_ref"]
             )
             settlement = self.runtime.settlement(row, response, quote)
-            exact(settlement, "payload_sha256 response_sha256 actual_units evidence")
+            from .controlled.local_runtime import LocalInstalledRuntime
+
+            reserved = type(self.runtime) is LocalInstalledRuntime and settlement.get(
+                "contract"
+            ) in ("V1-LOCAL-LIABILITY-READBACK", "V2-LOCAL-PLAN-READBACK")
+            if reserved:
+                exact(
+                    settlement,
+                    "contract version payload_sha256 response_sha256 "
+                    "liability_state actual_units evidence",
+                )
+                if (
+                    type(settlement["version"]) is not int
+                    or settlement["version"] != 2
+                    or settlement["liability_state"] != "RESERVED"
+                    or settlement["actual_units"] is not None
+                    or settlement["contract"]
+                    != (
+                        "V2-LOCAL-PLAN-READBACK"
+                        if advisory
+                        else "V1-LOCAL-LIABILITY-READBACK"
+                    )
+                ):
+                    raise ValueError("settlement_unverifiable")
+            else:
+                exact(
+                    settlement, "payload_sha256 response_sha256 actual_units evidence"
+                )
             if (
                 settlement["payload_sha256"] != row["payload_sha256"]
                 or settlement["response_sha256"] != digest(response)
                 or not settlement["evidence"]
             ):
                 raise ValueError("settlement_unverifiable")
-            actual = integer(settlement["actual_units"])
-            failure = "billing_bound_violated" if actual > row["worst_units"] else None
+            actual = None if reserved else integer(settlement["actual_units"])
+            failure = None
+            if actual is not None and actual > reserved_units(row):
+                failure = (
+                    "budget_plan_exceeded" if advisory else "billing_bound_violated"
+                )
+            usage_limit = MODELS[group_for_model(row["model"])][1]
+            if "input_policy" in row:
+                if digest(row["input_policy"]) != digest(flash_input_policy()):
+                    raise ValueError("controlled_input_policy_invalid")
+                usage_limit = input_limit(
+                    {"model_policy": "flash_only", "input_policy": row["input_policy"]},
+                    row,
+                )
+            if advisory and (
+                actual_input > preflight_input(row) or actual_input > usage_limit
+            ):
+                failure = failure or "input_preflight_exceeded"
             # Validate response without repairing a malformed provider result.
             try:
                 choice = raw["choices"][0]
@@ -949,7 +1124,7 @@ class ControlledAuthority:
             if failure == "transport_cleanup_failed":
                 row.setdefault("error_ref", row["cleanup_error_ref"])
             row.update(
-                send_state="SETTLED",
+                send_state="RESPONSE_VERIFIED" if reserved else "SETTLED",
                 outcome="aborted" if failure or original_error else "completed",
                 error=original_error or failure,
                 actual_units=actual,
@@ -959,11 +1134,20 @@ class ControlledAuthority:
                     job_id, self.store.put_object, settlement
                 ),
             )
+            if reserved:
+                row["liability_state"] = "RESERVED"
             settled = deepcopy(current)
-            settled["pending_units"] -= row["worst_units"]
-            settled["spent_units"] += actual
+            if not reserved:
+                settled["pending_units"] -= reserved_units(row)
+                settled["spent_units"] += actual
             settled["active_attempt"] = None
-            self._commit(settled, "SETTLE", previous=current, attempt=row, at=ended)
+            self._commit(
+                settled,
+                "VERIFY_RESPONSE_RETAIN_LIABILITY" if reserved else "SETTLE",
+                previous=current,
+                attempt=row,
+                at=ended,
+            )
             return {"attempt": row, "response": response}
         except Exception as error:
             message = (
@@ -977,6 +1161,55 @@ class ControlledAuthority:
                 detail={"original_error": message},
             )
             return {"attempt": row, "response": response}
+
+    def _settle_reserved_liability(self, current, row, response):
+        """Reconcile a final bill without changing the first response or grant."""
+        from .controlled.local_runtime import LocalInstalledRuntime
+
+        if (
+            type(self.runtime) is not LocalInstalledRuntime
+            or row.get("liability_state") != "RESERVED"
+            or row.get("actual_units") is not None
+            or current["active_attempt"] is not None
+            or current["pending_units"] < reserved_units(row)
+        ):
+            raise ValueError("reserved_liability_unverifiable")
+        job_id = current["job_id"]
+        quote = self.persistence_call(job_id, self.store.get_object, row["quote_ref"])
+        settlement = self.runtime.settlement(row, response, quote)
+        if settlement.get("liability_state") == "RESERVED":
+            raise ValueError("final_liability_not_yet_verified")
+        exact(settlement, "payload_sha256 response_sha256 actual_units evidence")
+        if (
+            settlement["payload_sha256"] != row["payload_sha256"]
+            or settlement["response_sha256"] != digest(response)
+            or not settlement["evidence"]
+        ):
+            raise ValueError("settlement_unverifiable")
+        actual = integer(settlement["actual_units"])
+        if actual > reserved_units(row):
+            current = self._stop(
+                current,
+                "budget_plan_exceeded"
+                if row.get("budget_basis") == ADVISORY_BUDGET
+                else "billing_bound_violated",
+            )
+        row.update(
+            send_state="SETTLED",
+            liability_state="SETTLED",
+            actual_units=actual,
+            final_settlement_at=self.now().isoformat(),
+            final_settlement_ref=self.persistence_call(
+                job_id, self.store.put_object, settlement
+            ),
+        )
+        changed = deepcopy(current)
+        changed["pending_units"] -= reserved_units(row)
+        changed["spent_units"] += actual
+        self._commit(
+            changed, "SETTLE_RETAINED_LIABILITY", previous=current, attempt=row
+        )
+        return {"attempt": row, "response": response}
 
     def finish(self, job_id, role):
         state = self._verified(job_id)
@@ -1047,7 +1280,7 @@ class ControlledAuthority:
 
     def status(self, job_id):
         state = self._verified(job_id)
-        return {
+        report = {
             "state": deepcopy(state),
             "attempts": self.persistence_call(job_id, self.store.list_attempts, job_id),
             "mode": "SYNTHETIC_ONLY"
@@ -1058,6 +1291,45 @@ class ControlledAuthority:
             "online_executable": False,
             "release_eligible": False,
         }
+        from .controlled.local_runtime import LocalInstalledRuntime
+
+        if type(self.runtime) is LocalInstalledRuntime:
+            plan = self.persistence_call(
+                job_id, self.store.get_object, state["plan_ref"]
+            )
+            validate_plan(plan)
+            advisory = plan.get("budget_policy") == ADVISORY_BUDGET
+            report.update(
+                contract=(
+                    "V2-LOCAL-CONTROLLED-STATUS"
+                    if advisory
+                    else "V1-LOCAL-CONTROLLED-STATUS"
+                ),
+                version=2 if advisory else 1,
+                mode="INSTALLED_OWNER_TRUSTED_LOCAL",
+                trust_profile="owner_trusted_local",
+                independent_administrator_anchor=False,
+                administrator_rollback_protection=False,
+                billing=(
+                    {
+                        "budget_policy": ADVISORY_BUDGET,
+                        "verified_spent_units": state["spent_units"],
+                        "unsettled_planned_units": state["pending_units"],
+                        "all_attempts_reconciled": state["pending_units"] == 0
+                        and all(
+                            row["send_state"] == "SETTLED" for row in report["attempts"]
+                        ),
+                        "final_bill_ceiling_proven": False,
+                    }
+                    if advisory
+                    else {
+                        "verified_spent_units": state["spent_units"],
+                        "unsettled_maximum_units": state["pending_units"],
+                        "final_bill_verified": state["pending_units"] == 0,
+                    }
+                ),
+            )
+        return report
 
     def read_object(self, identity, *, job_id=None):
         """Authenticated audit/controller use; worker receives only its result."""
@@ -1164,7 +1436,7 @@ class ControlledModelClient:
             total_input_tokens=usage.get("input_tokens"),
             output_tokens=usage.get("output_tokens"),
         )
-        if row["send_state"] != "SETTLED" or row["outcome"] != "completed":
+        if not completed_response(row):
             error = ModelError(
                 False,
                 response["status_code"],

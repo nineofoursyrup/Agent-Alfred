@@ -6,9 +6,9 @@ from threading import RLock
 from uuid import uuid4
 from weakref import WeakKeyDictionary
 
-from .controlled.contract import text
+from .controlled.contract import ADVISORY_BUDGET, text
 from .controlled.persistence import DurableExecutionAnchor, DurableExecutionStore
-from .controlled.runtime import InstalledRuntime
+from .controlled.runtime import is_installed_runtime
 from .controlled_execution import ControlledAuthority
 from .execution_decisions import material_binding
 from .materials import preflight_materials
@@ -61,9 +61,9 @@ def _first_reason(roots):
 class PersistentControlledAuthority(ControlledAuthority):
     """Same public dispatch and phase policy with durable failure barriers.
 
-    Local SQLite is explicitly synthetic. AWS adapters preserve this interface;
-    the installed host must own independent persistent B/C backends and access.
-    A failed cross-domain commit is not automatically repaired or skipped.
+    Unprotected SQLite fixtures remain synthetic. Installed AWS and owner-trusted
+    local adapters preserve this interface with their distinct trust profiles.
+    A failed ledger/witness commit is never automatically repaired or skipped.
     """
 
     def _installed(self):
@@ -72,7 +72,7 @@ class PersistentControlledAuthority(ControlledAuthority):
             self.anchor, DurableExecutionAnchor
         ):
             raise ValueError("durable_execution_backend_required")
-        if type(self.runtime) is InstalledRuntime and (
+        if is_installed_runtime(self.runtime) and (
             getattr(self.store, "synthetic_only", False)
             or getattr(self.anchor, "synthetic_only", False)
         ):
@@ -235,6 +235,14 @@ class PersistentControlledAuthority(ControlledAuthority):
             "revision": state["revision"] + 1,
             "nonce": uuid4().hex,
         }
+        from .controlled.local_runtime import LocalInstalledRuntime
+
+        if type(self.runtime) is LocalInstalledRuntime:
+            capability.update(
+                version=2,
+                trust_profile="owner_trusted_local",
+                local_continuity=self.runtime.continuity_checkpoint(),
+            )
         changed = {
             **state,
             "handler_epoch": None,
@@ -274,6 +282,17 @@ class PersistentControlledAuthority(ControlledAuthority):
                 or state["prepared_ref"]
             ):
                 raise ValueError("clean_handoff_unverifiable")
+            from .controlled.local_runtime import LocalInstalledRuntime
+
+            if type(self.runtime) is LocalInstalledRuntime:
+                if (
+                    handoff.get("version") != 2
+                    or handoff.get("trust_profile") != "owner_trusted_local"
+                ):
+                    raise ValueError("clean_handoff_unverifiable")
+                self.persistence_call(
+                    job_id, self.runtime.resume_continuity, handoff["local_continuity"]
+                )
             state = self._commit(
                 {
                     **state,
@@ -442,6 +461,7 @@ class PersistentControlledAuthority(ControlledAuthority):
     def stop_report(self, job_id):
         """Readable even when a domain is unavailable; unknown values stay unknown."""
         state, attempts, observations, faults, blockers = None, None, [], [], []
+        status = None
         stops = []
         verified = False
         fault_inventory_complete = True
@@ -509,12 +529,13 @@ class PersistentControlledAuthority(ControlledAuthority):
                 "SENDING": "possibly_sent",
                 "MAY_HAVE_SENT": "possibly_sent",
                 "SETTLED": "settled",
+                "RESPONSE_VERIFIED": "response_verified_liability_reserved",
             }[row["send_state"]]
-            counts[key] += 1
+            counts[key] = counts.get(key, 0) + 1
         roots = _first_faults(faults)
         with _FAULT_LOCK:
             roots.update(_FAULT_WITNESSES.get(self, {}).get(job_id, {}))
-        return {
+        report = {
             "contract": "V1-CONTROLLED-STOP-REPORT",
             "version": 1,
             "job_id": job_id,
@@ -549,3 +570,56 @@ class PersistentControlledAuthority(ControlledAuthority):
             "v1_release": "BLOCKED",
             "online_executable": False,
         }
+        from .controlled.local_runtime import LocalInstalledRuntime
+
+        if type(self.runtime) is LocalInstalledRuntime:
+            policy = (
+                status.get("billing", {}).get("budget_policy")
+                if status is not None
+                else None
+            )
+            advisory = policy == ADVISORY_BUDGET
+            strict = status is not None and status.get("contract") == (
+                "V1-LOCAL-CONTROLLED-STATUS"
+            )
+            report.update(
+                contract=(
+                    "V2-LOCAL-CONTROLLED-STOP-REPORT"
+                    if advisory
+                    else (
+                        "V1-LOCAL-CONTROLLED-STOP-REPORT"
+                        if strict
+                        else "V1-CONTROLLED-STOP-REPORT"
+                    )
+                ),
+                version=2 if advisory else 1,
+                trust_profile="owner_trusted_local",
+                independent_administrator_anchor=False,
+                administrator_rollback_protection=False,
+                offline_engineering="NOT_INFERRED_FROM_STOP",
+                real_readiness="NOT_INFERRED_FROM_STOP",
+                local_witness_verified=verified,
+            )
+            if advisory:
+                report.update(
+                    budget_policy=ADVISORY_BUDGET,
+                    unsettled_planned_units=(state["pending_units"] if state else None),
+                    all_attempts_reconciled=(
+                        state["pending_units"] == 0
+                        and attempts is not None
+                        and all(row["send_state"] == "SETTLED" for row in attempts)
+                        if state
+                        else False
+                    ),
+                    final_bill_ceiling_proven=False,
+                )
+            elif strict:
+                report["final_bill_verified"] = (
+                    state["pending_units"] == 0 if state else False
+                )
+            else:
+                report["contract"] = "LOCAL-CONTROLLED-STOP-REPORT-UNVERIFIED"
+                report["version"] = None
+                report["budget_policy"] = "UNVERIFIED"
+            report.pop("real_cloud_capacity")
+        return report

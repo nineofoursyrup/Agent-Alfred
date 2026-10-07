@@ -175,6 +175,7 @@ def _trace_sink(
 
 def build_host(
     *,
+    _run_id_factory=None,
     routing_graph_builder=None,
     persona_read_observer=None,
     file_publication_checkpoint=None,
@@ -242,6 +243,7 @@ def build_host(
             else AuditKey.load_or_create(audit_key_path, redactor)
         )
         host = RuntimeHost(
+            _run_id_factory=_run_id_factory,
             persona_read_observer=persona_read_observer,
             file_publication_checkpoint=file_publication_checkpoint,
             routing_graph_builder=routing_graph_builder,
@@ -437,6 +439,7 @@ def build_dashboard(
 
 def build_default_host(
     *,
+    _run_id_factory=None,
     state_dir: Path | None = None,
     persona_read_observer=None,
     file_publication_checkpoint=None,
@@ -475,6 +478,7 @@ def build_default_host(
         )
         model_settings.load()
         host = build_host(
+            _run_id_factory=_run_id_factory,
             persona_read_observer=persona_read_observer,
             file_publication_checkpoint=file_publication_checkpoint,
             local_tool_allowlist=local_tool_allowlist,

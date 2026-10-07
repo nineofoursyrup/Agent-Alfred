@@ -1,0 +1,20 @@
+{
+  "contract": "V1-LOCAL-REAL-CALIBRATION-SPEC-r1",
+  "confirmed_decisions": [
+    "owner_trusted_local",
+    "strict_USD25_missing_evidence_blocks"
+  ],
+  "approval_basis": "User confirmed both presented decisions in this conversation with 都确认; snapshot originals remain drafts from before that confirmation.",
+  "authenticated_runtime_event": false,
+  "run_grant": false,
+  "threshold_approved": false,
+  "github_published": false,
+  "original_documents": {
+    "ISSUE-98-DRAFT.md": "1244dbf534507174aceab6d0431d2ba95a2d7ad8df75184bed22c44d1231f3d4",
+    "CLAUSE-DIFF.md": "c9628b842007ecb081a1202b5341668a0e463a910bab89cb2499707019c7e46c",
+    "RECOMMENDATION.md": "00aed74dc5a50db8b47594b9db18ce6050934a980745c1d0bd117383e2c94715",
+    "ISSUE-105-DRAFT.md": "861e7e5d840b72bc8369aea50898fde7c541cc74dc563c440b81e6e9651b8376",
+    "ISSUE-106-DRAFT.md": "8a5a10ae9b68dd7b5785bb2652a329aa2bfb60de5842ee6760f803e75dfec528",
+    "LOCAL-BILLING-OS-RESEARCH.md": "d3e48842347120163ec525413f195b0725610b6eabbd847970e93ad136240ca1"
+  }
+}

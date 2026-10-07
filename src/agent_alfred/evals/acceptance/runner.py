@@ -99,18 +99,27 @@ def _run_case(
     synthetic_replay=False,
     capture_all=False,
     clock=None,
+    _prepared=None,
+    _prepare_only=False,
+    _run_id_factory=None,
+    _host_clock=None,
 ):
     """One fresh Host. Admission and first-run ownership belong to its caller.
 
-    Keep the complete frozen batch in scope; a one-case schema4 batch is invalid.
-    Mock execution on real materials has no actual sampling timestamp.
+    The public caller keeps the frozen batch. The local broker's private DTO
+    deliberately supplies only profile/case runtime inputs, not a schema4 batch.
+    Mock execution on real materials has no actual sampling timestamp. Private
+    preparation copies only declared seed state; it never supplies a Run result.
     """
     now = clock or (lambda: datetime.now(UTC))
     loaded_secrets = credential_secrets(credentials.values()) if credentials else ()
     root = Path(root)
     root.mkdir(parents=True, exist_ok=True)
     state = root / case["id"]
-    state.mkdir()
+    if _prepared is None:
+        state.mkdir()
+    elif not state.is_dir() or state.is_symlink():
+        raise ValueError("prepared_case_state_missing")
     profile = batch["profiles"][0]
     if batch["schema_version"] in (3, 4):
         from .case_setup import SimulatedModel
@@ -128,7 +137,8 @@ def _run_case(
 
         settings = effective_settings(case["setup"], profile)
     builtin = root / ("skills-" + case["id"])
-    builtin.mkdir()
+    if _prepared is None:
+        builtin.mkdir()
     if "skill" in case["setup"]:
         skill = builtin / "Fixture"
         skill.mkdir()
@@ -137,7 +147,8 @@ def _run_case(
             + case["setup"]["skill"],
             encoding="utf-8",
         )
-    _configure_models(state, profile)
+    if _prepared is None:
+        _configure_models(state, profile)
 
     case_factory = factory or ScriptedModelFactory(model)
     capture = (
@@ -153,6 +164,10 @@ def _run_case(
         from .case_setup import build_case_host
 
         return build_case_host(
+            clock=_host_clock,
+            _run_id_factory=(
+                None if preparing or recovering else _run_id_factory
+            ),
             _rollback=_rollback,
             fault_fixture=(
                 case["setup"].get("fault_fixture")
@@ -209,26 +224,42 @@ def _run_case(
             verify_skills,
         )
 
-        persona_receipt = prepare_persona(state, settings, case["setup"])
-        owner = ConstructionOwner()
-        try:
-            preparing = build(preparing=True, _rollback=owner.rollback)
-            preparing.start()
-            memory_rows = prepare_memory(preparing, case["setup"])
-            session, session_rows = prepare_session(preparing, case["setup"])
-        except BaseException as failure:
-            owner.fail(failure)
+        if _prepared is None:
+            persona_receipt = prepare_persona(state, settings, case["setup"])
+            owner = ConstructionOwner()
+            try:
+                preparing = build(preparing=True, _rollback=owner.rollback)
+                preparing.start()
+                memory_rows = prepare_memory(preparing, case["setup"])
+                session, session_rows = prepare_session(preparing, case["setup"])
+            except BaseException as failure:
+                owner.fail(failure)
+            else:
+                owner.rollback.close()
+            calendar_receipts = prepare_calendar(state, case["setup"])
+            before_business = local_business(state, settings)
+            install_skills(builtin, case["setup"])
         else:
-            owner.rollback.close()
-        calendar_receipts = prepare_calendar(state, case["setup"])
-        before_business = local_business(state, settings)
+            persona_receipt = deepcopy(_prepared["persona_receipt"])
+            memory_rows = deepcopy(_prepared["memory_rows"])
+            session, session_rows = _prepared["session"], deepcopy(
+                _prepared["session_rows"]
+            )
+            calendar_receipts = deepcopy(_prepared["calendar_receipts"])
+            before_business = deepcopy(_prepared["before_business"])
         verify_calendar(case["setup"], before_business)
         if (
             "persona" in case["setup"]
             and before_business["persona"]["content"] != case["setup"]["persona"]
         ):
             raise ValueError("setup_persona_readback_mismatch")
-        install_skills(builtin, case["setup"])
+        if _prepare_only:
+            return {
+                "persona_receipt": persona_receipt, "memory_rows": memory_rows,
+                "session": session, "session_rows": session_rows,
+                "calendar_receipts": calendar_receipts,
+                "before_business": before_business,
+            }
     owner = ConstructionOwner()
     try:
         host = build(_rollback=owner.rollback)

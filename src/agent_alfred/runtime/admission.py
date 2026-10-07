@@ -263,6 +263,7 @@ class RunAdmission:
         coordinator: AdmissionCoordinator,
         bind_run: Callable[[sqlite3.Connection, WorkItem], None] | None = None,
         capture_aggregation=None,
+        _run_id_factory=None,
     ):
         self._clock = clock
         self._settings = settings
@@ -273,6 +274,7 @@ class RunAdmission:
         self._coordinator = coordinator
         self._bind_run = bind_run
         self._capture_aggregation = capture_aggregation
+        self._run_id_factory = _run_id_factory
 
     def submit(self, request: SubmitRequest) -> SubmitResult:
         observed, snapshot = self._coordinator.admission_observe()
@@ -293,7 +295,17 @@ class RunAdmission:
         # -- every decision (conflict, lease, publication) lives inside the
         # one reserve call below, which is what keeps the lease and the
         # card from ever being observable apart.
-        run_id = uuid.uuid4().hex
+        # Only the constructing Host may bind a private Run identity source.
+        # SubmitRequest and model/IPC data never choose their own Run identity.
+        run_id = (
+            uuid.uuid4().hex if self._run_id_factory is None
+            else self._run_id_factory()
+        )
+        if (
+            type(run_id) is not str or len(run_id) != 32
+            or any(c not in "0123456789abcdef" for c in run_id)
+        ):
+            raise ValueError("invalid_host_run_identity")
         accepted_at = format_instant(self._clock.wall_utc())
         session_id = request.session_id
         if creates_session:

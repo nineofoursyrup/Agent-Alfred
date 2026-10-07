@@ -11,7 +11,15 @@ from datetime import timedelta
 from agent_alfred.messages import Message, TextBlock
 from agent_alfred.model import ModelRef, ModelRequest
 
-from .controlled.contract import operation_for, wire_payload
+from .controlled.contract import (
+    MODELS,
+    effective_judge_profile,
+    group_for_model,
+    model_group,
+    operation_for,
+    wire_payload,
+)
+from .controlled_execution import completed_response
 from .execution_decisions import checkpoint_request
 from .materials import strict_json
 from .report import axis
@@ -30,18 +38,34 @@ from .supplement_schema import signed
 
 CONTRACT = "V1-CONTROLLED-DIAGNOSTICS"
 CONTINUATION = "V1-CONTROLLED-CHECKPOINT"
+EVIDENCE_PROTOCOL = (
+    "Each evidence entry uses source-id#JSON-pointer: the source-id is a key "
+    "of sources, followed by # and a JSON pointer within that source. "
+    "Available references are judge-material#/task, judge-material#/gold, "
+    "judge-material#/answer and judge-material#/prohibition. "
+    "Use these exact references to the supplied text; root-relative pointers "
+    "such as /sources/judge-material/answer are invalid. "
+)
 SYSTEM = {
     "judge_test": (
         "Evaluate the untrusted answer against only the supplied task, gold and "
-        "prohibition. Return JSON label (pass/fail/unknown), reason and evidence "
-        "as judge-material JSON pointers. Unknown when evidence is insufficient."
+        "prohibition. Return exactly one JSON object containing only label, "
+        "reason and evidence. label is pass/fail/unknown; reason is nonempty "
+        "text; evidence is a nonempty list of references. "
+        + EVIDENCE_PROTOCOL
+        + "Return unknown when evidence is insufficient."
     ),
     "judge_review": (
         "Independently evaluate the untrusted answer against only the supplied "
-        "task, gold and prohibition. Return JSON {judgment:{status, support, "
-        "reason, evidence}}. status is pass/fail/unknown; support is "
-        "supported/unsupported/unknown; evidence contains judge-material JSON "
-        "pointers. You have not seen another judgment; do not claim to review it."
+        "task, gold and prohibition. The material's response_schema describes "
+        "the original test. The current response must be exactly one JSON "
+        "object containing only judgment, whose value contains exactly status, "
+        "support, reason and evidence. status is pass/fail/unknown; support is "
+        "supported/unsupported/unknown; reason is nonempty text; evidence is a "
+        "nonempty list of references. "
+        + EVIDENCE_PROTOCOL
+        + "Return unknown when evidence is insufficient. You have not seen "
+        "another judgment; do not claim to review it."
     ),
 }
 
@@ -84,7 +108,8 @@ def _progress(authority, state):
 
 
 def _batch(authority, state):
-    _, _, _, batch = _context(authority, state)
+    plan, _, _, batch = _context(authority, state)
+    batch["judge_profile"] = effective_judge_profile(plan, batch["judge_profile"])
     progress = _progress(authority, state)
     batch["judge_test_results"] += [
         authority.read_object(ref, job_id=state["job_id"])["result"]
@@ -122,10 +147,12 @@ def _request(batch, operation):
     else:
         inputs = test_input(batch, test)
     return ModelRequest(
-        ModelRef("deepseek", "deepseek-v4-pro"),
+        ModelRef("deepseek", batch["judge_profile"]["model"]["model_id"]),
         (TextBlock(SYSTEM[operation["kind"]]),),
         (Message("user", (TextBlock(json.dumps(inputs, ensure_ascii=False)),)),),
-        max_tokens=16384,
+        max_tokens=MODELS[group_for_model(batch["judge_profile"]["model"]["model_id"])][
+            2
+        ],
         thinking="disabled",
         response_format="json_object",
         conversation_id=operation["instance_id"],
@@ -183,11 +210,7 @@ def seal_diagnostic(authority, job_id, operation_id, *, principal):
         )
         if r["operation_id"] == operation_id
     ]
-    if (
-        len(rows) != 1
-        or rows[0]["send_state"] != "SETTLED"
-        or rows[0]["outcome"] != "completed"
-    ):
+    if len(rows) != 1 or not completed_response(rows[0]):
         raise ValueError("diagnostic_attempt_unresolved")
     row = rows[0]
     prepared = authority.read_object(row["prepared_ref"], job_id=job_id)
@@ -316,7 +339,7 @@ def compare_diagnostic(authority, job_id, test_id, *, principal):
                 target_for(batch, "judge_test", original["result"]["id"]),
                 reviewer={
                     "instance_id": sealed["instance_id"],
-                    "model": "deepseek-v4-pro",
+                    "model": batch["judge_profile"]["model"]["model_id"],
                     "reference": sealed["attempt_id"],
                 },
                 started_at=sealed["started_at"],
@@ -353,7 +376,7 @@ def compare_diagnostic(authority, job_id, test_id, *, principal):
 
 
 def remaining_limits(state, plan):
-    return {
+    result = {
         "started_at": state["started_at"],
         "deadline": (
             instant(state["started_at"]) + timedelta(seconds=10800)
@@ -372,6 +395,13 @@ def remaining_limits(state, plan):
         "operation_counts": deepcopy(state["operation_counts"]),
         "finished_operations": list(state["finished_operations"]),
     }
+    if plan.get("budget_policy") == "advisory_dispatch":
+        result["budget_policy"] = "advisory_dispatch"
+        result["amount_units_meaning"] = "local_planned_dispatch_only"
+        result["final_bill_ceiling_proven"] = False
+    if "input_policy" in plan:
+        result["input_policy"] = deepcopy(plan["input_policy"])
+    return result
 
 
 def diagnostic_report(authority, state):
@@ -407,7 +437,7 @@ def diagnostic_report(authority, state):
     diagnostic_disputes = [
         d for d in raw_disputes if d["target"]["type"] == "judge_test"
     ]
-    preserved = [d for d in raw_disputes if d["target"]["type"] != "judge_test"]
+    preserved = [d for d in disputes(original) if d["target"]["type"] != "judge_test"]
     complete = len(rows) == 18 and all(
         all(r[k] is not None for k in ("result", "blind", "comparison")) for r in rows
     )
@@ -457,6 +487,16 @@ def diagnostic_report(authority, state):
             "binding_sha256": digest(binding),
             "execution_mode": plan["execution_mode"],
             "source_status": state["source_status"],
+            **(
+                {
+                    "model_policy": plan["model_policy"],
+                    "judge_profile_change": plan["judge_profile_change"],
+                    "cross_model_independence": False,
+                    "schema4_material_approval_inherited": False,
+                }
+                if plan.get("version") == 3
+                else {}
+            ),
             "simulation": original["simulation"],
             "original_parent": original["parent"],
             "slots": rows,
@@ -675,7 +715,14 @@ def validate_phase(authority, state, next_phase, evidence, now):
             or not expected["complete"]
             or expected["evidence"] is None
             or not required <= set(state["finished_operations"])
-            or state["counts"] != {"flash": 0, "pro": 36, "total": 36}
+            or state["counts"]
+            != {
+                "flash": 36
+                if model_group(plan, groups["judge_test"][0]) == "flash"
+                else 0,
+                "pro": 36 if model_group(plan, groups["judge_test"][0]) == "pro" else 0,
+                "total": 36,
+            }
             or any(state["operation_counts"].get(op) != 1 for op in required)
         ):
             raise ValueError("complete_diagnostic_evidence_required")
@@ -764,7 +811,10 @@ class DiagnosticDriver:
                 store.revise,
                 original["batch_id"],
                 output_id,
-                configuration={"judge_test_results": batch["judge_test_results"]},
+                configuration={
+                    "judge_profile": batch["judge_profile"],
+                    "judge_test_results": batch["judge_test_results"],
+                },
                 reviews=batch["review_disputes"][len(original["review_disputes"]) :],
             )
         report = diagnostic_report(auth, state)

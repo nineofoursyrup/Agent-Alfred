@@ -21,12 +21,11 @@ from agent_alfred.resource_rollback import (
 from ..materials import strict_json
 from ..schema import digest, hash_value
 from ..supplement_decisions import instant
-from .contract import exact, integer, text
+from .contract import MAX_CONTROL_BYTES, exact, integer, text
 from .persistence import MAX_OBJECT_BYTES, bounded
 from .response_resources import owned_response
 
 CONTROL_CONTRACT = "V1-CONTROLLED-CONTROL"
-MAX_CONTROL_BYTES = 64 * 1024
 CONTROL_MARGIN_SECONDS = 30
 
 

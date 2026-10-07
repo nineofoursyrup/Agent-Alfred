@@ -656,6 +656,19 @@ def install_runtime(config_path, *, _rollback=None):
 
 
 def validate_runtime(runtime):
-    if type(runtime) not in (SyntheticRuntime, InstalledRuntime):
+    if type(runtime) is not SyntheticRuntime and not is_installed_runtime(runtime):
         raise ValueError("approval_source_unverifiable")
     return runtime
+
+
+def is_installed_runtime(runtime):
+    """Closed real adapters; no structural protocol or user factory admission."""
+    from .local_runtime import LocalInstalledRuntime
+
+    return type(runtime) in (InstalledRuntime, LocalInstalledRuntime)
+
+
+def is_installed_source(source):
+    from .local_source import LocalDecisionSource
+
+    return type(source) in (InstalledDecisionSource, LocalDecisionSource)

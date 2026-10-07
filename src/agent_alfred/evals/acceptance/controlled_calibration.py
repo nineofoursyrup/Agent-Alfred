@@ -16,8 +16,8 @@ from agent_alfred.messages import Message, TextBlock
 from agent_alfred.model import ModelRef, ModelRequest
 from agent_alfred.resource_rollback import RollbackSlot
 
-from .controlled.contract import operation_for
-from .controlled.runtime import SyntheticRuntime
+from .controlled.contract import MODELS, group_for_model, operation_for
+from .controlled.runtime import InstalledRuntime, SyntheticRuntime
 from .controlled_diagnostics import (
     DiagnosticDriver,
     _context,
@@ -384,16 +384,26 @@ class CalibrationDriver:
         if not self._start("product", cid):
             return
         try:
-            record = _run_case(
-                original,
-                case,
-                self.workspace / self.job_id,
-                factory=_ControllerFactory(self, op),
-                credentials=CredentialOverlay({}, None),
-                synthetic_replay=type(auth.runtime) is SyntheticRuntime,
-                capture_all=True,
-                clock=auth.now,
-            )
+            # The installed local adapter owns the native launch and trusted
+            # projection bridge. No controller object enters its worker.
+            if type(auth.runtime) not in (SyntheticRuntime, InstalledRuntime):
+                from .controlled.local_runner import run_local_case
+                from .controlled.local_runtime import LocalInstalledRuntime
+
+                if type(auth.runtime) is not LocalInstalledRuntime:
+                    raise ValueError("local_installed_runtime_required")
+                record = run_local_case(self, case, plan, original)
+            else:
+                record = _run_case(
+                    original,
+                    case,
+                    self.workspace / self.job_id,
+                    factory=_ControllerFactory(self, op),
+                    credentials=CredentialOverlay({}, None),
+                    synthetic_replay=type(auth.runtime) is SyntheticRuntime,
+                    capture_all=True,
+                    clock=auth.now,
+                )
             record["batch_id"] = self.job_id + "-first-results"
             record["evidence"]["controlled_execution"] = {
                 "contract": CONTRACT,
@@ -453,11 +463,13 @@ class CalibrationDriver:
             factory,
             producer={
                 "instance_id": op["instance_id"],
-                "model": "deepseek-v4-pro",
+                "model": batch["judge_profile"]["model"]["model_id"],
                 "reference": op["id"],
             },
             clock=auth.now,
-            max_output_tokens=16384,
+            max_output_tokens=MODELS[
+                group_for_model(batch["judge_profile"]["model"]["model_id"])
+            ][2],
             conversation_id=op["instance_id"],
         )
         self._write(
@@ -493,14 +505,16 @@ class CalibrationDriver:
                 return
             inputs = blind_input(batch, target)
             request = ModelRequest(
-                ModelRef("deepseek", "deepseek-v4-pro"),
+                ModelRef("deepseek", batch["judge_profile"]["model"]["model_id"]),
                 (TextBlock(REVIEW_SYSTEM),),
                 (
                     Message(
                         "user", (TextBlock(json.dumps(inputs, ensure_ascii=False)),)
                     ),
                 ),
-                max_tokens=16384,
+                max_tokens=MODELS[
+                    group_for_model(batch["judge_profile"]["model"]["model_id"])
+                ][2],
                 thinking="disabled",
                 response_format="json_object",
                 conversation_id=op["instance_id"],
@@ -511,11 +525,13 @@ class CalibrationDriver:
                 for r in self._io(auth.store.list_attempts, self.job_id)
                 if r["operation_id"] == op["id"]
             ]
-            if (
-                len(rows) != 1
-                or rows[0]["send_state"] != "SETTLED"
-                or rows[0]["outcome"] != "completed"
-            ):
+            if len(rows) == 1 and rows[0]["send_state"] == "RESPONSE_VERIFIED":
+                from .controlled_execution import completed_response
+
+                complete = completed_response(rows[0])
+            else:
+                complete = len(rows) == 1 and rows[0]["send_state"] == "SETTLED"
+            if len(rows) != 1 or not complete or rows[0]["outcome"] != "completed":
                 return
             row = rows[0]
             raw, parsed, error = _raw(auth, self.job_id, row), None, None
@@ -568,7 +584,7 @@ class CalibrationDriver:
                 target,
                 reviewer={
                     "instance_id": sealed["instance_id"],
-                    "model": "deepseek-v4-pro",
+                    "model": batch["judge_profile"]["model"]["model_id"],
                     "reference": sealed["attempts"][0]["attempt_id"],
                 },
                 started_at=sealed["started_at"],
@@ -736,7 +752,7 @@ class CalibrationDriver:
             }
             for s in slots
         ]
-        return {
+        report = {
             "contract": CONTRACT,
             "version": 1,
             "job_id": self.job_id,
@@ -790,3 +806,61 @@ class CalibrationDriver:
                 "authorization required"
             ),
         }
+        if type(auth.runtime) not in (SyntheticRuntime, InstalledRuntime):
+            from .controlled.local_runtime import LocalInstalledRuntime
+
+            if type(auth.runtime) is not LocalInstalledRuntime:
+                raise ValueError("calibration_runtime_not_supported")
+            provenance = auth.runtime.provenance
+            observed = [
+                r
+                for r in batch["results"]
+                if (
+                    r["source"] == "online"
+                    and r["sampled_at"] is not None
+                    and r["evidence"].get("local_bridge", {}).get("real_sample") is True
+                    and r["evidence"]["local_bridge"].get("mode")
+                    == "LOCAL_INSTALLED_RUNNER"
+                    and r["evidence"].get("independent_readback", {}).get("source")
+                    == "actual_runner_files"
+                )
+            ]
+            report["local_runtime_provenance"] = provenance
+            report["real_execution_observations"] = {
+                "contract": "V1-LOCAL-CALIBRATION-OBSERVATIONS",
+                "version": 1,
+                "trust_profile": provenance["trust_profile"],
+                "fixed_denominator": 30,
+                "actual_first_results": len(observed),
+                "actual_result_ids": [r["id"] for r in observed],
+                "all_thirty_observed": len(observed) == 30,
+                "independent_administrator_anchor": False,
+                "quality_or_threshold_approval_implied": False,
+            }
+            last_check = provenance["last_validated_readiness"]
+            report["real_readiness"] = {
+                **axis(
+                    [],
+                    ["fresh_runtime_check_required_for_next_operation"]
+                    if last_check
+                    else ["local_real_readiness_evidence_missing"],
+                ),
+                "last_validated_readiness": last_check,
+                "scope": "observed_proofs_not_future_run_permission",
+            }
+            report["calibration_quality"] = axis(
+                assessed["failures"],
+                [
+                    *assessed["blockers"],
+                    *(
+                        []
+                        if len(observed) == 30
+                        else [
+                            "real_calibration_incomplete"
+                            if observed
+                            else "real_calibration_not_performed"
+                        ]
+                    ),
+                ],
+            )
+        return report

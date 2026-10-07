@@ -1,3 +1,5 @@
+> 历史盘点原结论保留。当前 Agent-only 合同下的必要义务、#45 A29 与 #35 原附件补遗、仍缺原始 brief 的来源限制见[2026-10-07 义务补遗](agent-only-obligations.md)。`coverage-inventory.json` 保持原字节及 INCOMPLETE / NOT RUN，不把未映射行批量改成 PASS，也不把来源缺口直接归因于产品缺陷。
+
 # Coverage 审计最终补充（2026-09-20）
 
 逐条清单：[coverage-inventory.json](coverage-inventory.json)。SHA256 `a6bef34695eb7323491f1997e2622e2fea073f79d02a02a52bdf57414d163fb7`。
