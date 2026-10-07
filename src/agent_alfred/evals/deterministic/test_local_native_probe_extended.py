@@ -35,6 +35,10 @@ def request(tmp_path):
 
 
 def fake_boundaries(monkeypatch):
+    # The native bootstrap's child_env is empty. This protocol fixture must
+    # not inherit pytest/CI parent names or claim actual environment isolation.
+    monkeypatch.setattr(probe.os, "environ", {})
+
     def denied(*args, **kwargs):
         raise OSError(errno.EPERM, "offline permission fixture")
 
@@ -72,6 +76,7 @@ def test_fixed_exec_attempt_is_part_of_parent_and_child_observations(
     )
     for contract in (probe.CONTRACT, probe.CHILD):
         result = probe.collect({**value, "contract": contract})
+        assert result["environment_names"] == []
         row = next(
             row for row in result["observations"] if row["target"] == "fixed_exec"
         )
@@ -272,6 +277,11 @@ def test_child_validation_rejects_contents_and_false_denial(tmp_path, monkeypatc
     fake_boundaries(monkeypatch)
     answer = probe.collect(value)
     probe.validate_child(answer, value)
+    at_limit = [f"OFFLINE_NAME_{index}" for index in range(63)] + ["N" * 128]
+    probe.validate_child({**answer, "environment_names": at_limit}, value)
+    for names in (at_limit + ["ONE_TOO_MANY"], ["N" * 129], [False]):
+        with pytest.raises(ValueError, match="child_mismatch"):
+            probe.validate_child({**answer, "environment_names": names}, value)
     with pytest.raises(ValueError, match="child_mismatch"):
         probe.validate_child({**answer, "contents": "SHOULD_NOT_PASS"}, value)
     bad = deepcopy(answer)
