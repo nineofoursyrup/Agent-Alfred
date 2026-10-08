@@ -82,11 +82,12 @@ export function overviewPage(root,options) {
   });
   function restoreFocus(){
     const origin=pendingRestore;if(!origin)return;
-    const source=origin.section==='期间指标'?periodSource:origin.section==='当前记忆条目数'?memorySource:recentSource;
-    if(!source.value)return;
+    const source=origin.section==='期间指标'?periodSource:origin.section==='当前记忆条目数'?memorySource:origin.section==='全历史最近运行'?recentSource:null;
+    if(source&&!source.value)return;
     pendingRestore=null;
-    const target=[...root.querySelectorAll('a')].find(item=>item.getAttribute('href')===origin.focusHref);
-    if(target){target.focus({preventScroll:true});returnNotice.textContent='已重新读取来源。';}
+    const region=origin.section?[...root.querySelectorAll('section')].find(item=>item.getAttribute('aria-label')===origin.section):root;
+    const target=[...(region?.querySelectorAll('a')||[])].find(item=>item.getAttribute('href')===origin.focusHref&&(item.closest('[data-run-id]')?.getAttribute('data-run-id')??'')===(origin.anchor??''));
+    if(target){target.focus({preventScroll:true});returnNotice.textContent=source?'已重新读取来源。':'已恢复来源入口。';}
     else {returnNotice.textContent='原来源目标已不在本次结果中；已重新读取，未替换为其他目标。';returnNotice.tabIndex=-1;returnNotice.focus({preventScroll:true});}
   }
   const metrics=node('div');metrics.className='overview-metrics';root.append(metrics);
@@ -247,7 +248,7 @@ export function overviewPage(root,options) {
     if(!started&&state.connected&&state.instance){started=true;void readPeriod();void readRecent();}
     if(!memoryStarted&&state.connected&&state.memoryState==='online'){memoryStarted=true;void readMemory();}
   });
-  return {getLeaveState:()=>({dirty:false}),setVisible:()=>{for(const source of [periodSource,memorySource,recentSource])source.present();},captureSource,restoreSource(/** @type {Wire} */ origin){if(origin?.kind==='overview'){pendingRestore=origin;anchor=origin.anchor;focusHref=origin.focusHref;sectionKey=origin.section;restoreFocus();}},dispose(){disposed=true;pendingRestore=null;document.removeEventListener('pointerdown',cancelRestore);document.removeEventListener('keydown',cancelRestore);unsubscribe();for(const source of [periodSource,memorySource,recentSource])source.dispose();}};
+  return {getLeaveState:()=>({dirty:false}),setVisible:()=>{for(const source of [periodSource,memorySource,recentSource])source.present();},captureSource,restoreSource(/** @type {Wire} */ origin){if(origin?.kind==='overview'){pendingRestore=origin;anchor=origin.anchor;focusHref=origin.focusHref;sectionKey=origin.section;queueMicrotask(restoreFocus);}},dispose(){disposed=true;pendingRestore=null;document.removeEventListener('pointerdown',cancelRestore);document.removeEventListener('keydown',cancelRestore);unsubscribe();for(const source of [periodSource,memorySource,recentSource])source.dispose();}};
 }
 
 /** @param {Wire} run @param {boolean} current @param {Wire[]} peers */

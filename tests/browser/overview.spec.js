@@ -270,6 +270,7 @@ test('Repeated Overview reads preserve another Ops snapshot and trace pruning ke
 
 test('Source navigation records only identity and restores Overview after a real reread', async ({page}) => {
   const server=await fixture();
+  let release=()=>{};
   try {
     await server.send('runs 1');await page.goto(server.origin+'/overview?range=30d&timezone=Asia%2FShanghai');
     const row=page.locator('.overview-run').first();await expect(row).toBeVisible();
@@ -287,7 +288,22 @@ test('Source navigation records only identity and restores Overview after a real
     await expect(page.locator('.overview-run').getByRole('link')).toBeFocused();
     await expect(input).toHaveValue('总览往返草稿');
     expect(periodReads).toBe(1);expect(streams).toBe(0);
-  } finally {await server.close();}
+    const architectureMemory=page.getByLabel('静态架构说明').getByRole('link',{name:'记忆',exact:true});
+    await architectureMemory.click();await expect(page).toHaveURL(/\/memory(?:\?|$)/);
+    expect(await page.evaluate(()=>window.overviewSources.at(-1).returnSource.section)).toBe('静态架构说明');
+    await page.goBack();
+    await expect(architectureMemory).toBeFocused();
+    await expect(page.getByRole('link',{name:'查看当前记忆（重新读取）'})).not.toBeFocused();
+
+    // A later real user intent retires the pending restore of a data-backed Run anchor.
+    await row.getByRole('link').click();await expect(page).toHaveURL(/\/runs\//);
+    let fetched;const received=new Promise(resolve=>fetched=resolve),gate=new Promise(resolve=>release=resolve);
+    await page.route('**/api/overview/recent-runs?**',async route=>{const response=await route.fetch();fetched();await gate;await route.fulfill({response}).catch(()=>{});});
+    await page.goBack();await received;
+    await input.click();await input.fill('返回后继续输入');
+    release();await expect(page.locator('.overview-run')).toHaveCount(1);
+    await expect(input).toBeFocused();await expect(input).toHaveValue('返回后继续输入');expect(streams).toBe(0);
+  } finally {release();await server.close();}
 });
 
 // Retain native EventSource and real Host events; only frame delivery is controlled.
