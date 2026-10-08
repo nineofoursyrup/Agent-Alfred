@@ -73,6 +73,10 @@ _TERMINAL_PHASE = TERMINAL_RUN_PHASE
 AdmissionState = Literal["pending", "admitted", "rejected", "unconfirmed"]
 
 
+class SourceFilterMismatch(ValueError):
+    """The requested source scope excludes the target."""
+
+
 class UnknownRunFilter(ValueError):
     """The requested filter is not one of the three closed values."""
 
@@ -111,6 +115,10 @@ class RunSummary:
     finished_at: str | None
     activity_revision: int
     admission_state: AdmissionState = "unconfirmed"
+    recording_state: str | None = None
+    recording_source: str = "unknown"
+    state_revision: int | None = None
+    aggregation: dict | None = None
 
     def __post_init__(self) -> None:
         phase, outcome = parse_run_lifecycle_pair(self.phase, self.outcome)
@@ -148,6 +156,7 @@ class MainBarRunPair:
     skill_notice: str | None = None
     no_reply: bool = False
     aggregation: dict | None = None
+    message_anchor: str | None = None
 
 
 @dataclass(frozen=True)
@@ -157,6 +166,7 @@ class MainBarHistoricMessage:
     message: Message
     source: str
     created_at: str
+    message_anchor: str | None = None
 
     @property
     def run_id(self) -> None:
@@ -193,6 +203,17 @@ class SessionChatRun:
     activity_revision: int
     reply_preview: str | None
     reply_source: str | None
+    purpose: str = "chat"
+    filter: str = "chat"
+    purpose_known: bool = True
+    session_id: str | None = None
+    entry_surface_id: str | None = None
+    prompt_preview: str | None = None
+    admission_state: AdmissionState = "admitted"
+    recording_state: str | None = None
+    recording_source: str = "unknown"
+    state_revision: int | None = None
+    aggregation: dict | None = None
 
     def __post_init__(self) -> None:
         phase, outcome = parse_run_lifecycle_pair(self.phase, self.outcome)
@@ -217,7 +238,7 @@ def classify_purpose(purpose: str) -> tuple[str, bool]:
     """
     from agent_alfred.schema import PURPOSES
 
-    if purpose == CHAT_FILTER:
+    if purpose in (CHAT_FILTER, "aggregation"):
         return CHAT_FILTER, True
     return SYSTEM_FILTER, purpose in PURPOSES
 
@@ -313,7 +334,7 @@ def _mainbar_pending_cursor(
 
 _COLUMNS = """run_id, purpose, session_id, gateway, entry_surface_id,
               prompt_preview, phase, outcome, accepted_at, started_at,
-              finished_at, activity_revision, admission_state"""
+              finished_at, activity_revision, admission_state, telemetry"""
 
 
 class _RunRow(NamedTuple):
@@ -330,9 +351,12 @@ class _RunRow(NamedTuple):
     finished_at: str | None
     activity_revision: int
     admission_state: AdmissionState
+    telemetry: str | None
 
 
 def _row_to_summary(raw_row) -> RunSummary:
+    from agent_alfred.runtime.telemetry import finalization_metadata
+
     row = _RunRow(*raw_row)
     purpose = row.purpose
     shelf, known = classify_purpose(purpose)
@@ -345,7 +369,9 @@ def _row_to_summary(raw_row) -> RunSummary:
         session_id=row.session_id,
         gateway=row.gateway,
         entry_surface_id=row.entry_surface_id,
-        prompt_preview=row.prompt_preview,
+        prompt_preview=row.prompt_preview
+        if purpose == "chat" and row.admission_state == "admitted"
+        else None,
         phase=phase,
         outcome=outcome,
         accepted_at=row.accepted_at,
@@ -353,6 +379,7 @@ def _row_to_summary(raw_row) -> RunSummary:
         finished_at=row.finished_at,
         activity_revision=row.activity_revision,
         admission_state=row.admission_state,
+        **finalization_metadata(row.telemetry, phase=phase, purpose=purpose),
     )
 
 
@@ -457,11 +484,17 @@ def _redact_summary(
     defence in depth under ADR-0003, and it is idempotent -- a remembered
     secret is already a marker, which no later pass can re-match.
     """
-    if summary is None or summary.prompt_preview is None:
+    if summary is None:
         return summary
-    return replace(summary, prompt_preview=redactor.redact_text(
-        summary.prompt_preview
-    ))
+    return replace(
+        summary,
+        prompt_preview=redactor.redact_text(summary.prompt_preview)
+        if summary.prompt_preview is not None
+        else None,
+        aggregation=redactor.redact_jsonable(summary.aggregation)
+        if summary.aggregation
+        else None,
+    )
 
 
 def locate_run(
@@ -470,6 +503,7 @@ def locate_run(
     run_id: str,
     redactor: Redactor,
     limit: int = DEFAULT_RUN_PAGE_SIZE,
+    filter: str | None = None,
     recording_failed_run_ids: frozenset[str] = frozenset(),
 ) -> RunPage | None:
     """The page a deep link should open on for one Run.
@@ -479,6 +513,10 @@ def locate_run(
     page positioned so the Run is the *last* item, so continuing from the
     returned cursor walks forward without repeating it.
     """
+    if filter is not None and filter not in RUN_FILTERS:
+        raise UnknownRunFilter("unknown_filter")
+    if limit < 1:
+        raise ValueError("invalid_input")
     if run_id in recording_failed_run_ids:
         return None
     row = conn.execute(
@@ -487,19 +525,24 @@ def locate_run(
     if row is None:
         return None
     summary = _row_to_summary(row)
+    if filter not in (None, ALL_FILTER, summary.filter):
+        raise SourceFilterMismatch("source_filter_mismatch")
+    selected_filter = summary.filter if filter is None else filter
     if summary.phase != _TERMINAL_PHASE:
         # It is the pinned Run, not a page row: it has no stable position to
         # page to.
         return RunPage(
-            filter=summary.filter,
+            filter=selected_filter,
             runs=(),
             non_terminal=_redact_summary(summary, redactor),
             next_cursor=None,
         )
-    if summary.filter == CHAT_FILTER:
+    if selected_filter == CHAT_FILTER:
         purpose_clause = "AND purpose IN ('chat', 'aggregation')"
-    else:
+    elif selected_filter == SYSTEM_FILTER:
         purpose_clause = "AND purpose NOT IN ('chat', 'aggregation')"
+    else:
+        purpose_clause = ""
     # The newest ``limit - 1`` terminal Runs that are newer than the target,
     # taken nearest-first and then turned back around, so the page ends on
     # the target itself. Bounded either way: a deep link into the ten
@@ -544,7 +587,7 @@ def locate_run(
         ),
     ).fetchone()
     return RunPage(
-        filter=summary.filter,
+        filter=selected_filter,
         runs=tuple(runs),
         non_terminal=_redact_summary(
             _non_terminal_run(conn, purpose_clause, recording_failed_run_ids),
@@ -819,6 +862,7 @@ def mainbar_pairs(
                 message=_stored_message(role, content, redactor),
                 source=source,
                 created_at=created_at,
+                message_anchor=_message_anchor(session_id, "historic", row_id),
             )
         )
         historic_position = row_id
@@ -857,7 +901,14 @@ def _mainbar_pair(conn, row: _MainBarRunRow, redactor: Redactor) -> MainBarRunPa
     ).fetchone()
     from agent_alfred.runtime.replies import intentional_no_reply
 
+    anchor_row = conn.execute(
+        "SELECT id FROM agent_log WHERE run_id=? AND session_id=? ORDER BY id LIMIT 1",
+        (row.run_id, row.session_id),
+    ).fetchone()
     return MainBarRunPair(
+        message_anchor=_message_anchor(row.session_id, "runs", anchor_row[0])
+        if anchor_row
+        else None,
         no_reply=bool(telemetry and intentional_no_reply(telemetry[0])),
         aggregation=json.loads(telemetry[0]).get("memory", {}).get("aggregation")
         if telemetry and telemetry[0]
@@ -1097,6 +1148,7 @@ def list_session_chat_runs(
                 started_at=row.started_at,
                 finished_at=row.finished_at,
                 activity_revision=row.activity_revision,
+                **_session_metadata(conn, row.run_id, redactor),
                 **_final_reply(conn, row.run_id, redactor, reply_max_chars),
             )
         )
@@ -1111,6 +1163,30 @@ def list_session_chat_runs(
     return SessionChatRunsPage(
         session_id=session_id, runs=entries, next_cursor=next_cursor
     )
+
+
+def _session_metadata(conn, run_id, redactor):
+    from dataclasses import asdict
+
+    row = conn.execute(
+        f"SELECT {_COLUMNS} FROM runs WHERE run_id=?", (run_id,)
+    ).fetchone()
+    summary = asdict(_redact_summary(_row_to_summary(row), redactor))
+    return {
+        key: summary[key]
+        for key in (
+            "purpose",
+            "filter",
+            "purpose_known",
+            "session_id",
+            "entry_surface_id",
+            "prompt_preview",
+            "admission_state",
+            "recording_state",
+            "recording_source",
+            "aggregation",
+        )
+    }
 
 
 def _session_runs_cursor(session_id: str, position: tuple[int, str] | None) -> str:
@@ -1151,3 +1227,51 @@ def _final_reply(
     if len(text) > max_chars:
         text = text[: max_chars - 1] + "…"
     return {"reply_preview": text if text else None, "reply_source": row[1]}
+
+
+def with_host_state(page, snapshot, redactor):
+    """Merge only same-identity Host facts; durable recorded never regresses."""
+    from agent_alfred.runtime.telemetry import aggregation_metadata
+
+    if page is None:
+        return None
+
+    def merge(row):
+        if row is None or row.recording_state == "recorded":
+            return row
+        projection = snapshot.unrecorded_terminal_projection
+        active = snapshot.active_run
+        source = next(
+            (
+                item
+                for item in (projection, active)
+                if item is not None
+                and item.run_id == row.run_id
+                and item.session_id == row.session_id
+                and item.purpose == row.purpose
+            ),
+            None,
+        )
+        if source is None or source.recording_state is None:
+            return row
+        values = dict(
+            recording_state=source.recording_state,
+            recording_source="host_state",
+            state_revision=snapshot.state_revision,
+        )
+        if row.purpose == "aggregation" and source is projection:
+            values["aggregation"] = redactor.redact_jsonable(
+                aggregation_metadata(projection.aggregation)
+            )
+        return replace(row, **values)
+
+    values = {"runs": tuple(merge(row) for row in page.runs)}
+    if isinstance(page, RunPage):
+        values["non_terminal"] = merge(page.non_terminal)
+    return replace(page, **values)
+
+
+def _message_anchor(session_id, segment, row_id):
+    from agent_alfred.runtime.source_locations import message_anchor
+
+    return message_anchor(session_id, segment, row_id)

@@ -34,7 +34,23 @@ def read_evidence(
         pruned = conn.execute(
             "SELECT prune_reason FROM trace_prunes WHERE run_id = ?", (run_id,)
         ).fetchone()
-    telemetry = json.loads(row[1]) if row[1] else {}
+    from agent_alfred.runtime.telemetry import finalization_metadata
+
+    metadata = finalization_metadata(row[1], phase=row[0])
+    try:
+        telemetry = json.loads(row[1]) if row[1] else {}
+        if not isinstance(telemetry, dict):
+            telemetry = {}
+    except ValueError, TypeError:
+        telemetry = {}
+    if not isinstance(telemetry.get("memory"), dict):
+        telemetry["memory"] = {
+            "gate_state": "legacy_unknown",
+            "gate": None,
+            "input_attempts": [],
+        }
+    if not isinstance(telemetry.get("attempts"), list):
+        telemetry["attempts"] = []
     with store.reading() as conn:
         input_rows = conn.execute(
             "SELECT kind,explanation FROM run_input_explanations WHERE run_id=? "
@@ -101,7 +117,7 @@ def read_evidence(
                 "run_id": run_id,
                 "trace_status": status,
                 "trace_incomplete": telemetry.get("trace_incomplete"),
-                "recording_state": "recorded" if row[1] else None,
+                "recording_state": metadata["recording_state"],
                 "events": safe_events,
                 "memory": telemetry.get("memory", {
                     "gate_state": "legacy_unknown", "gate": None, "input_attempts": []

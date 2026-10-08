@@ -65,6 +65,13 @@ def test_pending_reply_does_not_wait_for_the_database_write_lock():
                         run_id=submitted.run_id,
                     )
                 )
+                answers.append(
+                    host.locate_mainbar(
+                        process_instance_id=host.process_instance_id,
+                        session_id=submitted.session_id,
+                        run_id=submitted.run_id,
+                    )
+                )
             finally:
                 completed.set()
 
@@ -72,6 +79,12 @@ def test_pending_reply_does_not_wait_for_the_database_write_lock():
         reader.start()
         assert completed.wait(2), "reply read waited for the held database lock"
         assert answers[0].reply_text == "pong"
+        assert answers[1]["reply_text"] == "pong"
+        assert answers[1]["recording_state"] == "pending"
+        assert answers[1]["recording_source"] == "host_state"
+        assert answers[1]["source"] == "unrecorded_projection"
+        assert answers[1]["user"]["availability"] == "preview"
+        assert answers[1]["history_contiguous"] is False
     finally:
         saving.release()
         committing.release()
@@ -204,6 +217,43 @@ def test_reply_redaction_failure_is_read_unavailable_and_can_be_retried(saved):
         )
         assert host.snapshot() == before
     finally:
+        saving.release()
+        host.close()
+        conn.close()
+
+
+@pytest.mark.parametrize("saved", [False, True])
+def test_exact_record_user_redaction_failure_is_unavailable(saved, monkeypatch):
+    saving = SelectiveLatch()
+    saving.arm()
+    host, conn = build_runtime_host(before_recording_commit=saving)
+    host.start()
+    try:
+        submitted = host.submit(SubmitRequest(message="hello"))
+        assert saving.entered.wait(2)
+        if saved:
+            saving.release()
+            host.wait(submitted.run_id)
+        before = host.snapshot()
+        original = Redactor.redact_text
+
+        def fail_only_user(self, text):
+            if text == "hello":
+                raise RuntimeError("private failure detail")
+            return original(self, text)
+
+        monkeypatch.setattr(Redactor, "redact_text", fail_only_user)
+        assert DashboardApi(facade=host).shared_read(
+            "/api/mainbar/locate",
+            {
+                "process_instance_id": host.process_instance_id,
+                "session_id": submitted.session_id,
+                "run_id": submitted.run_id,
+            },
+        ) == (503, {"code": "reply_unavailable"})
+        assert host.snapshot() == before
+    finally:
+        monkeypatch.undo()
         saving.release()
         host.close()
         conn.close()

@@ -4,12 +4,14 @@ import hashlib
 import json
 import threading
 import uuid
+from contextlib import closing
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal, InvalidOperation, localcontext
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from agent_alfred.clock import format_instant
 from agent_alfred.pricing import BILLING, project_cost
+from agent_alfred.runtime.telemetry import finalization_metadata
 
 TOKENS = (
     "total_input_tokens",
@@ -79,10 +81,14 @@ def normalize_filters(value, now):
 
 
 class FrozenPrices:
-    def __init__(self, prices, identities):
-        self.values = {
-            (e, m, d): prices.quote(e, m, d) for e, m in identities for d, _ in BILLING
-        }
+    def __init__(self, prices, identities, *, cancelled=None):
+        self.values = {}
+        for endpoint, model in sorted(identities):
+            for dimension, _ in BILLING:
+                _check_cancel(cancelled)
+                self.values[(endpoint, model, dimension)] = prices.quote(
+                    endpoint, model, dimension
+                )
 
     def quote(self, endpoint_id, model_id, dimension):
         return self.values.get((endpoint_id, model_id, dimension))
@@ -123,11 +129,31 @@ def safe_attempt(raw, prices, at):
     }
 
 
-def summary(rows):
+def _decimal_add(left, right):
+    with localcontext() as context:
+        context.prec = (
+            max(left.adjusted(), right.adjusted(), 0)
+            - min(left.as_tuple().exponent, right.as_tuple().exponent, 0)
+            + 2
+        )
+        return left + right
+
+
+def _check_cancel(cancelled):
+    if cancelled is not None and cancelled():
+        raise AccountingError("read_cancelled")
+
+
+def summary(rows, *, cancelled=None):
     result = {
         "run_count": len(rows),
         "attempt_count": 0,
         "unknown_cost_attempts": 0,
+        "exact_attempts": 0,
+        "estimated_attempts": 0,
+        "price_sources": {},
+        "stale_price_attempts": 0,
+        "tiered_price_attempts": 0,
         "incomplete_runs": 0,
         "tool_requests": 0,
         "confirmed_starts": 0,
@@ -141,14 +167,24 @@ def summary(rows):
     exact = estimated = Decimal(0)
     groups = {}
     for row in rows:
+        _check_cancel(cancelled)
         result["incomplete_runs"] += bool(row["coverage"])
         for attempt in row["attempts"]:
+            _check_cancel(cancelled)
             result["attempt_count"] += 1
             cost = attempt["cost"]
             if cost["state"] == "exact":
-                exact += Decimal(cost["amount"])
+                result["exact_attempts"] += 1
+                exact = _decimal_add(exact, Decimal(cost["amount"]))
             elif cost["state"] == "estimated":
-                estimated += Decimal(cost["amount"])
+                result["estimated_attempts"] += 1
+                components = cost["price_components"]
+                for source in {item["source"] for item in components}:
+                    sources = result["price_sources"]
+                    sources[source] = sources.get(source, 0) + 1
+                result["stale_price_attempts"] += any(c["stale"] for c in components)
+                result["tiered_price_attempts"] += any(c["tiered"] for c in components)
+                estimated = _decimal_add(estimated, Decimal(cost["amount"]))
             else:
                 result["unknown_cost_attempts"] += 1
             for key in TOKENS:
@@ -157,6 +193,7 @@ def summary(rows):
                     "missing_attempts" if value is None else "known"
                 ] += 1 if value is None else value
         for tool in row["tools"]:
+            _check_cancel(cancelled)
             result["tool_requests"] += 1
             result[
                 {
@@ -234,19 +271,39 @@ class AccountingSnapshots:
             self._expire()
             if len(self.snapshots) >= self.max_count:
                 raise AccountingError("snapshot_quota")
-            prices = self.price_factory()
-            rows = []
-            unresolved_membership = []
-            captured_bytes = 0
-            # No read transaction survives this block. A single consistent read
-            # fixes membership, metering, telemetry, and prune facts together.
-            with self.store.transaction() as conn:
-                conn.execute("BEGIN")
-                cursor = conn.execute("""SELECT run_id,session_id,purpose,phase,outcome,
-                    accepted_at,started_at,activity_revision,telemetry FROM runs
-                    ORDER BY activity_revision DESC,run_id DESC""")
+            result = self._build(normalized, now, recording_failed=recording_failed)
+            for row in result["runs"]:
+                row.pop("_model_coverage", None)
+            encoded = json.dumps(result, ensure_ascii=False).encode()
+            if (
+                len(encoded) + sum(len(v[1]) for v in self.snapshots.values())
+                > self.max_bytes
+            ):
+                raise AccountingError("snapshot_quota")
+            self.snapshots[result["snapshot_id"]] = (
+                self.clock.monotonic() + self.ttl,
+                encoded,
+            )
+            return self.page(result["snapshot_id"])
+
+    def _build(self, normalized, now, *, recording_failed=(), cancelled=None):
+        """The one member/price projection for retained and request-local reads."""
+        _check_cancel(cancelled)
+        prices = self.price_factory()
+        rows = []
+        unresolved_membership = []
+        captured_bytes = 0
+        # No read transaction survives this block. A single consistent read
+        # fixes membership, metering, telemetry, and prune facts together.
+        with self.store.transaction() as conn:
+            conn.execute("BEGIN")
+            cursor = conn.execute("""SELECT run_id,session_id,purpose,phase,outcome,
+                accepted_at,started_at,activity_revision,telemetry FROM runs
+                ORDER BY activity_revision DESC,run_id DESC""")
+            with closing(cursor):
                 names = [d[0] for d in cursor.description]
                 for values in cursor:
+                    _check_cancel(cancelled)
                     row = dict(zip(names, values, strict=True))
                     if any(
                         normalized.get(k) and normalized[k] != row[k]
@@ -329,7 +386,23 @@ class AccountingSnapshots:
                         "SELECT prune_reason FROM trace_prunes WHERE run_id=?",
                         (row["run_id"],),
                     ).fetchone()
+                    model_coverage = set(coverage) - {
+                        "historic_tool_metering_unrecorded",
+                        "time_unrecorded",
+                    }
+                    if (
+                        row["phase"] == "finished"
+                        and finalization_metadata(raw, phase=row["phase"])[
+                            "recording_state"
+                        ]
+                        is None
+                    ):
+                        model_coverage.add("telemetry_unreadable_or_missing")
+                    memory = telemetry.get("memory")
+                    if isinstance(memory, dict) and memory.get("input_unconfirmed"):
+                        model_coverage.add("attempt_count_unconfirmed")
                     row.update(
+                        _model_coverage=sorted(model_coverage),
                         tools=tools,
                         coverage=coverage,
                         raw_attempts=attempts,
@@ -339,53 +412,102 @@ class AccountingSnapshots:
                         prune_reason=pruned[0] if pruned else None,
                     )
                     rows.append(row)
-            identities = set()
-            for row in rows:
-                for raw in row["raw_attempts"]:
-                    model = raw.get("model") if isinstance(raw, dict) else None
-                    if isinstance(model, dict) and all(
-                        type(model.get(k)) is str for k in ("endpoint_id", "model_id")
-                    ):
-                        identities.add((model["endpoint_id"], model["model_id"]))
-            frozen = FrozenPrices(prices, identities)
-            at = format_instant(now)
-            for row in rows:
-                row["attempts"] = []
-                seen = set()
-                for raw in row.pop("raw_attempts"):
-                    try:
-                        attempt = safe_attempt(raw, frozen, at)
-                        if attempt["attempt_id"] in seen:
-                            raise ValueError("duplicate_attempt")
-                        seen.add(attempt["attempt_id"])
-                        row["attempts"].append(attempt)
-                    except ValueError, TypeError, KeyError:
-                        row["coverage"].append("damaged_attempt")
-            result = {
-                "snapshot_id": uuid.uuid4().hex,
-                "process_instance_id": self.process_id,
-                "computed_at": at,
-                "filters": normalized,
-                "expires_at": format_instant(now + timedelta(seconds=self.ttl)),
-                "summary": summary(rows),
-                "unresolved_membership": unresolved_membership,
-                "runs": rows,
-                "history_boundary": "Persistent Runs only; legacy messages excluded.",
-            }
-            result["price_version"] = hashlib.sha256(
-                repr(frozen.values).encode()
-            ).hexdigest()
-            encoded = json.dumps(result, ensure_ascii=False).encode()
-            if (
-                len(encoded) + sum(len(v[1]) for v in self.snapshots.values())
-                > self.max_bytes
-            ):
-                raise AccountingError("snapshot_quota")
-            self.snapshots[result["snapshot_id"]] = (
-                self.clock.monotonic() + self.ttl,
-                encoded,
+        identities = set()
+        for row in rows:
+            _check_cancel(cancelled)
+            for raw in row["raw_attempts"]:
+                _check_cancel(cancelled)
+                model = raw.get("model") if isinstance(raw, dict) else None
+                if isinstance(model, dict) and all(
+                    type(model.get(k)) is str for k in ("endpoint_id", "model_id")
+                ):
+                    identities.add((model["endpoint_id"], model["model_id"]))
+        frozen = FrozenPrices(prices, identities, cancelled=cancelled)
+        at = format_instant(now)
+        for row in rows:
+            _check_cancel(cancelled)
+            row["attempts"] = []
+            seen = set()
+            for raw in row.pop("raw_attempts"):
+                _check_cancel(cancelled)
+                try:
+                    attempt = safe_attempt(raw, frozen, at)
+                    if attempt["attempt_id"] in seen:
+                        raise ValueError("duplicate_attempt")
+                    seen.add(attempt["attempt_id"])
+                    row["attempts"].append(attempt)
+                except ValueError, TypeError, KeyError:
+                    row["coverage"].append("damaged_attempt")
+                    row["_model_coverage"].append("damaged_attempt")
+        result = {
+            "snapshot_id": uuid.uuid4().hex,
+            "process_instance_id": self.process_id,
+            "computed_at": at,
+            "filters": normalized,
+            "expires_at": format_instant(now + timedelta(seconds=self.ttl)),
+            "summary": summary(rows, cancelled=cancelled),
+            "unresolved_membership": unresolved_membership,
+            "runs": rows,
+            "history_boundary": "Persistent Runs only; legacy messages excluded.",
+        }
+        result["price_version"] = hashlib.sha256(
+            repr(frozen.values).encode()
+        ).hexdigest()
+        _check_cancel(cancelled)
+        if len(json.dumps(result, ensure_ascii=False).encode()) > self.max_bytes:
+            raise AccountingError("snapshot_quota")
+        return result
+
+    def period(self, filters, *, recording_failed=(), cancelled=None):
+        if not isinstance(filters, dict) or set(filters) - {"range", "timezone"}:
+            raise AccountingError("invalid_input")
+        if filters.get("range") not in ("today", "7d", "30d"):
+            raise AccountingError("invalid_range")
+        # Same concurrency boundary; do not expire, renew or touch Ops slots.
+        with self.lock:
+            now = self.clock.wall_utc()
+            normalized = normalize_filters(filters, now)
+            value = self._build(
+                normalized, now, recording_failed=recording_failed, cancelled=cancelled
             )
-            return self.page(result["snapshot_id"])
+            rows = value.pop("runs")
+            reasons, model_reasons = {}, {}
+            model_incomplete = 0
+            for row in rows:
+                _check_cancel(cancelled)
+                model = set(row["_model_coverage"])
+                model_incomplete += bool(model)
+                for reason in set(row["coverage"]):
+                    reasons[reason] = reasons.get(reason, 0) + 1
+                for reason in model:
+                    model_reasons[reason] = model_reasons.get(reason, 0) + 1
+            zone = ZoneInfo(normalized["timezone"])
+            value.update(
+                observation_id=value.pop("snapshot_id"),
+                expires_at=format_instant(now + timedelta(seconds=min(self.ttl, 900))),
+                unresolved_membership_count=len(value.pop("unresolved_membership")),
+                ops_filters={
+                    "range": "custom",
+                    "timezone": zone.key,
+                    **{
+                        name: datetime.fromisoformat(normalized[name])
+                        .astimezone(zone)
+                        .date()
+                        .isoformat()
+                        for name in ("start", "end")
+                    },
+                },
+                coverage={
+                    "incomplete_runs": value["summary"]["incomplete_runs"],
+                    "reasons": reasons,
+                },
+                model_coverage={
+                    "complete": model_incomplete == 0,
+                    "incomplete_runs": model_incomplete,
+                    "reasons": model_reasons,
+                },
+            )
+            return value
 
     def _expire(self):
         now = self.clock.monotonic()

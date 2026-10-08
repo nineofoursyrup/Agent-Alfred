@@ -691,6 +691,25 @@ class DashboardApi:
 
     # -- reads -------------------------------------------------------------
 
+    def _read_context(self, params):
+        identity = params.get("process_instance_id")
+        if (
+            identity is not None
+            and identity != self._facade.snapshot().process_instance_id
+        ):
+            return 409, {"code": "process_context_expired"}
+        return None
+
+    def _observed(self, params, payload):
+        if "process_instance_id" in params:
+            return {**payload, **self._facade.read_observation()}
+        return payload
+
+    def shared_read(self, path, params, *, cancelled=None):
+        from agent_alfred.gateway.web.shared_reads import read
+
+        return read(self._facade, path, params, cancelled=cancelled)
+
     @_map_read_errors
     def session_inbox(self, params: dict[str, str]) -> tuple[int, Any]:
         limit = _page_size(params, "limit")
@@ -713,29 +732,55 @@ class DashboardApi:
 
     @_map_read_errors
     def runs_page(self, params: dict[str, str]) -> tuple[int, Any]:
+        context_error = self._read_context(params)
+        if context_error:
+            return context_error
         filter_name = params.get("filter", "all")
         if filter_name not in RUN_FILTERS:
             return 400, {"code": "unknown_filter"}
         limit = _page_size(params, "limit")
-        return 200, _runs_payload(
+        return 200, self._observed(params, _runs_payload(
             self._facade.list_runs(
                 filter=filter_name, limit=limit, cursor=params.get("cursor")
             )
-        )
+        ))
 
     @_map_read_errors
     def locate_run(self, run_id: str, params: dict[str, str]) -> tuple[int, Any]:
         limit = _page_size(params, "limit")
-        page = self._facade.locate_run(run_id, limit=limit)
+        context_error = self._read_context(params)
+        if context_error:
+            return context_error
+        if "filter" in params and params["filter"] not in RUN_FILTERS:
+            return 400, {"code": "unknown_filter"}
+        try:
+            page = self._facade.locate_run(
+                run_id,
+                limit=limit,
+                **({"filter": params["filter"]} if "filter" in params else {}),
+            )
+        except runs.SourceFilterMismatch:
+            return 409, {"code": "source_filter_mismatch"}
         if page is None:
             return 404, {"code": "unknown_run"}
-        return 200, _runs_payload(page)
+        payload = _runs_payload(page)
+        payload["target"] = {
+            "anchor": run_id,
+            "run_id": run_id,
+            "placement": "pinned"
+            if page.non_terminal is not None and page.non_terminal.run_id == run_id
+            else "page",
+        }
+        return 200, self._observed(params, payload)
 
     @_map_read_errors
     def session_runs(self, params: dict[str, str]) -> tuple[int, Any]:
         # Same rule as the other Session-scoped reads: the Session is named
         # by the query parameter, verbatim, and only its absence is a bad
         # request -- the empty string is a value the database may hold.
+        context_error = self._read_context(params)
+        if context_error:
+            return context_error
         session_id = params.get("session_id")
         if session_id is None:
             return 400, {"code": "missing_session_id"}
@@ -746,7 +791,7 @@ class DashboardApi:
             )
         except SessionNotFound:
             return 404, {"code": "unknown_session"}
-        return 200, _session_runs_payload(page)
+        return 200, self._observed(params, _session_runs_payload(page))
 
     def recover_reply(self, params: dict[str, str]) -> tuple[int, Any]:
         """GET /api/reply: identity plus full text, never a recording receipt.
@@ -859,6 +904,7 @@ def _messages_payload(page: SessionMessagesPage) -> dict[str, Any]:
                 # Null for historic rows, and that is the point: a message
                 # with no Run is never dressed up as one that had one.
                 "run_id": message.run_id,
+                "message_anchor": message.message_anchor,
             }
             for message in page.messages
         ],
@@ -928,6 +974,14 @@ def _run_json(run) -> dict[str, Any]:
         "started_at": run.started_at,
         "finished_at": run.finished_at,
         "activity_revision": run.activity_revision,
+        "recording_state": run.recording_state,
+        "recording_source": run.recording_source,
+        "aggregation": run.aggregation,
+        **(
+            {"state_revision": run.state_revision}
+            if run.state_revision is not None
+            else {}
+        ),
     }
 
 
@@ -943,6 +997,7 @@ def _mainbar_item_json(item) -> dict[str, Any]:
     if isinstance(item, runs.MainBarRunPair):
         return {
             "type": "run_pair",
+            "message_anchor": item.message_anchor,
             **({"aggregation": item.aggregation} if item.aggregation else {}),
             **({"reply_disposition": "no_reply"} if item.no_reply else {}),
             **({"skill_notice": item.skill_notice} if item.skill_notice else {}),
@@ -965,6 +1020,7 @@ def _mainbar_item_json(item) -> dict[str, Any]:
         raise TypeError(f"unknown MainBar item: {type(item).__name__}")
     return {
         "type": "historic_message",
+        "message_anchor": item.message_anchor,
         "run_id": item.run_id,
         "role": item.message.role,
         "blocks": [_block_json(block) for block in item.message.blocks],
@@ -988,6 +1044,26 @@ def _session_runs_payload(page) -> dict[str, Any]:
                 "activity_revision": run.activity_revision,
                 "reply_preview": run.reply_preview,
                 "reply_source": run.reply_source,
+                **{
+                    key: _run_json(run)[key]
+                    for key in (
+                        "purpose",
+                        "purpose_known",
+                        "filter",
+                        "session_id",
+                        "entry_surface_id",
+                        "prompt_preview",
+                        "admission_state",
+                        "recording_state",
+                        "recording_source",
+                        "aggregation",
+                    )
+                },
+                **(
+                    {"state_revision": run.state_revision}
+                    if run.state_revision is not None
+                    else {}
+                ),
             }
             for run in page.runs
         ],
