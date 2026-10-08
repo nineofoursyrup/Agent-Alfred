@@ -73,6 +73,30 @@ for (const length of [4, 60])
         await expect(
           page.getByRole("region", { name: "追踪导出" }),
         ).toBeVisible();
+        const replyStart = reads.length;
+        await page.getByRole("button", { name: /在主对话中查看$/ }).click();
+        const reply = page.locator('#messages [data-run-id="' + run + '"]');
+        await expect(reply).toHaveCount(1);
+        await expect(reply).toContainText("相同文字");
+        await expect(page.locator("#reading-status")).toContainText(
+          "相邻历史尚未读取",
+        );
+        const replyReads = reads
+          .slice(replyStart)
+          .filter((url) => new URL(url).pathname === "/api/mainbar/locate");
+        expect(replyReads).toHaveLength(1);
+        expect(new URL(replyReads[0]).searchParams.get("session_id")).toBe(
+          session,
+        );
+        expect(new URL(replyReads[0]).searchParams.get("run_id")).toBe(run);
+        // Cross-Session selection may read one normal history window; it never
+        // walks historical pages to find this exact early reply.
+        expect(
+          reads
+            .slice(replyStart)
+            .filter((url) => new URL(url).pathname === "/api/sessions/messages")
+            .length,
+        ).toBeLessThanOrEqual(1);
         const start = reads.length;
         await page.getByRole("link", { name: "返回来源", exact: true }).click();
         await expect(
