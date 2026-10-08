@@ -203,7 +203,7 @@ def locate_record(
             run_id=run_id,
         )
         preview = (
-            redactor.redact_text(projection.prompt_preview)
+            _redact_reply(redactor, projection.prompt_preview)
             if projection.prompt_preview is not None
             else None
         )
@@ -248,7 +248,12 @@ def locate_record(
                 session_id=session_id,
                 run_id=run_id,
             )
-            user_message = _stored_message("user", user[0], redactor) if user else None
+            try:
+                user_message = (
+                    _stored_message("user", user[0], redactor) if user else None
+                )
+            except Exception as exc:
+                raise ReplyUnavailable("reply unavailable") from exc
         except (
             sqlite3.Error,
             RecordingUnavailable,

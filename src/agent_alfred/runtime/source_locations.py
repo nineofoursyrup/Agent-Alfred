@@ -153,6 +153,9 @@ def locate_session_run(
     ).fetchone()
     if row is None or run_id in recording_failed_run_ids:
         raise SourceTargetUnavailable("unknown_run")
+    # A live object has no stable historical neighbors. Return only its slot.
+    if row[1] != "finished":
+        limit = 1
     excluded, excluded_params = runs._excluded_runs_clause(recording_failed_run_ids)
     newer = conn.execute(
         "SELECT activity_revision,run_id FROM runs WHERE session_id=? "

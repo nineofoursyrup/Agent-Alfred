@@ -319,3 +319,170 @@ def test_new_reads_cross_real_guarded_http_without_mutating_or_leaking(
         assert (host.snapshot(), len(model.requests)) == before
     finally:
         assert dashboard.close()
+
+
+def test_source_waiting_and_pinned_targets_never_claim_a_history_cursor(tmp_path):
+    with ops_host(tmp_path, [GATE, "first", GATE, "second"]) as (host, _, conn, _):
+        first, _ = run(host)
+        session = host.list_runs().runs[0].session_id
+        second, _ = run(host)
+        # A second admitted row makes accidental historical neighbors observable.
+        conn.execute("UPDATE runs SET session_id=? WHERE run_id=?", (session, second))
+        conn.execute(
+            "INSERT INTO agent_log(session_id,role,content,source,created_at) "
+            "VALUES (?, 'user', '[]', 'web', 'historic')",
+            (session,),
+        )
+        conn.commit()
+        api = DashboardApi(facade=host)
+        anchor = next(
+            m["message_anchor"]
+            for m in api.session_messages(session, {})[1]["messages"]
+            if m["run_id"] is None
+        )
+        conn.execute(
+            "UPDATE runs SET phase='running',outcome=NULL,finished_at=NULL "
+            "WHERE run_id=?",
+            (first,),
+        )
+        conn.commit()
+        params = {
+            "process_instance_id": host.process_instance_id,
+            "session_id": session,
+        }
+        status, messages = api.shared_read(
+            "/api/sessions/messages/locate", {**params, "anchor": anchor}
+        )
+        assert status == 200
+        assert messages["target"]["placement"] == "waiting"
+        assert messages["runs_pending"] is True
+        assert messages["messages"] == []
+        assert messages["next_cursor"] is not None
+        status, located = api.shared_read(
+            "/api/sessions/runs/locate", {**params, "run_id": first}
+        )
+        assert status == 200
+        assert located["target"]["placement"] == "pinned"
+        assert [r["run_id"] for r in located["runs"]] == [first]
+        assert located["next_cursor"] is None
+        status, inbox = api.shared_read("/api/sessions/locate", params)
+        assert status == 200
+        assert inbox["target"]["placement"] == "pinned"
+        assert inbox["sessions"] == []
+        assert inbox["next_cursor"] is None
+        conn.execute("DELETE FROM agent_log WHERE run_id IS NULL")
+        conn.commit()
+        assert api.shared_read(
+            "/api/sessions/messages/locate", {**params, "anchor": anchor}
+        ) == (404, {"code": "source_target_unavailable"})
+
+
+def test_memory_revision_changed_before_http_response_discards_the_count(
+    tmp_path, monkeypatch
+):
+    from urllib.parse import urlencode
+
+    from agent_alfred.evals.deterministic.test_memory_http import prepared_dashboard
+    from agent_alfred.evals.deterministic.test_memory_mirrors import save
+    from agent_alfred.evals.deterministic.test_web_http import _get, _request
+
+    dashboard, model = prepared_dashboard(tmp_path, monkeypatch, [])
+    try:
+        host = dashboard.host
+        before = host.memory_service.memory_revision
+        observe = host.read_observation
+
+        def change_before_envelope():
+            assert save(host.memory_service, operation="race")["status"] == "saved"
+            return observe()
+
+        monkeypatch.setattr(host, "read_observation", change_before_envelope)
+        head, body = _request(
+            dashboard.port,
+            _get(
+                dashboard.port,
+                "/api/overview/memory-counts?"
+                + urlencode(
+                    {
+                        "process_instance_id": host.process_instance_id,
+                        "expected_memory_revision": before,
+                    }
+                ),
+            ),
+        )
+        assert head.startswith(b"HTTP/1.1 409")
+        assert json.loads(body) == {"code": "memory_changed"}
+        assert host.memory_service.memory_revision > before
+        assert model.requests == []
+    finally:
+        assert dashboard.close()
+
+
+def test_http_disconnect_releases_period_transaction_and_keeps_ops_snapshots(
+    tmp_path, monkeypatch
+):
+    import copy
+    import socket
+    import threading
+    from urllib.parse import urlencode
+
+    from agent_alfred.evals.deterministic.test_memory_http import prepared_dashboard
+    from agent_alfred.evals.deterministic.test_web_http import _get
+    from agent_alfred.runtime.accounting import AccountingError
+
+    dashboard, _ = prepared_dashboard(tmp_path, monkeypatch, [GATE, "done"])
+    entered, release, completed = (threading.Event() for _ in range(3))
+    client = None
+    try:
+        host = dashboard.host
+        run(host)
+        host.accounting_snapshot({"range": "all", "timezone": "UTC"})
+        before = copy.deepcopy(host._accounting.snapshots)
+        period = host.overview_period
+        outcomes = []
+
+        def observe_period(filters, *, cancelled):
+            def at_real_transaction():
+                if host._conn.in_transaction:
+                    entered.set()
+                    assert release.wait(3)
+                return cancelled()
+
+            try:
+                return period(filters, cancelled=at_real_transaction)
+            except AccountingError as exc:
+                outcomes.append(str(exc))
+                raise
+            finally:
+                completed.set()
+
+        monkeypatch.setattr(host, "overview_period", observe_period)
+        client = socket.create_connection(("127.0.0.1", dashboard.port), timeout=3)
+        client.sendall(
+            _get(
+                dashboard.port,
+                "/api/overview/period?"
+                + urlencode(
+                    {
+                        "process_instance_id": host.process_instance_id,
+                        "range": "7d",
+                        "timezone": "UTC",
+                    }
+                ),
+            )
+        )
+        assert entered.wait(3), "period never entered the real read transaction"
+        client.shutdown(socket.SHUT_RDWR)
+        client.close()
+        client = None
+        release.set()
+        assert completed.wait(3)
+        assert outcomes == ["read_cancelled"]
+        assert not host._conn.in_transaction
+        assert host._accounting.snapshots == before
+        assert period({"range": "7d", "timezone": "UTC"})["summary"]["run_count"] == 1
+    finally:
+        release.set()
+        if client is not None:
+            client.close()
+        assert dashboard.close()
