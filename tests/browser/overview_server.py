@@ -196,6 +196,16 @@ def main():
                     elif kind == "broken":
                         conn.execute("UPDATE runs SET telemetry='{}'")
                     conn.commit()
+            elif command.startswith("collide-run "):
+                current_id = command.split()[1]
+                assert identities
+                legacy_id = current_id[:12] + "-legacy-history"
+                with host._store.transaction() as conn:
+                    conn.execute(
+                        "UPDATE runs SET run_id=? WHERE run_id=?",
+                        (legacy_id, identities[0]),
+                    )
+                    conn.commit()
             elif command == "opaque-runs":
                 with host._store.transaction() as conn:
                     conn.execute("PRAGMA ignore_check_constraints=ON")

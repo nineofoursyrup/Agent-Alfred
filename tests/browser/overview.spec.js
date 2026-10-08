@@ -394,19 +394,35 @@ test('A real recorded read merges into the held current slot without duplicate o
   const server=await fixture();
   let recentReads=0;page.on('request',request=>{if(request.url().includes('/api/overview/recent-runs?'))recentReads++;});
   try {
-    await observeStream(page);await server.send('runs 5');await page.goto(server.origin+'/overview');
-    await expect(page.locator('.overview-run')).toHaveCount(5);
+    await observeStream(page);await server.send('runs 5');
+    await page.route('**/api/overview/recent-runs?**',route=>route.abort());
+    await page.goto(server.origin+'/overview');
+    await expect(page.getByLabel('全历史最近运行')).toContainText('读取失败');
+    await expect(page.locator('.overview-run')).toHaveCount(0);
     const entry=await (await page.request.get(server.origin+'/api/entry')).json();const headers={'x-agent-alfred-csrf':entry.csrf_token};
     const session=await (await page.request.post(server.origin+'/api/sessions',{headers,data:{}})).json();
     await page.evaluate(()=>window.holdIdle=true);await server.send('hold-recording');
     const accepted=await (await page.request.post(server.origin+'/api/runs',{headers,data:{session_id:session.session_id,message:'held durable overlap'}})).json();
     await server.send('wait-recording');
     const current=page.getByLabel('当前运行槽');await expect(current).toContainText('正在保存');
+    const currentHref='/runs/'+encodeURIComponent(accepted.run_id);
+    await expect(current.getByRole('link')).toHaveAttribute('href',currentHref);
     await server.send('release-recording');
+    await page.unroute('**/api/overview/recent-runs?**');
     await page.getByRole('button',{name:'刷新最近运行'}).click();await expect(current).toContainText('已保存');
+    await expect(current.getByRole('link')).toHaveText('Run '+accepted.run_id.slice(0,12)+'…');
+    // New peers must refresh the label even when current identity and recorded state stay unchanged.
+    await server.send('collide-run '+accepted.run_id);
+    const legacyId=accepted.run_id.slice(0,12)+'-legacy-history';
+    await page.getByRole('button',{name:'刷新最近运行'}).click();
     await expect(page.locator('.overview-history .overview-run')).toHaveCount(5);
     const ids=await page.locator('.overview-run').evaluateAll(rows=>rows.map(row=>row.dataset.runId));
     expect(new Set(ids).size).toBe(6);expect(ids.filter(id=>id===accepted.run_id)).toHaveLength(1);
+    const legacy=page.locator('.overview-history .overview-run').filter({has:page.getByRole('link',{name:'Run '+legacyId,exact:true})});
+    await expect(current.getByRole('link')).toHaveText('Run '+accepted.run_id);
+    await expect(current.getByRole('link')).toHaveAttribute('href',currentHref);
+    await expect(legacy.getByRole('link')).toHaveAttribute('href','/runs/'+encodeURIComponent(legacyId));
+    expect(new Set(await page.locator('.overview-run>a').allTextContents()).size).toBe(6);
     const historicalIds=await page.locator('.overview-history .overview-run').evaluateAll(rows=>rows.map(row=>row.dataset.runId));
     const readsBeforeRelease=recentReads;
     const old=await page.evaluate(()=>window.lastPending);expect(old).toBeTruthy();await emit(page,'state_patch',old);
@@ -421,5 +437,8 @@ test('A real recorded read merges into the held current slot without duplicate o
     await page.getByRole('button',{name:'刷新最近运行'}).click();
     await expect(page.locator('.overview-history .overview-run').first()).toHaveAttribute('data-run-id',accepted.run_id);
     expect(recentReads).toBe(readsBeforeRelease+1);
+    const links=page.locator('.overview-history .overview-run>a');
+    expect(new Set(await links.allTextContents()).size).toBe(5);
+    await expect(links.first()).toHaveAttribute('href',currentHref);
   } finally {await server.send('release-recording');await server.close();}
 });

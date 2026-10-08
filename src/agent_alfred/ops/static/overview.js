@@ -158,21 +158,28 @@ export function overviewPage(root,options) {
     const details=node('details');details.append(node('summary','本次记忆来源'),node('p',`当前 Store · 修订 ${value.memory_revision} · 实例 ${value.process_instance_id}`),node('p',`读取 ${time(value.observed_at)} · 有效至 ${time(value.expires_at)}`),node('p','同修订完整计数，包含现存受保护条目，不含候选、镜像、旧版本、消息或 Skill 文件。'));
     memoryBody.append(details);
   }
+  /** Fixed membership and visible display identities are separate. @param {Wire|null} value */
+  function visibleRuns(value) {
+    const history=(value?.runs||[]).filter((/** @type {Wire} */ row)=>row.run_id!==slot?.run_id);
+    return {history,peers:slot?[slot,...history]:history};
+  }
   /** @param {Wire|null} value */
   function renderRecent(value) {
     recentBody.replaceChildren();
-    if(!value){recentBody.append(node('p','—'));return;}
-    const rows=value.runs.filter((/** @type {Wire} */ row)=>row.run_id!==slot?.run_id);
+    if(!value){recentBody.append(node('p','—'));renderCurrent();return;}
+    const {history:rows,peers}=visibleRuns(value);
     if(!rows.length)recentBody.append(node('p','暂无可展示的已结束运行'));
-    for(const run of rows)recentBody.append(runCard(run,false,value.runs));
+    for(const run of rows)recentBody.append(runCard(run,false,peers));
     const details=node('details');details.append(node('summary','本次最近运行来源'),node('p',`持久 Run 索引 · 读取 ${time(value.observed_at)} · 有效至 ${time(value.expires_at)} · 实例 ${value.process_instance_id}`));recentBody.append(details);
+    renderCurrent();
   }
   function renderCurrent() {
-    const signature=JSON.stringify([slot,state.connected]);
+    const {peers}=visibleRuns(recentSource.value);
+    const signature=JSON.stringify([slot,state.connected,peers.map((/** @type {Wire} */ run)=>run.run_id)]);
     if(signature===slotSignature)return;
     slotSignature=signature;current.replaceChildren();
     if(!slot)return;
-    current.append(node('h3',state.connected?'当前宿主观测':'断连 · 当前槽最后观测'),runCard(slot,true,recentSource.value?.runs||[]));
+    current.append(node('h3',state.connected?'当前宿主观测':'断连 · 当前槽最后观测'),runCard(slot,true,peers));
   }
   /** @param {Source} source @param {string} path @param {Record<string,string>} params */
   async function read(source,path,params) {
@@ -195,7 +202,7 @@ export function overviewPage(root,options) {
         if(slot&&durable?.recording_state==='recorded')slot.recording_state='recorded';
         // The sixth candidate only fills this read's slot exclusion; history then stays fixed.
         body.runs=body.runs.filter((/** @type {Wire} */ row)=>row.run_id!==slot?.run_id).slice(0,5);
-        notice.textContent='';renderCurrent();
+        notice.textContent='';
       }
       source.accept(body);restoreFocus();
     }catch(error){if(!disposed&&generation===source.generation){source.loading=false;source.failure=error instanceof Error?error.message:'来源暂不可读';source.present();}}
