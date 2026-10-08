@@ -1,0 +1,224 @@
+{
+  "schema_version": 2,
+  "contract": "DASHBOARD-MIGRATION-IMPLEMENTATION-CONTRACT-r1",
+  "recorded_at": "2026-10-08T17:46:35+00:00",
+  "scope": "Authorized documentation archive and to-spec handoff only",
+  "branch": "codex/issue-92-migration-contract",
+  "document_parents": [
+    "1a343ae1894554ad0167273a34b1f6bce171fb5b",
+    "0120f0aff56b7c8b29854c5d9be5fe475b8b06b7"
+  ],
+  "product_baseline": "22c8720e1ec874fd012cc79b086cd8aace4c79b6",
+  "authorization_record": "PUBLICATION.md",
+  "files": [
+    {
+      "path": "CONTEXT.md",
+      "sha256": "6aace8bf9dae8cc5566db509d49bc531c3770512fabaf49f5f34dea17c04633e",
+      "bytes": 60940
+    },
+    {
+      "path": "docs/adr/0048-exact-run-reply-location-stays-in-mainbar.md",
+      "sha256": "45732b06a5abab917aa7f7d09ba16be5e74a58e591dc7985e9cad3e912442b00",
+      "bytes": 1203
+    },
+    {
+      "path": "docs/design/issue-89/APPROVAL.md",
+      "sha256": "40061bc6e21d5c7209512565928fa81493376f15069f4953759f4f081f94a524",
+      "bytes": 3847
+    },
+    {
+      "path": "docs/design/issue-89/DECISIONS.md",
+      "sha256": "60e9ac0350f8cf6a5d559a001ade8d6627b0df1298c73d4e9adb8ee553483303",
+      "bytes": 12752
+    },
+    {
+      "path": "docs/design/issue-89/DESIGN.md",
+      "sha256": "35ba39e52415b8e349d3658970932bcbd23019ef561f55a41642369afbe0af84",
+      "bytes": 48130
+    },
+    {
+      "path": "docs/design/issue-89/FACTS.md",
+      "sha256": "3052d194d53bd7779e2d3b13aa9d4e25cd59325be5e6d8c74189895a372941a0",
+      "bytes": 11439
+    },
+    {
+      "path": "docs/design/issue-89/PUBLICATION.md",
+      "sha256": "cef66bc063570960d38cd9ab41530682449c137402d42c76250778d461292bfb",
+      "bytes": 2574
+    },
+    {
+      "path": "docs/design/issue-89/QA.md",
+      "sha256": "513e76804092db7d00f7b066f94f478f15f08042a4cfc8be2d0126527cf4178a",
+      "bytes": 4691
+    },
+    {
+      "path": "docs/design/issue-89/RESOLUTION-DRAFT.md",
+      "sha256": "f51a0759d861da100ef35c93c79e9b9eda7f8a9f9286d22f4ea6e31d284ecbb7",
+      "bytes": 3164
+    },
+    {
+      "path": "docs/design/issue-89/manifest.json",
+      "sha256": "880180e32da8803288664c615c49851c2da22051f741405319c53f60cc432eb2",
+      "bytes": 2016
+    },
+    {
+      "path": "docs/design/issue-92/ACCEPTANCE.md",
+      "sha256": "b5b9ba4eaf6fed836823932414d922cb75a59fc052e80ebeaa1d72abc1574a9b",
+      "bytes": 14944
+    },
+    {
+      "path": "docs/design/issue-92/APPROVAL.md",
+      "sha256": "4783ff60c689e81ce5d5e24f5d78bbec20de636d081e61c58f911edf69f1c770",
+      "bytes": 3904
+    },
+    {
+      "path": "docs/design/issue-92/ARCHIVE-VALIDATION.md",
+      "sha256": "50bc0540e9b0914586566c98f379c599ac9e92fd21f726299060c82404d296d0",
+      "bytes": 2701
+    },
+    {
+      "path": "docs/design/issue-92/DECISIONS.md",
+      "sha256": "af4d5794f0334e87669b7ba648a408af81d8767a9a0512edaf43bbc7477d0926",
+      "bytes": 9926
+    },
+    {
+      "path": "docs/design/issue-92/FACTS.md",
+      "sha256": "1498eed72652d2938145da5ed3f2810eea8cbe3c88b397dd5f30f145e6cf9e12",
+      "bytes": 10481
+    },
+    {
+      "path": "docs/design/issue-92/HANDOFF-TO-SPEC.md",
+      "sha256": "621dae02d0270198be61d12a8129b662a318a386a5ee2da72b064c1800eb5d83",
+      "bytes": 4481
+    },
+    {
+      "path": "docs/design/issue-92/PUBLICATION.md",
+      "sha256": "5e821413de9aa23ad0d0a277f025772ec6cd6536c3795a240490a242c5544dee",
+      "bytes": 3324
+    },
+    {
+      "path": "docs/design/issue-92/SLICES-DRAFT.md",
+      "sha256": "bb839ca2622a746d8257042b41e96841911bbae0907d0f934feb384fe2d351e1",
+      "bytes": 7224
+    },
+    {
+      "path": "docs/design/issue-92/SLICES.md",
+      "sha256": "4411d52c0ff5f08da699d23b6be008437d47974bc591f4ac9efc4d841d9500fe",
+      "bytes": 8727
+    },
+    {
+      "path": "docs/design/issue-92/SPEC.md",
+      "sha256": "4006a4219b88ef2e06aa23ec34ea438ac5e6206423f9fb070b61d14dfa13fbf1",
+      "bytes": 17075
+    },
+    {
+      "path": "docs/design/issue-92/VALIDATION-PLAN.md",
+      "sha256": "e27111aaa1745e1be3cc93cc5378f9ad735a089768b6e9fb75cb82dd49bdf8cd",
+      "bytes": 10024
+    },
+    {
+      "path": "docs/design/issue-92/VALIDATION.md",
+      "sha256": "790c0b633b9ee0070fecf8a5faae63d024b6f1900789edeac16464e1c7cd1e40",
+      "bytes": 4736
+    },
+    {
+      "path": "docs/design/issue-92/acceptance-map.json",
+      "sha256": "6689fa44948bdf01bc4e4fe2fc63d6532a0d3067df9c5b2b0f32ab166a1e30e7",
+      "bytes": 318361
+    },
+    {
+      "path": "docs/design/issue-92/history/before-archive/ACCEPTANCE.md",
+      "sha256": "b5b9ba4eaf6fed836823932414d922cb75a59fc052e80ebeaa1d72abc1574a9b",
+      "bytes": 14944
+    },
+    {
+      "path": "docs/design/issue-92/history/before-archive/APPROVAL.md",
+      "sha256": "4783ff60c689e81ce5d5e24f5d78bbec20de636d081e61c58f911edf69f1c770",
+      "bytes": 3904
+    },
+    {
+      "path": "docs/design/issue-92/history/before-archive/DECISIONS.md",
+      "sha256": "07fa956e7c4cae77bf99de6ddf701141ac4b2b255a2820e59a4941da991efca9",
+      "bytes": 9828
+    },
+    {
+      "path": "docs/design/issue-92/history/before-archive/FACTS.md",
+      "sha256": "e8afcf4846683da5086beb335d88a33362649b7c1a4f29e18ff7475c23b94222",
+      "bytes": 10189
+    },
+    {
+      "path": "docs/design/issue-92/history/before-archive/README.md",
+      "sha256": "c3c69e7eaeafab234dcf88afd996278d0d145d6e48fe98ba80e3ec186e2af170",
+      "bytes": 623
+    },
+    {
+      "path": "docs/design/issue-92/history/before-archive/SLICES-DRAFT.md",
+      "sha256": "bb839ca2622a746d8257042b41e96841911bbae0907d0f934feb384fe2d351e1",
+      "bytes": 7224
+    },
+    {
+      "path": "docs/design/issue-92/history/before-archive/SLICES.md",
+      "sha256": "4411d52c0ff5f08da699d23b6be008437d47974bc591f4ac9efc4d841d9500fe",
+      "bytes": 8727
+    },
+    {
+      "path": "docs/design/issue-92/history/before-archive/SPEC.md",
+      "sha256": "a5fd2ef17226a5ef0c7690b828b3ddc915d3fea9d5427744aaef9c6cae35be60",
+      "bytes": 16725
+    },
+    {
+      "path": "docs/design/issue-92/history/before-archive/VALIDATION-PLAN.md",
+      "sha256": "db4640fa3dd7a8091931df84a657951ff2e61bc632c64ab8427ad39ff2e6a52e",
+      "bytes": 9862
+    },
+    {
+      "path": "docs/design/issue-92/history/before-archive/VALIDATION.md",
+      "sha256": "790c0b633b9ee0070fecf8a5faae63d024b6f1900789edeac16464e1c7cd1e40",
+      "bytes": 4736
+    },
+    {
+      "path": "docs/design/issue-92/history/before-archive/acceptance-map.json",
+      "sha256": "e903757969d1e6ce2e3afb4b04e135940bc2420c97096723db353fcfe7b98388",
+      "bytes": 313287
+    },
+    {
+      "path": "docs/design/issue-92/history/before-archive/manifest.json",
+      "sha256": "418d7ca252808ff05eaebb987bccdcc48223b6ca12bfeed8f44c2baa4200c8e7",
+      "bytes": 3743
+    },
+    {
+      "path": "docs/design/issue-92/history/before-archive/source-index.json",
+      "sha256": "d84428996ab25994688b7c46681f47dbd4b80f053a7eedecccef03c19509408a",
+      "bytes": 14188
+    },
+    {
+      "path": "docs/design/issue-92/source-index.json",
+      "sha256": "7b3300b26e7915677ebdb3caea1c412a842da62a8ee2018a57231c5a6f81cf10",
+      "bytes": 14486
+    }
+  ],
+  "manifest_self_hash_included": false,
+  "observed_checks": {
+    "result": "PASS",
+    "archive_files": 38,
+    "markdown_files": 31,
+    "local_links": 249,
+    "original_issue92_files_preserved": 12,
+    "original_issue89_files_preserved": 8,
+    "fixed_source_files": 31,
+    "source_items": 309,
+    "product_contract_R02_R12": "unchanged",
+    "DAG": "acyclic",
+    "whole_section_responsibility_union": "PASS",
+    "main_user_changes": "preserved",
+    "product_scope_diff": "none",
+    "all_product_verification": "NOT RUN"
+  },
+  "source_handoff": {
+    "status": "READY_FOR_TO_SPEC",
+    "open_native_dependencies": [],
+    "product_implementation_authorized": false
+  },
+  "original_manifest": "history/before-archive/manifest.json",
+  "authority_note": "File hashes identify this archive; design confirmations and later Git authorization remain separate. Actual remote publication/closure is recorded in the issue resolutions."
+}

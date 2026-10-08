@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "scope": "Approved issue 89 design archive only",
+  "branch": "codex/issue-89-inbox-runs-design",
+  "document_base": "0e9915b5f020a756776f3e67fe13f352da3bb983",
+  "product_baseline": "22c8720e1ec874fd012cc79b086cd8aace4c79b6",
+  "authorization_record": "PUBLICATION.md",
+  "original_eight_files_preserved": true,
+  "files": [
+    {
+      "path": "CONTEXT.md",
+      "sha256": "d69dbcc9f3dc8e121bfa9b572a3713aeee9f222cc598df592e58209d971e9db5",
+      "bytes": 60336
+    },
+    {
+      "path": "docs/adr/0048-exact-run-reply-location-stays-in-mainbar.md",
+      "sha256": "45732b06a5abab917aa7f7d09ba16be5e74a58e591dc7985e9cad3e912442b00",
+      "bytes": 1203
+    },
+    {
+      "path": "docs/design/issue-89/APPROVAL.md",
+      "sha256": "40061bc6e21d5c7209512565928fa81493376f15069f4953759f4f081f94a524",
+      "bytes": 3847
+    },
+    {
+      "path": "docs/design/issue-89/DECISIONS.md",
+      "sha256": "60e9ac0350f8cf6a5d559a001ade8d6627b0df1298c73d4e9adb8ee553483303",
+      "bytes": 12752
+    },
+    {
+      "path": "docs/design/issue-89/DESIGN.md",
+      "sha256": "35ba39e52415b8e349d3658970932bcbd23019ef561f55a41642369afbe0af84",
+      "bytes": 48130
+    },
+    {
+      "path": "docs/design/issue-89/FACTS.md",
+      "sha256": "3052d194d53bd7779e2d3b13aa9d4e25cd59325be5e6d8c74189895a372941a0",
+      "bytes": 11439
+    },
+    {
+      "path": "docs/design/issue-89/QA.md",
+      "sha256": "513e76804092db7d00f7b066f94f478f15f08042a4cfc8be2d0126527cf4178a",
+      "bytes": 4691
+    },
+    {
+      "path": "docs/design/issue-89/RESOLUTION-DRAFT.md",
+      "sha256": "f51a0759d861da100ef35c93c79e9b9eda7f8a9f9286d22f4ea6e31d284ecbb7",
+      "bytes": 3164
+    },
+    {
+      "path": "docs/design/issue-89/PUBLICATION.md",
+      "sha256": "cef66bc063570960d38cd9ab41530682449c137402d42c76250778d461292bfb",
+      "bytes": 2574
+    }
+  ],
+  "manifest_self_hash_included": false,
+  "verification_boundary": "Document identity and static checks only; all product verification NOT RUN."
+}
