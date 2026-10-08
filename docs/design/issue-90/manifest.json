@@ -1,0 +1,52 @@
+{
+  "design_id": "MEMORY-BEHAVIOUR-TOOLS-DESIGN-r1",
+  "date": "2026-10-08",
+  "timezone": "Asia/Shanghai",
+  "state": "design_confirmed_product_not_implemented",
+  "publication": "not_started",
+  "branch": "codex/issue-90-memory-behaviour-tools-design",
+  "source_commits": {
+    "product": "22c8720e1ec874fd012cc79b086cd8aace4c79b6",
+    "design_parent": "0e9915b5f020a756776f3e67fe13f352da3bb983"
+  },
+  "approval_record": "docs/design/issue-90/APPROVAL.md",
+  "integrity_scope": "Listed local files; manifest excludes itself. This does not prove remote publication or product acceptance.",
+  "files": [
+    {
+      "path": "CONTEXT.md",
+      "sha256": "92cfd1c4dbece5cee963b4704be5c91c838835f3469ce81d83ca21bc39d0706d"
+    },
+    {
+      "path": "docs/adr/0046-panel-visibility-preserves-page-lifecycle.md",
+      "sha256": "3a2b06fcb5688e6e6d6dc9f8a2d2ec7af4b5bfa944fe0556ba44ebca20546e04"
+    },
+    {
+      "path": "docs/design/issue-90/ACCEPTANCE.md",
+      "sha256": "275a4e1e4817f8ee36c2adeb5463075c7315f8f8c049e117792563b028b5acba"
+    },
+    {
+      "path": "docs/design/issue-90/APPROVAL.md",
+      "sha256": "e74d51b236817c448f3f51e2b58a6e96bc6ac5684491a463fe04b24833e2104c"
+    },
+    {
+      "path": "docs/design/issue-90/DECISIONS.md",
+      "sha256": "c1114991998505ac876a73a4316204d16711083617ebd9b78a52c09cfb59ccce"
+    },
+    {
+      "path": "docs/design/issue-90/DESIGN.md",
+      "sha256": "9788e488c7b32dfbe15876193c2fc4958f44b82961ae7f091b8284b073863697"
+    },
+    {
+      "path": "docs/design/issue-90/FACTS.md",
+      "sha256": "c21f1080c8b4235caf767c10a0351d9a31dbb456e56d26288d709a7eccb4fdc1"
+    },
+    {
+      "path": "docs/design/issue-90/RESOLUTION-DRAFT.md",
+      "sha256": "584f7d364d5b3c08a87170b7d9c171579509d4101f0eac39fb63c09084620f35"
+    },
+    {
+      "path": "docs/design/issue-90/VALIDATION.md",
+      "sha256": "ea41b371430d931a3ac046a4db9828c9cda8dd412cb01fdfb5dea950e5ec478f"
+    }
+  ]
+}
