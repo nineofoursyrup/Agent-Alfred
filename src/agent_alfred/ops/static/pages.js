@@ -483,7 +483,12 @@ export function modelsPage(root, csrf) {
     });
     const body = await response.json();
     if (response.ok && alive) {
-      if(op==='display') {const key=JSON.stringify([fields.endpoint_id,fields.model_id]);const draft=nameDrafts.get(key);if(draft&&draft.value===(fields.display_name||''))nameDrafts.delete(key);}
+      if(op==='display') {
+        const key=JSON.stringify([fields.endpoint_id,fields.model_id]);const draft=nameDrafts.get(key);
+        const saved=body.endpoints?.flatMap((/** @type {Wire} */ endpoint) => endpoint.models||[]).find((/** @type {Wire} */ model) => model.endpoint_id===fields.endpoint_id&&model.model_id===fields.model_id);
+        const baseline=saved ? saved.display_name||'' : fields.display_name||'';
+        if(draft){if(draft.value===baseline)nameDrafts.delete(key);else draft.baseline=baseline;}
+      }
       render(body);
     }
   }

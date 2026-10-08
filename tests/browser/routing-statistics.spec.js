@@ -410,6 +410,7 @@ test('INTEGRATION-75 CE-14/15 statistics and both topologies retain independent 
     await routing.getByRole('button', {name:'刷新统计', exact:true}).click();
     await started;
     await page.getByRole('link', {name:'运行', exact:true}).click();
+    await page.getByRole('button',{name:'放弃并离开',exact:true}).click();
     release(); await page.unrouteAll({behavior:'wait'});
     await expect(page.locator('.topology, .routing-statistics')).toHaveCount(0);
     await page.getByRole('link', {name:'行为', exact:true}).click();

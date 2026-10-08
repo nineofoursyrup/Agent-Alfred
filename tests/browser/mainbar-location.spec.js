@@ -45,9 +45,21 @@ test('failed exact location has an explicit read-only retry and does not create 
   page.on('request',request=>{if(request.method()==='POST')posts++;});
   await page.route('**/api/mainbar/locate?*',route=>{reads++;return reads===1?route.fulfill({status:503,json:{code:'reply_unavailable'}}):route.fulfill({json:record(session)});});
   expect((await locate(page,session)).status).toBe('unavailable');
+  await page.getByRole('button',{name:'收起主对话',exact:true}).click();
+  await expect(page.locator('#shell-status')).toContainText('正文未完整加载，可只读重试');
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   await page.getByRole('button',{name:'重新定位正文',exact:true}).click();
   await expect(page.locator('#messages')).toContainText('早期完整正文');
   expect(reads).toBe(2);expect(posts).toBe(0);
+});
+
+test('a later unavailable request cannot erase a retained preview marker',async({page})=>{
+  const session=await controlledTransport(page);let reads=0;
+  await page.route('**/api/mainbar/locate?*',route=>{reads++;return route.fulfill({json:record(session,reads===1?{}:{user:{availability:'unavailable',blocks:null,preview:null}})});});
+  await locate(page,session);await locate(page,session);
+  const article=page.locator('#messages [data-run-id="early"]');
+  await expect(article).toContainText('安全请求预览');
+  await expect(article).toContainText('请求预览（未取得完整请求）');
 });
 
 test('hidden no-reply failure retains outcome attention without inventing a new reply',async({page})=>{

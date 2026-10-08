@@ -65,7 +65,7 @@ test('CE-09/10: failed recording keeps no-reply projection and rejects next Run'
     await expect(page.locator('#messages').getByText('已结束 · 按要求未回复')).toBeVisible();
     await expect(page.locator('#messages').getByText('正文未完整加载')).toHaveCount(0);
     await expect(page.getByRole('button', {name:'发送', exact:true})).toBeDisabled();
-    const href = await page.getByRole('link', {name:'查看当前运行'}).getAttribute('href');
+    const href = await page.getByRole('region', {name:'当前运行', exact:true}).getByRole('link', {name:'查看当前运行'}).getAttribute('href');
     const run = {run_id:new URL(href, server.origin).pathname.split('/').pop(),
       session_id:await page.evaluate(() => sessionStorage.getItem('alfred.session'))};
     await server.send('repair-recording');
@@ -167,7 +167,8 @@ test('CE-01: disabled real browser conversation matches exact pre-routing baseli
         await ready;
         await page.getByRole('button', {name:'新建会话', exact:true}).click();
         await expect(page.getByRole('textbox', {name:'消息'})).toBeEnabled();
-        await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
+        if(source===baseline)await page.getByRole('button',{name:'展开对话',exact:true}).click();
+        else await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
         await page.getByRole('textbox', {name:'消息'}).fill('/skills off\nhello');
         await page.getByRole('button', {name:'发送', exact:true}).click();
         await expect(page.locator('#messages').getByText('离线 Skill 回复')).toBeVisible();

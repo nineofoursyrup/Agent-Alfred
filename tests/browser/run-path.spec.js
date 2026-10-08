@@ -60,7 +60,7 @@ for(const viewport of [{width:1280,height:850},{width:390,height:844}]) test(`CE
     const run=await routingRun(page,server);
     await page.setViewportSize(viewport);
     await page.goto(server.origin+'/runs/'+run);
-    await expect(page.getByRole('button',{name:'新建会话',exact:true})).toBeEnabled();
+    await expect(page.locator('#new-session')).toBeEnabled();
     await page.keyboard.press('Escape');
     const toggle=page.getByRole('button',{name:'本次执行路径',exact:true});
     await toggle.focus();await page.keyboard.press('Enter');

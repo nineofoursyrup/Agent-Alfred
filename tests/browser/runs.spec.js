@@ -449,6 +449,7 @@ test("unsent SSE preparation never becomes an actual Attempt", async ({page}) =>
   await domain(page, 3, session, {name: "run.finished", outcome: "max_steps"});
   await expect(detail.locator("details.attempt")).toHaveCount(0);
   await page.reload();
+  await emit(page, "state_patch", state(session, 1));
   const restored = page.getByRole("region", {name: "运行过程"});
   await expect(restored.getByText("本次输入", {exact: true})).toBeVisible();
   await emit(page, "state_patch", state(session, 2, {coordinator_state: "running", active_run: run(session)}));
@@ -508,6 +509,7 @@ for (const proof of ["committed", "aborted", "block", "start-only", "terminal-on
     const persistent = !["block", "start-only"].includes(proof);
     if (persistent) diskEvents = [{seq: 2, envelope: {step_index: 0, attempt_id: "real"}, payload: terminal}];
     await page.reload();
+    await emit(page, "state_patch", state(session, 1));
     const restored = page.getByRole("region", {name: "运行过程"});
     await expect(restored.getByText("本次输入", {exact: true})).toBeVisible();
     await expect(restored.locator("details.attempt")).toHaveCount(persistent ? 1 : 0);

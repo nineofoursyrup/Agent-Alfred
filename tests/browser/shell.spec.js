@@ -185,7 +185,7 @@ for(const target of ['memory','database'])test(`hidden ${target} still withdraws
     const other=await api(page.request,server.origin);
     const saved=await other.command({operation_id:'shell-hidden-seed',kind:'semantic',action:'save',payload:{subject:'hidden',fact:'hidden-sensitive-body'}});
     await page.setViewportSize({width:390,height:844});await page.goto(server.origin+'/'+target);
-    const content=target==='database'?page.getByRole('region',{name:'查询结果'}):page.getByLabel('语义记忆列表');
+    const content=target==='database'?page.getByRole('region',{name:'查询结果',includeHidden:true}):page.getByLabel('语义记忆列表');
     if(target==='database'){
       await page.getByRole('textbox',{name:'SQL',exact:true}).fill('SELECT fact FROM diag_facts');
       await page.getByRole('button',{name:'执行',exact:true}).click();

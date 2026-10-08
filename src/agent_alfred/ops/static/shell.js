@@ -261,7 +261,7 @@ export function createShell(options) {
   } else storeCurrent();
   present();
   return {
-    start(){if(!mounted)mount();},navigate,openPanel,closePanel,visibleMainbar,
+    start(){if(!mounted)mount();},restore(){capture();mount();},navigate,openPanel,closePanel,visibleMainbar,
     get generation(){return generation;},
     /** @param {any} value */ publish(value){state=Object.freeze({...value});publish();},
     /** @param {(state:any)=>void} callback */ subscribeState(callback){subscribers.add(callback);callback(state);return ()=>subscribers.delete(callback);},
