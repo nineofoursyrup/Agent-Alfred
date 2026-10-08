@@ -76,6 +76,7 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
   const locationNotice = node("p");
   locationNotice.setAttribute("role", "status");
   const mainbar = node("button", "在主对话中查看");
+  mainbar.disabled = true;
   const refreshEvidence = node("button", "刷新过程证据");
   refreshEvidence.addEventListener("click", () => void loadEvidence());
   const refreshRun = node("button", "刷新运行摘要");
@@ -118,12 +119,17 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
     );
     root.append(select, list);
   } else {
+    const actions = node("div");
+    actions.className = "run-actions";
+    const exportLink = node("a", "查看追踪导出");
+    exportLink.href = "#trace-export";
+    follow(exportLink, () => exportView?.reveal());
+    actions.append(back, mainbar, exportLink);
     root.append(
-      back,
+      actions,
       summary,
       metadataStatus,
       refreshRun,
-      mainbar,
       locationNotice,
       evidenceStatus,
       refreshEvidence,
@@ -131,10 +137,6 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
     );
     pathView = topologyView(root, "run-path", runtime, memory, selected);
     root.append(usage, exportMount);
-    const exportLink = node("a", "查看追踪导出");
-    exportLink.href = "#trace-export";
-    follow(exportLink, () => exportView?.reveal());
-    root.insertBefore(exportLink, summary);
     follow(
       back,
       () =>

@@ -18,6 +18,13 @@
   margin: 0 0 12px;
   grid-template-columns: minmax(0, 1fr);
 }
+.run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-block: 12px;
+}
 .run-fields > div {
   min-width: 0;
 }
@@ -77,6 +84,9 @@
   max-height: none;
 }
 @container (min-width:680px) {
+  .run-fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
   .run-table {
     display: table;
   }
