@@ -96,6 +96,7 @@ class SessionMessage:
     # Historic rows may carry the legacy per-message telemetry verbatim; new
     # Runs keep telemetry in runs.telemetry, so this is None for them.
     telemetry: Any | None
+    message_anchor: str | None = None
 
 
 @dataclass(frozen=True)
@@ -406,7 +407,7 @@ def _historic_tail(
         )
         taken = rows[:remaining]
         for row in taken:
-            messages.append(_historic_message(row, redactor))
+            messages.append(_historic_message(row, redactor, session_id=session_id))
             historic_position = row[0]
         if len(rows) <= len(taken):
             return None
@@ -465,8 +466,10 @@ def _created_at(conn, session_id: str) -> str:
 def _run_messages(
     conn, run_id: str, redactor: Redactor
 ) -> list[SessionMessage]:
+    from agent_alfred.runtime.source_locations import message_anchor
+
     rows = conn.execute(
-        """SELECT role, content, source, telemetry, created_at, run_id
+        """SELECT role, content, source, telemetry, created_at, run_id, id, session_id
            FROM agent_log WHERE run_id = ? ORDER BY id ASC""",
         (run_id,),
     ).fetchall()
@@ -478,8 +481,10 @@ def _run_messages(
             created_at=created_at,
             run_id=run_id,
             telemetry=None if telemetry is None else json.loads(telemetry),
+            message_anchor=message_anchor(session_id, "runs", row_id),
         )
-        for role, content, source, telemetry, created_at, run_id in rows
+        for (role, content, source, telemetry, created_at,
+             run_id, row_id, session_id) in rows
     ]
 
 
@@ -511,9 +516,9 @@ def _page_historic(conn, session_id: str, after_id: int | None, count: int):
     ).fetchall()
 
 
-def _historic_message(row, redactor: Redactor) -> SessionMessage:
+def _historic_message(row, redactor: Redactor, *, session_id: str) -> SessionMessage:
     row_id, role, content, source, telemetry, created_at, run_id = row
-    del row_id
+    from agent_alfred.runtime.source_locations import message_anchor
     return SessionMessage(
         role=role,
         blocks=blocks_from_jsonable(_redacted_json(content, redactor)),
@@ -521,4 +526,5 @@ def _historic_message(row, redactor: Redactor) -> SessionMessage:
         created_at=created_at,
         run_id=run_id,
         telemetry=None if telemetry is None else json.loads(telemetry),
+        message_anchor=message_anchor(session_id, "historic", row_id),
     )
