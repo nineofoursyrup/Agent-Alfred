@@ -102,6 +102,11 @@ for (const length of [4, 60])
         await expect(
           preview.locator('[data-source-highlighted="true"]'),
         ).toHaveCount(1);
+        await expect(
+          preview
+            .locator('[data-source-highlighted="true"]')
+            .getByRole("link", { name: "查看运行", exact: true }),
+        ).toBeFocused();
         const location = reads
           .slice(start)
           .filter(
@@ -140,6 +145,11 @@ for (const length of [4, 60])
         await expect(
           preview.locator('[data-source-highlighted="true"]'),
         ).toHaveCount(1);
+        await expect(
+          preview
+            .locator('[data-source-highlighted="true"]')
+            .getByRole("link", { name: "查看运行", exact: true }),
+        ).toBeFocused();
         expect(
           reads
             .slice(runStart)
@@ -155,6 +165,12 @@ for (const length of [4, 60])
             .getByRole("region", { name: "会话列表" })
             .locator('[data-source-highlighted="true"]'),
         ).toHaveAttribute("data-source-id", session);
+        await expect(
+          page
+            .getByRole("region", { name: "会话列表" })
+            .locator('[data-source-highlighted="true"]')
+            .getByRole("link"),
+        ).toBeFocused();
       }
     } finally {
       await server.close();
@@ -275,6 +291,7 @@ test("all Runs return keeps its source filter through one bounded read", async (
     await expect(
       list.locator('[data-source-highlighted="true"]'),
     ).toHaveAttribute("data-source-id", "");
+    await expect(target).toBeFocused();
     await expect(page.getByRole("combobox", { name: "运行筛选" })).toHaveValue(
       "all",
     );

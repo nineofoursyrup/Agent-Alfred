@@ -5,7 +5,8 @@ import { node } from "./dom.js";
  * explicit refresh replaces its window. There is no background data polling.
  * @param {HTMLElement} root @param {string} path @param {Wire} params
  * @param {(body:Wire,replace:boolean)=>void} render @param {string} label
- * @param {()=>Wire} runtime @param {()=>void} [afterRead] */
+ * @param {()=>Wire} runtime @param {()=>void} [afterRead]
+ * @param {(code:string)=>void} [onFailure] */
 export function sourceReader(
   root,
   path,
@@ -14,6 +15,7 @@ export function sourceReader(
   label,
   runtime,
   afterRead = () => {},
+  onFailure = () => {},
 ) {
   const status = node("p");
   status.setAttribute("role", "status");
@@ -36,6 +38,9 @@ export function sourceReader(
     invalidated = "",
     failure = "",
     sequence = 0;
+  let changes = 0,
+    acknowledgedChanges = 0,
+    changeNotice = "";
   let controller = new AbortController();
   let readingIntent = 0;
   const moved = () => {
@@ -68,6 +73,7 @@ export function sourceReader(
       failure,
       waiting ? "运行记录尚未落定；请稍后刷新，暂不跨越消息分段。" : "",
       releasedWaiting ? "运行记录等待已解除，可继续读取。" : "",
+      hasRead && changes > acknowledgedChanges ? changeNotice : "",
       observed
         ? `读取于 ${new Date(observed).toLocaleTimeString()}${stale ? " · " + stale : ""}`
         : invalidated,
@@ -91,7 +97,9 @@ export function sourceReader(
     const state = runtime();
     const own = ++sequence,
       instance = state.instance,
-      intent = readingIntent;
+      intent = readingIntent,
+      readChanges = changes,
+      replacesWindow = replace || !!location || !hasRead;
     if (!instance || state.connected !== true) {
       failure = "连接尚未确认，暂不可读取";
       paint();
@@ -177,6 +185,7 @@ export function sourceReader(
       waitingRevision = state.revision;
       releasedWaiting = false;
       hasRead = true;
+      if (replacesWindow) acknowledgedChanges = readChanges;
       observed = Date.now();
       invalidated = "";
       retry = null;
@@ -185,6 +194,7 @@ export function sourceReader(
     } catch (error) {
       if (closed || own !== sequence) return;
       failure = error instanceof Error ? error.message : "read_unavailable";
+      onFailure(failure);
       if (location) {
         retry = location;
         latest.hidden = false;
@@ -210,6 +220,12 @@ export function sourceReader(
     refresh,
     more,
     status,
+    changed(/** @type {string} */ message = "有新数据，请刷新。") {
+      if (!hasRead && !busy) return;
+      changes++;
+      changeNotice = message;
+      paint();
+    },
     get observed() {
       return observed;
     },
@@ -262,8 +278,10 @@ export function follow(link, action) {
   });
 }
 
-/** @param {HTMLElement} root @param {string} value @param {string} key */
-export function highlightSource(root, value, key) {
+/** A stable non-body trigger is scoped to the revalidated row identity.
+ * @param {HTMLElement} root @param {string} value @param {string} key
+ * @param {{key:string,href:string}|null} trigger @param {HTMLElement|null} fallback */
+export function highlightSource(root, value, key, trigger, fallback) {
   const target = [...root.querySelectorAll("[data-source-key]")].find(
     (item) =>
       item.getAttribute("data-source-key") === key &&
@@ -271,10 +289,22 @@ export function highlightSource(root, value, key) {
   );
   if (target instanceof HTMLElement) {
     target.dataset.sourceHighlighted = "true";
-    target.tabIndex = -1;
     target.scrollIntoView({ block: "center" });
-    target.focus({ preventScroll: true });
+    const control = [...target.querySelectorAll("[data-source-trigger]")].find(
+      (item) =>
+        item.getAttribute("data-source-trigger") === trigger?.key &&
+        item.getAttribute("href") === trigger?.href,
+    );
+    if (control instanceof HTMLElement) {
+      control.focus({ preventScroll: true });
+      return true;
+    }
   }
+  if (fallback) {
+    fallback.tabIndex = -1;
+    fallback.focus({ preventScroll: true });
+  }
+  return false;
 }
 
 /** @param {HTMLElement} root @param {string} text @param {string} key */

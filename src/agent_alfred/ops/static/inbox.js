@@ -30,6 +30,44 @@ export function inbox(root, dashboard) {
   const seen = new Set();
   const heading = node("h2", session === null ? "最近会话" : `会话 ${session}`);
   preview.append(heading);
+  const actions = node("div");
+  actions.className = "inbox-actions";
+  const createButton = node("button", "新建会话并打开主对话");
+  const createReason = node("p"),
+    continueReason = node("p"),
+    restoreNotice = node("p");
+  for (const status of [createReason, continueReason, restoreNotice])
+    status.setAttribute("role", "status");
+  const continueButton = node("button", "继续此会话");
+  let targetVerified = false,
+    targetFailure = "",
+    actionFailure = "";
+  function paintActions() {
+    const createState = dashboard.sessionActionState("create");
+    createButton.disabled = !createState.allowed;
+    createReason.textContent = createState.reason || actionFailure;
+    if (session !== null) {
+      const state = dashboard.sessionActionState("continue", session);
+      const reason =
+        state.reason ||
+        (dashboard.runtime().instance !== connection
+          ? "来源进程已变化，请重新核验会话。"
+          : !targetVerified
+            ? targetFailure || "正在核验会话身份，请等待读取。"
+            : "");
+      continueButton.disabled = !!reason;
+      continueReason.textContent = reason;
+    }
+  }
+  createButton.addEventListener("click", async () => {
+    actionFailure = "";
+    const result = await dashboard.createSession();
+    if (closed) return;
+    actionFailure = result.status === "applied" ? "" : result.reason;
+    paintActions();
+  });
+  actions.append(createButton, createReason);
+  preview.append(actions, restoreNotice);
   const back = node("a", "返回会话列表");
   back.href = "/inbox";
   if (session !== null) {
@@ -41,19 +79,28 @@ export function inbox(root, dashboard) {
             route: "/inbox",
             kind: "sessions",
             anchor: session,
+            trigger: {
+              key: "open-session",
+              href:
+                "/inbox?" +
+                new URLSearchParams({ session_id: session, view: "messages" }),
+            },
             process_instance_id: connection,
           },
         }),
     );
-    const continueButton = node("button", "继续此会话");
-    continueButton.addEventListener(
-      "click",
-      () => void dashboard.selectSession(session),
-    );
+    continueButton.addEventListener("click", async () => {
+      const result = await dashboard.continueSession(session);
+      if (closed) return;
+      paintActions();
+      if (result.status !== "applied")
+        continueReason.textContent = result.reason;
+    });
     preview.append(
       back,
       node("p", "只读预览；继续此会话将切换主对话。"),
       continueButton,
+      continueReason,
     );
     const nav = node("nav");
     nav.setAttribute("aria-label", "会话预览分区");
@@ -77,10 +124,13 @@ export function inbox(root, dashboard) {
     preview.append(nav);
   }
   if (session !== null && !["messages", "runs"].includes(partition)) {
+    targetFailure = "无效的会话预览分区。";
+    const stopActions = dashboard.subscribeSessionActions(paintActions);
     preview.append(node("p", "无效的会话预览分区。"));
     return {
       close() {
         closed = true;
+        stopActions();
       },
     };
   }
@@ -118,6 +168,7 @@ export function inbox(root, dashboard) {
       partition,
       anchor: anchor?.id ?? null,
       anchorKind: anchor?.kind ?? null,
+      trigger: anchor?.trigger ?? null,
       process_instance_id: connection,
       observed_at: reader.observed,
       returnSource: origin,
@@ -125,8 +176,17 @@ export function inbox(root, dashboard) {
   }
   /** @param {HTMLAnchorElement} link @param {string} id @param {string} key */
   function open(link, id, key) {
+    link.dataset.sourceTrigger =
+      key === "session" ? "open-session" : "open-run";
     follow(link, () => {
-      anchor = { id, kind: key };
+      anchor = {
+        id,
+        kind: key,
+        trigger: {
+          key: link.dataset.sourceTrigger,
+          href: link.getAttribute("href"),
+        },
+      };
       void dashboard.navigate(link.href, {
         source: { returnSource: captureSource() },
       });
@@ -224,7 +284,7 @@ export function inbox(root, dashboard) {
           node(
             "p",
             session === null
-              ? "还没有会话，请在主对话中新建会话。"
+              ? "还没有会话，可使用页头的新建会话入口。"
               : "此分区暂无已读记录。",
           ),
         );
@@ -234,8 +294,8 @@ export function inbox(root, dashboard) {
         body.source_focus_allowed
       )
         queueMicrotask(() => {
-          if (!closed)
-            highlightSource(
+          if (!closed) {
+            const focused = highlightSource(
               rows,
               body.target.anchor,
               session === null
@@ -243,13 +303,90 @@ export function inbox(root, dashboard) {
                 : partition === "messages"
                   ? "message"
                   : "run",
+              anchor?.trigger || null,
+              heading,
             );
+            restoreNotice.textContent = focused
+              ? "已重新核验来源并恢复原入口。"
+              : "原入口已不可用，已恢复列表标题。";
+          }
         });
     },
     label,
     dashboard.runtime,
-    () => reconcileWaiting(dashboard.runtime()),
+    () => {
+      targetVerified = true;
+      targetFailure = "";
+      paintActions();
+      reconcileWaiting(dashboard.runtime());
+    },
+    (code) => {
+      if (code === "unknown_session") {
+        targetVerified = false;
+        targetFailure = "此会话不存在或不可用，请返回会话列表。";
+      } else if (!targetVerified)
+        targetFailure = "会话身份尚未核验，请重试读取。";
+      paintActions();
+    },
   );
+  let creationRevision = dashboard.sessionActionState("create").createdRevision;
+  const stopActions = dashboard.subscribeSessionActions(() => {
+    paintActions();
+    const next = dashboard.sessionActionState("create").createdRevision;
+    if (next > creationRevision && session === null)
+      reader.changed("有新数据，请刷新会话。");
+    creationRevision = next;
+  });
+  let lastRevision = dashboard.runtime().revision,
+    lastActive = dashboard.runtime().active;
+  /** Keep historical membership and cursors fixed; only announce related
+   * durable-window changes observed through the accepted Host revisions.
+   * @param {Wire} state */
+  function observeChanges(state) {
+    if (
+      state.instance !== connection ||
+      state.connected !== true ||
+      !Number.isSafeInteger(state.revision)
+    )
+      return;
+    if (state.revision > lastRevision) {
+      const next = state.active;
+      const related = (/** @type {Wire|null} */ run) =>
+        typeof run?.session_id === "string" &&
+        (session === null || run.session_id === session);
+      const signature = (/** @type {Wire|null} */ run) =>
+        run
+          ? JSON.stringify([
+              run.run_id,
+              run.session_id,
+              run.phase,
+              run.recording_state,
+            ])
+          : "";
+      const changed = signature(next) !== signature(lastActive);
+      const settled =
+        (related(next) &&
+          ["recorded", "failed"].includes(next.recording_state)) ||
+        (related(lastActive) && next?.run_id !== lastActive.run_id);
+      // Absolute replacements may skip the active slot entirely. That revision
+      // cannot prove this read unchanged, so offer a conservative explicit check.
+      const unlocatedChange = !lastActive && !next && lastRevision >= 0;
+      if (
+        (changed &&
+          (session === null
+            ? related(next) || related(lastActive)
+            : settled)) ||
+        unlocatedChange
+      )
+        reader.changed(
+          partition === "runs" && session !== null
+            ? "有新运行，请刷新会话运行。"
+            : "有新数据，请刷新" + label + "。",
+        );
+      lastRevision = state.revision;
+      lastActive = next;
+    }
+  }
   /** A newer synchronized Host state can release this Session's waiting
    * boundary without reading or replacing its retained cursor.
    * @param {Wire} state */
@@ -282,6 +419,7 @@ export function inbox(root, dashboard) {
       lastGap = state.readGapRevision;
       reader.invalidate("增量通知缺口，快照待刷新");
     }
+    observeChanges(state);
     reconcileWaiting(state);
     reader.sync();
   });
@@ -294,7 +432,11 @@ export function inbox(root, dashboard) {
       origin = source?.returnSource || null;
       if (source?.kind !== kind || typeof source.anchor !== "string") return;
       restored = true;
-      anchor = { id: source.anchor, kind: source.anchorKind };
+      anchor = {
+        id: source.anchor,
+        kind: source.anchorKind,
+        trigger: source.trigger || null,
+      };
       if (source.process_instance_id !== dashboard.runtime().instance) {
         reader.invalidate("来源进程已变化；请明确刷新当前列表");
         return;
@@ -328,6 +470,7 @@ export function inbox(root, dashboard) {
       closed = true;
       reader.close();
       unsubscribe();
+      stopActions();
     },
   };
 }

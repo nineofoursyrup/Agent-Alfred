@@ -33,6 +33,8 @@ let connected = false;
 let valid = false;
 let sending = false;
 let creating = false;
+let createdSessionRevision = 0;
+/** @type {Set<()=>void>} */ const sessionActionListeners = new Set();
 let unavailable = false;
 /** @type {Wire|null} */ let busySummary = null;
 /** @type {Wire|null} */ let active = null;
@@ -121,11 +123,30 @@ function canSend() {
     !!input.value.trim()
   );
 }
+/** The one owner supplies both control availability and click-time checks.
+ * @param {'create'|'continue'} action @param {string|null} [target] */
+function sessionActionState(action, target = null) {
+  let reason = creating ? '正在新建会话，请等待完成。'
+    : sending ? '正在提交，请等待当前请求确认。'
+    : !csrf ? '入口凭据尚未就绪，请等待连接核验。' : '';
+  if (!reason && action === 'create') {
+    reason = active || busySummary ? '当前运行尚未收尾，请完成后再新建。'
+      : unavailable ? '记录服务不可用，暂不能新建会话。' : '';
+  } else if (!reason && action === 'continue') {
+    reason = !connected ? '连接尚未同步，请等待状态核验。'
+      : typeof target !== 'string' ? '会话身份不可用。'
+      : (['chat','aggregation'].includes(active?.purpose) && active?.session_id === session && target !== session)
+        ? '当前会话的运行尚未收尾，请完成后再切换。'
+      : target === session && !valid ? '会话已失效；请保留草稿并选择或新建会话。' : '';
+  }
+  return {allowed: !reason, reason, createdRevision: createdSessionRevision};
+}
 function updateSend() {
   /** @type {HTMLButtonElement} */ (element("send")).disabled = !canSend();
   element("send-reason").textContent=session===null?"请显式新建或继续会话。":!connected?"连接尚未同步；草稿仍可编辑。":!valid?"会话不可用；请保留草稿并选择会话。":unavailable?"记录服务不可用；不会排队发送。":sending?"正在提交；新增输入会保留。":active||busySummary?"当前运行尚未收尾；不会排队发送。":"Enter 发送 · Shift+Enter 换行";
   /** @type {HTMLButtonElement} */ (element("new-session")).disabled =
-    creating || sending || !!active || !!busySummary || unavailable || !csrf;
+    !sessionActionState('create').allowed;
+  for (const listener of sessionActionListeners) listener();
 }
 /** @param {Wire|null} summary */
 function renderBusy(summary) {
@@ -730,19 +751,18 @@ memory.watch(publishState);
 export const dashboard = {
   navigate:shell.navigate,openPanel:shell.openPanel,closePanel:shell.closePanel,
   subscribeState:shell.subscribeState,selectSession:resume,locateReply,returnLatest,
+  sessionActionState,continueSession,createSession:()=>createSession(true),
+  subscribeSessionActions(/** @type {()=>void} */ listener) {sessionActionListeners.add(listener);listener();return ()=>sessionActionListeners.delete(listener);},
   runtime:()=>({instance,connected,session,active,revision,unavailable}),
 };
 /** @param {string} target */
 async function resume(target) {
-  if (
-    sending || creating ||
-    (["chat","aggregation"].includes(active?.purpose) &&
-      active?.session_id === session &&
-      target !== session)
-  ) {
-    error.textContent = "当前会话的运行尚未收尾，请完成后再切换。";
-    return;
-  }
+  return (await continueSession(target)).status === 'applied';
+}
+/** @param {string} target */
+async function continueSession(target) {
+  const state = sessionActionState('continue',target);
+  if (!state.allowed) {error.textContent=state.reason;return {status:'blocked',reason:state.reason};}
   if (target !== session) {
     retireLocation();
     session = target;
@@ -758,8 +778,9 @@ async function resume(target) {
     stream.connect(session);
   }
   shell.openPanel('mainbar');
+  updateSend();
   void loadMessages();
-  return true;
+  return {status:'applied',session_id:target};
 }
 input.addEventListener("input", () => {
   if (session !== null) storage.set(`alfred.draft:${session}`, input.value);
@@ -788,12 +809,13 @@ window.addEventListener("pageshow", (event) => {
     stream.connect(session);
   }
 });
-element("new-session").addEventListener("click", async () => {
-  const button = /** @type {HTMLButtonElement} */ (element("new-session"));
-  if(creating)return;
+/** @param {boolean} [reveal] */
+async function createSession(reveal = false) {
+  const state = sessionActionState('create');
+  if (!state.allowed) {error.textContent=state.reason;return {status:'blocked',reason:state.reason};}
   creating=true;
-  const focusOwner=document.activeElement;const pageOwner=shell.generation;
-  button.disabled = true;
+  const intent=readingIntent;const pageOwner=shell.generation;
+  updateSend();
   try {
     const response = await fetch("/api/sessions", {
       method: "POST",
@@ -804,8 +826,11 @@ element("new-session").addEventListener("click", async () => {
       body: "{}",
     });
     const result = await response.json();
-    if (!response.ok || typeof result.session_id !== "string")
-      throw new Error("会话未能创建，请稍后重试。");
+    if (!response.ok || typeof result.session_id !== "string") {
+      const reasons=/** @type {Record<string,string>} */({mutation_in_flight:'当前运行或保存操作尚未收尾，请稍后重试。',recording_unavailable:'记录服务不可用，暂不能新建会话。',admission_failed:'运行受理不可用，暂不能新建会话。'});
+      throw new Error(reasons[result.code] || "会话未能创建，请稍后重试。");
+    }
+    createdSessionRevision++;
     retireLocation();
     session = result.session_id;
     storage.set("alfred.session", /** @type {string} */ (session));
@@ -817,16 +842,19 @@ element("new-session").addEventListener("click", async () => {
     memory.disconnected();
     accountingView?.disconnect();
     stream.connect(session);
-    if(pageOwner===shell.generation && document.activeElement===focusOwner && shell.visibleMainbar())shell.openPanel("mainbar");
+    if(pageOwner===shell.generation && readingIntent===intent && (reveal || shell.visibleMainbar()))shell.openPanel("mainbar");
     void loadMessages();
+    return {status:'applied',session_id:session};
   } catch (failure) {
     error.textContent =
       failure instanceof Error ? failure.message : "连接不可用";
+    return {status:'failed',reason:error.textContent};
   } finally {
     creating=false;
     updateSend();
   }
-});
+}
+element("new-session").addEventListener("click", () => void createSession());
 restoreDraft();
 restoreUnread();
 try {

@@ -32,6 +32,7 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
     evidence = /** @type {Wire|null} */ (null);
   let origin = /** @type {Wire|null} */ (null),
     anchor = /** @type {string|null} */ (null),
+    trigger = /** @type {{key:string,href:string}|null} */ (null),
     live = /** @type {Wire|null} */ (null);
   let sequence = 0,
     controller = new AbortController(),
@@ -173,6 +174,7 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
           filter,
           anchor,
           anchorKind: "run",
+          trigger,
           process_instance_id: connection,
           observed_at: reader.observed,
         }
@@ -187,8 +189,10 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
       encodeURIComponent(run.run_id) +
       "?" +
       new URLSearchParams({ filter });
+    link.dataset.sourceTrigger = "open-run";
     follow(link, () => {
       anchor = run.run_id;
+      trigger = { key: "open-run", href: link.getAttribute("href") || "" };
       void dashboard.navigate(link.href, {
         source: { returnSource: captureSource() },
       });
@@ -232,7 +236,17 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
       }
       if (body.target && body.source_focus_allowed)
         queueMicrotask(() => {
-          if (!closed) highlightSource(list, body.target.anchor, "run");
+          if (
+            !closed &&
+            !highlightSource(
+              list,
+              body.target.anchor,
+              "run",
+              trigger,
+              root.closest("main")?.querySelector("h1") || null,
+            )
+          )
+            notice.textContent = "原入口已不可用，已恢复列表标题。";
         });
     },
     "运行",
@@ -816,6 +830,7 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
       if (source?.kind !== "runs" || typeof source.anchor !== "string") return;
       restored = true;
       anchor = source.anchor;
+      trigger = source.trigger || null;
       if (source.process_instance_id !== connection) {
         reader.invalidate("来源进程已变化；请明确刷新当前列表");
         return;

@@ -25,6 +25,20 @@
   gap: 12px;
   margin-block: 12px;
 }
+.inbox-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-block: 12px;
+}
+.inbox-actions [role="status"] {
+  flex-basis: 100%;
+  margin: 0;
+}
+.inbox-actions [role="status"]:empty {
+  display: none;
+}
 .run-fields > div {
   min-width: 0;
 }
