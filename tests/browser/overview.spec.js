@@ -376,6 +376,7 @@ test('Overview keeps opaque colliding identities and reference layouts readable'
 
 test('A real recorded read merges into the held current slot without duplicate or old pending downgrade', async ({page}) => {
   const server=await fixture();
+  let recentReads=0;page.on('request',request=>{if(request.url().includes('/api/overview/recent-runs?'))recentReads++;});
   try {
     await observeStream(page);await server.send('runs 5');await page.goto(server.origin+'/overview');
     await expect(page.locator('.overview-run')).toHaveCount(5);
@@ -390,11 +391,19 @@ test('A real recorded read merges into the held current slot without duplicate o
     await expect(page.locator('.overview-history .overview-run')).toHaveCount(5);
     const ids=await page.locator('.overview-run').evaluateAll(rows=>rows.map(row=>row.dataset.runId));
     expect(new Set(ids).size).toBe(6);expect(ids.filter(id=>id===accepted.run_id)).toHaveLength(1);
+    const historicalIds=await page.locator('.overview-history .overview-run').evaluateAll(rows=>rows.map(row=>row.dataset.runId));
+    const readsBeforeRelease=recentReads;
     const old=await page.evaluate(()=>window.lastPending);expect(old).toBeTruthy();await emit(page,'state_patch',old);
     await expect(current).toContainText('已保存');await expect(current).not.toContainText('正在保存');
     await expect.poll(()=>page.evaluate(()=>window.heldIdle?.length||0)).toBeGreaterThan(0);
     await page.evaluate(()=>{window.holdIdle=false;for(const deliver of window.heldIdle.splice(0))deliver();});
     await expect(current.locator('.overview-run')).toHaveCount(0);
     await expect(page.locator('.overview-history .overview-run')).toHaveCount(5);
+    expect(await page.locator('.overview-history .overview-run').evaluateAll(rows=>rows.map(row=>row.dataset.runId))).toEqual(historicalIds);
+    expect(recentReads).toBe(readsBeforeRelease);
+    expect(historicalIds).not.toContain(accepted.run_id);
+    await page.getByRole('button',{name:'刷新最近运行'}).click();
+    await expect(page.locator('.overview-history .overview-run').first()).toHaveAttribute('data-run-id',accepted.run_id);
+    expect(recentReads).toBe(readsBeforeRelease+1);
   } finally {await server.send('release-recording');await server.close();}
 });

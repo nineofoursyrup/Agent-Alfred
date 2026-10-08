@@ -161,7 +161,7 @@ export function overviewPage(root,options) {
   function renderRecent(value) {
     recentBody.replaceChildren();
     if(!value){recentBody.append(node('p','—'));return;}
-    const rows=value.runs.filter((/** @type {Wire} */ row)=>row.run_id!==slot?.run_id).slice(0,5);
+    const rows=value.runs.filter((/** @type {Wire} */ row)=>row.run_id!==slot?.run_id);
     if(!rows.length)recentBody.append(node('p','暂无可展示的已结束运行'));
     for(const run of rows)recentBody.append(runCard(run,false,value.runs));
     const details=node('details');details.append(node('summary','本次最近运行来源'),node('p',`持久 Run 索引 · 读取 ${time(value.observed_at)} · 有效至 ${time(value.expires_at)} · 实例 ${value.process_instance_id}`));recentBody.append(details);
@@ -192,6 +192,8 @@ export function overviewPage(root,options) {
       if(source===recentSource){
         const durable=body.runs.find((/** @type {Wire} */ row)=>row.run_id===slot?.run_id);
         if(slot&&durable?.recording_state==='recorded')slot.recording_state='recorded';
+        // The sixth candidate only fills this read's slot exclusion; history then stays fixed.
+        body.runs=body.runs.filter((/** @type {Wire} */ row)=>row.run_id!==slot?.run_id).slice(0,5);
         notice.textContent='';renderCurrent();
       }
       source.accept(body);restoreFocus();
