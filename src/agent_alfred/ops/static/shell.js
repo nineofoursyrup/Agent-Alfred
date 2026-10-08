@@ -2,6 +2,7 @@ import {node} from './dom.js';
 
 /** The only source of route, navigation and title identities. */
 export const PAGES = [
+  {path:'/overview', title:'总览', english:'Overview', group:'工作区'},
   {path:'/inbox', title:'收件箱', english:'Inbox', group:'工作区'},
   {path:'/runs', title:'运行', english:'Runs', group:'工作区'},
   {path:'/memory', title:'记忆', english:'Memory', group:'工作区'},
