@@ -1,0 +1,37 @@
+{
+  "scope": "documentation checker tooling history; not a product failure or product verification",
+  "attempts": [
+    {
+      "attempt": 1,
+      "observed_utc": "2026-10-08T18:29:41.263553+00:00",
+      "checker_sha256": "6db9ba1d074cfb7cb092b4b5b32641d40df0cff807697a7bfe1162e4f5cb5ee3",
+      "result": {
+        "result": "FAIL",
+        "scope": "documentation static checks",
+        "tooling_error": "'source_end_line'",
+        "all_product_verification": "NOT RUN"
+      },
+      "diagnosis": "The source map uses source_end_line for normative sections but single source_line for table items. The checker incorrectly required source_end_line on every item.",
+      "repair": "Preserve each original hashing convention: sections include their trailing newline; single table rows do not append a newline."
+    }
+  ],
+  "all_product_verification": "NOT RUN",
+  "tooling_observations": [
+    {
+      "command": "uv run --no-sync ruff check docs/design/dashboard-implementation/verify_spec.py",
+      "result": "TOOLING_ERROR",
+      "detail": "No Ruff executable in this worktree. uv created an empty .venv; only the task-created empty environment was removed after checking its contents. No product tests ran.",
+      "recovery": "Use existing /Users/nineofour/Agent-Alfred/.venv/bin/ruff with --no-cache; do not install dependencies."
+    }
+  ],
+  "lint_observations": [
+    {
+      "command": "/Users/nineofour/Agent-Alfred/.venv/bin/ruff check --no-cache docs/design/dashboard-implementation/verify_spec.py",
+      "checker_sha256": "59702cfa07cef9cad018b76e3acb854a65dae87184db8434a72ed0926f83f95d",
+      "result": "FAIL",
+      "rule": "E501",
+      "count": 14,
+      "repair": "Format only the new documentation checker and wrap remaining long literals; product source is unchanged."
+    }
+  ]
+}

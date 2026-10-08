@@ -1,0 +1,207 @@
+{
+  "observed_at": "2026-10-08T18:05:13.589821+00:00",
+  "sources": [
+    {
+      "issue": 86,
+      "state": "closed",
+      "state_reason": "completed",
+      "fixed_commit": "541befcbe4f771d6f0d7ce3dfc820357c91c7cbc",
+      "matching_resolutions": [
+        {
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/issues/86#issuecomment-6054783352",
+          "updated_at": "2026-10-08T07:20:56Z",
+          "body_sha256": "ad83768a9b245b192d2fdedd2b79ff40f1a7ee50d4c6bcf342b4aaab25038866"
+        }
+      ],
+      "dependency_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 2
+      }
+    },
+    {
+      "issue": 87,
+      "state": "closed",
+      "state_reason": "completed",
+      "fixed_commit": "751d5b84e1b7a633019920a805ab647c1b15a419",
+      "matching_resolutions": [
+        {
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/issues/87#issuecomment-6056440401",
+          "updated_at": "2026-10-08T09:01:05Z",
+          "body_sha256": "942ab8612e621ebf157ded9e4fa386368d505d62c237eb32ea9d76d647bbfc07"
+        }
+      ],
+      "dependency_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 1,
+        "blocking": 0,
+        "total_blocking": 4
+      }
+    },
+    {
+      "issue": 88,
+      "state": "closed",
+      "state_reason": "completed",
+      "fixed_commit": "0e9915b5f020a756776f3e67fe13f352da3bb983",
+      "matching_resolutions": [
+        {
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/issues/88#issuecomment-6057770954",
+          "updated_at": "2026-10-08T10:21:56Z",
+          "body_sha256": "11c36247823ac5fb5c7ba39ecb0b5901b4e85852b0c5c3415e1ed6ffce5d6286"
+        }
+      ],
+      "dependency_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 0,
+        "blocking": 0,
+        "total_blocking": 1
+      }
+    },
+    {
+      "issue": 89,
+      "state": "closed",
+      "state_reason": "completed",
+      "fixed_commit": "0120f0aff56b7c8b29854c5d9be5fe475b8b06b7",
+      "matching_resolutions": [
+        {
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/issues/89#issuecomment-6065550390",
+          "updated_at": "2026-10-08T17:35:48Z",
+          "body_sha256": "360db7fd72a8eb51765a85593daa81334573ac4a7626f4033a5aa4be14b06f7e"
+        }
+      ],
+      "dependency_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 1,
+        "blocking": 0,
+        "total_blocking": 1
+      }
+    },
+    {
+      "issue": 90,
+      "state": "closed",
+      "state_reason": "completed",
+      "fixed_commit": "7d175d6a65a93aec725cf86e6be3df167d3ca74c",
+      "matching_resolutions": [
+        {
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/issues/90#issuecomment-6061651349",
+          "updated_at": "2026-10-08T14:06:29Z",
+          "body_sha256": "7d56ff737c8066564583f33720d1089c881eb49c2e2cc439448c0680c9cb664a"
+        }
+      ],
+      "dependency_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 1,
+        "blocking": 0,
+        "total_blocking": 1
+      }
+    },
+    {
+      "issue": 91,
+      "state": "closed",
+      "state_reason": "completed",
+      "fixed_commit": "1a343ae1894554ad0167273a34b1f6bce171fb5b",
+      "matching_resolutions": [
+        {
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/issues/91#issuecomment-6063969211",
+          "updated_at": "2026-10-08T16:04:32Z",
+          "body_sha256": "5258d8a295c30d6107e66aa0f8b1aed0f819da0d07d60711d23dcd6f03aac441"
+        }
+      ],
+      "dependency_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 1,
+        "blocking": 0,
+        "total_blocking": 1
+      }
+    },
+    {
+      "issue": 92,
+      "state": "closed",
+      "state_reason": "completed",
+      "fixed_commit": "9716e0c395c603ccc262284de577cfb8df3f8d48",
+      "matching_resolutions": [
+        {
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/issues/92#issuecomment-6065812852",
+          "updated_at": "2026-10-08T17:51:12Z",
+          "body_sha256": "c54eedc64c253f92363b060dda71d1c15a1efdfcf36f44cfc70b300992de8e78"
+        }
+      ],
+      "dependency_summary": {
+        "blocked_by": 0,
+        "total_blocked_by": 6,
+        "blocking": 0,
+        "total_blocking": 0
+      }
+    }
+  ],
+  "map_children": [
+    {
+      "number": 86,
+      "state": "closed",
+      "state_reason": "completed"
+    },
+    {
+      "number": 87,
+      "state": "closed",
+      "state_reason": "completed"
+    },
+    {
+      "number": 88,
+      "state": "closed",
+      "state_reason": "completed"
+    },
+    {
+      "number": 89,
+      "state": "closed",
+      "state_reason": "completed"
+    },
+    {
+      "number": 90,
+      "state": "closed",
+      "state_reason": "completed"
+    },
+    {
+      "number": 91,
+      "state": "closed",
+      "state_reason": "completed"
+    },
+    {
+      "number": 92,
+      "state": "closed",
+      "state_reason": "completed"
+    }
+  ],
+  "issue92_dependencies": [
+    {
+      "number": 86,
+      "state": "closed",
+      "state_reason": "completed"
+    },
+    {
+      "number": 87,
+      "state": "closed",
+      "state_reason": "completed"
+    },
+    {
+      "number": 88,
+      "state": "closed",
+      "state_reason": "completed"
+    },
+    {
+      "number": 89,
+      "state": "closed",
+      "state_reason": "completed"
+    },
+    {
+      "number": 90,
+      "state": "closed",
+      "state_reason": "completed"
+    },
+    {
+      "number": 91,
+      "state": "closed",
+      "state_reason": "completed"
+    }
+  ]
+}
