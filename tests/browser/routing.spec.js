@@ -2,6 +2,41 @@ import {observeTopology} from './topology-observation.js';
 import {test, expect} from '@playwright/test';
 import {memoryServer, api} from './memory-server.js';
 
+test('S06 CE-13: read-only comparison cannot rebase a dirty routing choice', async ({page}) => {
+  const server = await memoryServer({script:'tests/browser/routing_server.py'});
+  try {
+    await page.goto(server.origin + '/behaviour');
+    const choice = page.getByRole('checkbox', {name:'启用消息分流'});
+    await expect(choice).toBeEnabled();
+    const saved = await (await page.request.get(server.origin + '/api/behaviour')).json();
+    await choice.check();
+    const {csrf_token} = await (await page.request.get(server.origin + '/api/entry')).json();
+    const external = await page.request.post(server.origin + '/api/behaviour', {
+      headers:{'x-agent-alfred-csrf':csrf_token},
+      data:{action:'save',enabled:true,expected_revision:saved.revision},
+    });
+    expect(external.status()).toBe(200);
+    const refreshed = page.waitForResponse(r => r.url().endsWith('/api/behaviour') && r.request().method()==='GET');
+    await page.getByRole('button',{name:'刷新设置',exact:true}).click();
+    await refreshed;
+    await observeTopology(page);
+    await choice.uncheck(); // Still an edit of the original version, not consent to the external revision.
+    await choice.check();
+    const attempted = page.waitForResponse(r => r.url().endsWith('/api/behaviour') && r.request().method()==='POST');
+    await page.getByRole('button',{name:'保存设置',exact:true}).click();
+    const response = await attempted;
+    expect(response.request().postDataJSON().expected_revision).toBe(saved.revision);
+    expect(response.status()).toBe(409);
+    await expect(page.getByText(/settings_conflict/)).toBeVisible();
+    await expect(choice).toBeChecked();
+    await page.getByRole('button',{name:'基于当前版本继续编辑',exact:true}).click();
+    await choice.uncheck();
+    await page.getByRole('button',{name:'保存设置',exact:true}).click();
+    await expect(page.getByText('已保存；下一 Run 生效。',{exact:true})).toBeVisible();
+    expect((await (await page.request.get(server.origin+'/api/behaviour')).json()).enabled).toBe(false);
+  } finally {await server.close();}
+});
+
 test('CE-07/09/12: Behaviour, no reply, refresh and real restart', async ({page}) => {
   const server = await memoryServer({script: 'tests/browser/routing_server.py'});
   try {
@@ -134,7 +169,7 @@ test('CE-13: page fingerprint rejects external change and explicitly backs up re
     await page.getByRole('button', {name:'刷新设置'}).click();
     await expect(page.getByText(/配置不可用/)).toBeVisible();
     await recover.click();
-    await expect(page.getByText('已保存；下一 Run 生效。')).toBeVisible();
+    await expect(page.getByText('已备份原文件并恢复为关闭；下一 Run 生效。')).toBeVisible();
     const backup = (await readdir(server.directory)).find(p => p.startsWith('behaviour.json.backup-'));
     expect(await readFile(join(server.directory, backup), 'utf8')).toBe('broken B');
     await server.restart();
@@ -182,4 +217,31 @@ test('CE-01: disabled real browser conversation matches exact pre-routing baseli
     }
     expect(texts[1]).toBe(texts[0]);
   } finally {await rm(baseline, {recursive:true, force:true});}
+});
+
+test('S06 CE-13: a delayed save receipt preserves the choice edited after submission',async({page})=>{
+  const server = await memoryServer({script:'tests/browser/routing_server.py'});
+  let release = () => {};
+  try {
+    await page.goto(server.origin+'/behaviour');
+    const choice = page.getByRole('checkbox',{name:'启用消息分流'});
+    await choice.check();
+    let accepted;
+    const started = new Promise(resolve=>accepted=resolve), gate = new Promise(resolve=>release=resolve);
+    await page.route('**/api/behaviour',async route=>{
+      if(route.request().method()!=='POST')return route.continue();
+      const response = await route.fetch();accepted();await gate;await route.fulfill({response});
+    });
+    await page.getByRole('button',{name:'保存设置',exact:true}).click();await started;
+    await choice.uncheck();
+    await expect(page.getByRole('button',{name:'刷新设置',exact:true})).toBeDisabled();
+    release();
+    await expect(page.getByText('已保存；下一 Run 生效。',{exact:true})).toBeVisible();
+    await expect(choice).not.toBeChecked();
+    await expect(page.getByText(/未提交选择：关闭 · 编辑基线 revision 1/)).toBeVisible();
+    await page.getByRole('button',{name:'刷新设置',exact:true}).click();
+    await expect(page.getByText(/已保存的分流设置：开启 · revision 1/)).toBeVisible();
+    await expect(choice).not.toBeChecked();
+    expect((await(await page.request.get(server.origin+'/api/behaviour')).json()).enabled).toBe(true);
+  } finally {release();await server.close();}
 });

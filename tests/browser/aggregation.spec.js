@@ -69,6 +69,23 @@ async function prepareDraft(page, server, beforeCreate = async () => {}) {
   return {other, session, memoryId:saved.body.result.memory_id};
 }
 
+test('S06 CE-18/19: a fresh form never adopts another aggregation terminal projection', async ({page},testInfo) => {
+  const server = await memoryServer({script:'tests/browser/aggregation_server.py'});
+  try {
+    await prepareDraft(page,server);
+    await server.send('fail-recording');
+    await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
+    await expect(page.getByText('草稿未保存，请查看运行记录状态。',{exact:true})).toBeVisible();
+    await page.getByText('草稿未保存，请查看运行记录状态。',{exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:testInfo.outputPath('aggregation-recording-failed.png')});
+    await page.reload();
+    await expect(page.locator('#messages').getByText('已验证草稿 [[S1]]',{exact:true})).toBeVisible();
+    const form = page.getByRole('region',{name:'手动聚合',exact:true});
+    await expect(form.getByText('尚未提交聚合请求。',{exact:true})).toBeVisible();
+    await expect(form.getByRole('heading',{name:'聚合草稿',exact:true})).toHaveCount(0);
+    await expect(form.getByRole('button',{name:'语义记忆 S1',exact:true})).toHaveCount(0);
+  } finally {await server.close();}
+});
+
 test('aggregation CE-08/11: candidate hidden, recording pending busy and failed recovery', async ({page}) => {
   const server = await memoryServer({script:'tests/browser/aggregation_server.py'});
   try {
@@ -494,8 +511,9 @@ test('CI-01: delayed initial Session list cannot erase a newer selected target',
   const server = await memoryServer({script:'tests/browser/aggregation_server.py'});
   let release = () => {};
   try {
-    let first = true, captured;
+    let first = true, captured, finished;
     const received = new Promise(resolve => { captured = resolve; });
+    const settled = new Promise(resolve => { finished = resolve; });
     const held = new Promise(resolve => { release = resolve; });
     await page.route('**/api/sessions?*', async route => {
       if (!first) return route.continue();
@@ -503,11 +521,13 @@ test('CI-01: delayed initial Session list cannot erase a newer selected target',
       const response = await route.fetch();
       expect(response.status()).toBe(200);
       expect((await response.json()).sessions).toEqual([]);
-      captured(); await held; await route.fulfill({response});
+      captured(); await held; await route.fulfill({response}).catch(() => {}); finished();
     });
     const {other, session} = await prepareDraft(page, server, () => received);
     await expect(page.getByRole('combobox',{name:'目标会话'})).toHaveValue(session);
-    await deliverSessionList(page, release);
+    // Refresh cancels the superseded GET. Await the intercepted response's
+    // completion, since an aborted fetch correctly emits no browser response.
+    release(); await settled;
     // Keep the original HTTP acceptance assertion as well as the selected value.
     const accepted = page.waitForResponse(r => r.url().endsWith('/api/runs') && r.request().method() === 'POST');
     await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
@@ -556,4 +576,24 @@ test('CI-01: an in-flight Session refresh preserves the latest user selection', 
     expect(body.session_id).toBe(second);
     await expect.poll(async () => (await other.get('/api/run-evidence?run_id='+body.run_id)).body.memory?.aggregation?.request?.session_id).toBe(second);
   } finally { release(); await server.close(); }
+});
+
+test('S06 CE-19: a retained failed-recording form uses the restarted Run outcome instead of old trace success',async({page})=>{
+  const server=await memoryServer({script:'tests/browser/aggregation_server.py'});
+  const posts=[];page.on('request',r=>{if(r.method()==='POST'&&r.url().endsWith('/api/runs'))posts.push(r.postDataJSON());});
+  try {
+    await prepareDraft(page,server);await server.send('fail-recording');
+    await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
+    await expect(page.getByText('草稿未保存，请查看运行记录状态。',{exact:true})).toBeVisible();
+    const form=page.getByRole('region',{name:'手动聚合',exact:true});
+    await form.getByRole('textbox',{name:'聚合目标',exact:true}).fill('重启后仍应保留的新目标');
+    const prior=(await(await page.request.get(server.origin+'/api/entry')).json()).instance_id;
+    const changed=page.waitForResponse(async r=>r.url().endsWith('/api/entry')&&r.ok()&&(await r.json()).instance_id!==prior);
+    await server.send('repair-recording');await server.restart();await changed;
+    await form.getByRole('button',{name:'重新核对本次运行',exact:true}).click();
+    await expect(form.getByText(/本次运行已中断（interrupted）/)).toBeVisible();
+    await expect(form.getByRole('heading',{name:'聚合草稿',exact:true})).toHaveCount(0);
+    await expect(form.getByRole('textbox',{name:'聚合目标',exact:true})).toHaveValue('重启后仍应保留的新目标');
+    await expect(form.getByRole('button',{name:'生成聚合草稿',exact:true})).toBeEnabled();expect(posts).toHaveLength(1);
+  }finally{await server.close();}
 });
