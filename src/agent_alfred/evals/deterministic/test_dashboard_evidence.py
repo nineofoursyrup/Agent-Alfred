@@ -214,24 +214,27 @@ def test_failed_run_keeps_recorded_accounting_and_string_terminal_error(tmp_path
 
     class FailedModel(ScriptedModel):
         def respond(self, request, *, events=None, deadline=None):
-            error = ModelError(False, None, "offline failure", "failed-attempt",
+            self.requests.append(request)
+            attempt_id = f"failed-attempt-{len(self.requests)}"
+            error = ModelError(False, None, "offline failure", attempt_id,
                                "offline_failure")
             usage = Usage(output_tokens=7)
             if events is not None:
-                events.emit(AttemptStarted(attempt_id="failed-attempt"))
+                events.emit(AttemptStarted(attempt_id=attempt_id))
                 events.emit(AttemptAborted(
-                    attempt_id="failed-attempt", error=error, usage=usage,
+                    attempt_id=attempt_id, error=error, usage=usage,
                 ))
             return ModelResult(
-                attempts=(AttemptRecord("failed-attempt", False, "aborted",
+                attempts=(AttemptRecord(attempt_id, False, "aborted",
                                         usage, error),),
                 response=None, final_error=error,
             )
 
     port = free_loopback_port()
+    model = FailedModel([])
     dashboard = build_dashboard(
         state_dir=tmp_path, port=port,
-        factory=ScriptedModelFactory(FailedModel([])),
+        factory=ScriptedModelFactory(model),
     )
     try:
         dashboard.start()
@@ -247,8 +250,13 @@ def test_failed_run_keeps_recorded_accounting_and_string_terminal_error(tmp_path
         assert body["trace_status"] == "available"
         assert body["recording_state"] == "recorded"
         assert body["trace_incomplete"] is False
-        assert body["attempts"][0]["usage"]["output_tokens"] == 7
-        assert body["attempts"][0]["outcome"] == "aborted"
+        assert len(model.requests) == 2  # failed gate and ordinary fallback
+        assert [a["attempt_id"] for a in body["attempts"]] == [
+            "failed-attempt-1", "failed-attempt-2",
+        ]
+        assert [
+            (a["usage"]["output_tokens"], a["outcome"]) for a in body["attempts"]
+        ] == [(7, "aborted"), (7, "aborted")]
         assert body["events"][-1]["payload"]["error"]
     finally:
         assert dashboard.close()
