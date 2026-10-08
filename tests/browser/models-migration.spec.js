@@ -64,6 +64,106 @@ test('S08 real two-tab conflict retains baseline and requires explicit adoption'
   }finally{await context.close();await s.close();}
 });
 
+test('S08 SPEC F1 lost saved receipt requires a post-failure read before explicit adoption',async({browser})=>{
+  const s=await server(),context=await browser.newContext({baseURL:s.origin});let release=()=>{};
+  try {
+    const page=await context.newPage();await open(page,s.origin);const row=selected(page);
+    const input=row.getByRole('textbox',{name:'显示名',exact:true}),save=row.getByRole('button',{name:'保存显示名',exact:true});
+    const adopt=row.getByRole('button',{name:'基于当前版本继续编辑',exact:true});
+    const refresh=page.getByRole('button',{name:'核对当前模型设置',exact:true});
+    await input.fill('A');await save.click();await expect(row.getByText('已确认保存',{exact:true})).toBeVisible();
+    let received,held,got,mode='hold';const posts=[],reads=[];
+    const barrier=()=>{received=new Promise(resolve=>got=resolve);held=new Promise(resolve=>release=resolve);};barrier();
+    await page.route('**/api/models',async route=>{
+      reads.push(mode);
+      if(mode==='fail'){await route.abort();return;}
+      const response=await route.fetch();got();await held;await route.fulfill({response}).catch(()=>{});
+    });
+    await page.route('**/api/settings',async route=>{
+      const request=route.request().postDataJSON();const response=await route.fetch();posts.push({request,status:response.status()});
+      if(request.display_name==='B')await route.abort();else await route.fulfill({response});
+    });
+    await refresh.click();await received; // This genuine revision 1 read predates the failure.
+    await input.fill('B');await save.click();
+    await expect(row.getByText('保存结果未确认。先核对当前值；不会自动重送。',{exact:true})).toBeVisible();
+    expect((await saved(page)).display_name_override).toBe('B');
+    expect(reads).toEqual(['hold']);await expect(adopt).toBeDisabled();
+    const oldRead=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/models');release();await oldRead;
+    await expect(adopt).toBeDisabled();await expect(row.getByText('当前保存值：A',{exact:true})).toBeVisible();
+    mode='fail';await refresh.click();await expect(page.getByText(/模型设置读取失败/)).toBeVisible();
+    await expect(adopt).toBeDisabled();await expect(input).toHaveValue('B');
+    mode='hold';barrier();await refresh.click();await received;
+    await input.fill('C');await input.evaluate(el=>el.setSelectionRange(0,1));release();
+    await expect(row.getByText('当前保存值：B',{exact:true})).toBeVisible();
+    await expect(input).toHaveValue('C');await expect(input).toBeFocused();
+    expect(await input.evaluate(el=>[el.selectionStart,el.selectionEnd])).toEqual([0,1]);
+    await expect(row.locator('.model-row-state')).toContainText('保存结果未确认');await expect(save).toBeDisabled();
+    await expect(adopt).toBeEnabled();expect(posts).toHaveLength(1);
+    await adopt.click();await expect(input).toHaveValue('C');expect(posts).toHaveLength(1);
+    await save.click();await expect(row.getByText('已确认保存',{exact:true})).toBeVisible();
+    expect(posts.map(p=>[p.request.display_name,p.request.expected_revision,p.status])).toEqual([['B',1,200],['C',2,200]]);
+    expect((await saved(page)).display_name_override).toBe('C');
+    expect((await (await fetch(s.control)).json()).model_calls).toHaveLength(0);
+  }finally{release();await context.close();await s.close();}
+});
+
+test('S08 SPEC F1 real conflict with a failed comparison keeps its baseline even when values match',async({browser})=>{
+  const s=await server(),context=await browser.newContext({baseURL:s.origin});
+  try {
+    const a=await context.newPage(),b=await context.newPage();await open(a,s.origin);await open(b,s.origin);
+    const row=selected(a),input=row.getByRole('textbox',{name:'显示名',exact:true});
+    const save=row.getByRole('button',{name:'保存显示名',exact:true}),adopt=row.getByRole('button',{name:'基于当前版本继续编辑',exact:true});
+    await input.fill('相同值');await selected(b).getByRole('textbox',{name:'显示名',exact:true}).fill('相同值');
+    await selected(b).getByRole('button',{name:'保存显示名',exact:true}).click();
+    await expect(selected(b).getByText('已确认保存',{exact:true})).toBeVisible();
+    let fail=true;const posts=[];
+    await a.route('**/api/models',async route=>{if(fail)await route.abort();else await route.continue();});
+    await a.route('**/api/settings',async route=>{const request=route.request().postDataJSON();const response=await route.fetch();posts.push({request,status:response.status()});await route.fulfill({response});});
+    await save.click();await expect(a.getByText(/模型设置读取失败/)).toBeVisible();
+    await expect(row.getByText(/编辑基线：空（无覆盖） · revision 0/)).toBeVisible();
+    await expect(input).toHaveValue('相同值');await expect(adopt).toBeDisabled();await expect(save).toBeDisabled();
+    expect(posts.map(p=>[p.request.expected_revision,p.status])).toEqual([[0,409]]);
+    fail=false;await a.getByRole('button',{name:'核对当前模型设置',exact:true}).click();
+    await expect(row.getByText('当前保存值：相同值',{exact:true})).toBeVisible();
+    await expect(row.getByText(/编辑基线：空（无覆盖） · revision 0；当前 revision 1/)).toBeVisible();
+    await expect(row.getByText(/stale_revision/)).toBeVisible();await expect(save).toBeDisabled();
+    await expect(adopt).toBeEnabled();expect(posts).toHaveLength(1);
+    await adopt.click();await input.fill('明确重提');await save.click();
+    await expect(row.getByText('已确认保存',{exact:true})).toBeVisible();
+    expect(posts.map(p=>[p.request.expected_revision,p.status])).toEqual([[0,409],[1,200]]);
+    expect((await saved(a)).display_name_override).toBe('明确重提');
+  }finally{await context.close();await s.close();}
+});
+
+test('S08 SPEC F1 real instance change retires the old comparison read and qualification',async({browser})=>{
+  let s=await server();const context=await browser.newContext({baseURL:s.origin});let release=()=>{};
+  try {
+    const page=await context.newPage();await open(page,s.origin);const row=selected(page);
+    const input=row.getByRole('textbox',{name:'显示名',exact:true}),save=row.getByRole('button',{name:'保存显示名',exact:true});
+    const adopt=row.locator('.setting-field').first().getByRole('button',{name:'基于当前版本继续编辑',exact:true});
+    const refresh=page.getByRole('button',{name:'核对当前模型设置',exact:true});
+    const before=await (await page.request.get('/api/entry')).json();let posts=0;
+    await page.route('**/api/settings',async route=>{posts++;await route.fetch();await route.abort();});
+    await input.fill('保留跨实例草稿');await save.click();await expect(adopt).toBeDisabled();
+    await refresh.click();await expect(adopt).toBeEnabled();
+    let received,reads=0,mode='hold';const captured=new Promise(resolve=>received=resolve),held=new Promise(resolve=>release=resolve);
+    await page.route('**/api/models',async route=>{
+      reads++;if(mode==='fail'){await route.abort();return;}
+      const response=await route.fetch();received();await held;await route.fulfill({response}).catch(()=>{});
+    });
+    await refresh.click();await captured;mode='fail';await s.close();s=await server();
+    expect(before.instance_id).toBeTruthy();
+    expect((await (await page.request.get('/api/entry')).json()).instance_id).not.toBe(before.instance_id);
+    await expect.poll(()=>reads).toBeGreaterThan(1);
+    await expect(page.getByText(/模型设置读取失败/)).toBeVisible();await expect(adopt).toBeDisabled();
+    const late=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/models');release();await late;
+    await expect(adopt).toBeDisabled();await expect(input).toHaveValue('保留跨实例草稿');expect(posts).toBe(1);
+    await page.unroute('**/api/models');await refresh.click();await expect(adopt).toBeEnabled();
+    await expect(row.getByText('当前保存值：空（无覆盖）',{exact:true}).first()).toBeVisible();
+    await expect(input).toHaveValue('保留跨实例草稿');await expect(save).toBeDisabled();expect(posts).toBe(1);
+  }finally{release();await context.close();await s.close();}
+});
+
 test('S08 saved model probe preserves drafts and links its real Attempt and cost',async({browser})=>{
   const s=await server(),context=await browser.newContext({baseURL:s.origin});
   try {

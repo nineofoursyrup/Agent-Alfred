@@ -4,7 +4,8 @@ import {dashboard} from './app.js';
 import {settingsFocus} from './settings-focus.js';
 
 /** @typedef {Record<string, any>} Wire */
-/** @typedef {{value:string,baseline:string,revision:number,status:string,message:string,conflict:boolean,pending:boolean,request:number}} Draft */
+/** @typedef {{generation:number,instance:string,request:number,afterRead:number,revision:number|null}} Comparison */
+/** @typedef {{value:string,baseline:string,revision:number,status:string,message:string,conflict:boolean,pending:boolean,request:number,comparison:Comparison|null}} Draft */
 const DIMENSIONS = ['uncached_input', 'cache_read', 'cache_write', 'output'];
 const CONNECTION = /** @type {Record<string,string>} */ ({unconfigured:'未配置', configured_untested:'已配置未测试', connected:'已连接', error:'错误'});
 const CATALOG = /** @type {Record<string,string>} */ ({unfetched:'尚未获取', fresh:'新鲜', stale:'过期', unavailable:'不可用'});
@@ -55,10 +56,21 @@ export function modelsPage(root, csrf) {
     const key = JSON.stringify([model.endpoint_id, model.model_id, field]);
     let draft = drafts.get(key);
     if (!draft) {
-      draft = {value:savedValue(model, field), baseline:savedValue(model, field), revision:current?.revision ?? 0, status:'', message:'', conflict:false, pending:false, request:0};
+      draft = {value:savedValue(model, field), baseline:savedValue(model, field), revision:current?.revision ?? 0, status:'', message:'', conflict:false, pending:false, request:0, comparison:null};
       drafts.set(key, draft);
     }
     return draft;
+  }
+  /** A failure retires every read started before it. @param {Draft} draft */
+  function requireComparison(draft) {
+    draft.comparison={generation,instance,request:draft.request,afterRead:readSequence,revision:null};
+  }
+  /** @param {Draft} draft */
+  function canAdopt(draft) {
+    const comparison=draft.comparison;
+    return connected && current?.status==='ok' && !draft.pending && !draft.message.includes('external_change')
+      && comparison?.generation===generation && comparison.instance===instance
+      && comparison.revision!==null && comparison.revision===current.revision;
   }
   /** @param {Wire} model */
   function rowState(model) {
@@ -97,6 +109,9 @@ export function modelsPage(root, csrf) {
     if (endpoint && catalogs.has(endpoint)) return;
     if (endpoint) catalogs.add(endpoint);
     const request = ++readSequence, epoch=generation;
+    // Capture the failure owner when the read starts, not when it returns.
+    const comparisons=new Map([...drafts].map(([key,draft])=>[key,draft.comparison]));
+    for(const comparison of comparisons.values())if(comparison)comparison.revision=null;
     const params = new URLSearchParams();
     if (endpoint) params.set('expand',endpoint);
     if (force) params.set('refresh','1');
@@ -106,7 +121,15 @@ export function modelsPage(root, csrf) {
       const body = await response.json();
       if (!alive || epoch!==generation || request!==readSequence) return;
       if (!response.ok) throw new Error(body.code || 'read_unavailable');
-      if (accept(body)) pageNotice.textContent=settingsConflict || (!connected ? '连接尚未同步；设置为当前 HTTP 观察，草稿可编辑，写入暂停。' : body.status==='ok' ? `设置 revision ${body.revision}；单项保存，各项互不代存。` : `设置不可用：${body.status}；读取失败不表示无指派。`);
+      if (accept(body)) {
+        if(body.status==='ok')for(const group of body.endpoints || [])for(const model of group.models || [])for(const field of ['display','style',...DIMENSIONS]) {
+          const key=JSON.stringify([model.endpoint_id,model.model_id,field]);
+          const draft=drafts.get(key), comparison=comparisons.get(key);
+          if(comparison && draft?.comparison===comparison && comparison.generation===generation && comparison.instance===instance
+              && request>comparison.afterRead && (!draft.request || draft.request===comparison.request))comparison.revision=body.revision;
+        }
+        pageNotice.textContent=settingsConflict || (!connected ? '连接尚未同步；设置为当前 HTTP 观察，草稿可编辑，写入暂停。' : body.status==='ok' ? `设置 revision ${body.revision}；单项保存，各项互不代存。` : `设置不可用：${body.status}；读取失败不表示无指派。`);
+      }
     } catch {
       if (alive && epoch===generation && request===readSequence) pageNotice.textContent='模型设置读取失败；已有内容仅为旧观察，草稿保留。请明确重试。';
     } finally {
@@ -120,11 +143,11 @@ export function modelsPage(root, csrf) {
 
   /** @param {string} op @param {Wire} model @param {Wire} fields @param {Draft|null} [draft] */
   async function mutate(op, model, fields, draft=null) {
-    if (!current || !alive || !connected || !csrf() || draft?.pending || draft?.conflict || (!draft && receipts.get(modelKey(model))?.pending)) return;
+    if (!current || !alive || !connected || !csrf() || draft?.pending || draft?.conflict || draft?.status==='unknown' || (!draft && receipts.get(modelKey(model))?.pending)) return;
     const epoch=generation, submitted=draft?.value, revision=draft?.revision ?? current.revision;
     const key=modelKey(model), attempt=++operationSequence;
     const ownsRequest=()=>alive && epoch===generation && (draft?draft.request===attempt:receipts.get(key)?.attempt===attempt);
-    if (draft) {draft.request=attempt;draft.pending=true; draft.status='pending'; draft.message='正在提交；后续编辑不会改写本次请求。';}
+    if (draft) {draft.comparison=null;draft.request=attempt;draft.pending=true; draft.status='pending'; draft.message='正在提交；后续编辑不会改写本次请求。';}
     if (!draft) receipts.set(key,{attempt,pending:true,kind:op,message:'设置正在提交'});
     render();
     try {
@@ -132,7 +155,7 @@ export function modelsPage(root, csrf) {
       const body=await response.json();
       if (!ownsRequest()) return;
       if (!response.ok) {
-        if (draft) {draft.status='failed'; draft.message=errorText(body); draft.conflict=body.code==='settings_conflict';}
+        if (draft) {draft.status='failed'; draft.message=errorText(body); draft.conflict=body.code==='settings_conflict';if(draft.conflict)requireComparison(draft);}
         else receipts.set(key,{attempt,message:errorText(body)});
         if (body.code==='settings_conflict') {
           settingsConflict=errorText(body);pageNotice.textContent=settingsConflict;
@@ -143,7 +166,7 @@ export function modelsPage(root, csrf) {
       }
       if (draft) {
         const saved=body.endpoints?.flatMap((/** @type {Wire} */ g)=>g.models).find((/** @type {Wire} */ m)=>modelKey(m)===key);
-        if (!saved) {draft.status='unknown'; draft.message='已收到回执，但无法核验原字段；请核对。';}
+        if (!saved) {draft.status='unknown'; draft.message='已收到回执，但无法核验原字段；请核对。';requireComparison(draft);}
         else {
           const field=op==='price'?fields.dimension:op;
           draft.baseline=savedValue(saved,field); draft.revision=body.revision; draft.status='saved';
@@ -158,7 +181,7 @@ export function modelsPage(root, csrf) {
       accept(body,true);
     } catch {
       if (!ownsRequest()) return;
-      if (draft) {draft.status='unknown';draft.message='保存结果未确认。先核对当前值；不会自动重送。';}
+      if (draft) {draft.status='unknown';draft.message='保存结果未确认。先核对当前值；不会自动重送。';requireComparison(draft);}
       else receipts.set(key,{attempt,message:'设置结果未确认；请核对，不会自动重送。'});
     } finally {
       if (ownsRequest()) {
@@ -218,8 +241,8 @@ export function modelsPage(root, csrf) {
     if (draft.conflict || draft.status==='unknown') {
       const compare=node('button','基于当前版本继续编辑');
       compare.dataset.focusKey=JSON.stringify([model.endpoint_id,model.model_id,'adopt',field]);
-      compare.disabled=!connected || current?.status!=='ok' || draft.message.includes('external_change');
-      compare.onclick=()=>{draft.baseline=saved;draft.revision=current?.revision ?? draft.revision;draft.conflict=false;draft.status='';draft.message='已采用当前版本；原请求不再重送，保存需再次明确点击。';if(![...drafts.values()].some(d=>d.conflict)){settingsConflict='';pageNotice.textContent=`设置 revision ${current?.revision}；已核对，保存仍需明确点击。`;}render();};
+      compare.disabled=!canAdopt(draft);
+      compare.onclick=()=>{if(!canAdopt(draft))return;draft.baseline=saved;draft.revision=current?.revision ?? draft.revision;draft.comparison=null;draft.conflict=false;draft.status='';draft.message='已采用当前版本；原请求不再重送，保存需再次明确点击。';if(![...drafts.values()].some(d=>d.conflict)){settingsConflict='';pageNotice.textContent=`设置 revision ${current?.revision}；已核对，保存仍需明确点击。`;}render();};
       box.append(compare);
     }
     update();
@@ -313,11 +336,14 @@ export function modelsPage(root, csrf) {
     const resumed=state.connected && !connected;
     const connectivityChanged=Boolean(state.connected)!==connected;
     connected=Boolean(state.connected);
-    if(changed){instance=state.instance;generation++;readSequence++;current=null;for(const draft of drafts.values()){draft.pending=false;draft.conflict=true;draft.status='unknown';draft.message='运行实例已变更；保留原草稿，先核对当前版本。';}pageNotice.textContent='实例已变更，正在核对当前设置。';}
+    if(changed){instance=state.instance;generation++;readSequence++;current=null;for(const draft of drafts.values()){draft.pending=false;draft.conflict=true;draft.status='unknown';draft.message='运行实例已变更；保留原草稿，先核对当前版本。';requireComparison(draft);}pageNotice.textContent='实例已变更，正在核对当前设置。';}
     if(changed || resumed)void read();
     if(!connected && connectivityChanged){
       generation++;readSequence++;
-      for(const draft of drafts.values())if(draft.pending){draft.pending=false;draft.status='unknown';draft.message='连接中断，保存结果未确认；不会自动重送。';}
+      for(const draft of drafts.values()){
+        if(draft.pending){draft.pending=false;draft.status='unknown';draft.message='连接中断，保存结果未确认；不会自动重送。';}
+        if(draft.conflict || draft.status==='unknown')requireComparison(draft);
+      }
       for(const receipt of receipts.values())if(receipt.pending){receipt.pending=false;receipt.message='连接中断，原操作结果未确认；请核对运行或设置，不会自动重送。';}
       pageNotice.textContent='连接中断；设置仅为旧观察，草稿保留，操作暂停。';
     }
