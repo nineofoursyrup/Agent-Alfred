@@ -29,7 +29,7 @@
   min-width: 0;
 }
 .run-fields dt {
-  font-size: 0.78rem;
+  font-size: 12px;
   color: var(--muted, #667085);
 }
 .run-fields dd {

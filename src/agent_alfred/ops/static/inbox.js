@@ -13,6 +13,7 @@ export function inbox(root, dashboard) {
   const url = new URL(location.href),
     session = url.searchParams.get("session_id");
   const partition = url.searchParams.get("view") ?? "messages";
+  const connection = dashboard.runtime().instance;
   let closed = false,
     restored = false,
     anchor = /** @type {Wire|null} */ (null),
@@ -40,7 +41,7 @@ export function inbox(root, dashboard) {
             route: "/inbox",
             kind: "sessions",
             anchor: session,
-            process_instance_id: dashboard.runtime().instance,
+            process_instance_id: connection,
           },
         }),
     );
@@ -117,7 +118,7 @@ export function inbox(root, dashboard) {
       partition,
       anchor: anchor?.id ?? null,
       anchorKind: anchor?.kind ?? null,
-      process_instance_id: dashboard.runtime().instance,
+      process_instance_id: connection,
       observed_at: reader.observed,
       returnSource: origin,
     };
@@ -247,7 +248,28 @@ export function inbox(root, dashboard) {
     },
     label,
     dashboard.runtime,
+    () => reconcileWaiting(dashboard.runtime()),
   );
+  /** A newer synchronized Host state can release this Session's waiting
+   * boundary without reading or replacing its retained cursor.
+   * @param {Wire} state */
+  function reconcileWaiting(state) {
+    if (
+      session === null ||
+      partition !== "messages" ||
+      state.instance !== connection ||
+      state.connected !== true
+    )
+      return;
+    const active = state.active;
+    if (
+      active === null ||
+      (active &&
+        (active.session_id !== session ||
+          ["recorded", "failed"].includes(active.recording_state)))
+    )
+      reader.releaseWaiting(state.revision);
+  }
   let lastInstance = dashboard.runtime().instance,
     lastGap = 0;
   const unsubscribe = dashboard.subscribeState((/** @type {Wire} */ state) => {
@@ -260,6 +282,8 @@ export function inbox(root, dashboard) {
       reader.invalidate("增量通知缺口，快照待刷新");
     }
     if (state.connected === false) reader.invalidate("连接中断，保留旧快照");
+    reconcileWaiting(state);
+    reader.sync();
   });
   queueMicrotask(() => {
     if (!closed && !restored) void reader.load();

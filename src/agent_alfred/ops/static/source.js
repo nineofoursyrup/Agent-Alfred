@@ -5,8 +5,16 @@ import { node } from "./dom.js";
  * explicit refresh replaces its window. There is no background data polling.
  * @param {HTMLElement} root @param {string} path @param {Wire} params
  * @param {(body:Wire,replace:boolean)=>void} render @param {string} label
- * @param {()=>Wire} runtime */
-export function sourceReader(root, path, params, render, label, runtime) {
+ * @param {()=>Wire} runtime @param {()=>void} [afterRead] */
+export function sourceReader(
+  root,
+  path,
+  params,
+  render,
+  label,
+  runtime,
+  afterRead = () => {},
+) {
   const status = node("p");
   status.setAttribute("role", "status");
   const refresh = node("button", `刷新${label}`),
@@ -22,6 +30,8 @@ export function sourceReader(root, path, params, render, label, runtime) {
     closed = false,
     hasRead = false,
     waiting = false;
+  let waitingRevision = 0,
+    releasedWaiting = false;
   let observed = 0,
     invalidated = "",
     failure = "",
@@ -46,6 +56,8 @@ export function sourceReader(root, path, params, render, label, runtime) {
   /** @type {{path:string,params:Wire}|null} */ let retry = null;
   const connection = runtime().instance;
   function paint() {
+    const readable =
+      runtime().connected === true && runtime().instance === connection;
     const stale =
       invalidated ||
       (observed && Date.now() - observed >= 15 * 60 * 1000
@@ -55,14 +67,16 @@ export function sourceReader(root, path, params, render, label, runtime) {
       busy ? "读取中…" : "",
       failure,
       waiting ? "运行记录尚未落定；请稍后刷新，暂不跨越消息分段。" : "",
+      releasedWaiting ? "运行记录等待已解除，可继续读取。" : "",
       observed
         ? `读取于 ${new Date(observed).toLocaleTimeString()}${stale ? " · " + stale : ""}`
         : invalidated,
     ]
       .filter(Boolean)
       .join(" ");
-    refresh.disabled = busy;
-    more.disabled = busy || waiting || !!invalidated;
+    refresh.disabled = busy || !readable;
+    latest.disabled = busy || !readable;
+    more.disabled = busy || waiting || !!invalidated || !readable;
     more.hidden = hasRead && !cursor;
     more.textContent = failure ? "读取暂不可用，点击重试" : `更多${label}`;
   }
@@ -74,10 +88,11 @@ export function sourceReader(root, path, params, render, label, runtime) {
       (!replace && !location && hasRead && (!cursor || waiting))
     )
       return;
+    const state = runtime();
     const own = ++sequence,
-      instance = runtime().instance,
+      instance = state.instance,
       intent = readingIntent;
-    if (!instance) {
+    if (!instance || state.connected !== true) {
       failure = "连接尚未确认，暂不可读取";
       paint();
       return;
@@ -96,6 +111,7 @@ export function sourceReader(root, path, params, render, label, runtime) {
       path,
       params: { ...params, ...(!replace && cursor ? { cursor } : {}) },
     };
+    if (location) retry = location;
     try {
       const response = await fetch(
         request.path +
@@ -111,7 +127,8 @@ export function sourceReader(root, path, params, render, label, runtime) {
         closed ||
         own !== sequence ||
         !root.isConnected ||
-        runtime().instance !== instance
+        runtime().instance !== instance ||
+        runtime().connected !== true
       )
         return;
       if (!response.ok)
@@ -157,11 +174,14 @@ export function sourceReader(root, path, params, render, label, runtime) {
       );
       cursor = body.next_cursor ?? null;
       waiting = body.runs_pending === true;
+      waitingRevision = state.revision;
+      releasedWaiting = false;
       hasRead = true;
       observed = Date.now();
       invalidated = "";
       retry = null;
       latest.hidden = true;
+      afterRead();
     } catch (error) {
       if (closed || own !== sequence) return;
       failure = error instanceof Error ? error.message : "read_unavailable";
@@ -194,8 +214,24 @@ export function sourceReader(root, path, params, render, label, runtime) {
       return observed;
     },
     invalidate(/** @type {string} */ reason) {
+      ++sequence;
+      controller.abort();
+      busy = false;
       invalidated = reason;
       if (runtime().instance !== connection) reopen.hidden = false;
+      paint();
+    },
+    sync: paint,
+    releaseWaiting(/** @type {number} */ revision) {
+      if (
+        !waiting ||
+        !Number.isSafeInteger(waitingRevision) ||
+        !Number.isSafeInteger(revision) ||
+        revision <= waitingRevision
+      )
+        return;
+      waiting = false;
+      releasedWaiting = true;
       paint();
     },
     close() {

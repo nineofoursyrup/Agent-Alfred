@@ -35,6 +35,7 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
     live = /** @type {Wire|null} */ (null);
   let sequence = 0,
     controller = new AbortController(),
+    metadataBusy = false,
     evidenceBusy = false,
     evidenceError = "",
     metadataAt = 0,
@@ -337,12 +338,19 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
       notice.textContent = "当前运行槽已释放或变化；有新数据，请刷新运行列表。";
   }
   async function loadSelected() {
+    if (
+      closed ||
+      runtime().connected !== true ||
+      runtime().instance !== connection
+    )
+      return;
     const own = ++sequence;
     controller.abort();
     controller = new AbortController();
     notice.textContent = "读取运行…";
-    refreshRun.disabled = true;
+    metadataBusy = true;
     evidenceBusy = false;
+    paintReadControls();
     try {
       const response = await fetch(
         "/api/runs/locate/" +
@@ -352,7 +360,12 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
         { signal: controller.signal },
       );
       const body = await response.json();
-      if (closed || own !== sequence || runtime().instance !== connection)
+      if (
+        closed ||
+        own !== sequence ||
+        runtime().instance !== connection ||
+        runtime().connected !== true
+      )
         return;
       if (!response.ok) throw new Error(body.code || "运行不存在或暂不可读取");
       const next =
@@ -364,6 +377,7 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
       selectedRun = active?.run_id === selected ? { ...next, ...active } : next;
       metadataAt = Date.now();
       metadataInvalidated = "";
+      paintTimes();
       notice.textContent = "";
       update();
       void loadEvidence();
@@ -375,13 +389,23 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
         paintAction();
       }
     } finally {
-      if (!closed && own === sequence) refreshRun.disabled = false;
+      if (!closed && own === sequence) {
+        metadataBusy = false;
+        paintReadControls();
+      }
     }
   }
   async function loadEvidence() {
-    if (selected === null || closed || evidenceBusy) return;
+    if (
+      selected === null ||
+      closed ||
+      evidenceBusy ||
+      runtime().connected !== true ||
+      runtime().instance !== connection
+    )
+      return;
     evidenceBusy = true;
-    refreshEvidence.disabled = true;
+    paintReadControls();
     const own = sequence;
     try {
       const response = await fetch(
@@ -395,7 +419,12 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
         { signal: controller.signal },
       );
       const body = await response.json();
-      if (closed || own !== sequence || runtime().instance !== connection)
+      if (
+        closed ||
+        own !== sequence ||
+        runtime().instance !== connection ||
+        runtime().connected !== true
+      )
         return;
       if (response.status === 410 && body.error?.code === "snapshot_expired") {
         evidence = { snapshot_expired: true };
@@ -421,7 +450,7 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
     } finally {
       if (!closed && own === sequence) {
         evidenceBusy = false;
-        refreshEvidence.disabled = false;
+        paintReadControls();
         update();
       }
     }
@@ -708,6 +737,23 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
       (evidenceError ? " · " + evidenceError : "");
   }
   const timer = setInterval(paintTimes, 60 * 1000);
+  function paintReadControls() {
+    const online = runtime().connected === true;
+    refreshRun.disabled = metadataBusy || !online;
+    refreshEvidence.disabled =
+      evidenceBusy || !online || runtime().instance !== connection;
+  }
+  /** @param {string} reason */
+  function retireReads(reason) {
+    ++sequence;
+    controller.abort();
+    controller = new AbortController();
+    if (metadataBusy) notice.textContent = reason;
+    metadataBusy = evidenceBusy = false;
+    metadataInvalidated = evidenceInvalidated = reason;
+    paintTimes();
+    paintReadControls();
+  }
   let lastGap = 0;
   const unsubscribe = dashboard.subscribeState((/** @type {Wire} */ state) => {
     const projection = state.projection;
@@ -729,28 +775,23 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
       lastGap = state.readGapRevision;
       reader.invalidate("增量通知缺口，快照待刷新");
       if (selected !== null) {
-        metadataInvalidated = "增量通知缺口，快照待刷新";
-        evidenceInvalidated = "增量通知缺口，快照待刷新";
+        retireReads("增量通知缺口，快照待刷新");
         evidenceError = "增量通知缺口，过程快照待刷新";
         paintTimes();
       }
     }
     if (state.instance && state.instance !== connection) {
-      ++sequence;
-      controller.abort();
+      retireReads("进程已变化，旧快照仅供阅读");
       reader.invalidate("进程已变化，请重新打开此页面");
       notice.textContent = "进程已变化；旧快照仅供阅读，请重新打开此页面。";
-      metadataInvalidated = evidenceInvalidated = "进程已变化，旧快照仅供阅读";
-      paintTimes();
       refreshRun.textContent = "重新核验运行";
-      refreshRun.disabled = false;
-      refreshEvidence.disabled = true;
     }
     if (state.connected === false) {
       reader.invalidate("连接中断，保留旧快照");
-      metadataInvalidated = evidenceInvalidated = "连接中断，保留旧快照";
-      paintTimes();
+      retireReads("连接中断，保留旧快照");
     }
+    reader.sync();
+    paintReadControls();
     paintAction();
   });
   queueMicrotask(() => {

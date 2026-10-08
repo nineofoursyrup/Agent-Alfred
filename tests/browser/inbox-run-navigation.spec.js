@@ -320,16 +320,17 @@ test("late source positioning cannot take focus from a newer MainBar reading int
   );
 });
 
-test("real pending recording keeps historic source messages behind their boundary", async ({
-  page,
-}) => {
-  const server = await memoryServer({
-    script: "tests/browser/trace_export_server.py",
-    prepare: async (directory) => {
-      execFileSync(".venv/bin/python", [
-        "-B",
-        "-c",
-        `
+for (const failed of [false, true])
+  test(`real ${failed ? "failed" : "recorded"} settlement unlocks the original waiting cursor without a refresh`, async ({
+    page,
+  }) => {
+    const server = await memoryServer({
+      script: "tests/browser/trace_export_server.py",
+      prepare: async (directory) => {
+        execFileSync(".venv/bin/python", [
+          "-B",
+          "-c",
+          `
 import sqlite3,json,sys
 from pathlib import Path
 from agent_alfred import schema
@@ -339,42 +340,69 @@ for index in range(3):
  conn.execute('INSERT INTO agent_log(session_id,role,content,source,created_at) VALUES (?,?,?,?,?)',('waiting-history','user',json.dumps([{'type':'text','text':'历史等文'}]),'cli','old'))
 conn.commit();conn.close()
 `,
-        directory,
-      ]);
-    },
+          directory,
+        ]);
+      },
+    });
+    try {
+      await page.goto(
+        server.origin + "/inbox?session_id=waiting-history&view=messages",
+      );
+      const preview = page.getByRole("region", { name: "会话只读预览" });
+      await expect(preview.locator("[data-source-id]")).toHaveCount(3);
+      await page
+        .getByRole("button", { name: "继续此会话", exact: true })
+        .click();
+      await server.send(failed ? "recording-hold-fail" : "recording-hold");
+      await page.getByRole("textbox", { name: "消息" }).fill("等待记录边界");
+      await page.getByRole("button", { name: "发送", exact: true }).click();
+      await server.send("await-recording");
+      const pendingResponse = page.waitForResponse(
+        (r) => new URL(r.url()).pathname === "/api/sessions/messages",
+      );
+      await preview
+        .getByRole("button", { name: "刷新会话消息", exact: true })
+        .click();
+      const pending = await (await pendingResponse).json();
+      expect(pending.runs_pending).toBe(true);
+      expect(typeof pending.next_cursor).toBe("string");
+      await expect(preview).toContainText("运行记录尚未落定");
+      await expect(preview.locator("[data-source-id]")).toHaveCount(0);
+      await expect(
+        preview.getByRole("button", { name: "更多会话消息", exact: true }),
+      ).toBeDisabled();
+      const continuedReads = [];
+      page.on("request", (request) => {
+        if (new URL(request.url()).pathname === "/api/sessions/messages")
+          continuedReads.push(request.url());
+      });
+      await server.send("release-recording");
+      await expect(page.getByRole("region", { name: "主对话" })).toContainText(
+        failed ? "未保存" : "已保存",
+      );
+      const more = preview.getByRole("button", {
+        name: "更多会话消息",
+        exact: true,
+      });
+      await expect(more).toBeEnabled();
+      await expect(preview).toContainText("可继续读取");
+      await expect(preview.locator("[data-source-id]")).toHaveCount(0);
+      expect(continuedReads).toHaveLength(0);
+      await preview
+        .getByRole("button", { name: "更多会话消息", exact: true })
+        .click();
+      await expect(preview.locator("[data-source-id]")).toHaveCount(
+        failed ? 3 : 5,
+      );
+      expect(continuedReads).toHaveLength(1);
+      expect(new URL(continuedReads[0]).searchParams.get("cursor")).toBe(
+        pending.next_cursor,
+      );
+      await expect(
+        preview.getByRole("link", { name: "查看运行", exact: true }),
+      ).toHaveCount(failed ? 0 : 2);
+    } finally {
+      await server.send("release-recording");
+      await server.close();
+    }
   });
-  try {
-    await page.goto(
-      server.origin + "/inbox?session_id=waiting-history&view=messages",
-    );
-    const preview = page.getByRole("region", { name: "会话只读预览" });
-    await expect(preview.locator("[data-source-id]")).toHaveCount(3);
-    await page.getByRole("button", { name: "继续此会话", exact: true }).click();
-    await server.send("recording-hold-fail");
-    await page.getByRole("textbox", { name: "消息" }).fill("等待记录边界");
-    await page.getByRole("button", { name: "发送", exact: true }).click();
-    await server.send("await-recording");
-    await preview
-      .getByRole("button", { name: "刷新会话消息", exact: true })
-      .click();
-    await expect(preview).toContainText("运行记录尚未落定");
-    await expect(preview.locator("[data-source-id]")).toHaveCount(0);
-    await expect(
-      preview.getByRole("button", { name: "更多会话消息", exact: true }),
-    ).toBeDisabled();
-    await server.send("release-recording");
-    await expect(page.getByRole("region", { name: "主对话" })).toContainText(
-      "未保存",
-    );
-    await preview
-      .getByRole("button", { name: "刷新会话消息", exact: true })
-      .click();
-    await expect(preview.locator("[data-source-id]")).toHaveCount(3);
-    await expect(
-      preview.getByRole("link", { name: "查看运行", exact: true }),
-    ).toHaveCount(0);
-  } finally {
-    await server.send("release-recording");
-    await server.close();
-  }
-});

@@ -228,6 +228,22 @@ test("real summary privacy gates and container 679/680 use one equivalent table/
         ),
       ).toBe(true);
     }
+    await list
+      .getByRole("link", { name: "查看运行", exact: true })
+      .first()
+      .click();
+    const fields = page.getByRole("region", { name: "运行摘要" }).locator("dt");
+    for (const width of [1440, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(fields.first()).toBeVisible();
+      await expect
+        .poll(() =>
+          fields.evaluateAll((items) => [
+            ...new Set(items.map((item) => getComputedStyle(item).fontSize)),
+          ]),
+        )
+        .toEqual(["12px"]);
+    }
   } finally {
     await server.close();
   }
