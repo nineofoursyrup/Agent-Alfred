@@ -39,14 +39,16 @@ test("the narrow drawer is a keyboard-contained dialog that restores focus", asy
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   await page.getByRole("button", { name: "新建会话", exact: true }).click();
   const input = page.getByRole("textbox", { name: "消息" });
   await input.fill("中文草稿");
-  const opener = page.getByRole("button", { name: "展开对话", exact: true });
+  const opener = page.locator('#shell-toolbar [data-open-panel="mainbar"]');
+  await page.keyboard.press("Escape");
   await opener.click();
-  const dialog = page.getByRole("dialog", { name: "主对话对话框" });
+  const dialog = page.getByRole("dialog", { name: "MainBar" });
   await expect(dialog).toHaveAttribute("aria-modal", "true");
-  await expect(input).toBeFocused();
+  await expect(page.locator("#mainbar-title")).toBeFocused();
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
   expect(
@@ -57,7 +59,7 @@ test("the narrow drawer is a keyboard-contained dialog that restores focus", asy
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
   await expect(opener).toBeFocused();
-  await expect(input).toHaveValue("中文草稿");
+  await expect(page.locator("#message")).toHaveValue("中文草稿");
 });
 
 test("composition Enter does not send, Shift Enter inserts a newline, normal Enter sends once", async ({

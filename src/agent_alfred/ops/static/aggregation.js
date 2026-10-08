@@ -1,3 +1,4 @@
+import {Drafts} from "./shell.js";
 import {node} from './dom.js';
 /** @typedef {Record<string, any>} Wire */
 const names = /** @type {Record<string,string>} */ ({semantic:'语义记忆', episodic:'情景记忆', history:'会话窗口'});
@@ -54,6 +55,7 @@ export function aggregationFacts(root, facts, sync) {
 /** @param {HTMLElement} root @param {()=>string} csrf @param {()=>Wire} runtime @param {import("./memory.js").MemorySync} sync */
 export function aggregationForm(root, csrf, runtime, sync) {
   const section = node('section'); section.setAttribute('aria-label', '手动聚合');
+  const drafts=new Drafts();
   const target = node('select'); target.setAttribute('aria-label','目标会话');
   const goal = node('textarea'); goal.setAttribute('aria-label','聚合目标');
   const keywords = node('input'); keywords.setAttribute('aria-label','聚合关键词');
@@ -70,6 +72,7 @@ export function aggregationForm(root, csrf, runtime, sync) {
   const status = node('p'); status.setAttribute('role','status');
   const result = node('div');
   section.append(send, refresh, status, result); root.append(section);
+  for(const control of [target,goal,keywords,...choices.values()])drafts.track(control);
   let pending = false;
   let run = '';
   let uncertain = false;
@@ -86,6 +89,7 @@ export function aggregationForm(root, csrf, runtime, sync) {
   keywords.addEventListener('input', () => { keywordsEdited = true; });
   goal.addEventListener('input', () => { if (!keywordsEdited) keywords.value = goal.value; });
   let sessionRequest = 0;
+  let targetEdited=false;target.addEventListener('change',()=>{targetEdited=true;});
   async function sessions() {
     const request = ++sessionRequest;
     try {
@@ -100,6 +104,7 @@ export function aggregationForm(root, csrf, runtime, sync) {
         const option = node('option', item.title || item.session_id); option.value = item.session_id; target.append(option);
       }
       if (selected) target.value = selected;
+      if(!targetEdited)drafts.saved(target);
     } catch {
       if (request === sessionRequest && section.isConnected) status.textContent = '会话读取失败，请刷新。';
     }
@@ -138,11 +143,13 @@ export function aggregationForm(root, csrf, runtime, sync) {
     if (pending || uncertain) return;
     const body = {purpose:'aggregation', session_id:target.value, message:goal.value,
       keywords:keywords.value, sources:[...choices].filter(([,v]) => v.checked).map(([k]) => k)};
+    const submitted=new Map([...drafts.inputs.keys()].map(input=>[input,drafts.value(input)]));
     pending = true; send.disabled = true; status.textContent = '正在提交…';
     try {
       const response = await fetch('/api/runs', {method:'POST', headers:{'Content-Type':'application/json','x-agent-alfred-csrf':csrf()},body:JSON.stringify(body)});
       const value = await response.json();
       if (!response.ok) { status.textContent = `未提交：${value.code}；表单已保留。`; return; }
+      for(const [input,value] of submitted)drafts.saved(input,value);
       run = value.run_id; awaiting = true; status.textContent = '正在读取资料或起草…';
     } catch {
       uncertain = true; status.textContent = '准入未确认；请查看已有运行，确认后刷新页面。不会自动重投。';
@@ -151,5 +158,5 @@ export function aggregationForm(root, csrf, runtime, sync) {
   });
   refresh.addEventListener('click', () => void sessions());
   void sessions(); void update();
-  return section;
+  return Object.assign(section,{getLeaveState:()=>({...drafts.leave('手动聚合表单有未提交输入。'),pending})});
 }

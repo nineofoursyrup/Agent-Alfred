@@ -1235,6 +1235,12 @@ function recordPanel(kind, page) {
   reread.addEventListener("click", () => void load());
   return {
     panel,
+    getLeaveState() {
+      const original=editing?.original;
+      const editDirty=!!original && ((editSubject?.value||'')!==original.subject || editBody.value!==original.body || (editStart?.value||'')!==original.start || (editEnd?.value||'')!==original.end);
+      return {dirty:editDirty || !!(newSubject?.value || newBody.value || newStart?.value || newEnd?.value), summary:'记忆编辑或新建输入尚未确认保存。'};
+    },
+    dispose(){++listRequest;++detailRequest;records=[];selected=null;clearDraft();createForm.reset();},
     confirmed,
     refresh() {
       // Any invalidation hides the open body until the current record is re-read.
@@ -1879,7 +1885,7 @@ function mirrorsPanel(page) {
  * The Memory page: three tabs plus the statistics, queue, mirror and receipt
  * panels. MainBar and Session stay in the shell.
  * @param {HTMLElement} root @param {MemorySync} sync
- * @param {{csrf:()=>string, session:()=>string|null, receipts:ReturnType<typeof memoryReceipts>}} options
+ * @param {{csrf:()=>string, session:()=>string|null, receipts:ReturnType<typeof memoryReceipts>, replaceSource?:(target:URL)=>void}} options
  */
 export function memoryPage(root, sync, options) {
   const connection = node("p");
@@ -1941,7 +1947,7 @@ export function memoryPage(root, sync, options) {
     }
     const url = new URL(location.href);
     url.searchParams.set("tab", key);
-    history.replaceState(null, "", url);
+    if(options.replaceSource)options.replaceSource(url);else history.replaceState(history.state, "", url);
     if (key === "skills") void skills.load();
   }
   tabs.addEventListener("keydown", (event) => {
@@ -1997,4 +2003,8 @@ export function memoryPage(root, sync, options) {
   });
   refresh();
   void statistics.load();
+  return {
+    getLeaveState(){return {dirty:semantic.getLeaveState().dirty||episodic.getLeaveState().dirty,summary:'记忆编辑或新建输入尚未确认保存。'};},
+    close(){unwatch();semantic.dispose();episodic.dispose();receipts.detach();},
+  };
 }

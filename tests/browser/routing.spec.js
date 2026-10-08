@@ -12,7 +12,7 @@ test('CE-07/09/12: Behaviour, no reply, refresh and real restart', async ({page}
     await page.getByRole('button', {name: '新建会话', exact: true}).click();
     await expect(page.getByRole('textbox', {name: '消息'})).toBeEnabled();
     const session = await page.evaluate(() => sessionStorage.getItem('alfred.session'));
-    await page.getByRole('button', {name: '展开对话', exact: true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     await page.getByRole('textbox', {name: '消息'}).fill('不用回复');
     const accepted = page.waitForResponse(r => r.url().endsWith('/api/runs') && r.request().method() === 'POST');
     await page.getByRole('button', {name: '发送', exact: true}).click();
@@ -55,7 +55,7 @@ test('CE-09/10: failed recording keeps no-reply projection and rejects next Run'
     await expect(page.getByText('已保存；下一 Run 生效。')).toBeVisible();
     await page.getByRole('button', {name:'新建会话', exact:true}).click();
     await expect(page.getByRole('textbox', {name:'消息'})).toBeEnabled();
-    await page.getByRole('button', {name:'展开对话', exact:true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     await server.send('fail-recording');
     await page.getByRole('textbox', {name:'消息'}).fill('不用回复');
     await page.getByRole('button', {name:'发送', exact:true}).click();
@@ -92,7 +92,7 @@ test('CE-09: recovery facts and fixed text survive trace removal and restart', a
     await server.send('corrupt-context');
     await page.getByRole('button', {name:'新建会话', exact:true}).click();
     await expect(page.getByRole('textbox', {name:'消息'})).toBeEnabled();
-    await page.getByRole('button', {name:'展开对话', exact:true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     for (const task of ['不用回复', '解释上下文']) {
       await page.getByRole('textbox', {name:'消息'}).fill(task);
       await page.getByRole('button', {name:'发送', exact:true}).click();
@@ -167,7 +167,7 @@ test('CE-01: disabled real browser conversation matches exact pre-routing baseli
         await ready;
         await page.getByRole('button', {name:'新建会话', exact:true}).click();
         await expect(page.getByRole('textbox', {name:'消息'})).toBeEnabled();
-        await page.getByRole('button', {name:'展开对话', exact:true}).click();
+        await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
         await page.getByRole('textbox', {name:'消息'}).fill('/skills off\nhello');
         await page.getByRole('button', {name:'发送', exact:true}).click();
         await expect(page.locator('#messages').getByText('离线 Skill 回复')).toBeVisible();

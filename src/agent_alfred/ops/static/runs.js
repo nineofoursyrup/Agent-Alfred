@@ -20,7 +20,7 @@ export function outcomeLabel(run) {
   );
 }
 
-/** @param {HTMLElement} root @param {import('./progress.js').Progress} progress @param {()=>void} navigate @param {import('./memory.js').MemorySync} memory @param {()=>string} csrf @param {()=>Wire} runtime */
+/** @param {HTMLElement} root @param {import('./progress.js').Progress} progress @param {(target:string)=>void} navigate @param {import('./memory.js').MemorySync} memory @param {()=>string} csrf @param {()=>Wire} runtime */
 export function runsPage(root, progress, navigate, memory, csrf, runtime) {
   const context = new URLSearchParams(location.search);
   const filter = node("select");
@@ -50,8 +50,7 @@ export function runsPage(root, progress, navigate, memory, csrf, runtime) {
   detail.setAttribute("aria-label", "运行过程");
   root.append(filter, list, detail);
   filter.addEventListener("change", () => {
-    history.pushState(null, "", `/runs?filter=${filter.value}`);
-    navigate();
+    navigate(`/runs?filter=${filter.value}`);
   });
   let exportView = /** @type {ReturnType<typeof traceExport>|null} */ (null);
   const pathView = selected ? topologyView(root, "run-path", runtime, memory, selected) : null;
@@ -346,7 +345,7 @@ export function runsPage(root, progress, navigate, memory, csrf, runtime) {
       }
     })();
   } else void pager.load();
-  return { update, loadEvidence, sync, dispose: () => {exportView?.dispose();pathView?.close();} };
+  return { update, loadEvidence, sync, dispose: () => {unwatch();pager.close();exportView?.dispose();pathView?.close();} };
 }
 
 /** @param {HTMLElement} root @param {Wire[]} events @param {Wire[]} ledger @param {Wire} run @param {Set<string>} confirmed */

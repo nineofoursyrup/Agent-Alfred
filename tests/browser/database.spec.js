@@ -4,7 +4,7 @@ test("Database page lists approved objects without executing examples", async ({
   page,
 }) => {
   await page.goto("/database");
-  await expect(page.getByRole("heading", { name: "Database", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "数据库", exact: true })).toBeVisible();
   await expect(page.getByRole("region", { name: "MainBar" })).toBeVisible();
   await expect(page.getByRole("textbox", { name: "SQL" })).toBeVisible();
   await expect(page.getByText("diag_sessions", { exact: true })).toBeVisible();
@@ -20,7 +20,7 @@ test("chat then Database JOIN matches the saved assistant reply", async ({
 }) => {
   await page.goto("/inbox");
   await page.getByRole("button", { name: "新建会话", exact: true }).click();
-  await page.getByRole("button", { name: "展开对话", exact: true }).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   const input = page.getByRole("textbox", { name: "消息" });
   await input.fill("请回复");
   await expect(page.getByRole("button", { name: "发送", exact: true })).toBeEnabled();
@@ -36,8 +36,8 @@ test("chat then Database JOIN matches the saved assistant reply", async ({
     conversation.getByText("离线模型回复", { exact: true }),
   ).toHaveCount(1);
   await expect(conversation.getByText("已保存", { exact: true })).toBeVisible();
-  await page.getByRole("link", { name: "Database", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Database", exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "数据库", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "数据库", exact: true })).toBeVisible();
   const editor = page.getByRole("textbox", { name: "SQL" });
   await editor.fill(
     "SELECT m.text FROM diag_messages m WHERE m.role='assistant'",
@@ -99,7 +99,8 @@ test("leaving Database cancels and clears draft and results", async ({ page }) =
   expect((await executed).status()).toBe(200);
   await expect(page.getByRole("region", { name: "查询结果" })).toContainText("1");
   await page.getByRole("link", { name: "收件箱", exact: true }).click();
-  await page.getByRole("link", { name: "Database", exact: true }).click();
+  await page.getByRole("button", { name: "放弃并离开", exact: true }).click();
+  await page.getByRole("link", { name: "数据库", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "SQL" })).toHaveValue("");
   await expect(page.getByRole("region", { name: "查询结果" })).toBeEmpty();
 });
@@ -168,7 +169,7 @@ test("hidden tab keeps results; offline clears results and keeps SQL", async ({
   await page.evaluate(() => window.dispatchEvent(new Event("offline")));
   await expect(result).toBeEmpty();
   await expect(editor).toHaveValue("SELECT 1 AS n");
-  await expect(page.getByText("连接中断")).toBeVisible();
+  await expect(page.locator("#page").getByText("连接中断")).toBeVisible();
 });
 
 test("BFCache restore clears results and SQL then rechecks", async ({ page }) => {

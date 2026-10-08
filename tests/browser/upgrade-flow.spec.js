@@ -38,7 +38,7 @@ test("real migrated null-run messages create no Run rows before or after a new U
   try {
     await page.goto(`${server.origin}/runs?filter=all`);
     const list = page.getByRole("region",{name:"运行列表"});
-    await expect(page.getByRole("heading",{name:"运行详情",exact:true})).toBeVisible();
+    await expect(page.getByRole("heading",{name:"运行",exact:true})).toBeVisible();
     const before = await (await page.request.get(`${server.origin}/api/runs?filter=all`)).json();
     expect(before.runs).toEqual([]);
     expect(before.non_terminal).toBeNull();

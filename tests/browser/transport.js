@@ -28,7 +28,9 @@ export async function controlledTransport(page) {
   await page.route("**/api/entry", (route) =>
     route.fulfill({ json: { ...entry, instance_id: "test-process" } }),
   );
-  return page.evaluate(() => sessionStorage.getItem("alfred.session"));
+  const session=await page.evaluate(() => sessionStorage.getItem("alfred.session"));
+  await emit(page,"state_patch",state(session,0));
+  return session;
 }
 
 export function state(session, revision = 1, extra = {}) {

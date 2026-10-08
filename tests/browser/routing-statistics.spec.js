@@ -34,7 +34,7 @@ test('CE-03/08/14 real recovery counts survive restart and late range responses'
     await server.send('corrupt-context');
     // Use the real MainBar because it also owns and supplies session identity.
     await page.getByRole('button', {name:'新建会话', exact:true}).click();
-    await page.getByRole('button', {name:'展开对话', exact:true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     await page.getByRole('textbox', {name:'消息'}).fill('不用回复');
     await page.getByRole('button', {name:'发送', exact:true}).click();
     await expect(page.locator('#messages').getByText('已保存', {exact:true})).toBeVisible();
@@ -109,7 +109,7 @@ test('CE-01 full failure and graph-internal fallback have separate live HTTP and
     await page.getByRole('checkbox', {name:'启用消息分流'}).check();
     await page.getByRole('button', {name:'保存设置', exact:true}).click();
     await expect(page.getByText('已保存；下一 Run 生效。')).toBeVisible();
-    await page.getByRole('button', {name:'展开对话', exact:true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     for (const task of ['STATS graph fallback', 'STATS full failure', 'STATS classifier failure']) {
       const previousSession = await page.evaluate(() => sessionStorage.getItem('alfred.session'));
       await page.getByRole('button', {name:'新建会话', exact:true}).click();
@@ -222,7 +222,7 @@ async function submitActual(page, server, message, saved = true) {
   const previous = await page.evaluate(() => sessionStorage.getItem('alfred.session'));
   await page.getByRole('button', {name:'新建会话', exact:true}).click();
   await expect.poll(() => page.evaluate(() => sessionStorage.getItem('alfred.session'))).not.toBe(previous);
-  const expand = page.getByRole('button', {name:'展开对话', exact:true});
+  const expand = page.locator('#shell-toolbar [data-open-panel="mainbar"]');
   if (await expand.isVisible()) await expand.click();
   await expect(page.getByRole('textbox', {name:'消息'})).toBeEnabled();
   await page.getByRole('textbox', {name:'消息'}).fill(message);

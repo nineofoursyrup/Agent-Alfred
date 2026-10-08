@@ -12,7 +12,7 @@ async function routingRun(page, server, message='解释图执行') {
   await page.getByRole('button',{name:'新建会话',exact:true}).click();
   const session=(await (await created).json()).session_id;
   await expect.poll(()=>page.evaluate(()=>sessionStorage.getItem('alfred.session'))).toBe(session);
-  if(await page.getByRole('button',{name:'展开对话',exact:true}).count()) await page.getByRole('button',{name:'展开对话',exact:true}).click();
+  if(await page.locator('#shell-toolbar [data-open-panel="mainbar"]').count()) await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   await page.getByRole('textbox',{name:'消息'}).fill(message);
   const accepted=page.waitForResponse(r=>r.url().endsWith('/api/runs')&&r.request().method()==='POST');
   await expect(page.getByRole('button',{name:'发送',exact:true})).toBeEnabled();

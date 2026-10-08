@@ -45,7 +45,7 @@ test("known busy and a 409 use one ordinary card and keep the draft", async ({
   await page.getByRole("button", { name: "发送", exact: true }).click();
   await expect(card).toHaveText(before);
   await expect(input).toHaveValue("等你完成后再发");
-  await page.getByRole("button", { name: "展开对话", exact: true }).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   await expect(page.getByRole("region", { name: "主对话" })).not.toContainText(
     "等你完成后再发",
   );

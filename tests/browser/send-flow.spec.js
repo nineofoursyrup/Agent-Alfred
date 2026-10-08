@@ -20,7 +20,7 @@ test("one real UI flow reaches 202, Step, Attempt, deltas and one reply across p
     await page.goto(origin);
     await page.getByRole("button",{name:"新建会话",exact:true}).click();
     await expect(page.getByRole("textbox",{name:"消息"})).toBeEnabled();
-    await page.getByRole("button",{name:"展开对话",exact:true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     await page.getByRole("textbox",{name:"消息"}).fill("完整发送闭环的问题");
     const accepted = page.waitForResponse(response=>response.url().endsWith("/api/runs") && response.request().method()==="POST");
     await page.getByRole("button",{name:"发送",exact:true}).click();

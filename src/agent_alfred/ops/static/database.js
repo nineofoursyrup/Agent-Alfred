@@ -408,6 +408,7 @@ export function databasePage(root, ctx) {
   void loadCatalog();
 
   return {
+    getLeaveState() {return {dirty:editor.value!=="", summary:"手写 SQL 尚未保存；离开会清空编辑器和受管结果。", pending:inFlight};},
     sync() {
       if (!alive || online) return;
       online = true;

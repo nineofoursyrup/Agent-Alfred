@@ -112,7 +112,7 @@ test("A52: explicit save, next-Run hit, source, edit conflict, delete and requer
     const other = await api(page.request, server.origin);
     await page.goto(server.origin + "/inbox");
     await page.getByRole("button", {name: "新建会话", exact: true}).click();
-    await page.getByRole("button", {name: "展开对话", exact: true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     const chat = page.getByRole("region", {name: "主对话"});
     const send = async text => {
       await page.getByRole("textbox", {name: "消息"}).fill(text);

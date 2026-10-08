@@ -74,7 +74,7 @@ test("CE-03 CE-08 CE-09 MainBar uses real search, safe text, Ops credits, newer 
     await b.locator("article").filter({has: b.getByRole("heading", {name:"web_search", exact:true})}).getByRole("button", {name:"保存授权", exact:true}).click();
     await expect(b.locator("article").filter({has: b.getByRole("heading", {name:"web_search", exact:true})})).toContainText("模型暴露：real");
     await b.getByRole("button", {name:"新建会话", exact:true}).click();
-    await b.getByRole("button", {name:"展开对话", exact:true}).click();
+    await b.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     let external = 0; b.on("request", r => {if (r.url().includes("source.invalid")) external++;});
     await b.getByRole("textbox", {name:"消息"}).fill("搜索验收");
     await b.getByRole("button", {name:"发送", exact:true}).click();
@@ -162,7 +162,7 @@ test("CE-08 rotated old and new secrets are redacted before real SSE delivery", 
     await tool.getByRole("button", {name:"保存授权",exact:true}).click();
     await expect(tool).toContainText("模型暴露：real");
     await page.getByRole("button",{name:"新建会话",exact:true}).click();
-    await page.getByRole("button",{name:"展开对话",exact:true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     await page.getByRole("textbox",{name:"消息"}).fill("搜索验收");
     await page.getByRole("button",{name:"发送",exact:true}).click();
     await expect(page.getByRole("region",{name:"主对话"})).toContainText("*** ***");
@@ -191,7 +191,7 @@ test("CE-04 CE-05 over-limit reported numbers keep results, missing balance and 
     await tool.getByRole("button", {name:"保存授权", exact:true}).click();
     await expect(tool).toContainText("模型暴露：real");
     await page.getByRole("button", {name:"新建会话", exact:true}).click();
-    await page.getByRole("button", {name:"展开对话", exact:true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     await page.getByRole("textbox", {name:"消息"}).fill("搜索验收");
     await page.getByRole("button", {name:"发送", exact:true}).click();
     await expect(page.getByRole("region", {name:"主对话"})).toContainText("https://source.invalid/");

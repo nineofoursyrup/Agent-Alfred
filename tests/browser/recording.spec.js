@@ -65,7 +65,7 @@ for (const fails of [false, true])
       await other.getByRole("button", {name:"发送",exact:true}).click();
       await requestHeld;
       const accepted = page.waitForResponse(response => response.url().endsWith("/api/runs") && response.status() === 202);
-      await page.getByRole("button", { name: "展开对话", exact: true }).click();
+      await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
       await page.getByRole("textbox", { name: "消息" }).fill("保存窗口测试");
       await page.getByRole("button", { name: "发送", exact: true }).click();
       const acceptedRun = (await (await accepted).json()).run_id;

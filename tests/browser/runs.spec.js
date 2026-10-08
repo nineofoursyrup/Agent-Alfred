@@ -4,7 +4,7 @@ import { controlledTransport, domain, emit, state, run } from "./transport.js";
 test("input source failure stays explicit after reloading run details", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "新建会话", exact: true }).click();
-  await page.getByRole("button", { name: "展开对话", exact: true }).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   await page.getByRole("textbox", { name: "消息" }).fill("输入来源失败展示");
   const accepted = page.waitForResponse(response =>
     response.url().endsWith("/api/runs") && response.status() === 202);
@@ -31,7 +31,7 @@ test("input source failure stays explicit after reloading run details", async ({
 test("later failed preparation displays its own final exclusions after reload", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "新建会话", exact: true }).click();
-  await page.getByRole("button", { name: "展开对话", exact: true }).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   await page.getByRole("textbox", { name: "消息" }).fill("输入来源失败展示");
   const accepted = page.waitForResponse(response =>
     response.url().endsWith("/api/runs") && response.status() === 202);
@@ -65,7 +65,7 @@ test("later failed preparation displays its own final exclusions after reload", 
 test("unconfirmed input registration remains unknown after reload", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "新建会话", exact: true }).click();
-  await page.getByRole("button", { name: "展开对话", exact: true }).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   await page.getByRole("textbox", { name: "消息" }).fill("输入来源失败展示");
   const accepted = page.waitForResponse(response =>
     response.url().endsWith("/api/runs") && response.status() === 202);
@@ -95,7 +95,7 @@ test("unconfirmed input registration remains unknown after reload", async ({ pag
 test("oversized input shows preparation failure without an invented Attempt", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "新建会话", exact: true }).click();
-  await page.getByRole("button", { name: "展开对话", exact: true }).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   await page.getByRole("textbox", { name: "消息" }).fill("先保存一轮历史");
   await page.getByRole("button", { name: "发送", exact: true }).click();
   await expect(page.getByRole("region", { name: "主对话" })).toContainText("已保存");
@@ -123,7 +123,7 @@ test("oversized input shows preparation failure without an invented Attempt", as
 test("preparation exclusions use server counts without manufacturing actual input", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "新建会话", exact: true }).click();
-  await page.getByRole("button", { name: "展开对话", exact: true }).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   await page.getByRole("textbox", { name: "消息" }).fill("x".repeat(64001));
   const accepted = page.waitForResponse(response =>
     response.url().endsWith("/api/runs") && response.status() === 202);
@@ -157,7 +157,7 @@ test("a real recorded Run deep link loads published Attempt evidence and exact c
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "新建会话", exact: true }).click();
-  await page.getByRole("button", { name: "展开对话", exact: true }).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   await page.getByRole("textbox", { name: "消息" }).fill("运行详情测试");
   const accepted = page.waitForResponse(
     (response) =>
