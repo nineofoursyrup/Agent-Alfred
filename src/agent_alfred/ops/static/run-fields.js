@@ -37,12 +37,15 @@ export function recordingLabel(run) {
 export function runFields(run) {
   const decoded = node("textarea");
   decoded.innerHTML = run.purpose || "";
+  const purpose = /** @type {Record<string,string>} */ ({
+    chat: "普通聊天（chat）",
+    aggregation: "手动聚合（aggregation）",
+    probe: "推理探针（probe）",
+    consolidation: "记忆提炼（consolidation）",
+  });
   const fields = [
     ["Run ID", run.run_id],
-    [
-      "用途",
-      decoded.value + (run.purpose_known === false ? "（未知用途）" : ""),
-    ],
+    ["用途", purpose[run.purpose] || decoded.value + "（未知用途）"],
     ["所属分组", run.filter === "chat" ? "会话运行" : "系统运行"],
     ["来源", run.gateway ?? "未知"],
     ["入口", run.entry_surface_id ?? "未知"],
@@ -59,7 +62,14 @@ export function runFields(run) {
         unconfirmed: "准入未确认",
       })[run.admission_state] || "准入未确认",
     ],
-    ["阶段", run.phase || "未知"],
+    [
+      "阶段",
+      /** @type {Record<string,string>} */ ({
+        accepted: "已接受",
+        running: "运行中",
+        finished: "已结束",
+      })[run.phase] || "状态待核验",
+    ],
     ["结果", outcomeLabel(run)],
     ["记录", recordingLabel(run)],
     ["记录来源", run.recording_source || "未知"],
