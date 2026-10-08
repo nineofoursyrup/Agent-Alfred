@@ -1,5 +1,5 @@
 import {test, expect} from '@playwright/test';
-import {controlledTransport, domain, emit, state} from './transport.js';
+import {controlledTransport, domain, emit, run, state} from './transport.js';
 
 // Only the frozen public MainBar action port is called. HTTP and SSE remain
 // controlled boundaries; the composed real read model is verified by S01/S03.
@@ -25,6 +25,15 @@ test('exact MainBar location is one bounded read with a marked preview and separ
   await page.getByRole('button',{name:'回到最新',exact:true}).click();
   await expect(page.locator('#reading-status')).toHaveText('');
   expect(reads).toBe(1);
+});
+
+test('process-gap navigation distinguishes a legal empty Run ID from an absent target',async({page})=>{
+  const session=await controlledTransport(page);
+  await emit(page,'transport_notice',{code:'deltas_dropped'});
+  await expect(page.locator('#shell-status').getByRole('link',{name:'查看过程缺口',exact:true})).toHaveCount(0);
+  await emit(page,'state_patch',state(session,2,{coordinator_state:'running',active_run:run(session,{run_id:''})}));
+  await emit(page,'transport_notice',{code:'deltas_dropped'});
+  await expect(page.locator('#shell-status').getByRole('link',{name:'查看过程缺口',exact:true})).toHaveAttribute('href','/runs/');
 });
 
 test('retired location cannot leave a loading state or late content after page navigation',async({page})=>{

@@ -209,10 +209,10 @@ function renderShellStatus() {
   status.append(node('p',facts.join(' · ')));
   if(busySummary?.navigation?.href){const link=node('a','查看当前运行');link.href=busySummary.navigation.href;status.append(link);}
   if(terminalStatus && !busySummary){const link=node('a','查看最近运行结果');link.href='/runs/'+encodeURIComponent(terminalStatus.run_id);status.append(link);}
-  if(processGap?.run_id){const link=node('a','查看过程缺口');link.href='/runs/'+encodeURIComponent(processGap.run_id);status.append(link);}
+  if(processGap && typeof processGap.run_id==='string'){const link=node('a','查看过程缺口');link.href='/runs/'+encodeURIComponent(processGap.run_id);status.append(link);}
   if(unread&&!unread.seen){const show=node('button','查看新回复');show.onclick=()=>{shell.openPanel('mainbar');returnLatest();};status.append(show);}
   if(unread&&!unread.seen && messageNodes.get('run:'+unread.run_id)?.element.dataset.replyComplete!=='true'){
-    const verify=node('button','核对未读结果');verify.onclick=()=>{if(session&&unread)void locateReply({process_instance_id:instance,session_id:session,run_id:unread.run_id,action_id:crypto.randomUUID()});};status.append(verify);
+    const verify=node('button','核对未读结果');verify.onclick=()=>{if(session!==null&&unread)void locateReply({process_instance_id:instance,session_id:session,run_id:unread.run_id,action_id:crypto.randomUUID()});};status.append(verify);
   }
 }
 function publishState() {shell.publish({instance,connected,session,active,revision,unavailable,memoryRevision:memory.revision,memoryState:memory.state,projection:[...replies.values()].find(r=>r.recording_state!=='recorded')||null});renderShellStatus();}
@@ -285,7 +285,7 @@ function renderMessages() {
     const article=entry.element;
     if(entry.signature!==signature) {
       entry.signature=signature;article.replaceChildren();
-      if(item.run_id)article.dataset.runId=item.run_id;
+      if(typeof item.run_id==='string')article.dataset.runId=item.run_id;
       article.dataset.replyComplete=String(item.type==='run_pair'?!!item.assistant&&item.reply_disposition!=='no_reply':item.type==='projection'&&!item.loading&&!item.recording_unverified&&typeof item.text==='string'&&['recorded','failed','pending'].includes(item.recording_state));
       if(item.aggregation)aggregationFacts(article,item.aggregation,memory);
       if(item.type==='run_pair') {
