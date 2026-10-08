@@ -309,4 +309,3 @@ export function connectionsPage(root, csrf) {
     window.removeEventListener("focus", focused);
   }};
 }
-
