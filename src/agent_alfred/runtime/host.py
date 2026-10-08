@@ -2114,6 +2114,32 @@ class RuntimeHost:
             filters, recording_failed=self._recording_failed_run_ids()
         )
 
+    def read_observation(self):
+        return {
+            "schema_version": 1,
+            "process_instance_id": self.process_instance_id,
+            "observed_at": format_instant(self._clock.wall_utc()),
+        }
+
+    def overview_memory_counts(self, expected_memory_revision):
+        from agent_alfred.memory.queries import MemoryQueryService
+        from agent_alfred.memory.types import CursorStaleError
+
+        memory = self.memory_service
+        value = MemoryQueryService(memory.reading_stores).counts(
+            expected_memory_revision=expected_memory_revision
+        )
+        if memory.memory_revision != value["memory_revision"]:
+            raise CursorStaleError("memory_changed")
+        return value
+
+    def overview_period(self, filters, *, cancelled=None):
+        return self._accounting.period(
+            filters,
+            recording_failed=self._recording_failed_run_ids(),
+            cancelled=cancelled,
+        )
+
     def accounting_page(self, snapshot_id, offset=0):
         return self._accounting.page(snapshot_id, offset)
 
@@ -2159,6 +2185,46 @@ class RuntimeHost:
                 title_max_chars=self._settings.prompt_preview_max_chars,
                 recording_failed_run_ids=recording_failed,
             )
+
+    def locate_source(self, kind, *, session_id, limit, **target):
+        from agent_alfred.runtime import source_locations
+
+        reader = {
+            "session": source_locations.locate_session,
+            "messages": source_locations.locate_messages,
+            "session_run": source_locations.locate_session_run,
+        }[kind]
+        extra = (
+            {}
+            if kind == "session"
+            else {
+                "recording_failed_run_ids": self._recording_failed_run_ids()
+                if kind == "messages"
+                else self._unaddressable_run_ids()
+            }
+        )
+        with self._store.reading() as conn:
+            page, location = reader(
+                conn,
+                session_id=session_id,
+                limit=limit,
+                redactor=self._redactor,
+                **target,
+                **extra,
+            )
+        if kind == "session_run":
+            page = runs.with_host_state(page, self.snapshot(), self._redactor)
+        return page, location
+
+    def locate_mainbar(self, *, process_instance_id, session_id, run_id):
+        return replies.locate_record(
+            self.snapshot(),
+            self._store,
+            self._redactor,
+            process_instance_id=process_instance_id,
+            session_id=session_id,
+            run_id=run_id,
+        )
 
     def _recording_failed_run_ids(self) -> frozenset[str]:
         """Run ids the authoritative in-process projection says cannot record."""
@@ -2219,7 +2285,7 @@ class RuntimeHost:
         """The runs page: terminal Runs paged, the live Run pinned."""
         recording_failed = self._unaddressable_run_ids()
         with self._store.reading() as conn:
-            return runs.list_runs(
+            page = runs.list_runs(
                 conn,
                 filter=filter,
                 limit=limit,
@@ -2227,18 +2293,23 @@ class RuntimeHost:
                 redactor=self._redactor,
                 recording_failed_run_ids=recording_failed,
             )
+        return runs.with_host_state(page, self.snapshot(), self._redactor)
 
-    def locate_run(self, run_id: str, *, limit: int = 25) -> runs.RunPage | None:
+    def locate_run(
+        self, run_id: str, *, limit: int = 25, filter: str | None = None
+    ) -> runs.RunPage | None:
         """The page a deep link to one Run should open on."""
         recording_failed = self._unaddressable_run_ids()
         with self._store.reading() as conn:
-            return runs.locate_run(
+            page = runs.locate_run(
                 conn,
                 run_id=run_id,
                 limit=limit,
+                filter=filter,
                 redactor=self._redactor,
                 recording_failed_run_ids=recording_failed,
             )
+        return runs.with_host_state(page, self.snapshot(), self._redactor)
 
     def list_session_chat_runs(
         self,
@@ -2250,7 +2321,7 @@ class RuntimeHost:
         """One Session's admitted chat Runs, keyset paged."""
         recording_failed = self._unaddressable_run_ids()
         with self._store.reading() as conn:
-            return runs.list_session_chat_runs(
+            page = runs.list_session_chat_runs(
                 conn,
                 session_id=session_id,
                 limit=limit,
@@ -2259,6 +2330,7 @@ class RuntimeHost:
                 reply_max_chars=self._settings.prompt_preview_max_chars,
                 recording_failed_run_ids=recording_failed,
             )
+        return runs.with_host_state(page, self.snapshot(), self._redactor)
 
     def recover_reply(
         self,

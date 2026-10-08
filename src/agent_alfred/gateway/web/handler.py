@@ -359,6 +359,20 @@ class DashboardHandler(BaseHTTPRequestHandler):
             # answer: something went wrong here, and nothing about what.
             self._send(500, {"code": "internal_error"})
 
+    def _read_cancelled(self):
+        """Observe this peer's disconnect without consuming a pipelined request."""
+        import select
+
+        try:
+            ready, _, _ = select.select([self.connection], [], [], 0)
+            return (
+                bool(ready)
+                and self.connection.recv(1, socket.MSG_PEEK | socket.MSG_DONTWAIT)
+                == b""
+            )
+        except OSError, ValueError:
+            return True
+
     def _route_get(self, path: str) -> None:
         asset = page_asset(path)
         if asset is not None:
@@ -381,6 +395,14 @@ class DashboardHandler(BaseHTTPRequestHandler):
         context = self._context
         api = context.api
         params = self._params()
+        from agent_alfred.gateway.web.shared_reads import READS
+
+        if path in READS:
+            status, payload = api.shared_read(
+                path, params, cancelled=self._read_cancelled
+            )
+            self._send(status, payload)
+            return
         if path in ACCOUNTING_READS:
             status, payload = api.accounting_read(path, params)
             self._send(status, payload)

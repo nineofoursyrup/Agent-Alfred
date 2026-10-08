@@ -116,3 +116,42 @@ def test_invalid_query_shape_is_rejected(queries, fields):
     service, _stores, _conn = queries
     with pytest.raises(ValueError):
         service.get_records(**fields)
+
+
+def test_complete_counts_share_revision_and_do_not_read_bodies(queries):
+    service, (semantic, episodic), conn = queries
+    for index in range(120):
+        semantic.save(f"person-{index}", "private fact", ManualOrigin("web"))
+    episodic.save(
+        "private episode", datetime(2026, 9, 9, tzinfo=UTC), None, ManualOrigin("web")
+    )
+    observed = []
+    conn.set_trace_callback(observed.append)
+    value = service.counts(expected_memory_revision=semantic.memory_revision)
+    assert value == {
+        "memory_revision": 121,
+        "counts": {"semantic": 120, "episodic": 1, "total": 121},
+    }
+    assert all("SELECT *" not in sql.upper() for sql in observed)
+    with pytest.raises(CursorStaleError):
+        service.counts(expected_memory_revision=120)
+
+
+def test_counts_refuse_missing_capability_and_revision_changes(queries, monkeypatch):
+    from agent_alfred.memory.queries import CountsUnavailable
+
+    service, (semantic, episodic), _conn = queries
+    monkeypatch.setattr(episodic, "count", None)
+    with pytest.raises(CountsUnavailable):
+        service.counts(expected_memory_revision=0)
+    monkeypatch.undo()
+    original = semantic.count
+
+    def changed():
+        value = original()
+        semantic.save("changed", "fact", ManualOrigin("web"))
+        return value
+
+    monkeypatch.setattr(semantic, "count", changed)
+    with pytest.raises(CursorStaleError):
+        service.counts(expected_memory_revision=0)

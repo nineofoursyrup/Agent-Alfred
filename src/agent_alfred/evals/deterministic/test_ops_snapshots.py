@@ -274,3 +274,117 @@ def test_ops_and_existing_run_evidence_map_recording_unavailable(tmp_path):
             )
             == expected
         )
+
+
+def test_overview_uses_complete_request_local_ledger_without_retaining_ops_slots(
+    tmp_path,
+):
+    with ops_host(tmp_path, [GATE, "done"]) as (host, _, conn, _):
+        identity, _ = run(host)
+        for index in range(65):
+            conn.execute(
+                "INSERT INTO runs (run_id,purpose,session_id,gateway,entry_surface_id,"
+                "prompt_preview,phase,outcome,accepted_at,started_at,finished_at,"
+                "activity_revision,telemetry,admission_state) "
+                "SELECT ? , purpose, session_id, gateway, "
+                "entry_surface_id, prompt_preview, phase, outcome, accepted_at, "
+                "started_at, finished_at, ?, telemetry, admission_state FROM runs "
+                "WHERE run_id=?",
+                (f"copy-{index}", 1000 + index, identity),
+            )
+        conn.commit()
+        saved = host.accounting_snapshot({"range": "all", "timezone": "UTC"})
+        before = dict(host._accounting.snapshots)
+        period = host.overview_period({"range": "today", "timezone": "UTC"})
+        assert period["summary"]["run_count"] == 66
+        assert period["summary"]["attempt_count"] == 132
+        assert period["summary"]["exact_attempts"] == 0
+        assert period["unresolved_membership_count"] == 0
+        assert period["ops_filters"]["end"] > period["ops_filters"]["start"]
+        assert "snapshot_id" not in period and "runs" not in period
+        assert host._accounting.snapshots == before
+        assert host.accounting_page(saved["snapshot_id"]) == saved
+
+
+def test_overview_preserves_unknown_membership_and_separate_model_proof(tmp_path):
+    with ops_host(tmp_path, [GATE, "done"]) as (host, _, conn, clock):
+        identity, _ = run(host)
+        legacy = {
+            "trace_incomplete": True,
+            "attempts": [
+                {
+                    "attempt_id": "known-aborted",
+                    "outcome": "aborted",
+                    "usage": {
+                        "endpoint_reported_cost_usd": "0.000000000000000000000000000001"
+                    },
+                }
+            ],
+        }
+        conn.execute(
+            "UPDATE runs SET telemetry=? WHERE run_id=?", (json.dumps(legacy), identity)
+        )
+        conn.commit()
+        value = host.overview_period({"range": "today", "timezone": "UTC"})
+        assert value["summary"]["exact_usd"] == "0.000000000000000000000000000001"
+        assert value["summary"]["exact_attempts"] == 1
+        assert value["coverage"]["reasons"] == {"historic_tool_metering_unrecorded": 1}
+        assert value["model_coverage"] == {
+            "complete": True,
+            "incomplete_runs": 0,
+            "reasons": {},
+        }
+        conn.execute("UPDATE runs SET started_at='broken',accepted_at='broken'")
+        conn.commit()
+        value = host.overview_period({"range": "today", "timezone": "UTC"})
+        assert value["summary"]["run_count"] == 0
+        assert value["unresolved_membership_count"] == 1
+        assert value["summary"]["exact_attempts"] == 0
+        assert not conn.in_transaction
+
+
+def test_overview_failure_and_cancellation_release_owned_resources(
+    tmp_path, monkeypatch
+):
+    with ops_host(tmp_path, [GATE, "done"]) as (host, _, conn, _):
+        run(host)
+        saved = host.accounting_snapshot({"range": "all", "timezone": "UTC"})
+        before = dict(host._accounting.snapshots)
+        for _ in range(9):
+            host.overview_period({"range": "7d", "timezone": "UTC"})
+        for during_transaction in (True, False):
+            entered_transaction = False
+
+            def cancelled():
+                nonlocal entered_transaction
+                entered_transaction |= conn.in_transaction
+                return entered_transaction and conn.in_transaction == during_transaction
+
+            with pytest.raises(AccountingError, match="read_cancelled"):
+                host.overview_period(
+                    {"range": "7d", "timezone": "UTC"}, cancelled=cancelled
+                )
+            assert not conn.in_transaction
+            assert host._accounting.snapshots == before
+        monkeypatch.setattr(host._accounting, "max_bytes", 1)
+        with pytest.raises(AccountingError, match="snapshot_quota"):
+            host.overview_period({"range": "7d", "timezone": "UTC"})
+        assert not conn.in_transaction
+        assert host._accounting.snapshots == before
+        assert host.accounting_page(saved["snapshot_id"]) == saved
+
+
+def test_overview_calendar_window_uses_exclusive_local_dates_across_dst(tmp_path):
+    from datetime import UTC, datetime
+
+    with ops_host(tmp_path, []) as (host, _, _, clock):
+        clock.wall = datetime(2026, 3, 8, 16, tzinfo=UTC)
+        value = host.overview_period({"range": "today", "timezone": "America/New_York"})
+        assert value["filters"]["start"] == "2026-03-08T05:00:00+00:00"
+        assert value["filters"]["end"] == "2026-03-09T04:00:00+00:00"
+        assert value["ops_filters"] == {
+            "range": "custom",
+            "timezone": "America/New_York",
+            "start": "2026-03-08",
+            "end": "2026-03-09",
+        }

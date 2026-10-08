@@ -65,6 +65,13 @@ def test_pending_reply_does_not_wait_for_the_database_write_lock():
                         run_id=submitted.run_id,
                     )
                 )
+                answers.append(
+                    host.locate_mainbar(
+                        process_instance_id=host.process_instance_id,
+                        session_id=submitted.session_id,
+                        run_id=submitted.run_id,
+                    )
+                )
             finally:
                 completed.set()
 
@@ -72,6 +79,12 @@ def test_pending_reply_does_not_wait_for_the_database_write_lock():
         reader.start()
         assert completed.wait(2), "reply read waited for the held database lock"
         assert answers[0].reply_text == "pong"
+        assert answers[1]["reply_text"] == "pong"
+        assert answers[1]["recording_state"] == "pending"
+        assert answers[1]["recording_source"] == "host_state"
+        assert answers[1]["source"] == "unrecorded_projection"
+        assert answers[1]["user"]["availability"] == "preview"
+        assert answers[1]["history_contiguous"] is False
     finally:
         saving.release()
         committing.release()

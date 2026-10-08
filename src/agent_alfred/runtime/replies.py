@@ -130,35 +130,157 @@ def recover_reply(
         _notice_from_telemetry(row[1], redactor),
         reply_disposition=(
             "reply"
-            if row[1] and json.loads(row[1]).get("memory", {}).get("routing")
+            if _memory_telemetry(row[1]).get("routing")
             else None
         ),
     )
 
 
+def _memory_telemetry(encoded):
+    try:
+        value = json.loads(encoded) if encoded else {}
+    except ValueError, TypeError:
+        return {}
+    if not isinstance(value, dict) or not isinstance(value.get("memory"), dict):
+        return {}
+    return value["memory"]
+
+
 def _notice_from_telemetry(encoded, redactor):
-    value = (
-        json.loads(encoded).get("memory", {}).get("skills", {}).get("notice")
-        if encoded
-        else None
-    )
+    skills = _memory_telemetry(encoded).get("skills")
+    value = skills.get("notice") if isinstance(skills, dict) else None
     return _redact_reply(redactor, value) if isinstance(value, str) else None
 
 
 def intentional_no_reply(encoded):
-    """Only a persisted successful NoAction is an intentional missing answer."""
-    if not encoded:
-        return False
-    memory = json.loads(encoded).get("memory", {})
-    aggregation = memory.get("aggregation", {})
+    """Only an explicit successful NoAction is an intentional missing answer."""
+    memory = _memory_telemetry(encoded)
+    aggregation = memory.get("aggregation")
     if (
-        aggregation.get("graph_result") == "NoAction"
+        isinstance(aggregation, dict)
+        and aggregation.get("graph_result") == "NoAction"
         and aggregation.get("reply_disposition") == "no_reply"
     ):
         return True
-    routing = memory.get("routing", {})
+    routing = memory.get("routing")
     return (
-        routing.get("graph_result") == "NoAction"
+        isinstance(routing, dict)
+        and routing.get("graph_result") == "NoAction"
         and routing.get("reply_disposition") == "no_reply"
         and routing.get("reason_code") == "user_requested_no_reply"
     )
+
+
+class ReplyTargetUnavailable(ReplyUnavailable):
+    """The exact identity is absent, belongs elsewhere, or has no chat purpose."""
+
+
+def locate_record(
+    snapshot, store, redactor, *, process_instance_id, session_id, run_id
+):
+    """One exact formal record, independent from ordinary history pagination."""
+    from agent_alfred.runtime.cursor import encode_cursor
+    from agent_alfred.runtime.runs import _stored_message
+    from agent_alfred.runtime.telemetry import finalization_metadata
+
+    if snapshot.process_instance_id != process_instance_id:
+        raise ReplyContextExpired("reply context expired")
+    projection = snapshot.unrecorded_terminal_projection
+    matched = (
+        projection is not None
+        and projection.run_id == run_id
+        and projection.session_id == session_id
+        and projection.purpose in ("chat", "aggregation")
+    )
+    # A projection hit must not acquire the lock held by the saving writer.
+    if matched:
+        reply = recover_reply(
+            snapshot,
+            store,
+            redactor,
+            process_instance_id=process_instance_id,
+            session_id=session_id,
+            run_id=run_id,
+        )
+        preview = (
+            redactor.redact_text(projection.prompt_preview)
+            if projection.prompt_preview is not None
+            else None
+        )
+        values = {
+            "purpose": projection.purpose,
+            "activity_revision": None,
+            "created_at": None,
+            "source": "unrecorded_projection",
+            "recording_state": projection.recording_state,
+            "recording_source": "host_state",
+            "state_revision": snapshot.state_revision,
+            "user": {
+                "availability": "preview" if preview is not None else "unavailable",
+                "blocks": None,
+                "preview": preview,
+            },
+        }
+    else:
+        try:
+            with store.reading() as conn:
+                row = conn.execute(
+                    "SELECT purpose,phase,activity_revision,telemetry,admission_state "
+                    "FROM runs WHERE run_id=? AND session_id=?",
+                    (run_id, session_id),
+                ).fetchone()
+                if (
+                    row is None
+                    or row[0] not in ("chat", "aggregation")
+                    or row[4] != "admitted"
+                ):
+                    raise ReplyTargetUnavailable("reply target unavailable")
+                user = conn.execute(
+                    "SELECT content,created_at FROM agent_log WHERE run_id=? "
+                    "AND session_id=? AND role='user' ORDER BY id LIMIT 1",
+                    (run_id, session_id),
+                ).fetchone()
+            reply = recover_reply(
+                snapshot,
+                store,
+                redactor,
+                process_instance_id=process_instance_id,
+                session_id=session_id,
+                run_id=run_id,
+            )
+            user_message = _stored_message("user", user[0], redactor) if user else None
+        except (
+            sqlite3.Error,
+            RecordingUnavailable,
+            ValueError,
+            TypeError,
+            AttributeError,
+        ) as exc:
+            raise ReplyUnavailable("reply unavailable") from exc
+        metadata = finalization_metadata(row[3], phase=row[1], purpose=row[0])
+        values = {
+            "purpose": row[0],
+            "activity_revision": row[2],
+            "created_at": user[1] if user else None,
+            "source": "recorded_pair",
+            "recording_state": metadata["recording_state"],
+            "recording_source": metadata["recording_source"],
+            "user": {
+                "availability": "full" if user_message is not None else "unavailable",
+                "blocks": user_message,
+                "preview": None,
+            },
+        }
+    return {
+        "process_instance_id": process_instance_id,
+        "session_id": session_id,
+        "run_id": run_id,
+        "item_key": encode_cursor(
+            {"v": 1, "k": "run_pair", "s": session_id, "r": run_id}
+        ),
+        "reply_text": reply.reply_text,
+        "reply_disposition": reply.reply_disposition,
+        "skill_notice": reply.skill_notice,
+        "history_contiguous": False,
+        **values,
+    }
