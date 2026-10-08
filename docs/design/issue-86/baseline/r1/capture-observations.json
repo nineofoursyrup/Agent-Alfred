@@ -1,0 +1,69 @@
+{
+  "browser": "154.0.8037.93",
+  "captures": [
+    {
+      "name": "A-overview-1440",
+      "width": 1440,
+      "height": 900,
+      "documentWidth": 1440,
+      "dpr": 1,
+      "url": "http://127.0.0.1:18786/baseline/r1/dashboard-prototype.html?variant=A&page=overview&state=normal",
+      "resources": 0
+    },
+    {
+      "name": "A-overview-1280",
+      "width": 1280,
+      "height": 800,
+      "documentWidth": 1280,
+      "dpr": 1,
+      "url": "http://127.0.0.1:18786/baseline/r1/dashboard-prototype.html?variant=A&page=overview&state=normal",
+      "resources": 0
+    },
+    {
+      "name": "A-runs-edge-1280",
+      "width": 1280,
+      "height": 800,
+      "documentWidth": 1280,
+      "dpr": 1,
+      "url": "http://127.0.0.1:18786/baseline/r1/dashboard-prototype.html?variant=A&page=runs&state=edge",
+      "resources": 0
+    },
+    {
+      "name": "A-components-1440",
+      "width": 1440,
+      "height": 900,
+      "documentWidth": 1440,
+      "dpr": 1,
+      "url": "http://127.0.0.1:18786/baseline/r1/dashboard-prototype.html?variant=A&page=components&state=edge",
+      "resources": 0
+    },
+    {
+      "name": "A-overview-390",
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "dpr": 1,
+      "url": "http://127.0.0.1:18786/baseline/r1/dashboard-prototype.html?variant=A&page=overview&state=normal",
+      "resources": 0
+    },
+    {
+      "name": "A-runs-edge-320",
+      "width": 320,
+      "height": 800,
+      "documentWidth": 320,
+      "dpr": 1,
+      "url": "http://127.0.0.1:18786/baseline/r1/dashboard-prototype.html?variant=A&page=runs&state=edge",
+      "resources": 0
+    },
+    {
+      "name": "A-chat-edge-390",
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "dpr": 1,
+      "url": "http://127.0.0.1:18786/baseline/r1/dashboard-prototype.html?variant=A&page=overview&state=edge",
+      "resources": 0
+    }
+  ],
+  "errors": []
+}

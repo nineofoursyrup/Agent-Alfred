@@ -1,0 +1,99 @@
+{
+  "issue": 86,
+  "revision": "r1",
+  "status": "pending_user_visual_review",
+  "date": "2026-10-08",
+  "base_commit": "22c8720e1ec874fd012cc79b086cd8aace4c79b6",
+  "confirmed_questions": [
+    "Q1",
+    "Q2",
+    "Q3"
+  ],
+  "environment": {
+    "os": "macOS 27.2",
+    "browser": "Headless Chromium 154.0.8037.93",
+    "device_pixel_ratio": 1
+  },
+  "assets": [
+    {
+      "path": "DECISIONS.md",
+      "bytes": 5703,
+      "sha256": "6e1fb2f417ce21cc2f4f98cc423f8b93ddc5dc72eaf90f5ef2e7fbfadb3eb8fc"
+    },
+    {
+      "path": "QA-r1.md",
+      "bytes": 3061,
+      "sha256": "210193a27663ef1e7592b4ba66fb8e3742d1b63f9ff1ea7ae4119378b25364c7"
+    },
+    {
+      "path": "README.md",
+      "bytes": 1227,
+      "sha256": "5b53297ed06a10cdd89375e3b9057e37aca60a7fbd65f03e67a0fd44f5e2da82"
+    },
+    {
+      "path": "dashboard-prototype.html",
+      "bytes": 44201,
+      "sha256": "44936e6b85558dfb78d1df6e6aec08ea300575e598cfa3e284c187cc9492bfdf"
+    },
+    {
+      "path": "previews/A-chat-edge-390.png",
+      "bytes": 67215,
+      "sha256": "eb5b75302fbaf064d057dd0088e6a2e625d0943e72df73e469b0f3c5f74485f4"
+    },
+    {
+      "path": "previews/A-chat-text-200-390.png",
+      "bytes": 66475,
+      "sha256": "334e41ab1592373830f4c0611252b38a861c9683ecb03e458a38f45fe85fbc65"
+    },
+    {
+      "path": "previews/A-components-1440.png",
+      "bytes": 204127,
+      "sha256": "62d3053642332e5ae0ab8e3551582ed194fc837f70e8605e900bd7e7568d44bf"
+    },
+    {
+      "path": "previews/A-overview-1440.png",
+      "bytes": 207413,
+      "sha256": "6887171b6e0bdc780f3d6f710dd37c7a8bfe95a8e6c68765eabc6f0a64ba89d5"
+    },
+    {
+      "path": "previews/A-overview-390.png",
+      "bytes": 59421,
+      "sha256": "6a5698f234aae24a2015050ebb180ffa422ac2c3570d03a0465629ff69ec5237"
+    },
+    {
+      "path": "previews/A-runs-edge-1280.png",
+      "bytes": 192479,
+      "sha256": "e3eebe0571bcf8704dafffdca4eb5314d6ecf35acf347147a257f3fbefc028f0"
+    },
+    {
+      "path": "previews/A-runs-edge-320.png",
+      "bytes": 61159,
+      "sha256": "053d83284fae641f6a76bcaab8c13066df201ecd5f776b76d6b64a72d1f32052"
+    },
+    {
+      "path": "previews/B-overview-1440.png",
+      "bytes": 210116,
+      "sha256": "3c9d9183416896bcc225f5b3f027385de4d04f4b1721b61f66e8b110a14e83a2"
+    },
+    {
+      "path": "previews/C-overview-1440.png",
+      "bytes": 200024,
+      "sha256": "f6a1027bb88cf2cfb7f0b91cae3331145770c5167ab5349206597a69b27b10ed"
+    },
+    {
+      "path": "reference/syrup-original-preview.webp",
+      "bytes": 14560,
+      "sha256": "3784ac9b491b3db6ea5670abf22d490a972b1c839fb45a7b5a80c6de12ee6051"
+    },
+    {
+      "path": "reference/syrup-original.html",
+      "bytes": 79561,
+      "sha256": "54807adb38541fa2966e5b0c334b9d0e8d71c60b814245601bc4f35b8ec54b84"
+    },
+    {
+      "path": "review.html",
+      "bytes": 2827,
+      "sha256": "48391da2d81a42cf367269e8364262173cc5bbc606264cdc49f595a7ada4a91c"
+    }
+  ]
+}
