@@ -771,6 +771,10 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
       };
       update();
     }
+    if (state.connected === false) {
+      reader.invalidate("连接中断，保留旧快照");
+      retireReads("连接中断，保留旧快照");
+    }
     if (state.readGapRevision > lastGap) {
       lastGap = state.readGapRevision;
       reader.invalidate("增量通知缺口，快照待刷新");
@@ -785,10 +789,6 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
       reader.invalidate("进程已变化，请重新打开此页面");
       notice.textContent = "进程已变化；旧快照仅供阅读，请重新打开此页面。";
       refreshRun.textContent = "重新核验运行";
-    }
-    if (state.connected === false) {
-      reader.invalidate("连接中断，保留旧快照");
-      retireReads("连接中断，保留旧快照");
     }
     reader.sync();
     paintReadControls();

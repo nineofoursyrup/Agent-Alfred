@@ -277,11 +277,11 @@ export function inbox(root, dashboard) {
       lastInstance = state.instance;
       reader.invalidate("进程已变化，请重新打开此页面");
     }
+    if (state.connected === false) reader.invalidate("连接中断，保留旧快照");
     if (state.readGapRevision > lastGap) {
       lastGap = state.readGapRevision;
       reader.invalidate("增量通知缺口，快照待刷新");
     }
-    if (state.connected === false) reader.invalidate("连接中断，保留旧快照");
     reconcileWaiting(state);
     reader.sync();
   });
