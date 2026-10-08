@@ -169,12 +169,13 @@ export function createShell(options) {
   }
   function mount() {
     if(!started){activeNav();present();return;}
+    const preserveMainbarFocus=!mounted && mainbar.contains(document.activeElement);
     stopScrollRestore();
     controller?.dispose?.();generation++;
     controller=options.mount(currentUrl);mounted=true;
     activeNav();present();
     if(current.source){controller.restoreSource?.(current.source);restoreScroll(current.source.scrollTop||0);}else page.scrollTop=0;
-    titleFocus();
+    if(!preserveMainbarFocus)titleFocus();
   }
   /** @param {string|URL} target @param {{replace?:boolean,source?:Object,intent?:string}} [intent] */
   async function navigate(target,intent={}) {

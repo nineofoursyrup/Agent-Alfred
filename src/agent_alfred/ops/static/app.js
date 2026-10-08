@@ -447,7 +447,12 @@ const stream = new Stream(
         connectionsView?.sync(instance);
         databaseView?.sync();
       }
-      if (body.state_revision <= revision) return;
+      if (body.state_revision <= revision) {
+        // Matching credentials may have arrived while disconnected. Recheck
+        // readiness without reapplying an already accepted Host revision.
+        if(first && revision>=0 && body.state_revision===revision && csrf)shell.start();
+        return;
+      }
       notices.snapshot();
       const incoming = body.active_run;
       if (
