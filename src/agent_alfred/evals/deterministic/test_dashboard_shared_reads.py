@@ -57,6 +57,7 @@ def test_exact_mainbar_and_source_location_are_bounded_and_identity_bound(tmp_pa
         assert len(located["reply_text"]) == 40007
         assert located["user"]["availability"] == "full"
         assert located["history_contiguous"] is False
+        assert located["aggregation"] is None
         assert "next_cursor" not in located
         for _ in range(2):
             conn.execute(
@@ -129,7 +130,69 @@ def test_no_reply_aggregation_metadata_is_independent_and_body_free(tmp_path):
         assert record["reply_text"] is None
         assert record["reply_disposition"] == "no_reply"
         assert record["user"]["availability"] == "full"
+        assert record["aggregation"] == row["aggregation"]
         assert model.requests == []
+
+
+@pytest.mark.parametrize("produce_reply", [False, True])
+def test_exact_aggregation_retains_graph_facts_before_and_after_recording(
+    tmp_path, produce_reply
+):
+    from agent_alfred.evals.deterministic._web_runtime_test_helpers import (
+        SelectiveLatch,
+    )
+    from agent_alfred.evals.deterministic.test_aggregation import save_fact
+    from agent_alfred.evals.deterministic.test_runtime_skills import runtime
+
+    saving = SelectiveLatch()
+    saving.arm()
+    expected = {
+        "graph_result": "Completed" if produce_reply else "NoAction",
+        "reply_disposition": "reply" if produce_reply else "no_reply",
+        "reason_code": None if produce_reply else "sources_not_selected",
+        "evidence_state": "known",
+    }
+    with runtime(
+        tmp_path,
+        ["草稿 [[S1]]"] if produce_reply else [],
+        before_recording_commit=saving,
+    ) as (host, model, _):
+        try:
+            if produce_reply:
+                save_fact(host)
+            session = host.create_session()
+            accepted = host.aggregate(
+                session_id=session,
+                goal="整理 coffee",
+                keywords="coffee",
+                sources=("semantic",) if produce_reply else (),
+            )
+            assert saving.entered.wait(2)
+            api = DashboardApi(facade=host)
+            params = {
+                "process_instance_id": host.process_instance_id,
+                "session_id": session,
+                "run_id": accepted.run_id,
+            }
+            for saved in (False, True):
+                if saved:
+                    saving.release()
+                    assert host.wait(accepted.run_id).outcome == "completed"
+                status, located = api.shared_read("/api/mainbar/locate", params)
+                assert status == 200
+                assert located["aggregation"] == expected
+                assert located["reply_text"] == (
+                    "草稿 [[S1]]" if produce_reply else None
+                )
+                assert located["recording_state"] == (
+                    "recorded" if saved else "pending"
+                )
+                assert located["source"] == (
+                    "recorded_pair" if saved else "unrecorded_projection"
+                )
+            assert len(model.requests) == int(produce_reply)
+        finally:
+            saving.release()
 
 
 @pytest.mark.parametrize("length", [4, 240])

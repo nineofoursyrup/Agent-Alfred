@@ -181,7 +181,10 @@ def locate_record(
     """One exact formal record, independent from ordinary history pagination."""
     from agent_alfred.runtime.cursor import encode_cursor
     from agent_alfred.runtime.runs import _stored_message
-    from agent_alfred.runtime.telemetry import finalization_metadata
+    from agent_alfred.runtime.telemetry import (
+        aggregation_metadata,
+        finalization_metadata,
+    )
 
     if snapshot.process_instance_id != process_instance_id:
         raise ReplyContextExpired("reply context expired")
@@ -215,6 +218,9 @@ def locate_record(
             "recording_state": projection.recording_state,
             "recording_source": "host_state",
             "state_revision": snapshot.state_revision,
+            "aggregation": aggregation_metadata(projection.aggregation)
+            if projection.purpose == "aggregation"
+            else None,
             "user": {
                 "availability": "preview" if preview is not None else "unavailable",
                 "blocks": None,
@@ -270,12 +276,17 @@ def locate_record(
             "source": "recorded_pair",
             "recording_state": metadata["recording_state"],
             "recording_source": metadata["recording_source"],
+            "aggregation": metadata["aggregation"],
             "user": {
                 "availability": "full" if user_message is not None else "unavailable",
                 "blocks": user_message,
                 "preview": None,
             },
         }
+    try:
+        values["aggregation"] = redactor.redact_jsonable(values["aggregation"])
+    except Exception as exc:
+        raise ReplyUnavailable("reply unavailable") from exc
     return {
         "process_instance_id": process_instance_id,
         "session_id": session_id,
