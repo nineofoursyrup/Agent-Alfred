@@ -167,14 +167,22 @@ def locate_session_run(
         "AND purpose IN ('chat','aggregation') AND admission_state='admitted' "
         f"{excluded} AND (activity_revision>? OR (activity_revision=? AND run_id>?)) "
         "ORDER BY activity_revision ASC,run_id ASC LIMIT ?",
-        (session_id, *excluded_params, row[0], row[0], run_id, max(0, limit - 1)),
+        (session_id, *excluded_params, row[0], row[0], run_id, limit),
     ).fetchall()
-    upper = newer[-1] if newer else (row[0], run_id)
-    cursor = runs._session_runs_cursor(session_id, (upper[0] + 1, ""))
+    # The extra newer row is the reader's strict upper bound. Keep the full
+    # key: incrementing only the revision would re-admit larger IDs at a tie.
+    cursor = (
+        runs._session_runs_cursor(session_id, newer[-1])
+        if len(newer) == limit
+        else None
+    )
+    # With fewer newer neighbors, stop at the target instead of filling the
+    # location window with older rows. Its next cursor still resumes history.
+    page_limit = min(limit, len(newer) + 1)
     page = runs.list_session_chat_runs(
         conn,
         session_id=session_id,
-        limit=limit,
+        limit=page_limit,
         redactor=redactor,
         cursor=cursor,
         recording_failed_run_ids=recording_failed_run_ids,

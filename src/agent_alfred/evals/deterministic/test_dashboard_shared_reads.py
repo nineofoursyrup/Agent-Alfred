@@ -288,6 +288,62 @@ def test_sources_use_bounded_keysets_and_compatible_cursors(tmp_path, length):
         ) == (400, {"code": "invalid_anchor"})
 
 
+@pytest.mark.parametrize("same_revision", [True, False])
+def test_session_run_location_preserves_composite_boundary_and_cursor(
+    tmp_path, same_revision
+):
+    with ops_host(tmp_path, [GATE, "answer"]) as (host, model, conn, _):
+        original, _ = run(host)
+        session = host.list_runs().runs[0].session_id
+        keys = ["tie-a", "tie-b", "tie-c"]
+        for index, identity in enumerate(keys):
+            conn.execute(
+                "INSERT INTO runs (run_id,purpose,session_id,gateway,prompt_preview,"
+                "phase,outcome,accepted_at,finished_at,activity_revision,telemetry,"
+                "admission_state) SELECT ?,purpose,session_id,gateway,prompt_preview,"
+                "phase,outcome,accepted_at,finished_at,?,telemetry,admission_state "
+                "FROM runs WHERE run_id=?",
+                (identity, 100 if same_revision else 100 + index, original),
+            )
+        conn.commit()
+        before = (host.snapshot(), len(model.requests))
+        api = DashboardApi(facade=host)
+        for index, target in enumerate(keys):
+            for limit in (1, 2):
+                status, located = api.shared_read(
+                    "/api/sessions/runs/locate",
+                    {
+                        "process_instance_id": host.process_instance_id,
+                        "session_id": session,
+                        "run_id": target,
+                        "limit": str(limit),
+                    },
+                )
+                assert status == 200
+                assert located["target"]["run_id"] == target
+                assert located["target"]["placement"] == "page"
+                assert [r["run_id"] for r in located["runs"]] == list(
+                    reversed(keys[index : index + limit])
+                )
+                # The normal descending reader continues strictly below the
+                # located target, even when adjacent records share a revision.
+                cursor, tail = located["next_cursor"], []
+                while cursor is not None:
+                    status, page = api.session_runs(
+                        {
+                            "session_id": session,
+                            "cursor": cursor,
+                            "limit": "2",
+                        }
+                    )
+                    assert status == 200
+                    tail.extend(r["run_id"] for r in page["runs"])
+                    assert len(tail) <= len(keys)
+                    cursor = page["next_cursor"]
+                assert tail == [*reversed(keys[:index]), original]
+        assert (host.snapshot(), len(model.requests)) == before
+
+
 @pytest.mark.parametrize(
     "session_id,run_id", [("", ""), ("session/a?b#%中文", "run/a?b#%中文")]
 )
