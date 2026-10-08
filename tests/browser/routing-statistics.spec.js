@@ -208,7 +208,7 @@ test('SPEC-02/CE-14 old process and departed-page responses cannot become curren
     await page.getByRole('link', {name:'运行', exact:true}).click();
     release(); await nextSettled;
     await expect(panel).toHaveCount(0);
-    await page.getByRole('link', {name:'Behaviour', exact:true}).click();
+    await page.getByRole('link', {name:'行为', exact:true}).click();
     await expect(page.getByRole('button', {name:'刷新统计', exact:true})).toBeHidden();
   } finally {release?.(); await server.close();}
 });
@@ -412,7 +412,7 @@ test('INTEGRATION-75 CE-14/15 statistics and both topologies retain independent 
     await page.getByRole('link', {name:'运行', exact:true}).click();
     release(); await page.unrouteAll({behavior:'wait'});
     await expect(page.locator('.topology, .routing-statistics')).toHaveCount(0);
-    await page.getByRole('link', {name:'Behaviour', exact:true}).click();
+    await page.getByRole('link', {name:'行为', exact:true}).click();
     await expect(routing.getByRole('button', {name:'查看流程', exact:true})).toHaveAttribute('aria-expanded', 'false');
     await expect(aggregation.getByRole('button', {name:'查看流程', exact:true})).toHaveAttribute('aria-expanded', 'false');
     await expect(routing.getByRole('button', {name:'刷新统计', exact:true})).toBeHidden();

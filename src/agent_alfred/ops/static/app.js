@@ -159,12 +159,16 @@ let locateGeneration=0;
 /** @type {AbortController|null} */ let locateController=null;
 /** @type {Wire|null} */ let locatedRecord=null;
 let followLatest=true;
+let readingIntent=0;
+for(const kind of ['focusin','pointerdown','input','keydown','wheel','touchstart'])document.addEventListener(kind,()=>{readingIntent++;},{passive:true});
+/** @type {Wire|null} */ let terminalStatus=null;
+/** @type {Wire|null} */ let processGap=null;
 /** @type {Set<string>} */ const notifiedReplies=new Set();
 /** @type {{run_id:string,seen:boolean}|null} */ let unread=null;
 function restoreUnread() {
   unread=null;
   if(session===null)return;
-  try {const value=JSON.parse(storage.get(`alfred.unread:${session}`)||'null');if(value && typeof value.run_id==='string')unread={run_id:value.run_id,seen:value.seen===true};}catch{/* Invalid non-body metadata is discarded. */}
+  try {const value=JSON.parse(storage.get(`alfred.unread:${session}`)||'null');if(value && typeof value.run_id==='string'){unread={run_id:value.run_id,seen:value.seen===true};notifiedReplies.add(value.run_id);}}catch{/* Invalid non-body metadata is discarded. */}
 }
 function saveUnread() {if(session!==null && unread)storage.set(`alfred.unread:${session}`,JSON.stringify(unread));}
 /** @param {string} runId @param {Wire} reply */
@@ -173,13 +177,14 @@ function noteReply(runId,reply) {
   notifiedReplies.add(runId);unread={run_id:runId,seen:false};saveUnread();
 }
 function updateReadStatus() {
-  const latest=element('messages').lastElementChild;
-  if(unread && !unread.seen && !locationTarget && latest instanceof HTMLElement && document.visibilityState==='visible' && shell.visibleMainbar()) {
+  const latest=unread?messageNodes.get('run:'+unread.run_id)?.element:null;
+  if(unread && !unread.seen && !locationTarget && latest?.dataset.replyComplete==='true' && document.visibilityState==='visible' && shell.visibleMainbar()) {
     const view=drawer.getBoundingClientRect();const end=latest.getBoundingClientRect();
     if(end.bottom<=view.bottom+1 && end.bottom>view.top && end.height>0){unread.seen=true;saveUnread();}
   }
   const status=element('reading-status');
   status.textContent=locationTarget ? (locationTarget.loading?'正在定位指定记录…':locationTarget.error || `已定位历史${locationTarget.purpose==='aggregation'?'聚合草稿':'回复'}；相邻历史尚未读取。`) : '';
+  /** @type {HTMLButtonElement} */(element('retry-location')).hidden=!locationTarget?.error;
   /** @type {HTMLButtonElement} */(element('return-latest')).hidden=!locationTarget && !(unread && !unread.seen) && followLatest;
   renderShellStatus();
 }
@@ -189,17 +194,30 @@ function renderShellStatus() {
   if(!connected)facts.push('连接中断或正在同步');
   if(busySummary)facts.push(`${busySummary.stage} · ${busySummary.gateway==='cli'?'CLI':busySummary.gateway==='web'?'Web':busySummary.gateway||'来源未知'}`);
   if(unavailable)facts.push('记录服务不可用 · 未保存');
-  if(unread&&!unread.seen)facts.push('有新回复');
+  if(terminalStatus && !busySummary){
+    const latest=replies.get(terminalStatus.run_id)||terminalStatus;
+    facts.push(outcomeLabel({...terminalStatus,reply_disposition:undefined}));
+    facts.push(latest.recording_state==='recorded'?'已保存':latest.recording_state==='failed'?'未保存':latest.recording_state==='pending'?'正在保存':'记录状态待核对');
+  }
+  if(processGap)facts.push(processGap.message);
+  if([...replies.values()].some(reply=>reply.session_id===session && reply.loading))facts.push('正文未完整加载');
+  if(unread&&!unread.seen)facts.push(messageNodes.get('run:'+unread.run_id)?.element.dataset.replyComplete==='true'?'有新回复':'有新回复 · 结果需核对');
   if(element('storage-warning').textContent)facts.push('本页临时保留，刷新恢复受限');
   if(!facts.length)facts.push(session===null?'尚未选择会话':'已同步');
   status.append(node('p',facts.join(' · ')));
   if(busySummary?.navigation?.href){const link=node('a','查看当前运行');link.href=busySummary.navigation.href;status.append(link);}
+  if(terminalStatus && !busySummary){const link=node('a','查看最近运行结果');link.href='/runs/'+encodeURIComponent(terminalStatus.run_id);status.append(link);}
+  if(processGap?.run_id){const link=node('a','查看过程缺口');link.href='/runs/'+encodeURIComponent(processGap.run_id);status.append(link);}
   if(unread&&!unread.seen){const show=node('button','查看新回复');show.onclick=()=>{shell.openPanel('mainbar');returnLatest();};status.append(show);}
+  if(unread&&!unread.seen && messageNodes.get('run:'+unread.run_id)?.element.dataset.replyComplete!=='true'){
+    const verify=node('button','核对未读结果');verify.onclick=()=>{if(session&&unread)void locateReply({process_instance_id:instance,session_id:session,run_id:unread.run_id,action_id:crypto.randomUUID()});};status.append(verify);
+  }
 }
 function publishState() {shell.publish({instance,connected,session,active,revision,unavailable,memoryRevision:memory.revision,memoryState:memory.state,projection:[...replies.values()].find(r=>r.recording_state!=='recorded')||null});renderShellStatus();}
-function retireLocation() {locateGeneration++;locateController?.abort();locateController=null;}
+function retireLocation() {locateGeneration++;locateController?.abort();locateController=null;if(locationTarget?.loading){locationTarget=null;renderMessages();}}
 function returnLatest() {retireLocation();locationTarget=null;followLatest=true;renderMessages();drawer.scrollTop=drawer.scrollHeight;updateReadStatus();}
 element('return-latest').addEventListener('click',returnLatest);
+element('retry-location').addEventListener('click',()=>{if(locationTarget)void locateReply(/** @type {any} */({...locationTarget,action_id:crypto.randomUUID()}));});
 drawer.addEventListener('scroll',()=>{followLatest=drawer.scrollHeight-drawer.scrollTop-drawer.clientHeight<48;updateReadStatus();});
 document.addEventListener('visibilitychange',updateReadStatus);
 /** Exact target consumer; callers must supply the complete immutable identity. @param {{process_instance_id:string,session_id:string,run_id:string,action_id:string}} target */
@@ -209,6 +227,7 @@ async function locateReply(target) {
   retireLocation();const mine=locateGeneration;const owner=shell.generation;
   locationTarget={...target,loading:true};locatedRecord=null;followLatest=false;
   shell.openPanel('mainbar');updateReadStatus();
+  const intent=readingIntent;
   const controller=new AbortController();locateController=controller;
   try {
     const response=await fetch('/api/mainbar/locate?'+new URLSearchParams({process_instance_id:target.process_instance_id,session_id:target.session_id,run_id:target.run_id}),{signal:controller.signal});
@@ -222,12 +241,12 @@ async function locateReply(target) {
     locatedRecord=body;
     const old=replies.get(target.run_id)||{};
     const recording=['recorded','failed'].includes(old.recording_state)&&body.recording_state==='pending'?old.recording_state:body.recording_state;
-    replies.set(target.run_id,{...old,session_id:session,user:body.user?.availability==='full'?textBlocks(body.user.blocks):body.user?.preview||old.user,reply_disposition:body.reply_disposition,text:body.reply_disposition==='no_reply'?undefined:body.reply_text,skill_notice:body.skill_notice,recording_state:recording,loading:body.reply_disposition!=='no_reply' && typeof body.reply_text!=='string',purpose:body.purpose});
+    const keepFull=old.userAvailability==='full' && body.user?.availability!=='full';
+    replies.set(target.run_id,{...old,session_id:session,user:keepFull?old.user:body.user?.availability==='full'?textBlocks(body.user.blocks):body.user?.preview||old.user,userAvailability:keepFull?'full':body.user?.availability,reply_disposition:body.reply_disposition,text:body.reply_disposition==='no_reply'?undefined:body.reply_text,skill_notice:body.skill_notice,recording_state:recording,loading:body.reply_disposition!=='no_reply' && typeof body.reply_text!=='string',purpose:body.purpose});
     locationTarget={...target,loading:false,purpose:body.purpose};
     renderMessages();
     const record=messageNodes.get('run:'+target.run_id)?.element;
-    if(record){drawer.scrollTop+=record.getBoundingClientRect().top-drawer.getBoundingClientRect().top;}
-    // The explicit action focused the panel before IO. The response never steals focus.
+    if(record && intent===readingIntent && shell.visibleMainbar()){drawer.scrollTop+=record.getBoundingClientRect().top-drawer.getBoundingClientRect().top;record.focus({preventScroll:true});}
     return {status:'applied'};
   }catch(failure){
     if(mine!==locateGeneration || controller.signal.aborted)return {status:'retired'};
@@ -264,6 +283,7 @@ function renderMessages() {
     if(entry.signature!==signature) {
       entry.signature=signature;article.replaceChildren();
       if(item.run_id)article.dataset.runId=item.run_id;
+      article.dataset.replyComplete=String(item.type==='run_pair'?!!item.assistant&&item.reply_disposition!=='no_reply':item.type==='projection'&&!item.loading&&typeof item.text==='string'&&['recorded','failed','pending'].includes(item.recording_state));
       if(item.aggregation)aggregationFacts(article,item.aggregation,memory);
       if(item.type==='run_pair') {
         if(item.user)article.append(node('p',textBlocks(item.user)));
@@ -273,6 +293,7 @@ function renderMessages() {
         article.append(node('small','已保存'));
       }else if(item.type==='historic_message')article.append(node('p',textBlocks(item.blocks)));
       else {
+        if(item.userAvailability==='preview')article.append(node('small','请求预览（未取得完整请求）'));
         if(item.user)article.append(node('p',item.user));
         if(item.text!==undefined&&item.text!==null&&item.reply_disposition!=='no_reply')article.append(node('p',item.text));
         if(item.skill_notice)article.append(node('p',item.skill_notice));
@@ -392,6 +413,7 @@ const stream = new Stream(
         behaviourView?.sync();
         revision = -1;
         replies.clear();
+        terminalStatus=null;processGap=null;
         progress.clear();
         resetHistory();
         if (body.session_valid) void loadMessages();
@@ -440,12 +462,15 @@ const stream = new Stream(
           ...old,
           session_id: projection.session_id,
           user: old.user || projection.prompt_preview,
+          userAvailability:old.userAvailability||'preview',
           outcome: projection.outcome,
           aggregation: projection.aggregation,
           reply_disposition: projection.reply_disposition || old.reply_disposition,
           recording_state: projection.recording_state,
           loading: projection.reply_disposition !== "no_reply" && old.text === undefined,
         });
+        terminalStatus={...projection};
+        noteReply(projection.run_id,replies.get(projection.run_id)||{});
         if (projection.session_id === session && old.text === undefined && projection.reply_disposition !== "no_reply")
           void recoverReply(projection.run_id);
         if (
@@ -476,6 +501,7 @@ const stream = new Stream(
       announcer.say(active ? stages[body.coordinator_state] : "就绪");
       if (unavailable) error.textContent = "记录服务不可用；草稿已保留。";
       if (incoming?.recording_state) {
+        if(terminalStatus && terminalStatus.run_id===incoming.run_id)terminalStatus.recording_state=incoming.recording_state;
         const old = replies.get(incoming.run_id);
         if (old) old.recording_state = incoming.recording_state;
         if (incoming.recording_state === "recorded") void loadMessages();
@@ -490,6 +516,7 @@ const stream = new Stream(
       if (!progress.receive(body)) return;
       const event = body.payload;
       const envelope = body.envelope;
+      if(event.name==='run.finished')terminalStatus={...event,run_id:envelope.run_id,session_id:envelope.session_id,recording_state:replies.get(envelope.run_id)?.recording_state||'pending'};
       notices.settled(
         event.name === "run.finished",
         ![...progress.attempts.values()].some(
@@ -520,6 +547,7 @@ const stream = new Stream(
         void connectionsView?.refresh();
       }
     } else if (kind === "transport_notice") {
+      if(body.code==='deltas_dropped' || body.code==='replay_gap'&&body.current_run_state==='unrecoverable')processGap={run_id:active?.run_id,message:body.code==='deltas_dropped'?'部分过程增量未收到':'当前运行的过程无法完整恢复'};
       progress.interrupt();
       notices.receive(body);
       renderMessages();
@@ -592,7 +620,7 @@ async function send() {
     }
     if (response.status !== 202) throw new Error("消息未获准；草稿已保留。");
     const old = replies.get(result.run_id) || {};
-    replies.set(result.run_id, { ...old, session_id: target, user: draft });
+    replies.set(result.run_id, { ...old, session_id: target, user: draft, userAvailability:'full' });
     if (session === target && input.value === draft) {
       input.value = "";
       storage.set(`alfred.draft:${target}`, "");

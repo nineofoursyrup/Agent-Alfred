@@ -85,11 +85,28 @@ export function createShell(options) {
   let navigating=false;
   let mounted=false;
   let generation=0;
+  /** @type {MutationObserver|null} */ let scrollObserver=null;
+  let scrollFrame=0;
+  function stopScrollRestore(){scrollObserver?.disconnect();scrollObserver=null;cancelAnimationFrame(scrollFrame);scrollFrame=0;}
+  /** Restore after async page content grows, but retire on a newer user intent. @param {number} top */
+  function restoreScroll(top){
+    stopScrollRestore();
+    if(!top){page.scrollTop=0;return;}
+    function apply(){
+      scrollFrame=0;page.scrollTop=top;
+      if(Math.abs(page.scrollTop-top)<1)stopScrollRestore();
+    }
+    scrollObserver=new MutationObserver(()=>{if(!scrollFrame)scrollFrame=requestAnimationFrame(apply);});
+    scrollObserver.observe(page,{subtree:true,childList:true,attributes:true});
+    apply();
+  }
+  for(const kind of ['wheel','touchstart','pointerdown','keydown'])page.addEventListener(kind,stopScrollRestore,{passive:true});
   /** @type {Set<(event:any)=>void>} */ const subscribers=new Set();
   let state=/** @type {any} */({});
   function publish() {for(const callback of subscribers)callback(state);}
   function storeCurrent() {history.replaceState({...history.state,alfredShell:current},'',currentUrl.href);}
   function capture() {if (controller) current.source={scrollTop:page.scrollTop,...controller.captureSource?.()};storeCurrent();}
+  page.addEventListener('scroll',()=>{if(!scrollObserver&&!navigating&&!restoreHistory&&currentUrl.href===location.href)capture();});
   function activeNav() {
     const def=pageDefinition(currentUrl);
     for(const link of nav.querySelectorAll('a')) {
@@ -148,10 +165,11 @@ export function createShell(options) {
     else {wideOpen=false;temporaryWide=false;options.storage.set('alfred.shell.wideOpen','false');present();returnFocus();}
   }
   function mount() {
+    stopScrollRestore();
     controller?.dispose?.();generation++;
     controller=options.mount(currentUrl);mounted=true;
     activeNav();present();
-    if(current.source){controller.restoreSource?.(current.source);page.scrollTop=current.source.scrollTop||0;}else page.scrollTop=0;
+    if(current.source){controller.restoreSource?.(current.source);restoreScroll(current.source.scrollTop||0);}else page.scrollTop=0;
     titleFocus();
   }
   /** @param {string|URL} target @param {{replace?:boolean,source?:Object,intent?:string}} [intent] */
@@ -177,8 +195,14 @@ export function createShell(options) {
       // Browser history from an earlier document has no reusable panel ownership.
       const url=new URL(location.href);
       if(!pageDefinition(url))return;
-      if(!await confirmLeave(controller?.getLeaveState?.()||{dirty:false})){history.forward();return;}
-      currentUrl=url;panel=null;current={...current,index:next?.index??current.index-1,url:url.href,panel:null,epoch};storeCurrent();mount();return;
+      if(navigating)return;navigating=true;
+      const old=current;const delta=next?next.index-current.index:-1;
+      try {
+        if(!await confirmLeave(controller?.getLeaveState?.()||{dirty:false})){
+          await new Promise(resolve=>{restoreHistory=()=>{current=old;currentUrl=new URL(old.url);panel=null;present();resolve(undefined);};history.go(-delta);});return;
+        }
+        currentUrl=url;panel=null;current={...current,index:next?.index??current.index-1,url:url.href,panel:null,source:next?.source||null,epoch};storeCurrent();mount();return;
+      }finally{navigating=false;}
     }
     const delta=next.index-current.index;
     if(next.url===currentUrl.href){

@@ -148,3 +148,55 @@ test('crossing the breakpoint keeps editing selection without overwriting the wi
   await page.setViewportSize({width:1100,height:800});await expect(sql).toBeFocused();
   await expect(page.locator('#mainbar')).toBeHidden();
 });
+
+test('Forward cancellation after reload restores the correct old-document history direction',async({page})=>{
+  await page.goto('/inbox');
+  await page.locator('nav a[href="/database"]').click();
+  await page.locator('nav a[href="/runs"]').click();
+  await page.goBack();await page.reload();
+  const sql=page.getByRole('textbox',{name:'SQL',exact:true});await sql.fill('SELECT 43');
+  await page.goForward();await page.getByRole('button',{name:'留在此页',exact:true}).click();
+  await expect(page).toHaveURL(/\/database$/);
+  await expect(sql).toHaveValue('SELECT 43');await expect(sql).toBeFocused();
+  await page.goForward();await page.getByRole('button',{name:'放弃并离开',exact:true}).click();
+  await expect(page).toHaveURL(/\/runs$/);
+});
+
+test('Back restores the central scroll only after the list response returns',async({page})=>{
+  await page.goto('/inbox');
+  for(let index=0;index<35;index++){
+    const response=await page.request.get('/api/entry');const entry=await response.json();
+    await page.request.post('/api/sessions',{headers:{'x-agent-alfred-csrf':entry.csrf_token},data:{}});
+  }
+  await page.reload();await expect(page.locator('#page .card').first()).toBeVisible();
+  await page.locator('#page').evaluate(element=>element.scrollTop=400);
+  const top=await page.locator('#page').evaluate(element=>element.scrollTop);expect(top).toBeGreaterThan(100);
+  await page.locator('nav a[href="/models"]').click();
+  let release,entered;const gate=new Promise(r=>release=r),captured=new Promise(r=>entered=r);
+  await page.route('**/api/sessions?*',async route=>{const response=await route.fetch();entered();await gate;await route.fulfill({response});});
+  await page.goBack();await captured;release();
+  await expect.poll(()=>page.locator('#page').evaluate(element=>element.scrollTop)).toBe(top);
+  await expect(page.getByRole('heading',{name:'收件箱',exact:true})).toBeFocused();
+});
+
+for(const target of ['memory','database'])test(`hidden ${target} still withdraws protected content through the real stream`,async({page})=>{
+  const {api,memoryServer}=await import('./memory-server.js');const server=await memoryServer();
+  try{
+    const other=await api(page.request,server.origin);
+    const saved=await other.command({operation_id:'shell-hidden-seed',kind:'semantic',action:'save',payload:{subject:'hidden',fact:'hidden-sensitive-body'}});
+    await page.setViewportSize({width:390,height:844});await page.goto(server.origin+'/'+target);
+    const content=target==='database'?page.getByRole('region',{name:'查询结果'}):page.getByLabel('语义记忆列表');
+    if(target==='database'){
+      await page.getByRole('textbox',{name:'SQL',exact:true}).fill('SELECT fact FROM diag_facts');
+      await page.getByRole('button',{name:'执行',exact:true}).click();
+    }
+    await expect(content).toContainText('hidden-sensitive-body');
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
+    await expect(page.locator('#page')).toHaveAttribute('aria-hidden','true');
+    const deleted=await other.command({operation_id:'shell-hidden-delete',kind:'semantic',action:'delete',expected_version:1,payload:{id:saved.body.result.memory_id}});
+    expect(deleted.body.result.status).toBe('deleted');
+    await expect(content).not.toContainText('hidden-sensitive-body');
+    await page.keyboard.press('Escape');await expect(content).not.toContainText('hidden-sensitive-body');
+    if(target==='database')await expect(page.getByRole('textbox',{name:'SQL',exact:true})).toHaveValue('SELECT fact FROM diag_facts');
+  }finally{await server.close();}
+});

@@ -156,7 +156,7 @@ test("CE-08 rotated old and new secrets are redacted before real SSE delivery", 
     await control(s, {key:"browser-key-replacement", echo_keys:true});
     await page.getByRole("button", {name:"重新读取 .env"}).click();
     await expect(page.locator('[data-integration="tavily"]')).toContainText("末四位 ment");
-    await page.getByRole("link", {name:"Tools", exact:true}).click();
+    await page.getByRole("link", {name:"工具", exact:true}).click();
     await page.getByRole("combobox", {name:"web_search 授权草稿"}).selectOption("allowed");
     const tool = page.locator("article").filter({has:page.getByRole("heading",{name:"web_search",exact:true})});
     await tool.getByRole("button", {name:"保存授权",exact:true}).click();

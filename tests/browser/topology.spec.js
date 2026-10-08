@@ -196,7 +196,7 @@ for (const action of ['collapse','navigate','restart']) {
         await page.getByRole('link',{name:'运行',exact:true}).click();
         release.release();await page.unrouteAll({behavior:'wait'});
         await expect(page.getByRole('region',{name:'流程拓扑'})).toHaveCount(0);
-        await page.getByRole('link',{name:'Behaviour',exact:true}).click();
+        await page.getByRole('link',{name:'行为',exact:true}).click();
         region=section(page);
         await expect(region.getByRole('button',{name:'查看流程'})).toHaveAttribute('aria-expanded','false');
         return;
