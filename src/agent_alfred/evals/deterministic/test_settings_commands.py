@@ -14,19 +14,55 @@ from agent_alfred.settings_commands import (
     assign,
     is_assignable,
     pin,
+    set_display_name,
     set_price_override,
     support_label,
     unpin,
 )
 
 
+@pytest.mark.parametrize("field", ["display_name", "price_override"])
+def test_clearing_persisted_pin_field_survives_reopening(tmp_path, field):
+    from agent_alfred.pricing import UserPriceOverride
+
+    path = tmp_path / "model_settings.json"
+    store = ModelSettingsStore(path)
+    store.load()
+    target = dict(endpoint_id=DEFAULT_ENDPOINT_ID, model_id=DEFAULT_MODEL_ID)
+    saved = store.mutate(
+        0,
+        lambda snap: pin(
+            snap,
+            **target,
+            display_name="已保存名称",
+            price_override=UserPriceOverride(output=Decimal("0")),
+        ),
+    )
+    # An omitted argument still means keep the saved value.
+    saved = store.mutate(saved.revision, lambda snap: pin(snap, **target))
+    assert saved.pin(**target).display_name == "已保存名称"
+    assert saved.pin(**target).price_override.output == Decimal("0")
+    store.mutate(
+        saved.revision,
+        lambda snap: (
+            set_display_name(snap, **target, display_name=None)
+            if field == "display_name"
+            else set_price_override(snap, **target, dimension="output", value=None)
+        ),
+    )
+    reopened = ModelSettingsStore(path).load().pin(**target)
+    assert getattr(reopened, field) is None
+    if field == "display_name":
+        assert reopened.price_override.output == Decimal("0")
+    else:
+        assert reopened.display_name == "已保存名称"
+
+
 def test_assignable_formula_ignores_connection_and_keeps_unknown() -> None:
     pinned = PinRecord(
         DEFAULT_ENDPOINT_ID, DEFAULT_MODEL_ID, wire_style_override="openai"
     )
-    unknown = resolve_model(
-        "openai", "mystery", wire_style_override="openai"
-    )
+    unknown = resolve_model("openai", "mystery", wire_style_override="openai")
     assert unknown.support == "unknown"
     assert unknown.wire_style_source == "user_declared"
     assert is_assignable(pinned, unknown) is True
@@ -35,9 +71,9 @@ def test_assignable_formula_ignores_connection_and_keeps_unknown() -> None:
         DEFAULT_ENDPOINT_ID, "grok-4.6", wire_style_override=None
     )
     assert unsupported.support == "unsupported"
-    assert is_assignable(
-        PinRecord(DEFAULT_ENDPOINT_ID, "grok-4.6"), unsupported
-    ) is False
+    assert (
+        is_assignable(PinRecord(DEFAULT_ENDPOINT_ID, "grok-4.6"), unsupported) is False
+    )
     assert is_assignable(None, unknown) is False
 
 
@@ -181,3 +217,166 @@ def test_explicit_zero_override_reaches_run_evidence(tmp_path: Path) -> None:
         assert by_dim["uncached_input"]["source"] == "user_override"
     finally:
         dashboard.close()
+
+
+def test_http_clear_reopens_store_and_reprices_only_new_snapshots(tmp_path):
+    import json
+    from urllib.error import HTTPError
+    from urllib.request import Request, urlopen
+
+    from agent_alfred.connections import CredentialOverlay
+    from agent_alfred.evals.deterministic._web_lifecycle_test_helpers import (
+        free_loopback_port,
+    )
+    from agent_alfred.messages import TextBlock
+    from agent_alfred.model import (
+        AttemptRecord,
+        ModelResponse,
+        ModelResult,
+        ScriptedModel,
+        ScriptedModelFactory,
+        Usage,
+    )
+    from agent_alfred.pricing import PriceQuote
+    from agent_alfred.settings import OPENCODE_API_KEY_ENV
+    from agent_alfred.wiring import build_dashboard
+
+    class Prices:
+        def quote(self, endpoint_id, model_id, dimension):
+            return PriceQuote(Decimal("2"), "catalog")
+
+    class Factory(ScriptedModelFactory):
+        def catalog_prices(self):
+            return Prices()
+
+    class MeteredModel(ScriptedModel):
+        def respond(self, request, *, events=None, deadline=None):
+            return ModelResult(
+                (
+                    AttemptRecord(
+                        "clear-probe",
+                        False,
+                        "committed",
+                        Usage(
+                            uncached_input_tokens=1000,
+                            output_tokens=1000,
+                        ),
+                        model=request.model,
+                    ),
+                ),
+                ModelResponse((TextBlock("offline probe"),), "end_turn", request.model),
+                None,
+            )
+
+    factory = Factory(MeteredModel([]))
+    dashboard = build_dashboard(
+        state_dir=tmp_path,
+        port=free_loopback_port(),
+        factory=factory,
+        credentials=CredentialOverlay({OPENCODE_API_KEY_ENV: "fixture-only"}, None),
+    )
+    dashboard.start()
+    target = dict(endpoint_id=DEFAULT_ENDPOINT_ID, model_id=DEFAULT_MODEL_ID)
+
+    def request(path, body=None):
+        headers = {"Content-Type": "application/json"}
+        if body is not None:
+            headers["x-agent-alfred-csrf"] = dashboard.csrf_token
+        call = Request(
+            f"http://127.0.0.1:{dashboard.port}{path}",
+            headers=headers,
+            data=None if body is None else json.dumps(body).encode(),
+        )
+        try:
+            response = urlopen(call, timeout=5)
+        except HTTPError as error:
+            response = error
+        with response:
+            return response.status, json.load(response)
+
+    def save(op, **values):
+        _, view = request("/api/models")
+        status, body = request(
+            "/api/settings",
+            dict(
+                op=op,
+                expected_revision=view["revision"],
+                **target,
+                **values,
+            ),
+        )
+        assert status == 200, body
+        return body
+
+    try:
+        save("display", display_name="持久旧值")
+        save("price", dimension="uncached_input", value="4")
+        saved = save("price", dimension="output", value="0")
+        status, admission = request(
+            "/api/runs",
+            dict(
+                purpose="inference_probe",
+                message="probe",
+                **target,
+            ),
+        )
+        assert status == 202
+        import time
+
+        deadline = time.monotonic() + 5
+        while dashboard.host.snapshot().coordinator_state != "idle":
+            assert time.monotonic() < deadline, "probe did not finish recording"
+            time.sleep(0.01)
+        assert factory.snapshots[-1].model_id == DEFAULT_MODEL_ID
+        old = dashboard.host.accounting_snapshot({"range": "all", "timezone": "UTC"})
+        detail = dashboard.host.accounting_detail(
+            old["snapshot_id"], admission["run_id"]
+        )
+        assert old["summary"]["estimated_usd"] == "0.004"
+        assert detail["run"]["attempts"][0]["attempt_id"] == "clear-probe"
+        save("display", display_name=None)
+        save("price", dimension="uncached_input", value=None)
+        partial = (
+            ModelSettingsStore(tmp_path / "model_settings.json").load().pin(**target)
+        )
+        assert partial.display_name is None
+        assert partial.price_override.uncached_input is None
+        assert partial.price_override.output == Decimal("0")
+        midway = dashboard.host.accounting_snapshot({"range": "all", "timezone": "UTC"})
+        assert midway["summary"]["estimated_usd"] == "0.002"
+        save("price", dimension="output", value=None)
+        reopened = (
+            ModelSettingsStore(tmp_path / "model_settings.json").load().pin(**target)
+        )
+        assert reopened.display_name is None
+        assert reopened.price_override is None
+        _, reread = request("/api/models")
+        row = next(
+            model
+            for group in reread["endpoints"]
+            for model in group["models"]
+            if model["endpoint_id"] == DEFAULT_ENDPOINT_ID
+            and model["model_id"] == DEFAULT_MODEL_ID
+        )
+        assert row["display_name"] is None
+        assert row["price_override"] is None
+        status, conflict = request(
+            "/api/settings",
+            dict(
+                op="display",
+                expected_revision=saved["revision"],
+                **target,
+                display_name="stale",
+            ),
+        )
+        assert status == 409
+        assert conflict == {"code": "settings_conflict", "cause": "stale_revision"}
+        new = dashboard.host.accounting_snapshot({"range": "all", "timezone": "UTC"})
+        assert new["summary"]["estimated_usd"] == "0.004"
+        assert new["price_version"] != old["price_version"]
+        assert (
+            dashboard.host.accounting_detail(old["snapshot_id"], admission["run_id"])
+            == detail
+        )
+    finally:
+        assert dashboard.close()
