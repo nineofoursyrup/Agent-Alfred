@@ -84,6 +84,8 @@ export function createShell(options) {
   let current={version:1,documentId,index:0,epoch,panel:/** @type {string|null} */(null),url:currentUrl.href,source:/** @type {any} */(null)};
   /** @type {null|(()=>void)} */ let restoreHistory=null;
   let navigating=false;
+  // First readiness belongs to this document, not to a route or connection.
+  let started=false;
   let mounted=false;
   let generation=0;
   /** @type {MutationObserver|null} */ let scrollObserver=null;
@@ -166,12 +168,14 @@ export function createShell(options) {
     else {wideOpen=false;temporaryWide=false;options.storage.set('alfred.shell.wideOpen','false');present();returnFocus();}
   }
   function mount() {
+    if(!started){activeNav();present();return;}
+    const preserveMainbarFocus=!mounted && mainbar.contains(document.activeElement);
     stopScrollRestore();
     controller?.dispose?.();generation++;
     controller=options.mount(currentUrl);mounted=true;
     activeNav();present();
     if(current.source){controller.restoreSource?.(current.source);restoreScroll(current.source.scrollTop||0);}else page.scrollTop=0;
-    titleFocus();
+    if(!preserveMainbarFocus)titleFocus();
   }
   /** @param {string|URL} target @param {{replace?:boolean,source?:Object,intent?:string}} [intent] */
   async function navigate(target,intent={}) {
@@ -260,9 +264,9 @@ export function createShell(options) {
     restoreHistory=()=>{current={...current,documentId,epoch,panel:null};storeCurrent();present();};
     history.back();
   } else storeCurrent();
-  present();
+  activeNav();present();
   return {
-    start(){if(!mounted)mount();},restore(){capture();mount();},navigate,openPanel,closePanel,visibleMainbar,
+    start(){started=true;if(!mounted&&!navigating)mount();},restore(){capture();mount();},navigate,openPanel,closePanel,visibleMainbar,
     get generation(){return generation;},
     /** @param {any} value */ publish(value){state=Object.freeze({...value});publish();},
     /** @param {(state:any)=>void} callback */ subscribeState(callback){subscribers.add(callback);callback(state);return ()=>subscribers.delete(callback);},
