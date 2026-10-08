@@ -597,3 +597,31 @@ test('S06 CE-19: a retained failed-recording form uses the restarted Run outcome
     await expect(form.getByRole('button',{name:'生成聚合草稿',exact:true})).toBeEnabled();expect(posts).toHaveLength(1);
   }finally{await server.close();}
 });
+
+test('S06 CE-24/27: leaving a form with an accepted delayed POST retires only its UI owner',async({page})=>{
+  const server=await memoryServer({script:'tests/browser/aggregation_server.py'});
+  let release=()=>{};
+  try {
+    const {other,session}=await prepareDraft(page,server);let accepted,finished;
+    const submitted=new Promise(resolve=>accepted=resolve),settled=new Promise(resolve=>finished=resolve),gate=new Promise(resolve=>release=resolve);
+    const posts=[];
+    await page.route('**/api/runs',async route=>{
+      if(route.request().method()!=='POST')return route.continue();
+      posts.push(route.request().postDataJSON());const response=await route.fetch();accepted(await acceptedRun(response));
+      await gate;await route.fulfill({response}).catch(()=>{});finished();
+    });
+    await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();const {run_id}=await submitted;
+    await page.getByRole('textbox',{name:'聚合目标',exact:true}).fill('提交后新增的草稿');
+    await page.getByRole('link',{name:'运行',exact:true}).click();await page.getByRole('button',{name:'留在此页',exact:true}).click();
+    await expect(page.getByRole('textbox',{name:'聚合目标',exact:true})).toHaveValue('提交后新增的草稿');
+    await page.getByRole('link',{name:'运行',exact:true}).click();await page.getByRole('button',{name:'放弃并离开',exact:true}).click();
+    await expect(page).toHaveURL(/\/runs$/);release();await settled;
+    await expect(page.getByRole('region',{name:'手动聚合',exact:true})).toHaveCount(0);
+    await expect.poll(async()=>(await other.get('/api/run-evidence?run_id='+run_id)).body.memory?.aggregation?.graph_result).toBe('Completed');
+    expect(posts).toEqual([{purpose:'aggregation',session_id:session,message:'draft goal',keywords:'coffee',sources:['semantic']}]);
+    expect((await other.get('/api/runs?filter=chat&limit=25')).body.runs.filter(item=>item.purpose==='aggregation')).toHaveLength(1);
+    await page.getByRole('link',{name:'行为',exact:true}).click();
+    const form=page.getByRole('region',{name:'手动聚合',exact:true});await expect(form.getByRole('textbox',{name:'聚合目标',exact:true})).toHaveValue('');
+    await expect(form.getByText('尚未提交聚合请求。',{exact:true})).toBeVisible();
+  }finally{release();await server.close();}
+});
