@@ -1,5 +1,6 @@
 import {node} from "./dom.js";
 import {dashboard} from "./app.js";
+import {settingsFocus} from "./settings-focus.js";
 /** @typedef {Record<string, any>} Wire */
 const STATE_LABEL = /** @type {Record<string,string>} */ ({
   unconfigured: "未配置",
@@ -17,6 +18,7 @@ const CATALOG_LABEL = /** @type {Record<string,string>} */ ({
 /** @param {HTMLElement} root @param {()=>string} csrf */
 export function connectionsPage(root, csrf) {
   root.classList.add("settings-page");
+  const focus=settingsFocus(root);
   let alive=true, generation=0;
   const opened=new Map();
   const pending=new Set();
@@ -38,13 +40,14 @@ export function connectionsPage(root, csrf) {
   window.addEventListener("focus", focused);
   const list = node("div");
   list.setAttribute("aria-label", "端点连接");
-  const reread = node("button", "重新读取 .env");
+  const reread = node("button", "重新读取 .env");reread.dataset.focusKey="reread";
   reread.addEventListener("click", () => void postReread());
   root.append(reread, list);
 
   async function postReread() {
     const token = csrf();
     if (!token || !connected || pendingReread) return;
+    const focusRequest=focus.capture();
     pendingReread=true;
     const epoch=generation;
     reread.disabled = true;
@@ -65,7 +68,7 @@ export function connectionsPage(root, csrf) {
     } catch {
       if(epoch===generation)mutationFailure("重读结果未确认，请核对当前状态后重试。", attempt);
     } finally {
-      if(epoch===generation){pendingReread=false;reread.disabled=!connected;}
+      if(epoch===generation){pendingReread=false;reread.disabled=!connected;focus.restore(focusRequest);}
     }
   }
 
@@ -75,8 +78,10 @@ export function connectionsPage(root, csrf) {
     if (!token || !connected) return;
     const epoch=generation;
     if (button.disabled || pending.has(endpointId)) return;
+    focus.capture();
     pending.add(endpointId);
     button.disabled = true;
+    if(current)render(current);
     const attempt = ++sequence;
     try {
       const response = await fetch("/api/connections/probe", {
@@ -142,8 +147,7 @@ export function connectionsPage(root, csrf) {
     // This current configuration fact is independent of operation receipts.
     configurationNotice.textContent = body.integration_application === "not_applied"
       ? "配置未能一致生效，外部能力已暂停；请修复后重新读取 .env。" : "";
-    const focused=document.activeElement;
-    const focusKey=focused instanceof HTMLElement && list.contains(focused)?focused.dataset.focusKey:null;
+    const focusRequest=focus.capture();
     list.replaceChildren();
     const endpointGroup=node("section"); endpointGroup.className="settings-group";endpointGroup.setAttribute("aria-label","模型端点");
     endpointGroup.append(node("h2","模型端点"));
@@ -193,7 +197,7 @@ export function connectionsPage(root, csrf) {
         const balance=observed.balances?.[scope];
         more.append(node("p",`${scope} 套餐用量：${balance?.plan_usage ?? "未报告"}；套餐上限：${balance?.plan_limit ?? "未报告"}`));
       }
-      const tools=node("a","到工具页核对授权");tools.href="/tools";more.append(tools);card.append(more);integrationGroup.append(card);
+      const tools=node("a","到工具页核对授权");tools.dataset.focusKey="tools:integration:"+integration.integration_id;tools.href="/tools";more.append(tools);card.append(more);integrationGroup.append(card);
     }
     if(!(body.integrations || []).length)integrationGroup.append(node("p","当前没有可展示的可选集成。"));
     const section=node("section");section.className="settings-group";section.setAttribute("aria-label","MCP 服务器");section.append(node("h2","MCP 服务器"));list.append(section);
@@ -219,13 +223,10 @@ export function connectionsPage(root, csrf) {
         more.append(node("p",`server_key：${server.server_key}`));
         if(server.history)more.append(node("p",`历史连接：${server.history.state}；不代表当前就绪。`));
         for(const line of server.diagnostics || [])more.append(node("pre",line));
-        const tools=node("a","到工具页核对授权");tools.href="/tools";more.append(tools);card.append(more);section.append(card);
+        const tools=node("a","到工具页核对授权");tools.dataset.focusKey="tools:mcp:"+server.server_key;tools.href="/tools";more.append(tools);card.append(more);section.append(card);
       }
     } else section.append(node("p","MCP 状态未提供；不能推断维护成功。"));
-    if(focusKey && focused && !focused.isConnected && document.activeElement===document.body) {
-      const replacement=[...list.querySelectorAll('[data-focus-key]')].find(e=>e instanceof HTMLElement && e.dataset.focusKey===focusKey);
-      if(replacement instanceof HTMLElement)replacement.focus({preventScroll:true});
-    }
+    focus.restore(focusRequest);
 
     return true;
   }
@@ -233,6 +234,7 @@ export function connectionsPage(root, csrf) {
   /** @param {Wire} payload */
   async function operateMCP(payload) {
     if(pendingMCP || !alive || !connected || !csrf())return;
+    focus.capture();
     pendingMCP=true;
     const epoch=generation;
     const attempt = ++sequence;
@@ -304,7 +306,7 @@ export function connectionsPage(root, csrf) {
     if(changed && connected)void refresh();
   });
   return {refresh, sync, close() {
-    alive=false;generation++;reads.abort();stop();
+    alive=false;generation++;reads.abort();stop();focus.close();
     ++sequence; channel.close();
     window.removeEventListener("focus", focused);
   }};

@@ -166,3 +166,75 @@ test('S08 each saved field is independent and uses the public HTTP value',async(
     expect((await (await fetch(s.control)).json()).model_calls).toHaveLength(0);
   }finally{await context.close();await s.close();}
 });
+
+test('S08 STD01 retired save cannot clear a successor request after real Stream reconnect',async({browser})=>{
+  const s=await server(),context=await browser.newContext({baseURL:s.origin});
+  let releaseA=()=>{},releaseB=()=>{};
+  try {
+    const page=await context.newPage();await open(page,s.origin);const row=selected(page);
+    const input=row.getByRole('textbox',{name:'显示名',exact:true});
+    const save=row.getByRole('button',{name:'保存显示名',exact:true});
+    const posts=[];let gotA,gotB;
+    const recvA=new Promise(resolve=>gotA=resolve),recvB=new Promise(resolve=>gotB=resolve);
+    const heldA=new Promise(resolve=>releaseA=resolve),heldB=new Promise(resolve=>releaseB=resolve);
+    await page.route('**/api/settings',async route=>{
+      const request=route.request().postDataJSON();posts.push(request);
+      const response=await route.fetch();expect(response.status()).toBe(200);
+      if(request.display_name==='A'){gotA();await heldA;}
+      if(request.display_name==='B'){gotB();await heldB;}
+      await route.fulfill({response}).catch(()=>{});
+    });
+    await input.fill('A');await save.click();await recvA;
+    await context.setOffline(true);
+    await expect(row.getByText(/连接中断，保存结果未确认/)).toBeVisible();
+    await context.setOffline(false);
+    await expect(row.getByText('当前保存值：A',{exact:true})).toBeVisible();
+    await row.getByRole('button',{name:'基于当前版本继续编辑',exact:true}).click();
+    await input.fill('B');await save.click();await recvB;await expect(save).toBeDisabled();
+    const arrived=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/settings' && r.request().postDataJSON().display_name==='A');
+    releaseA();await arrived;
+    await input.fill('C');
+    await expect(save).toBeDisabled();
+    await expect(row.locator('.model-row-state')).toContainText('提交中');
+    expect(posts.map(p=>[p.display_name,p.expected_revision])).toEqual([['A',0],['B',1]]);
+    releaseB();
+    await expect(row.getByText('已确认保存；还有新编辑',{exact:true})).toBeVisible();
+    await expect(input).toHaveValue('C');await expect(save).toBeEnabled();
+    expect((await saved(page)).display_name_override).toBe('B');
+    expect(posts).toHaveLength(2);
+    expect((await (await fetch(s.control)).json()).model_calls).toHaveLength(0);
+  }finally{releaseA();releaseB();await context.setOffline(false);await context.close();await s.close();}
+});
+
+test('S08 STD02 model action focus survives refresh and completion without stealing a new intent',async({browser})=>{
+  const s=await server(),context=await browser.newContext({baseURL:s.origin});let release=()=>{};
+  try {
+    const page=await context.newPage();await open(page,s.origin);const row=selected(page);
+    const input=row.getByRole('textbox',{name:'显示名',exact:true});
+    const save=row.getByRole('button',{name:'保存显示名',exact:true});
+    const other=page.locator("[data-model='opencode-go:qwen3.7-max']");
+    await other.getByText('模型详情',{exact:true}).click();await other.getByRole('button',{name:'钉选',exact:true}).click();
+    await expect(other.getByRole('textbox',{name:'显示名',exact:true})).toBeVisible();
+    for(const button of [save,other.getByRole('button',{name:'保存显示名',exact:true}),row.getByRole('button',{name:'保存 output',exact:true}),row.getByRole('button',{name:'指派为主模型',exact:true}),row.getByRole('button',{name:'测试真实调用（可能计费）',exact:true}),page.locator('[data-endpoint="opencode-go"]').getByRole('button',{name:'刷新目录',exact:true})]) {
+      await button.focus();
+      const reread=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/models');
+      await page.evaluate(()=>window.dispatchEvent(new Event('focus')));await reread;
+      await expect(button).toBeFocused();
+    }
+    let entered,posts=0;let received=new Promise(resolve=>entered=resolve);let held=new Promise(resolve=>release=resolve);
+    await page.route('**/api/settings',async route=>{posts++;const response=await route.fetch();entered();await held;await route.fulfill({response}).catch(()=>{});});
+    await input.fill('focused action');await save.click();await received;await expect(save).toBeDisabled();
+    release();await expect(row.getByText('已确认保存',{exact:true})).toBeVisible();await expect(save).toBeFocused();
+    received=new Promise(resolve=>entered=resolve);held=new Promise(resolve=>release=resolve);
+    await input.fill('MainBar owns focus');await save.click();await received;
+    const chat=page.getByRole('button',{name:'新建会话',exact:true});await chat.focus();
+    release();await expect(row.getByText('已确认保存',{exact:true})).toBeVisible();await expect(chat).toBeFocused();
+    received=new Promise(resolve=>entered=resolve);held=new Promise(resolve=>release=resolve);
+    await input.fill('page has retired');await save.click();await received;
+    await page.locator('nav a[href="/connections"]').click();await page.getByRole('button',{name:'放弃并离开',exact:true}).click();
+    const reread=page.getByRole('button',{name:'重新读取 .env',exact:true});await reread.focus();
+    const finished=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/settings');release();await finished;
+    await expect(reread).toBeFocused();expect(posts).toBe(3);
+    expect((await (await fetch(s.control)).json()).model_calls).toHaveLength(0);
+  }finally{release();await context.close();await s.close();}
+});

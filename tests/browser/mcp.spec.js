@@ -50,6 +50,7 @@ test('MCP CE-09 CE-14 double-tab env publication and explicit reconnect',async({
     expect((await control(s)).requests.filter(r=>r.method==='initialize')).toHaveLength(before);
     await b.locator('[data-mcp-server="test"]').getByRole('button',{name:'重连',exact:true}).click();
     await expect(b.locator('[data-mcp-server="test"]')).toContainText('已连接');
+    await expect(b.locator('[data-mcp-server="test"]').getByRole('button',{name:'重连',exact:true})).toBeFocused();
     await expect(a.locator('[data-mcp-server="test"]')).toContainText('已连接');
     expect((await control(s)).requests.filter(r=>r.method==='initialize')).toHaveLength(before+1);
   }finally{await context.close();await s.close();}

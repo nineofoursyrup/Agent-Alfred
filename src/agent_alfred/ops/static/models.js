@@ -1,9 +1,10 @@
 import {node} from './dom.js';
 import {confirmLeave} from './shell.js';
 import {dashboard} from './app.js';
+import {settingsFocus} from './settings-focus.js';
 
 /** @typedef {Record<string, any>} Wire */
-/** @typedef {{value:string,baseline:string,revision:number,status:string,message:string,conflict:boolean,pending:boolean}} Draft */
+/** @typedef {{value:string,baseline:string,revision:number,status:string,message:string,conflict:boolean,pending:boolean,request:number}} Draft */
 const DIMENSIONS = ['uncached_input', 'cache_read', 'cache_write', 'output'];
 const CONNECTION = /** @type {Record<string,string>} */ ({unconfigured:'未配置', configured_untested:'已配置未测试', connected:'已连接', error:'错误'});
 const CATALOG = /** @type {Record<string,string>} */ ({unfetched:'尚未获取', fresh:'新鲜', stale:'过期', unavailable:'不可用'});
@@ -32,6 +33,7 @@ const errorText = body => `${ERRORS[body.cause || body.code] || '操作失败，
 /** Models owns drafts and receipts; the shell owns navigation and Stream. @param {HTMLElement} root @param {()=>string} csrf */
 export function modelsPage(root, csrf) {
   root.classList.add('settings-page');
+  const focus=settingsFocus(root);
   const pageNotice = node('p', '正在读取模型设置…'); pageNotice.setAttribute('role', 'status');
   const refresh = node('button', '核对当前模型设置');
   const assignments = node('section'); assignments.setAttribute('aria-label', '模型指派');
@@ -53,7 +55,7 @@ export function modelsPage(root, csrf) {
     const key = JSON.stringify([model.endpoint_id, model.model_id, field]);
     let draft = drafts.get(key);
     if (!draft) {
-      draft = {value:savedValue(model, field), baseline:savedValue(model, field), revision:current?.revision ?? 0, status:'', message:'', conflict:false, pending:false};
+      draft = {value:savedValue(model, field), baseline:savedValue(model, field), revision:current?.revision ?? 0, status:'', message:'', conflict:false, pending:false, request:0};
       drafts.set(key, draft);
     }
     return draft;
@@ -120,14 +122,15 @@ export function modelsPage(root, csrf) {
   async function mutate(op, model, fields, draft=null) {
     if (!current || !alive || !connected || !csrf() || draft?.pending || draft?.conflict || (!draft && receipts.get(modelKey(model))?.pending)) return;
     const epoch=generation, submitted=draft?.value, revision=draft?.revision ?? current.revision;
-    if (draft) {draft.pending=true; draft.status='pending'; draft.message='正在提交；后续编辑不会改写本次请求。';}
     const key=modelKey(model), attempt=++operationSequence;
+    const ownsRequest=()=>alive && epoch===generation && (draft?draft.request===attempt:receipts.get(key)?.attempt===attempt);
+    if (draft) {draft.request=attempt;draft.pending=true; draft.status='pending'; draft.message='正在提交；后续编辑不会改写本次请求。';}
     if (!draft) receipts.set(key,{attempt,pending:true,kind:op,message:'设置正在提交'});
     render();
     try {
       const response=await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json','x-agent-alfred-csrf':csrf()},body:JSON.stringify({op,expected_revision:revision,endpoint_id:model.endpoint_id,model_id:model.model_id,...fields})});
       const body=await response.json();
-      if (!alive || epoch!==generation) return;
+      if (!ownsRequest()) return;
       if (!response.ok) {
         if (draft) {draft.status='failed'; draft.message=errorText(body); draft.conflict=body.code==='settings_conflict';}
         else receipts.set(key,{attempt,message:errorText(body)});
@@ -154,12 +157,14 @@ export function modelsPage(root, csrf) {
       if(![...drafts.values()].some(d=>d.conflict)){settingsConflict='';pageNotice.textContent=`设置 revision ${body.revision}；单项保存，各项互不代存。`;}
       accept(body,true);
     } catch {
-      if (!alive || epoch!==generation) return;
+      if (!ownsRequest()) return;
       if (draft) {draft.status='unknown';draft.message='保存结果未确认。先核对当前值；不会自动重送。';}
       else receipts.set(key,{attempt,message:'设置结果未确认；请核对，不会自动重送。'});
     } finally {
-      if (draft) draft.pending=false;
-      if (alive && epoch===generation) render();
+      if (ownsRequest()) {
+        if (draft) {draft.pending=false;draft.request=0;}
+        render();
+      }
     }
   }
 
@@ -188,6 +193,7 @@ export function modelsPage(root, csrf) {
     if (draft.conflict || (draft.value!==draft.baseline && draft.revision!==current?.revision)) baseline.textContent=`编辑基线：${shown(draft.baseline)} · revision ${draft.revision}；当前 revision ${current?.revision}`;
     const feedback=node('p',draft.message || (draft.value!==draft.baseline?'未保存':'')); feedback.setAttribute('role','status');
     const save=node('button',field==='display'?'保存显示名':field==='style'?'保存线路':`保存 ${field}`);
+    save.dataset.focusKey=JSON.stringify([model.endpoint_id,model.model_id,'save',field]);
     const update=()=>{
       control.disabled=receipts.get(modelKey(model))?.kind==='unpin';
       save.disabled=control.disabled || !connected || current?.status!=='ok' || draft.pending || draft.conflict || draft.status==='unknown' || (field==='style' && !draft.value);
@@ -211,6 +217,7 @@ export function modelsPage(root, csrf) {
     box.append(title,currentValue,baseline,save,feedback);
     if (draft.conflict || draft.status==='unknown') {
       const compare=node('button','基于当前版本继续编辑');
+      compare.dataset.focusKey=JSON.stringify([model.endpoint_id,model.model_id,'adopt',field]);
       compare.disabled=!connected || current?.status!=='ok' || draft.message.includes('external_change');
       compare.onclick=()=>{draft.baseline=saved;draft.revision=current?.revision ?? draft.revision;draft.conflict=false;draft.status='';draft.message='已采用当前版本；原请求不再重送，保存需再次明确点击。';if(![...drafts.values()].some(d=>d.conflict)){settingsConflict='';pageNotice.textContent=`设置 revision ${current?.revision}；已核对，保存仍需明确点击。`;}render();};
       box.append(compare);
@@ -239,16 +246,14 @@ export function modelsPage(root, csrf) {
 
   /** @param {Wire} model @param {string} id @param {string} label */
   function runLink(model,id,label) {
-    const link=node('a',label);link.href='/runs/'+encodeURIComponent(id)+'?filter=system';
+    const link=node('a',label);link.dataset.focusKey=JSON.stringify([model.endpoint_id,model.model_id,'run',id]);link.href='/runs/'+encodeURIComponent(id)+'?filter=system';
     link.onclick=event=>{if(event.button!==0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)return;event.preventDefault();void dashboard.navigate(link.href,{intent:'source',source:{returnSource:{route:'/models',kind:'model',anchor:modelKey(model),section:'model',process_instance_id:instance}}});};
     return link;
   }
 
   function render() {
     if (!alive || !current || !root.isConnected) return;
-    const focused=document.activeElement;
-    const focusKey=focused instanceof HTMLElement && root.contains(focused)?focused.dataset.focusKey:null;
-    const selection=focused instanceof HTMLInputElement?[focused.selectionStart,focused.selectionEnd]:null;
+    const focusRequest=focus.capture();
     assignments.replaceChildren(node('h2','模型指派'));
     const describe=(/** @type {Wire|null|undefined} */ value)=>value?`${value.endpoint_id} / ${value.model_id}`:'未知';
     if (current.status!=='ok') assignments.append(node('p',`设置不可用：${current.status}；不能确认当前指派。`));
@@ -258,8 +263,8 @@ export function modelsPage(root, csrf) {
       const section=node('section');section.className='settings-group';section.dataset.endpoint=group.endpoint_id;
       const connection=node('p',`连接：${CONNECTION[group.observation?.state] || group.observation?.state || '未知'} ${group.observation?.reason || ''} ${group.observation?.checked_at || ''} ${group.observation?.checked_via || ''}`);connection.dataset.dimension='connection';
       const catalog=node('p',`目录：${CATALOG[group.catalog.health] || group.catalog.health}；上次成功 ${group.catalog.last_success_at || '尚无'} ${group.catalog.last_error || ''} ${group.catalog.retry_at?'重试 '+group.catalog.retry_at:''}`);catalog.dataset.dimension='catalog';
-      const open=node('button','展开此端点');open.disabled=!connected;open.onclick=()=>void read(group.endpoint_id);
-      const reload=node('button',catalogs.has(group.endpoint_id)?'目录读取中…':'刷新目录');reload.disabled=catalogs.has(group.endpoint_id)||!connected;reload.onclick=()=>void read(group.endpoint_id,true);
+      const open=node('button','展开此端点');open.dataset.focusKey=JSON.stringify([group.endpoint_id,'expand']);open.disabled=!connected;open.onclick=()=>void read(group.endpoint_id);
+      const reload=node('button',catalogs.has(group.endpoint_id)?'目录读取中…':'刷新目录');reload.dataset.focusKey=JSON.stringify([group.endpoint_id,'refresh']);reload.disabled=catalogs.has(group.endpoint_id)||!connected;reload.onclick=()=>void read(group.endpoint_id,true);
       section.append(node('h2',group.endpoint_id),connection,catalog,open,reload);
       if (!group.models.length) section.append(node('p','暂无候选；目录尚未获取、失败或为空均不代表当前无指派。'));
       for (const model of group.models) {
@@ -273,33 +278,30 @@ export function modelsPage(root, csrf) {
         details.append(node('p',`endpoint_id：${model.endpoint_id}`),node('p',`model_id：${model.model_id}`),node('p',`候选来源：${(model.sources || []).join(' / ') || '未知'}；支持依据：${model.support_basis || '未知'}`),node('p',`线路：${model.wire_style || '未知'}；线路依据：${model.wire_style_source || '未知'}`));
         const actions=node('div');actions.className='settings-actions';
         if(model.pinned) {
-          const unpin=node('button','取消钉选');unpin.disabled=primary||gate||!connected||Boolean(receipts.get(key)?.pending)||['display','style',...DIMENSIONS].some(f=>fieldDraft(model,f).pending);
+          const unpin=node('button','取消钉选');unpin.dataset.focusKey=JSON.stringify([model.endpoint_id,model.model_id,'unpin']);unpin.disabled=primary||gate||!connected||Boolean(receipts.get(key)?.pending)||['display','style',...DIMENSIONS].some(f=>fieldDraft(model,f).pending);
           unpin.onclick=async()=>{const changed=['display','style',...DIMENSIONS].some(f=>{const d=fieldDraft(model,f);return d.value!==d.baseline;});if(changed && !await confirmLeave({dirty:true,summary:'取消钉选将放弃此模型的未保存编辑。'}))return;void mutate('unpin',model,{});};
           actions.append(unpin);
           if(primary||gate)actions.append(node('p','已指派，不能取消钉选。'));
-        } else {const pin=node('button','钉选');pin.disabled=!connected;pin.onclick=()=>void mutate('pin',model,{});actions.append(pin);}
+        } else {const pin=node('button','钉选');pin.dataset.focusKey=JSON.stringify([model.endpoint_id,model.model_id,'pin']);pin.disabled=!connected;pin.onclick=()=>void mutate('pin',model,{});actions.append(pin);}
         for(const [slot,label] of [['primary','指派为主模型'],['retrieval_gate','指派为检索门']]) {
-          const assign=node('button',label);assign.disabled=!model.assignable||!connected;assign.onclick=()=>void mutate('assign',model,{slot});actions.append(assign);
+          const assign=node('button',label);assign.dataset.focusKey=JSON.stringify([model.endpoint_id,model.model_id,'assign',slot]);assign.disabled=!model.assignable||!connected;assign.onclick=()=>void mutate('assign',model,{slot});actions.append(assign);
         }
         if(!model.assignable)actions.append(node('p',`不可指派：${!model.pinned?'请先钉选':model.disable_code || '支持依据不足'}（${model.disable_dimension || 'pin'}）。连接观测不参与指派。`));
         details.append(actions);
         if(model.pinned)for(const field of ['display','style',...DIMENSIONS])details.append(editor(model,field,summary));
         const probe=node('section');probe.className='model-probe';probe.setAttribute('aria-label','真实调用测试');
         probe.append(node('h4','真实调用测试'),node('p',`${model.endpoint_id} / ${model.model_id} · 仅按已保存设置测试；可能产生费用，未保存编辑不会纳入。`));
-        const button=node('button','测试真实调用（可能计费）');button.disabled=!model.probe_enabled||!connected||Boolean(receipts.get(key)?.pending);button.onclick=()=>void inferenceProbe(model);probe.append(button);
+        const button=node('button','测试真实调用（可能计费）');button.dataset.focusKey=JSON.stringify([model.endpoint_id,model.model_id,'probe']);button.disabled=!model.probe_enabled||!connected||Boolean(receipts.get(key)?.pending);button.onclick=()=>void inferenceProbe(model);probe.append(button);
         if(!model.probe_enabled)probe.append(node('p',!model.probe?'需先钉选并指派此模型。':'缺少该端点凭据。'));
         const receipt=receipts.get(key);if(receipt?.message)probe.append(node('p',receipt.message));
         if(receipt?.runId)probe.append(runLink(model,receipt.runId,`查看探针 Run ${receipt.runId}`));
         if(receipt?.blockingRun)probe.append(runLink(model,receipt.blockingRun,`查看阻挡本次操作的 Run ${receipt.blockingRun}`));
-        if(receipt && !receipt.runId){const all=node('a','核对运行记录');all.href='/runs?filter=system';probe.append(all);}
+        if(receipt && !receipt.runId){const all=node('a','核对运行记录');all.dataset.focusKey=JSON.stringify([model.endpoint_id,model.model_id,'runs']);all.href='/runs?filter=system';probe.append(all);}
         details.append(probe);row.append(details);section.append(row);
       }
       list.append(section);
     }
-    if(focusKey && focused && !focused.isConnected && document.activeElement===document.body) {
-      const replacement=[...root.querySelectorAll('[data-focus-key]')].find(e=>/** @type {HTMLElement} */(e).dataset.focusKey===focusKey);
-      if(replacement instanceof HTMLElement){replacement.focus({preventScroll:true});if(selection && replacement instanceof HTMLInputElement)replacement.setSelectionRange(selection[0],selection[1]);}
-    }
+    focus.restore(focusRequest);
     if(restore) {
       const target=[...list.querySelectorAll('[data-model-key]')].find(e=>/** @type {HTMLElement} */(e).dataset.modelKey===restore?.anchor);
       if(target){target.scrollIntoView({block:'nearest'});restore=null;}
@@ -326,6 +328,6 @@ export function modelsPage(root, csrf) {
     getLeaveState:()=>({dirty:[...drafts.values()].some(d=>d.value!==d.baseline),pending:[...drafts.values()].some(d=>d.pending)||[...receipts.values()].some(r=>r.pending),summary:'模型设置有未保存输入；已提交设置或探针不会因离开而撤销。'}),
     captureSource:()=>({route:'/models',kind:'model',anchor,process_instance_id:instance}),
     restoreSource:(/** @type {Wire} */ source)=>{if(source?.anchor){anchor=source.anchor;expanded.set(anchor,true);restore=source;render();}},
-    close(){alive=false;generation++;reads.abort();stop();window.removeEventListener('focus',onFocus);},
+    close(){alive=false;generation++;reads.abort();stop();focus.close();window.removeEventListener('focus',onFocus);},
   };
 }
