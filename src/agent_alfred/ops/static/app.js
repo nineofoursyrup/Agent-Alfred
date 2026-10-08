@@ -439,7 +439,7 @@ const stream = new Stream(
         valid = body.session_valid;
         const restore=restoreRunPage?.page===runPage && restoreRunPage?.generation===shell.generation;
         restoreRunPage=null;
-        if(restore)shell.restore();else shell.start();
+        if(restore)shell.restore();
         notices.snapshot();
         updateSend();
         void memory.connected(instance);
@@ -545,6 +545,7 @@ const stream = new Stream(
       updateSend();
       runPage?.sync(active);
       publishState();
+      if(csrf)shell.start();
     } else if (kind === "domain_event") {
       if (!progress.receive(body)) return;
       const event = body.payload;
@@ -619,6 +620,7 @@ async function refreshEntry(expected) {
       error.textContent = "入口暂不可用；请刷新页面，草稿仍保留。";
   }
   updateSend();
+  if(csrf && connected && revision>=0)shell.start();
 }
 
 async function send() {
