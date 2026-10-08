@@ -10,6 +10,7 @@ import { inbox, modelsPage, connectionsPage, behaviourPage } from "./pages.js";
 import { runsPage, outcomeLabel } from "./runs.js";
 import { MemorySync, memoryPage, memoryReceipts } from "./memory.js";
 import { databasePage } from "./database.js";
+import { overviewPage } from "./overview.js";
 /** @typedef {Record<string, any>} Wire */
 /** @template {Element} T @param {string} id @returns {T} */
 function element(id) {
@@ -34,6 +35,9 @@ let creating = false;
 let unavailable = false;
 /** @type {Wire|null} */ let busySummary = null;
 /** @type {Wire|null} */ let active = null;
+/** Current immutable Host projection, distinct from MainBar's retained reply records. */
+/** @type {Wire|null} */ let hostProjection = null;
+let readGapRevision = 0;
 /** @type {Map<string, Wire>} */ const replies = new Map();
 /** @type {Wire[]} */ let historyItems = [];
 let historyCursor = "";
@@ -215,7 +219,7 @@ function renderShellStatus() {
     const verify=node('button','核对未读结果');verify.onclick=()=>{if(session!==null&&unread)void locateReply({process_instance_id:instance,session_id:session,run_id:unread.run_id,action_id:crypto.randomUUID()});};status.append(verify);
   }
 }
-function publishState() {shell.publish({instance,connected,session,active,revision,unavailable,memoryRevision:memory.revision,memoryState:memory.state,projection:[...replies.values()].find(r=>r.recording_state!=='recorded')||null});renderShellStatus();}
+function publishState() {shell.publish({instance,connected,session,active,revision,unavailable,memoryRevision:memory.revision,memoryState:memory.state,projection:hostProjection,readGapRevision});renderShellStatus();}
 function retireLocation() {locateGeneration++;locateController?.abort();locateController=null;if(locationTarget?.loading){locationTarget=null;renderMessages();}}
 function returnLatest() {retireLocation();locationTarget=null;followLatest=true;renderMessages();drawer.scrollTop=drawer.scrollHeight;updateReadStatus();}
 element('return-latest').addEventListener('click',returnLatest);
@@ -420,6 +424,7 @@ const stream = new Stream(
         instance = body.process_instance_id;
         behaviourView?.sync();
         revision = -1;
+        active=null;hostProjection=null;
         replies.clear();
         terminalStatus=null;processGap=null;
         progress.clear();
@@ -456,6 +461,17 @@ const stream = new Stream(
       connected = true;
       valid = body.session_valid;
       active = body.coordinator_state === "idle" ? null : incoming;
+      // Only this accepted Host revision may retain or release the current slot.
+      const currentProjection=body.unrecorded_terminal_projection;
+      hostProjection=currentProjection?{
+        process_instance_id:instance,state_revision:revision,
+        run_id:currentProjection.run_id,session_id:currentProjection.session_id,
+        purpose:currentProjection.purpose,phase:'finished',outcome:currentProjection.outcome,
+        recording_state:currentProjection.recording_state,
+        reply_disposition:currentProjection.reply_disposition,aggregation:currentProjection.aggregation,
+        gateway:incoming?.run_id===currentProjection.run_id?incoming.gateway:null,
+        started_at:incoming?.run_id===currentProjection.run_id?incoming.started_at:null,
+      }:null;
       if (!first) accountingView?.sync(instance);
       progress.snapshot(active, body.step);
       notices.settled(
@@ -568,6 +584,7 @@ const stream = new Stream(
       progress.interrupt();
       notices.receive(body);
       renderMessages();
+      if(body.code==='replay_gap'||body.code==='deltas_dropped'){readGapRevision++;publishState();}
     } else if (kind === "memory_patch") {
       memory.patch(body);
       publishState();
@@ -686,7 +703,8 @@ function mountPage(url) {
   element("page").replaceChildren(heading,root);
   runPage=null;connectionsView=null;databaseView=null;behaviourView=null;accountingView=null;
   let owner=/** @type {any} */(null);
-  if(path==='/behaviour')owner=behaviourView=behaviourPage(root,()=>csrf,()=>({instance,active,connected,unavailable,projection:[...replies.values()].find(r=>r.aggregation&&r.recording_state!=='recorded')}),memory,()=>instance);
+  if(path==='/overview')owner=overviewPage(root,{url,replaceSource:(target)=>shell.replaceSource(target)});
+  else if(path==='/behaviour')owner=behaviourView=behaviourPage(root,()=>csrf,()=>({instance,active,connected,unavailable,projection:[...replies.values()].find(r=>r.aggregation&&r.recording_state!=='recorded')}),memory,()=>instance);
   else if(path==='/tools')owner=accountingView=toolsPage(root,()=>csrf);
   else if(path==='/ops')owner=accountingView=accountingPage(root,()=>csrf);
   else if(path==='/models')owner=modelsPage(root,()=>csrf);

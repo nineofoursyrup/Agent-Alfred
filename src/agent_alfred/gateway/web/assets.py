@@ -9,6 +9,8 @@ PAGE_POLICY = (
 )
 
 ASSETS = {
+    "/assets/overview.js": ("overview.js", "text/javascript"),
+    "/assets/overview.css": ("overview.css", "text/css"),
     "/assets/shell.js": ("shell.js", "text/javascript"),
     "/assets/routing-statistics.js": ("routing-statistics.js", "text/javascript"),
 
@@ -33,6 +35,7 @@ ASSETS = {
 def page_asset(path: str) -> tuple[bytes, str] | None:
     if path in {
         "/",
+        "/overview",
         "/inbox",
         "/runs",
         "/memory",
