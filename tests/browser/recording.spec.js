@@ -112,6 +112,10 @@ for (const fails of [false, true])
       await expect(other.getByRole("textbox", { name: "消息" })).toHaveValue(
         "第二标签页草稿",
       );
+      const located=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/mainbar/locate');
+      expect((await page.evaluate(async run_id=>{const {dashboard}=await import('/assets/app.js');const current=dashboard.runtime();return dashboard.locateReply({process_instance_id:current.instance,session_id:current.session,run_id,action_id:crypto.randomUUID()});},acceptedRun)).status).toBe('applied');
+      expect(await (await located).json()).toMatchObject({run_id:acceptedRun,source:'unrecorded_projection',recording_state:'pending',user:{availability:'preview'}});
+      await expect(page.locator(`#messages [data-run-id="${acceptedRun}"]`)).toHaveCount(1);
       if (!fails) {
         await page.getByRole('button',{name:'收起主对话',exact:true}).click();
         await page.evaluate(()=>window.dispatchEvent(new Event('offline')));
