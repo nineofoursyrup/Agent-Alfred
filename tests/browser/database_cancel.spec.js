@@ -77,7 +77,8 @@ for (const delivery of ['before-B', 'after-B', 'new-page']) {
       await ready.promise;
       if (delivery === 'new-page') {
         await page.getByRole('link', {name: '收件箱', exact: true}).click();
-        await page.getByRole('link', {name: 'Database', exact: true}).click();
+        await page.getByRole('button', {name: '放弃并离开', exact: true}).click();
+        await page.getByRole('link', {name: '数据库', exact: true}).click();
         await expect(page.getByText('可执行', {exact: true})).toBeVisible();
         await expect(page.getByRole('textbox', {name: 'SQL', exact: true})).toHaveValue('');
       }

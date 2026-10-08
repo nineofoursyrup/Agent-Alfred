@@ -7,7 +7,7 @@ test('aggregation CE-02/04/14: Behaviour to same Session, refresh and restart', 
   try {
     await page.goto(server.origin + '/behaviour');
     await page.getByRole('button',{name:'新建会话',exact:true}).click();
-    await page.getByRole('button',{name:'展开对话',exact:true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     await page.getByRole('textbox',{name:'消息',exact:true}).fill('hello history');
     await page.getByRole('button',{name:'发送',exact:true}).click();
     await expect(page.locator('#messages').getByText('离线路由回复')).toBeVisible();
@@ -59,7 +59,7 @@ async function prepareDraft(page, server, beforeCreate = async () => {}) {
   expect(body.session_id).toEqual(expect.any(String));
   const session = body.session_id;
   await expect.poll(() => page.evaluate(() => sessionStorage.getItem('alfred.session'))).toBe(session);
-  await page.getByRole('button',{name:'展开对话',exact:true}).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   await page.getByRole('button',{name:'刷新会话',exact:true}).click();
   await page.getByRole('combobox',{name:'目标会话'}).selectOption(session);
   await page.getByRole('textbox',{name:'聚合目标',exact:true}).fill('draft goal');
@@ -274,7 +274,7 @@ for (const surface of ['mainbar','behaviour','runs']) for (const timing of ['ope
       }
       const area = surface === 'mainbar' ? page.locator('#messages') : surface === 'behaviour' ? page.getByRole('region',{name:'手动聚合',exact:true}) : page.getByRole('region',{name:'运行过程',exact:true});
       if (surface !== 'mainbar') {
-        const collapse=page.getByRole('button',{name:'收起对话',exact:true});
+        const collapse=page.getByRole('button',{name:'收起主对话',exact:true});
         if (await collapse.isVisible()) await collapse.click();
       }
       const source = area.getByRole('button',{name:'语义记忆 S1',exact:true});
@@ -337,7 +337,7 @@ for (const surface of ['mainbar','behaviour','runs']) for (const timing of ['ope
       await expect(area).toContainText(/不可用|已变化|无法核验/);
       await page.unroute('**/api/memory/record?*');
       await page.goto(server.origin+'/behaviour');
-      const expand=page.getByRole('button',{name:'展开对话',exact:true});
+      const expand=page.locator('#shell-toolbar [data-open-panel="mainbar"]');
       if(await expand.isVisible()) await expand.click();
       await expect(page.locator('#messages').getByText('已验证草稿 [[S1]]',{exact:true})).toBeVisible();
     } finally { release(); releaseVerification(); await server.close(); }
@@ -426,7 +426,7 @@ for (const rounds of [0, 1, 3]) {
     try {
       await page.goto(server.origin+'/behaviour');
       await page.getByRole('button',{name:'新建会话',exact:true}).click();
-      await page.getByRole('button',{name:'展开对话',exact:true}).click();
+      await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
       const other = await api(page.request,server.origin);
       const history = [];
       for (const text of ['old history question','new history question']) {

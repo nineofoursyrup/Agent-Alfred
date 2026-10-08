@@ -1,3 +1,4 @@
+import {Drafts} from "./shell.js";
 import {topologyView} from "./topology.js";
 import {routingStatistics} from "./routing-statistics.js";
 import {aggregationForm} from "./aggregation.js";
@@ -13,6 +14,7 @@ export class Pager {
     this.path = path;
     this.params = params;
     this.append = append;
+    this.controller=new AbortController();
     this.cursor = "";
     this.busy = false;
     this.finished = false;
@@ -21,6 +23,7 @@ export class Pager {
     this.button.addEventListener("click", () => void this.load());
     root.append(this.button);
   }
+  close(){this.controller.abort();}
   async load() {
     if (this.busy || this.finished) return;
     this.busy = true;
@@ -31,7 +34,7 @@ export class Pager {
         ...(this.cursor ? { cursor: this.cursor } : {}),
       };
       const response = await fetch(
-        this.path + "?" + new URLSearchParams(params),
+        this.path + "?" + new URLSearchParams(params),{signal:this.controller.signal},
       );
       const body = await response.json();
       if (!this.root.isConnected) return;
@@ -54,6 +57,7 @@ export class Pager {
 /** @param {HTMLElement} root @param {(id:string)=>void} resume */
 export function inbox(root, resume) {
   const groups = node("div");
+  let closePreview=()=>{};
   const preview = node("section");
   preview.setAttribute("aria-label", "会话只读预览");
   root.append(groups, preview);
@@ -77,14 +81,13 @@ export function inbox(root, resume) {
         const open = node("button", session.title);
         card.append(open, node("p", session.created_at));
         groups.append(card);
-        open.addEventListener("click", () =>
-          showSession(preview, session, resume),
-        );
+        open.addEventListener("click", () => {closePreview();closePreview=showSession(preview, session, resume);});
       }
     },
     "更多会话",
   );
   void pager.load();
+  return {close(){pager.close();closePreview();}};
 }
 
 /** @param {HTMLElement} root @param {Wire} session @param {(id:string)=>void} resume */
@@ -141,6 +144,7 @@ function showSession(root, session, resume) {
   );
   void messagePager.load();
   void runPager.load();
+  return ()=>{messagePager.close();runPager.close();};
 }
 
 const STATE_LABEL = /** @type {Record<string,string>} */ ({
@@ -452,6 +456,9 @@ export function connectionsPage(root, csrf) {
 
 /** @param {HTMLElement} root @param {()=>string} csrf */
 export function modelsPage(root, csrf) {
+  const drafts=new Drafts();
+  /** @type {Map<string,{value:string,baseline:string}>} */ const nameDrafts=new Map();
+  let alive=true;
   const list = node("div");
   list.setAttribute("aria-label", "模型候选");
   root.append(list);
@@ -475,7 +482,15 @@ export function modelsPage(root, csrf) {
       }),
     });
     const body = await response.json();
-    if (response.ok) render(body);
+    if (response.ok && alive) {
+      if(op==='display') {
+        const key=JSON.stringify([fields.endpoint_id,fields.model_id]);const draft=nameDrafts.get(key);
+        const saved=body.endpoints?.flatMap((/** @type {Wire} */ endpoint) => endpoint.models||[]).find((/** @type {Wire} */ model) => model.endpoint_id===fields.endpoint_id&&model.model_id===fields.model_id);
+        const baseline=saved ? saved.display_name||'' : fields.display_name||'';
+        if(draft){if(draft.value===baseline)nameDrafts.delete(key);else draft.baseline=baseline;}
+      }
+      render(body);
+    }
   }
 
   /** @param {string} endpointId */
@@ -484,7 +499,7 @@ export function modelsPage(root, csrf) {
       "/api/models?" + new URLSearchParams({ expand: endpointId }),
     );
     const body = await response.json();
-    if (response.ok) render(body);
+    if (response.ok && alive) render(body);
   }
 
   /** @param {string} endpointId @param {HTMLButtonElement} button */
@@ -505,7 +520,11 @@ export function modelsPage(root, csrf) {
 
   /** @param {Wire} body */
   function render(body) {
+    if(!alive || !root.isConnected)return;
     current = body;
+    const focused=document.activeElement;
+    const focusKey=focused instanceof HTMLInputElement ? focused.dataset.draftKey : undefined;
+    const selection=focused instanceof HTMLInputElement?[focused.selectionStart,focused.selectionEnd]:null;
     list.replaceChildren();
     if (body.status && body.status !== "ok") {
       list.append(node("p", `设置不可用：${body.status}`));
@@ -637,6 +656,12 @@ export function modelsPage(root, csrf) {
           const name = node("input");
           name.setAttribute("aria-label", "显示名");
           if (model.display_name) name.value = model.display_name;
+          const nameKey=JSON.stringify([model.endpoint_id,model.model_id]);
+          const previous=nameDrafts.get(nameKey);
+          if(previous)name.value=previous.value;
+          name.dataset.draftKey=nameKey;
+          drafts.track(name);
+          name.addEventListener('input',()=>{nameDrafts.set(nameKey,{value:name.value,baseline:previous?.baseline||model.display_name||''});});
           const saveName = node("button", "保存显示名");
           saveName.addEventListener("click", () =>
             void mutate("display", {
@@ -681,6 +706,7 @@ export function modelsPage(root, csrf) {
       }
       list.append(section);
     }
+    if(focusKey && focused && !focused.isConnected && document.activeElement===document.body){const replacement=[...list.querySelectorAll('input')].find(input=>input.dataset.draftKey===focusKey);if(replacement){replacement.focus({preventScroll:true});if(selection)replacement.setSelectionRange(selection[0],selection[1]);}}
   }
 
   /** @param {string} endpointId @param {string} modelId */
@@ -705,10 +731,13 @@ export function modelsPage(root, csrf) {
   void fetch("/api/models")
     .then((response) => response.json())
     .then(render);
+  return {getLeaveState:()=>({dirty:[...nameDrafts.values()].some(draft=>draft.value!==draft.baseline),summary:"模型显示名有未提交输入。"}),close(){alive=false;}};
 }
 
 /** @param {HTMLElement} root @param {()=>string} csrf @param {()=>Wire} runtime @param {import("./memory.js").MemorySync} memory @param {()=>string} instance */
 export function behaviourPage(root, csrf, runtime, memory, instance) {
+  const drafts=new Drafts();
+  let alive=true;
   const routing = node("section"); routing.setAttribute("aria-label", "消息分流");
   routing.append(node("h2", "消息分流"), node("p", "持续设置 · CLI/Web 共享。默认关闭；保存后下一 Run 生效。回复进入当前会话，静默时只记用户消息，不生成助手消息或长期记忆。"));
   root.append(routing);
@@ -718,6 +747,7 @@ export function behaviourPage(root, csrf, runtime, memory, instance) {
   const enabled = document.createElement('input');
   enabled.type = 'checkbox';
   enabled.disabled = true;
+  drafts.track(enabled);
   label.prepend(enabled);
   const notice = node('p'); notice.setAttribute('role', 'status');
   const save = node('button', '保存设置'); save.disabled = true;
@@ -734,9 +764,9 @@ export function behaviourPage(root, csrf, runtime, memory, instance) {
       const response = await fetch('/api/behaviour');
       if (!response.ok) throw new Error('读取失败');
       state = await response.json();
-      if (!root.isConnected) return;
+      if (!alive || !root.isConnected) return;
       actual.textContent = state.status === 'ok' ? `已保存的分流设置：${state.enabled ? '开启' : '关闭'}。能查看结构不代表已经启用或可以成功执行。` : `分流设置未知 / ${state.status}。`;
-      enabled.checked = state.enabled;
+      if(!drafts.dirty()){enabled.checked=state.enabled;drafts.saved(enabled);}
       enabled.disabled = state.status !== 'ok';
       save.disabled = state.status !== 'ok';
       recover.hidden = state.status === 'ok' || !state.fingerprint;
@@ -746,6 +776,7 @@ export function behaviourPage(root, csrf, runtime, memory, instance) {
   }
   /** @param {string} action */
   async function write(action) {
+    const submitted=enabled.checked;
     save.disabled = true; recover.disabled = true;
     try {
       const response = await fetch('/api/behaviour', {
@@ -754,12 +785,12 @@ export function behaviourPage(root, csrf, runtime, memory, instance) {
           enabled:enabled.checked, fingerprint:state.fingerprint}),
       });
       const result = await response.json();
-      if (!root.isConnected) return;
+      if (!alive || !root.isConnected) return;
       if (!response.ok) {
         notice.textContent = `未保存（${result.code}${result.cause ? ' / ' + result.cause : ''}）。选择已保留，请刷新后重试。${result.backup_path ? '备份：' + result.backup_path : ''}`;
         return;
       }
-      state = result; enabled.checked = result.enabled;
+      state = result; if(enabled.checked===submitted)enabled.checked=result.enabled;drafts.saved(enabled,String(result.enabled));
       actual.textContent = `已保存的分流设置：${state.enabled ? '开启' : '关闭'}。能查看结构不代表已经启用或可以成功执行。`;
       enabled.disabled = false; recover.hidden = true;
       notice.textContent = '已保存；下一 Run 生效。';
@@ -771,8 +802,9 @@ export function behaviourPage(root, csrf, runtime, memory, instance) {
   refresh.addEventListener('click', () => void read());
   void read();
   return {
+    getLeaveState(){return {dirty:drafts.dirty()||aggregation.getLeaveState().dirty,summary:"分流设置或聚合表单有未提交输入。"};},
     sync() {statistics.sync();},
     disconnect() {statistics.disconnect();},
-    close() {statistics.close(); for (const view of views) view.close();},
+    close() {alive=false;statistics.close(); for (const view of views) view.close();},
   };
 }

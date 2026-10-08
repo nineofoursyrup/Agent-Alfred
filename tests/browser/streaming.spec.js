@@ -13,7 +13,7 @@ test("disconnect clears an unfinished Attempt and suppresses its later deltas", 
       active_run: run(session),
     }),
   );
-  await page.getByRole("button", { name: "展开对话", exact: true }).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   const chat = page.getByRole("region", { name: "主对话" });
   await domain(
     page,
@@ -110,7 +110,7 @@ test("deltas_dropped withdraws text until every affected Attempt closes", async 
       active_run: run(session),
     }),
   );
-  await page.getByRole("button", { name: "展开对话", exact: true }).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   await domain(
     page,
     1,
@@ -242,7 +242,7 @@ test("an unrecorded terminal snapshot recovers full text and refuses stale pendi
       json: { ...query, reply_text: "完整但尚未保存的回复" },
     });
   });
-  await page.getByRole("button", { name: "展开对话", exact: true }).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   const terminal = run(session, {
     phase: "finished",
     outcome: "completed",

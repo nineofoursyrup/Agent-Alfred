@@ -6,7 +6,7 @@ import {join} from 'node:path';
 test('real Run exports an inert share ZIP through native browser download', async ({page}) => {
   await page.goto('/');
   await page.getByRole('button', {name:'新建会话',exact:true}).click();
-  await page.getByRole('button', {name:'展开对话',exact:true}).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   await page.getByRole('textbox', {name:'消息'}).fill('export private prompt');
   const accepted = page.waitForResponse(r => r.url().endsWith('/api/runs') && r.status() === 202);
   await page.getByRole('button', {name:'发送',exact:true}).click();
@@ -41,7 +41,7 @@ with zipfile.ZipFile(sys.argv[1]) as z:
 async function createRun(page) {
   await page.goto('/');
   await page.getByRole('button',{name:'新建会话',exact:true}).click();
-  await page.getByRole('button',{name:'展开对话',exact:true}).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   await page.getByRole('textbox',{name:'消息'}).fill('export lifecycle');
   const accepted=page.waitForResponse(r=>r.url().endsWith('/api/runs')&&r.status()===202);
   await page.getByRole('button',{name:'发送',exact:true}).click();
@@ -129,7 +129,7 @@ test('AC02 AC09 AC10 AC12: multistep Attempts, inline and external tool bodies d
   try {
     await page.goto(server.origin+'/');
     await page.getByRole('button',{name:'新建会话',exact:true}).click();
-    await page.getByRole('button',{name:'展开对话',exact:true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     await page.getByRole('textbox',{name:'消息'}).fill('导出工具验收');
     const accepted=page.waitForResponse(r=>r.url().endsWith('/api/runs')&&r.status()===202);
     await page.getByRole('button',{name:'发送',exact:true}).click();
@@ -175,7 +175,7 @@ with zipfile.ZipFile(sys.argv[1]) as z:
 async function fixtureRun(page,server,message='导出工具验收',saved=true) {
   await page.goto(server.origin+'/');
   await page.getByRole('button',{name:'新建会话',exact:true}).click();
-  const expand=page.getByRole('button',{name:'展开对话',exact:true});
+  const expand=page.locator('#shell-toolbar [data-open-panel="mainbar"]');
   if (await expand.isVisible()) await expand.click();
   await page.getByRole('textbox',{name:'消息'}).fill(message);
   const accepted=page.waitForResponse(r=>r.url().endsWith('/api/runs')&&r.status()===202);

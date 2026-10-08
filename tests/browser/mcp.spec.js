@@ -25,7 +25,7 @@ test('MCP CE-01 CE-05 CE-11 MainBar authorization, safe result and persistent co
     await tool.getByRole('combobox').selectOption('allowed');await tool.getByRole('button',{name:'保存授权',exact:true}).click();
     await expect(tool).toContainText('模型暴露：real');
     await b.getByRole('button',{name:'新建会话',exact:true}).click();
-    await b.getByRole('button',{name:'展开对话',exact:true}).click();
+    await b.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     await b.getByRole('textbox',{name:'消息'}).fill('MCP 验收');await b.getByRole('button',{name:'发送',exact:true}).click();
     const chat=b.getByRole('region',{name:'主对话'});
     await expect(chat).toContainText('<script>window.injected=true</script>');

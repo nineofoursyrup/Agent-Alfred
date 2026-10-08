@@ -112,7 +112,7 @@ test("A52: explicit save, next-Run hit, source, edit conflict, delete and requer
     const other = await api(page.request, server.origin);
     await page.goto(server.origin + "/inbox");
     await page.getByRole("button", {name: "新建会话", exact: true}).click();
-    await page.getByRole("button", {name: "展开对话", exact: true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     const chat = page.getByRole("region", {name: "主对话"});
     const send = async text => {
       await page.getByRole("textbox", {name: "消息"}).fill(text);
@@ -1824,6 +1824,7 @@ test("G2 v2: an uncommitted update loses its reusable body when its record is fo
     await panel.getByRole("button", {name: "保存修改", exact: true}).click();
     await expect(page.getByRole("region", {name: "记忆操作回执"})).toContainText("尚未找到提交记录");
     await page.locator('nav a[href="/runs"]').click();
+    await page.getByRole('button',{name:'放弃并离开',exact:true}).click();
     const deletion = await other.command({operation_id: "absent-update-delete", kind: "semantic", action: "delete", payload: {id: saved.body.result.memory_id}, expected_version: 1});
     expect(deletion.body.forgetting.state).toBe("complete");
     await expect.poll(() => page.evaluate(() => (sessionStorage.getItem("alfred.memory.operations") || "").includes("UNCOMMITTED_PRIVATE_BODY"))).toBe(false);

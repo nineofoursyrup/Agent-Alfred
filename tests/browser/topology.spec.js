@@ -194,9 +194,10 @@ for (const action of ['collapse','navigate','restart']) {
         await expect(region.locator('svg [data-node-id]')).toHaveCount(2);
       } else if(action==='navigate') {
         await page.getByRole('link',{name:'运行',exact:true}).click();
+        await page.getByRole('button',{name:'放弃并离开',exact:true}).click();
         release.release();await page.unrouteAll({behavior:'wait'});
         await expect(page.getByRole('region',{name:'流程拓扑'})).toHaveCount(0);
-        await page.getByRole('link',{name:'Behaviour',exact:true}).click();
+        await page.getByRole('link',{name:'行为',exact:true}).click();
         region=section(page);
         await expect(region.getByRole('button',{name:'查看流程'})).toHaveAttribute('aria-expanded','false');
         return;
@@ -294,7 +295,7 @@ test('AC-14: protocol text injection is shown literally and never becomes markup
   } finally {await server.close();}
 });
 
-test('CE-06: first connection identity does not erase an already open first read',async({page})=>{
+test('CE-06: first shell synchronization precedes and preserves the first graph read',async({page})=>{
   const server=await memoryServer({script:'tests/browser/topology_server.py'});
   const entry=barrier(), graph=barrier(), captured=barrier();
   try {
@@ -302,8 +303,10 @@ test('CE-06: first connection identity does not erase an already open first read
     await interceptOnce(page,routePath,async route=>{const response=await route.fetch();captured.release();await graph.promise;await route.fulfill({response}).catch(()=>{});});
     await page.goto(server.origin+'/behaviour',{waitUntil:'commit'});
     const region=section(page);
+    await expect(region).toHaveCount(0); // Shell owns the first Host synchronization.
+    entry.release();
     await region.getByRole('button',{name:'查看流程',exact:true}).click();await captured.promise;
-    entry.release();await expect(region.getByText(/服务已连接/)).toBeVisible();
+    await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
     await expect(region.getByText('正在读取…',{exact:true})).toBeVisible();
     graph.release();await expect(region.locator('svg [data-node-id]')).toHaveCount(9);
   } finally {entry.release();graph.release();await server.close();}

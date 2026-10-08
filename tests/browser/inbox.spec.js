@@ -164,7 +164,7 @@ test("MainBar paginates across the Run and historic segments without deduplicati
   });
   await page.goto("/");
   await page.getByRole("button", { name: "新建会话", exact: true }).click();
-  await page.getByRole("button", { name: "展开对话", exact: true }).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   const chat = page.getByRole("region", { name: "主对话" });
   await expect(chat).toContainText("新的回复");
   await chat.getByRole("button", { name: "更早的消息", exact: true }).click();
@@ -191,7 +191,7 @@ test("pending settlement cannot rewind an already loaded historic cursor", async
   });
   const session = await controlledTransport(page);
   await emit(page, "state_patch", state(session));
-  await page.getByRole("button", {name:"展开对话", exact:true}).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   const chat = page.getByRole("region", {name:"主对话"});
   await expect(chat.getByText(/^历史 \d+$/)).toHaveCount(25);
   mode = "pending";

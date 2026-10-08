@@ -19,7 +19,7 @@ async function chat(page, origin) {
   expect(created.status()).toBe(201);
   const session = (await created.json()).session_id;
   await page.waitForFunction(id => sessionStorage.getItem("alfred.session") === id, session);
-  const expand = page.getByRole("button", {name: "展开对话", exact: true});
+  const expand = page.locator('#shell-toolbar [data-open-panel="mainbar"]');
   if (await expand.isVisible()) await expand.click();
 }
 async function send(page, text) {

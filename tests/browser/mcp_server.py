@@ -137,7 +137,7 @@ def main():
         thread.start()
         dashboard = build_dashboard(
             state_dir=state,
-            port=17749,
+            port=int(os.environ.get("ALFRED_BROWSER_TEST_PORT", "17736")) + 7,
             credentials=CredentialOverlay({}, str(env)),
             factory=ScriptedModelFactory(Model([])),
         )

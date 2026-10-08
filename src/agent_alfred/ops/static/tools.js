@@ -99,7 +99,7 @@ export function toolsPage(root, csrf) {
         const checked = await load();
         if (alive && online && checked) {
           if (receipt && checked.revision === receipt.revision && checked.application_state === receipt.application_state && !checked.external_change) {
-            if (body.identity && drafts.get(body.identity)?.revision === body.expected_revision) drafts.delete(body.identity);
+            if (body.identity && drafts.get(body.identity)?.revision === body.expected_revision && drafts.get(body.identity)?.value === body.authorization) drafts.delete(body.identity);
             render(checked);
             notice = checked.application_state === 'applied' ? '服务端确认操作，授权已生效。' : '已保存，尚未生效；请显式重新应用。';
           }
@@ -113,6 +113,6 @@ export function toolsPage(root, csrf) {
   const focus = () => { if (!busy) void load(); };
   window.addEventListener('focus', focus);
   void load();
-  return {sync() {online = true; focus();}, disconnect() {online = false; ++generation; state.textContent = '离线，当前生效状态待核验；草稿保留。';},
+  return {getLeaveState(){return {dirty:[...drafts].some(([identity,draft])=>draft.value!==(current?.authorizations?.[identity]||'unset')),summary:'工具授权草稿尚未确认保存。',pending:busy};},sync() {online = true; focus();}, disconnect() {online = false; ++generation; state.textContent = '离线，当前生效状态待核验；草稿保留。';},
     close() {alive = false; ++generation; controller.abort(); window.removeEventListener('focus', focus);}};
 }
