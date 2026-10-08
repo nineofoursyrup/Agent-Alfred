@@ -28,6 +28,7 @@ ASSETS = {
     "/assets/pages.js": ("pages.js", "text/javascript"),
     "/assets/runs.js": ("runs.js", "text/javascript"),
     "/assets/memory.js": ("memory.js", "text/javascript"),
+    "/assets/memory.css": ("memory.css", "text/css"),
     "/assets/database.js": ("database.js", "text/javascript"),
 }
 

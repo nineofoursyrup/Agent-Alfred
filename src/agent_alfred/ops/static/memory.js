@@ -1,4 +1,5 @@
 import { node } from "./dom.js";
+import { dashboard } from "./app.js";
 /** @typedef {Record<string, any>} Wire */
 /**
  * @typedef {{state:"ok", body:Wire}
@@ -282,6 +283,59 @@ function input(type = "text") {
   result.type = type;
   if (type === "datetime-local") result.step = "1";
   return result;
+}
+
+/** A page-local replacement guard; submitted operations retain their owners.
+ * @param {HTMLElement} root @returns {Promise<boolean>} */
+function confirmDiscard(root) {
+  const trigger = document.activeElement;
+  const dialog = node("dialog");
+  dialog.setAttribute("aria-label", "保留当前编辑？");
+  const keep = node("button", "保留当前编辑");
+  const discard = node("button", "放弃后继续");
+  dialog.append(node("h2", "保留当前编辑？"),
+    node("p", "继续会丢失尚未提交的修改。已提交的操作仍可在操作回执中核对，不会因此撤销。"), keep, discard);
+  root.append(dialog);
+  return new Promise(resolve => {
+    let answered = false;
+    const finish = (/** @type {boolean} */ accepted) => {
+      if (answered) return;
+      answered = true;
+      dialog.close();dialog.remove();
+      if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus({preventScroll:true});
+      resolve(accepted);
+    };
+    keep.addEventListener("click", () => finish(false));
+    discard.addEventListener("click", () => finish(true));
+    dialog.addEventListener("cancel", event => {event.preventDefault();finish(false);});
+    dialog.showModal();keep.focus();
+  });
+}
+
+/** Presentation only: the original component remains mounted and protected.
+ * The summary is supplied from body-free state, never copied from content.
+ * @param {HTMLElement} content @param {string} title @param {()=>string} describe */
+function foldSection(content, title, describe) {
+  const section = node("section");section.className = "memory-maintenance";
+  const heading = node("h2");const toggle = node("button", title);
+  toggle.setAttribute("aria-label", title);
+  const summary = node("p");summary.className = "memory-summary";
+  const body = node("div");body.className = "memory-maintenance-body";
+  body.id = `memory-maintenance-${crypto.randomUUID()}`;
+  toggle.setAttribute("aria-controls", body.id);toggle.setAttribute("aria-expanded", "false");
+  body.hidden = true;heading.append(toggle);body.append(content);section.append(heading, summary, body);
+  const update = () => {summary.textContent = describe();};
+  const open = (focus = false) => {
+    body.hidden = false;toggle.setAttribute("aria-expanded", "true");
+    if (focus) {toggle.focus({preventScroll:true});section.scrollIntoView({block:"start"});}
+  };
+  toggle.addEventListener("click", () => {
+    if (body.hidden) open();
+    else {if (body.contains(document.activeElement)) toggle.focus();body.hidden=true;toggle.setAttribute("aria-expanded", "false");}
+  });
+  const observer = new MutationObserver(update);
+  observer.observe(content, {subtree:true,childList:true,characterData:true});update();
+  return {section, open, isOpen:()=>!body.hidden, update, dispose:()=>observer.disconnect()};
 }
 
 const RESULT_LABEL = /** @type {Record<string,(r:Wire)=>string>} */ ({
@@ -656,7 +710,22 @@ function receiptsPanel(page) {
     }
   }
   render();
-  return { section, submit, refresh, render, discard };
+  function summary() {
+    if (!entries.length) return "本标签页尚无记忆操作。";
+    const sending = entries.filter(entry => entry.state === "sending").length;
+    const pending = entries.filter(entry => entry.state === "pending").length;
+    const deleted = entries.filter(entry => entry.result?.status === "deleted");
+    const unfinished = deleted.filter(entry => entry.forgetting?.state !== "complete");
+    const scope = unfinished.filter(entry => entry.forgetting?.state === "needs_scope").length;
+    const failures = unfinished.flatMap(entry => (entry.forgetting?.cleanup || [])
+      .filter((/** @type {Wire} */ item) => item.state !== "complete")
+      .map((/** @type {Wire} */ item) => `${item.target_id} · ${item.state}${item.error ? " · " + item.error : ""}`));
+    return `仅本标签页 · 提交中 ${sending} · 结果待确认 ${pending} · 遗忘未完成 ${unfinished.length}` +
+      `${scope ? ` · 范围待确认 ${scope}` : ""}${notes.size ? ` · 核验提示 ${notes.size} 项（展开核对）` : ""}` +
+      `${failures.length ? "；" + [...new Set(failures)].join("；") : ""}` +
+      `。已确认历史至多 20 项；未确认与未完成责任单独保留。`;
+  }
+  return { section, submit, refresh, render, discard, summary };
 }
 
 /**
@@ -726,6 +795,29 @@ function recordPanel(kind, page) {
   cancelEdit.type = "button";
   editForm.append(editNotice, saveEdit, cancelEdit);
   editForm.hidden = true;
+  const detailHeading = node("h3", "记录详情");detailHeading.tabIndex = -1;
+  const detailToggle = node("button", "收起详情");
+  const detailSummary = node("p");detailSummary.className = "memory-summary";
+  const detailContent = node("div");detailContent.id = `memory-detail-${kind}`;
+  const detailBody = node("div");detailBody.className = "memory-record-content";
+  detailToggle.setAttribute("aria-controls", detailContent.id);
+  detailToggle.setAttribute("aria-expanded", "true");
+  const backToList = node("button", "回到列表");
+  backToList.addEventListener("click", () => {
+    const target = [...list.querySelectorAll("article")].find(item => item.dataset.memoryId === selected?.id)?.querySelector("button");
+    (target || list).focus({preventScroll:true});list.scrollIntoView({block:"start"});
+  });
+  list.tabIndex = -1;
+  detailContent.append(detailBody, editForm);
+  detail.append(detailHeading, detailToggle, backToList, detailSummary, detailContent);
+  detail.hidden = true;
+  detailToggle.addEventListener("click", () => {
+    const closing = !detailContent.hidden;
+    if (closing && detailContent.contains(document.activeElement)) detailToggle.focus();
+    detailContent.hidden = closing;
+    detailToggle.setAttribute("aria-expanded", String(!closing));
+    detailToggle.textContent = closing ? "展开详情" : "收起详情";
+  });
   const createForm = node("form");
   createForm.setAttribute("aria-label", `新增${label}`);
   const newSubject = semantic ? field(createForm, "新主题", input()) : null;
@@ -756,19 +848,22 @@ function recordPanel(kind, page) {
     end.parentElement?.after(preview);
     show();
   }
-  panel.append(
-    node("h2", label),
-    searchForm,
-    status,
-    list,
-    more,
-    reread,
-    detail,
-    editForm,
-    node("h3", `新增${label}`),
-    createNotice,
-    createForm,
-  );
+  const createSection = node("section");createSection.className = "memory-create";
+  const createToggle = node("button", `新建${label}`);
+  const createSummary = node("p");createSummary.className = "memory-summary";
+  const createContent = node("div");createContent.id = `memory-create-${kind}`;
+  createContent.hidden = true;
+  createToggle.setAttribute("aria-controls", createContent.id);createToggle.setAttribute("aria-expanded", "false");
+  createToggle.addEventListener("click", () => {
+    const closing = !createContent.hidden;
+    if (closing && createContent.contains(document.activeElement)) createToggle.focus();
+    createContent.hidden = closing;createToggle.setAttribute("aria-expanded", String(!closing));
+  });
+  createForm.addEventListener("input", updateCreateSummary);
+  editForm.addEventListener("input", updateDetailSummary);
+  createContent.append(createForm);createSection.append(createToggle, createSummary, createNotice, createContent);
+  panel.append(node("h2", label), createSection, searchForm, status, list, more, reread, detail);
+
 
   /** @type {Record<string,string>} */ let filters = {};
   /** @type {Wire[]} */ let records = [];
@@ -778,6 +873,8 @@ function recordPanel(kind, page) {
   let listRequest = 0;
   /** @type {{id:string, record:Wire|null, state:string, code?:string}|null} */ let selected = null;
   let detailRequest = 0;
+  let disposed = false;
+  let choosing = false;
   let detailMessage = "";
   // The version the user chose to delete; a changed record needs a new choice.
   /** @type {number|null} */ let confirming = null;
@@ -852,9 +949,10 @@ function recordPanel(kind, page) {
       listState = "ready";
     }
     renderList();
+    updateDetailSummary();
   }
   function renderList() {
-    createForm.hidden = Boolean(createAttempt) &&
+    createForm.hidden = Boolean(createAttempt && createAttempt.request === JSON.stringify(createRequest())) &&
       (!page.sync.online || createDraftVerified !== page.sync.invalidations);
     list.replaceChildren();
     more.hidden = !(listState === "ready" && cursor && page.sync.online);
@@ -882,8 +980,9 @@ function recordPanel(kind, page) {
       const card = node("article");
       card.className = "card";
       card.dataset.memoryId = record.id;
-      if (semantic) card.append(node("h3", record.subject), node("p", record.fact));
-      else card.append(node("p", record.summary), node("p", interval(record)));
+      const excerpt = node("p", semantic ? record.fact : record.summary);excerpt.className = "memory-excerpt";
+      if (semantic) card.append(node("h3", record.subject), excerpt);
+      else card.append(excerpt, node("p", interval(record)));
       card.append(node("small", meta(record)));
       const open = node("button", "查看详情");
       open.addEventListener("click", () => void openRecord(record.id));
@@ -897,13 +996,22 @@ function recordPanel(kind, page) {
   }
   /** @param {string} id */
   async function openRecord(id) {
+    if (choosing || disposed) return;
+    if (editing && editing.id !== id && editUnsubmitted()) {
+      choosing = true;
+      const accepted = await confirmDiscard(panel);
+      choosing = false;
+      if (!accepted || disposed) return;
+    }
     if (selected?.id !== id) {
       confirming = null;
       detailMessage = editing && editing.id !== id ? "已切换记录，未提交的编辑草稿已放弃。" : "";
       if (editing && editing.id !== id) clearDraft();
     }
     selected = { id, record: null, state: "loading" };
+    detailContent.hidden = false;detailToggle.setAttribute("aria-expanded", "true");detailToggle.textContent = "收起详情";
     renderDetail();
+    detailHeading.focus({preventScroll:true});detail.scrollIntoView({block:"start"});
     await verify();
   }
   async function verify() {
@@ -936,42 +1044,45 @@ function recordPanel(kind, page) {
     editNotice.textContent = "";
   }
   function renderDetail() {
-    detail.replaceChildren();
-    editForm.hidden = true;
-    if (detailMessage) detail.append(node("p", detailMessage));
+    detailBody.replaceChildren();
+    editForm.hidden = !page.sync.online || selected?.state !== "ready" || !editing || editing.id !== selected?.id;
+    if (detailMessage) detailBody.append(node("p", detailMessage));
+    detail.hidden = !selected;
+    updateDetailSummary();
     if (!selected) return;
-    detail.append(node("h3", "记录详情"));
     if (!page.sync.online) {
-      detail.append(node("p", "连接中断：正文已隐藏，重连并核验后再显示。"));
+      detailBody.append(node("p", "连接中断：正文已隐藏，重连并核验后再显示。"));
       return;
     }
     if (selected.state === "loading") {
-      detail.append(node("p", "正在读取当前内容…"));
+      detailBody.append(node("p", "正在读取当前内容…"));
       return;
     }
     if (selected.state === "gone") {
-      detail.append(node("p", "记录已不存在（可能已被删除）；不显示旧正文。"));
+      detailBody.append(node("p", "记录已不存在（可能已被删除）；不显示旧正文。"));
       return;
     }
     if (selected.state !== "ready" || !selected.record) {
       const retry = node("button", "重新读取");
       retry.addEventListener("click", () => void verify());
-      detail.append(
+      detailBody.append(
         node("p", `读取失败（${selected.code}）：不能确认记录是否存在，也不作为不存在处理。`),
         retry,
       );
-      editForm.hidden = !editing;
+      // Preserve the draft in its owner, but a failed current verification
+      // cannot make protected text visible again.
+      editForm.hidden = true;
       return;
     }
     const record = selected.record;
-    if (semantic) detail.append(node("h4", record.subject), node("p", record.fact));
-    else detail.append(node("p", record.summary), node("p", interval(record)));
-    detail.append(node("p", meta(record)));
-    detail.append(sourceGroups(record.provenance));
+    if (semantic) detailBody.append(node("h4", record.subject), node("p", record.fact));
+    else detailBody.append(node("p", record.summary), node("p", interval(record)));
+    detailBody.append(node("p", meta(record)));
+    detailBody.append(sourceGroups(record.provenance));
     if (record.origin?.type === "consolidation") {
       const batch = node("button", "查看提炼批次");
       batch.addEventListener("click", () => page.openBatch(record.origin.batch_id));
-      detail.append(batch);
+      detailBody.append(batch);
     }
     const edit = node("button", "编辑");
     edit.addEventListener("click", () => startEdit(record));
@@ -980,7 +1091,7 @@ function recordPanel(kind, page) {
       confirming = record.record_version;
       renderDetail();
     });
-    detail.append(edit, remove);
+    detailBody.append(edit, remove);
     if (confirming === record.record_version) {
       const box = node("div");
       box.setAttribute("role", "group");
@@ -995,12 +1106,12 @@ function recordPanel(kind, page) {
       box.append(
         node(
           "p",
-          `确认删除版本 ${record.record_version}？条目与索引会真删，受管副本随后清理；${HISTORY_NOTE}`,
+          `确认删除 ${label} ${record.id} 的版本 ${record.record_version}？条目与索引会真删，受管副本随后清理；其他独立记忆不自动删除。${HISTORY_NOTE}`,
         ),
         confirm,
         cancel,
       );
-      detail.append(box);
+      detailBody.append(box);
     }
     if (editing && editing.id === record.id) {
       editForm.hidden = false;
@@ -1010,6 +1121,7 @@ function recordPanel(kind, page) {
   }
   /** @param {Wire} record */
   function startEdit(record) {
+    if (editing?.id === record.id) {editBody.focus();return;}
     if (editSubject) editSubject.value = record.subject;
     editBody.value = semantic ? record.fact : record.summary;
     if (editStart) editStart.value = localInput(record.occurred_at);
@@ -1035,13 +1147,19 @@ function recordPanel(kind, page) {
     event.preventDefault();
     void submitEdit();
   });
-  cancelEdit.addEventListener("click", () => {
+  cancelEdit.addEventListener("click", async () => {
+    if (choosing || disposed) return;
+    if (editUnsubmitted()) {
+      choosing = true;
+      const accepted = await confirmDiscard(panel);
+      choosing = false;
+      if (!accepted || disposed) return;
+    }
     clearDraft();
     renderDetail();
   });
-  async function submitEdit() {
-    if (!editing) return;
-    const draft = editing;
+  /** @param {NonNullable<typeof editing>} draft */
+  function editRequest(draft) {
     const original = draft.original;
     /** @type {Wire} */ const payload = { id: draft.id };
     if (editSubject && editSubject.value !== original.subject)
@@ -1052,7 +1170,13 @@ function recordPanel(kind, page) {
       payload.occurred_at = awareLocal(editStart.value);
     if (editEnd && editEnd.value !== original.end)
       payload.occurred_until = editEnd.value ? awareLocal(editEnd.value) : null;
-    const request = { kind, action: "update", payload, expected_version: draft.base };
+    return { kind, action: "update", payload, expected_version: draft.base };
+  }
+  async function submitEdit() {
+    if (!editing) return;
+    const draft = editing;
+    const request = editRequest(draft);
+    const submitted = editValues();
     editAttempt = operationFor(editAttempt, request);
     saveEdit.disabled = true;
     const response = await page.submit({
@@ -1061,11 +1185,19 @@ function recordPanel(kind, page) {
       ...request,
     });
     saveEdit.disabled = false;
-    if (editing !== draft) return;
+    if (disposed || editing !== draft) return;
     if (!response.unconfirmed) editAttempt = null;
     if (response.ok) {
       const result = response.body?.result;
-      clearDraft();
+      const unchanged = JSON.stringify(editValues()) === JSON.stringify(submitted);
+      if (unchanged) clearDraft();
+      else {
+        // The receipt belongs to the submitted values. Preserve subsequent
+        // input and compare it with the version that was actually committed.
+        draft.original = submitted;
+        draft.base = result.record_version;
+        editNotice.textContent = "此前修改已确认保存；提交后新增的编辑尚未保存。";
+      }
       detailMessage =
         result?.status === "updated"
           ? `已更新到版本 ${result.record_version}。`
@@ -1146,6 +1278,8 @@ function recordPanel(kind, page) {
   async function create() {
     const request = createRequest();
     createAttempt = operationFor(createAttempt, request);
+    const attempt = createAttempt;
+    updateCreateSummary();
     createDraftVerified = page.sync.invalidations;
     createButton.disabled = true;
     const response = await page.submit({
@@ -1153,16 +1287,20 @@ function recordPanel(kind, page) {
       operation_id: createAttempt.operation_id,
       ...request,
     });
+    if (disposed) return;
     createButton.disabled = false;
-    if (!response.unconfirmed) createAttempt = null;
+    if (!response.unconfirmed && createAttempt === attempt) createAttempt = null;
     if (response.ok) {
       const result = response.body?.result;
-      createForm.reset();
+      const unchanged = JSON.stringify(createRequest()) === attempt.request;
+      if (unchanged) createForm.reset();
+      updateCreateSummary();
       createForm.hidden = false;
       createNotice.textContent =
         result?.status === "saved"
           ? `已保存（ID ${result.memory_id}，版本 ${result.record_version}）。`
           : `已存在同一条记忆（ID ${result?.memory_id}），未新增。`;
+      if (!unchanged) createNotice.append("提交后新增的输入尚未保存，已保留。");
       return;
     }
     createNotice.textContent =
@@ -1210,6 +1348,7 @@ function recordPanel(kind, page) {
     createForm.reset();
     createForm.hidden = false;
     createAttempt = null;
+    updateCreateSummary();
     createNotice.textContent = `此前未回执的保存已确认（ID ${id}），该记忆随后已被删除：草稿正文已清除。`;
   }
 
@@ -1233,14 +1372,42 @@ function recordPanel(kind, page) {
   });
   more.addEventListener("click", () => void load(true));
   reread.addEventListener("click", () => void load());
+  function updateCreateSummary() {
+    const entered = newSubject?.value || newBody.value || newStart?.value || newEnd?.value;
+    createSummary.textContent = !entered ? "" : createAttempt?.request === JSON.stringify(createRequest())
+      ? "该内容已提交，可在操作回执核对结果；离开不会撤销动作。" : "新建输入尚未保存。";
+  }
+  function updateDetailSummary() {
+    if (!selected) {detailSummary.textContent = "";return;}
+    const states = {loading:"正在核验",ready:"当前内容已核验",gone:"记录已不存在",failed:"读取失败，不能确认当前内容"};
+    const state = page.sync.online ? states[/** @type {keyof typeof states} */ (selected.state)] || "未核验" : "离线或核验中，正文已隐藏";
+    const id = selected.id;
+    const membership = listState === "ready" && !records.some(record => record.id === id) ? " · 独立详情，不在当前查询已加载结果中" : "";
+    detailSummary.textContent = `${label} · ID ${selected.id} · ${state}${editing ? ` · ${editUnsubmitted() ? "未保存编辑" : editAttempt ? "已提交编辑，可核对回执" : "编辑中"}（基线版本 ${editing.base}）` : ""}${membership}`;
+  }
+  function editValues() {
+    return {subject:editSubject?.value ?? "", body:editBody.value,
+      start:editStart?.value ?? "", end:editEnd?.value ?? ""};
+  }
+  function editDirty() {
+    return !!editing && JSON.stringify(editValues()) !== JSON.stringify(editing.original);
+  }
+  function editUnsubmitted() {
+    return editDirty() && (!editing || editAttempt?.request !== JSON.stringify(editRequest(editing)));
+  }
   return {
     panel,
-    getLeaveState() {
-      const original=editing?.original;
-      const editDirty=!!original && ((editSubject?.value||'')!==original.subject || editBody.value!==original.body || (editStart?.value||'')!==original.start || (editEnd?.value||'')!==original.end);
-      return {dirty:editDirty || !!(newSubject?.value || newBody.value || newStart?.value || newEnd?.value), summary:'记忆编辑或新建输入尚未确认保存。'};
+    selectedId:()=>selected?.id ?? null,
+    async restore(/** @type {string|null} */ id) {
+      if (typeof id !== "string" || disposed) return;
+      selected={id,record:null,state:"loading"};renderDetail();await verify();
     },
-    dispose(){++listRequest;++detailRequest;records=[];selected=null;clearDraft();createForm.reset();},
+    getLeaveState() {
+      const entered = !!(newSubject?.value || newBody.value || newStart?.value || newEnd?.value);
+      return {dirty:editUnsubmitted() || (entered && createAttempt?.request !== JSON.stringify(createRequest())),
+        pending:!!(createAttempt || editAttempt || deleteAttempt), summary:"有提交后新增或尚未提交的记忆输入。"};
+    },
+    dispose(){disposed=true;++listRequest;++detailRequest;records=[];selected=null;clearDraft();createForm.reset();},
     confirmed,
     refresh() {
       // Any invalidation hides the open body until the current record is re-read.
@@ -1268,12 +1435,15 @@ function skillsPanel(root) {
     list,
   );
   let loaded = false;
+  let disposed = false;
+  const requests = new Set();
   async function load() {
     if (loaded) return;
     loaded = true;
     try {
       const response = await fetch("/api/memory/skills");
       const body = await response.json();
+      if (disposed) return;
       if (!response.ok) throw new Error(failureCode(response.status, body));
       if (!body.skills.length) list.append(node("p", "没有可用的 Skill。"));
       for (const skill of body.skills) {
@@ -1289,22 +1459,32 @@ function skillsPanel(root) {
         );
         const open = node("button", "查看正文");
         const text = node("pre");
+        text.tabIndex = 0;text.setAttribute("aria-label", `Skill ${skill.name} 完整正文`);
+        let generation = 0;
         open.addEventListener("click", async () => {
+          const token = ++generation;
+          const request = new AbortController();requests.add(request);
+          text.textContent = "正在读取启动快照正文…";
           try {
             const reply = await fetch(
               "/api/memory/skill?" + new URLSearchParams({ name: skill.name }),
+              {signal:request.signal},
             );
             const loadedSkill = await reply.json();
+            if (disposed || token !== generation) return;
             if (!reply.ok) throw new Error(failureCode(reply.status, loadedSkill));
             text.textContent = loadedSkill.skill.body;
           } catch {
-            text.textContent = "正文暂不可读取。";
-          }
+            if (!disposed && token === generation) text.textContent = "正文暂不可读取。";
+          } finally {requests.delete(request);}
         });
-        card.append(open, text);
+        const use = node("button", "在主对话使用 /skills");
+        use.addEventListener("click", () => dashboard.openPanel("mainbar"));
+        card.append(open, use, node("p", `在主对话中明确输入 /skills ${skill.name} 及你的请求；打开主对话不会提交或替换现有草稿。`), text);
         list.append(card);
       }
     } catch (failure) {
+      if (disposed) return;
       list.replaceChildren(
         node(
           "p",
@@ -1313,7 +1493,7 @@ function skillsPanel(root) {
       );
     }
   }
-  return { load };
+  return { load, dispose(){disposed=true;for(const request of requests)request.abort();requests.clear();} };
 }
 
 /** @param {Wire} ratio @param {string} label */
@@ -1331,7 +1511,13 @@ function statisticsPanel(session) {
   section.append(node("h2", "检索统计"));
   field(section, "仅当前会话", scoped);
   section.append(refresh, output);
+  let generation = 0, disposed = false, state = "尚未读取";
+  /** @type {AbortController|null} */ let request = null;
   async function load() {
+    const token = ++generation;
+    request?.abort();request = new AbortController();
+    state = "正在读取检索统计";
+    output.replaceChildren(node("p", state));
     const target = session();
     scoped.disabled = target === null;
     /** @type {Record<string,string>} */
@@ -1339,16 +1525,20 @@ function statisticsPanel(session) {
     try {
       const response = await fetch(
         "/api/memory/statistics?" + new URLSearchParams(params),
+        {signal:request.signal},
       );
       const body = await response.json();
+      if (disposed || token !== generation) return;
       if (!response.ok) throw new Error(failureCode(response.status, body));
       const stats = body.statistics;
       const excluded = stats.excluded;
+      state = `已读取 · ${stats.session_id === null ? "全部会话" : "所选会话"} · [${stats.since}, ${stats.until})`;
       output.replaceChildren(
         node(
           "p",
           `范围 [${stats.since}, ${stats.until}) · ${stats.session_id === null ? "全部会话" : "当前会话"}的已记录对话运行`,
         ),
+        node("p", `次数：S ${stats.counts.skip} · H ${stats.counts.hit} · M ${stats.counts.miss} · E ${stats.counts.error}`),
         node("p", ratioText(stats.skip, "跳过 S/(S+H+M)")),
         node("p", ratioText(stats.hit, "命中 H/(H+M)")),
         node("p", ratioText(stats.error, "错误 E/(S+H+M+E)")),
@@ -1358,14 +1548,16 @@ function statisticsPanel(session) {
         ),
       );
     } catch (failure) {
+      if (disposed || token !== generation) return;
+      state = `统计暂不可读取（${failure instanceof Error ? failure.message : ""}）。`;
       output.replaceChildren(
-        node("p", `统计暂不可读取（${failure instanceof Error ? failure.message : ""}）。`),
+        node("p", state),
       );
     }
   }
   scoped.addEventListener("change", () => void load());
   refresh.addEventListener("click", () => void load());
-  return { section, load };
+  return { section, load, summary:()=>state, dispose(){disposed=true;++generation;request?.abort();} };
 }
 
 const BATCH_LABEL = /** @type {Record<string,string>} */ ({
@@ -1602,8 +1794,10 @@ function queuePanel(page) {
   );
   /** @type {Map<string, Wire|string>} */ const candidates = new Map();
   let request = 0;
+  let disposed = false;
   let queue = /** @type {Wire|null} */ (null);
   async function load() {
+    if (disposed) return;
     const token = ++request;
     queue = null;
     for (const id of candidates.keys()) candidates.set(id, "正在重新核验候选…");
@@ -1611,7 +1805,7 @@ function queuePanel(page) {
     const result = await page.sync.read("/api/memory/consolidation", {
       limit: "50", offset: String(offset), ...(sessionId ? { session_id: sessionId } : {}),
     });
-    if (token !== request || result.state === "stale") return;
+    if (disposed || token !== request || result.state === "stale") return;
     queue = result.state === "ok" ? result.body : null;
     readError.textContent =
       result.state === "failed" ? `队列暂不可读取（${result.code}）。` : "";
@@ -1620,11 +1814,12 @@ function queuePanel(page) {
   }
   /** @param {string} id */
   async function candidate(id) {
+    if (disposed) return;
     const token = request;
     candidates.set(id, "正在读取候选…");
     render();
     const result = await page.sync.read("/api/memory/consolidation", { batch_id: id });
-    if (token !== request || result.state === "stale" || !candidates.has(id)) return;
+    if (disposed || token !== request || result.state === "stale" || !candidates.has(id)) return;
     candidates.set(
       id,
       result.state === "ok" ? result.body.batch : `候选暂不可读取（${result.state === "failed" ? result.code : "连接中断"}）。`,
@@ -1642,6 +1837,7 @@ function queuePanel(page) {
     settled: () => void load(),
   });
   function render() {
+    if (disposed) return;
     output.replaceChildren();
     previous.disabled = !page.sync.online || !queue || offset === 0;
     next.disabled = !page.sync.online || !queue || !(queue.sessions_has_more || queue.batches_has_more);
@@ -1682,7 +1878,7 @@ function queuePanel(page) {
       }
       output.append(row);
     }
-    if (!queue.batches.length) output.append(node("p", "暂无提炼批次。"));
+    if (!queue.batches.length) output.append(node("p", "当前队列页暂无提炼批次。"));
     // A batch opened from a record's origin may be older than the listed page.
     const listed = new Set(queue.batches.map((/** @type {Wire} */ batch) => batch.batch_id));
     for (const [id, detail] of candidates)
@@ -1700,6 +1896,7 @@ function queuePanel(page) {
       const row = node("article");
       row.className = "card";
       row.dataset.batch = batch.batch_id;
+      if (!listed.has(batch.batch_id)) row.append(node("p", "来源定位的历史批次，不属于当前队列分页结果。"));
       row.append(
         node("strong", `批次 ${batch.batch_id} · 修订 ${batch.revision}`),
         node("p", BATCH_LABEL[batch.status] || batch.status),
@@ -1763,11 +1960,37 @@ function queuePanel(page) {
     }
   }
   /** @param {string} id */
-  function openBatch(id) {
-    void candidate(id);
-    section.scrollIntoView({ block: "start" });
+  async function openBatch(id) {
+    const focus = document.activeElement;
+    await candidate(id);
+    if (disposed || document.activeElement !== focus) return;
+    const row = [...section.querySelectorAll("article")].find(item => item.dataset.batch === id);
+    if (row) {row.tabIndex=-1;row.focus({preventScroll:true});row.scrollIntoView({block:"start"});}
   }
-  return { section, load, openBatch, render };
+  function summary() {
+    const action = note.textContent ? ` · ${note.textContent}` : "";
+    if (!page.sync.online) return "队列未核验，候选正文已隐藏。" + action;
+    if (readError.textContent) return readError.textContent + action;
+    if (!queue) return "正在读取当前队列页。" + action;
+    const counts = new Map();
+    for (const batch of queue.batches) counts.set(batch.status, (counts.get(batch.status) || 0) + 1);
+    const blocked = queue.sessions.filter((/** @type {Wire} */ session) => session.block || session.error).length;
+    return `当前队列页 ${offset / 50 + 1} · ${queue.sessions.length} 个会话／${queue.batches.length} 个批次` +
+      ` · ${[...counts].map(([state,count])=>`${BATCH_LABEL[state] || state} ${count}`).join("；") || "本页无批次"}` +
+      `${blocked ? ` · 来源受阻或读取失败 ${blocked}` : ""}` +
+      `${queue.sessions_has_more || queue.batches_has_more ? " · 后面还有数据" : " · 当前筛选已到末页"}；不是全局待办总数。` + action;
+  }
+  return {
+    section, load, openBatch, render, summary,
+    captureSource:()=>({offset,sessionId}),
+    async restoreSource(/** @type {Wire} */ source) {
+      if (!source || typeof source.sessionId !== "string" || !Number.isSafeInteger(source.offset) || source.offset < 0 || source.offset % 50 !== 0) return;
+      offset=source.offset;sessionId=source.sessionId;sessionInput.value=sessionId;candidates.clear();
+      await load();
+      if (!disposed && typeof source.batchId === "string") await candidate(source.batchId);
+    },
+    dispose(){disposed=true;++request;candidates.clear();queue=null;},
+  };
 }
 
 /** @param {{sync:MemorySync, csrf:()=>string}} page */
@@ -1791,12 +2014,14 @@ function mirrorsPanel(page) {
   /** @type {Map<string,string>} */ const previews = new Map();
   /** @type {Wire[]} */ let mirrors = [];
   let request = 0;
+  let disposed = false;
   async function load() {
+    if (disposed) return;
     const token = ++request;
     for (const name of previews.keys()) previews.set(name, "正在重新核验预览…");
     render();
     const result = await page.sync.read("/api/memory/mirrors", {});
-    if (token !== request || result.state === "stale") return;
+    if (disposed || token !== request || result.state === "stale") return;
     mirrors = result.state === "ok" ? result.body.mirrors : [];
     readError.textContent =
       result.state === "failed" ? `镜像状态暂不可读取（${result.code}）。` : "";
@@ -1805,10 +2030,12 @@ function mirrorsPanel(page) {
   }
   /** @param {string} name */
   async function preview(name) {
+    if (disposed) return;
+    const token = request;
     previews.set(name, "正在读取预览…");
     render();
     const result = await page.sync.read("/api/memory/mirrors", { name, preview: "1" });
-    if (result.state === "stale" || !previews.has(name)) return;
+    if (disposed || token !== request || result.state === "stale" || !previews.has(name)) return;
     const mirror = result.state === "ok" ? result.body.mirrors[0] : null;
     previews.set(
       name,
@@ -1826,6 +2053,7 @@ function mirrorsPanel(page) {
     settled: () => void load(),
   });
   function render() {
+    if (disposed) return;
     output.replaceChildren();
     if (!page.sync.online) {
       output.append(node("p", "连接中断：镜像预览已隐藏，重连并核验后再显示。"));
@@ -1874,11 +2102,19 @@ function mirrorsPanel(page) {
         row.append(confirm);
       }
       const text = previews.get(name);
-      if (text !== undefined) row.append(node("pre", text));
+      if (text !== undefined) {
+        const body = node("pre", text);body.tabIndex=0;body.setAttribute("aria-label", `${name} 镜像预览`);row.append(body);
+      }
       output.append(row);
     }
   }
-  return { section, load, render };
+  function summary() {
+    const action = note.textContent ? ` · ${note.textContent}` : "";
+    if (!page.sync.online) return "镜像未核验，预览已隐藏。" + action;
+    if (readError.textContent) return readError.textContent + action;
+    return (mirrors.length ? mirrors.map(mirror => `${mirror.name === "facts" ? "事实" : "情景"}：${mirror.conflict ? "外部修改待确认" : mirror.error ? `同步失败（${mirror.error}）` : mirror.ready ? "已同步并核验" : "待同步或核验中"}`).join("；") : "镜像状态尚未读取。") + action;
+  }
+  return { section, load, render, summary, dispose(){disposed=true;++request;previews.clear();mirrors=[];} };
 }
 
 /**
@@ -1888,6 +2124,25 @@ function mirrorsPanel(page) {
  * @param {{csrf:()=>string, session:()=>string|null, receipts:ReturnType<typeof memoryReceipts>, replaceSource?:(target:URL)=>void}} options
  */
 export function memoryPage(root, sync, options) {
+  root.classList.add("memory-page");
+  let disposed = false, selectedTab = "semantic", focusHref = "", restoreGeneration = 0;
+  /** @type {string|null} */ let focusBatchId = null;
+  const sourceNotice = node("p");sourceNotice.setAttribute("role", "status");
+  function captureSource() {
+    return {kind:"memory",route:`/memory?tab=${selectedTab}`,tab:selectedTab,
+      semanticId:semantic.selectedId(),episodicId:episodic.selectedId(),focusHref,
+      openMaintenance:maintenance.map(item=>item.isOpen()),queue:{...queue.captureSource(),batchId:focusBatchId}};
+  }
+  const cancelRestore = () => {restoreGeneration++;};
+  document.addEventListener("pointerdown", cancelRestore);document.addEventListener("keydown", cancelRestore);
+  root.addEventListener("click", event => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const link = event.target instanceof Element ? event.target.closest("a") : null;
+    if (!link || link.origin !== location.origin || link.target || !link.pathname.startsWith("/runs/")) return;
+    focusHref=link.getAttribute("href") || "";
+    focusBatchId=link.closest("[data-batch]")?.getAttribute("data-batch") ?? null;
+    event.preventDefault();void dashboard.navigate(link.href,{intent:"source",source:{returnSource:captureSource()}});
+  });
   const connection = node("p");
   connection.setAttribute("role", "status");
   const verify = node("button", "重新核验");
@@ -1906,10 +2161,16 @@ export function memoryPage(root, sync, options) {
   const queue = queuePanel({ sync, csrf: options.csrf });
   const mirrors = mirrorsPanel({ sync, csrf: options.csrf });
   const statistics = statisticsPanel(options.session);
+  const maintenance = [
+    foldSection(receipts.section, "操作回执／遗忘进度", receipts.summary),
+    foldSection(queue.section, "提炼队列", queue.summary),
+    foldSection(statistics.section, "检索统计", statistics.summary),
+    foldSection(mirrors.section, "Markdown 镜像", mirrors.summary),
+  ];
   const pageContext = {
     sync,
     submit: receipts.submit,
-    openBatch: queue.openBatch,
+    openBatch: (/** @type {string} */ id) => {maintenance[1].open(true);queue.openBatch(id);},
     discard: receipts.discard,
   };
   const semantic = recordPanel("semantic", pageContext);
@@ -1939,6 +2200,7 @@ export function memoryPage(root, sync, options) {
   });
   /** @param {string} key */
   function select(key) {
+    selectedTab = key;
     for (const item of sections) {
       const active = item.key === key;
       item.tab.setAttribute("aria-selected", String(active));
@@ -1960,12 +2222,11 @@ export function memoryPage(root, sync, options) {
   root.append(
     connection,
     verify,
+    sourceNotice,
     tabs,
     ...sections.map((item) => item.panel),
-    receipts.section,
-    statistics.section,
-    queue.section,
-    mirrors.section,
+    node("h2", "记忆维护"),
+    ...maintenance.map(item => item.section),
   );
   const requested = new URLSearchParams(location.search).get("tab") || "semantic";
   select(sections.some((item) => item.key === requested) ? requested : "semantic");
@@ -2004,7 +2265,27 @@ export function memoryPage(root, sync, options) {
   refresh();
   void statistics.load();
   return {
-    getLeaveState(){return {dirty:semantic.getLeaveState().dirty||episodic.getLeaveState().dirty,summary:'记忆编辑或新建输入尚未确认保存。'};},
-    close(){unwatch();semantic.dispose();episodic.dispose();receipts.detach();},
+    captureSource,
+    async restoreSource(/** @type {Wire} */ origin) {
+      if (origin?.kind !== "memory") return;
+      const generation = ++restoreGeneration;
+      // The shell focuses the new title synchronously after mounting. Capture
+      // that initial focus, then respect any later focus change (including paste).
+      let initialFocus = document.activeElement;
+      queueMicrotask(()=>{initialFocus=document.activeElement;});
+      focusHref=typeof origin.focusHref === "string" ? origin.focusHref : "";
+      focusBatchId=typeof origin.queue?.batchId === "string" ? origin.queue.batchId : null;
+      if (sections.some(item => item.key === origin.tab)) select(origin.tab);
+      for (const [index,item] of maintenance.entries()) if(origin.openMaintenance?.[index] === true)item.open();
+      await Promise.all([semantic.restore(origin.semanticId), episodic.restore(origin.episodicId), queue.restoreSource(origin.queue)]);
+      if (disposed || generation !== restoreGeneration || document.activeElement !== initialFocus) return;
+      const sourceRoot = focusBatchId === null ? sections.find(item=>item.key === selectedTab)?.panel
+        : [...queue.section.querySelectorAll("[data-batch]")].find(item=>item.getAttribute("data-batch") === focusBatchId);
+      const link = [...(sourceRoot?.querySelectorAll("a") || [])].find(item => item.getAttribute("href") === focusHref && item.checkVisibility());
+      if (link) {link.focus({preventScroll:true});sourceNotice.textContent="已重新核验原记忆详情与来源。";}
+      else if (origin.focusHref) {sourceNotice.textContent="原来源入口暂不可用；请核对当前详情，未替换为其他记录。";}
+    },
+    getLeaveState(){const s=semantic.getLeaveState(), e=episodic.getLeaveState();return {dirty:s.dirty||e.dirty,pending:s.pending||e.pending,summary:'有提交后新增或尚未提交的记忆输入。'};},
+    close(){disposed=true;++restoreGeneration;document.removeEventListener("pointerdown",cancelRestore);document.removeEventListener("keydown",cancelRestore);unwatch();semantic.dispose();episodic.dispose();queue.dispose();mirrors.dispose();statistics.dispose();skills.dispose();for(const item of maintenance)item.dispose();receipts.detach();},
   };
 }
