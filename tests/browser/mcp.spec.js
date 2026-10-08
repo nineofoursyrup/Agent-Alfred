@@ -148,3 +148,35 @@ test('MCP CE-14 delayed Tools response cannot undo new environment isolation',as
     expect((await control(s)).requests.filter(r=>r.method==='tools/call')).toHaveLength(0);
   }finally{release?.();await context.close();await s.close();}
 });
+
+test('S08 lost MCP receipt requires explicit same-operation retry and preserves connection details',async({browser},testInfo)=>{
+  const s=await server(),context=await browser.newContext({reducedMotion:'reduce'});
+  try {
+    const page=await context.newPage(),origin=`http://127.0.0.1:${s.entry.port}`;
+    await page.goto(origin+'/connections');
+    const card=page.locator('[data-mcp-server="test"]');
+    await card.getByText('服务器详情',{exact:true}).click();
+    const before=(await control(s)).requests.filter(r=>r.method==='initialize').length;
+    const payloads=[];
+    await page.route('**/api/connections/mcp',async route=>{payloads.push(route.request().postDataJSON());const response=await route.fetch();if(payloads.length===1)await route.abort();else await route.fulfill({response});});
+    await card.getByRole('button',{name:'重连',exact:true}).click();
+    await expect(page.getByRole('button',{name:'重试同一 MCP 操作',exact:true})).toBeVisible();
+    await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+    await expect(card.locator('details')).toHaveAttribute('open','');
+    expect(payloads).toHaveLength(1);
+    await page.getByRole('button',{name:'重试同一 MCP 操作',exact:true}).click();
+    await expect(page.getByText(/MCP 操作 completed/)).toBeVisible();
+    expect(payloads).toHaveLength(2);expect(payloads[1]).toEqual(payloads[0]);
+    expect((await control(s)).requests.filter(r=>r.method==='initialize')).toHaveLength(before+1);
+    const dimensions=[];
+    for(const [width,height] of [[1440,900],[1280,800],[390,844],[320,800]]) {
+      await page.setViewportSize({width,height});await card.scrollIntoViewIfNeeded();
+      await card.getByRole('button',{name:'重连',exact:true}).focus();await expect(card.getByRole('button',{name:'重连',exact:true})).toBeFocused();
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+      dimensions.push({viewport:[width,height],central:await page.locator('#page').boundingBox()});
+      await page.screenshot({path:testInfo.outputPath(`connections-${width}.png`)});
+    }
+    console.log('S08 Connections central widths',JSON.stringify(dimensions));
+    await testInfo.attach('central-dimensions',{body:JSON.stringify(dimensions,null,2),contentType:'application/json'});
+  }finally{await context.close();await s.close();}
+});

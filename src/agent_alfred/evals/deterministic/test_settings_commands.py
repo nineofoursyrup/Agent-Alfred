@@ -359,6 +359,7 @@ def test_http_clear_reopens_store_and_reprices_only_new_snapshots(tmp_path):
             and model["model_id"] == DEFAULT_MODEL_ID
         )
         assert row["display_name"] is None
+        assert row["display_name_override"] is None
         assert row["price_override"] is None
         status, conflict = request(
             "/api/settings",

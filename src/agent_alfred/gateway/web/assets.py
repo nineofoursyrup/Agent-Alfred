@@ -9,6 +9,9 @@ PAGE_POLICY = (
 )
 
 ASSETS = {
+    "/assets/models.js": ("models.js", "text/javascript"),
+    "/assets/connections.js": ("connections.js", "text/javascript"),
+    "/assets/settings.css": ("settings.css", "text/css"),
     "/assets/shell.js": ("shell.js", "text/javascript"),
     "/assets/routing-statistics.js": ("routing-statistics.js", "text/javascript"),
 

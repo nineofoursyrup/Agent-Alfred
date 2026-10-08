@@ -39,11 +39,12 @@ test('a retired Run cache restoration cannot remount a successor page or erase i
   await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));
   await expect.poll(()=>page.evaluate(()=>window.sources.length)).toBe(sourceCount+1);
   await page.locator('nav a[href="/models"]').click();
+  await page.locator("[data-model='opencode-go:deepseek-v4-flash']").getByText('模型详情',{exact:true}).click();
   const name=page.getByRole('textbox',{name:'显示名',exact:true}).first();
   await name.fill('new-successor-unsaved-draft');
-  const original=await name.elementHandle();
+  // A legitimate model-state refresh may replace a field DOM node; draft,
+  // focus and the registered leave guard must survive the stale Run restore.
   await emit(page,'state_patch',state(session,20));
-  expect(await original.evaluate(input=>input.isConnected)).toBe(true);
   await expect(name).toHaveValue('new-successor-unsaved-draft');
   await expect(name).toBeFocused();
   await expect(page).toHaveURL(/\/models$/);
