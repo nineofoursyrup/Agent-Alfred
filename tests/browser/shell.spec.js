@@ -1,4 +1,5 @@
 import {test, expect} from '@playwright/test';
+import {controlledTransport,emit,state} from './transport.js';
 
 test('one shell retains SQL and consumes one mutually exclusive panel history layer', async ({page}) => {
   await page.setViewportSize({width:390,height:844});
@@ -28,6 +29,27 @@ test('one shell retains SQL and consumes one mutually exclusive panel history la
   await expect(page).toHaveURL(/\/database$/);
   await expect(sql).toBeVisible();
   await expect(sql).toHaveValue('');
+});
+
+test('a retired Run cache restoration cannot remount a successor page or erase its draft',async({page})=>{
+  // Synthetic persisted only checks the reconnect owner boundary, not actual BFCache.
+  const session=await controlledTransport(page);
+  await page.locator('nav a[href="/runs"]').click();
+  const sourceCount=await page.evaluate(()=>window.sources.length);
+  await page.evaluate(()=>window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));
+  await expect.poll(()=>page.evaluate(()=>window.sources.length)).toBe(sourceCount+1);
+  await page.locator('nav a[href="/models"]').click();
+  const name=page.getByRole('textbox',{name:'显示名',exact:true}).first();
+  await name.fill('new-successor-unsaved-draft');
+  const original=await name.elementHandle();
+  await emit(page,'state_patch',state(session,20));
+  expect(await original.evaluate(input=>input.isConnected)).toBe(true);
+  await expect(name).toHaveValue('new-successor-unsaved-draft');
+  await expect(name).toBeFocused();
+  await expect(page).toHaveURL(/\/models$/);
+  await expect(page.locator('dialog[open]')).toHaveCount(0);
+  await page.locator('nav a[href="/runs"]').click();
+  await expect(page.getByRole('button',{name:'留在此页',exact:true})).toBeFocused();
 });
 
 test('browser history cancellation preserves the actual page, draft, focus and repeatable Back', async ({page}) => {

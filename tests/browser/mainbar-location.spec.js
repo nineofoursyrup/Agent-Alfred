@@ -91,3 +91,22 @@ test('a later preview cannot downgrade the same target full request or recorded 
   await expect(article).toContainText('已保存');await expect(article).not.toContainText('请求预览');
   await expect(article).toHaveCount(1);
 });
+
+test('idle reconnect verifies the same Run and does not infer saving from an unrelated persisted pair',async({page})=>{
+  const session=await controlledTransport(page);let reads=0;
+  await domain(page,1,session,{name:'run.finished',outcome:'completed',reply_disposition:'reply',reply:{blocks:[{type:'text',text:'待核对回复'}]}});
+  await page.getByRole('button',{name:'收起主对话',exact:true}).click();
+  await page.route('**/api/mainbar?*',route=>{reads++;return route.fulfill({json:{items:[{type:'run_pair',run_id:reads===1?'other-recorded-run':'r1',activity_revision:1,user:[{type:'text',text:'持久请求'}],assistant:[{type:'text',text:'持久回复'}]}],next_cursor:null,runs_pending:false}});});
+  const sources=await page.evaluate(()=>window.sources.length);
+  await page.evaluate(()=>{window.dispatchEvent(new Event('offline'));window.dispatchEvent(new Event('online'));});
+  await expect.poll(()=>page.evaluate(()=>window.sources.length)).toBe(sources+1);
+  await emit(page,'state_patch',state(session,20));
+  await expect.poll(()=>reads).toBe(1);
+  await expect(page.locator('#shell-status')).toContainText('记录状态待核对');
+  await expect(page.locator('#shell-status')).not.toContainText('已保存');
+  await expect(page.locator('#shell-status')).not.toContainText('正在保存');
+  await page.evaluate(async session=>{const {dashboard}=await import('/assets/app.js');await dashboard.selectSession(session);},session);
+  await expect(page.locator('#shell-status')).toContainText('已保存');
+  await expect(page.locator('#messages [data-run-id="r1"]')).toHaveCount(1);
+  expect(reads).toBe(2);
+});

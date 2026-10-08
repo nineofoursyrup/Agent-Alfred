@@ -112,11 +112,28 @@ for (const fails of [false, true])
       await expect(other.getByRole("textbox", { name: "消息" })).toHaveValue(
         "第二标签页草稿",
       );
+      if (!fails) {
+        await page.getByRole('button',{name:'收起主对话',exact:true}).click();
+        await page.evaluate(()=>window.dispatchEvent(new Event('offline')));
+        await expect(page.locator('#shell-status')).toContainText('正在保存');
+      }
       server.stdin.write(fails ? "fail\n" : "record\n");
       await expect(chat).toContainText(fails ? "回复已收到但未保存" : "已保存");
       await expect(chat.getByText("离线模型回复", { exact: true })).toHaveCount(
         1,
       );
+      if (!fails) {
+        const session=await page.evaluate(()=>sessionStorage.getItem('alfred.session'));
+        const persisted=await (await page.request.get(origin+'/api/mainbar?'+new URLSearchParams({session_id:session}))).json();
+        expect(persisted.items.some(item=>item.type==='run_pair'&&item.run_id===acceptedRun)).toBe(true);
+        await page.evaluate(()=>window.dispatchEvent(new Event('online')));
+        await expect.poll(()=>page.evaluate(async()=>{const {dashboard}=await import('/assets/app.js');const current=dashboard.runtime();return current.connected&&current.active===null;})).toBe(true);
+        await expect(page.locator('#shell-status')).toContainText('已保存');
+        await expect(page.locator('#shell-status')).not.toContainText('正在保存');
+        await page.evaluate(async()=>{const {dashboard}=await import('/assets/app.js');await dashboard.selectSession(dashboard.runtime().session);});
+        await expect(page.locator('#messages')).toContainText('已保存');
+        await expect(page.locator('#shell-status')).toContainText('已保存');
+      }
       if (fails) {
         const response = await other.evaluate(async () => {
           const entry = await (await fetch("/api/entry")).json();

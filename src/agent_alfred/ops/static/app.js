@@ -26,7 +26,7 @@ let csrf = "";
 let instance = "";
 let revision = -1;
 let connected = false;
-let restoreRunPage=false;
+/** @type {{page:ReturnType<typeof runsPage>,generation:number}|null} */ let restoreRunPage=null;
 /** @type {ReturnType<typeof toolsPage>|ReturnType<typeof accountingPage>|null} */ let accountingView = null;
 let valid = false;
 let sending = false;
@@ -198,7 +198,7 @@ function renderShellStatus() {
   if(terminalStatus && !busySummary){
     const latest=replies.get(terminalStatus.run_id)||terminalStatus;
     facts.push(terminalStatus.outcome==='completed' && terminalStatus.reply_disposition==='no_reply' ? terminalStatus.aggregation?'聚合已结束 · 未生成草稿':outcomeLabel(terminalStatus) : outcomeLabel({...terminalStatus,reply_disposition:undefined}));
-    facts.push(latest.recording_state==='recorded'?'已保存':latest.recording_state==='failed'?'未保存':latest.recording_state==='pending'?'正在保存':'记录状态待核对');
+    facts.push(latest.recording_unverified?'记录状态待核对':latest.recording_state==='recorded'?'已保存':latest.recording_state==='failed'?'未保存':latest.recording_state==='pending'?'正在保存':'记录状态待核对');
   }
   if(processGap)facts.push(processGap.message);
   if(locationTarget?.error)facts.push(locationTarget.error);
@@ -245,7 +245,7 @@ async function locateReply(target) {
     const recording=['recorded','failed'].includes(old.recording_state)&&body.recording_state==='pending'?old.recording_state:body.recording_state;
     const completeness=/** @type {Record<string,number>} */({full:2,preview:1,unavailable:0});
     const keepUser=(completeness[old.userAvailability]||0)>(completeness[body.user?.availability]||0);
-    replies.set(target.run_id,{...old,session_id:session,user:keepUser?old.user:body.user?.availability==='full'?textBlocks(body.user.blocks):body.user?.preview||old.user,userAvailability:keepUser?old.userAvailability:body.user?.availability,reply_disposition:body.reply_disposition,text:body.reply_disposition==='no_reply'?undefined:body.reply_text,skill_notice:body.skill_notice,aggregation:body.aggregation||old.aggregation,recording_state:recording,loading:body.reply_disposition!=='no_reply' && typeof body.reply_text!=='string',purpose:body.purpose});
+    replies.set(target.run_id,{...old,session_id:session,user:keepUser?old.user:body.user?.availability==='full'?textBlocks(body.user.blocks):body.user?.preview||old.user,userAvailability:keepUser?old.userAvailability:body.user?.availability,reply_disposition:body.reply_disposition,text:body.reply_disposition==='no_reply'?undefined:body.reply_text,skill_notice:body.skill_notice,aggregation:body.aggregation||old.aggregation,recording_state:recording,recording_unverified:false,loading:body.reply_disposition!=='no_reply' && typeof body.reply_text!=='string',purpose:body.purpose});
     locationTarget={...target,loading:false,purpose:body.purpose,reply_disposition:body.reply_disposition};
     renderMessages();
     const record=messageNodes.get('run:'+target.run_id)?.element;
@@ -286,7 +286,7 @@ function renderMessages() {
     if(entry.signature!==signature) {
       entry.signature=signature;article.replaceChildren();
       if(item.run_id)article.dataset.runId=item.run_id;
-      article.dataset.replyComplete=String(item.type==='run_pair'?!!item.assistant&&item.reply_disposition!=='no_reply':item.type==='projection'&&!item.loading&&typeof item.text==='string'&&['recorded','failed','pending'].includes(item.recording_state));
+      article.dataset.replyComplete=String(item.type==='run_pair'?!!item.assistant&&item.reply_disposition!=='no_reply':item.type==='projection'&&!item.loading&&!item.recording_unverified&&typeof item.text==='string'&&['recorded','failed','pending'].includes(item.recording_state));
       if(item.aggregation)aggregationFacts(article,item.aggregation,memory);
       if(item.type==='run_pair') {
         if(item.user)article.append(node('p',textBlocks(item.user)));
@@ -303,7 +303,7 @@ function renderMessages() {
         if(item.reply_disposition==='no_reply'&&!item.aggregation)article.append(node('small','已结束 · 按要求未回复'));
         if(item.loading){article.append(node('p','正文未完整加载'));const retry=node('button','重新加载正文');retry.onclick=()=>void recoverReply(item.run_id);article.append(retry);}
         if(item.outcome && (item.reply_disposition!=='no_reply'||item.outcome!=='completed'))article.append(node('small',outcomeLabel({...item,reply_disposition:undefined})));
-        if(item.type==='projection')article.append(node('small',item.recording_state==='recorded'?'已保存':item.recording_state==='failed'?item.reply_disposition==='no_reply'?'本次运行未保存':'回复已收到但未保存':item.recording_state==='pending'?'正在保存':'记录状态未知'));
+        if(item.type==='projection')article.append(node('small',item.recording_unverified?'记录状态待核对':item.recording_state==='recorded'?'已保存':item.recording_state==='failed'?item.reply_disposition==='no_reply'?'本次运行未保存':'回复已收到但未保存':item.recording_state==='pending'?'正在保存':'记录状态未知'));
       }
     }
     article.classList.toggle('located',!!locationTarget&&item.run_id===locationTarget.run_id);
@@ -357,6 +357,11 @@ async function loadMessages(older = false) {
     valid = true;
     const resumePending = historyPending && !historyCursor && !historyItems.some(item => item.type === "historic_message");
     const items = /** @type {Wire[]} */ ([...page.items].reverse());
+    for(const item of items)if(item.type==='run_pair'){
+      const reply=replies.get(item.run_id);
+      if(reply && reply.session_id===target){reply.recording_state='recorded';reply.recording_unverified=false;}
+      if(terminalStatus && terminalStatus.run_id===item.run_id && terminalStatus.session_id===target){terminalStatus.recording_state='recorded';terminalStatus.recording_unverified=false;}
+    }
     if (!historyLoaded) historyItems = items;
     else {
       const pairs = new Map(
@@ -427,7 +432,9 @@ const stream = new Stream(
       if (first) {
         connected = true;
         valid = body.session_valid;
-        if(restoreRunPage){restoreRunPage=false;shell.restore();}else shell.start();
+        const restore=restoreRunPage?.page===runPage && restoreRunPage?.generation===shell.generation;
+        restoreRunPage=null;
+        if(restore)shell.restore();else shell.start();
         notices.snapshot();
         updateSend();
         void memory.connected(instance);
@@ -458,6 +465,12 @@ const stream = new Stream(
         ),
       );
       unavailable = body.coordinator_state === "recording_failed";
+      if(first && body.coordinator_state==='idle'){
+        let recheck=terminalStatus?.session_id===session && terminalStatus?.recording_state==='pending';
+        if(terminalStatus?.recording_state==='pending')terminalStatus.recording_unverified=true;
+        for(const reply of replies.values())if(reply.recording_state==='pending'){reply.recording_unverified=true;if(reply.session_id===session)recheck=true;}
+        if(recheck)void loadMessages();
+      }
       const projection = body.unrecorded_terminal_projection;
       if (projection) {
         const old = replies.get(projection.run_id) || {};
@@ -470,6 +483,7 @@ const stream = new Stream(
           aggregation: projection.aggregation,
           reply_disposition: projection.reply_disposition || old.reply_disposition,
           recording_state: projection.recording_state,
+          recording_unverified:false,
           loading: projection.reply_disposition !== "no_reply" && old.text === undefined,
         });
         terminalStatus={...projection};
@@ -504,9 +518,9 @@ const stream = new Stream(
       announcer.say(active ? stages[body.coordinator_state] : "就绪");
       if (unavailable) error.textContent = "记录服务不可用；草稿已保留。";
       if (incoming?.recording_state) {
-        if(terminalStatus && terminalStatus.run_id===incoming.run_id)terminalStatus.recording_state=incoming.recording_state;
+        if(terminalStatus && terminalStatus.run_id===incoming.run_id){terminalStatus.recording_state=incoming.recording_state;terminalStatus.recording_unverified=false;}
         const old = replies.get(incoming.run_id);
-        if (old) old.recording_state = incoming.recording_state;
+        if (old) {old.recording_state = incoming.recording_state;old.recording_unverified=false;}
         if (incoming.recording_state === "recorded") void loadMessages();
       }
       if (!valid && session !== null)
@@ -688,7 +702,7 @@ function mountPage(url) {
     setVisible:(/** @type {boolean} */ visible)=>owner?.setVisible?.(visible),
     captureSource:()=>owner?.captureSource?.()||{},
     restoreSource:(/** @type {any} */ source)=>owner?.restoreSource?.(source),
-    dispose(){retireLocation();receipts.detach();if(owner?.dispose)owner.dispose();else owner?.close?.();root.remove();},
+    dispose(){if(restoreRunPage?.page===owner)restoreRunPage=null;retireLocation();receipts.detach();if(owner?.dispose)owner.dispose();else owner?.close?.();root.remove();},
   };
 }
 const shell=createShell({mount:mountPage,storage,onVisibility:()=>queueMicrotask(updateReadStatus)});
@@ -748,7 +762,7 @@ window.addEventListener("pagehide", () => databaseView?.suspend());
 window.addEventListener("pageshow", (event) => {
   if (event.persisted) databaseView?.restoredFromCache();
   if (event.persisted && runPage) {
-    restoreRunPage=true;
+    restoreRunPage={page:runPage,generation:shell.generation};
     connected = false;
     stream.source?.close();
     memory.disconnected();
