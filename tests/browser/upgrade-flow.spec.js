@@ -5,7 +5,7 @@ test("a real upgraded Session combines a new UI Run with every historic message 
   const server = await localServer();
   try {
     await page.goto(server.origin);
-    await page.getByRole("button", {name:"升级前消息 01",exact:true}).click();
+    await page.getByRole("link", {name:"升级前消息 01",exact:true}).click();
     await page.getByRole("button", {name:"继续此会话",exact:true}).click();
     const chat = page.getByRole("region", {name:"主对话"});
     await expect(chat.getByText(/^升级前消息 \d+$/)).toHaveCount(25);
@@ -42,9 +42,9 @@ test("real migrated null-run messages create no Run rows before or after a new U
     const before = await (await page.request.get(`${server.origin}/api/runs?filter=all`)).json();
     expect(before.runs).toEqual([]);
     expect(before.non_terminal).toBeNull();
-    await expect(list.locator("article")).toHaveCount(0);
+    await expect(list.locator("[data-source-id]")).toHaveCount(0);
     await page.getByRole("link",{name:"收件箱",exact:true}).click();
-    await page.getByRole("button",{name:"升级前消息 01",exact:true}).click();
+    await page.getByRole("link",{name:"升级前消息 01",exact:true}).click();
     await page.getByRole("button",{name:"继续此会话",exact:true}).click();
     await expect(page.getByRole("region",{name:"主对话"}).getByText(/^升级前消息 \d+$/)).toHaveCount(25);
     const messages = await (await page.request.get(`${server.origin}/api/sessions/messages?`+new URLSearchParams({session_id:"legacy /会话?",page_size:"100"}))).json();
@@ -55,9 +55,9 @@ test("real migrated null-run messages create no Run rows before or after a new U
     await page.getByRole("button",{name:"发送",exact:true}).click();
     const {run_id} = await (await accepted).json();
     await expect(page.getByRole("region",{name:"主对话"})).toContainText("已保存");
-    await page.getByRole("link",{name:"运行",exact:true}).click();
-    await expect(list.locator("article")).toHaveCount(1);
-    await expect(list.getByRole("link",{name:"查看运行",exact:true})).toHaveAttribute("href",`/runs/${encodeURIComponent(run_id)}?filter=chat`);
+    await page.getByRole("navigation",{name:"主导航"}).getByRole("link",{name:"运行",exact:true}).click();
+    await expect(list.locator("[data-source-id]")).toHaveCount(1);
+    await expect(list.getByRole("link",{name:"查看运行",exact:true})).toHaveAttribute("href",`/runs/${encodeURIComponent(run_id)}?filter=all`);
     const after = await (await page.request.get(`${server.origin}/api/runs?filter=all`)).json();
     expect(after.runs.map(run=>run.run_id)).toEqual([run_id]);
     expect(after.non_terminal).toBeNull();

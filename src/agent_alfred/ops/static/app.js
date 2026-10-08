@@ -6,7 +6,8 @@ import { Stream } from "./stream.js";
 import { node, textBlocks } from "./dom.js";
 import { Progress } from "./progress.js";
 import { ConnectionNotices, Announcer } from "./notices.js";
-import { inbox, modelsPage, connectionsPage, behaviourPage } from "./pages.js";
+import { modelsPage, connectionsPage, behaviourPage } from "./pages.js";
+import { inbox } from "./inbox.js";
 import { runsPage, outcomeLabel } from "./runs.js";
 import { MemorySync, memoryPage, memoryReceipts } from "./memory.js";
 import { databasePage } from "./database.js";
@@ -693,8 +694,8 @@ function mountPage(url) {
   else if(path==='/connections')owner=connectionsView=connectionsPage(root,()=>csrf);
   else if(path==='/memory')owner=memoryPage(root,memory,{csrf:()=>csrf,session:()=>session,receipts,replaceSource:(target)=>shell.replaceSource(target)});
   else if(path==='/database')owner=databaseView=databasePage(root,{csrf:()=>csrf,instance:()=>instance,connected:()=>connected});
-  else if(path==='/runs'||path.startsWith('/runs/'))owner=runPage=runsPage(root,progress,(target)=>void shell.navigate(target),memory,()=>csrf,()=>({instance,connected}));
-  else if(path==='/inbox'||path==='/')owner=inbox(root,resume);
+  else if(path==='/runs'||path.startsWith('/runs/'))owner=runPage=runsPage(root,progress,dashboard,memory,()=>csrf);
+  else if(path==='/inbox'||path==='/')owner=inbox(root,dashboard);
   else root.append(node('p','此地址不可用。'));
   if(connected){runPage?.sync(active);connectionsView?.sync(instance);}
   return {

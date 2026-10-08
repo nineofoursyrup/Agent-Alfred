@@ -40,12 +40,12 @@ test("inbox viewing is read only; continue switches drafts explicitly", async ({
           {
             role: "user",
             blocks: [{ type: "text", text: "升级前的问题" }],
-            run_id: null,
+            run_id: null, message_anchor: "legacy-user",
           },
           {
             role: "assistant",
             blocks: [{ type: "text", text: "升级前的回复" }],
-            run_id: null,
+            run_id: null, message_anchor: "legacy-assistant",
           },
         ],
         next_cursor: null,
@@ -65,13 +65,13 @@ test("inbox viewing is read only; continue switches drafts explicitly", async ({
             type: "historic_message",
             role: "assistant",
             blocks: [{ type: "text", text: "升级前的回复" }],
-            run_id: null,
+            run_id: null, message_anchor: "legacy-assistant",
           },
           {
             type: "historic_message",
             role: "user",
             blocks: [{ type: "text", text: "升级前的问题" }],
-            run_id: null,
+            run_id: null, message_anchor: "legacy-user",
           },
         ],
         next_cursor: null,
@@ -80,7 +80,7 @@ test("inbox viewing is read only; continue switches drafts explicitly", async ({
     });
   });
   await page.getByRole("link", { name: "收件箱", exact: true }).click();
-  await page.getByRole("button", { name: "旧日对话", exact: true }).click();
+  await page.getByRole("link", { name: "旧日对话", exact: true }).click();
   await expect(
     page.getByRole("region", { name: "会话只读预览" }),
   ).toContainText("升级前的回复");
@@ -113,7 +113,7 @@ test("a real v2 upgrade shows all historic messages and creates no synthetic Run
 }) => {
   await page.goto("/");
   await page
-    .getByRole("button", { name: "升级前消息 01", exact: true })
+    .getByRole("link", { name: "升级前消息 01", exact: true })
     .click();
   const preview = page.getByRole("region", { name: "会话只读预览" });
   await expect(preview.getByRole("link", { name: "查看运行" })).toHaveCount(0);
@@ -215,9 +215,10 @@ test("inbox Run outcomes reuse distinct terminal wording independent of recordin
     ["interrupted",null,"执行前中断"],
     ["interrupted","today","运行终态无法确认"],
   ];
-  await page.route("**/api/sessions/runs?*", route => route.fulfill({json:{runs:outcomes.map(([outcome,started_at],i) => ({run_id:`terminal-${i}`,phase:"finished",outcome,started_at,gateway:"cli",accepted_at:"today",reply_preview:null,recording_state:i===0?"failed":"recorded"})),next_cursor:null}}));
+  await page.route("**/api/sessions/runs?*", route => route.fulfill({json:{runs:outcomes.map(([outcome,started_at],i) => ({run_id:`terminal-${i}`,purpose:"chat",phase:"finished",outcome,started_at,gateway:"cli",accepted_at:"today",reply_preview:null,recording_state:i===0?"failed":"recorded"})),next_cursor:null}}));
   await page.goto("/");
-  await page.getByRole("button", {name:"终态会话",exact:true}).click();
+  await page.getByRole("link", {name:"终态会话",exact:true}).click();
+  await page.getByRole("navigation", {name:"会话预览分区"}).getByRole("link", {name:"运行",exact:true}).click();
   const preview = page.getByRole("region", {name:"会话只读预览"});
   for (const [i,[outcome,,label]] of outcomes.entries()) {
     const row = preview.locator("article").filter({has:page.locator(`a[href*="terminal-${i}"]`)});
