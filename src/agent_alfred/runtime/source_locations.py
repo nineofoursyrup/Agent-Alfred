@@ -1,7 +1,12 @@
 """Bounded source positioning over the existing keyset readers and cursors."""
 
 from agent_alfred.runtime import runs, sessions
-from agent_alfred.runtime.cursor import MalformedCursor, decode_cursor, encode_cursor
+from agent_alfred.runtime.cursor import (
+    MalformedCursor,
+    decode_cursor,
+    encode_cursor,
+    parse_cursor_position_int,
+)
 from agent_alfred.runtime.run_queries import has_inflight_chat_run
 
 
@@ -57,18 +62,18 @@ def locate_messages(
         raise sessions.SessionNotFound("unknown_session")
     try:
         value = decode_cursor(anchor, version=1, kind="message_anchor")
+        position = parse_cursor_position_int(value.get("id"))
         if (
             value.get("s") != session_id
             or value.get("seg") not in ("runs", "historic")
-            or type(value.get("id")) is not int
-            or value["id"] < 1
+            or position < 1
         ):
             raise InvalidAnchor("invalid_anchor")
     except MalformedCursor:
         raise InvalidAnchor("invalid_anchor") from None
     row = conn.execute(
         "SELECT run_id FROM agent_log WHERE id=? AND session_id=?",
-        (value["id"], session_id),
+        (position, session_id),
     ).fetchone()
     if row is None:
         raise SourceTargetUnavailable("source_target_unavailable")
@@ -105,7 +110,7 @@ def locate_messages(
                 "k": "runs",
                 "seg": "historic",
                 "s": session_id,
-                "id": value["id"] - 1,
+                "id": position - 1,
             }
         )
     else:

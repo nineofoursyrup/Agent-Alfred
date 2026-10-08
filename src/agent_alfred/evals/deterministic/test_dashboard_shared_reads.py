@@ -481,6 +481,57 @@ def test_memory_revision_changed_before_http_response_discards_the_count(
         assert dashboard.close()
 
 
+def test_message_anchor_sqlite_integer_domain_is_validated_at_http(
+    tmp_path, monkeypatch
+):
+    from urllib.parse import urlencode
+
+    from agent_alfred.evals.deterministic.test_memory_http import prepared_dashboard
+    from agent_alfred.evals.deterministic.test_web_http import _get, _request
+    from agent_alfred.runtime.cursor import MAX_SQLITE_CURSOR_POSITION, encode_cursor
+
+    dashboard, model = prepared_dashboard(tmp_path, monkeypatch, [])
+    try:
+        host = dashboard.host
+        session = host.create_session()
+        before = host.snapshot()
+        for position, status, code in (
+            (MAX_SQLITE_CURSOR_POSITION + 1, 400, "invalid_anchor"),
+            (MAX_SQLITE_CURSOR_POSITION, 404, "source_target_unavailable"),
+            (0, 400, "invalid_anchor"),
+            (True, 400, "invalid_anchor"),
+        ):
+            anchor = encode_cursor(
+                {
+                    "v": 1,
+                    "k": "message_anchor",
+                    "s": session,
+                    "seg": "historic",
+                    "id": position,
+                }
+            )
+            head, body = _request(
+                dashboard.port,
+                _get(
+                    dashboard.port,
+                    "/api/sessions/messages/locate?"
+                    + urlencode(
+                        {
+                            "process_instance_id": host.process_instance_id,
+                            "session_id": session,
+                            "anchor": anchor,
+                        }
+                    ),
+                ),
+            )
+            assert int(head.split()[1]) == status
+            assert json.loads(body) == {"code": code}
+        assert model.requests == []
+        assert host.snapshot() == before
+    finally:
+        assert dashboard.close()
+
+
 def test_http_disconnect_releases_period_transaction_and_keeps_ops_snapshots(
     tmp_path, monkeypatch
 ):
