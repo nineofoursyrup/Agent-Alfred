@@ -3,12 +3,16 @@
 import json
 import os
 import re
+import sqlite3
 import subprocess
 import sys
 import tarfile
+from contextlib import closing
 from pathlib import Path
 
 import pytest
+
+from agent_alfred.runtime.cursor import decode_cursor
 
 BASE = "8ba7192ee84533aef3deb8453d8fa7364d67f48b"
 
@@ -75,6 +79,30 @@ def test_ce01_exact_baseline_cli_requests_events_messages(tmp_path, mode):
     for section in sections:
         assert section["text"].count(anchor) == 1
         section["text"] = section["text"].replace(anchor, amendment, 1)
+
+    # #109 adds only a stable message_anchor to this existing response. Verify
+    # each anchor against its real persisted row before excluding that one
+    # additive field; all original response fields remain compared below.
+    current = results[1]["messages"][1]
+    database = tmp_path / "after" / (
+        "db.sqlite3" if mode == "http" else "runs.sqlite3"
+    )
+    with closing(sqlite3.connect(database)) as conn:
+        rows = conn.execute(
+            "SELECT id,run_id,role FROM agent_log WHERE session_id=? ORDER BY id",
+            (current["session_id"],),
+        ).fetchall()
+    for message, (row_id, run_id, role) in zip(current["messages"], rows, strict=True):
+        assert (message["run_id"], message["role"]) == (run_id, role)
+        assert decode_cursor(
+            message.pop("message_anchor"), version=1, kind="message_anchor"
+        ) == {
+            "v": 1,
+            "k": "message_anchor",
+            "s": current["session_id"],
+            "seg": "historic" if run_id is None else "runs",
+            "id": row_id,
+        }
 
     # #81 adds observation-only path events. Compare every old business event,
     # request, result and reference; generated identity offsets are immaterial.
