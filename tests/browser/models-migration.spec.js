@@ -356,6 +356,7 @@ test('S08 STD02 model action focus survives refresh and completion without steal
     release();await expect(row.getByText('已确认保存',{exact:true})).toBeVisible();await expect(chat).toBeFocused();
     received=new Promise(resolve=>entered=resolve);held=new Promise(resolve=>release=resolve);
     await input.fill('page has retired');await save.click();await received;
+    await input.fill('new unsaved input before retirement');
     await page.locator('nav a[href="/connections"]').click();await page.getByRole('button',{name:'放弃并离开',exact:true}).click();
     const reread=page.getByRole('button',{name:'重新读取 .env',exact:true});await reread.focus();
     const finished=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/settings');release();await finished;
