@@ -61,12 +61,14 @@ for (const cleanup of ['released', 'pending', 'failed']) {
       ['timed_out', '超时'], ['invalidated', '失效'], ['failed', '执行失败'],
     ]) {
       state = value;
+      await page.goto('/database');
+      await expect(page.getByText('可执行', {exact:true})).toBeVisible();
       const response = page.waitForResponse(r => r.request().method() === 'GET' && /\/api\/database\/queries\/[^/]+$/.test(new URL(r.url()).pathname));
       await page.getByRole('button', {name: '执行', exact: true}).click();
       await response;
-      const pending = cleanup === 'pending' && ['completed', 'timed_out', 'invalidated', 'failed'].includes(state);
-      const label = cleanup === 'failed' ? '清理失败' : expected + (pending ? ' · 清理中' : '');
-      await expect(page.locator('#page [data-state]')).toHaveText(label);
+      await expect(page.locator('#page [data-state]')).toHaveText(expected);
+      await expect(page.getByText(cleanup === 'failed' ? '清理失败' : cleanup === 'pending' ? '清理中' : '清理已释放', {exact:true})).toBeVisible();
+      if (cleanup !== 'released') await expect(page.getByRole('button',{name:'执行',exact:true})).toBeDisabled();
       await expect(page.getByRole('region', {name: '查询结果'})).toBeEmpty();
     }
   });
@@ -119,5 +121,38 @@ test('STD-06/SPEC-12: actual worker stop failure is cleanup failure', async ({pa
     await server.send('heal');
     const recovered = await (await page.request.get(`${server.origin}/api/database/queries/${body.query_id}`)).json();
     expect(recovered.cleanup).toBe('released');
+  } finally {await server.close();}
+});
+
+test('S10 failed cleanup blocks queries until both release and capability are verified', async ({page}) => {
+  const server = await memoryServer({script: 'tests/browser/database_server.py'});
+  try {
+    await page.goto(server.origin + '/database');
+    await expect(page.getByText('可执行', {exact:true})).toBeVisible();
+    await server.send('arm');
+    await server.send('kill-fail');
+    await page.getByRole('textbox', {name:'SQL',exact:true}).fill('SELECT * FROM diag_sessions');
+    await page.getByRole('button', {name:'执行',exact:true}).click();
+    await server.send('running');
+    const cancelled = page.waitForResponse(r => r.url().endsWith('/cancel'));
+    await page.getByRole('button', {name:'取消',exact:true}).click();
+    const receipt = await (await cancelled).json();
+    expect(receipt.cleanup).toBe('failed');
+    await expect(page.getByText('清理失败',{exact:true})).toBeVisible();
+    const run = page.getByRole('button', {name:'执行',exact:true});
+    await expect(run).toBeDisabled();
+    let newHandles = 0;
+    page.on('request', r => {if(r.url().endsWith('/api/database/queries')) newHandles++;});
+    await run.evaluate(el => el.click());
+    expect(newHandles).toBe(0);
+    await page.getByRole('button', {name:'核验查询与可用性',exact:true}).click();
+    await expect(run).toBeDisabled();
+    await server.send('heal');
+    await page.getByRole('button', {name:'核验查询与可用性',exact:true}).click();
+    await expect(page.getByText('清理已释放',{exact:true})).toBeVisible();
+    await expect(run).toBeEnabled();
+    await page.getByRole('textbox', {name:'SQL',exact:true}).fill('SELECT 7 AS recovered');
+    await run.click();
+    await expect(page.getByRole('region', {name:'查询结果'}).locator('td')).toHaveText('7');
   } finally {await server.close();}
 });
