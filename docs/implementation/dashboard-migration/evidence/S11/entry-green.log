@@ -1,0 +1,13 @@
+
+> test:browser
+> playwright test tests/browser/shell.spec.js --grep default Overview|all ten --output=/Users/nineofour/.codex/dashboard-migration-20261009/S11/entry-green-artifacts
+
+
+Running 2 tests using 1 worker
+
+(node:85726) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/browser/shell.spec.js:104:1 › all ten pages keep one native EventSource and the selected Session draft (980ms)
+  ✓  2 tests/browser/shell.spec.js:127:1 › default Overview replaces the root history entry and brand navigation respects unsaved input (733ms)
+
+  2 passed (2.8s)

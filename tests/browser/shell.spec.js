@@ -101,7 +101,7 @@ test('refresh retires the panel entry without leaving a same-page Back stop',asy
   await expect(page).toHaveURL(/\/inbox$/);
 });
 
-test('all nine existing pages keep one native EventSource and the selected Session draft',async({page})=>{
+test('all ten pages keep one native EventSource and the selected Session draft',async({page})=>{
   await page.addInitScript(()=>{
     const Native=window.EventSource;window.observedSources=[];
     window.EventSource=class extends Native{constructor(...args){super(...args);window.observedSources.push(this);}close(){this.observedClosed=true;super.close();}};
@@ -112,7 +112,7 @@ test('all nine existing pages keep one native EventSource and the selected Sessi
   await page.getByRole('textbox',{name:'消息'}).fill('九页共享且不发送的草稿');
   const identity=await page.evaluate(()=>sessionStorage.getItem('alfred.session'));
   const connections=await page.evaluate(()=>window.observedSources.length);
-  for(const path of ['runs','memory','models','connections','behaviour','tools','ops','database','inbox']){
+  for(const path of ['overview','runs','memory','models','connections','behaviour','tools','ops','database','inbox']){
     await page.locator(`nav a[href="/${path}"]`).click();
     await expect(page.locator(`nav a[href="/${path}"]`)).toHaveAttribute('aria-current','page');
     await expect(page.getByRole('textbox',{name:'消息'})).toHaveValue('九页共享且不发送的草稿');
@@ -122,6 +122,34 @@ test('all nine existing pages keep one native EventSource and the selected Sessi
   }
   expect(posts.filter(url=>url.endsWith('/api/sessions'))).toHaveLength(1);
   expect(posts.filter(url=>url.endsWith('/api/runs'))).toHaveLength(0);
+});
+
+test('default Overview replaces the root history entry and brand navigation respects unsaved input',async({page})=>{
+  const posts=[];page.on('request',request=>{if(request.method()==='POST')posts.push(request.url());});
+  await page.goto('/inbox');
+  await expect(page.locator('nav a[href="/inbox"]')).toHaveAttribute('aria-current','page');
+  await page.goto('/?range=today');
+  await expect(page).toHaveURL(/\/overview\?range=today$/);
+  await expect(page.locator('#page h1')).toHaveText('总览');
+  await expect(page.locator('nav [aria-current="page"]')).toHaveCount(1);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/inbox$/);
+  await page.goForward();
+  await expect(page).toHaveURL(/\/overview\?range=today$/);
+  await page.reload();
+  await expect(page.locator('#page h1')).toHaveText('总览');
+  expect(posts).toEqual([]);
+  await page.locator('nav a[href="/database"]').click();
+  const sql=page.getByRole('textbox',{name:'SQL',exact:true});await sql.fill('SELECT 119');
+  await page.locator('a.brand').click();
+  await expect(page.getByRole('button',{name:'留在此页',exact:true})).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page).toHaveURL(/\/database$/);await expect(sql).toHaveValue('SELECT 119');
+  await page.locator('a.brand').click();
+  await page.getByRole('button',{name:'放弃并离开',exact:true}).click();
+  await expect(page).toHaveURL(/\/overview$/);
+  await expect(page.locator('#page h1')).toHaveText('总览');
+  expect(posts).toEqual([]);
 });
 
 test('late accepted response preserves new chat input and the users central focus',async({page})=>{

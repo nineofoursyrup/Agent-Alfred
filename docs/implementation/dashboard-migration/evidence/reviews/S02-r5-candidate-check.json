@@ -1,0 +1,13 @@
+{
+  "head": "5ceee180cf9f54f336017fb88998d2b11f91a186",
+  "tree": "2b90301c4ea0bea96a1b2ca377163177c86def75",
+  "base": "a4168881bd9057a900e8d353002307adff714c42",
+  "changed_files": 47,
+  "all_resource_hashes_match_fixed_head": true,
+  "resource_count": 18,
+  "reference_edges": 38,
+  "reference_graph_unchanged_from_independently_checked_r4": true,
+  "source_identity_fields_unchanged": true,
+  "source_count": 164,
+  "acceptance_count": 25
+}

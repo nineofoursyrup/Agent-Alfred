@@ -68,8 +68,8 @@ test("the real CLI entry holds admission while a Web UI send preserves its draft
       once(server,"exit").then(() => {throw new Error(stderr);}),
     ]);
     const origin = `http://127.0.0.1:${port}`;
-    await page.goto(origin);
-    await page.getByRole("button",{name:"CLI 闩锁运行",exact:true}).click();
+    await page.goto(origin + '/inbox');
+    await page.getByRole("link",{name:"CLI 闩锁运行",exact:true}).click();
     await page.getByRole("button",{name:"继续此会话",exact:true}).click();
     const input = page.getByRole("textbox",{name:"消息"});
     await input.fill("CLI 忙时的 Web 草稿");

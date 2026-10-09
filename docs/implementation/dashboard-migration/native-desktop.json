@@ -1,0 +1,136 @@
+{
+  "candidate": {
+    "head": "593564fc4b6ed08bc332bbfcf76dcf67107929c0",
+    "tree": "dc0b879a7d34fb81f10b68bbd466984969be7383",
+    "source_tree": "5e5affdf0c481f4b5ad38f02cf47d7fc2d5c483a",
+    "archive_sha256": "57734f03d0a040f7a3d618fc149b710e6b546f0946a7c6e1f5a9f4d7f6b28d96",
+    "prepared_at": "2026-10-09T04:17:30.294922+00:00",
+    "source": "/Users/nineofour/.codex/dashboard-migration-20261009/native-final/source",
+    "state": "/Users/nineofour/.codex/dashboard-migration-20261009/native-final/state",
+    "port": 18100,
+    "factory": "ScriptedModelFactory(BrowserModel([])), no real provider",
+    "fixture": "tests/browser/chat_server.py",
+    "status": "READY_TO_LAUNCH",
+    "checks": {
+      "native200": "NOT RUN",
+      "nativeIME": "NOT RUN",
+      "normal_close": "NOT RUN"
+    }
+  },
+  "observed_at": "2026-10-09T04:25:28.900069+00:00",
+  "native_desktop_200pct": {
+    "result": "PASS",
+    "method": "Actual native Chrome menu: observed initial110%, four plus clicks to200%, actual app AX Zoom200 and native menu screenshot; no CSS/font/viewport override",
+    "environment": {
+      "os": "macOS27.2 (26B5101f)",
+      "browser": "Google Chrome155.0.8059.39",
+      "CSS_viewport": [
+        864,
+        453
+      ],
+      "dpr": 4,
+      "visualViewportScale": 1,
+      "htmlCSSZoom": "1",
+      "bodyCSSZoom": "1"
+    },
+    "observations": [
+      "No document horizontal overflow: innerWidth/documentWidth/bodyWidth864",
+      "MainBar/message/send/close native controls fully inside864x453; visible and enabled when applicable",
+      "Native input plus Shift+Enter retained two-line draft; before send1Session/0Runs/0messages",
+      "Native Enter explicitly submitted once; native button later submitted once; normal real settlement then1Session/2Runs/4messages",
+      "Native close returned focus to Open MainBar and retained unsent draft; native reopen showed same draft",
+      "Native conversation scroll changed only local region, pageY0, source scrollHeight384/clientHeight56/scrollTop240; return-latest control visible",
+      "Original110% restored with native menu and screenshot; task-created tab closed"
+    ],
+    "evidence": [
+      "chrome-initial-menu.png",
+      "chrome-200-menu.png",
+      "200-overview-geometry.json",
+      "200-draft-geometry.json",
+      "200-before-send-counts.json",
+      "200-after-send-counts.json",
+      "200-closed.json",
+      "200-conversation-scroll.json",
+      "200-draft.jpg",
+      "200-scroll.jpg",
+      "chrome-restored-menu.png"
+    ]
+  },
+  "native_chinese_IME": {
+    "result": "BLOCKED",
+    "product_confirmation_chain": "NOT RUN",
+    "method": "Native Chrome input focus, Ctrl+Space, native n/i keys; observed ABC then restored historical Doubao source",
+    "actual": "Only plain Latin input visible; no verified Chinese candidate/composition or Enter-confirm chain. Did not press Enter on this unverified input and cleared isolated draft. Previous preflight also recorded no composition events. Do not count synthetic event or text insertion as native IME.",
+    "required_condition": "A functioning native macOS Pinyin composition path must be selected/verified, then confirmEnter/no-send followed by newline/send and focus preservation on this product",
+    "selected_source_restored": "(\n        {\n        \"Bundle ID\" = \"com.bytedance.inputmethod.doubaoime\";\n        \"Input Mode\" = \"com.bytedance.inputmethod.doubaoime.pinyin\";\n        InputSourceKind = \"Input Mode\";\n    }\n)\n",
+    "evidence": [
+      "ime-attempt.png",
+      "ime-attempt-ax.txt",
+      "../native-ime-preflight/result.json"
+    ]
+  },
+  "cleanup": {
+    "result": "PASS",
+    "normal_close": "Existing chat_server stdin stop; finally assert dashboard.close() succeeded; process63021 exited0 with stop CRLF",
+    "ports": [
+      {
+        "port": 18100,
+        "connect_ex": 61,
+        "reuseaddr_bind": true
+      },
+      {
+        "port": 18101,
+        "connect_ex": 61,
+        "reuseaddr_bind": true
+      },
+      {
+        "port": 18102,
+        "connect_ex": 61,
+        "reuseaddr_bind": true
+      },
+      {
+        "port": 18103,
+        "connect_ex": 61,
+        "reuseaddr_bind": true
+      },
+      {
+        "port": 18104,
+        "connect_ex": 61,
+        "reuseaddr_bind": true
+      },
+      {
+        "port": 18105,
+        "connect_ex": 61,
+        "reuseaddr_bind": true
+      },
+      {
+        "port": 18106,
+        "connect_ex": 61,
+        "reuseaddr_bind": true
+      },
+      {
+        "port": 18107,
+        "connect_ex": 61,
+        "reuseaddr_bind": true
+      },
+      {
+        "port": 18108,
+        "connect_ex": 61,
+        "reuseaddr_bind": true
+      },
+      {
+        "port": 18109,
+        "connect_ex": 61,
+        "reuseaddr_bind": true
+      }
+    ],
+    "counts_after_close": {
+      "sessions": 1,
+      "runs": 2,
+      "agent_log": 4
+    },
+    "task_tab_closed": true,
+    "zoom_restored_percent": 110
+  },
+  "qualification": "Native interaction evidence only, not G08 package lifecycle, finalCI, whole-source acceptance, or genuineIME PASS. Browser profile had ReadFrog extension; its injected controls are not product controls."
+}

@@ -200,8 +200,8 @@ test("CE-04 CE-05 over-limit reported numbers keep results, missing balance and 
     await expect(page.getByRole("region", {name:"主对话"})).toContainText("https://source.invalid/");
     await page.goto(origin + "/ops");
     const totals = page.getByRole("region", {name:"账目汇总"});
-    await expect(totals).toContainText('"unknown":1');
-    await expect(totals).toContainText('"reported":0');
+    await expect(totals).toContainText('结果未知，请核验原操作 1');
+    await expect(totals).toContainText('已报告计量 0');
     expect((await control(s)).requests).toEqual(["/usage", "/search"]);
   } finally {try {await context.close();} finally {await s.close();}}
 });

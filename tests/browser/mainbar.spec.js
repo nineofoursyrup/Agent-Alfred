@@ -5,7 +5,7 @@ test("MainBar keeps its draft and drawer across pages and a refresh", async ({
 }) => {
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "收件箱" }),
+    page.getByRole("heading", { name: "总览" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "新建会话", exact: true }).click();
   const input = page.getByRole("textbox", { name: "消息" });

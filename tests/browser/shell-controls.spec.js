@@ -3,6 +3,7 @@ import {test,expect} from '@playwright/test';
 for(const name of ['models','behaviour','tools'])test(`${name} registers real unsaved input across panel visibility and confirmed navigation`,async({page})=>{
   await page.goto('/'+name);
   if(name==='models')await page.locator("[data-model='opencode-go:deepseek-v4-flash']").getByText('模型详情',{exact:true}).click();
+  if(name==='tools')await page.locator('article').filter({has:page.getByRole('heading',{name:'web_search',exact:true})}).getByRole('button',{name:'展开详情',exact:true}).click();
   const control=name==='models'?page.getByRole('textbox',{name:'显示名',exact:true}).first():name==='behaviour'?page.getByRole('checkbox',{name:'启用消息分流'}):page.getByRole('combobox',{name:'web_search 授权草稿'});
   if(name==='models')await control.fill('未保存的模型名称');
   else if(name==='behaviour')await control.check();

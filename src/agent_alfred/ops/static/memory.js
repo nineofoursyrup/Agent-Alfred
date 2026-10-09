@@ -1395,7 +1395,7 @@ function recordPanel(kind, page) {
     return !!editing && JSON.stringify(editValues()) !== JSON.stringify(editing.original);
   }
   function editUnsubmitted() {
-    return editDirty() && (!editing || editAttempt?.request !== JSON.stringify(editRequest(editing)));
+    return editing && editAttempt ? editAttempt.request !== JSON.stringify(editRequest(editing)) : editDirty();
   }
   return {
     panel,

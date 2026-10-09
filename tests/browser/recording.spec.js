@@ -40,10 +40,10 @@ for (const fails of [false, true])
       await page.goto(origin);
       await page.getByRole("button", { name: "新建会话", exact: true }).click();
       const other = await context.newPage();
-      await other.goto(origin);
+      await other.goto(origin + '/inbox');
       await other
         .getByRole("main")
-        .getByRole("button", { name: /新会话 ·/ })
+        .getByRole("link", { name: /新会话 ·/ })
         .click();
       await other
         .getByRole("button", { name: "继续此会话", exact: true })

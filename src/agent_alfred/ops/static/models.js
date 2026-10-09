@@ -5,7 +5,7 @@ import {settingsFocus} from './settings-focus.js';
 
 /** @typedef {Record<string, any>} Wire */
 /** @typedef {{generation:number,instance:string,request:number,afterRead:number,revision:number|null}} Comparison */
-/** @typedef {{value:string,baseline:string,revision:number,status:string,message:string,conflict:boolean,pending:boolean,request:number,comparison:Comparison|null}} Draft */
+/** @typedef {{value:string,baseline:string,submitted:string|null,revision:number,status:string,message:string,conflict:boolean,pending:boolean,request:number,comparison:Comparison|null}} Draft */
 const DIMENSIONS = ['uncached_input', 'cache_read', 'cache_write', 'output'];
 const CONNECTION = /** @type {Record<string,string>} */ ({unconfigured:'未配置', configured_untested:'已配置未测试', connected:'已连接', error:'错误'});
 const CATALOG = /** @type {Record<string,string>} */ ({unfetched:'尚未获取', fresh:'新鲜', stale:'过期', unavailable:'不可用'});
@@ -30,6 +30,8 @@ function savedValue(model, field) {
 const shown = value => value === '' || value == null ? '空（无覆盖）' : value;
 /** @param {Wire} body */
 const errorText = body => `${ERRORS[body.cause || body.code] || '操作失败，请核对。'} (${body.code || 'unknown'}${body.cause ? ' / '+body.cause : ''})`;
+/** Pending/unknown requests own a frozen value; only later edits are unsubmitted. @param {Draft} draft */
+const unsubmitted = draft => draft.value !== (draft.submitted !== null && ['pending','unknown'].includes(draft.status) ? draft.submitted : draft.baseline);
 
 /** Models owns drafts and receipts; the shell owns navigation and Stream. @param {HTMLElement} root @param {()=>string} csrf */
 export function modelsPage(root, csrf) {
@@ -56,7 +58,7 @@ export function modelsPage(root, csrf) {
     const key = JSON.stringify([model.endpoint_id, model.model_id, field]);
     let draft = drafts.get(key);
     if (!draft) {
-      draft = {value:savedValue(model, field), baseline:savedValue(model, field), revision:current?.revision ?? 0, status:'', message:'', conflict:false, pending:false, request:0, comparison:null};
+      draft = {value:savedValue(model, field), baseline:savedValue(model, field), submitted:null, revision:current?.revision ?? 0, status:'', message:'', conflict:false, pending:false, request:0, comparison:null};
       drafts.set(key, draft);
     }
     return draft;
@@ -76,7 +78,7 @@ export function modelsPage(root, csrf) {
   function rowState(model) {
     const fields = ['display', 'style', ...DIMENSIONS].map(field=>fieldDraft(model, field));
     const labels = [];
-    if (fields.some(d=>d.value!==d.baseline)) labels.push('未保存');
+    if (fields.some(unsubmitted)) labels.push('未保存');
     if (fields.some(d=>d.pending)) labels.push('提交中');
     if (fields.some(d=>d.conflict)) labels.push('版本冲突，保留草稿');
     if (fields.some(d=>d.status==='unknown')) labels.push('保存结果未确认');
@@ -147,7 +149,7 @@ export function modelsPage(root, csrf) {
     const epoch=generation, submitted=draft?.value, revision=draft?.revision ?? current.revision;
     const key=modelKey(model), attempt=++operationSequence;
     const ownsRequest=()=>alive && epoch===generation && (draft?draft.request===attempt:receipts.get(key)?.attempt===attempt);
-    if (draft) {draft.comparison=null;draft.request=attempt;draft.pending=true; draft.status='pending'; draft.message='正在提交；后续编辑不会改写本次请求。';}
+    if (draft) {draft.submitted=draft.value;draft.comparison=null;draft.request=attempt;draft.pending=true; draft.status='pending'; draft.message='正在提交；后续编辑不会改写本次请求。';}
     if (!draft) receipts.set(key,{attempt,pending:true,kind:op,message:'设置正在提交'});
     render();
     try {
@@ -155,7 +157,7 @@ export function modelsPage(root, csrf) {
       const body=await response.json();
       if (!ownsRequest()) return;
       if (!response.ok) {
-        if (draft) {draft.status='failed'; draft.message=errorText(body); draft.conflict=body.code==='settings_conflict';if(draft.conflict)requireComparison(draft);}
+        if (draft) {draft.submitted=null;draft.status='failed'; draft.message=errorText(body); draft.conflict=body.code==='settings_conflict';if(draft.conflict)requireComparison(draft);}
         else receipts.set(key,{attempt,message:errorText(body)});
         if (body.code==='settings_conflict') {
           settingsConflict=errorText(body);pageNotice.textContent=settingsConflict;
@@ -169,7 +171,7 @@ export function modelsPage(root, csrf) {
         if (!saved) {draft.status='unknown'; draft.message='已收到回执，但无法核验原字段；请核对。';requireComparison(draft);}
         else {
           const field=op==='price'?fields.dimension:op;
-          draft.baseline=savedValue(saved,field); draft.revision=body.revision; draft.status='saved';
+          draft.baseline=savedValue(saved,field); draft.submitted=null; draft.revision=body.revision; draft.status='saved';
           if (draft.value===submitted) draft.value=draft.baseline;
           draft.message=draft.value===draft.baseline?'已确认保存':'已确认保存；还有新编辑';
         }
@@ -214,13 +216,13 @@ export function modelsPage(root, csrf) {
     if (DIMENSIONS.includes(field)) currentValue.append(document.createTextNode(' · USD / 百万 Token；用户覆盖价，空不是 0。'));
     const baseline=node('p'); baseline.className='setting-help';
     if (draft.conflict || (draft.value!==draft.baseline && draft.revision!==current?.revision)) baseline.textContent=`编辑基线：${shown(draft.baseline)} · revision ${draft.revision}；当前 revision ${current?.revision}`;
-    const feedback=node('p',draft.message || (draft.value!==draft.baseline?'未保存':'')); feedback.setAttribute('role','status');
+    const feedback=node('p',draft.message || (unsubmitted(draft)?'未保存':'')); feedback.setAttribute('role','status');
     const save=node('button',field==='display'?'保存显示名':field==='style'?'保存线路':`保存 ${field}`);
     save.dataset.focusKey=JSON.stringify([model.endpoint_id,model.model_id,'save',field]);
     const update=()=>{
       control.disabled=receipts.get(modelKey(model))?.kind==='unpin';
       save.disabled=control.disabled || !connected || current?.status!=='ok' || draft.pending || draft.conflict || draft.status==='unknown' || (field==='style' && !draft.value);
-      feedback.textContent=draft.message || (draft.value!==draft.baseline?'未保存':'');
+      feedback.textContent=draft.message || (unsubmitted(draft)?'未保存':'');
       summary.textContent=rowState(model);
     };
     control.addEventListener(field==='style'?'change':'input',()=>{
@@ -242,7 +244,7 @@ export function modelsPage(root, csrf) {
       const compare=node('button','基于当前版本继续编辑');
       compare.dataset.focusKey=JSON.stringify([model.endpoint_id,model.model_id,'adopt',field]);
       compare.disabled=!canAdopt(draft);
-      compare.onclick=()=>{if(!canAdopt(draft))return;draft.baseline=saved;draft.revision=current?.revision ?? draft.revision;draft.comparison=null;draft.conflict=false;draft.status='';draft.message='已采用当前版本；原请求不再重送，保存需再次明确点击。';if(![...drafts.values()].some(d=>d.conflict)){settingsConflict='';pageNotice.textContent=`设置 revision ${current?.revision}；已核对，保存仍需明确点击。`;}render();};
+      compare.onclick=()=>{if(!canAdopt(draft))return;draft.baseline=saved;draft.submitted=null;draft.revision=current?.revision ?? draft.revision;draft.comparison=null;draft.conflict=false;draft.status='';draft.message='已采用当前版本；原请求不再重送，保存需再次明确点击。';if(![...drafts.values()].some(d=>d.conflict)){settingsConflict='';pageNotice.textContent=`设置 revision ${current?.revision}；已核对，保存仍需明确点击。`;}render();};
       box.append(compare);
     }
     update();
@@ -302,7 +304,7 @@ export function modelsPage(root, csrf) {
         const actions=node('div');actions.className='settings-actions';
         if(model.pinned) {
           const unpin=node('button','取消钉选');unpin.dataset.focusKey=JSON.stringify([model.endpoint_id,model.model_id,'unpin']);unpin.disabled=primary||gate||!connected||Boolean(receipts.get(key)?.pending)||['display','style',...DIMENSIONS].some(f=>fieldDraft(model,f).pending);
-          unpin.onclick=async()=>{const changed=['display','style',...DIMENSIONS].some(f=>{const d=fieldDraft(model,f);return d.value!==d.baseline;});if(changed && !await confirmLeave({dirty:true,summary:'取消钉选将放弃此模型的未保存编辑。'}))return;void mutate('unpin',model,{});};
+          unpin.onclick=async()=>{const changed=['display','style',...DIMENSIONS].some(f=>unsubmitted(fieldDraft(model,f)));if(changed && !await confirmLeave({dirty:true,summary:'取消钉选将放弃此模型的未保存编辑。'}))return;void mutate('unpin',model,{});};
           actions.append(unpin);
           if(primary||gate)actions.append(node('p','已指派，不能取消钉选。'));
         } else {const pin=node('button','钉选');pin.dataset.focusKey=JSON.stringify([model.endpoint_id,model.model_id,'pin']);pin.disabled=!connected;pin.onclick=()=>void mutate('pin',model,{});actions.append(pin);}
@@ -351,7 +353,7 @@ export function modelsPage(root, csrf) {
   });
   void read();
   return {
-    getLeaveState:()=>({dirty:[...drafts.values()].some(d=>d.value!==d.baseline),pending:[...drafts.values()].some(d=>d.pending)||[...receipts.values()].some(r=>r.pending),summary:'模型设置有未保存输入；已提交设置或探针不会因离开而撤销。'}),
+    getLeaveState:()=>({dirty:[...drafts.values()].some(unsubmitted),pending:[...drafts.values()].some(d=>d.pending)||[...receipts.values()].some(r=>r.pending),summary:'模型设置有未保存输入；已提交设置或探针不会因离开而撤销。'}),
     captureSource:()=>({route:'/models',kind:'model',anchor,process_instance_id:instance}),
     restoreSource:(/** @type {Wire} */ source)=>{if(source?.anchor){anchor=source.anchor;expanded.set(anchor,true);restore=source;render();}},
     close(){alive=false;generation++;reads.abort();stop();focus.close();window.removeEventListener('focus',onFocus);},

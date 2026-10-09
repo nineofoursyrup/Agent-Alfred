@@ -1,0 +1,957 @@
+
+> test:browser
+> playwright test --output=/Users/nineofour/.codex/dashboard-migration-20261009/S11/browser-full-01-artifacts
+
+
+Running 525 tests using 1 worker
+
+(node:87295) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓    1 tests/browser/accessibility.spec.js:3:1 › new Session stays disabled until the real entry credentials arrive (333ms)
+  ✓    2 tests/browser/accessibility.spec.js:37:1 › the narrow drawer is a keyboard-contained dialog that restores focus (388ms)
+  ✓    3 tests/browser/accessibility.spec.js:65:1 › composition Enter does not send, Shift Enter inserts a newline, normal Enter sends once (342ms)
+  ✓    4 tests/browser/accounting-layout.spec.js:5:1 › S09 real Ops layout keeps filter, price and history controls reachable at reference and boundary widths (3.0s)
+  ✓    5 tests/browser/accounting-migration.spec.js:17:1 › S09 refresh retires old paging ownership without releasing a newer page request (2.3s)
+  ✓    6 tests/browser/accounting-migration.spec.js:45:1 › S09 failed refresh retires old paging and allows original-page and refresh retries (2.8s)
+  ✓    7 tests/browser/accounting-migration.spec.js:77:1 › S09 mixed Attempt accounting exposes four price dimensions and freezes prices until explicit refresh (968ms)
+  ✓    8 tests/browser/accounting-migration.spec.js:107:1 › S09 manual history is one UTF-8 segment, isolated from financial expiry and retired on Run switch (2.6s)
+  ✓    9 tests/browser/accounting-migration.spec.js:157:1 › S09 fixed range stays distinct from a changed or rejected filter draft (2.1s)
+  ✓   10 tests/browser/accounting-migration.spec.js:189:1 › S09 native return reuses the source snapshot and one bounded page, expiry requires explicit refresh (2.6s)
+  ✓   11 tests/browser/accounting-migration.spec.js:230:3 › S09 migrated Run explicit return restores its visible source at 1280px and honors newer intent (3.4s)
+  ✓   12 tests/browser/accounting-migration.spec.js:230:3 › S09 migrated Run explicit return restores its visible source at 390px and honors newer intent (3.5s)
+  ✓   13 tests/browser/accounting-migration.spec.js:309:1 › S09 direct source reload and read retry never create a replacement snapshot (1.5s)
+  ✓   14 tests/browser/accounting-migration.spec.js:341:1 › S09 a new process retires a held financial response and clears body without replacing the old ledger (3.6s)
+  ✓   15 tests/browser/accounting.spec.js:4:1 › A01 A02 A23 A28: MainBar to real Tools and immutable Ops ledger (1.4s)
+  ✓   16 tests/browser/accounting.spec.js:31:1 › A23: refresh cannot accept another page from the previous snapshot (2.3s)
+  ✓   17 tests/browser/accounting.spec.js:47:1 › A06: a late successful authorization receipt does not replace newer pending state (1.2s)
+  ✓   18 tests/browser/accounting.spec.js:72:1 › A04 A05 A06 A08: two tabs keep drafts, reject busy, and distinguish lost receipt from application (1.6s)
+  ✓   19 tests/browser/accounting.spec.js:112:1 › A24 A32 A33: snapshot expiry, offline body, reconnect prune and page cleanup (1.4s)
+  ✓   20 tests/browser/accounting.spec.js:149:47 › A07: focus detects malformed authorization without claiming applied (928ms)
+  ✓   21 tests/browser/accounting.spec.js:149:47 › A07: reconnect detects malformed authorization without claiming applied (938ms)
+  ✓   22 tests/browser/accounting.spec.js:172:1 › A23 A24: expired Ops to Run snapshot has explicit refresh preserving normalized filters (1.4s)
+
+  ✓   23 tests/browser/admission.spec.js:4:1 › a real v3 migration labels only unconfirmed old Runs (1.1s)
+  ✓   24 tests/browser/aggregation.spec.js:5:1 › aggregation CE-02/04/14: Behaviour to same Session, refresh and restart (2.5s)
+  ✓   25 tests/browser/aggregation.spec.js:72:1 › S06 CE-18/19: a fresh form never adopts another aggregation terminal projection (2.2s)
+  ✓   26 tests/browser/aggregation.spec.js:89:1 › aggregation CE-08/11: candidate hidden, recording pending busy and failed recovery (3.7s)
+  ✓   27 tests/browser/aggregation.spec.js:128:1 › aggregation CE-08: dropped accepted response does not resubmit or move Session (2.0s)
+  ✓   28 tests/browser/aggregation.spec.js:206:1 › aggregation CE-11: invalid streamed candidate never becomes a draft (1.5s)
+  ✓   29 tests/browser/aggregation.spec.js:226:1 › aggregation CE-12: real HTTP forgetting keeps draft and disables source (2.2s)
+  ✓   30 tests/browser/aggregation.spec.js:244:1 › S06/S03: retiring Behaviour and Run owners clears their opened aggregation source (2.0s)
+  ✓   31 tests/browser/aggregation.spec.js:269:1 › aggregation CE-14: every source combination through Behaviour (5.5s)
+  ✓   32 tests/browser/aggregation.spec.js:295:3 › STD-01/SPEC-01: mainbar clears offline sources and opened reads on delete (2.3s)
+  ✓   33 tests/browser/aggregation.spec.js:295:3 › STD-01/SPEC-01: mainbar clears offline sources and late reads on delete (2.4s)
+  ✓   34 tests/browser/aggregation.spec.js:295:3 › STD-01/SPEC-01: behaviour clears offline sources and opened reads on delete (2.4s)
+  ✓   35 tests/browser/aggregation.spec.js:295:3 › STD-01/SPEC-01: behaviour clears offline sources and late reads on delete (2.1s)
+  ✓   36 tests/browser/aggregation.spec.js:295:3 › STD-01/SPEC-01: runs clears offline sources and opened reads on delete (2.2s)
+  ✓   37 tests/browser/aggregation.spec.js:295:3 › STD-01/SPEC-01: runs clears offline sources and late reads on delete (2.7s)
+  ✓   38 tests/browser/aggregation.spec.js:397:1 › SPEC-03 CE-08: accepted POST remains fixed while response waits and Session/form change (2.5s)
+  ✓   39 tests/browser/aggregation.spec.js:458:1 › SPEC-03 CE-11: partial stream transport failure preserves aborted Attempt without a draft (1.5s)
+  ✓   40 tests/browser/aggregation.spec.js:491:3 › SPEC-07 rounds=0: real history exclusion in Behaviour, MainBar and Run (1.9s)
+  ✓   41 tests/browser/aggregation.spec.js:491:3 › SPEC-07 rounds=1: real history exclusion in Behaviour, MainBar and Run (1.9s)
+  ✓   42 tests/browser/aggregation.spec.js:491:3 › SPEC-07 rounds=3: real history exclusion in Behaviour, MainBar and Run (1.8s)
+  ✓   43 tests/browser/aggregation.spec.js:561:1 › CI-01: delayed initial Session list cannot erase a newer selected target (985ms)
+  ✓   44 tests/browser/aggregation.spec.js:594:1 › CI-01: an in-flight Session refresh preserves the latest user selection (1.5s)
+  ✓   45 tests/browser/aggregation.spec.js:632:1 › S06 CE-19: a retained failed-recording form uses the restarted Run outcome instead of old trace success (3.5s)
+  ✓   46 tests/browser/aggregation.spec.js:652:1 › S06 CE-24/27: leaving a form with an accepted delayed POST retires only its UI owner (1.5s)
+  ✓   47 tests/browser/aggregation.spec.js:687:3 › S06-ST-01: aggregation accepted delayed receipt separates submitted inputs from confirmation (984ms)
+  ✓   48 tests/browser/aggregation.spec.js:687:3 › S06-ST-01: aggregation rejected delayed receipt separates submitted inputs from confirmation (988ms)
+  ✓   49 tests/browser/behaviour.spec.js:6:3 › S06 CE-28: Behaviour controls and long drafts remain readable at 1440x900 (1.5s)
+  ✓   50 tests/browser/behaviour.spec.js:6:3 › S06 CE-28: Behaviour controls and long drafts remain readable at 1280x800 (1.5s)
+  ✓   51 tests/browser/behaviour.spec.js:6:3 › S06 CE-28: Behaviour controls and long drafts remain readable at 390x844 (1.5s)
+  ✓   52 tests/browser/behaviour.spec.js:6:3 › S06 CE-28: Behaviour controls and long drafts remain readable at 320x800 (1.5s)
+  ✓   53 tests/browser/behaviour.spec.js:39:1 › S06 CE-27/28: actual central 679/680 and shell 1099/1100 retain draft ownership (1.4s)
+  ✓   54 tests/browser/behaviour.spec.js:63:1 › S06 CE-27/28: Chromium touch simulation preserves Behaviour beneath MainBar (1.4s)
+  ✓   55 tests/browser/busy.spec.js:4:1 › known busy and a 409 use one ordinary card and keep the draft (489ms)
+  ✓   56 tests/browser/cli-flow.spec.js:8:1 › CLI startup failure exits and reports the original error with stdin open (311ms)
+  ✓   57 tests/browser/cli-flow.spec.js:8:1 › CLI startup failure exits and reports the original error with stdin eof (290ms)
+  ✘   58 tests/browser/cli-flow.spec.js:57:1 › the real CLI entry holds admission while a Web UI send preserves its draft (15.1s)
+(node:87742) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   59 tests/browser/database_cancel.spec.js:21:3 › SPEC-11: cancel owns pending issuance, previous query=false (392ms)
+  ✓   60 tests/browser/database_cancel.spec.js:21:3 › SPEC-11: cancel owns pending issuance, previous query=true (632ms)
+  ✓   61 tests/browser/database_cancel.spec.js:59:3 › STD-05: cancel A receipt before-B cannot change B (867ms)
+  ✓   62 tests/browser/database_cancel.spec.js:59:3 › STD-05: cancel A receipt after-B cannot change B (886ms)
+  ✓   63 tests/browser/database_cancel.spec.js:59:3 › STD-05: cancel A receipt new-page cannot change B (940ms)
+  ✓   64 tests/browser/database_cancel.spec.js:121:1 › SPEC-11: completion before cancel is honest and does not retain the result (536ms)
+  ✓   65 tests/browser/database_cancel.spec.js:130:1 › STD-05: late status probe for A cannot replace B (786ms)
+actual-lifecycle reload {"before":{"query_id":"D0JGXl0y7h4Ns2US_8d7sfrg","pid":88012,"status":"running","cleanup":"pending"},"after":{"query_id":"D0JGXl0y7h4Ns2US_8d7sfrg","pid":88012,"pid_exists":false,"status":"cancelled","cleanup":"released","worker":null,"response_owner":null,"buffers":0,"source_write_lock":"acquired-and-released"}}
+  ✓   66 tests/browser/database_lifecycle.spec.js:7:3 › AC-25: real reload cancels an actual worker and releases all owners (1.2s)
+actual-lifecycle close {"before":{"query_id":"kjxY9GJhVC4HMeU4sapKDwI4","pid":88072,"status":"running","cleanup":"pending"},"after":{"query_id":"kjxY9GJhVC4HMeU4sapKDwI4","pid":88072,"pid_exists":false,"status":"cancelled","cleanup":"released","worker":null,"response_owner":null,"buffers":0,"source_write_lock":"acquired-and-released"}}
+  ✓   67 tests/browser/database_lifecycle.spec.js:7:3 › AC-25: real close cancels an actual worker and releases all owners (920ms)
+  ✓   68 tests/browser/database_lifecycle.spec.js:40:1 › AC-25: real browser offline and online clears results, preserves SQL, never reruns (587ms)
+  ✓   69 tests/browser/database_lifecycle.spec.js:62:1 › S10 a new process invalidates the old query and verifies new capability without rerunning (2.4s)
+  ✓   70 tests/browser/database_migration.spec.js:14:1 › Database catalog preserves every approved field and expanded state across capability checks (1.5s)
+  ✓   71 tests/browser/database_migration.spec.js:50:3 › 1440x900 › Database types, long content and keyboard actions remain reachable at 1440x900 (1.0s)
+  ✓   72 tests/browser/database_migration.spec.js:50:3 › 1280x800 › Database types, long content and keyboard actions remain reachable at 1280x800 (997ms)
+  ✓   73 tests/browser/database_migration.spec.js:50:3 › 390x844 › Database types, long content and keyboard actions remain reachable at 390x844 (1.1s)
+  ✓   74 tests/browser/database_migration.spec.js:50:3 › 320x800 › Database types, long content and keyboard actions remain reachable at 320x800 (1.1s)
+  ✓   75 tests/browser/database_migration.spec.js:114:1 › Database row, column and byte results follow actual worker boundaries (1.5s)
+  ✓   76 tests/browser/database_migration.spec.js:143:1 › Database failed clipboard writes give local feedback and unavailable results cannot copy (325ms)
+  ✓   77 tests/browser/database_migration.spec.js:153:1 › Database measures central 679/680 and shell 1099/1100 without clipping actions (472ms)
+real-status-loss {"kind":"failed","execute":{"http":400,"body":{"code":"sql_error","detail":"SQL 无法执行。","query_id":"b4ilQddahN0UdCjzVGivfzqj"}},"status":{"http":200,"body":{"query_id":"b4ilQddahN0UdCjzVGivfzqj","instance_id":"59813c8c2c474b4e98d6c2a2538cf15f","status":"failed","cleanup":"released"}}}
+  ✓   78 tests/browser/database_status.spec.js:9:3 › STD-06/SPEC-12: real lost execute response failed/released (1.1s)
+real-status-loss {"kind":"timed_out","execute":{"http":504,"body":{"code":"query_timeout","detail":"查询超过执行期限。","query_id":"dyJFWlodZihgslDIjQcC-Wdj"}},"status":{"http":200,"body":{"query_id":"dyJFWlodZihgslDIjQcC-Wdj","instance_id":"ea65c9fd9d9b456eb200b08ca503f04a","status":"timed_out","cleanup":"released"}}}
+  ✓   79 tests/browser/database_status.spec.js:9:3 › STD-06/SPEC-12: real lost execute response timed_out/released (6.1s)
+real-status-loss {"kind":"completed","execute":{"http":200,"body":{"query_id":"XbXyymqypSJE2xI4OzwnjmS7","instance_id":"39461279fef944928282ed8baa9e8b45","memory_revision":"11","protection_version":"5","objects":[],"coverage":{"attempts":{"recorded":0,"recorded_empty":0,"unrecorded":0,"in_progress_runs":0},"notice":"缺行不证明未发生请求"},"read_at":"2026-10-09T04:18:53.804227Z","columns":["unseen"],"rows":[[{"type":"integer","value":"12"}]],"returned_rows":1,"truncated":false,"truncation_reasons":[]}},"status":{"http":200,"body":{"query_id":"XbXyymqypSJE2xI4OzwnjmS7","instance_id":"39461279fef944928282ed8baa9e8b45","status":"completed","cleanup":"released","result_delivered":true}}}
+  ✓   80 tests/browser/database_status.spec.js:9:3 › STD-06/SPEC-12: real lost execute response completed/released (1.1s)
+  ✓   81 tests/browser/database_status.spec.js:48:3 › status/cleanup presentation matrix: released (1.9s)
+  ✓   82 tests/browser/database_status.spec.js:48:3 › status/cleanup presentation matrix: pending (1.9s)
+  ✓   83 tests/browser/database_status.spec.js:48:3 › status/cleanup presentation matrix: failed (1.9s)
+  ✓   84 tests/browser/database_status.spec.js:82:3 › status lookup error handle_expired is not a cleanup failure (335ms)
+  ✓   85 tests/browser/database_status.spec.js:82:3 › status lookup error not_found is not a cleanup failure (320ms)
+  ✓   86 tests/browser/database_status.spec.js:82:3 › status lookup error instance_changed is not a cleanup failure (519ms)
+actual-cleanup-failure {"cancel":{"query_id":"mQGDS0nZupyT0ZDOQ94W5Eyu","status":"failed","cleanup":"failed"},"status":{"query_id":"mQGDS0nZupyT0ZDOQ94W5Eyu","instance_id":"1ceee0d668eb4003976f74150b07538e","status":"failed","cleanup":"failed"},"newHandleStatus":503}
+  ✓   87 tests/browser/database_status.spec.js:95:1 › STD-06/SPEC-12: actual worker stop failure is cleanup failure (1.3s)
+  ✓   88 tests/browser/database_status.spec.js:127:1 › S10 failed cleanup blocks queries until both release and capability are verified (1.4s)
+lost-receipt-recovery {"lost":"issuance","handles":["tuS7Q-YOuHRZB8IW4dn9JPPj","a2loJZvDr81GwIH3W1sDzPIR"],"executes":1,"lostStatusReads":0,"actual":{"query_id":"tuS7Q-YOuHRZB8IW4dn9JPPj","instance_id":"16c5b3a1bca0489880979769c0788148","status":"unused","cleanup":"released"},"capability":{"instance":"16c5b3a1bca0489880979769c0788148","available":true}}
+  ✓   89 tests/browser/database_status.spec.js:161:3 › S10 lost issuance receipt preserves the boundary for explicit capability recovery (1.1s)
+lost-receipt-recovery {"lost":"execute","handles":["zn8_kSKaKrLRxH8ohiw8ILBq","8t6O0jHmFYwQEMNyi7O1YwWS"],"executes":2,"lostStatusReads":2,"actual":{"query_id":"zn8_kSKaKrLRxH8ohiw8ILBq","instance_id":"ae1162c9e6124d2fb87e460c8092ee89","status":"completed","cleanup":"released","result_delivered":true},"capability":{"instance":"ae1162c9e6124d2fb87e460c8092ee89","available":true}}
+  ✓   90 tests/browser/database_status.spec.js:161:3 › S10 lost execute receipt preserves the boundary for explicit capability recovery (1.6s)
+  ✓   91 tests/browser/database.spec.js:3:1 › Database page lists approved objects without executing examples (291ms)
+  ✓   92 tests/browser/database.spec.js:21:1 › chat then Database JOIN matches the saved assistant reply (661ms)
+  ✓   93 tests/browser/database.spec.js:60:1 › empty SELECT shows columns and zero rows; syntax error stays safe (618ms)
+  ✓   94 tests/browser/database.spec.js:91:1 › leaving Database cancels and clears draft and results (573ms)
+  ✓   95 tests/browser/database.spec.js:111:1 › HTML in a result cell is not executed (469ms)
+  ✓   96 tests/browser/database.spec.js:128:1 › successful result shows read time, sources, protection and coverage (469ms)
+  ✓   97 tests/browser/database.spec.js:150:1 › hidden tab keeps results; offline clears results and keeps SQL (519ms)
+  ✓   98 tests/browser/database.spec.js:178:1 › BFCache restore clears results and SQL then rechecks (467ms)
+  ✓   99 tests/browser/database.spec.js:201:1 › one click cannot start two execute requests (419ms)
+  ✓  100 tests/browser/database.spec.js:221:1 › real SSE recovery clears results, verifies versions and never reruns SQL (5.0s)
+  ✓  101 tests/browser/database.spec.js:260:1 › real deletion rejects an old HTTP response delayed at the browser boundary (1.5s)
+  ✓  102 tests/browser/database.spec.js:318:1 › S10 example replacement keeps an existing draft and its selection by default (505ms)
+  ✓  103 tests/browser/database.spec.js:347:1 › S10 submitted SQL keeps its identity while the next draft changes (501ms)
+  ✓  104 tests/browser/database.spec.js:380:1 › S10 copies only the rendered result page with row-limit and source evidence (1.2s)
+  ✓  105 tests/browser/inbox-run-navigation.spec.js:6:1 › real Inbox preview, Run source return and explicit MainBar location preserve the selected Session draft (813ms)
+  ✓  106 tests/browser/inbox-run-navigation.spec.js:115:1 › failed source return never scans or substitutes a target, and fallback is explicit (404ms)
+  ✓  107 tests/browser/inbox-run-navigation.spec.js:172:1 › message paging failure retains the real opaque cursor and successful source (384ms)
+  ✓  108 tests/browser/inbox-run-navigation.spec.js:217:1 › ordinary evidence refresh keeps expanded content and a user text selection (590ms)
+  ✓  109 tests/browser/inbox-run-navigation.spec.js:274:1 › late source positioning cannot take focus from a newer MainBar reading intent (409ms)
+
+  ✓  110 tests/browser/inbox-run-navigation.spec.js:332:3 › real recorded settlement unlocks the original waiting cursor without a refresh (1.1s)
+
+  ✓  111 tests/browser/inbox-run-navigation.spec.js:332:3 › real failed settlement unlocks the original waiting cursor without a refresh (1.1s)
+  ✓  112 tests/browser/inbox-run-navigation.spec.js:418:1 › Inbox header creates through the existing owner while retaining list and preview (1.3s)
+  ✓  113 tests/browser/inbox-run-navigation.spec.js:520:1 › Inbox Continue shows the real pending guard without opening the hidden MainBar (1.2s)
+
+  ✓  114 tests/browser/inbox-run-navigation.spec.js:653:3 › Inbox sessions announces real durable changes without replacing a read window (1.1s)
+
+  ✓  115 tests/browser/inbox-run-navigation.spec.js:653:3 › Inbox messages announces real durable changes without replacing a read window (1.1s)
+
+  ✓  116 tests/browser/inbox-run-navigation.spec.js:653:3 › Inbox runs announces real durable changes without replacing a read window (1.1s)
+
+  ✓  117 tests/browser/inbox-run-sources.spec.js:31:3 › real bounded sources preserve empty and special identities across 4 Run histories (2.2s)
+
+  ✓  118 tests/browser/inbox-run-sources.spec.js:31:3 › real bounded sources preserve empty and special identities across 60 Run histories (2.4s)
+
+  ✓  119 tests/browser/inbox-run-sources.spec.js:180:1 › real summary privacy gates and container 679/680 use one equivalent table/card DOM (1.1s)
+
+  ✓  120 tests/browser/inbox-run-sources.spec.js:268:1 › all Runs return keeps its source filter through one bounded read (1.6s)
+
+  ✓  121 tests/browser/inbox-run-sources.spec.js:311:1 › real detail snapshots expire without polling and disclose a disconnected source (1.1s)
+  ✓  122 tests/browser/inbox.spec.js:4:1 › inbox viewing is read only; continue switches drafts explicitly (483ms)
+  ✘  123 tests/browser/inbox.spec.js:111:1 › a real v2 upgrade shows all historic messages and creates no synthetic Run (15.1s)
+(node:88520) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  124 tests/browser/inbox.spec.js:134:1 › MainBar paginates across the Run and historic segments without deduplicating equal messages (407ms)
+  ✓  125 tests/browser/inbox.spec.js:177:1 › pending settlement cannot rewind an already loaded historic cursor (490ms)
+  ✘  126 tests/browser/inbox.spec.js:208:1 › inbox Run outcomes reuse distinct terminal wording independent of recording state (15.1s)
+(node:88545) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  127 tests/browser/integrations.spec.js:23:1 › CE-02 CE-03 real double-tab probe, busy reread, stale success and key rotation (1.5s)
+  ✓  128 tests/browser/integrations.spec.js:64:1 › CE-03 CE-08 CE-09 MainBar uses real search, safe text, Ops credits, newer error wins (1.8s)
+  ✓  129 tests/browser/integrations.spec.js:104:1 › CE-03 Connections resets across real Host restart and rejects old process response (2.0s)
+  ✓  130 tests/browser/integrations.spec.js:126:1 › CE-11 late cached success cannot erase a newer real dotenv failure (1.1s)
+  ✓  131 tests/browser/integrations.spec.js:147:1 › CE-08 rotated old and new secrets are redacted before real SSE delivery (1.4s)
+  ✘  132 tests/browser/integrations.spec.js:179:1 › CE-04 CE-05 over-limit reported numbers keep results, missing balance and readable Ops (5.5s)
+(node:88592) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  133 tests/browser/integrations.spec.js:209:1 › CI-01 real busy probe receipt survives a completed focus refresh (1.3s)
+  ✓  134 tests/browser/integrations.spec.js:243:1 › STD-V5-01 model probe success survives a later real reread refusal (970ms)
+  ✓  135 tests/browser/integrations.spec.js:276:5 › SPEC-V5-01 late 409 preserves configuration suspension and recovery (same process) (1.2s)
+  ✓  136 tests/browser/integrations.spec.js:276:5 › SPEC-V5-01 late read failure preserves configuration suspension and recovery (same process) (1.2s)
+  ✓  137 tests/browser/integrations.spec.js:276:5 › SPEC-V5-01 late 409 preserves configuration suspension and recovery (new process) (2.1s)
+  ✓  138 tests/browser/integrations.spec.js:276:5 › SPEC-V5-01 late read failure preserves configuration suspension and recovery (new process) (2.1s)
+  ✓  139 tests/browser/integrations.spec.js:353:1 › S08 STD02 connection details and operation focus survive refresh without stealing MainBar focus (1.1s)
+  ✓  140 tests/browser/integrations.spec.js:372:1 › S08 STD01 Connections already isolates retired probe cleanup from a successor (1.0s)
+  ✓  141 tests/browser/mainbar-aggregation-location.spec.js:4:103 › exact aggregation NoAction keeps independent disposition and sources_not_selected (458ms)
+  ✓  142 tests/browser/mainbar-aggregation-location.spec.js:4:103 › exact aggregation NoAction keeps independent disposition and no_matching_sources (406ms)
+  ✓  143 tests/browser/mainbar-empty-identity.spec.js:4:1 › restored unread for real empty Session and Run IDs uses one guarded read and preserves its draft (1.2s)
+  ✓  144 tests/browser/mainbar-integration.spec.js:3:1 › real S01 records compose with S02 exact location, identity merge and cross-Session drafts (570ms)
+  ✓  145 tests/browser/mainbar-location.spec.js:16:1 › exact MainBar location is one bounded read with a marked preview and separate history cursor (413ms)
+  ✓  146 tests/browser/mainbar-location.spec.js:30:1 › process-gap navigation distinguishes a legal empty Run ID from an absent target (371ms)
+  ✓  147 tests/browser/mainbar-location.spec.js:39:1 › retired location cannot leave a loading state or late content after page navigation (420ms)
+  ✓  148 tests/browser/mainbar-location.spec.js:52:1 › failed exact location has an explicit read-only retry and does not create a Run (485ms)
+  ✓  149 tests/browser/mainbar-location.spec.js:65:1 › a later unavailable request cannot erase a retained preview marker (370ms)
+  ✓  150 tests/browser/mainbar-location.spec.js:74:1 › hidden no-reply failure retains outcome attention without inventing a new reply (418ms)
+  ✓  151 tests/browser/mainbar-location.spec.js:84:1 › restored unread identity remains unconfirmed when another history item is visible (467ms)
+  ✓  152 tests/browser/mainbar-location.spec.js:94:1 › a later preview cannot downgrade the same target full request or recorded state (368ms)
+  ✓  153 tests/browser/mainbar-location.spec.js:104:1 › idle reconnect verifies the same Run and does not infer saving from an unrelated persisted pair (419ms)
+  ✓  154 tests/browser/mainbar-reading.spec.js:13:1 › new reply preserves a selected old message and only explicit latest follows it (453ms)
+  ✓  155 tests/browser/mainbar-reading.spec.js:27:1 › opening hidden MainBar at an old position does not acknowledge the new reply (486ms)
+  ✘  156 tests/browser/mainbar.spec.js:3:1 › MainBar keeps its draft and drawer across pages and a refresh (4.2s)
+(node:88651) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  157 tests/browser/mainbar.spec.js:29:1 › an accepted message receives one recorded reply, also after refresh (492ms)
+  ✓  158 tests/browser/mcp.spec.js:4:1 › MCP CE-01 CE-05 CE-11 MainBar authorization, safe result and persistent cost (2.5s)
+  ✓  159 tests/browser/mcp.spec.js:47:1 › MCP CE-09 CE-14 double-tab env publication and explicit reconnect (1.6s)
+  ✓  160 tests/browser/mcp.spec.js:66:1 › MCP SPEC-01 real HTTP recovery from invalid startup and stale preview (1.4s)
+  ✓  161 tests/browser/mcp.spec.js:85:1 › MCP CE-09 CE-14 late old HTTP snapshots cannot restore callable UI (1.7s)
+  ✓  162 tests/browser/mcp.spec.js:113:1 › MCP CE-09 CE-15 real pending HTTP replay retains one process and rejects competing operation (1.1s)
+  ✓  163 tests/browser/mcp.spec.js:135:1 › MCP CE-14 delayed Tools response cannot undo new environment isolation (1.4s)
+S08 Connections central widths [{"viewport":[1440,900],"central":{"x":232,"y":65.390625,"width":888,"height":834.609375}},{"viewport":[1280,800],"central":{"x":232,"y":65.390625,"width":728,"height":734.609375}},{"viewport":[390,844],"central":{"x":0,"y":61.390625,"width":390,"height":782.609375}},{"viewport":[320,800],"central":{"x":0,"y":61.390625,"width":320,"height":738.609375}}]
+  ✓  164 tests/browser/mcp.spec.js:161:1 › S08 lost MCP receipt requires explicit same-operation retry and preserves connection details (1.7s)
+  ✓  165 tests/browser/memory-fixture.spec.js:9:3 › Memory fixture waits for stdio close after exit 0/null (103ms)
+  ✓  166 tests/browser/memory-fixture.spec.js:9:3 › Memory fixture waits for stdio close after exit 7/null (104ms)
+  ✓  167 tests/browser/memory-fixture.spec.js:9:3 › Memory fixture waits for stdio close after exit null/SIGTERM (103ms)
+  ✓  168 tests/browser/memory-fixture.spec.js:38:1 › Memory fixture reports process failure while awaiting a command receipt (103ms)
+  ✓  169 tests/browser/memory-migration.spec.js:4:1 › S05: a confirmed save cannot clear the next draft or steal its focus (1.1s)
+  ✓  170 tests/browser/memory-migration.spec.js:39:1 › S05: collapsed content preserves drafts while maintenance exposes bounded status (952ms)
+  ✓  171 tests/browser/memory-migration.spec.js:71:1 › S05: switching the edit target requires an explicit discard and cancellation preserves focus (970ms)
+  ✓  172 tests/browser/memory-migration.spec.js:102:1 › S05: editing during a save retains the new text and independently filtered detail (1.4s)
+  ✓  173 tests/browser/memory-migration.spec.js:146:1 › S05: real forgetting invalidates folded details, drafts and mirror previews before late reads return (1.4s)
+  ✓  174 tests/browser/memory-migration.spec.js:194:1 › S05 Spec-F1: mirror preview loading then collapse retains its own error until a current read succeeds (939ms)
+  ✓  175 tests/browser/memory-migration.spec.js:194:1 › S05 Spec-F1: mirror preview failure then collapse retains its own error until a current read succeeds (1.4s)
+  ✓  176 tests/browser/memory-migration.spec.js:280:1 › S05: a folded receipt exposes uncertainty without automatic expansion or focus movement (1.1s)
+  ✓  177 tests/browser/memory-migration.spec.js:306:1 › S05 ST-01: folded completed deletion exposes a failed progress read and clears it only after verification (1.4s)
+  ✓  178 tests/browser/memory-migration.spec.js:368:1 › S05: keyboard-only creation and detail return keep every primary control reachable (930ms)
+  ✓  179 tests/browser/memory-migration.spec.js:402:1 › S05: leaving an in-flight submit guards only new unsubmitted input and keeps the original receipt (1.1s)
+  ✓  180 tests/browser/memory.spec.js:44:1 › A40: empty, no match, read failure, busy and conflicts stay distinct (1.9s)
+  ✓  181 tests/browser/memory.spec.js:128:1 › A52: explicit save, next-Run hit, source, edit conflict, delete and requery (3.8s)
+  ✓  182 tests/browser/memory.spec.js:292:1 › A35: a delete in one tab clears the other tab and late reads never restore the body (2.0s)
+  ✓  183 tests/browser/memory.spec.js:382:1 › A36/A55: disconnect hides bodies, reconnect verifies, and stale or foreign frames are ignored (1.4s)
+  ✓  184 tests/browser/memory.spec.js:465:1 › A37: expanded gate references show the edited version, absence and read faults distinctly (1.3s)
+
+  ✓  185 tests/browser/memory.spec.js:542:1 › A38: equal creation times page in stable internal order and stale cursors force a reread (1.6s)
+  ✓  186 tests/browser/memory.spec.js:589:1 › A41/A42: the read-only Skill catalog shows overrides and reloads only after restart (2.5s)
+  ✓  187 tests/browser/memory.spec.js:645:1 › A47: queue states and actions are explicit; busy is 409 and nothing bypasses the threshold (6.4s)
+  ✓  188 tests/browser/memory.spec.js:799:1 › A55: an undeliverable memory_patch closes the real stream and reconnect verifies (4.4s)
+  ✓  189 tests/browser/memory.spec.js:836:1 › R14: a mirror write failure is shown apart from the saved record and retried explicitly (1.4s)
+  ✓  190 tests/browser/memory.spec.js:875:1 › R10/R14: an external mirror edit keeps cleanup unfinished until regeneration is confirmed (1.7s)
+  ✓  191 tests/browser/memory.spec.js:925:3 › episodic time › R11: aware local input, half-open display and boundary search (1.4s)
+
+  ✓  192 tests/browser/memory.spec.js:995:1 › R13: an oversized source blocks its Session until the user explicitly skips it (1.7s)
+  ✓  193 tests/browser/memory.spec.js:1022:1 › R08: a lost response stays unconfirmed until queried or resent with the same id (2.5s)
+  ✓  194 tests/browser/memory.spec.js:1112:3 › R08: reload during an unanswered command preserves its identity (committed=false) (1.4s)
+  ✓  195 tests/browser/memory.spec.js:1112:3 › R08: reload during an unanswered command preserves its identity (committed=true) (1.4s)
+  ✓  196 tests/browser/memory.spec.js:1179:1 › R08: more than twenty unanswered commands remain recoverable after reload (3.5s)
+
+  ✓  197 tests/browser/memory.spec.js:1226:1 › R09: unknown legacy history needs an explicit scope before forgetting completes (1.6s)
+  ✓  198 tests/browser/memory.spec.js:1260:5 › G2 R10: forgotten save clears recovery bodies while response is lost (1.5s)
+  ✓  199 tests/browser/memory.spec.js:1260:5 › G2 R10: forgotten save clears recovery bodies while response is inflight (1.5s)
+  ✓  200 tests/browser/memory.spec.js:1260:5 › G2 R10: forgotten update clears recovery bodies while response is lost (1.8s)
+  ✓  201 tests/browser/memory.spec.js:1260:5 › G2 R10: forgotten update clears recovery bodies while response is inflight (1.7s)
+  ✓  202 tests/browser/memory.spec.js:1309:5 › G2 R08: save keeps identity after truncated-json under success headers (1.4s)
+  ✓  203 tests/browser/memory.spec.js:1309:5 › G2 R08: save keeps identity after interrupted-body under success headers (1.4s)
+  ✓  204 tests/browser/memory.spec.js:1309:5 › G2 R08: save keeps identity after missing-field under success headers (1.4s)
+  ✓  205 tests/browser/memory.spec.js:1309:5 › G2 R08: update keeps identity after truncated-json under success headers (1.5s)
+  ✓  206 tests/browser/memory.spec.js:1309:5 › G2 R08: update keeps identity after interrupted-body under success headers (1.4s)
+  ✓  207 tests/browser/memory.spec.js:1309:5 › G2 R08: update keeps identity after missing-field under success headers (1.5s)
+  ✓  208 tests/browser/memory.spec.js:1309:5 › G2 R08: delete keeps identity after truncated-json under success headers (1.5s)
+  ✓  209 tests/browser/memory.spec.js:1309:5 › G2 R08: delete keeps identity after interrupted-body under success headers (1.4s)
+  ✓  210 tests/browser/memory.spec.js:1309:5 › G2 R08: delete keeps identity after missing-field under success headers (1.6s)
+  ✓  211 tests/browser/memory.spec.js:1367:1 › G2 D09: all unanswered mirror actions survive navigation and reload (2.5s)
+  ✓  212 tests/browser/memory.spec.js:1407:1 › G2 D09: a late old-page query cannot erase a newer action identity (2.1s)
+  ✓  213 tests/browser/memory.spec.js:1464:5 › G2 D09: mirror truncated-json keeps a queryable action after reload (1.6s)
+  ✓  214 tests/browser/memory.spec.js:1464:5 › G2 D09: mirror missing-status keeps a queryable action after reload (1.9s)
+  ✓  215 tests/browser/memory.spec.js:1464:5 › G2 D09: queue truncated-json keeps a queryable action after reload (1.7s)
+  ✓  216 tests/browser/memory.spec.js:1464:5 › G2 D09: queue missing-status keeps a queryable action after reload (2.2s)
+  ✓  217 tests/browser/memory.spec.js:1518:1 › G2 D09: a queried durable mirror failure is a definite failure, not undefined success (1.4s)
+  ✓  218 tests/browser/memory.spec.js:1538:1 › G2 R10: a late missing-operation read cannot mask later commit and forgetting (1.4s)
+  ✓  219 tests/browser/memory.spec.js:1587:3 › G2 R10: save read failures preserve drafts until reconnect verifies forgetting (1.4s)
+  ✓  220 tests/browser/memory.spec.js:1587:3 › G2 R10: update read failures preserve drafts until reconnect verifies forgetting (1.4s)
+  ✓  221 tests/browser/memory.spec.js:1630:5 › G2 D09: mirror sending reload recovers the original operation (committed=false) (1.4s)
+  ✓  222 tests/browser/memory.spec.js:1630:5 › G2 D09: mirror sending reload recovers the original operation (committed=true) (1.4s)
+  ✓  223 tests/browser/memory.spec.js:1630:5 › G2 D09: queue sending reload recovers the original operation (committed=false) (1.6s)
+  ✓  224 tests/browser/memory.spec.js:1630:5 › G2 D09: queue sending reload recovers the original operation (committed=true) (1.6s)
+  ✓  225 tests/browser/memory.spec.js:1682:1 › G2 D09: restored confirmation never authorizes a newer external file (1.4s)
+  ✓  226 tests/browser/memory.spec.js:1717:3 › G2 v2: save recovery clears forgotten bodies while away and after reload (1.5s)
+  ✓  227 tests/browser/memory.spec.js:1717:3 › G2 v2: update recovery clears forgotten bodies while away and after reload (1.6s)
+
+  ✓  228 tests/browser/memory.spec.js:1784:1 › G2 v2: an older blocked Session remains reachable and skippable (1.7s)
+  ✓  229 tests/browser/memory.spec.js:1838:4 › batch polling rejects missing with HTTP and body diagnostics (0ms)
+  ✓  230 tests/browser/memory.spec.js:1838:4 › batch polling rejects storage with HTTP and body diagnostics (0ms)
+  ✓  231 tests/browser/memory.spec.js:1838:4 › batch polling rejects unknown conflict with HTTP and body diagnostics (0ms)
+  ✓  232 tests/browser/memory.spec.js:1838:4 › batch polling rejects missing batch with HTTP and body diagnostics (0ms)
+  ✓  233 tests/browser/memory.spec.js:1838:4 › batch polling rejects wrong batch with HTTP and body diagnostics (0ms)
+  ✓  234 tests/browser/memory.spec.js:1838:4 › batch polling rejects invalid status with HTTP and body diagnostics (0ms)
+
+  ✓  235 tests/browser/memory.spec.js:1843:3 › G2 v2: older batches support approve through bounded queue pages (1.5s)
+
+  ✓  236 tests/browser/memory.spec.js:1843:3 › G2 v2: older batches support reject through bounded queue pages (1.9s)
+
+  ✓  237 tests/browser/memory.spec.js:1843:3 › G2 v2: older batches support retry through bounded queue pages (1.9s)
+
+  ✓  238 tests/browser/memory.spec.js:1843:3 › G2 v2: older batches support retry through bounded queue pages during revision race (1.9s)
+
+  ✓  239 tests/browser/memory.spec.js:1884:1 › G2 v2: queue page and filter changes reject late candidate reads (2.2s)
+  ✓  240 tests/browser/memory.spec.js:1928:1 › G2 v2: an uncommitted update loses its reusable body when its record is forgotten away (1.9s)
+
+  ✓  241 tests/browser/memory.spec.js:1956:1 › G2 v3: queue filters preserve distinct historical Session IDs verbatim (1.7s)
+  ✓  242 tests/browser/memory.spec.js:1988:1 › G2 v4: controlled stream waits for the application's entry read (907ms)
+
+  ✓  243 tests/browser/memory.spec.js:2015:1 › G2 v5: receipt refresh preserves the selected exact legacy scope (1.9s)
+
+  ✓  244 tests/browser/memory.spec.js:2052:1 › G2 v5: late pre-confirmation receipt cannot restore needs-scope progress (1.9s)
+
+  ✓  245 tests/browser/memory.spec.js:2102:1 › G2 v5: a revised scope requires a new explicit selection (1.9s)
+
+  ✓  246 tests/browser/memory.spec.js:2150:1 › G2 v6: late abort is ignored and the coalesced query runs (1.9s)
+
+  ✓  247 tests/browser/memory.spec.js:2204:1 › G2 v6: late truncated-json is ignored and the coalesced query runs (1.8s)
+  ✓  248 tests/browser/memory.spec.js:2258:1 › G2 v6: retained complete deletion rechecks on invalidation and reconnect without polling (1.4s)
+  ✓  249 tests/browser/models-migration.spec.js:23:1 › S11 model pending save protects a successor equal to its old saved value (1.2s)
+  ✓  250 tests/browser/models-migration.spec.js:23:1 › S11 model unknown save protects a successor equal to its old saved value (1.2s)
+  ✓  251 tests/browser/models-migration.spec.js:47:1 › S08 real catalog label and explicit clearing survive HTTP read and page reentry (1.1s)
+  ✓  252 tests/browser/models-migration.spec.js:73:1 › S08 real two-tab conflict retains baseline and requires explicit adoption (1.2s)
+  ✓  253 tests/browser/models-migration.spec.js:92:1 › S08 SPEC F1 lost saved receipt requires a post-failure read before explicit adoption (1.1s)
+  ✓  254 tests/browser/models-migration.spec.js:135:1 › S08 SPEC F1 real conflict with a failed comparison keeps its baseline even when values match (1.3s)
+  ✓  255 tests/browser/models-migration.spec.js:163:1 › S08 SPEC F1 real instance change retires the old comparison read and qualification (2.5s)
+  ✓  256 tests/browser/models-migration.spec.js:192:1 › S08 saved model probe preserves drafts and links its real Attempt and cost (1.0s)
+  ✓  257 tests/browser/models-migration.spec.js:219:1 › S08 a lost real accepted probe response never replays on focus or reentry (1.1s)
+S08 Models central widths [{"viewport":[1440,900],"central":{"x":232,"y":65.390625,"width":888,"height":834.609375}},{"viewport":[1280,800],"central":{"x":232,"y":65.390625,"width":728,"height":734.609375}},{"viewport":[390,844],"central":{"x":0,"y":61.390625,"width":390,"height":782.609375}},{"viewport":[320,800],"central":{"x":0,"y":61.390625,"width":320,"height":738.609375}}]
+  ✓  258 tests/browser/models-migration.spec.js:233:1 › S08 catalog refresh stays one request and settings remain usable in four viewports (1.0s)
+  ✓  259 tests/browser/models-migration.spec.js:256:1 › S08 rejected unpin keeps the original dirty draft (862ms)
+  ✓  260 tests/browser/models-migration.spec.js:272:1 › S08 each saved field is independent and uses the public HTTP value (1.1s)
+  ✓  261 tests/browser/models-migration.spec.js:295:1 › S08 STD01 retired save cannot clear a successor request after real Stream reconnect (1.1s)
+  ✓  262 tests/browser/models-migration.spec.js:334:1 › S08 STD02 model action focus survives refresh and completion without stealing a new intent (1.3s)
+  ✓  263 tests/browser/notices.spec.js:17:5 › replay gap malformed/recoverable has connection-only wording and lifetime (433ms)
+  ✓  264 tests/browser/notices.spec.js:17:5 › replay gap malformed/unrecoverable has connection-only wording and lifetime (433ms)
+  ✓  265 tests/browser/notices.spec.js:17:5 › replay gap malformed/absent has connection-only wording and lifetime (429ms)
+  ✓  266 tests/browser/notices.spec.js:17:5 › replay gap instance_mismatch/recoverable has connection-only wording and lifetime (436ms)
+  ✓  267 tests/browser/notices.spec.js:17:5 › replay gap instance_mismatch/unrecoverable has connection-only wording and lifetime (431ms)
+  ✓  268 tests/browser/notices.spec.js:17:5 › replay gap instance_mismatch/absent has connection-only wording and lifetime (439ms)
+  ✓  269 tests/browser/notices.spec.js:17:5 › replay gap too_old/recoverable has connection-only wording and lifetime (431ms)
+  ✓  270 tests/browser/notices.spec.js:17:5 › replay gap too_old/unrecoverable has connection-only wording and lifetime (437ms)
+  ✓  271 tests/browser/notices.spec.js:17:5 › replay gap too_old/absent has connection-only wording and lifetime (435ms)
+  ✓  272 tests/browser/notices.spec.js:17:5 › replay gap ahead/recoverable has connection-only wording and lifetime (430ms)
+  ✓  273 tests/browser/notices.spec.js:17:5 › replay gap ahead/unrecoverable has connection-only wording and lifetime (432ms)
+  ✓  274 tests/browser/notices.spec.js:17:5 › replay gap ahead/absent has connection-only wording and lifetime (432ms)
+  ✓  275 tests/browser/notices.spec.js:58:1 › announcements throttle continuous changes without starvation and deduplicate repeats (735ms)
+  ✓  276 tests/browser/overview.spec.js:8:1 › Overview reads three real independent sources without selecting a Session (909ms)
+  ✓  277 tests/browser/overview.spec.js:34:1 › Overview preserves full counts, separate costs and fixed calendar source on navigation (3.2s)
+  ✓  278 tests/browser/overview.spec.js:68:1 › Unknown, proven zero, no consumption, tiny positive and damaged membership stay distinct (1.5s)
+  ✓  279 tests/browser/overview.spec.js:104:1 › Three sources fail independently, retire replaced ranges and allow local retries (1.4s)
+  ✓  280 tests/browser/overview.spec.js:132:1 › Hidden Overview revokes a changed memory revision and rejects its delayed response (1.1s)
+  ✓  281 tests/browser/overview.spec.js:155:1 › Disconnect, same-instance reconnect and restart cannot renew or resurrect observations (2.6s)
+  ✓  282 tests/browser/overview.spec.js:178:1 › Original observation expires despite a failed refresh and layout changes; earlier source expiry wins (945ms)
+  ✓  283 tests/browser/overview.spec.js:204:1 › Current saving Run shares one slot; ordinary completion only prompts a manual history refresh (1.1s)
+  ✓  284 tests/browser/overview.spec.js:234:1 › Invalid range and IANA timezone expose correction without blocking other sources (970ms)
+  ✓  285 tests/browser/overview.spec.js:252:1 › Repeated Overview reads preserve another Ops snapshot and trace pruning keeps accounting (1.5s)
+  ✓  286 tests/browser/overview.spec.js:271:1 › Source navigation records only identity and restores Overview after a real reread (1.4s)
+  ✓  287 tests/browser/overview.spec.js:339:1 › Gap and disconnect retire slow real reads even after a same-instance reconnect (1.1s)
+  ✓  288 tests/browser/overview.spec.js:362:1 › Overview keeps opaque colliding identities and reference layouts readable (2.0s)
+  ✓  289 tests/browser/overview.spec.js:400:1 › A real recorded read merges into the held current slot without duplicate or old pending downgrade (1.1s)
+  ✘  290 tests/browser/pagination.spec.js:3:1 › Session, chat Run and all Run pages keep independent opaque cursors (4.2s)
+(node:89674) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  291 tests/browser/pagination.spec.js:45:3 › completed has distinct visible and accessible Run wording (266ms)
+  ✓  292 tests/browser/pagination.spec.js:45:3 › max_steps has distinct visible and accessible Run wording (220ms)
+  ✓  293 tests/browser/pagination.spec.js:45:3 › failed has distinct visible and accessible Run wording (213ms)
+  ✓  294 tests/browser/pagination.spec.js:45:3 › interrupted has distinct visible and accessible Run wording (215ms)
+  ✓  295 tests/browser/read-retirement.spec.js:114:3 › real Session response is retired across disconnect and same-instance reconnect (1.0s)
+  ✓  296 tests/browser/read-retirement.spec.js:114:3 › real Session response is retired across broker replay gap and same-instance reconnect (1.0s)
+  ✓  297 tests/browser/read-retirement.spec.js:162:5 › active Run summary retires its response without clearing stale after reconnect (1.3s)
+  ✓  298 tests/browser/read-retirement.spec.js:162:5 › active Run evidence retires its response without clearing stale after reconnect (1.3s)
+  ✓  299 tests/browser/read-retirement.spec.js:162:5 › active Run summary retires its response without clearing stale after broker replay gap (1.3s)
+  ✓  300 tests/browser/read-retirement.spec.js:162:5 › active Run evidence retires its response without clearing stale after broker replay gap (1.4s)
+  ✘  301 tests/browser/recording.spec.js:7:3 › real pending reconnect and second-tab draft survive recorded settlement (15.1s)
+(node:89806) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  302 tests/browser/recording.spec.js:7:3 › real pending reconnect and second-tab draft survive failed settlement (15.3s)
+(node:89904) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  303 tests/browser/restart.spec.js:9:1 › an actual Dashboard process restart preserves an empty Session and its draft (2.5s)
+  ✓  304 tests/browser/routing-statistics.spec.js:4:1 › S06 CE-16/26: ratio bars use the same real sample and failures remain visible when collapsed (2.6s)
+  ✓  305 tests/browser/routing-statistics.spec.js:34:1 › CE-15 statistics is collapsed, independent of unsaved settings, and keyboard readable (1.6s)
+  ✓  306 tests/browser/routing-statistics.spec.js:57:1 › CE-03/08/14 real recovery counts survive restart and late range responses (3.1s)
+  ✓  307 tests/browser/routing-statistics.spec.js:102:1 › CE-14/15 closed and departed panels cannot be revived by late data; no polling (1.5s)
+  ✓  308 tests/browser/routing-statistics.spec.js:135:1 › CE-01 full failure and graph-internal fallback have separate live HTTP and page denominators (1.9s)
+  ✓  309 tests/browser/routing-statistics.spec.js:169:1 › CE-15 statistics preserves a real aggregation request awaiting its receipt (2.4s)
+  ✓  310 tests/browser/routing-statistics.spec.js:204:1 › SPEC-02/CE-14 old process and departed-page responses cannot become current (2.8s)
+  ✓  311 tests/browser/routing-statistics.spec.js:263:1 › SPEC-03 CE-05/12/13/15 legacy counts, unknown metrics and real bad-data errors (2.4s)
+  ✓  312 tests/browser/routing-statistics.spec.js:302:1 › SPEC-03 CE-06/15 disabled-only, settings conflict and real SQL timeout recover (4.5s)
+  ✓  313 tests/browser/routing-statistics.spec.js:336:1 › SPEC-03 CE-07/08 recorded failure recovery and context_failure reach the page (2.8s)
+  ✓  314 tests/browser/routing-statistics.spec.js:355:1 › SPEC-03 CE-11 real Clock admission boundaries and rolling page window (2.8s)
+  ✓  315 tests/browser/routing-statistics.spec.js:375:1 › SPEC-03 CE-16 complete real a-p sample is identical over HTTP and page (1.9s)
+  ✓  316 tests/browser/routing-statistics.spec.js:403:1 › INTEGRATION-75 CE-14/15 statistics and both topologies retain independent state and close together (1.7s)
+  ✓  317 tests/browser/routing.spec.js:5:1 › S06 CE-13: read-only comparison cannot rebase a dirty routing choice (1.5s)
+  ✓  318 tests/browser/routing.spec.js:44:1 › CE-07/09/12: Behaviour, no reply, refresh and real restart (2.2s)
+  ✓  319 tests/browser/routing.spec.js:88:1 › CE-09/10: failed recording keeps no-reply projection and rejects next Run (2.2s)
+  ✓  320 tests/browser/routing.spec.js:124:1 › CE-09: recovery facts and fixed text survive trace removal and restart (1.9s)
+  ✓  321 tests/browser/routing.spec.js:158:1 › CE-13: page fingerprint rejects external change and explicitly backs up recovery (2.3s)
+
+  ✓  322 tests/browser/routing.spec.js:185:1 › CE-01: disabled real browser conversation matches exact pre-routing baseline (2.9s)
+  ✓  323 tests/browser/routing.spec.js:226:1 › S06 CE-13: a delayed save receipt preserves the choice edited after submission (1.1s)
+  ✓  324 tests/browser/routing.spec.js:263:3 › S06-ST-01: routing delayed receipt does not label submitted-only input as dirty (1.1s)
+  ✓  325 tests/browser/routing.spec.js:263:3 › S06-ST-01: routing lost receipt does not label submitted-only input as dirty (1.1s)
+  ✓  326 tests/browser/run-path.spec.js:27:1 › AC-01/02/03 CE-10: actual routing path is collapsed and refresh is manual (1.3s)
+  ✓  327 tests/browser/run-path.spec.js:57:73 › CE-11/AC-19 keyboard graph/text equivalence 1280 (1.7s)
+  ✓  328 tests/browser/run-path.spec.js:57:73 › CE-11/AC-19 keyboard graph/text equivalence 390 (1.7s)
+  ✓  329 tests/browser/run-path.spec.js:95:1 › CE-08 latest request wins across reverse responses, reopen and Run navigation (2.1s)
+  ✓  330 tests/browser/run-path.spec.js:136:1 › CE-01/08: real process restart reads P1 retained graph and invalidates old response (2.4s)
+  ✓  331 tests/browser/run-path.spec.js:164:1 › CE-07/15 network failure keeps stale snapshot; verified missing clears it and recovery restores (1.3s)
+  ✓  332 tests/browser/run-path.spec.js:194:35 › CE-12 pending snapshot stays independent from recorded SSE false (1.2s)
+  ✓  333 tests/browser/run-path.spec.js:194:35 › CE-12 pending snapshot stays independent from recorded SSE true (1.2s)
+  ✓  334 tests/browser/run-path.spec.js:232:1 › CE-03/10 actual aggregation lost 202 and pending recording observation do not resubmit (1.5s)
+  ✓  335 tests/browser/run-path.spec.js:313:1 › CE-04 half-wave HTTP and retained prefix never display whole-wave commit (973ms)
+  ✓  336 tests/browser/run-path.spec.js:340:39 › CE-02/11 real test graph abort state and plain text (1.3s)
+  ✓  337 tests/browser/run-path.spec.js:340:39 › CE-02/11 real test graph unknown state and plain text (1.3s)
+  ✓  338 tests/browser/run-path.spec.js:363:70 › CE-06 real SIGKILL restart browser complete (1.5s)
+  ✓  339 tests/browser/run-path.spec.js:363:70 › CE-06 real SIGKILL restart browser prefix (1.5s)
+  ✓  340 tests/browser/run-path.spec.js:363:70 › CE-06 real SIGKILL restart browser missing (1.5s)
+  ✓  341 tests/browser/run-path.spec.js:363:70 › CE-06 real SIGKILL restart browser recording_failed (1.5s)
+  ✓  342 tests/browser/run-path.spec.js:394:90 › CE-07 real trace refresh prune replaces old path (1.3s)
+  ✓  343 tests/browser/run-path.spec.js:394:90 › CE-07 real trace refresh corrupt replaces old path (1.3s)
+  ✓  344 tests/browser/run-path.spec.js:394:90 › CE-07 real trace refresh version replaces old path (1.3s)
+  ✓  345 tests/browser/run-path.spec.js:394:90 › CE-07 real trace refresh legacy replaces old path (1.3s)
+  ✓  346 tests/browser/run-path.spec.js:394:90 › CE-07 real trace refresh too_large replaces old path (1.3s)
+  ✓  347 tests/browser/run-path.spec.js:394:90 › CE-07 real trace refresh seq replaces old path (1.3s)
+  ✓  348 tests/browser/run-path.spec.js:394:90 › CE-07 real trace refresh wrong_run replaces old path (1.4s)
+  ✓  349 tests/browser/run-path.spec.js:425:1 › CE-09 current cache overflow is unavailable while real business completes (995ms)
+  ✓  350 tests/browser/run-path.spec.js:442:1 › CE-08 same Run reverse responses preserve latest durable snapshot (986ms)
+  ✓  351 tests/browser/run-path.spec.js:466:87 › CE-05/10 real routing browser fallback (1.1s)
+  ✓  352 tests/browser/run-path.spec.js:466:87 › CE-05/10 real routing browser recovery (1.1s)
+  ✓  353 tests/browser/run-path.spec.js:466:87 › CE-05/10 real routing browser failure (1.1s)
+  ✓  354 tests/browser/run-path.spec.js:466:87 › CE-05/10 real routing browser blocked (1.1s)
+  ✓  355 tests/browser/run-path.spec.js:466:87 › CE-05/10 real routing browser bypass (1.1s)
+  ✓  356 tests/browser/run-path.spec.js:466:87 › CE-05/10 real routing browser unavailable (1.1s)
+  ✓  357 tests/browser/run-path.spec.js:503:236 › C2 STD-01 SPEC-01 COORD-01 protocol future_started (1.5s)
+  ✓  358 tests/browser/run-path.spec.js:503:236 › C2 STD-01 SPEC-01 COORD-01 protocol future_finished (1.4s)
+  ✓  359 tests/browser/run-path.spec.js:503:236 › C2 STD-01 SPEC-01 COORD-01 protocol future_skipped (1.6s)
+  ✓  360 tests/browser/run-path.spec.js:503:236 › C2 STD-01 SPEC-01 COORD-01 protocol future_aborted (1.5s)
+  ✓  361 tests/browser/run-path.spec.js:503:236 › C2 STD-01 SPEC-01 COORD-01 protocol not_taken_target (1.5s)
+  ✓  362 tests/browser/run-path.spec.js:503:236 › C2 STD-01 SPEC-01 COORD-01 protocol unknown_route_label (1.5s)
+  ✓  363 tests/browser/run-path.spec.js:503:236 › C2 STD-01 SPEC-01 COORD-01 protocol run_finished_before_graph (1.5s)
+  ✓  364 tests/browser/run-path.spec.js:503:236 › C2 STD-01 SPEC-01 COORD-01 protocol contradictory_not_started (1.5s)
+  ✓  365 tests/browser/run-path.spec.js:503:236 › C2 STD-01 SPEC-01 COORD-01 protocol unknown_graph_outcome (1.5s)
+  ✓  366 tests/browser/run-path.spec.js:503:236 › C2 STD-01 SPEC-01 COORD-01 protocol premature_wave_commit (1.5s)
+  ✓  367 tests/browser/run-path.spec.js:526:297 › C3 STD-02 SPEC-02 stage fallback_before_graph (1.6s)
+  ✓  368 tests/browser/run-path.spec.js:526:297 › C3 STD-02 SPEC-02 stage bypass_after_graph (1.4s)
+  ✓  369 tests/browser/run-path.spec.js:526:297 › C3 STD-02 SPEC-02 stage unknown_stage (1.5s)
+  ✓  370 tests/browser/run-path.spec.js:526:297 › C3 STD-02 SPEC-02 stage nonboolean_entered (1.5s)
+  ✓  371 tests/browser/run-path.spec.js:526:297 › C3 STD-02 SPEC-02 stage stage_after_run (1.5s)
+  ✓  372 tests/browser/run-path.spec.js:526:297 › C3 STD-02 SPEC-02 stage bypass_before_graph (1.4s)
+  ✓  373 tests/browser/run-path.spec.js:526:297 › C3 STD-02 SPEC-02 stage unknown_reason (1.4s)
+  ✓  374 tests/browser/run-path.spec.js:526:297 › C3 STD-02 SPEC-02 stage duplicate_stage (1.5s)
+  ✓  375 tests/browser/run-path.spec.js:526:297 › C3 STD-02 SPEC-02 stage fallback_without_graph (1.5s)
+  ✓  376 tests/browser/run-path.spec.js:526:297 › C3 STD-02 SPEC-02 stage nocapture_after_run (1.1s)
+  ✓  377 tests/browser/run-path.spec.js:526:297 › C3 STD-02 SPEC-02 stage nocapture_unknown_stage (1.1s)
+  ✓  378 tests/browser/run-path.spec.js:526:297 › C3 STD-02 SPEC-02 stage nocapture_nonboolean (1.1s)
+  ✓  379 tests/browser/run-path.spec.js:526:297 › C3 STD-02 SPEC-02 stage nocapture_duplicate (1.1s)
+  ✓  380 tests/browser/run-path.spec.js:555:151 › C4 SPEC-03 COORD-02 real trace rejection and recovery terminal_count (1.5s)
+  ✓  381 tests/browser/run-path.spec.js:555:151 › C4 SPEC-03 COORD-02 real trace rejection and recovery completed_failure_reason (1.5s)
+  ✓  382 tests/browser/run-path.spec.js:555:151 › C4 SPEC-03 COORD-02 real trace rejection and recovery complete_node_failed (1.5s)
+  ✓  383 tests/browser/run-path.spec.js:555:151 › C4 SPEC-03 COORD-02 real trace rejection and recovery complete_budget (1.5s)
+  ✓  384 tests/browser/run-path.spec.js:555:151 › C4 SPEC-03 COORD-02 real trace rejection and recovery aggregation_fallback (1.1s)
+  ✓  385 tests/browser/run-path.spec.js:555:151 › C4 SPEC-03 COORD-02 real trace rejection and recovery aggregation_bypass (1.0s)
+  ✓  386 tests/browser/run-path.spec.js:607:28 › C4 SPEC-03 real engine legal terminal count 0 (1.1s)
+  ✓  387 tests/browser/run-path.spec.js:607:28 › C4 SPEC-03 real engine legal terminal count 1 (1.1s)
+  ✓  388 tests/browser/run-path.spec.js:607:28 › C4 SPEC-03 real engine legal terminal count 2 (1.1s)
+  ✓  389 tests/browser/run-path.spec.js:623:157 › C5 SPEC-04 actual policy decision overall_deadline (1.1s)
+  ✓  390 tests/browser/run-path.spec.js:623:157 › C5 SPEC-04 actual policy decision budget_exhausted (1.1s)
+  ✓  391 tests/browser/run-path.spec.js:623:157 › C5 SPEC-04 actual policy decision forced_stop (1.2s)
+  ✓  392 tests/browser/run-path.spec.js:623:157 › C5 SPEC-04 actual policy decision context_invalid (1.1s)
+  ✓  393 tests/browser/run-path.spec.js:623:157 › C5 SPEC-04 actual policy decision side_effect_unknown (1.2s)
+  ✓  394 tests/browser/run-path.spec.js:623:157 › C5 SPEC-04 actual policy decision side_effect_occurred (1.1s)
+  ✓  395 tests/browser/run-path.spec.js:623:157 › C5 SPEC-04 actual policy decision allowed_error_code (1.2s)
+  ✓  396 tests/browser/runs.spec.js:4:1 › input source failure stays explicit after reloading run details (647ms)
+  ✓  397 tests/browser/runs.spec.js:31:1 › later failed preparation displays its own final exclusions after reload (662ms)
+  ✓  398 tests/browser/runs.spec.js:65:1 › unconfirmed input registration remains unknown after reload (668ms)
+  ✓  399 tests/browser/runs.spec.js:95:1 › oversized input shows preparation failure without an invented Attempt (14.4s)
+  ✓  400 tests/browser/runs.spec.js:126:1 › preparation exclusions use server counts without manufacturing actual input (743ms)
+  ✓  401 tests/browser/runs.spec.js:158:1 › a real recorded Run deep link loads published Attempt evidence and exact cost (683ms)
+  ✓  402 tests/browser/runs.spec.js:198:1 › a Run admitted after opening the list appears once as the pinned running row (414ms)
+  ✓  403 tests/browser/runs.spec.js:234:1 › aborted attempts stay in publication position and unknown cost never has an amount (337ms)
+  ✓  404 tests/browser/runs.spec.js:360:1 › durable accounting survives absent trace and event usage cannot manufacture a charge (516ms)
+  ✓  405 tests/browser/runs.spec.js:383:1 › live Attempt updates keep keyboard focus and collapse only the new abort (482ms)
+  ✓  406 tests/browser/runs.spec.js:408:1 › global busy stays in MainBar while pinned Runs obey filters and deep-link correction (467ms)
+  ✓  407 tests/browser/runs.spec.js:430:1 › unsent SSE preparation never becomes an actual Attempt (552ms)
+  ✓  408 tests/browser/runs.spec.js:462:39 › confirmed input survives unavailable accounting (terminal=false) (201ms)
+  ✓  409 tests/browser/runs.spec.js:462:39 › confirmed input survives unavailable accounting (terminal=true) (203ms)
+  ✓  410 tests/browser/runs.spec.js:473:3 › cached committed evidence survives unavailable receipts correctly (513ms)
+  ✓  411 tests/browser/runs.spec.js:473:3 › cached aborted evidence survives unavailable receipts correctly (493ms)
+  ✓  412 tests/browser/runs.spec.js:473:3 › cached block evidence survives unavailable receipts correctly (519ms)
+  ✓  413 tests/browser/runs.spec.js:473:3 › cached start-only evidence survives unavailable receipts correctly (551ms)
+  ✓  414 tests/browser/runs.spec.js:473:3 › cached terminal-only evidence survives unavailable receipts correctly (542ms)
+  ✓  415 tests/browser/runs.spec.js:521:3 › stream mode uses actual start metadata (streamed) (439ms)
+  ✓  416 tests/browser/runs.spec.js:521:3 › stream mode uses actual start metadata (nonstreamed) (429ms)
+  ✓  417 tests/browser/runs.spec.js:521:3 › stream mode uses actual start metadata (missing) (449ms)
+  ✓  418 tests/browser/runs.spec.js:521:3 › stream mode uses actual start metadata (terminal-only) (447ms)
+  ✓  419 tests/browser/send-flow.spec.js:6:1 › one real UI flow reaches 202, Step, Attempt, deltas and one reply across pages and reload (1.5s)
+  ✓  420 tests/browser/session-create-race.spec.js:44:1 › creating closes Send and Enter while a newer draft keeps the successful receipt explicit (1.1s)
+  ✓  421 tests/browser/session-create-race.spec.js:72:1 › an external real Run prevents late creation from switching the recording Session and never queues the switch (1.3s)
+  ✓  422 tests/browser/session-create-race.spec.js:102:1 › a successful creation from an earlier process stays a receipt until explicit current-process verification (2.6s)
+  ✓  423 tests/browser/session-create-race.spec.js:125:54 › first native mount before the real creation receipt preserves unchanged intent (1.0s)
+  ✓  424 tests/browser/session-create-race.spec.js:125:54 › first native mount before the real creation receipt preserves navigate intent (1.0s)
+  ✓  425 tests/browser/session-create-race.spec.js:125:54 › first native mount before the real creation receipt preserves focus intent (1.0s)
+  ✓  426 tests/browser/session-create-race.spec.js:161:95 › a delayed receipt keeps the editing controls reachable at 320x360 (1.1s)
+  ✓  427 tests/browser/session-create-race.spec.js:161:95 › a delayed receipt keeps the editing controls reachable at 320x800 (1.1s)
+  ✓  428 tests/browser/session-create-race.spec.js:161:95 › a delayed receipt keeps the editing controls reachable at 1440x360 (1.2s)
+  ✘  429 tests/browser/settings.spec.js:3:1 › Models and Connections navigation keeps MainBar (218ms)
+(node:90692) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  430 tests/browser/settings.spec.js:14:1 › unsupported grok rows do not show 支持 (300ms)
+  ✓  431 tests/browser/settings.spec.js:38:3 › auth probe button posts only endpoint_id, shows result, and restores (313ms)
+  ✓  432 tests/browser/settings.spec.js:137:3 › auth probe error restores the button and shows the machine code (306ms)
+  ✓  433 tests/browser/settings.spec.js:38:3 › auth probe button posts only endpoint_id, shows result, and restores after focus refresh (306ms)
+  ✓  434 tests/browser/settings.spec.js:137:3 › auth probe error restores the button and shows the machine code after focus refresh (312ms)
+  ✓  435 tests/browser/settings.spec.js:199:1 › assigned inference probe names the row and catalog refresh exists (284ms)
+  ✓  436 tests/browser/settings.spec.js:239:1 › S08 fields save explicitly and a delayed receipt keeps newer drafts (420ms)
+  ✓  437 tests/browser/shell-controls.spec.js:3:50 › models registers real unsaved input across panel visibility and confirmed navigation (442ms)
+  ✓  438 tests/browser/shell-controls.spec.js:3:50 › behaviour registers real unsaved input across panel visibility and confirmed navigation (402ms)
+  ✘  439 tests/browser/shell-controls.spec.js:3:50 › tools registers real unsaved input across panel visibility and confirmed navigation (15.1s)
+(node:90860) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  440 tests/browser/shell-controls.spec.js:22:1 › amplified text at reduced available height retains scrollable MainBar controls (371ms)
+  ✓  441 tests/browser/shell-controls.spec.js:34:1 › display-name late save advances the dirty baseline while retaining the newer draft (455ms)
+  ✓  442 tests/browser/shell-startup.spec.js:9:1 › a first native snapshot arriving after MainBar editing preserves focus and selection across the breakpoint (421ms)
+  ✓  443 tests/browser/shell-startup.spec.js:46:41 › initial entry barrier preserves route history and mounts only the latest target after synchronization (468ms)
+  ✓  444 tests/browser/shell-startup.spec.js:46:41 › initial state barrier preserves route history and mounts only the latest target after synchronization (428ms)
+  ✓  445 tests/browser/shell-startup.spec.js:95:1 › first readiness waits for a pending native panel-history transition before mounting its target (404ms)
+actual-startup-reconnect {"runtime":{"instance":"2ca21fae203d4ef69ac1f1dce5222eb9","connected":true,"session":"2523b44f0fd74f2096f301a90412c584","active":null,"revision":0,"unavailable":false},"snapshots":[{"instance":"2ca21fae203d4ef69ac1f1dce5222eb9","revision":0},{"instance":"2ca21fae203d4ef69ac1f1dce5222eb9","revision":0}],"reads":["/api/models"],"posts":[],"pages":1}
+actual-startup-server-exits [0,0]
+  ✓  446 tests/browser/shell-startup.spec.js:123:1 › same-revision reconnect finishes startup when matching credentials arrive offline after a real process restart (1.9s)
+  ✓  447 tests/browser/shell.spec.js:4:1 › one shell retains SQL and consumes one mutually exclusive panel history layer (579ms)
+  ✓  448 tests/browser/shell.spec.js:34:1 › a retired Run cache restoration cannot remount a successor page or erase its draft (609ms)
+  ✓  449 tests/browser/shell.spec.js:56:1 › browser history cancellation preserves the actual page, draft, focus and repeatable Back (382ms)
+  ✓  450 tests/browser/shell.spec.js:74:1 › wide shell uses fixed rails, keeps MainBar and does not remount the same route (390ms)
+  ✓  451 tests/browser/shell.spec.js:91:1 › refresh retires the panel entry without leaving a same-page Back stop (407ms)
+  ✓  452 tests/browser/shell.spec.js:104:1 › all ten pages keep one native EventSource and the selected Session draft (850ms)
+  ✓  453 tests/browser/shell.spec.js:127:1 › default Overview replaces the root history entry and brand navigation respects unsaved input (704ms)
+  ✓  454 tests/browser/shell.spec.js:155:1 › late accepted response preserves new chat input and the users central focus (388ms)
+  ✓  455 tests/browser/shell.spec.js:175:1 › storage denial keeps the in-memory draft and reports its limited lifetime (303ms)
+  ✓  456 tests/browser/shell.spec.js:185:1 › crossing the breakpoint keeps editing selection without overwriting the wide preference (474ms)
+  ✓  457 tests/browser/shell.spec.js:203:1 › Forward cancellation after reload restores the correct old-document history direction (556ms)
+  ✓  458 tests/browser/shell.spec.js:216:1 › Back restores the central scroll only after the list response returns (658ms)
+  ✓  459 tests/browser/shell.spec.js:233:43 › hidden memory still withdraws protected content through the real stream (914ms)
+  ✓  460 tests/browser/shell.spec.js:233:43 › hidden database still withdraws protected content through the real stream (938ms)
+  ✓  461 tests/browser/skills.spec.js:40:1 › CE-10/22/28: real Skill preparation, attempts, MainBar and historical metadata (2.3s)
+  ✓  462 tests/browser/skills.spec.js:67:1 › CE-23: a late real evidence response cannot replace the next Run (1.7s)
+  ✓  463 tests/browser/skills.spec.js:108:1 › CE-19/21: selector input failure has no fictitious Step or Attempt (1.4s)
+  ✓  464 tests/browser/streaming.spec.js:4:1 › disconnect clears an unfinished Attempt and suppresses its later deltas (480ms)
+  ✓  465 tests/browser/streaming.spec.js:101:1 › deltas_dropped withdraws text until every affected Attempt closes (467ms)
+  ✓  466 tests/browser/streaming.spec.js:160:1 › duplicate, regressing and foreign patches do not replace authoritative state (403ms)
+  ✓  467 tests/browser/streaming.spec.js:186:1 › a terminal Attempt snapshot settles the affected dropped-delta notice without inventing events (380ms)
+  ✓  468 tests/browser/streaming.spec.js:233:1 › an unrecorded terminal snapshot recovers full text and refuses stale pending (451ms)
+  ✓  469 tests/browser/tabs.spec.js:5:3 › two tabs isolating a Session project only matching temporary text (863ms)
+  ✓  470 tests/browser/tabs.spec.js:5:3 › two tabs sharing a Session project only matching temporary text (1.0s)
+  ✓  471 tests/browser/tabs.spec.js:93:1 › a restarted process invalidates the Session without losing its draft and refreshes the write token (516ms)
+  ✓  472 tests/browser/tools-migration.spec.js:10:1 › S07 source groups use registered identity; collapse and readback retain draft, focus and order (917ms)
+  ✓  473 tests/browser/tools-migration.spec.js:44:1 › S07 real MCP same-name replacement retires permission and draft; restored identity does not revive an old success (1.8s)
+  ✓  474 tests/browser/tools-migration.spec.js:95:1 › S07 in-flight edits, lost receipt, focus and reconnect keep explicit comparison without reposting (1.1s)
+  ✓  475 tests/browser/tools-migration.spec.js:137:1 › S07 an already submitted authorization can leave without discarding input or cancelling the real command (1.1s)
+  ✓  476 tests/browser/tools-migration.spec.js:160:1 › S07 Spec F1 a lost authorization receipt without newer input can leave after current readback (1.1s)
+  ✓  477 tests/browser/tools-migration.spec.js:190:1 › S07 Spec F1 a definite authorization refusal keeps unsubmitted input until explicit retry (1.1s)
+  ✓  478 tests/browser/tools-migration.spec.js:218:1 › S07 Spec F1 discarding only a successor draft retains the unknown submitted action (1.1s)
+  ✓  479 tests/browser/tools-migration.spec.js:247:1 › S07 Spec F1 an actual unconfirmed authorization write is not a definite refusal (1.1s)
+  ✓  480 tests/browser/tools-migration.spec.js:274:56 › S07 F1 an in-flight edit back to the saved baseline remains a new draft (success) (1.1s)
+  ✓  481 tests/browser/tools-migration.spec.js:274:56 › S07 F1 an in-flight edit back to the saved baseline remains a new draft (missing) (1.1s)
+  ✓  482 tests/browser/tools-migration.spec.js:274:56 › S07 F1 an in-flight edit back to the saved baseline remains a new draft (rejected) (1.1s)
+  ✓  483 tests/browser/tools-migration.spec.js:329:1 › S07 F2 a new edit after lost receipt and failed readback retains its original CAS baseline (1.1s)
+  ✓  484 tests/browser/tools-migration.spec.js:378:1 › S07 unreadable catalog keeps draft and local status; unavailable MCP is visible without inventing a connection (926ms)
+  ✓  485 tests/browser/tools-migration.spec.js:394:37 › S07 Persona discovery and explicit ordinary Runs preserve version, conflict and next-Run application (override=false) (1.7s)
+  ✓  486 tests/browser/tools-migration.spec.js:394:37 › S07 Persona discovery and explicit ordinary Runs preserve version, conflict and next-Run application (override=true) (1.4s)
+  ✓  487 tests/browser/tools-visual.spec.js:5:1 › S07 four viewports, shell and measured central boundaries retain full text and keyboard controls (2.7s)
+  ✓  488 tests/browser/tools.spec.js:4:1 › real tool creation and next-Step query reach the chat and survive reload (1.2s)
+  ✓  489 tests/browser/tools.spec.js:17:3 › host handles 确认, reread and recovery without model approval (1.5s)
+  ✓  490 tests/browser/tools.spec.js:17:3 › host handles 取消, reread and recovery without model approval (1.4s)
+  ✓  491 tests/browser/tools.spec.js:43:3 › CI-02: session admission during saved-chat scheduling preserves the draft and recovers (1.3s)
+  ✓  492 tests/browser/tools.spec.js:43:3 › CI-02: run admission during saved-chat scheduling preserves the draft and recovers (911ms)
+  ✓  493 tests/browser/topology.spec.js:5:1 › S06 CE-15/26: selected detail follows the graph and collapsed failure retains its identity (922ms)
+  ✓  494 tests/browser/topology.spec.js:25:1 › CE-01/02/05/08: real graphs, complete details and independent business forms (1.7s)
+  ✓  495 tests/browser/topology.spec.js:93:3 › CE-04: explicit protocol injection schema preserves old graph then recovers (1.2s)
+  ✓  496 tests/browser/topology.spec.js:93:3 › CE-04: explicit protocol injection duplicate preserves old graph then recovers (1.2s)
+  ✓  497 tests/browser/topology.spec.js:93:3 › CE-04: explicit protocol injection dangling preserves old graph then recovers (1.2s)
+  ✓  498 tests/browser/topology.spec.js:93:3 › CE-04: explicit protocol injection terminal preserves old graph then recovers (1.2s)
+  ✓  499 tests/browser/topology.spec.js:93:3 › CE-04: explicit protocol injection missing preserves old graph then recovers (1.2s)
+  ✓  500 tests/browser/topology.spec.js:120:1 › CE-03/05/08: actual publication, reverse HTTP responses, unknown text, selection and viewport (1.5s)
+  ✓  501 tests/browser/topology.spec.js:166:1 › CE-03/04: transport failure, initial retry, independent graphs and real startup absence (2.4s)
+  ✓  502 tests/browser/topology.spec.js:202:3 › CE-06: collapse invalidates captured real P1 response (1.2s)
+  ✓  503 tests/browser/topology.spec.js:202:3 › CE-06: navigate invalidates captured real P1 response (1.2s)
+  ✓  504 tests/browser/topology.spec.js:202:3 › CE-06: restart invalidates captured real P1 response (2.7s)
+  ✓  505 tests/browser/topology.spec.js:240:3 › CE-08: keyboard and complete text at 1280px (2.9s)
+  ✓  506 tests/browser/topology.spec.js:240:3 › CE-08: keyboard and complete text at 390px (2.9s)
+  ✓  507 tests/browser/topology.spec.js:281:1 › CE-01/03: disconnection and recovery never replace a snapshot or save drafts (914ms)
+  ✓  508 tests/browser/topology.spec.js:300:1 › AC-14: protocol text injection is shown literally and never becomes markup (1.2s)
+  ✓  509 tests/browser/topology.spec.js:318:1 › CE-06: first shell synchronization precedes and preserves the first graph read (962ms)
+  ✓  510 tests/browser/topology.spec.js:336:1 › CE-01 / AC-12: real settings save with lost response stays unconfirmed during observation (1.1s)
+  ✓  511 tests/browser/topology.spec.js:360:3 › STD-01/SPEC-01: real mouse selection and drag in message_routing (1.1s)
+  ✓  512 tests/browser/topology.spec.js:360:3 › STD-01/SPEC-01: real mouse selection and drag in manual_aggregation (1.1s)
+
+  ✓  513 tests/browser/trace_export.spec.js:6:1 › real Run exports an inert share ZIP through native browser download (1.4s)
+  ✓  514 tests/browser/trace_export.spec.js:54:1 › AC18 AC24: another tab sees busy, leaving ready releases ownership (2.6s)
+
+  ✓  515 tests/browser/trace_export.spec.js:82:1 › AC24: delayed real creation response cannot restore a departed page (2.5s)
+
+  ✓  516 tests/browser/trace_export.spec.js:137:1 › AC02 AC09 AC10 AC12: multistep Attempts, inline and external tool bodies download in both modes (2.2s)
+
+  ✓  517 tests/browser/trace_export.spec.js:220:1 › SPEC03 CE01: missing artifact warns in page and real downloaded manifest and README (2.3s)
+  ✓  518 tests/browser/trace_export.spec.js:233:1 › SPEC03 CE08 CE06: HTTP cancel keeps active IO busy in second tab; generation replacement rejects (2.8s)
+
+  ✓  519 tests/browser/trace_export.spec.js:263:1 › SPEC03 AC24: accepted native transfer continues after leaving Run (2.3s)
+
+  ✓  520 tests/browser/trace_export.spec.js:280:1 › SPEC03 AC24: reconnect and restarted instance cannot restore old ready task (5.3s)
+
+  ✓  521 tests/browser/trace_export.spec.js:302:1 › SPEC03 CE02: actual recording pending and failed then historical unknown remain distinct in browser (2.2s)
+
+  ✓  522 tests/browser/trace_export.spec.js:328:1 › SPEC03 CE02: historical run without recording evidence stays unknown after restart (3.1s)
+
+  ✓  523 tests/browser/trace_export.spec.js:342:1 › SPEC03 AC24: cached page return rechecks instance and replaces disposed export view (2.3s)
+  ✘  524 tests/browser/upgrade-flow.spec.js:4:1 › a real upgraded Session combines a new UI Run with every historic message in order (15.1s)
+(node:91441) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  525 tests/browser/upgrade-flow.spec.js:36:1 › real migrated null-run messages create no Run rows before or after a new UI Run (1.1s)
+
+
+  1) tests/browser/cli-flow.spec.js:57:1 › the real CLI entry holds admission while a Web UI send preserves its draft 
+
+    Test timeout of 15000ms exceeded.
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/cli-flow-the-real-CLI-entr-407e8-UI-send-preserves-its-draft/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/cli-flow-the-real-CLI-entr-407e8-UI-send-preserves-its-draft/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/cli-flow-the-real-CLI-entr-407e8-UI-send-preserves-its-draft/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/cli-flow-the-real-CLI-entr-407e8-UI-send-preserves-its-draft/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) tests/browser/inbox.spec.js:111:1 › a real v2 upgrade shows all historic messages and creates no synthetic Run 
+
+    Test timeout of 15000ms exceeded.
+
+    Error: locator.click: Test timeout of 15000ms exceeded.
+    Call log:
+      - waiting for getByRole('link', { name: '升级前消息 01', exact: true })
+
+
+      115 |   await page
+      116 |     .getByRole("link", { name: "升级前消息 01", exact: true })
+    > 117 |     .click();
+          |      ^
+      118 |   const preview = page.getByRole("region", { name: "会话只读预览" });
+      119 |   await expect(preview.getByRole("link", { name: "查看运行" })).toHaveCount(0);
+      120 |   await page.getByRole("button", { name: "继续此会话", exact: true }).click();
+        at /Users/nineofour/.codex/worktrees/dashboard-s11/Agent-Alfred/tests/browser/inbox.spec.js:117:6
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/inbox-a-real-v2-upgrade-sh-55bef-nd-creates-no-synthetic-Run/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/inbox-a-real-v2-upgrade-sh-55bef-nd-creates-no-synthetic-Run/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/inbox-a-real-v2-upgrade-sh-55bef-nd-creates-no-synthetic-Run/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/inbox-a-real-v2-upgrade-sh-55bef-nd-creates-no-synthetic-Run/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) tests/browser/inbox.spec.js:208:1 › inbox Run outcomes reuse distinct terminal wording independent of recording state 
+
+    Test timeout of 15000ms exceeded.
+
+    Error: locator.click: Test timeout of 15000ms exceeded.
+    Call log:
+      - waiting for getByRole('link', { name: '终态会话', exact: true })
+
+
+      218 |   await page.route("**/api/sessions/runs?*", route => route.fulfill({json:{runs:outcomes.map(([outcome,started_at],i) => ({run_id:`terminal-${i}`,purpose:"chat",phase:"finished",outcome,started_at,gateway:"cli",accepted_at:"today",reply_preview:null,recording_state:i===0?"failed":"recorded"})),next_cursor:null}}));
+      219 |   await page.goto("/");
+    > 220 |   await page.getByRole("link", {name:"终态会话",exact:true}).click();
+          |                                                          ^
+      221 |   await page.getByRole("navigation", {name:"会话预览分区"}).getByRole("link", {name:"运行",exact:true}).click();
+      222 |   const preview = page.getByRole("region", {name:"会话只读预览"});
+      223 |   for (const [i,[outcome,,label]] of outcomes.entries()) {
+        at /Users/nineofour/.codex/worktrees/dashboard-s11/Agent-Alfred/tests/browser/inbox.spec.js:220:58
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/inbox-inbox-Run-outcomes-r-81f60-ependent-of-recording-state/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/inbox-inbox-Run-outcomes-r-81f60-ependent-of-recording-state/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/inbox-inbox-Run-outcomes-r-81f60-ependent-of-recording-state/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/inbox-inbox-Run-outcomes-r-81f60-ependent-of-recording-state/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) tests/browser/integrations.spec.js:179:1 › CE-04 CE-05 over-limit reported numbers keep results, missing balance and readable Ops 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('region', { name: '账目汇总' })
+    Expected substring: "\"unknown\":1"
+    Received string:    "分项汇总Run 1 · 模型 Attempt 3 · 账目覆盖不足 Run 0精确费用 USD 0 · 估算费用 USD 0 · 费用未知 Attempt 3工具请求 1 · 已确认启动 1 · 明确未启动 0 · 启动未确认 0精确 Attempt 0 · 估算 Attempt 0 · 使用陈旧价格 0 · 涉及阶梯价 0估算价格来源：无工具计量状态：不计费 0 · 已报告计量 0 · 结果未知，请核验原操作 1 · 历史未记录 0Token 用量与缺失覆盖Token 用量与缺失覆盖维度已记录 Token未报告的 Attempt 数输入总量03未缓存输入03缓存读取03缓存写入03输出03推理03仅统计持久 Run 与可读账目；无 Run 的旧消息不计入。账目覆盖不证明正式回复已保存，完整记录状态请进入运行过程核对。"
+    Timeout: 4000ms
+
+    Call log:
+      - Expect "toContainText" getByRole('region', { name: '账目汇总' }) with timeout 4000ms
+      - waiting for getByRole('region', { name: '账目汇总' })
+        12 × locator resolved to <section aria-label="账目汇总">…</section>
+           - unexpected value "分项汇总Run 1 · 模型 Attempt 3 · 账目覆盖不足 Run 0精确费用 USD 0 · 估算费用 USD 0 · 费用未知 Attempt 3工具请求 1 · 已确认启动 1 · 明确未启动 0 · 启动未确认 0精确 Attempt 0 · 估算 Attempt 0 · 使用陈旧价格 0 · 涉及阶梯价 0估算价格来源：无工具计量状态：不计费 0 · 已报告计量 0 · 结果未知，请核验原操作 1 · 历史未记录 0Token 用量与缺失覆盖Token 用量与缺失覆盖维度已记录 Token未报告的 Attempt 数输入总量03未缓存输入03缓存读取03缓存写入03输出03推理03仅统计持久 Run 与可读账目；无 Run 的旧消息不计入。账目覆盖不证明正式回复已保存，完整记录状态请进入运行过程核对。"
+
+
+      201 |     await page.goto(origin + "/ops");
+      202 |     const totals = page.getByRole("region", {name:"账目汇总"});
+    > 203 |     await expect(totals).toContainText('"unknown":1');
+          |                          ^
+      204 |     await expect(totals).toContainText('"reported":0');
+      205 |     expect((await control(s)).requests).toEqual(["/usage", "/search"]);
+      206 |   } finally {try {await context.close();} finally {await s.close();}}
+        at /Users/nineofour/.codex/worktrees/dashboard-s11/Agent-Alfred/tests/browser/integrations.spec.js:203:26
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/integrations-CE-04-CE-05-o-313fc-ng-balance-and-readable-Ops/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/integrations-CE-04-CE-05-o-313fc-ng-balance-and-readable-Ops/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/integrations-CE-04-CE-05-o-313fc-ng-balance-and-readable-Ops/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/integrations-CE-04-CE-05-o-313fc-ng-balance-and-readable-Ops/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) tests/browser/mainbar.spec.js:3:1 › MainBar keeps its draft and drawer across pages and a refresh 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: '收件箱' })
+    Expected: visible
+    Timeout: 4000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: '收件箱' }) with timeout 4000ms
+      - waiting for getByRole('heading', { name: '收件箱' })
+
+
+       7 |   await expect(
+       8 |     page.getByRole("heading", { name: "收件箱" }),
+    >  9 |   ).toBeVisible();
+         |     ^
+      10 |   await page.getByRole("button", { name: "新建会话", exact: true }).click();
+      11 |   const input = page.getByRole("textbox", { name: "消息" });
+      12 |   await input.fill("跨页保留这份草稿");
+        at /Users/nineofour/.codex/worktrees/dashboard-s11/Agent-Alfred/tests/browser/mainbar.spec.js:9:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/mainbar-MainBar-keeps-its--2e759--across-pages-and-a-refresh/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/mainbar-MainBar-keeps-its--2e759--across-pages-and-a-refresh/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/mainbar-MainBar-keeps-its--2e759--across-pages-and-a-refresh/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/mainbar-MainBar-keeps-its--2e759--across-pages-and-a-refresh/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) tests/browser/pagination.spec.js:3:1 › Session, chat Run and all Run pages keep independent opaque cursors 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  getByRole('main').getByRole('link', { name: /^分页会话 / })
+    Expected: 25
+    Received: 0
+    Timeout:  4000ms
+
+    Call log:
+      - Expect "toHaveCount" getByRole('main').getByRole('link', { name: /^分页会话 / }) with timeout 4000ms
+      - waiting for getByRole('main').getByRole('link', { name: /^分页会话 / })
+        12 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      25 |   await page.goto("/");
+      26 |   const main = page.getByRole("main");
+    > 27 |   await expect(main.getByRole("link", {name:/^分页会话 /})).toHaveCount(25);
+         |                                                         ^
+      28 |   await main.getByRole("button", {name:"更多会话",exact:true}).click();
+      29 |   await expect(main.getByRole("link", {name:/^分页会话 /})).toHaveCount(27);
+      30 |   await main.getByRole("link", {name:"分页会话 26",exact:true}).click();
+        at /Users/nineofour/.codex/worktrees/dashboard-s11/Agent-Alfred/tests/browser/pagination.spec.js:27:57
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/pagination-Session-chat-Ru-073cc--independent-opaque-cursors/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/pagination-Session-chat-Ru-073cc--independent-opaque-cursors/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/pagination-Session-chat-Ru-073cc--independent-opaque-cursors/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/pagination-Session-chat-Ru-073cc--independent-opaque-cursors/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) tests/browser/recording.spec.js:7:3 › real pending reconnect and second-tab draft survive recorded settlement 
+
+    Test timeout of 15000ms exceeded.
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/recording-real-pending-rec-9faca-survive-recorded-settlement/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/recording-real-pending-rec-9faca-survive-recorded-settlement/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/recording-real-pending-rec-9faca-survive-recorded-settlement/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/recording-real-pending-rec-9faca-survive-recorded-settlement/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/recording-real-pending-rec-9faca-survive-recorded-settlement/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  8) tests/browser/recording.spec.js:7:3 › real pending reconnect and second-tab draft survive failed settlement 
+
+    Test timeout of 15000ms exceeded.
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/recording-real-pending-rec-1ac07-t-survive-failed-settlement/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/recording-real-pending-rec-1ac07-t-survive-failed-settlement/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/recording-real-pending-rec-1ac07-t-survive-failed-settlement/error-context.md
+
+    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/recording-real-pending-rec-1ac07-t-survive-failed-settlement/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/recording-real-pending-rec-1ac07-t-survive-failed-settlement/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  9) tests/browser/settings.spec.js:3:1 › Models and Connections navigation keeps MainBar ──────────
+
+    Error: locator.click: Error: strict mode violation: getByRole('link', { name: '模型', exact: true }) resolved to 2 elements:
+        1) <a href="/models" title="Models">模型</a> aka getByRole('link', { name: '模型', description: 'Models' })
+        2) <a href="/models">模型</a> aka getByRole('region', { name: '静态架构说明' }).getByRole('link', { name: '模型' })
+
+    Call log:
+      - waiting for getByRole('link', { name: '模型', exact: true })
+
+
+      3 | test("Models and Connections navigation keeps MainBar", async ({ page }) => {
+      4 |   await page.goto("/");
+    > 5 |   await page.getByRole("link", { name: "模型", exact: true }).click();
+        |                                                             ^
+      6 |   await expect(page.getByRole("heading", { name: "模型", exact: true })).toBeVisible();
+      7 |   await expect(page.getByRole("navigation", { name: "主导航" })).toBeVisible();
+      8 |   await page.getByRole("link", { name: "连接", exact: true }).click();
+        at /Users/nineofour/.codex/worktrees/dashboard-s11/Agent-Alfred/tests/browser/settings.spec.js:5:61
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/settings-Models-and-Connections-navigation-keeps-MainBar/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/settings-Models-and-Connections-navigation-keeps-MainBar/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/settings-Models-and-Connections-navigation-keeps-MainBar/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/settings-Models-and-Connections-navigation-keeps-MainBar/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  10) tests/browser/shell-controls.spec.js:3:50 › tools registers real unsaved input across panel visibility and confirmed navigation 
+
+    Test timeout of 15000ms exceeded.
+
+    Error: locator.selectOption: Test timeout of 15000ms exceeded.
+    Call log:
+      - waiting for getByRole('combobox', { name: 'web_search 授权草稿' })
+
+
+       7 |   if(name==='models')await control.fill('未保存的模型名称');
+       8 |   else if(name==='behaviour')await control.check();
+    >  9 |   else await control.selectOption('denied');
+         |                      ^
+      10 |   await page.getByRole('button',{name:'收起主对话',exact:true}).click();
+      11 |   await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
+      12 |   await page.locator('nav a[href="/runs"]').click();
+        at /Users/nineofour/.codex/worktrees/dashboard-s11/Agent-Alfred/tests/browser/shell-controls.spec.js:9:22
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/shell-controls-tools-regis-a52b6-ty-and-confirmed-navigation/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/shell-controls-tools-regis-a52b6-ty-and-confirmed-navigation/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/shell-controls-tools-regis-a52b6-ty-and-confirmed-navigation/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/shell-controls-tools-regis-a52b6-ty-and-confirmed-navigation/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  11) tests/browser/upgrade-flow.spec.js:4:1 › a real upgraded Session combines a new UI Run with every historic message in order 
+
+    Test timeout of 15000ms exceeded.
+
+    Error: locator.click: Test timeout of 15000ms exceeded.
+    Call log:
+      - waiting for getByRole('link', { name: '升级前消息 01', exact: true })
+
+
+       6 |   try {
+       7 |     await page.goto(server.origin + '/inbox');
+    >  8 |     await page.getByRole("link", {name:"升级前消息 01",exact:true}).click();
+         |                                                                ^
+       9 |     await page.getByRole("button", {name:"继续此会话",exact:true}).click();
+      10 |     const chat = page.getByRole("region", {name:"主对话"});
+      11 |     await expect(chat.getByText(/^升级前消息 \d+$/)).toHaveCount(25);
+        at /Users/nineofour/.codex/worktrees/dashboard-s11/Agent-Alfred/tests/browser/upgrade-flow.spec.js:8:64
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/upgrade-flow-a-real-upgrad-fff55-y-historic-message-in-order/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/upgrade-flow-a-real-upgrad-fff55-y-historic-message-in-order/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/upgrade-flow-a-real-upgrad-fff55-y-historic-message-in-order/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/S11/browser-full-01-artifacts/upgrade-flow-a-real-upgrad-fff55-y-historic-message-in-order/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  11 failed
+    tests/browser/cli-flow.spec.js:57:1 › the real CLI entry holds admission while a Web UI send preserves its draft 
+    tests/browser/inbox.spec.js:111:1 › a real v2 upgrade shows all historic messages and creates no synthetic Run 
+    tests/browser/inbox.spec.js:208:1 › inbox Run outcomes reuse distinct terminal wording independent of recording state 
+    tests/browser/integrations.spec.js:179:1 › CE-04 CE-05 over-limit reported numbers keep results, missing balance and readable Ops 
+    tests/browser/mainbar.spec.js:3:1 › MainBar keeps its draft and drawer across pages and a refresh 
+    tests/browser/pagination.spec.js:3:1 › Session, chat Run and all Run pages keep independent opaque cursors 
+    tests/browser/recording.spec.js:7:3 › real pending reconnect and second-tab draft survive recorded settlement 
+    tests/browser/recording.spec.js:7:3 › real pending reconnect and second-tab draft survive failed settlement 
+    tests/browser/settings.spec.js:3:1 › Models and Connections navigation keeps MainBar ───────────
+    tests/browser/shell-controls.spec.js:3:50 › tools registers real unsaved input across panel visibility and confirmed navigation 
+    tests/browser/upgrade-flow.spec.js:4:1 › a real upgraded Session combines a new UI Run with every historic message in order 
+  514 passed (13.8m)

@@ -22,7 +22,7 @@ test("Session, chat Run and all Run pages keep independent opaque cursors", asyn
     const result = paged("runs", cursor, i => ({run_id:`run-${i}`, purpose:"chat", filter:"chat", accepted_at:`time-${i}`, phase:"finished", outcome:"completed"}));
     return route.fulfill({json:{filter:"all", runs:result.items, next_cursor:result.next_cursor}});
   });
-  await page.goto("/");
+  await page.goto("/inbox");
   const main = page.getByRole("main");
   await expect(main.getByRole("link", {name:/^分页会话 /})).toHaveCount(25);
   await main.getByRole("button", {name:"更多会话",exact:true}).click();

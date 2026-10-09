@@ -119,21 +119,27 @@ test("S05: editing during a save retains the new text and independently filtered
     });
     await detail.getByRole("button",{name:"保存修改",exact:true}).click();
     await arrived;
-    await draft.fill("回执在途新增的修改");
+    // Returning to the pre-submit value is a new intent once B was submitted.
+    await draft.fill("版本一");
+    await page.locator('nav a[href="/overview"]').click();
+    await expect(page.getByRole('button',{name:'留在此页',exact:true})).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(draft).toHaveValue("版本一");
+    await draft.focus();
     release();
     await expect(detail.getByText("此前修改已确认保存；提交后新增的编辑尚未保存。",{exact:true})).toBeVisible();
-    await expect(draft).toHaveValue("回执在途新增的修改");
+    await expect(draft).toHaveValue("版本一");
     await expect(draft).toBeFocused();
     expect((await other.get(`/api/memory/record?kind=semantic&id=${id}`)).body.record.fact).toBe("已经提交的修改");
     await panel.getByLabel("文本",{exact:true}).fill("此查询没有结果");
     await panel.getByRole("button",{name:"搜索",exact:true}).click();
     await expect(panel.getByText("没有匹配的记忆。",{exact:true})).toBeVisible();
     await expect(detail).toContainText("独立详情，不在当前查询已加载结果中");
-    await expect(draft).toHaveValue("回执在途新增的修改");
+    await expect(draft).toHaveValue("版本一");
     await page.unroute("**/api/memory/commands");
     await detail.getByRole("button",{name:"保存修改",exact:true}).click();
     await expect(detail.getByText("已更新到版本 3。",{exact:true})).toBeVisible();
-    expect((await other.get(`/api/memory/record?kind=semantic&id=${id}`)).body.record.fact).toBe("回执在途新增的修改");
+    expect((await other.get(`/api/memory/record?kind=semantic&id=${id}`)).body.record.fact).toBe("版本一");
   } finally {release?.();await server.close();}
 });
 

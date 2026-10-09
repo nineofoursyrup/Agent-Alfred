@@ -1,0 +1,3747 @@
+{
+  "reviewer": "independent Standards",
+  "result": "PASS for fixed S08 r3 core scope",
+  "base": "bba439d7faeedde71970a74cea146a5e896e5345",
+  "head": "2951bf6892d9c5a7b43dedcb412ee54c938b2977",
+  "tree": "22d321b255f0e0edde3e588381e1f5cb02282e43",
+  "documented_violations": [],
+  "optional_heuristic_smells": [],
+  "closed_prior_findings": [
+    {
+      "id": "S08-STD-01",
+      "result": "CLOSED",
+      "code": [
+        "models.js:145–190",
+        "models.js:334–350"
+      ],
+      "rule": [
+        "docs/design/issue-91/DESIGN.md:67,72",
+        "docs/design/dashboard-implementation/INTERFACES.md:174"
+      ],
+      "evidence": [
+        "S08/logs/r2-03-STD01-red.log: 1 FAIL",
+        "S08/logs/r2-04-STD01-green.log: 1 PASS",
+        "S08/logs/r2-08-STD02-green.log: 3 PASS including STD01",
+        "S08/r3/logs/06-models-settings-browser.log: 25 PASS including STD01",
+        "S08/r3/logs/11-reviewed-base-composition.log: 10 PASS includes real STD01; 4 unrelated startup locator FAIL retained"
+      ],
+      "assessment": "A 接受后延迟回执，真实 Stream 断连/重连、核对并采用、B 在途再释放 A，输入 C 后 B 仍 pending；旧 finally 不能清 B。matching B 回执推进自己的基线并保留 C。"
+    },
+    {
+      "id": "S08-STD-02",
+      "result": "CLOSED",
+      "code": [
+        "settings-focus.js:6–35",
+        "models.js:202,243,327,357",
+        "connections.js:200,219,226,229"
+      ],
+      "rule": [
+        "docs/design/issue-91/DESIGN.md:32,182"
+      ],
+      "evidence": [
+        "S08/logs/r2-05-STD02-red.log: 2 genuine FAIL",
+        "S08/logs/r2-06-STD02-green.log: 2 fixture FAIL on disabled MainBar textbox",
+        "S08/logs/r2-08-STD02-green.log: 3 PASS",
+        "S08/logs/r2-14-connections-pending.log: 29 PASS",
+        "S08/r3/logs/06-models-settings-browser.log: 25 PASS",
+        "S08/r3/logs/11-reviewed-base-composition.log: 10 PASS subset includes both focus paths"
+      ],
+      "assessment": "精确模型/字段/动作身份跨真实只读刷新和暂时 disabled；仅当原待恢复 identity 仍当前且 activeElement=BODY 可恢复。新 pointer/key/focus/scroll、hidden/inert 或 dispose 退休资格，不夺 MainBar 或后继页焦点。"
+    }
+  ],
+  "files": [
+    {
+      "status": "M",
+      "path": "src/agent_alfred/candidates.py",
+      "bytes": 7975,
+      "sha256": "08be912faeb0219d5a7e1754d5907c26a1872ae07ffbb5da8e280e57d11bdaff",
+      "reviewed": true,
+      "basis": "本人 r1 完整文件/差异审查复用；当前 git blob 字节相同，当前责任和新增交互再次核对。"
+    },
+    {
+      "status": "M",
+      "path": "src/agent_alfred/evals/deterministic/test_auth_probe.py",
+      "bytes": 15888,
+      "sha256": "11687d7aaadcd1fdba52ed18b0084d5c2fe9eb100588f35e3f4bec446d62476f",
+      "reviewed": true,
+      "basis": "本人 r1 完整文件/差异审查复用；当前 git blob 字节相同，当前责任和新增交互再次核对。"
+    },
+    {
+      "status": "M",
+      "path": "src/agent_alfred/evals/deterministic/test_candidates.py",
+      "bytes": 8363,
+      "sha256": "ebf2941b69aa4f2e959367186cc893e8f019ee905cb99e9e8b952beef1d9109d",
+      "reviewed": true,
+      "basis": "本人 r1 完整文件/差异审查复用；当前 git blob 字节相同，当前责任和新增交互再次核对。"
+    },
+    {
+      "status": "M",
+      "path": "src/agent_alfred/evals/deterministic/test_models_page.py",
+      "bytes": 9343,
+      "sha256": "eccfae5df4c695c6fd3d00c674c1ada27012d0df0a3f5b90d4b8d30422c61e6b",
+      "reviewed": true,
+      "basis": "本人 r1 完整文件/差异审查复用；当前 git blob 字节相同，当前责任和新增交互再次核对。"
+    },
+    {
+      "status": "M",
+      "path": "src/agent_alfred/evals/deterministic/test_settings_commands.py",
+      "bytes": 13667,
+      "sha256": "d6b77c60ef412414e8e461fb2a89e1aefb3bbced8ce70297830432f5ba6d6e17",
+      "reviewed": true,
+      "basis": "本人 r1 完整文件/差异审查复用；当前 git blob 字节相同，当前责任和新增交互再次核对。"
+    },
+    {
+      "status": "M",
+      "path": "src/agent_alfred/gateway/web/assets.py",
+      "bytes": 2350,
+      "sha256": "038ec2188ed2f1a0e9c2d291bba1db49b4f95132a3fd721ffd8c14fdfb56675a",
+      "reviewed": true,
+      "basis": "本轮固定 r1→r3 全增量及相关完整模块审查；不是移动 worktree。"
+    },
+    {
+      "status": "A",
+      "path": "src/agent_alfred/ops/static/connections.js",
+      "bytes": 18440,
+      "sha256": "e057f5fe1d80ec8f52534b2f45df2d05f96a60fac4335f2ebda08f429f7ab891",
+      "reviewed": true,
+      "basis": "本轮固定 r1→r3 全增量及相关完整模块审查；不是移动 worktree。"
+    },
+    {
+      "status": "M",
+      "path": "src/agent_alfred/ops/static/index.html",
+      "bytes": 2867,
+      "sha256": "6901ab6c0811a4bdc595fac96f123d1dcdbafe85233da7f7b0c1f2ee2801ec48",
+      "reviewed": true,
+      "basis": "本轮固定 r1→r3 全增量及相关完整模块审查；不是移动 worktree。"
+    },
+    {
+      "status": "A",
+      "path": "src/agent_alfred/ops/static/models.js",
+      "bytes": 27861,
+      "sha256": "df2c3d3026539e4a251f3f4d4a227c1a4a022e37a037608389888385a8c9d3e5",
+      "reviewed": true,
+      "basis": "本轮固定 r1→r3 全增量及相关完整模块审查；不是移动 worktree。"
+    },
+    {
+      "status": "M",
+      "path": "src/agent_alfred/ops/static/pages.js",
+      "bytes": 9704,
+      "sha256": "69bc7cdbc4d8b3df542f1dc8f20e2ba12a90c655fe160b13661bd54b46b852d5",
+      "reviewed": true,
+      "basis": "本人 r1 完整文件/差异审查复用；当前 git blob 字节相同，当前责任和新增交互再次核对。"
+    },
+    {
+      "status": "A",
+      "path": "src/agent_alfred/ops/static/settings-focus.js",
+      "bytes": 1920,
+      "sha256": "07229e0d2f90554cbd3a26d7a1e079b4843cebef587945381a60a65b328e2915",
+      "reviewed": true,
+      "basis": "本轮固定 r1→r3 全增量及相关完整模块审查；不是移动 worktree。"
+    },
+    {
+      "status": "A",
+      "path": "src/agent_alfred/ops/static/settings.css",
+      "bytes": 1765,
+      "sha256": "18b9b3df8c5d8c12b3d4504a976d126d51126ffa06c30b8a7ec71814d1620b5c",
+      "reviewed": true,
+      "basis": "本人 r1 完整文件/差异审查复用；当前 git blob 字节相同，当前责任和新增交互再次核对。"
+    },
+    {
+      "status": "M",
+      "path": "src/agent_alfred/settings_commands.py",
+      "bytes": 5336,
+      "sha256": "d4b2123dee701cfa0cce0b1ce982badb0841484d324ebe4b2c06d7f3b660e8ec",
+      "reviewed": true,
+      "basis": "本人 r1 完整文件/差异审查复用；当前 git blob 字节相同，当前责任和新增交互再次核对。"
+    },
+    {
+      "status": "M",
+      "path": "tests/browser/integrations.spec.js",
+      "bytes": 24818,
+      "sha256": "20fda55b62a0c5f5af9e8f4688da6f5e9aa29190a8d148cfa9c4043b14eb2b32",
+      "reviewed": true,
+      "basis": "本轮固定 r1→r3 全增量及相关完整模块审查；不是移动 worktree。"
+    },
+    {
+      "status": "M",
+      "path": "tests/browser/mcp.spec.js",
+      "bytes": 13037,
+      "sha256": "9d5b9a11559bb22b290e52410542af11722658c6ab888cc05c96fd185cac137a",
+      "reviewed": true,
+      "basis": "本轮固定 r1→r3 全增量及相关完整模块审查；不是移动 worktree。"
+    },
+    {
+      "status": "A",
+      "path": "tests/browser/models-migration.spec.js",
+      "bytes": 26279,
+      "sha256": "04174bb2ef283bc41a5f55757362bc4ab8bab7ec3010507871244d37d25f2641",
+      "reviewed": true,
+      "basis": "本轮固定 r1→r3 全增量及相关完整模块审查；不是移动 worktree。"
+    },
+    {
+      "status": "M",
+      "path": "tests/browser/settings.spec.js",
+      "bytes": 11395,
+      "sha256": "b6f67f4c7868ed42b68a2afb49b13beb2d499980ee6fb534e89e4f82be72a9d9",
+      "reviewed": true,
+      "basis": "本人 r1 完整文件/差异审查复用；当前 git blob 字节相同，当前责任和新增交互再次核对。"
+    },
+    {
+      "status": "A",
+      "path": "tests/browser/settings_server.py",
+      "bytes": 4147,
+      "sha256": "e0d48730421c9cebe623901eb8a94df453bd3907a7ba7bc0ff15b448feb8b010",
+      "reviewed": true,
+      "basis": "本人 r1 完整文件/差异审查复用；当前 git blob 字节相同，当前责任和新增交互再次核对。"
+    },
+    {
+      "status": "M",
+      "path": "tests/browser/shell-controls.spec.js",
+      "bytes": 3888,
+      "sha256": "cf75493d50d79e78eeb3e5f4aedc9e787fad07e76c8c62065c713fca4d52bbb2",
+      "reviewed": true,
+      "basis": "本人 r1 完整文件/差异审查复用；当前 git blob 字节相同，当前责任和新增交互再次核对。"
+    },
+    {
+      "status": "M",
+      "path": "tests/browser/shell-startup.spec.js",
+      "bytes": 11634,
+      "sha256": "b00a060020d91742d274a884e32669ba050507e80b8ad746519d22d7e8d28ff5",
+      "reviewed": true,
+      "basis": "本轮固定 r1→r3 全增量及相关完整模块审查；不是移动 worktree。"
+    },
+    {
+      "status": "M",
+      "path": "tests/browser/shell.spec.js",
+      "bytes": 13702,
+      "sha256": "1acf227383bb5232c3c99422e4cdb7d9ee047b3875649f7b6835a7cbd2c16adb",
+      "reviewed": true,
+      "basis": "本人 r1 完整文件/差异审查复用；当前 git blob 字节相同，当前责任和新增交互再次核对。"
+    }
+  ],
+  "r1_increment_files": [
+    "src/agent_alfred/evals/deterministic/test_dashboard_assets.py",
+    "src/agent_alfred/gateway/web/assets.py",
+    "src/agent_alfred/ops/static/app.js",
+    "src/agent_alfred/ops/static/connections.js",
+    "src/agent_alfred/ops/static/index.html",
+    "src/agent_alfred/ops/static/models.js",
+    "src/agent_alfred/ops/static/overview.css",
+    "src/agent_alfred/ops/static/overview.js",
+    "src/agent_alfred/ops/static/settings-focus.js",
+    "src/agent_alfred/ops/static/shell.js",
+    "tests/browser/integrations.spec.js",
+    "tests/browser/mcp.spec.js",
+    "tests/browser/models-migration.spec.js",
+    "tests/browser/overview.spec.js",
+    "tests/browser/overview_server.py",
+    "tests/browser/shell-startup.spec.js"
+  ],
+  "inherited_review_reuse": {
+    "src/agent_alfred/ops/static/app.js": {
+      "previous_independent_review_head": "0af962fbc4fc799806ba2a27593102c3df8c9e48",
+      "sha256": "1208f8d65373a83c54450dd9eb5ac256e30ab37181e4639a62080d4ca3f5c68a",
+      "equal_current_base": true
+    },
+    "src/agent_alfred/ops/static/shell.js": {
+      "previous_independent_review_head": "0af962fbc4fc799806ba2a27593102c3df8c9e48",
+      "sha256": "cbaa8acc0de5a918aeeade090d46e43c9529ec584db3b05f7a2755253f14ddf2",
+      "equal_current_base": true
+    },
+    "src/agent_alfred/ops/static/overview.js": {
+      "previous_independent_review_head": "267a17ea73e353c6425e004c47e06fb319f49c83",
+      "sha256": "a5e8a66afa53aac280a3037318ebc49c2fba7a177d8e847fd471c1d482d96568",
+      "equal_current_base": true
+    },
+    "src/agent_alfred/ops/static/overview.css": {
+      "previous_independent_review_head": "267a17ea73e353c6425e004c47e06fb319f49c83",
+      "sha256": "90e1ccd20bb9949e5e69c23acc812f959d48c242277ca8ab444500a6178a6205",
+      "equal_current_base": true
+    },
+    "tests/browser/overview.spec.js": {
+      "previous_independent_review_head": "267a17ea73e353c6425e004c47e06fb319f49c83",
+      "sha256": "8bee85101d9dc38b78e9d2e909a111a8a228522b56bcd01892d3ec895efbd3ef",
+      "equal_current_base": true
+    },
+    "tests/browser/overview_server.py": {
+      "previous_independent_review_head": "267a17ea73e353c6425e004c47e06fb319f49c83",
+      "sha256": "fc872e245f1dc5028ce7b709a88529fe7d0f6af48e2d362c20bdcfa276b7cad0",
+      "equal_current_base": true
+    },
+    "src/agent_alfred/evals/deterministic/test_dashboard_assets.py": {
+      "previous_independent_review_head": "267a17ea73e353c6425e004c47e06fb319f49c83",
+      "sha256": "35f2a02682c6b236dc40e7c5e551df447f5eca5b6a6805c7a5c10536e47e6f9d",
+      "equal_current_base": true
+    }
+  },
+  "standards": {
+    "CLAUDE.md": {
+      "sha256": "d4691a7dc182b2ef4a29f1bc2f453b8e48255184c6b931b31959cf1f35b595c3",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "CONTEXT.md": {
+      "sha256": "6aace8bf9dae8cc5566db509d49bc531c3770512fabaf49f5f34dea17c04633e",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/dashboard.md": {
+      "sha256": "0b61e97f5abd23073751f202240440ac019d7db67530b2c862cb69b703873d8c",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/agents/domain.md": {
+      "sha256": "edc6d6131fdffc4b7135704f5262124fc43355c95f61b7399dc5a4db643e28ca",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/agents/issue-tracker.md": {
+      "sha256": "afd6852a80185217bd28aa5cbe456bef1e85be25be7bd1fba382d5b8ee428325",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/agents/triage-labels.md": {
+      "sha256": "4f53c9b40ce2651e3611aa090eaedbd6dbc9b71ef8c5f7e65eac0d8263190d0d",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/design/issue-87/SPEC.md": {
+      "sha256": "60a5342a1c2bdd3d6b7f7891c7268aa922898bf09203c81ffa1a26917c804f71",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/design/issue-90/DESIGN.md": {
+      "sha256": "9788e488c7b32dfbe15876193c2fc4958f44b82961ae7f091b8284b073863697",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/design/issue-90/ACCEPTANCE.md": {
+      "sha256": "275a4e1e4817f8ee36c2adeb5463075c7315f8f8c049e117792563b028b5acba",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/design/issue-91/DESIGN.md": {
+      "sha256": "7281673419190f5ec2e2296eae566df3d5bdefed4be125b7e48832dc947c94a1",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/design/issue-91/ACCEPTANCE.md": {
+      "sha256": "1e4198bd5c678045c3447fdd958b358cabb0dc2dabbc07cdabdc9119d48fc2e0",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/design/issue-92/ACCEPTANCE.md": {
+      "sha256": "b5b9ba4eaf6fed836823932414d922cb75a59fc052e80ebeaa1d72abc1574a9b",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/design/dashboard-implementation/SPEC.md": {
+      "sha256": "c8b09357e661fed623ab9a920536aa5b1cd583b28c2efaa7de40d6ef327ee7af",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/design/dashboard-implementation/INTERFACES.md": {
+      "sha256": "9526b8287325f2a29b150ebfeae95ba4284ce8199e1c3540f877f3b0dac1bb2c",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/design/dashboard-implementation/SLICES.md": {
+      "sha256": "46c7cd3e30b9890f036a392bfa2c28403a79d8b294a3cc421611167d9a9276b6",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/design/dashboard-implementation/VALIDATION.md": {
+      "sha256": "85f3ab9b9a28f55cb312d8d5ec70097f6216665e010f6abde41a518bf182dfb2",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/design/dashboard-implementation/SOURCE-AUDIT.md": {
+      "sha256": "9ac2ad1bdeaca2a05068de9e420f271e4f28efabe9375e815b15f0b7501a88e8",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/adr/0003-central-fail-closed-redactor.md": {
+      "sha256": "f74f219bc31900423964fadfe30cbd59e4401969af544436b2adb2197d4e716e",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/adr/0005-availability-and-authorization-are-orthogonal.md": {
+      "sha256": "c73a9dc9b5a7c2a6799a0a81c3fb7e948d5b288d4a99bd45e8e02105fc6f91b5",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/adr/0014-local-dashboard-threat-model.md": {
+      "sha256": "3e7f55b53ec69b7a4ddf95ac7eb07c3b44dd2a0f94985fb218d976627187fe7a",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/adr/0021-assignment-and-evidence-semantics.md": {
+      "sha256": "21880981af446445224b42c87a639e163691fd838a043edc2f63ff1855da7869",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/adr/0022-dual-conflict-check-for-settings-writes.md": {
+      "sha256": "f6f67cdbb30452634a1f8f45409061579ea0d4d4860ea5927d2152ddc5063bfd",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/adr/0045-syrup-visual-baseline-preserves-domain-evidence.md": {
+      "sha256": "534b944b50f799159d80bd7d46ef68137e2cb209c3ef709903e07c7bc6a9f503",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/adr/0046-panel-visibility-preserves-page-lifecycle.md": {
+      "sha256": "3a2b06fcb5688e6e6d6dc9f8a2d2ec7af4b5bfa944fe0556ba44ebca20546e04",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/adr/0047-overview-preserves-source-snapshot-boundaries.md": {
+      "sha256": "145cb547983929bd21b52d35a771e5748775f225f2f8435fe5e29f9f768f50d5",
+      "unchanged_from_own_full_r1_review": true
+    },
+    "docs/adr/0048-exact-run-reply-location-stays-in-mainbar.md": {
+      "sha256": "45732b06a5abab917aa7f7d09ba16be5e74a58e591dc7985e9cad3e912442b00",
+      "unchanged_from_own_full_r1_review": true
+    }
+  },
+  "baseline_smells": {
+    "Mysterious Name": "models.js:65–73/149 的 requireComparison/canAdopt/ownsRequest 明示各自资格，无需改名。",
+    "Duplicated Code": "settings-focus.js:6–35 集中 Models/Connections 的同一恢复规则；两页不同业务协议未强行合并，无 actionable duplication。",
+    "Feature Envy": "Models 比较资格属于自己的 draft/request；focus helper 仅管理 root 控件身份，不越界维护业务状态。",
+    "Data Clumps": "Comparison JSDoc 将 generation/instance/request/afterRead/revision 收在同一对象，固定于失败归属；不新增不必要接口层。",
+    "Primitive Obsession": "已有 Wire/API opaque IDs 保持；JSON identity keys 避免分隔碰撞。新增 request counter 是页面内 owner，不混 domain revisions。",
+    "Repeated Switches": "字段明确保存沿用 display/style/price 公共 op；无新增跨模块重复分派。",
+    "Shotgun Surgery": "focus 行为涉及两页和单一 helper 的必要范围，资源注册/HTML 索引同时完整，无散落未收束 owner。",
+    "Divergent Change": "Models 与 Connections 独立页面模块保留各自协议；helper 只承接焦点恢复。",
+    "Speculative Generality": "36 行 helper 已有两个具体使用方，comparison 字段均由实际失败资格约束使用。",
+    "Message Chains": "新增 getter/optional chaining 是短 wire 读取；未引入需要隐藏的长对象导航。",
+    "Middle Man": "settingsFocus 的 capture/restore/close 承担状态和清理不变量，非透明转发。",
+    "Refused Bequest": "新增实现无继承结构，不适用。"
+  },
+  "heuristic_interpretation": "12项是 possible smells 而非文档硬规则；项目标准优先，工具已强制的格式/类型不冒充人工发现。",
+  "source_items": [
+    {
+      "source_id": "issue-87:P02",
+      "source_issue": 87,
+      "source_kind": "user_path",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 192,
+      "source_text_sha256": "2fa2d73fb9537efee68da6a558d617946d84ec1e887e91c80c0219fa5048e1d4",
+      "source_cells": [
+        "P02 跨页聊天",
+        "发消息 → 流式内容 → 依次切换十页并进入当前 Run 详情 → 回复／保存落定；只有一份正式回复，输入区仍属于原 Session",
+        "R01、R03、R07、R08"
+      ],
+      "owners": [
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "S09",
+        "S10"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06",
+        "AC23"
+      ],
+      "integration_chains": [
+        "G01"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac04",
+        "proof-ac06",
+        "proof-ac23"
+      ],
+      "source_excerpt": "P02 跨页聊天 | 发消息 → 流式内容 → 依次切换十页并进入当前 Run 详情 → 回复／保存落定；只有一份正式回复，输入区仍属于原 Session | R01、R03、R07、R08",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "shell"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-87:CE-24",
+      "source_issue": 87,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 236,
+      "source_text_sha256": "28e18b26defdd1353d420875e1a18eacd7ea6426ae8c4bca2296ce4b7347a0be",
+      "source_cells": [
+        "CE-24",
+        "已提交业务请求仍在途，用户确认放弃未保存输入并离页",
+        "已提交动作不被假称撤销；回执按原协议处理；迟到结果不污染新页",
+        "延迟真实响应，核对原动作身份、新页状态与原回执路径"
+      ],
+      "owners": [
+        "S02",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "S10"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC13",
+        "AC17",
+        "AC19",
+        "AC22"
+      ],
+      "integration_chains": [
+        "G01"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac05",
+        "proof-ac13",
+        "proof-ac17",
+        "proof-ac19",
+        "proof-ac22"
+      ],
+      "source_excerpt": "CE-24 | 已提交业务请求仍在途，用户确认放弃未保存输入并离页 | 已提交动作不被假称撤销；回执按原协议处理；迟到结果不污染新页 | 延迟真实响应，核对原动作身份、新页状态与原回执路径",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "shell"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-87:section-12",
+      "source_issue": 87,
+      "source_kind": "normative_section",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 185,
+      "source_end_line": 206,
+      "source_heading": "完整可见用户路径",
+      "source_text_sha256": "08f813b4b1416914ba886b5fac53f12fbee68844a98ce31a4f75c7190ddd781c",
+      "owners": [
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "S09",
+        "S10",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC01",
+        "AC02",
+        "AC03",
+        "AC04",
+        "AC05",
+        "AC06",
+        "AC07",
+        "AC14",
+        "AC22",
+        "AC23",
+        "AC25",
+        "AC26"
+      ],
+      "integration_chains": [
+        "G01",
+        "G07"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac01",
+        "proof-ac02",
+        "proof-ac03",
+        "proof-ac04",
+        "proof-ac05",
+        "proof-ac06",
+        "proof-ac07",
+        "proof-ac14",
+        "proof-ac22",
+        "proof-ac23",
+        "proof-ac25",
+        "proof-ac26"
+      ],
+      "source_excerpt": "## 完整可见用户路径\n\n这些路径是后续验收应实际走通的用户行为，不能只用静态截图代替。页面自己的读取／写入协议在各路径中继续生效。\n\n| 路径 | 用户操作与关键可见结果 | 对应规则 |\n| --- | --- | --- |\n| P01 首次进入 | 无已选 Session → 打开 `/` → 总览及主对话空态 → 显式新建 → 输入启用；开页之前没有新建请求 | R01、R03、R07 |\n| P02 跨页聊天 | 发消息 → 流式内容 → 依次切换十页并进入当前 Run 详情 → 回复／保存落定；只有一份正式回复，输入区仍属于原 Session | R01、R03、R07、R08 |\n| P03 继续历史会话 | 当前有草稿 → 收件箱预览其他会话 → 查看其 Run → 当前 Session 不变 → 显式继续 → 切到对应 Session 与其草稿 | R01、R07 |\n| P04 旧地址与深链接 | 从书签打开旧九页／其他 Session 的 Run 详情 → 刷新 → 页面与选中项正确，主对话按本标签页恢复 | R01、R05、R07 |\n| P05 宽屏收起 | 对话正在执行 → 收起 → 中央变宽、状态仍可见 → 正式回复到达 → 提示有新回复 → 展开／回到最新 → 提示按可见事实解除 | R02、R05、R09、R10 |\n| P06 窄屏面板往返 | 中央页面有输入 → 导航抽屉 → 主对话 → 返回 → 原页原位置 → 前进 → 有效面板恢复；重复往返不叠层、不触发离页清理 | R02–R06、R10 |\n| P07 跨页返回与守卫 | 面板中选择其他页 → 未保存输入提示 → 先取消并核对原内容 → 再放弃离开 → 浏览器后退 → 原业务页重新核验，无旧面板假返回层 | R04、R06 |\n| P08 Database 生命周期 | 编辑／执行 SQL → 开合主对话 → 原页内容按现有保护规则保留 → 确认实际离页 → 清理 → 返回后空白且不自动重跑 | R03、R06 |\n| P09 Memory 保护 | 编辑记忆 → 用主对话遮住中央页 → 另一标签删除／修改该条 → 返回中央 → 核验／清除或冲突状态正确，旧正文不复活 | R03、R06 |\n| P10 发送不确定或正忙 | 显式发送遇 409／响应丢失／记录服务不可用 → 草稿仍在，原因与核对入口可见；等待、切页、重连都不自动重投 | R07–R09 |\n| P11 断线与重启 | 收取暂态内容 → 断线／服务重启 → 撤回受影响片段并显示恢复状态 → 合并可确认正式结果；失效 Session 不自动替换 | R07–R09 |\n| P12 阅读历史 | 向上翻消息、读更早分页／长代码 → 新回复到达 → 阅读位置与选择保留 → 主动回到最新 → 看到保存状态 | R08–R10 |\n| P13 焦点与输入法 | 键盘进入／离开面板 → IME 确认 → 换行／发送 → 响应前转到中央字段 → 响应到达仍在中央字段 | R07、R10 |\n| P14 刷新与调整窗口 | 已有 Session 和草稿 → 跨 1100 边界、文字放大、可用高度变化 → 草稿与编辑连续；刷新后恢复身份和宽屏偏好，窄屏默认中央 | R02、R04、R05、R10 |\n| P15 两个标签页 | 分别选不同或相同 Session → 输入不同草稿、选择不同开合 → 一个标签发消息／切页 → 另一个仅按权威全局状态更新，无草稿／偏好覆盖 | R03、R05、R07、R09 |\n",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "shell"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-87:section-13",
+      "source_issue": 87,
+      "source_kind": "normative_section",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 207,
+      "source_end_line": 237,
+      "source_heading": "关键反例与验证",
+      "source_text_sha256": "39e56e543398d16c123d944df816bbe99a75da1944e5ab6e832c3c057bcbb386",
+      "owners": [
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "S10",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC01",
+        "AC02",
+        "AC03",
+        "AC04",
+        "AC05",
+        "AC06",
+        "AC07",
+        "AC13",
+        "AC14",
+        "AC16",
+        "AC17",
+        "AC19",
+        "AC22",
+        "AC23",
+        "AC25",
+        "AC26"
+      ],
+      "integration_chains": [
+        "G01",
+        "G04",
+        "G07"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac01",
+        "proof-ac02",
+        "proof-ac03",
+        "proof-ac04",
+        "proof-ac05",
+        "proof-ac06",
+        "proof-ac07",
+        "proof-ac13",
+        "proof-ac14",
+        "proof-ac16",
+        "proof-ac17",
+        "proof-ac19",
+        "proof-ac22",
+        "proof-ac23",
+        "proof-ac25",
+        "proof-ac26"
+      ],
+      "scope_note": "Q6: mobile emulation only; no iPhone/iOS Safari/real mobile keyboard claim. Desktop native zoom and IME retained; historical BFCache BLOCKED preserved.",
+      "source_excerpt": "## 关键反例与验证\n\n所有 CE 均为**待实现验收要求**。一项行为可以由多条现有用例共同覆盖；不以测试数量替代行为证据。优先扩展已有浏览器套件，通过真实页面及 HTTP／SSE 公共接口验证。\n\n| ID | 反例／触发 | 必须观察到的结果 | 验证方式与适用入口 |\n| --- | --- | --- | --- |\n| CE-01 | 回复流式中换页、进入详情、收起再展开 | Session／Run 不变，普通导航不增事件连接，最后只有一份正式回复 | 扩展 `send-flow.spec.js`；真实壳层＋离线服务，记录 EventSource 所有者和请求身份 |\n| CE-02 | 有草稿时预览其他会话、打开其 Run，再显式继续 | 预览和详情不切会话；继续才切换，原草稿不被覆盖 | `inbox.spec.js`、`mainbar.spec.js` |\n| CE-03 | Behaviour 未保存选择先开关面板，再导航；分别取消／放弃 | 显隐不丢输入；取消保持原页原地址；放弃后才释放 | 真实表单与同源路由；比较显示、URL、选中项和写请求数 |\n| CE-04 | Database 有 SQL、结果或在执行，开关面板后确认离页 | 显隐不误清理；真离页按原协议释放；返回不重跑 | 现有 `database*.spec.js`，保留真实 worker／清理路径 |\n| CE-05 | Memory 页被面板遮住时，另一标签删除相关记录 | 失效核验照常，旧正文／草稿不复活 | `memory.spec.js` 及实际记忆服务，双标签和受控失效 |\n| CE-06 | 首次 `/`、旧九页、合法／失效 Run 深链接分别直达刷新 | 总览默认正确，旧路由可达，错误明确，无自动 Session 写入 | 真实资源服务与浏览器导航，含 `assets.py` 的 HTTP 路径 |\n| CE-07 | 窄屏导航／Chat 反复互换、返回、前进，再进入新页面 | 单层面板；先关面板再退业务页；没有重复／无可见变化的返回链 | 原生浏览器 Back／Forward，不仅人工派发 `popstate` |\n| CE-08 | 浏览器跨页返回遇未保存输入，取消后再次返回并确认 | URL、画面、选中项、输入一致；无历史死循环或跳错页 | 真实历史项与离页对话框，含面板打开时触发 |\n| CE-09 | 面板打开时刷新，或历史项跨文档／布局失效 | 窄屏回中央，旧面板不复活；会话草稿仍恢复，无额外自动写入 | 实际 reload、Back／Forward、断点切换 |\n| CE-10 | 输入中反复跨 1099／1100、放大文字或缩小可用高度 | 保住原输入和光标，正在编辑区域可见，存储偏好不被自动覆盖 | 真实窗口／viewport 和键盘操作；软键盘另用真实可用环境 |\n| CE-11 | 发送／保存响应未回时，用户切页、移焦或收起 Chat | 迟到响应不抢焦点、不覆盖新输入、不写入新页面或新 Session | 请求完成屏障；实际 UI 焦点、光标及目标身份断言 |\n| CE-12 | 翻旧消息、加载更早分页、选择长内容时继续收增量 | 阅读锚点、选择和局部滚动不跳动；主动回到最新才跟随 | `pagination.spec.js`、`inbox.spec.js` 与受控事件 |\n| CE-13 | 主对话隐藏时正式回复到达；再打开但仍停在旧消息 | 提示持续；最新回复末尾和记录状态进入视口后才解除；不自动展开 | 真实可见性、消息视口、收起／刷新及存储恢复 |\n| CE-14 | IME 确认、Shift+Enter、重复 Enter／点击发送 | 确认不发、换行不发、普通发送仅一次；202 前编辑的新草稿保留 | 扩展 `accessibility.spec.js`、`mainbar.spec.js`，控制响应顺序 |\n| CE-15 | 服务端已获准，但浏览器未取得完整 202 | 显示结果未确认，草稿仍在；切页／刷新／重连不自动再次 POST | 实际已获准 Run＋截断或丢失响应，核对后台 Run 数和请求身份 |\n| CE-16 | 其他 Session／CLI 正忙，或当前 Run 正在保存，随后遭遇 409 | 全局忙态可见且来源诚实；不排队，不标成本会话失败，不提前发送 | `busy.spec.js`、`recording.spec.js`、双标签 |\n| CE-17 | 暂态中断／Attempt 作废，之后有重放、旧实例或倒退补丁 | 撤回片段，拒收旧上下文，不重复正式回复；缺口事实保留 | `streaming.spec.js`、`notices.spec.js`，真实客户端消费受控 SSE |\n| CE-18 | 回复已完成但未保存，正文恢复晚到／失败，保存补丁交错 | 结局、记录和正文加载分轴；读取失败不冒充保存失败，读取成功不冒充已保存 | `streaming.spec.js`、`recording.spec.js`、`restart.spec.js` |\n| CE-19 | no_reply Run 或两条相同文本的旧消息，遇刷新／分页／重放 | 不造助手消息或新回复提示；真实旧消息不按文本去重 | `routing.spec.js`、`inbox.spec.js`、`upgrade-flow.spec.js` |\n| CE-20 | 两标签选择同一／不同 Session，各有草稿与布局偏好 | 全局事实一致，草稿／选择／偏好互不覆盖；来源标识不混淆 | `tabs.spec.js`＋独立浏览上下文，覆盖正常新开与恢复副本 |\n| CE-21 | 持久 Session 可恢复的进程重启，以及 Session 真失效／普通读取失败 | 可恢复的历史照常读取；真失效保留草稿并停发；读失败不删除草稿或补建 Session | `restart.spec.js`、`tabs.spec.js` 与 HTTP 失败分支 |\n| CE-22 | 320／390 宽、200% 文字、长回复／ID／表格、键盘面板往返 | 无整页横向溢出，输入／发送／关闭可达，焦点可见且不落到遮蔽内容 | #86 视觉核验方法＋真实焦点／滚动检查，保留首次失败 |\n| CE-23 | 标签页存储访问被拒绝或写入失败 | 已输入内容仍可用，明确恢复能力受限；没有虚假的已保存提示或自动新建 | 在存储公共边界注入失败，真实输入和刷新路径 |\n| CE-24 | 已提交业务请求仍在途，用户确认放弃未保存输入并离页 | 已提交动作不被假称撤销；回执按原协议处理；迟到结果不污染新页 | 延迟真实响应，核对原动作身份、新页状态与原回执路径 |\n",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "shell"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-90:R08",
+      "source_issue": 90,
+      "source_kind": "normative_section",
+      "source_document": "docs/design/issue-90/DESIGN.md",
+      "source_line": 128,
+      "source_end_line": 141,
+      "source_heading": "R08：Tools 目录与授权",
+      "source_text_sha256": "eda78b57b571ca0ce8ce35f4277569fc9d7ab4ff692c1a52b735c4219dfdd69d",
+      "owners": [
+        "S02",
+        "S03",
+        "S07",
+        "S08",
+        "S09"
+      ],
+      "acceptance_ids": [
+        "AC18",
+        "AC20",
+        "AC21",
+        "AC23"
+      ],
+      "integration_chains": [
+        "G05"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac18",
+        "proof-ac20",
+        "proof-ac21",
+        "proof-ac23"
+      ],
+      "source_excerpt": "## R08：Tools 目录与授权\n\n依据：Q3、Q8、Q9；[Tools/Ops 规格](../issue-32-tools-ops-spec.md)、[ADR-0005](../../adr/0005-availability-and-authorization-are-orthogonal.md)。\n\n1. 一级分组依次为内置工具、各集成来源、各 MCP 服务器；集成来源与服务器采用稳定名称次序，组内按工具名称稳定排序，同名用完整身份区分。状态变化不改变排序，不把工具描述或名称片段当来源分类器。\n2. 来源使用真实 `source_id` 与 MCP `server_key` 等字段；未知来源如实标记并保留身份，不归入“内置”。MCP 来源身份不同但显示服务器名相同时不能合并授权或历史。\n3. 行摘要包括名称、简述、副作用、适用可用性／连接观测、保存授权和生效／未知状态、模型暴露及阻止原因。允许换行；与选择无关的长技术身份可进入明细，但关键异常和同名区分不可隐藏。\n4. 明细展示完整来源／能力身份、完整描述、MCP 原名／别名、观测来源与时间、适用授权编辑及历史入口。可同时展开多项；每项仍是 unset／allowed／denied 草稿加显式保存，本地工具显示不需要外部授权。\n5. 顶部持续显示授权配置可读性、保存 revision、应用状态、外部修改和在途旧政策提示；提供核对当前授权、重新应用已保存授权。逐项明细中的保存值不冒充生效，MCP 已连接和可用数不冒充已授权。\n6. 草稿绑定完整能力 identity 与基线 revision，核对／focus／重连后保留比较与冲突；显式“基于当前版本继续编辑”才换基线。保存回执之后仍按原协议回读，匹配回执与当前事实才确认相应结果；结果恰好等于草稿不能证明原命令成功。\n7. 能力消失、换来源或同名新身份出现，不把旧草稿或授权转移过去。历史不可调用目录保留原身份与原因，不能因重新出现同名而恢复已退休授权。\n8. 请求数、调用结果、后续核验和费用仍归 Ops／Run。每项保留 `/ops?tool=<identity>`，查看包含该工具的完整 Run；同 Run 其他工具仍在，模型费用不归因给单一工具。继续到 Run 沿原快照和规范化筛选返回，过期时显式刷新。\n9. 凭据、连接探测、MCP 应用／重连／清理仍在 Connections；主对话仍是正式工具请求入口。目录没有逐工具次数、成功率或 schema 编辑数据，不据原稿添加新摘要或直接运行按钮。\n",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "authorization"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "#90 R08 与 P14/P15/CE21–24 全文复核：Connections 的连接/启动维护/历史观测不推定 Tools 已授权或有效暴露，去工具页核对链接保留明确所有权。共享 focus helper 不写授权。S07/S08 最终组合 NOT RUN。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-90:P14",
+      "source_issue": 90,
+      "source_kind": "user_path",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 24,
+      "source_text_sha256": "397fe578b2c2a0769827c8d765f7177ac596f8926279edf1d606d1e85bbcd29d",
+      "source_cells": [
+        "P14 Tools 授权",
+        "`/tools` → 真实来源组 → 展开工具 → 比较保存值与草稿 → 显式保存 → 回读 → 必要时显式重新应用 → 核对可用性与模型暴露",
+        "三态选择、配置可读性、连接、保存、生效各自可辨；本地工具无外部授权控件"
+      ],
+      "owners": [
+        "S07",
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC18",
+        "AC20",
+        "AC23"
+      ],
+      "integration_chains": [
+        "G05"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac18",
+        "proof-ac20",
+        "proof-ac23"
+      ],
+      "source_excerpt": "P14 Tools 授权 | `/tools` → 真实来源组 → 展开工具 → 比较保存值与草稿 → 显式保存 → 回读 → 必要时显式重新应用 → 核对可用性与模型暴露 | 三态选择、配置可读性、连接、保存、生效各自可辨；本地工具无外部授权控件",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "authorization"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "#90 R08 与 P14/P15/CE21–24 全文复核：Connections 的连接/启动维护/历史观测不推定 Tools 已授权或有效暴露，去工具页核对链接保留明确所有权。共享 focus helper 不写授权。S07/S08 最终组合 NOT RUN。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-90:P15",
+      "source_issue": 90,
+      "source_kind": "user_path",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 25,
+      "source_text_sha256": "6a762345464e7c01a3e342064cc320173bfb0f186df79aded4ffa5b82093ff15",
+      "source_cells": [
+        "P15 同名和历史工具",
+        "当前 MCP 来源 → 另一同名来源 → 历史不可调用目录 → 查看其原调用",
+        "完整身份区分，旧授权／草稿不继承到新来源；可用数不等于已授权数"
+      ],
+      "owners": [
+        "S07",
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC18",
+        "AC20",
+        "AC23"
+      ],
+      "integration_chains": [
+        "G05"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac18",
+        "proof-ac20",
+        "proof-ac23"
+      ],
+      "source_excerpt": "P15 同名和历史工具 | 当前 MCP 来源 → 另一同名来源 → 历史不可调用目录 → 查看其原调用 | 完整身份区分，旧授权／草稿不继承到新来源；可用数不等于已授权数",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "authorization"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "#90 R08 与 P14/P15/CE21–24 全文复核：Connections 的连接/启动维护/历史观测不推定 Tools 已授权或有效暴露，去工具页核对链接保留明确所有权。共享 focus helper 不写授权。S07/S08 最终组合 NOT RUN。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-90:CE-21",
+      "source_issue": 90,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 56,
+      "source_text_sha256": "4bb86e74cd481a67fc1069b56fe00d383297036ade14c11f766d5de8476f5501",
+      "source_cells": [
+        "CE-21",
+        "外部未配置／未验证／拒绝／未决定／允许，配置坏掉与保存 pending 分别出现",
+        "摘要和明细均保持正交状态；本地不冒授权开关，也不因授权配置故障被禁用；已连接与 MCP 可用数不冒充已授权",
+        "`accounting.spec.js` A01/A02、`mcp.spec.js` CE-01"
+      ],
+      "owners": [
+        "S07",
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC18",
+        "AC20"
+      ],
+      "integration_chains": [
+        "G05"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac18",
+        "proof-ac20"
+      ],
+      "source_excerpt": "CE-21 | 外部未配置／未验证／拒绝／未决定／允许，配置坏掉与保存 pending 分别出现 | 摘要和明细均保持正交状态；本地不冒授权开关，也不因授权配置故障被禁用；已连接与 MCP 可用数不冒充已授权 | `accounting.spec.js` A01/A02、`mcp.spec.js` CE-01",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "authorization"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "#90 R08 与 P14/P15/CE21–24 全文复核：Connections 的连接/启动维护/历史观测不推定 Tools 已授权或有效暴露，去工具页核对链接保留明确所有权。共享 focus helper 不写授权。S07/S08 最终组合 NOT RUN。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-90:CE-22",
+      "source_issue": 90,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 57,
+      "source_text_sha256": "34cd3408a8b21c7c5617706abdab6e9eb96aa906d186a45fc34090cd4329e16d",
+      "source_cells": [
+        "CE-22",
+        "两标签改授权；存在多项草稿，核对/focus刷新后发生版本冲突",
+        "各草稿绑定原身份与基线，保留比较并显式换基线；收起可见未保存／冲突；禁止自动覆盖磁盘外改",
+        "`accounting.spec.js` A04/A05/A06/A08"
+      ],
+      "owners": [
+        "S07",
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC18",
+        "AC20"
+      ],
+      "integration_chains": [
+        "G05"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac18",
+        "proof-ac20"
+      ],
+      "source_excerpt": "CE-22 | 两标签改授权；存在多项草稿，核对/focus刷新后发生版本冲突 | 各草稿绑定原身份与基线，保留比较并显式换基线；收起可见未保存／冲突；禁止自动覆盖磁盘外改 | `accounting.spec.js` A04/A05/A06/A08",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "authorization"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "#90 R08 与 P14/P15/CE21–24 全文复核：Connections 的连接/启动维护/历史观测不推定 Tools 已授权或有效暴露，去工具页核对链接保留明确所有权。共享 focus helper 不写授权。S07/S08 最终组合 NOT RUN。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-90:CE-23",
+      "source_issue": 90,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 58,
+      "source_text_sha256": "49f06449df5934da4129d63bc4c24cf1edc64ae4d32603e7ce86db4f62000855",
+      "source_cells": [
+        "CE-23",
+        "授权收到成功后回读已更新为 pending；或掉回执但值恰巧相同；或重新应用失败",
+        "保存、回执、生效分别判定，不以值相等证明原操作成功；无自动重送，失败常驻可达",
+        "`accounting.spec.js` A06 迟到回执及掉回执用例"
+      ],
+      "owners": [
+        "S07",
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC18",
+        "AC20"
+      ],
+      "integration_chains": [
+        "G05"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac18",
+        "proof-ac20"
+      ],
+      "source_excerpt": "CE-23 | 授权收到成功后回读已更新为 pending；或掉回执但值恰巧相同；或重新应用失败 | 保存、回执、生效分别判定，不以值相等证明原操作成功；无自动重送，失败常驻可达 | `accounting.spec.js` A06 迟到回执及掉回执用例",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "authorization"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "#90 R08 与 P14/P15/CE21–24 全文复核：Connections 的连接/启动维护/历史观测不推定 Tools 已授权或有效暴露，去工具页核对链接保留明确所有权。共享 focus helper 不写授权。S07/S08 最终组合 NOT RUN。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-90:CE-24",
+      "source_issue": 90,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 59,
+      "source_text_sha256": "9cce1626b8b9c1002cbe8491f28ec0efa1ff831c407e5b362a3997bbe886b9cc",
+      "source_cells": [
+        "CE-24",
+        "MCP 来源退休／换源／别名冲突，同名新工具或旧目录响应迟到",
+        "完整 identity 分离分组、授权、草稿和历史；旧授权不复活、旧数据不恢复可调用状态",
+        "`mcp.spec.js` CE-09/14/15 与现行 MCP 身份测试"
+      ],
+      "owners": [
+        "S07",
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC18",
+        "AC20"
+      ],
+      "integration_chains": [
+        "G05"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac18",
+        "proof-ac20"
+      ],
+      "source_excerpt": "CE-24 | MCP 来源退休／换源／别名冲突，同名新工具或旧目录响应迟到 | 完整 identity 分离分组、授权、草稿和历史；旧授权不复活、旧数据不恢复可调用状态 | `mcp.spec.js` CE-09/14/15 与现行 MCP 身份测试",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "authorization"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "#90 R08 与 P14/P15/CE21–24 全文复核：Connections 的连接/启动维护/历史观测不推定 Tools 已授权或有效暴露，去工具页核对链接保留明确所有权。共享 focus helper 不写授权。S07/S08 最终组合 NOT RUN。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:section-01",
+      "source_issue": 91,
+      "source_kind": "normative_section",
+      "source_document": "docs/design/issue-91/DESIGN.md",
+      "source_line": 7,
+      "source_end_line": 14,
+      "source_heading": "适用范围与来源",
+      "source_text_sha256": "7b2d23bbf6f274a6463e54ad614ec0d0d1d982489263439c4a234a0c50a25181",
+      "owners": [
+        "S08",
+        "S09",
+        "S10",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC23",
+        "AC25",
+        "AC26"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac02",
+        "proof-ac23",
+        "proof-ac25",
+        "proof-ac26"
+      ],
+      "source_excerpt": "## 适用范围与来源\n\n- 对应 [#91](https://github.com/nineofoursyrup/Agent-Alfred/issues/91)，承接 [父地图 #85](https://github.com/nineofoursyrup/Agent-Alfred/issues/85)、[#86 视觉规范](../issue-86/DECISIONS.md) 和 [#87 壳层规格](../issue-87/SPEC.md)。文档父提交 `7d175d6a65a93aec725cf86e6be3df167d3ca74c`，产品源码基线 `22c8720e1ec874fd012cc79b086cd8aace4c79b6`。\n- 页面标题和地址：模型 `/models`、连接 `/connections`、用量账本 `/ops`、数据库 `/database`。既有 query 与 Run 深链接语义保留，右侧继续是唯一 MainBar。\n- 本票冻结布局、信息层级、表单反馈、明细和完整用户路径。实际字段与未实现差距以 [FACTS.md](FACTS.md) 为据；未将当前缺陷描述为已满足的行为。\n- 连接、支持、指派、计量、查询保护与清理语义沿用 [CONTEXT.md](../../../CONTEXT.md) 及相应既定合同。原型示例、未来 API 和缺失字段不作为产品数据。\n- 本次没有产品实现、真实探针或模型执行授权；两轮设计确认也不包含文档提交、推送、远端 resolution、关闭票据、合并或发布授权。\n",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "governance"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "#91 完整适用原文与 canonical source/owners/AC 链比对；c34d846 独立 backend clear 提交是候选祖先且生产字节保留，父生产文件等于旧产品 22c8720。冻结文档未改，rollback 候选执行未发生。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:section-02",
+      "source_issue": 91,
+      "source_kind": "normative_section",
+      "source_document": "docs/design/issue-91/DESIGN.md",
+      "source_line": 15,
+      "source_end_line": 25,
+      "source_heading": "页面结构",
+      "source_text_sha256": "1feebdfcf5d2b359c112caddbb75fbe4d7c547c30430dea89073923537a2ff41",
+      "owners": [
+        "S08",
+        "S09",
+        "S10",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC23",
+        "AC25",
+        "AC26"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac02",
+        "proof-ac23",
+        "proof-ac25",
+        "proof-ac26"
+      ],
+      "source_excerpt": "## 页面结构\n\n| 页面 | 常驻主区 | 详情与操作 | 关键可见事实 |\n| --- | --- | --- | --- |\n| Models | 设置可读性／冲突提示 → 主模型与辅助小模型指派摘要 → 按端点分组的紧凑模型列表 | 模型行内详情：身份与依据、显示名、线路形状、四维用户覆盖价、独立真实调用测试区 | 端点连接与目录健康分开；模型支持、钉选、指派、草稿和提交结果分开 |\n| Connections | 页面状态与重新读取 .env → 模型端点 → 可选集成 → MCP 服务器 | 各项详情默认收起，可多项展开；MCP 应用在组头，测试／重连／继续清理属于各自对象 | 配置、当前连接、观测依据、未生效、进行中、清理和错误持续可见 |\n| Ops | 筛选与实际快照范围 → 分项汇总 → Run 表 | 一次查看一条 Run；模型 Attempt 费用表 → 工具请求列表 → 历史正文阅读区 | 精确／估算／未知、计量覆盖、启动与结果、快照身份及历史正文状态独立 |\n| Database | 可折叠对象目录及资源摘要 → SQL 编辑器与执行／取消 → 独立结果区 | 目录字段与示例、完整限制、类型保真的结果表及本地分页、复制操作 | 当前草稿与已提交查询关联、执行结局、正文是否收到、清理状态、来源与覆盖独立 |\n\n四页均在中央内容区完成操作，不另加常驻侧栏。模型、连接和账目详情展开不创建／切换 Session，不保存表单，不自动测试或运行 SQL。必要只读请求继续按各自原协议发生。\n",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "shell"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:R01",
+      "source_issue": 91,
+      "source_kind": "normative_section",
+      "source_document": "docs/design/issue-91/DESIGN.md",
+      "source_line": 26,
+      "source_end_line": 39,
+      "source_heading": "R01：公共呈现与页面生命周期",
+      "source_text_sha256": "1346337ea19d11107224db3882b48128446784db654964607b5b9774fd11de31",
+      "owners": [
+        "S08",
+        "S09",
+        "S10"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC05"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac02",
+        "proof-ac05"
+      ],
+      "source_excerpt": "## R01：公共呈现与页面生命周期\n\n依据：Q1–Q4、Q8–Q10、#86、#87、[ADR-0046](../../adr/0046-panel-visibility-preserves-page-lifecycle.md)。\n\n1. 采用 #86 的深色中文、正文 14px／表格 13px／辅助文字最低 12px、等宽数字与标识、细边框、卡片和表单层次。状态附文字及必要原因，不能只用颜色、提示气泡或 data-* 表达。\n2. 主动作和当前异常可见；详细技术字段按用户展开显示。未保存、提交中、结果未确认、错误、配置未生效与清理未完成在折叠摘要中继续可见，状态消除依据新事实，不按时间自动消失。\n3. 同一页面内保留用户选择的展开状态、输入和阅读位置。异步完成、只读刷新或重连不抢焦点、不自动展开；折叠隐藏当前焦点时，焦点回到对应展开控件。\n4. 宽窄屏保持相同业务顺序。≥1100 CSS px 左 232px、右 MainBar 320px，中央使用余宽；窄屏沿 #87 的导航／主对话面板切换。显隐不离页，后台保护和清理责任继续执行。\n5. 表单采用常驻标签、字段旁的单位／含义／错误及可见禁用原因。窗口变窄时字段和按钮自然换行；不能缩小字级或裁掉状态来维持单行。\n6. Ops 的 Run／Attempt 表和 Database 结果表使用具名、键盘可达的局部横向滚动区，保留所有应有列；不造成整页横向溢出。完整标识可换行或在明细读取；状态和操作不能只能靠悬停看到。\n7. 正文、错误、长地址和诊断说明可换行；需要保留结构的 SQL、历史正文、技术数据可局部滚动。来自服务的数据按原有纯文本方式显示，不扩大 HTML 执行或文件读取能力。\n8. 实际离页可能丢失尚未保存的模型输入或手写 SQL 时，按 #87 选择「留在此页」或「放弃并离开」，默认保留。确认离开才执行原页面释放；已提交操作不因放弃输入而撤销或被重新提交。\n9. 刷新／关闭整个文档沿既有浏览器离开提示与恢复边界，不承诺系统强退也能提示。页面输入不进入 URL 或新的通用持久缓存；查询结果和历史正文继续遵守自身的清理规则。\n",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "shell"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [
+        "S08-STD-02"
+      ],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:R02",
+      "source_issue": 91,
+      "source_kind": "normative_section",
+      "source_document": "docs/design/issue-91/DESIGN.md",
+      "source_line": 40,
+      "source_end_line": 59,
+      "source_heading": "R02：Models 指派、目录与明细",
+      "source_text_sha256": "6a4478d573e4af4ec4b22fa4e320a4f78906a88e28aa8cd877035b743c699588",
+      "owners": [
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC19"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac19"
+      ],
+      "source_excerpt": "## R02：Models 指派、目录与明细\n\n依据：Q1、Q5–Q7、[ADR-0021](../../adr/0021-assignment-and-evidence-semantics.md)。\n\n| 区域 | 内容与行为 |\n| --- | --- |\n| 指派摘要 | 主模型与辅助小模型各显示真实 endpoint/model 身份。辅助位置为空时明确“跟随主模型”，并说明用于记忆检索门、Skill 自动选择与消息分类。读取失败或设置不可用不能显示成无指派；摘要不增加清空辅助位置的新动作 |\n| 端点组头 | 端点身份；连接四态及观测时间／方式／原因；目录健康、上次成功、最新错误、重试时刻。连接与目录分成两条事实，不能合成“可用” |\n| 模型紧凑行 | 可辨识名称及 model_id、钉选与当前指派标记、支持三态／必要原因、详情入口。状态变更不悄悄替换排序或编辑目标；保留既有按身份的稳定候选合并与次序 |\n| 身份／依据明细 | 完整 endpoint_id/model_id、候选来源 sources、支持依据 support_basis、线路形状与 wire_style_source。候选来源不叫价格来源；用户声明仍明确未验证 |\n| 钉选／指派 | 保留钉选、取消钉选、指派主模型和辅助小模型。指派前必须钉选且符合既有支持判据；连接观测不作为额外条件。已指派项不能取消钉选，并显示原因 |\n| 单项设置 | 显示名、线路形状、四维用户覆盖价各有标签、当前保存值／草稿、单项保存与反馈；具体见 R03–R04 |\n| 真实调用测试 | 独立区域显示具体模型、已保存设置和可能计费说明；提交与回执见 R05 |\n\n打开 Models 沿原规则只自动获取当前主指派端点的目录；其他端点仍按已有展开动作懒加载。不得因把全部端点组头渲染到页面就请求全部目录。无凭据不发目录请求，仍展示本地钉选与内置候选；端点刷新沿既有缓存绕过和同端点请求合并规则，进行中有反馈。\n\n目录失败、端点失去凭据或模型支持结论变化不改指派。目录过期保留可用旧目录并同时展示新失败，不把旧值标为刚更新，也不清掉已有草稿。空目录、尚未获取、获取失败与只有本地候选分开。\n\n本票不增加手工输入任意模型、恢复内置线路或清空辅助指派的新命令。当前“内置”是未覆盖时的出处；不得把一个后端不支持的复位选项显示为可以保存的操作。未来若需要这些能力，另行明确接口和决定。\n",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "models"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 Models 模块复核：endpoint/model/field 身份、目录与连接/支持/指派分离、展开与草稿状态、目录请求边界未改。重绘操作控件具精确 data-focus-key；新用户意图退休待恢复焦点。STD02 已闭合。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:R03",
+      "source_issue": 91,
+      "source_kind": "normative_section",
+      "source_document": "docs/design/issue-91/DESIGN.md",
+      "source_line": 60,
+      "source_end_line": 73,
+      "source_heading": "R03：Models 按项保存、冲突与异步归属",
+      "source_text_sha256": "e053dff485dedd758b56226b8102aaa7d22c7855a90b34ffff87891401499acc",
+      "owners": [
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC19"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac19"
+      ],
+      "source_excerpt": "## R03：Models 按项保存、冲突与异步归属\n\n依据：Q5、#87、[ADR-0022](../../adr/0022-dual-conflict-check-for-settings-writes.md)。\n\n1. 修改输入只改变该模型该字段的草稿；保存按钮才提交相应单项 mutation。钉选和指派保持独立动作，没有全页／整行原子保存承诺，不因探针、目录刷新或展开其他模型而保存。\n2. 价格按每个计费维度分别保存；线路只保存后端已支持的手动形状。显示名空值与覆盖价清空沿原字段含义处理，成功回执须能核实实际保存值；现有清空路径缺口见 R12。\n3. 未保存、提交中、已确认保存、明确失败与保存结果未确认分别表达。错误放在相关字段／动作旁；设置整体不可读、较新 schema 或磁盘冲突同时有页面提示。\n4. 请求固定点击时的模型身份、字段、值和预期 revision。回执只更新匹配的对象与请求；用户在提交后继续输入时，新草稿不得被回执清掉。其他字段的草稿也不因整份快照重绘丢失。\n5. `stale_revision` 时保留草稿和其基线，读取并展示当前保存值；由用户核对后明确采用当前版本再提交，不自动重试旧写入。没有当前可核验值时仍保持待核对，值恰好相等不独自证明丢失回执的原命令成功。\n6. `external_change` 与标签页版本冲突分开说明：已拒绝写入、内存仍是 last-known-good、磁盘已被外部改动。刷新 Models 或重新读取 .env 不能宣称已经解决；不增加强制覆盖、自动恢复文件或未经支持的热重载。\n7. 配置损坏或较新 schema 保留原文件，聊天／写入按原规则受限；只读信息能否展示以真实返回为准。全局忙态、正在保存、准入故障和普通字段验证错误分别显示，未获准的操作不排队代办。\n8. 折叠或查看其他行时，原草稿和提示仍可找回。取消钉选等动作如果实际会丢失当前编辑，先采用保留／放弃输入的守卫；只是显隐或无实质变化不增加提示。\n9. 旧页面、旧实例或旧请求的响应不能回填新目标。实例变化后先取得当前事实再允许基于其继续操作；原未确认回执与新实例当前值分开，不将重新进入页面当作自动重送命令。\n",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "settings"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 draft value/baseline/revision 与 request/comparison 核对；success/error/catch/finally 均受原请求 owner 约束，STD01 已闭合。未知或冲突需同 generation/instance/失败 request 的后续成功读取；旧读取/新失败/重启均不授予 adoption。显式采用仅换比较基线与 revision，保留当前输入，再次显式保存。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [
+        "S08-STD-01"
+      ],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:R04",
+      "source_issue": 91,
+      "source_kind": "normative_section",
+      "source_document": "docs/design/issue-91/DESIGN.md",
+      "source_line": 74,
+      "source_end_line": 83,
+      "source_heading": "R04：用户覆盖价与账目依据",
+      "source_text_sha256": "522ec791aeafd81c951fabd288f522c3c6ed8d6d9f68b3143a80135d953028f1",
+      "owners": [
+        "S08",
+        "S09"
+      ],
+      "acceptance_ids": [
+        "AC19",
+        "AC21"
+      ],
+      "integration_chains": [
+        "G06"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac19",
+        "proof-ac21"
+      ],
+      "source_excerpt": "## R04：用户覆盖价与账目依据\n\n依据：Q6、[#29 价格合同](../../acceptance/sources/issue-29.md) 第 13 节。\n\n- Models 四个字段为未缓存输入 `uncached_input`、缓存读取 `cache_read`、缓存写入 `cache_write`、输出 `output`；单位统一 `USD / 百万 Token`，非负十进制数。\n- 每维都可留空。留空表示继续沿既有价格链查找，显式 `0` 表示该维零价；占位文字不能把留空渲染为 0。当前保存值与尚未保存的覆盖值分开，用户配置不称为官方价格。\n- Models 不新增有效报价预览接口。Ops 在对应 Attempt 中呈现本次快照实际使用的费用状态和逐维依据，不凭模型候选来源推定价格。\n- `exact` 显示端点有效自报金额，不同时生成估算分项；`estimated` 展示实际参与计费维度的 Token、单价、来源、金额及已有 stale／目录快照时刻／tiered 元数据；`unknown` 保留未知与用量事实，不生成金额。\n- 精确、估算、未知及 Token 缺失的判据由既有计量实现决定，页面不重算一套替代口径。修改覆盖价不更改已创建的账目快照；显式刷新创建的新快照才使用当时可得的价格。\n",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "settings"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 draft value/baseline/revision 与 request/comparison 核对；success/error/catch/finally 均受原请求 owner 约束，STD01 已闭合。未知或冲突需同 generation/instance/失败 request 的后续成功读取；旧读取/新失败/重启均不授予 adoption。显式采用仅换比较基线与 revision，保留当前输入，再次显式保存。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:R05",
+      "source_issue": 91,
+      "source_kind": "normative_section",
+      "source_document": "docs/design/issue-91/DESIGN.md",
+      "source_line": 84,
+      "source_end_line": 101,
+      "source_heading": "R05：模型推理探针",
+      "source_text_sha256": "c03966559fd1c56d7fd73b15956ca611187f63fcaa2755a2f32ae1541bcc1a6a",
+      "owners": [
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC20"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac20"
+      ],
+      "source_excerpt": "## R05：模型推理探针\n\n依据：Q7、[#29 两个探针](../../acceptance/sources/issue-29.md) 第 10 节。\n\n| 阶段／结果 | 必须可见的含义 |\n| --- | --- |\n| 操作前 | 具体 endpoint/model 身份，按已保存设置测试，按钮“测试真实调用（可能计费）”；尚未保存的编辑不暗中纳入 |\n| 不符合既有条件 | 当前未钉选／未指派、缺少凭据或其他真实拒绝原因；不能改猜另一个模型。支持态与连接观测保持独立 |\n| 提交中 | 原行显示正在提交，防止同一次点击重复发起；不清草稿、不切主对话 Session |\n| 202 且取得可信 run_id | 显示已受理及原 Run 详情入口；受理不等于完成、连接成功或已保存 |\n| 明确拒绝 | 显示对应忙态、目标失效、缺凭据、模型不支持或准入错误；使用已有 Run 忙态入口时明确它是阻挡本次操作的 Run |\n| 响应丢失／无法可信解释 | 显示受理结果未确认，允许查看现有运行记录核对；没有可靠身份就不自动匹配某条 Run，不自动再发探针 |\n| 已知 Run 后续结果 | 沿原 Run 只读事实展示／进入详情，Run 结局、记录状态、费用、过程缺口各按其来源；后到连接观测不是原命令成功回执 |\n\n探针仍为 `purpose=inference_probe` 的独立 Run，走全局准入、正常 Attempt／usage／trace，不写会话消息。查看结果、重连页面或详情开合不重跑；明确再次点击是一次新请求，不伪装为原请求恢复。\n\n生产端点当前没有声明免费认证探针，形状错误自动覆盖白名单也为空；界面不凭测试按钮的存在声称已经验证模型支持。推理失败、用户选择线路和指派不混成自动纠正模型的动作。\n",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "probe"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "复用未变的 exact target 保存设置探针、原 operation/Run 回执、busy/error/unknown 与无自动重送路径，复核新增准确焦点身份与 pending 呈现。所用真实 Host/HTTP 测试连接至受控离线 transport；不宣称真实模型/付费 execution。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:R06",
+      "source_issue": 91,
+      "source_kind": "normative_section",
+      "source_document": "docs/design/issue-91/DESIGN.md",
+      "source_line": 102,
+      "source_end_line": 114,
+      "source_heading": "R06：Connections 三组与维护操作",
+      "source_text_sha256": "84b4913c53066f3b63b37629ee9bf5b558d6caa5c3a7ea3cd05c33e172df7868",
+      "owners": [
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC20"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac20"
+      ],
+      "source_excerpt": "## R06：Connections 三组与维护操作\n\n依据：Q2、Q8，既有端点／集成／MCP 合同。\n\n1. 页面顶部显示全局读取、配置一致生效和操作回执状态，并放置“重新读取 .env”。它沿启动时固定路径及环境优先级读取凭据；页面不新增端点、地址或密钥编辑器，也不承担模型设置文件重载。\n2. 三组依次为模型端点、可选集成、MCP 服务器。组标题与逐项摘要常驻，详情默认收起且可多项展开；保持原有稳定身份与顺序，不因故障重排到另一个对象。\n3. 模型端点摘要分别展示连接观测、凭据配置、目录健康和关键原因。详情展示只读 base_url、catalog_url、api_key_env、掩码密钥信息、观测时间／方式和目录成功／失败／重试信息。catalog_url 为空表示没有单独配置地址，不能据此称为没有目录能力；既有实现可从 base_url 回落目录路径。凭据探针仅在既有声明与条件满足时提供，缺失时显示“无免费认证探针”。\n4. 可选集成按真实字段展示配置／连接、上次观测、最近尝试说明、重试时间以及 key／account 用量／上限。未知不补零，旧观测不能遮掉本次失败；Tavily 测试沿“探活免费未证实”的既有说明，连接测试不授予工具权限。400／422 可保留旧连接观测但更新本次尝试；探测 429 和搜索 429 分属各自限流状态，缓存／冷却时返回旧快照不能显示为刚完成新测试。\n5. MCP 组头保留配置来源、读取／应用错误、“应用 mcp.json”和既有操作进度。服务器摘要显示启动许可、连接、可用工具数／总数、需要重连、目录可能变化、清理未完成及原因；可用工具数不称为已授权数。\n6. 服务器详情保留诊断文本和历史连接的独立标记，历史事实不冒充当前就绪。重连和继续清理作用于该 server_key；工具授权入口仍在 Tools。启动许可与工具业务授权分开，清理责任未完成时不能用替代进程掩盖问题。\n7. 打开、窗口重新聚焦、跨标签通知及既有状态同步只读核对当前事实；折叠不停止必要的在途观察，也不触发探测或应用。操作回执与配置未一致生效是不同提示，前者成功不能清掉后者。\n8. 保留现有实例／connections_revision 与请求次序规则，旧读取／旧实例不能覆盖新状态。MCP 已受理操作仍绑定其 operation_id、token 和请求，丢回执后的查询或明确“重试同一 MCP 操作”沿原协议，不能改成新的随机身份重复维护。completed 只说明维护操作结束，仍须显示各服务器连接／清理结果；operation_conflict、mcp_conflict 与清理责任未确认分别解释。\n",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "connections"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 Connections 模块和 r1→r3 增量复核：实例/generation/read sequence/operation_id 归属、凭据重读、Tavily 历史观测与最近失败、MCP 同 operation 明确重试和 completed 非全成功保持。新增即时 pending 摘要、Tools 链接焦点身份与共享恢复边界；实际 A/B 迟到回执及 restart 用例通过。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:R11",
+      "source_issue": 91,
+      "source_kind": "normative_section",
+      "source_document": "docs/design/issue-91/DESIGN.md",
+      "source_line": 176,
+      "source_end_line": 184,
+      "source_heading": "R11：键盘、窄屏与实际路径验收",
+      "source_text_sha256": "af72b048980e919dd97f2a94be4b8e732b85639918c790a2f9a22d435b551082",
+      "owners": [
+        "S08",
+        "S09",
+        "S10"
+      ],
+      "acceptance_ids": [
+        "AC03",
+        "AC23",
+        "AC26"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac03",
+        "proof-ac23",
+        "proof-ac26"
+      ],
+      "scope_note": "Q6: mobile emulation only; no iPhone/iOS Safari/real mobile keyboard claim. Desktop native zoom and IME retained; historical BFCache BLOCKED preserved.",
+      "source_excerpt": "## R11：键盘、窄屏与实际路径验收\n\n完整路径与独立失效反例见 [ACCEPTANCE.md](ACCEPTANCE.md)。实施时需在真实页面走完从设置／查询到可见结果的路径，不能只看截图或静态 HTML。\n\n- 1440×900、1280×800、390×844 与 320×800 CSS px 沿 #86 检查；窄屏面板与主对话遵守 #87。保存、探针、分页、结果复制和取消在这些视口仍可访问。\n- Tab／Shift+Tab 可到达所有可用操作、错误定位、展开控件与局部滚动区；焦点可见且不被三栏／抽屉遮挡。已有原生表单键盘语义保留，控件内部方向键不被全页快捷键抢走。\n- 页面跳转、关闭详情与返回焦点按 #87；读取完成不抢焦点，状态播报有节制，不逐行或逐 token 播报。长 ID、地址、SQL、BLOB、错误与 200% 文字放大不能造成不可达操作。\n- 普通信息文字对比度至少 4.5:1；重要提示不自动消失；减少动效时取消过渡，无循环脉冲。允许平台字体抗锯齿差异，不允许以视觉误差理由忽略状态缺失或错误成功标记。\n",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "visual"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "settings.css 与 r1 字节相同；复核新增 focus helper、所有模型操作控件身份与 Connections 焦点路径，检查 r3 Models 和 r2 最终 Connections 的 1440/320 实际截图无新增遮挡/溢出。原生 200% 与真实中文 IME 未运行，Chromium viewport 不冒充移动设备验收。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [
+        "S08-STD-02"
+      ],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:R12",
+      "source_issue": 91,
+      "source_kind": "normative_section",
+      "source_document": "docs/design/issue-91/DESIGN.md",
+      "source_line": 185,
+      "source_end_line": 199,
+      "source_heading": "R12：现状差距与后续实现责任",
+      "source_text_sha256": "1146bae2c4e13f147c71b53a4800b9763541e3dcdf62a3c44ece284b85d92301",
+      "owners": [
+        "S08",
+        "S09",
+        "S10"
+      ],
+      "acceptance_ids": [
+        "AC19",
+        "AC20",
+        "AC21",
+        "AC22",
+        "AC25"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac19",
+        "proof-ac20",
+        "proof-ac21",
+        "proof-ac22",
+        "proof-ac25"
+      ],
+      "source_excerpt": "## R12：现状差距与后续实现责任\n\n| 差距 | 本设计要求 | 范围判断 |\n| --- | --- | --- |\n| Models 大卡片、无清楚指派摘要、依据字段与禁用原因不完整可见 | 实现 R02 的紧凑行／详情与具名事实 | 已确认的页面迁移 |\n| 线路／价格改动即提交，设置非 2xx 或网络错误缺反馈 | 实现 R03 单项显式保存、草稿保护、错误及冲突核对 | 已确认交互；保留现有 mutation／并发语义 |\n| 最后一项覆盖价清空、显示名清空存在 None 语义碰撞 | 通过原设置接口验证已保存值真正清除并回退，覆盖已有值→清空而非仅测初始空值 | 既有路径的实现缺口，后续施工须修复；本轮不改产品 |\n| 探针 POST 后未解释回执 | 按 R05 区分受理、拒绝、未知及已知 Run 入口 | 已确认反馈，不加自动执行或新探针授权 |\n| Connections 地址等 DTO 字段未完整显示、详细内容平铺 | R06 的三组摘要／详情和操作归属 | 使用既有字段与动作 |\n| Ops 多处主要依赖 JSON 和长卡片 | R07–R08 的摘要、真实列、费用分项与历史阅读区 | 不新增 per-Run 汇总或 recording_state DTO，不把全局摘要冒充行数据 |\n| Database 示例直接替换编辑器，无明确草稿／提交关联，复制范围名称含糊 | R09 的替换守卫、结果归属与本页复制文案 | 已确认输入与呈现补足 |\n| Database limits 已有但未完整可见、单条状态容易遮住独立事实 | R10 的摘要／详情和结局／正文／清理分列 | 使用既有合同，不新增结果 TTL 或改变清理边界 |\n\n本轮没有发现必须新增业务能力或改动安全合同才能继续的未决分支。上述缺口各有明确既定或已确认目标，可在后续施工中验证和修复；如果施工提出新的 API、查询历史、强制恢复或发布证据能力，应另行决策，不借本票确认扩张范围。\n",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "governance"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "#91 完整适用原文与 canonical source/owners/AC 链比对；c34d846 独立 backend clear 提交是候选祖先且生产字节保留，父生产文件等于旧产品 22c8720。冻结文档未改，rollback 候选执行未发生。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:section-15",
+      "source_issue": 91,
+      "source_kind": "normative_section",
+      "source_document": "docs/design/issue-91/DESIGN.md",
+      "source_line": 200,
+      "source_end_line": 204,
+      "source_heading": "领域记录与交接",
+      "source_text_sha256": "e395195c815986befece0ad491f6742beb660f41fc39cce9aa096020c229e9a7",
+      "owners": [
+        "S08",
+        "S09",
+        "S10",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC23",
+        "AC25",
+        "AC26"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac02",
+        "proof-ac23",
+        "proof-ac25",
+        "proof-ac26"
+      ],
+      "source_excerpt": "## 领域记录与交接\n\n`CONTEXT.md` 补充“用户覆盖价”，区分用户声明、官方价格和实际调用费用。连接与支持、双冲突、预先保护的数据集、页面显隐与清理已由 ADR-0021／0022／0040／0046 记录；本轮没有新的架构取舍，不增加重复 ADR。\n\n本票设计和待执行验收完成后，以 [RESOLUTION-DRAFT.md](RESOLUTION-DRAFT.md) 作为可审阅结论草稿。文档身份及本轮检查见 [VALIDATION.md](VALIDATION.md) 与 manifest；这些只能证明设计材料的范围和一致性，不能证明产品已经实现或验收通过。",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "governance"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "#91 完整适用原文与 canonical source/owners/AC 链比对；c34d846 独立 backend clear 提交是候选祖先且生产字节保留，父生产文件等于旧产品 22c8720。冻结文档未改，rollback 候选执行未发生。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:P01",
+      "source_issue": 91,
+      "source_kind": "user_path",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 11,
+      "source_text_sha256": "3c68fab2102813c83c056f131ffe574d2802b861ffa390aa02ad39700c21ca7a",
+      "source_cells": [
+        "P01 模型目录与指派",
+        "进入 Models → 看主／辅助指派及跟随关系 → 展开另一端点 → 钉选候选 → 指派 → 取消非指派项；连接、目录、支持三轴保持，已指派项禁用取消并解释",
+        "R02；`settings.spec.js`、`test_models_page.py`、`test_settings_commands.py`"
+      ],
+      "owners": [
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC19"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac19"
+      ],
+      "source_excerpt": "P01 模型目录与指派 | 进入 Models → 看主／辅助指派及跟随关系 → 展开另一端点 → 钉选候选 → 指派 → 取消非指派项；连接、目录、支持三轴保持，已指派项禁用取消并解释 | R02；`settings.spec.js`、`test_models_page.py`、`test_settings_commands.py`",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "models"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 Models 模块复核：endpoint/model/field 身份、目录与连接/支持/指派分离、展开与草稿状态、目录请求边界未改。重绘操作控件具精确 data-focus-key；新用户意图退休待恢复焦点。STD02 已闭合。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:P02",
+      "source_issue": 91,
+      "source_kind": "user_path",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 12,
+      "source_text_sha256": "7a4ca2eabcd0c91f178bf5423e17011d3e777c719643b8340ad17e4806fbfafd",
+      "source_cells": [
+        "P02 单项保存",
+        "修改显示名、手动线路和四维价格 → 未保存提示 → 分别保存 → 回读真实保存值 → 折叠重开；没有输入即提交或全行原子保存假象，提交后新编辑仍在",
+        "R03–R04；`settings.spec.js`、设置命令与存储用例"
+      ],
+      "owners": [
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC19"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac19"
+      ],
+      "source_excerpt": "P02 单项保存 | 修改显示名、手动线路和四维价格 → 未保存提示 → 分别保存 → 回读真实保存值 → 折叠重开；没有输入即提交或全行原子保存假象，提交后新编辑仍在 | R03–R04；`settings.spec.js`、设置命令与存储用例",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "settings"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 draft value/baseline/revision 与 request/comparison 核对；success/error/catch/finally 均受原请求 owner 约束，STD01 已闭合。未知或冲突需同 generation/instance/失败 request 的后续成功读取；旧读取/新失败/重启均不授予 adoption。显式采用仅换比较基线与 revision，保留当前输入，再次显式保存。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:P03",
+      "source_issue": 91,
+      "source_kind": "user_path",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 13,
+      "source_text_sha256": "b1a7d8a29f50d09c3bed6bb271049530064d7222cea2b5741df8eaf48e76421c",
+      "source_cells": [
+        "P03 覆盖价与显示名清除",
+        "已有显示名 → 清空保存 → 回到无显示名覆盖；已有单个／多个覆盖价 → 清空一维／最后一维 → 验证保存状态和价格链回退，显式 0 仍保留零价",
+        "R03–R04、R12；扩展 `test_settings_commands.py` 与真实页面路径，不能只测初始 None"
+      ],
+      "owners": [
+        "S08",
+        "S09"
+      ],
+      "acceptance_ids": [
+        "AC19",
+        "AC21"
+      ],
+      "integration_chains": [
+        "G06"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac19",
+        "proof-ac21"
+      ],
+      "source_excerpt": "P03 覆盖价与显示名清除 | 已有显示名 → 清空保存 → 回到无显示名覆盖；已有单个／多个覆盖价 → 清空一维／最后一维 → 验证保存状态和价格链回退，显式 0 仍保留零价 | R03–R04、R12；扩展 `test_settings_commands.py` 与真实页面路径，不能只测初始 None",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "settings"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 draft value/baseline/revision 与 request/comparison 核对；success/error/catch/finally 均受原请求 owner 约束，STD01 已闭合。未知或冲突需同 generation/instance/失败 request 的后续成功读取；旧读取/新失败/重启均不授予 adoption。显式采用仅换比较基线与 revision，保留当前输入，再次显式保存。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:P04",
+      "source_issue": 91,
+      "source_kind": "user_path",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 14,
+      "source_text_sha256": "9707c4909bc1f327afe3caeb0ed0be782595128bcae9bd05953e55f756840e1b",
+      "source_cells": [
+        "P04 双冲突与故障",
+        "两标签编辑同一设置 → 另一标签先保存 → 冲突保留草稿／核对后显式再保存；另模拟磁盘外改、损坏及较新 schema，页面反馈和文件保留符合原合同",
+        "R03；`test_model_settings_store.py`、`settings.spec.js`"
+      ],
+      "owners": [
+        "S08",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC19"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac05",
+        "proof-ac19"
+      ],
+      "source_excerpt": "P04 双冲突与故障 | 两标签编辑同一设置 → 另一标签先保存 → 冲突保留草稿／核对后显式再保存；另模拟磁盘外改、损坏及较新 schema，页面反馈和文件保留符合原合同 | R03；`test_model_settings_store.py`、`settings.spec.js`",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "settings"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 draft value/baseline/revision 与 request/comparison 核对；success/error/catch/finally 均受原请求 owner 约束，STD01 已闭合。未知或冲突需同 generation/instance/失败 request 的后续成功读取；旧读取/新失败/重启均不授予 adoption。显式采用仅换比较基线与 revision，保留当前输入，再次显式保存。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:P05",
+      "source_issue": 91,
+      "source_kind": "user_path",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 15,
+      "source_text_sha256": "b2dfc36e4fe779c6517bada8c85e20028c3b67a73f2e000ff4450a492b2c997c",
+      "source_cells": [
+        "P05 设置回执与目标",
+        "保存中继续改同字段／另一字段，或切详情 → 延迟成功／失败 → 原回执只更新原请求；断连／换实例／离页后返回，保留未确认事实而不重发",
+        "R03；现有设置／HTTP／壳层套件扩展"
+      ],
+      "owners": [
+        "S08",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC19"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac05",
+        "proof-ac19"
+      ],
+      "source_excerpt": "P05 设置回执与目标 | 保存中继续改同字段／另一字段，或切详情 → 延迟成功／失败 → 原回执只更新原请求；断连／换实例／离页后返回，保留未确认事实而不重发 | R03；现有设置／HTTP／壳层套件扩展",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "settings"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 draft value/baseline/revision 与 request/comparison 核对；success/error/catch/finally 均受原请求 owner 约束，STD01 已闭合。未知或冲突需同 generation/instance/失败 request 的后续成功读取；旧读取/新失败/重启均不授予 adoption。显式采用仅换比较基线与 revision，保留当前输入，再次显式保存。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [
+        "S08-STD-01"
+      ],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:P06",
+      "source_issue": 91,
+      "source_kind": "user_path",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 16,
+      "source_text_sha256": "47a461427174a1b28766df007624020bbe17fd733016cf008220715cccdf4e06",
+      "source_cells": [
+        "P06 具体模型推理探针",
+        "两指派模型可在同一或不同端点 → 从各自行发起测试 → 观察提交／受理和准确 Run 链接 → 查看 Attempt、费用与记录；未保存编辑不参与，无新增会话消息",
+        "R05；`test_inference_probe_target.py`、`test_runtime.py`、`settings.spec.js`"
+      ],
+      "owners": [
+        "S08",
+        "S03",
+        "S09"
+      ],
+      "acceptance_ids": [
+        "AC20",
+        "AC23"
+      ],
+      "integration_chains": [
+        "G06"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac20",
+        "proof-ac23"
+      ],
+      "source_excerpt": "P06 具体模型推理探针 | 两指派模型可在同一或不同端点 → 从各自行发起测试 → 观察提交／受理和准确 Run 链接 → 查看 Attempt、费用与记录；未保存编辑不参与，无新增会话消息 | R05；`test_inference_probe_target.py`、`test_runtime.py`、`settings.spec.js`",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "probe"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "复用未变的 exact target 保存设置探针、原 operation/Run 回执、busy/error/unknown 与无自动重送路径，复核新增准确焦点身份与 pending 呈现。所用真实 Host/HTTP 测试连接至受控离线 transport；不宣称真实模型/付费 execution。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:P07",
+      "source_issue": 91,
+      "source_kind": "user_path",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 17,
+      "source_text_sha256": "479d3959ed7d16126f85411e9c85f174d85182b555f2570adb66f6544a981fbd",
+      "source_cells": [
+        "P07 探针拒绝与丢响应",
+        "缺凭据、过期目标、不支持、全局忙和服务故障各触发明确反馈；丢 202 响应保持待核验，恢复连接不再 POST，无可靠 ID 不猜测关联",
+        "R05；推理目标、HTTP、准入和浏览器失败路径"
+      ],
+      "owners": [
+        "S08",
+        "S03",
+        "S09"
+      ],
+      "acceptance_ids": [
+        "AC20",
+        "AC23"
+      ],
+      "integration_chains": [
+        "G06"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac20",
+        "proof-ac23"
+      ],
+      "source_excerpt": "P07 探针拒绝与丢响应 | 缺凭据、过期目标、不支持、全局忙和服务故障各触发明确反馈；丢 202 响应保持待核验，恢复连接不再 POST，无可靠 ID 不猜测关联 | R05；推理目标、HTTP、准入和浏览器失败路径",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "probe"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "复用未变的 exact target 保存设置探针、原 operation/Run 回执、busy/error/unknown 与无自动重送路径，复核新增准确焦点身份与 pending 呈现。所用真实 Host/HTTP 测试连接至受控离线 transport；不宣称真实模型/付费 execution。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:P08",
+      "source_issue": 91,
+      "source_kind": "user_path",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 18,
+      "source_text_sha256": "73e465fa5528ba97bcd6ff121e06dc2abb5eb0d16f9f0ad0f4a12c992f2d7d41",
+      "source_cells": [
+        "P08 凭据重读与端点",
+        "进入 Connections → 展开地址／变量／掩码凭据 → 重新读取 .env → 查看受影响观测重置和各服务状态；不存在的免费认证探针如实说明",
+        "R06；`settings.spec.js`、连接与凭据确定性测试"
+      ],
+      "owners": [
+        "S08",
+        "S07"
+      ],
+      "acceptance_ids": [
+        "AC20",
+        "AC23"
+      ],
+      "integration_chains": [
+        "G05"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac20",
+        "proof-ac23"
+      ],
+      "source_excerpt": "P08 凭据重读与端点 | 进入 Connections → 展开地址／变量／掩码凭据 → 重新读取 .env → 查看受影响观测重置和各服务状态；不存在的免费认证探针如实说明 | R06；`settings.spec.js`、连接与凭据确定性测试",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "connections"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 Connections 模块和 r1→r3 增量复核：实例/generation/read sequence/operation_id 归属、凭据重读、Tavily 历史观测与最近失败、MCP 同 operation 明确重试和 completed 非全成功保持。新增即时 pending 摘要、Tools 链接焦点身份与共享恢复边界；实际 A/B 迟到回执及 restart 用例通过。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:P09",
+      "source_issue": 91,
+      "source_kind": "user_path",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 19,
+      "source_text_sha256": "6704253fa81a5e8d0da5f44c81c5e82a0d3c55e57bc2df7c8ad10569f535e47f",
+      "source_cells": [
+        "P09 可选集成",
+        "展开 Tavily → 看观测、最近尝试与 key/account 用量 → 显式测试 → 分别观察成功、400／422、探测 429、搜索 429 和缓存／冷却；旧观测与本次失败不混合",
+        "R06；`integrations.spec.js` 与集成服务用例"
+      ],
+      "owners": [
+        "S08",
+        "S07"
+      ],
+      "acceptance_ids": [
+        "AC20",
+        "AC23"
+      ],
+      "integration_chains": [
+        "G05"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac20",
+        "proof-ac23"
+      ],
+      "source_excerpt": "P09 可选集成 | 展开 Tavily → 看观测、最近尝试与 key/account 用量 → 显式测试 → 分别观察成功、400／422、探测 429、搜索 429 和缓存／冷却；旧观测与本次失败不混合 | R06；`integrations.spec.js` 与集成服务用例",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "connections"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 Connections 模块和 r1→r3 增量复核：实例/generation/read sequence/operation_id 归属、凭据重读、Tavily 历史观测与最近失败、MCP 同 operation 明确重试和 completed 非全成功保持。新增即时 pending 摘要、Tools 链接焦点身份与共享恢复边界；实际 A/B 迟到回执及 restart 用例通过。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:P10",
+      "source_issue": 91,
+      "source_kind": "user_path",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 20,
+      "source_text_sha256": "e2fb0bf64b2b6aa655857ae7c37c93e0f16b6c04f2782f41c5d912cdaff85102",
+      "source_cells": [
+        "P10 MCP 维护",
+        "查看启动许可／工具可用数 → 应用配置 → 逐服务器核对 → 重连 → 清理未完成时继续清理 → 丢回执后重试同一操作；工具授权仍从 Tools 查看",
+        "R06；`mcp.spec.js`、MCP 控制器／清理用例"
+      ],
+      "owners": [
+        "S08",
+        "S07"
+      ],
+      "acceptance_ids": [
+        "AC20",
+        "AC23"
+      ],
+      "integration_chains": [
+        "G05"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac20",
+        "proof-ac23"
+      ],
+      "source_excerpt": "P10 MCP 维护 | 查看启动许可／工具可用数 → 应用配置 → 逐服务器核对 → 重连 → 清理未完成时继续清理 → 丢回执后重试同一操作；工具授权仍从 Tools 查看 | R06；`mcp.spec.js`、MCP 控制器／清理用例",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "connections"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 Connections 模块和 r1→r3 增量复核：实例/generation/read sequence/operation_id 归属、凭据重读、Tavily 历史观测与最近失败、MCP 同 operation 明确重试和 completed 非全成功保持。新增即时 pending 摘要、Tools 链接焦点身份与共享恢复边界；实际 A/B 迟到回执及 restart 用例通过。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:P11",
+      "source_issue": 91,
+      "source_kind": "user_path",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 21,
+      "source_text_sha256": "5aa550f1db1151159acd314c0967d5c0f4efcbbd5f539b79189f8e6e61076b2d",
+      "source_cells": [
+        "P11 Connections 更新归属",
+        "在详情展开状态下触发窗口 focus／跨标签通知 → 延迟读与维护回执交错 → 看较新状态和未生效提示；折叠仍保留进行中及异常摘要，不重复维护",
+        "R01、R06；`settings.spec.js`、`integrations.spec.js`、`mcp.spec.js`"
+      ],
+      "owners": [
+        "S08",
+        "S07"
+      ],
+      "acceptance_ids": [
+        "AC20",
+        "AC23"
+      ],
+      "integration_chains": [
+        "G05"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac20",
+        "proof-ac23"
+      ],
+      "source_excerpt": "P11 Connections 更新归属 | 在详情展开状态下触发窗口 focus／跨标签通知 → 延迟读与维护回执交错 → 看较新状态和未生效提示；折叠仍保留进行中及异常摘要，不重复维护 | R01、R06；`settings.spec.js`、`integrations.spec.js`、`mcp.spec.js`",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "connections"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 Connections 模块和 r1→r3 增量复核：实例/generation/read sequence/operation_id 归属、凭据重读、Tavily 历史观测与最近失败、MCP 同 operation 明确重试和 completed 非全成功保持。新增即时 pending 摘要、Tools 链接焦点身份与共享恢复边界；实际 A/B 迟到回执及 restart 用例通过。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:P13",
+      "source_issue": 91,
+      "source_kind": "user_path",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 23,
+      "source_text_sha256": "e1ca7a58d5009ae1a437ae72611c1114cf36b9c6ef41d8cc58537cba2db072de",
+      "source_cells": [
+        "P13 快照一致性",
+        "固定一次快照 → 翻页／查看 Run → 期间后台新增账与修改价格 → 旧页仍按原范围／价格 → 显式刷新才变化；刷新失败保留原快照及筛选",
+        "R07；`accounting.spec.js`、`test_ops_snapshots.py`"
+      ],
+      "owners": [
+        "S09",
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC19",
+        "AC21"
+      ],
+      "integration_chains": [
+        "G06"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac19",
+        "proof-ac21"
+      ],
+      "source_excerpt": "P13 快照一致性 | 固定一次快照 → 翻页／查看 Run → 期间后台新增账与修改价格 → 旧页仍按原范围／价格 → 显式刷新才变化；刷新失败保留原快照及筛选 | R07；`accounting.spec.js`、`test_ops_snapshots.py`",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "pricing"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "后端 clear/null/zero 与 UserPriceOverride 不可变更新、真实 store 重开/HTTP/price fallback 的未变代码与 r1 证据复用；逐 dimension 显式保存仍用实际 override 值。比较读取不把恰巧相同值当保存成功；S09 最终金额展示组合仍 NOT RUN。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:P14",
+      "source_issue": 91,
+      "source_kind": "user_path",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 24,
+      "source_text_sha256": "7de9e300de4340742a268b0ceccd3862be3eed9bfc9edd6b959ffb6a2d250409",
+      "source_cells": [
+        "P14 账目明细",
+        "选择一条 Run → 看 Attempt 的 exact／estimated／unknown，展开参与计费维度 → 看工具身份、启动／结果／成本；不把全局 summary 当所选 Run 总额",
+        "R04、R08；账目浏览器、价格与快照用例"
+      ],
+      "owners": [
+        "S09",
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC19",
+        "AC21"
+      ],
+      "integration_chains": [
+        "G06"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac19",
+        "proof-ac21"
+      ],
+      "source_excerpt": "P14 账目明细 | 选择一条 Run → 看 Attempt 的 exact／estimated／unknown，展开参与计费维度 → 看工具身份、启动／结果／成本；不把全局 summary 当所选 Run 总额 | R04、R08；账目浏览器、价格与快照用例",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "pricing"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "后端 clear/null/zero 与 UserPriceOverride 不可变更新、真实 store 重开/HTTP/price fallback 的未变代码与 r1 证据复用；逐 dimension 显式保存仍用实际 override 值。比较读取不把恰巧相同值当保存成功；S09 最终金额展示组合仍 NOT RUN。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:P23",
+      "source_issue": 91,
+      "source_kind": "user_path",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 33,
+      "source_text_sha256": "f601db7a3cd3a2baadac78881a96f90c2b8ec8a2d6d1b552b28343f577c29b45",
+      "source_cells": [
+        "P23 四页窄屏与键盘",
+        "在四个参考视口，从主对话切回中央 → 完成模型保存、连接维护、账目阅读、SQL 执行／取消与复制 → 使用纯键盘、文字放大和减少动效 → 操作／提示／滚动可达",
+        "R01、R11；#86/#87 与上述各实际页面套件"
+      ],
+      "owners": [
+        "S08",
+        "S09",
+        "S10",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC03"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac02",
+        "proof-ac03"
+      ],
+      "source_excerpt": "P23 四页窄屏与键盘 | 在四个参考视口，从主对话切回中央 → 完成模型保存、连接维护、账目阅读、SQL 执行／取消与复制 → 使用纯键盘、文字放大和减少动效 → 操作／提示／滚动可达 | R01、R11；#86/#87 与上述各实际页面套件",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "visual"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "settings.css 与 r1 字节相同；复核新增 focus helper、所有模型操作控件身份与 Connections 焦点路径，检查 r3 Models 和 r2 最终 Connections 的 1440/320 实际截图无新增遮挡/溢出。原生 200% 与真实中文 IME 未运行，Chromium viewport 不冒充移动设备验收。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [
+        "S08-STD-02"
+      ],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:N01",
+      "source_issue": 91,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 39,
+      "source_text_sha256": "baeb2766e55bc83dd835bf3fc29bd510731e9885bde8ab7f2d23ccf5341cc8f3",
+      "source_cells": [
+        "N01 正交状态被折叠",
+        "端点 connected 就把 unsupported 模型显示为支持，或端点 unconfigured 阻止本来合法的指派",
+        "P01"
+      ],
+      "owners": [
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC19"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac19"
+      ],
+      "source_excerpt": "N01 正交状态被折叠 | 端点 connected 就把 unsupported 模型显示为支持，或端点 unconfigured 阻止本来合法的指派 | P01",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "models"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 Models 模块复核：endpoint/model/field 身份、目录与连接/支持/指派分离、展开与草稿状态、目录请求边界未改。重绘操作控件具精确 data-focus-key；新用户意图退休待恢复焦点。STD02 已闭合。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:N02",
+      "source_issue": 91,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 40,
+      "source_text_sha256": "b532015414a3908cd205957d35563d052e26a3cdb5e85dce11028f08fad795f8",
+      "source_cells": [
+        "N02 目录读取扩大",
+        "所有组头上屏就拉全部端点；无凭据也发请求；同端点刷新重复并发；目录 200 更新连接观测",
+        "P01、P08"
+      ],
+      "owners": [
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC19"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac19"
+      ],
+      "source_excerpt": "N02 目录读取扩大 | 所有组头上屏就拉全部端点；无凭据也发请求；同端点刷新重复并发；目录 200 更新连接观测 | P01、P08",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "models"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 Models 模块复核：endpoint/model/field 身份、目录与连接/支持/指派分离、展开与草稿状态、目录请求边界未改。重绘操作控件具精确 data-focus-key；新用户意图退休待恢复焦点。STD02 已闭合。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:N03",
+      "source_issue": 91,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 41,
+      "source_text_sha256": "bb2ec74a37b08c610948c3bdc2938fadcf7d965e1b52e5f3dc0dcbeb39b949fd",
+      "source_cells": [
+        "N03 名称代替身份",
+        "同名跨端点候选合并、指派／探针命中另一个 model_id，或凭目录失败改当前指派",
+        "P01、P06"
+      ],
+      "owners": [
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC19"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac19"
+      ],
+      "source_excerpt": "N03 名称代替身份 | 同名跨端点候选合并、指派／探针命中另一个 model_id，或凭目录失败改当前指派 | P01、P06",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "models"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 Models 模块复核：endpoint/model/field 身份、目录与连接/支持/指派分离、展开与草稿状态、目录请求边界未改。重绘操作控件具精确 data-focus-key；新用户意图退休待恢复焦点。STD02 已闭合。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:N04",
+      "source_issue": 91,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 42,
+      "source_text_sha256": "36852db110907ce2f062b89b1b702ba1fb2087052132f00f2c50cbd169808faa",
+      "source_cells": [
+        "N04 偷偷提交设置",
+        "选择线路、改价格、折叠详情、刷新目录或点击探针时自动保存；半行成功被称作整行成功",
+        "P02"
+      ],
+      "owners": [
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC19"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac19"
+      ],
+      "source_excerpt": "N04 偷偷提交设置 | 选择线路、改价格、折叠详情、刷新目录或点击探针时自动保存；半行成功被称作整行成功 | P02",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "settings"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 draft value/baseline/revision 与 request/comparison 核对；success/error/catch/finally 均受原请求 owner 约束，STD01 已闭合。未知或冲突需同 generation/instance/失败 request 的后续成功读取；旧读取/新失败/重启均不授予 adoption。显式采用仅换比较基线与 revision，保留当前输入，再次显式保存。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:N05",
+      "source_issue": 91,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 43,
+      "source_text_sha256": "becdedf015309b3933b3010277d9b59bbc5644c3679c85054de193d171fedcad",
+      "source_cells": [
+        "N05 最后一维清空假成功",
+        "清空已有最后一个覆盖维后接口回执成功但旧覆盖仍在；把初始 None 当清空回归",
+        "P03"
+      ],
+      "owners": [
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC19"
+      ],
+      "integration_chains": [
+        "G06"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac19"
+      ],
+      "source_excerpt": "N05 最后一维清空假成功 | 清空已有最后一个覆盖维后接口回执成功但旧覆盖仍在；把初始 None 当清空回归 | P03",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "settings"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 draft value/baseline/revision 与 request/comparison 核对；success/error/catch/finally 均受原请求 owner 约束，STD01 已闭合。未知或冲突需同 generation/instance/失败 request 的后续成功读取；旧读取/新失败/重启均不授予 adoption。显式采用仅换比较基线与 revision，保留当前输入，再次显式保存。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:N06",
+      "source_issue": 91,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 44,
+      "source_text_sha256": "f4a8354c103a11784dee4914eb44c1250fd93d34d59a6a2683570c8762348eff",
+      "source_cells": [
+        "N06 显示名清空假成功",
+        "清空已有显示名后旧名仍被保留；仅输入框变空即显示已保存",
+        "P03"
+      ],
+      "owners": [
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC19"
+      ],
+      "integration_chains": [
+        "G06"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac19"
+      ],
+      "source_excerpt": "N06 显示名清空假成功 | 清空已有显示名后旧名仍被保留；仅输入框变空即显示已保存 | P03",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "settings"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 draft value/baseline/revision 与 request/comparison 核对；success/error/catch/finally 均受原请求 owner 约束，STD01 已闭合。未知或冲突需同 generation/instance/失败 request 的后续成功读取；旧读取/新失败/重启均不授予 adoption。显式采用仅换比较基线与 revision，保留当前输入，再次显式保存。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:N07",
+      "source_issue": 91,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 45,
+      "source_text_sha256": "ffdd70e49569fef6fc8a6cd9e84ab2ca86976640755d08c42aa16e0f90ee20a5",
+      "source_cells": [
+        "N07 空价冒充零价",
+        "空输入保存为 0、四维被强制补齐、价格单位未注明或 exact 同时显示估算分项",
+        "P03、P14"
+      ],
+      "owners": [
+        "S08",
+        "S09"
+      ],
+      "acceptance_ids": [
+        "AC19",
+        "AC21"
+      ],
+      "integration_chains": [
+        "G06"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac19",
+        "proof-ac21"
+      ],
+      "source_excerpt": "N07 空价冒充零价 | 空输入保存为 0、四维被强制补齐、价格单位未注明或 exact 同时显示估算分项 | P03、P14",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "settings"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 draft value/baseline/revision 与 request/comparison 核对；success/error/catch/finally 均受原请求 owner 约束，STD01 已闭合。未知或冲突需同 generation/instance/失败 request 的后续成功读取；旧读取/新失败/重启均不授予 adoption。显式采用仅换比较基线与 revision，保留当前输入，再次显式保存。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:N08",
+      "source_issue": 91,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 46,
+      "source_text_sha256": "70e4d524f81f81c5478b34d810b25a2c765c85f8da9792b9d8190a1e959af130",
+      "source_cells": [
+        "N08 冲突被刷新吞掉",
+        "stale_revision 后自动换版本重试、external_change 后靠重读 .env 宣称解决，或外部文件被覆盖",
+        "P04"
+      ],
+      "owners": [
+        "S08",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC19"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac05",
+        "proof-ac19"
+      ],
+      "source_excerpt": "N08 冲突被刷新吞掉 | stale_revision 后自动换版本重试、external_change 后靠重读 .env 宣称解决，或外部文件被覆盖 | P04",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "settings"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 draft value/baseline/revision 与 request/comparison 核对；success/error/catch/finally 均受原请求 owner 约束，STD01 已闭合。未知或冲突需同 generation/instance/失败 request 的后续成功读取；旧读取/新失败/重启均不授予 adoption。显式采用仅换比较基线与 revision，保留当前输入，再次显式保存。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:N09",
+      "source_issue": 91,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 47,
+      "source_text_sha256": "c0c1da7a581bedb5b5fe3dc179e0805336fe199cdbf3c2a13986e39bc193858e",
+      "source_cells": [
+        "N09 回执清新草稿",
+        "提交后新编辑、另一模型／字段的输入被旧成功回执或整页 render 清掉",
+        "P05"
+      ],
+      "owners": [
+        "S08",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC19"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac05",
+        "proof-ac19"
+      ],
+      "source_excerpt": "N09 回执清新草稿 | 提交后新编辑、另一模型／字段的输入被旧成功回执或整页 render 清掉 | P05",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "settings"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 draft value/baseline/revision 与 request/comparison 核对；success/error/catch/finally 均受原请求 owner 约束，STD01 已闭合。未知或冲突需同 generation/instance/失败 request 的后续成功读取；旧读取/新失败/重启均不授予 adoption。显式采用仅换比较基线与 revision，保留当前输入，再次显式保存。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:N10",
+      "source_issue": 91,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 48,
+      "source_text_sha256": "0fb2c99251939b6d21614bfd662fb3313ecf331eba8ff0feb5e1e1bd2d381c9f",
+      "source_cells": [
+        "N10 受理等于成功",
+        "202 被显示为探针已连接／支持／完成；503 被统一断言为没有任何持久记录",
+        "P06、P07"
+      ],
+      "owners": [
+        "S08",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC20"
+      ],
+      "integration_chains": [
+        "G06"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac20"
+      ],
+      "source_excerpt": "N10 受理等于成功 | 202 被显示为探针已连接／支持／完成；503 被统一断言为没有任何持久记录 | P06、P07",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "probe"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "复用未变的 exact target 保存设置探针、原 operation/Run 回执、busy/error/unknown 与无自动重送路径，复核新增准确焦点身份与 pending 呈现。所用真实 Host/HTTP 测试连接至受控离线 transport；不宣称真实模型/付费 execution。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:N11",
+      "source_issue": 91,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 49,
+      "source_text_sha256": "63d1a6e8e0a839dd4ac367fce407c95619890fa9e7f26c68d888e365e3dfd2d9",
+      "source_cells": [
+        "N11 失联自动重试",
+        "响应丢失、focus 或重连重发探针；根据模型名／时间猜 run_id；查看详情新建 Session",
+        "P07"
+      ],
+      "owners": [
+        "S08",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC20"
+      ],
+      "integration_chains": [
+        "G06"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac20"
+      ],
+      "source_excerpt": "N11 失联自动重试 | 响应丢失、focus 或重连重发探针；根据模型名／时间猜 run_id；查看详情新建 Session | P07",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "probe"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "复用未变的 exact target 保存设置探针、原 operation/Run 回执、busy/error/unknown 与无自动重送路径，复核新增准确焦点身份与 pending 呈现。所用真实 Host/HTTP 测试连接至受控离线 transport；不宣称真实模型/付费 execution。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:N12",
+      "source_issue": 91,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 50,
+      "source_text_sha256": "6a88e8436ff2e313d696bc4ae752c6e035ce786191f2c48e4c56a3f9304d77a1",
+      "source_cells": [
+        "N12 不真实的认证能力",
+        "没有 auth_probe 声明时虚构免费验证，catalog_url=null 被直接称为无目录能力",
+        "P08"
+      ],
+      "owners": [
+        "S08",
+        "S07"
+      ],
+      "acceptance_ids": [
+        "AC20"
+      ],
+      "integration_chains": [
+        "G05"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac20"
+      ],
+      "source_excerpt": "N12 不真实的认证能力 | 没有 auth_probe 声明时虚构免费验证，catalog_url=null 被直接称为无目录能力 | P08",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "connections"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 Connections 模块和 r1→r3 增量复核：实例/generation/read sequence/operation_id 归属、凭据重读、Tavily 历史观测与最近失败、MCP 同 operation 明确重试和 completed 非全成功保持。新增即时 pending 摘要、Tools 链接焦点身份与共享恢复边界；实际 A/B 迟到回执及 restart 用例通过。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:N13",
+      "source_issue": 91,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 51,
+      "source_text_sha256": "5a62f8a1fbfe81801cb40003d2ab4af056b26b66134d74edd6a647bb9abe9634",
+      "source_cells": [
+        "N13 重读等于全体就绪",
+        ".env 重读成功掩盖配置未一致生效、MCP restart_required 或清理未完成",
+        "P08、P10"
+      ],
+      "owners": [
+        "S08",
+        "S07"
+      ],
+      "acceptance_ids": [
+        "AC20"
+      ],
+      "integration_chains": [
+        "G05"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac20"
+      ],
+      "source_excerpt": "N13 重读等于全体就绪 | .env 重读成功掩盖配置未一致生效、MCP restart_required 或清理未完成 | P08、P10",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "connections"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 Connections 模块和 r1→r3 增量复核：实例/generation/read sequence/operation_id 归属、凭据重读、Tavily 历史观测与最近失败、MCP 同 operation 明确重试和 completed 非全成功保持。新增即时 pending 摘要、Tools 链接焦点身份与共享恢复边界；实际 A/B 迟到回执及 restart 用例通过。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:N14",
+      "source_issue": 91,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 52,
+      "source_text_sha256": "2424bd0fd962ad76f1389e638cbf60c009b9d8cfb034bd7906d631d9f46d1115",
+      "source_cells": [
+        "N14 旧观测覆盖本次失败",
+        "Tavily 400／422 或冷却回执被写成刚刚测试成功；探测与搜索限流相互覆盖",
+        "P09"
+      ],
+      "owners": [
+        "S08",
+        "S07"
+      ],
+      "acceptance_ids": [
+        "AC20"
+      ],
+      "integration_chains": [
+        "G05"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac20"
+      ],
+      "source_excerpt": "N14 旧观测覆盖本次失败 | Tavily 400／422 或冷却回执被写成刚刚测试成功；探测与搜索限流相互覆盖 | P09",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "connections"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 Connections 模块和 r1→r3 增量复核：实例/generation/read sequence/operation_id 归属、凭据重读、Tavily 历史观测与最近失败、MCP 同 operation 明确重试和 completed 非全成功保持。新增即时 pending 摘要、Tools 链接焦点身份与共享恢复边界；实际 A/B 迟到回执及 restart 用例通过。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:N15",
+      "source_issue": 91,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 53,
+      "source_text_sha256": "7d496a1789fae51316f7a70bba19c4cb27145e6b8ffecdd3f88361d1be60476a",
+      "source_cells": [
+        "N15 MCP 维护偷换操作",
+        "重试原操作换新 ID，completed 被写成全部服务器成功，可用数被写成已授权数",
+        "P10"
+      ],
+      "owners": [
+        "S08",
+        "S07"
+      ],
+      "acceptance_ids": [
+        "AC20"
+      ],
+      "integration_chains": [
+        "G05"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac20"
+      ],
+      "source_excerpt": "N15 MCP 维护偷换操作 | 重试原操作换新 ID，completed 被写成全部服务器成功，可用数被写成已授权数 | P10",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "connections"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 Connections 模块和 r1→r3 增量复核：实例/generation/read sequence/operation_id 归属、凭据重读、Tavily 历史观测与最近失败、MCP 同 operation 明确重试和 completed 非全成功保持。新增即时 pending 摘要、Tools 链接焦点身份与共享恢复边界；实际 A/B 迟到回执及 restart 用例通过。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:N16",
+      "source_issue": 91,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 54,
+      "source_text_sha256": "dfea1f9ca16f6a290dd004f95bef2ee40cbe26f81911131d6cbbcfb06153959c",
+      "source_cells": [
+        "N16 旧 Connections 快照复活",
+        "旧实例／revision／迟到读取覆盖新状态，操作回执清掉尚存的未生效错误",
+        "P11"
+      ],
+      "owners": [
+        "S08",
+        "S07"
+      ],
+      "acceptance_ids": [
+        "AC20"
+      ],
+      "integration_chains": [
+        "G05"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac20"
+      ],
+      "source_excerpt": "N16 旧 Connections 快照复活 | 旧实例／revision／迟到读取覆盖新状态，操作回执清掉尚存的未生效错误 | P11",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "connections"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "完整 Connections 模块和 r1→r3 增量复核：实例/generation/read sequence/operation_id 归属、凭据重读、Tavily 历史观测与最近失败、MCP 同 operation 明确重试和 completed 非全成功保持。新增即时 pending 摘要、Tools 链接焦点身份与共享恢复边界；实际 A/B 迟到回执及 restart 用例通过。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:N18",
+      "source_issue": 91,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 56,
+      "source_text_sha256": "8750d21b5dd47fe639aee318f55028c267c9e5cb863478f29c0596054af69b69",
+      "source_cells": [
+        "N18 缺口变成零",
+        "无 telemetry 被说成零调用，损坏时间被补造纳入，未报告 Token 被补零，跨服务 credits 相加",
+        "P12、P14"
+      ],
+      "owners": [
+        "S09",
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC19",
+        "AC21"
+      ],
+      "integration_chains": [
+        "G06"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac19",
+        "proof-ac21"
+      ],
+      "source_excerpt": "N18 缺口变成零 | 无 telemetry 被说成零调用，损坏时间被补造纳入，未报告 Token 被补零，跨服务 credits 相加 | P12、P14",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "pricing"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "后端 clear/null/zero 与 UserPriceOverride 不可变更新、真实 store 重开/HTTP/price fallback 的未变代码与 r1 证据复用；逐 dimension 显式保存仍用实际 override 值。比较读取不把恰巧相同值当保存成功；S09 最终金额展示组合仍 NOT RUN。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:N19",
+      "source_issue": 91,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 57,
+      "source_text_sha256": "97eea55188c487f4baca6f9e3c21b5b22e5b17a7c79631019637f816956c7eba",
+      "source_cells": [
+        "N19 固定快照混账",
+        "翻页重定价、旧分页拼到新快照、detail 全局 summary 被标成单 Run 费用或推定 recording_state",
+        "P13、P14"
+      ],
+      "owners": [
+        "S09",
+        "S08"
+      ],
+      "acceptance_ids": [
+        "AC19",
+        "AC21"
+      ],
+      "integration_chains": [
+        "G06"
+      ],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac19",
+        "proof-ac21"
+      ],
+      "source_excerpt": "N19 固定快照混账 | 翻页重定价、旧分页拼到新快照、detail 全局 summary 被标成单 Run 费用或推定 recording_state | P13、P14",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "pricing"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "后端 clear/null/zero 与 UserPriceOverride 不可变更新、真实 store 重开/HTTP/price fallback 的未变代码与 r1 证据复用；逐 dimension 显式保存仍用实际 override 值。比较读取不把恰巧相同值当保存成功；S09 最终金额展示组合仍 NOT RUN。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    },
+    {
+      "source_id": "issue-91:N31",
+      "source_issue": 91,
+      "source_kind": "counterexample",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 69,
+      "source_text_sha256": "58b432bb3d9da417a5c1e41edc2fc666122eb19b80ed298c356a806c2c6ea032",
+      "source_cells": [
+        "N31 密度牺牲状态",
+        "320px 或文字放大时错误／取消／保存不可达，横向整页溢出，支持与价格未知靠颜色／悬停表示",
+        "P23"
+      ],
+      "owners": [
+        "S08",
+        "S09",
+        "S10",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC03"
+      ],
+      "integration_chains": [],
+      "integration_owner": "S11",
+      "public_seams": [
+        "proof-ac02",
+        "proof-ac03"
+      ],
+      "source_excerpt": "N31 密度牺牲状态 | 320px 或文字放大时错误／取消／保存不可达，横向整页溢出，支持与价格未知靠颜色／悬停表示 | P23",
+      "raw_text_sha_verified": true,
+      "canonical_metadata_verified": true,
+      "overall_acceptance": "NOT RUN",
+      "groups": [
+        "visual"
+      ],
+      "standards_reviewed": true,
+      "scope": "S08 responsibility in full original source",
+      "assessment": [
+        "settings.css 与 r1 字节相同；复核新增 focus helper、所有模型操作控件身份与 Connections 焦点路径，检查 r3 Models 和 r2 最终 Connections 的 1440/320 实际截图无新增遮挡/溢出。原生 200% 与真实中文 IME 未运行，Chromium viewport 不冒充移动设备验收。"
+      ],
+      "prior_review_used": true,
+      "prior_findings_closed": [],
+      "documented_violations": []
+    }
+  ],
+  "acceptance_items": [
+    {
+      "acceptance_id": "AC01",
+      "source_requirement": "| AC01 | 最终 `/` 进入 Overview；十页导航正确，旧九路由、Run 深链接及合法 query 可直达／刷新，失效目标有明确出口。无 Session 时可读 Overview，开页不创建会话或提交 Run。 | S02、S03、S04；最终入口变更后真实 HTTP 与浏览器导航 |",
+      "result": "NOT RUN",
+      "slice": "S08",
+      "fragment_groups": [
+        "shell"
+      ],
+      "fragment_scope": [
+        "S08 Models/Connections 通过既有 page owner、leave state、safe source port 接入唯一壳；面板不卸载页面，详情折叠/刷新保留草稿，真实导航确认后清理。合成 persisted 仅验证恢复归属，不宣称真实 BFCache。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。 r3 已合入 root 确认的双审 S02 startup r7 integration；真实 entry/SSE 首次同步门、native history、先前 0 GET/POST、唯一挂页与首次同步后合法断连 HTTP 读取已组合验证。默认折叠 Models 的断言只验证可见模型行和已挂载字段，保留 MainBar 焦点。"
+      ],
+      "evidence": [
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/15-browser-after-lifecycle.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/26-shell-regression.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/28-shell-visual-recheck.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-03-STD01-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-05-STD02-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-08-STD02-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-09-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-14-connections-pending.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/01-lost-read-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/02-lost-read-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/03-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/05-instance-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/06-models-settings-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/11-reviewed-base-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/15-startup-composition-green.log"
+      ],
+      "remaining": "S11 最终候选组合、独立双审、原生 200%/IME、四组安装与全仓 gates；完整 G05/G06 涉及 S03/S07/S09 后继页面。",
+      "standards_responsibility_reviewed": true,
+      "reviewer_assessment": [
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。"
+      ]
+    },
+    {
+      "acceptance_id": "AC02",
+      "source_requirement": "| AC02 | 十页及 MainBar 沿 #86 A 基线使用已确认 tokens、公共组件与状态表达；正常、加载、空、错误、断连／过期、未知、未保存和长内容按适用场景可读。公共 CSS 改动不破坏其他页。 | S02–S10；同版本／环境／状态截图、计算样式与可见状态；保存原参考 |",
+      "result": "NOT RUN",
+      "slice": "S08",
+      "fragment_groups": [
+        "governance",
+        "shell",
+        "visual"
+      ],
+      "fragment_scope": [
+        "S08 固定 source/AC/owners/hash 保真、独立清空修复 commit、资源静态依赖闭包及 first FAIL 保留；只交付片内候选，不提升整体 source/AC/G、原生缺口或发布状态。",
+        "S08 Models/Connections 通过既有 page owner、leave state、safe source port 接入唯一壳；面板不卸载页面，详情折叠/刷新保留草稿，真实导航确认后清理。合成 persisted 仅验证恢复归属，不宣称真实 BFCache。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。 r3 已合入 root 确认的双审 S02 startup r7 integration；真实 entry/SSE 首次同步门、native history、先前 0 GET/POST、唯一挂页与首次同步后合法断连 HTTP 读取已组合验证。默认折叠 Models 的断言只验证可见模型行和已挂载字段，保留 MainBar 焦点。",
+        "S08 Chromium 1440x900/1280x800/390x844/320x800 实际 Models/Connections 保存/维护/详情/长文本与横向溢出检查；中央宽实测 888/728/390/320px、键盘焦点、reducedMotion。真实原生 200% 与中文 IME 未在本片执行；手机仅 Chromium viewport 模拟。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。"
+      ],
+      "evidence": [
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/15-browser-after-lifecycle.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/22-extra-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/26-shell-regression.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/28-shell-visual-recheck.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/36-final-candidate-diff-check.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-01-integration-merge.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-02-merge-commit.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-03-STD01-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-05-STD02-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-08-STD02-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-09-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-13-S04-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-14-connections-pending.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/01-lost-read-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/02-lost-read-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/03-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/05-instance-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/06-models-settings-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/09-repair-commit.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/10-reviewed-integration-merge.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/11-reviewed-base-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/13-full-candidate-diff.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/15-startup-composition-green.log"
+      ],
+      "remaining": "S11 最终候选组合、独立双审、原生 200%/IME、四组安装与全仓 gates；完整 G05/G06 涉及 S03/S07/S09 后继页面。",
+      "standards_responsibility_reviewed": true,
+      "reviewer_assessment": [
+        "#91 完整适用原文与 canonical source/owners/AC 链比对；c34d846 独立 backend clear 提交是候选祖先且生产字节保留，父生产文件等于旧产品 22c8720。冻结文档未改，rollback 候选执行未发生。",
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。",
+        "settings.css 与 r1 字节相同；复核新增 focus helper、所有模型操作控件身份与 Connections 焦点路径，检查 r3 Models 和 r2 最终 Connections 的 1440/320 实际截图无新增遮挡/溢出。原生 200% 与真实中文 IME 未运行，Chromium viewport 不冒充移动设备验收。"
+      ]
+    },
+    {
+      "acceptance_id": "AC03",
+      "source_requirement": "| AC03 | 四参考视口和 1099／1100、中央 679／680 边界均可操作；键盘焦点、局部滚动、长标识／正文、减少动效符合原规则。真实桌面 200% 缩放及中文 IME 可发送／换行且不误发、不夺焦。 | S02–S10；实际几何／焦点与浏览器证据，桌面原生交互独立记录 |",
+      "result": "NOT RUN",
+      "slice": "S08",
+      "fragment_groups": [
+        "shell",
+        "visual"
+      ],
+      "fragment_scope": [
+        "S08 Models/Connections 通过既有 page owner、leave state、safe source port 接入唯一壳；面板不卸载页面，详情折叠/刷新保留草稿，真实导航确认后清理。合成 persisted 仅验证恢复归属，不宣称真实 BFCache。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。 r3 已合入 root 确认的双审 S02 startup r7 integration；真实 entry/SSE 首次同步门、native history、先前 0 GET/POST、唯一挂页与首次同步后合法断连 HTTP 读取已组合验证。默认折叠 Models 的断言只验证可见模型行和已挂载字段，保留 MainBar 焦点。",
+        "S08 Chromium 1440x900/1280x800/390x844/320x800 实际 Models/Connections 保存/维护/详情/长文本与横向溢出检查；中央宽实测 888/728/390/320px、键盘焦点、reducedMotion。真实原生 200% 与中文 IME 未在本片执行；手机仅 Chromium viewport 模拟。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。"
+      ],
+      "evidence": [
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/15-browser-after-lifecycle.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/22-extra-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/26-shell-regression.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/28-shell-visual-recheck.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-03-STD01-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-05-STD02-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-08-STD02-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-09-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-14-connections-pending.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/01-lost-read-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/02-lost-read-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/03-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/05-instance-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/06-models-settings-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/11-reviewed-base-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/15-startup-composition-green.log"
+      ],
+      "remaining": "S11 最终候选组合、独立双审、原生 200%/IME、四组安装与全仓 gates；完整 G05/G06 涉及 S03/S07/S09 后继页面。",
+      "standards_responsibility_reviewed": true,
+      "reviewer_assessment": [
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。",
+        "settings.css 与 r1 字节相同；复核新增 focus helper、所有模型操作控件身份与 Connections 焦点路径，检查 r3 Models 和 r2 最终 Connections 的 1440/320 实际截图无新增遮挡/溢出。原生 200% 与真实中文 IME 未运行，Chromium viewport 不冒充移动设备验收。"
+      ]
+    },
+    {
+      "acceptance_id": "AC04",
+      "source_requirement": "| AC04 | 唯一 MainBar／Stream 在跨页、面板往返、重连和多标签中保持 Session、Run 与按标签页／会话隔离的草稿。只有显式新建、继续或允许的跨 Session 定位改变选择；忙态及未收尾守卫有效。 | S02、S03；真实请求计数、EventSource 所有者、sessionStorage、可见草稿 |",
+      "result": "NOT RUN",
+      "slice": "S08",
+      "fragment_groups": [
+        "shell"
+      ],
+      "fragment_scope": [
+        "S08 Models/Connections 通过既有 page owner、leave state、safe source port 接入唯一壳；面板不卸载页面，详情折叠/刷新保留草稿，真实导航确认后清理。合成 persisted 仅验证恢复归属，不宣称真实 BFCache。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。 r3 已合入 root 确认的双审 S02 startup r7 integration；真实 entry/SSE 首次同步门、native history、先前 0 GET/POST、唯一挂页与首次同步后合法断连 HTTP 读取已组合验证。默认折叠 Models 的断言只验证可见模型行和已挂载字段，保留 MainBar 焦点。"
+      ],
+      "evidence": [
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/15-browser-after-lifecycle.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/26-shell-regression.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/28-shell-visual-recheck.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-03-STD01-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-05-STD02-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-08-STD02-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-09-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-14-connections-pending.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/01-lost-read-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/02-lost-read-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/03-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/05-instance-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/06-models-settings-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/11-reviewed-base-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/15-startup-composition-green.log"
+      ],
+      "remaining": "S11 最终候选组合、独立双审、原生 200%/IME、四组安装与全仓 gates；完整 G05/G06 涉及 S03/S07/S09 后继页面。",
+      "standards_responsibility_reviewed": true,
+      "reviewer_assessment": [
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。"
+      ]
+    },
+    {
+      "acceptance_id": "AC05",
+      "source_requirement": "| AC05 | 导航、原生 Back／Forward、reload 与断点切换遵守单层面板历史；取消离页保持 URL、对象、输入、焦点与位置。显隐不触发实际离页清理，隐藏内容的保护失效仍继续；确认离页由原资源所有者收尾。 | S02 与各页面片；真实未提交输入、已提交动作和慢响应的交错 |",
+      "result": "NOT RUN",
+      "slice": "S08",
+      "fragment_groups": [
+        "settings",
+        "shell"
+      ],
+      "fragment_scope": [
+        "S08 显示名/线路/四维价格独立显式保存；提交后编辑不清、冲突保留 baseline/current 对比，显式采用当前版本后再点保存；已有显示名及最后一维覆盖经公共 HTTP/command/store 重开真实清除，null 不等于 0，未指定 pin 行为不变。目录 display_name 与用户 display_name_override 分离；未知回执不自动重送。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。 r3：待核对字段记录失败 owner、发起读取序号、generation 与 instance；仅失败后发起且成功接受的当前读取提供采用资格。失败前迟到读取、比较失败、旧实例和旧页面不能解锁。成功读取不消除 unknown/conflict、不推定原命令成功、不自动重投；用户明确采用后再保存用新 baseline。",
+        "S08 Models/Connections 通过既有 page owner、leave state、safe source port 接入唯一壳；面板不卸载页面，详情折叠/刷新保留草稿，真实导航确认后清理。合成 persisted 仅验证恢复归属，不宣称真实 BFCache。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。 r3 已合入 root 确认的双审 S02 startup r7 integration；真实 entry/SSE 首次同步门、native history、先前 0 GET/POST、唯一挂页与首次同步后合法断连 HTTP 读取已组合验证。默认折叠 Models 的断言只验证可见模型行和已挂载字段，保留 MainBar 焦点。"
+      ],
+      "evidence": [
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/01-clear-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/06-clear-final.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/15-browser-after-lifecycle.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/20-backend.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/22-extra-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/26-shell-regression.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/28-shell-visual-recheck.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-03-STD01-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-05-STD02-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-08-STD02-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-09-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-14-connections-pending.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/01-lost-read-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/02-lost-read-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/03-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/05-instance-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/06-models-settings-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/11-reviewed-base-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/15-startup-composition-green.log"
+      ],
+      "remaining": "S11 最终候选组合、独立双审、原生 200%/IME、四组安装与全仓 gates；完整 G05/G06 涉及 S03/S07/S09 后继页面。",
+      "standards_responsibility_reviewed": true,
+      "reviewer_assessment": [
+        "完整 draft value/baseline/revision 与 request/comparison 核对；success/error/catch/finally 均受原请求 owner 约束，STD01 已闭合。未知或冲突需同 generation/instance/失败 request 的后续成功读取；旧读取/新失败/重启均不授予 adoption。显式采用仅换比较基线与 revision，保留当前输入，再次显式保存。",
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。"
+      ]
+    },
+    {
+      "acceptance_id": "AC06",
+      "source_requirement": "| AC06 | HTTP／SSE 逆序、重放、丢失受理回执、断线及新实例不造成自动重投、重复正式回复、旧状态倒退或迟到读取覆盖。phase／outcome／recording_state／正文／trace 各自表达，未知和失败不冒成功。 | S01、S02、S03；真实 Host 与记录屏障、公开恢复读取、受控传输 |",
+      "result": "NOT RUN",
+      "slice": "S08",
+      "fragment_groups": [
+        "shell"
+      ],
+      "fragment_scope": [
+        "S08 Models/Connections 通过既有 page owner、leave state、safe source port 接入唯一壳；面板不卸载页面，详情折叠/刷新保留草稿，真实导航确认后清理。合成 persisted 仅验证恢复归属，不宣称真实 BFCache。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。 r3 已合入 root 确认的双审 S02 startup r7 integration；真实 entry/SSE 首次同步门、native history、先前 0 GET/POST、唯一挂页与首次同步后合法断连 HTTP 读取已组合验证。默认折叠 Models 的断言只验证可见模型行和已挂载字段，保留 MainBar 焦点。"
+      ],
+      "evidence": [
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/15-browser-after-lifecycle.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/26-shell-regression.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/28-shell-visual-recheck.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-03-STD01-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-05-STD02-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-08-STD02-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-09-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-14-connections-pending.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/01-lost-read-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/02-lost-read-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/03-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/05-instance-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/06-models-settings-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/11-reviewed-base-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/15-startup-composition-green.log"
+      ],
+      "remaining": "S11 最终候选组合、独立双审、原生 200%/IME、四组安装与全仓 gates；完整 G05/G06 涉及 S03/S07/S09 后继页面。",
+      "standards_responsibility_reviewed": true,
+      "reviewer_assessment": [
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。"
+      ]
+    },
+    {
+      "acceptance_id": "AC07",
+      "source_requirement": "| AC07 | 早期 Session／Run 来源锚点和精确正式回复定位有界；请求量不随此前页数增长。定位、历史和恢复按身份合并；旧无 Run 消息仍保留，未读邻居不假装连续，回到最新只随显式动作。 | S01、S02、S03；长短历史公共读取、独立游标、请求数与焦点 |",
+      "result": "NOT RUN",
+      "slice": "S08",
+      "fragment_groups": [
+        "shell"
+      ],
+      "fragment_scope": [
+        "S08 Models/Connections 通过既有 page owner、leave state、safe source port 接入唯一壳；面板不卸载页面，详情折叠/刷新保留草稿，真实导航确认后清理。合成 persisted 仅验证恢复归属，不宣称真实 BFCache。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。 r3 已合入 root 确认的双审 S02 startup r7 integration；真实 entry/SSE 首次同步门、native history、先前 0 GET/POST、唯一挂页与首次同步后合法断连 HTTP 读取已组合验证。默认折叠 Models 的断言只验证可见模型行和已挂载字段，保留 MainBar 焦点。"
+      ],
+      "evidence": [
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/15-browser-after-lifecycle.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/26-shell-regression.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/28-shell-visual-recheck.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-03-STD01-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-05-STD02-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-08-STD02-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-09-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-14-connections-pending.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/01-lost-read-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/02-lost-read-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/03-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/05-instance-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/06-models-settings-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/11-reviewed-base-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/15-startup-composition-green.log"
+      ],
+      "remaining": "S11 最终候选组合、独立双审、原生 200%/IME、四组安装与全仓 gates；完整 G05/G06 涉及 S03/S07/S09 后继页面。",
+      "standards_responsibility_reviewed": true,
+      "reviewer_assessment": [
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。"
+      ]
+    },
+    {
+      "acceptance_id": "AC13",
+      "source_requirement": "| AC13 | Memory 搜索／分页、新建／编辑、版本冲突、时间范围和来源回读完整；显隐保留输入，目标替换有守卫。掉回执保留同 operation_id 核验／显式恢复，不能自动再造动作或让旧回执清新输入。 | S05、S02；真实命令／SQLite／HTTP、迟到回执与两标签操作 |",
+      "result": "NOT RUN",
+      "slice": "S08",
+      "fragment_groups": [
+        "shell"
+      ],
+      "fragment_scope": [
+        "S08 Models/Connections 通过既有 page owner、leave state、safe source port 接入唯一壳；面板不卸载页面，详情折叠/刷新保留草稿，真实导航确认后清理。合成 persisted 仅验证恢复归属，不宣称真实 BFCache。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。 r3 已合入 root 确认的双审 S02 startup r7 integration；真实 entry/SSE 首次同步门、native history、先前 0 GET/POST、唯一挂页与首次同步后合法断连 HTTP 读取已组合验证。默认折叠 Models 的断言只验证可见模型行和已挂载字段，保留 MainBar 焦点。"
+      ],
+      "evidence": [
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/15-browser-after-lifecycle.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/26-shell-regression.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/28-shell-visual-recheck.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-03-STD01-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-05-STD02-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-08-STD02-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-09-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-14-connections-pending.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/01-lost-read-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/02-lost-read-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/03-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/05-instance-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/06-models-settings-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/11-reviewed-base-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/15-startup-composition-green.log"
+      ],
+      "remaining": "S11 最终候选组合、独立双审、原生 200%/IME、四组安装与全仓 gates；完整 G05/G06 涉及 S03/S07/S09 后继页面。",
+      "standards_responsibility_reviewed": true,
+      "reviewer_assessment": [
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。"
+      ]
+    },
+    {
+      "acceptance_id": "AC14",
+      "source_requirement": "| AC14 | Memory 遗忘、范围确认、清理失败、提炼审核／重试及镜像维护保持各自事实；数据库删除不等于清理完成。外改确认不能复用于新文件，遗忘后隐藏摘要、预览、聚合资料和 Database 副本不得复活。 | S05；S06／S10／S03 联合；真实遗忘、提炼、镜像服务与保护修订 |",
+      "result": "NOT RUN",
+      "slice": "S08",
+      "fragment_groups": [
+        "shell"
+      ],
+      "fragment_scope": [
+        "S08 Models/Connections 通过既有 page owner、leave state、safe source port 接入唯一壳；面板不卸载页面，详情折叠/刷新保留草稿，真实导航确认后清理。合成 persisted 仅验证恢复归属，不宣称真实 BFCache。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。 r3 已合入 root 确认的双审 S02 startup r7 integration；真实 entry/SSE 首次同步门、native history、先前 0 GET/POST、唯一挂页与首次同步后合法断连 HTTP 读取已组合验证。默认折叠 Models 的断言只验证可见模型行和已挂载字段，保留 MainBar 焦点。"
+      ],
+      "evidence": [
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/15-browser-after-lifecycle.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/26-shell-regression.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/28-shell-visual-recheck.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-03-STD01-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-05-STD02-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-08-STD02-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-09-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-14-connections-pending.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/01-lost-read-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/02-lost-read-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/03-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/05-instance-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/06-models-settings-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/11-reviewed-base-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/15-startup-composition-green.log"
+      ],
+      "remaining": "S11 最终候选组合、独立双审、原生 200%/IME、四组安装与全仓 gates；完整 G05/G06 涉及 S03/S07/S09 后继页面。",
+      "standards_responsibility_reviewed": true,
+      "reviewer_assessment": [
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。"
+      ]
+    },
+    {
+      "acceptance_id": "AC16",
+      "source_requirement": "| AC16 | Behaviour 的分流保存、冲突／损坏恢复、两张流程图和路由统计各守协议。看图／统计不保存设置；图可标旧而统计按原规则撤旧值，比例和数表同快照，未知版本／零分母／覆盖明确。 | S06；下一 Run 联合 S03；真实配置命令、拓扑、统计及响应顺序 |",
+      "result": "NOT RUN",
+      "slice": "S08",
+      "fragment_groups": [
+        "shell"
+      ],
+      "fragment_scope": [
+        "S08 Models/Connections 通过既有 page owner、leave state、safe source port 接入唯一壳；面板不卸载页面，详情折叠/刷新保留草稿，真实导航确认后清理。合成 persisted 仅验证恢复归属，不宣称真实 BFCache。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。 r3 已合入 root 确认的双审 S02 startup r7 integration；真实 entry/SSE 首次同步门、native history、先前 0 GET/POST、唯一挂页与首次同步后合法断连 HTTP 读取已组合验证。默认折叠 Models 的断言只验证可见模型行和已挂载字段，保留 MainBar 焦点。"
+      ],
+      "evidence": [
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/15-browser-after-lifecycle.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/26-shell-regression.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/28-shell-visual-recheck.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-03-STD01-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-05-STD02-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-08-STD02-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-09-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-14-connections-pending.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/01-lost-read-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/02-lost-read-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/03-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/05-instance-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/06-models-settings-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/11-reviewed-base-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/15-startup-composition-green.log"
+      ],
+      "remaining": "S11 最终候选组合、独立双审、原生 200%/IME、四组安装与全仓 gates；完整 G05/G06 涉及 S03/S07/S09 后继页面。",
+      "standards_responsibility_reviewed": true,
+      "reviewer_assessment": [
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。"
+      ]
+    },
+    {
+      "acceptance_id": "AC17",
+      "source_requirement": "| AC17 | 手动聚合冻结原目标 Session 和输入；在途改表单／选会话不改投、不重投。未选来源不读取；发送前失效按原许可终止。无动作、失败、非法候选、未保存和合格草稿分别显示，历史草稿不恢复删前资料。 | S06、S05、S02、S03；真实准入／来源复核／记录与目标会话 |",
+      "result": "NOT RUN",
+      "slice": "S08",
+      "fragment_groups": [
+        "shell"
+      ],
+      "fragment_scope": [
+        "S08 Models/Connections 通过既有 page owner、leave state、safe source port 接入唯一壳；面板不卸载页面，详情折叠/刷新保留草稿，真实导航确认后清理。合成 persisted 仅验证恢复归属，不宣称真实 BFCache。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。 r3 已合入 root 确认的双审 S02 startup r7 integration；真实 entry/SSE 首次同步门、native history、先前 0 GET/POST、唯一挂页与首次同步后合法断连 HTTP 读取已组合验证。默认折叠 Models 的断言只验证可见模型行和已挂载字段，保留 MainBar 焦点。"
+      ],
+      "evidence": [
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/15-browser-after-lifecycle.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/26-shell-regression.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/28-shell-visual-recheck.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-03-STD01-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-05-STD02-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-08-STD02-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-09-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-14-connections-pending.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/01-lost-read-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/02-lost-read-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/03-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/05-instance-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/06-models-settings-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/11-reviewed-base-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/15-startup-composition-green.log"
+      ],
+      "remaining": "S11 最终候选组合、独立双审、原生 200%/IME、四组安装与全仓 gates；完整 G05/G06 涉及 S03/S07/S09 后继页面。",
+      "standards_responsibility_reviewed": true,
+      "reviewer_assessment": [
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。"
+      ]
+    },
+    {
+      "acceptance_id": "AC18",
+      "source_requirement": "| AC18 | Tools 按完整来源身份展示当前／退休／同名工具；连接、授权草稿、保存回执、实际生效与可用数分开。冲突保留比较，掉回执不自动重送，退休／换源不恢复旧权限；原调用入口与核验可达。 | S07；S08／S09 联合；真实授权与 MCP 来源、工具账目路径 |",
+      "result": "NOT RUN",
+      "slice": "S08",
+      "fragment_groups": [
+        "authorization"
+      ],
+      "fragment_scope": [
+        "S08 Connections 仅呈现当前维护/连接/可用事实与 Tools 入口，不写工具授权、也不根据已连接推断暴露 real；真实 Tavily/MCP 集成浏览器路径仍要求 Tools 逐项授权。S07 目录/授权页完整新布局及跨两端 G06 归 S11 合并后验收。"
+      ],
+      "evidence": [
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/15-browser-after-lifecycle.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/21-assets-mcp-pricing.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/22-extra-browser.log"
+      ],
+      "remaining": "S11 最终候选组合、独立双审、原生 200%/IME、四组安装与全仓 gates；完整 G05/G06 涉及 S03/S07/S09 后继页面。",
+      "standards_responsibility_reviewed": true,
+      "reviewer_assessment": [
+        "#90 R08 与 P14/P15/CE21–24 全文复核：Connections 的连接/启动维护/历史观测不推定 Tools 已授权或有效暴露，去工具页核对链接保留明确所有权。共享 focus helper 不写授权。S07/S08 最终组合 NOT RUN。"
+      ]
+    },
+    {
+      "acceptance_id": "AC19",
+      "source_requirement": "| AC19 | Models 目录／指派与连接／支持正交；显示名、线路、四维价格分别显式保存，冲突／在途新编辑保留。清空已有显示名和最后一维覆盖价经持久重读成立；空与显式零不同，价格回退不改旧快照。 | S08；S09 联合；真实 settings command/store、页面与价格来源 |",
+      "result": "NOT RUN",
+      "slice": "S08",
+      "fragment_groups": [
+        "governance",
+        "models",
+        "pricing",
+        "settings",
+        "shell"
+      ],
+      "fragment_scope": [
+        "S08 固定 source/AC/owners/hash 保真、独立清空修复 commit、资源静态依赖闭包及 first FAIL 保留；只交付片内候选，不提升整体 source/AC/G、原生缺口或发布状态。",
+        "S08 端点分组与模型详情、主/辅助指派及跟随文字、tuple identity、连接/目录/支持正交；目录显式单端点读取与防并发，已指派禁止取消钉选，失败取消钉选保留原草稿。",
+        "S08 必须保留的清空修复与真实持久历史：逐维/最后维清空后沿 catalog/user fallback 重新报价只影响新 snapshot，旧 snapshot 对象与字节内容不变；真实 Attempt estimated cost/unknown 及用量通过既有服务验证。Ops 新 UI 的 fixed-period/source return/逐维账目展示由 S09/S11 完整组合。",
+        "S08 显示名/线路/四维价格独立显式保存；提交后编辑不清、冲突保留 baseline/current 对比，显式采用当前版本后再点保存；已有显示名及最后一维覆盖经公共 HTTP/command/store 重开真实清除，null 不等于 0，未指定 pin 行为不变。目录 display_name 与用户 display_name_override 分离；未知回执不自动重送。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。 r3：待核对字段记录失败 owner、发起读取序号、generation 与 instance；仅失败后发起且成功接受的当前读取提供采用资格。失败前迟到读取、比较失败、旧实例和旧页面不能解锁。成功读取不消除 unknown/conflict、不推定原命令成功、不自动重投；用户明确采用后再保存用新 baseline。",
+        "S08 Models/Connections 通过既有 page owner、leave state、safe source port 接入唯一壳；面板不卸载页面，详情折叠/刷新保留草稿，真实导航确认后清理。合成 persisted 仅验证恢复归属，不宣称真实 BFCache。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。 r3 已合入 root 确认的双审 S02 startup r7 integration；真实 entry/SSE 首次同步门、native history、先前 0 GET/POST、唯一挂页与首次同步后合法断连 HTTP 读取已组合验证。默认折叠 Models 的断言只验证可见模型行和已挂载字段，保留 MainBar 焦点。"
+      ],
+      "evidence": [
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/01-clear-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/06-clear-final.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/15-browser-after-lifecycle.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/20-backend.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/21-assets-mcp-pricing.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/22-extra-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/26-shell-regression.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/28-shell-visual-recheck.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/36-final-candidate-diff-check.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-01-integration-merge.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-02-merge-commit.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-03-STD01-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-05-STD02-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-08-STD02-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-09-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-13-S04-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-14-connections-pending.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/01-lost-read-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/02-lost-read-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/03-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/05-instance-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/06-models-settings-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/09-repair-commit.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/10-reviewed-integration-merge.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/11-reviewed-base-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/13-full-candidate-diff.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/15-startup-composition-green.log"
+      ],
+      "remaining": "S11 最终候选组合、独立双审、原生 200%/IME、四组安装与全仓 gates；完整 G05/G06 涉及 S03/S07/S09 后继页面。",
+      "standards_responsibility_reviewed": true,
+      "reviewer_assessment": [
+        "#91 完整适用原文与 canonical source/owners/AC 链比对；c34d846 独立 backend clear 提交是候选祖先且生产字节保留，父生产文件等于旧产品 22c8720。冻结文档未改，rollback 候选执行未发生。",
+        "完整 Models 模块复核：endpoint/model/field 身份、目录与连接/支持/指派分离、展开与草稿状态、目录请求边界未改。重绘操作控件具精确 data-focus-key；新用户意图退休待恢复焦点。STD02 已闭合。",
+        "后端 clear/null/zero 与 UserPriceOverride 不可变更新、真实 store 重开/HTTP/price fallback 的未变代码与 r1 证据复用；逐 dimension 显式保存仍用实际 override 值。比较读取不把恰巧相同值当保存成功；S09 最终金额展示组合仍 NOT RUN。",
+        "完整 draft value/baseline/revision 与 request/comparison 核对；success/error/catch/finally 均受原请求 owner 约束，STD01 已闭合。未知或冲突需同 generation/instance/失败 request 的后续成功读取；旧读取/新失败/重启均不授予 adoption。显式采用仅换比较基线与 revision，保留当前输入，再次显式保存。",
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。"
+      ]
+    },
+    {
+      "acceptance_id": "AC20",
+      "source_requirement": "| AC20 | 具体模型探针只使用保存目标，准确连接 Run／Attempt／费用，受理不冒成功且失联不重试；Connections 三组的凭据重读、Tavily 观测、MCP 应用／重连／清理各有真实回执，不虚构认证能力。 | S08；S03／S07／S09 联合；离线模型、受控外部 IO 与真实 Host 准入／清理 |",
+      "result": "NOT RUN",
+      "slice": "S08",
+      "fragment_groups": [
+        "authorization",
+        "connections",
+        "governance",
+        "probe"
+      ],
+      "fragment_scope": [
+        "S08 Connections 仅呈现当前维护/连接/可用事实与 Tools 入口，不写工具授权、也不根据已连接推断暴露 real；真实 Tavily/MCP 集成浏览器路径仍要求 Tools 逐项授权。S07 目录/授权页完整新布局及跨两端 G06 归 S11 合并后验收。",
+        "S08 模型端点/可选集成/MCP 三组详情；endpoint-only 探针、.env 明确重读，Tavily 历史观测/本次尝试/usage/冷却分离，MCP 启动许可/工具可用/Tools 授权不同；显式 apply/reconnect/cleanup，丢真实回执后相同 operation_id 显式重试且不新建第二进程，focus/跨标签/旧实例迟到不能覆盖较新状态或未生效提示。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。",
+        "S08 固定 source/AC/owners/hash 保真、独立清空修复 commit、资源静态依赖闭包及 first FAIL 保留；只交付片内候选，不提升整体 source/AC/G、原生缺口或发布状态。",
+        "S08 具体 endpoint/model 的 saved-setting inference_probe，可能计费提示、Run 精确链接、真实离线 Attempt/持久费用证据；dirty 输入不进入请求，202 只表示受理，真实 accepted 响应丢失后 focus/重入零重送，不猜 Run ID。S03/S09 新 Run/Ops 组合与 G05/G06 最终双端路径仍待 S11。"
+      ],
+      "evidence": [
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/15-browser-after-lifecycle.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/20-backend.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/21-assets-mcp-pricing.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/22-extra-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/23-auth-probe.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/28-shell-visual-recheck.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/36-final-candidate-diff-check.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-01-integration-merge.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-02-merge-commit.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-03-STD01-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-05-STD02-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-08-STD02-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-09-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-13-S04-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-14-connections-pending.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/09-repair-commit.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/10-reviewed-integration-merge.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/11-reviewed-base-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/13-full-candidate-diff.log"
+      ],
+      "remaining": "S11 最终候选组合、独立双审、原生 200%/IME、四组安装与全仓 gates；完整 G05/G06 涉及 S03/S07/S09 后继页面。",
+      "standards_responsibility_reviewed": true,
+      "reviewer_assessment": [
+        "#90 R08 与 P14/P15/CE21–24 全文复核：Connections 的连接/启动维护/历史观测不推定 Tools 已授权或有效暴露，去工具页核对链接保留明确所有权。共享 focus helper 不写授权。S07/S08 最终组合 NOT RUN。",
+        "完整 Connections 模块和 r1→r3 增量复核：实例/generation/read sequence/operation_id 归属、凭据重读、Tavily 历史观测与最近失败、MCP 同 operation 明确重试和 completed 非全成功保持。新增即时 pending 摘要、Tools 链接焦点身份与共享恢复边界；实际 A/B 迟到回执及 restart 用例通过。",
+        "#91 完整适用原文与 canonical source/owners/AC 链比对；c34d846 独立 backend clear 提交是候选祖先且生产字节保留，父生产文件等于旧产品 22c8720。冻结文档未改，rollback 候选执行未发生。",
+        "复用未变的 exact target 保存设置探针、原 operation/Run 回执、busy/error/unknown 与无自动重送路径，复核新增准确焦点身份与 pending 呈现。所用真实 Host/HTTP 测试连接至受控离线 transport；不宣称真实模型/付费 execution。"
+      ]
+    },
+    {
+      "acceptance_id": "AC21",
+      "source_requirement": "| AC21 | Ops 固定期间、时区、身份及价格快照；完整 Run 与工具分项不错误归因。财务、历史正文、当前核验独立，过期不自动换账，Tools／Overview／Run 往返保留原来源上下文并显式重读。 | S09、S07、S04、S03、S02；真实 snapshot/page/detail、历史投影／核验 |",
+      "result": "NOT RUN",
+      "slice": "S08",
+      "fragment_groups": [
+        "authorization",
+        "governance",
+        "pricing",
+        "settings"
+      ],
+      "fragment_scope": [
+        "S08 Connections 仅呈现当前维护/连接/可用事实与 Tools 入口，不写工具授权、也不根据已连接推断暴露 real；真实 Tavily/MCP 集成浏览器路径仍要求 Tools 逐项授权。S07 目录/授权页完整新布局及跨两端 G06 归 S11 合并后验收。",
+        "S08 固定 source/AC/owners/hash 保真、独立清空修复 commit、资源静态依赖闭包及 first FAIL 保留；只交付片内候选，不提升整体 source/AC/G、原生缺口或发布状态。",
+        "S08 必须保留的清空修复与真实持久历史：逐维/最后维清空后沿 catalog/user fallback 重新报价只影响新 snapshot，旧 snapshot 对象与字节内容不变；真实 Attempt estimated cost/unknown 及用量通过既有服务验证。Ops 新 UI 的 fixed-period/source return/逐维账目展示由 S09/S11 完整组合。",
+        "S08 显示名/线路/四维价格独立显式保存；提交后编辑不清、冲突保留 baseline/current 对比，显式采用当前版本后再点保存；已有显示名及最后一维覆盖经公共 HTTP/command/store 重开真实清除，null 不等于 0，未指定 pin 行为不变。目录 display_name 与用户 display_name_override 分离；未知回执不自动重送。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。 r3：待核对字段记录失败 owner、发起读取序号、generation 与 instance；仅失败后发起且成功接受的当前读取提供采用资格。失败前迟到读取、比较失败、旧实例和旧页面不能解锁。成功读取不消除 unknown/conflict、不推定原命令成功、不自动重投；用户明确采用后再保存用新 baseline。"
+      ],
+      "evidence": [
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/01-clear-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/06-clear-final.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/15-browser-after-lifecycle.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/20-backend.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/21-assets-mcp-pricing.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/22-extra-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/26-shell-regression.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/28-shell-visual-recheck.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/36-final-candidate-diff-check.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-01-integration-merge.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-02-merge-commit.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-03-STD01-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-05-STD02-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-08-STD02-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-09-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-13-S04-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-14-connections-pending.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/01-lost-read-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/02-lost-read-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/03-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/05-instance-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/06-models-settings-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/09-repair-commit.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/10-reviewed-integration-merge.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/11-reviewed-base-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/13-full-candidate-diff.log"
+      ],
+      "remaining": "S11 最终候选组合、独立双审、原生 200%/IME、四组安装与全仓 gates；完整 G05/G06 涉及 S03/S07/S09 后继页面。",
+      "standards_responsibility_reviewed": true,
+      "reviewer_assessment": [
+        "#90 R08 与 P14/P15/CE21–24 全文复核：Connections 的连接/启动维护/历史观测不推定 Tools 已授权或有效暴露，去工具页核对链接保留明确所有权。共享 focus helper 不写授权。S07/S08 最终组合 NOT RUN。",
+        "#91 完整适用原文与 canonical source/owners/AC 链比对；c34d846 独立 backend clear 提交是候选祖先且生产字节保留，父生产文件等于旧产品 22c8720。冻结文档未改，rollback 候选执行未发生。",
+        "后端 clear/null/zero 与 UserPriceOverride 不可变更新、真实 store 重开/HTTP/price fallback 的未变代码与 r1 证据复用；逐 dimension 显式保存仍用实际 override 值。比较读取不把恰巧相同值当保存成功；S09 最终金额展示组合仍 NOT RUN。",
+        "完整 draft value/baseline/revision 与 request/comparison 核对；success/error/catch/finally 均受原请求 owner 约束，STD01 已闭合。未知或冲突需同 generation/instance/失败 request 的后续成功读取；旧读取/新失败/重启均不授予 adoption。显式采用仅换比较基线与 revision，保留当前输入，再次显式保存。"
+      ]
+    },
+    {
+      "acceptance_id": "AC22",
+      "source_requirement": "| AC22 | Database 示例仅改编辑器且替换有守卫；提交 SQL 与后续草稿、结果各有归属，分页／复制如实。取消、预算、列／行／字节限制及 cleanup 独立；清理未完成时遵守原准入状态，确认释放与能力恢复后才允许新的显式查询，句柄签发与执行仍按原协议分开。保护失效清除所有可复用副本且不自动重跑。 | S10、S02；S05 联合；真实查询 worker／HTTP、剪贴板及文档生命周期 |",
+      "result": "NOT RUN",
+      "slice": "S08",
+      "fragment_groups": [
+        "governance",
+        "shell"
+      ],
+      "fragment_scope": [
+        "S08 固定 source/AC/owners/hash 保真、独立清空修复 commit、资源静态依赖闭包及 first FAIL 保留；只交付片内候选，不提升整体 source/AC/G、原生缺口或发布状态。",
+        "S08 Models/Connections 通过既有 page owner、leave state、safe source port 接入唯一壳；面板不卸载页面，详情折叠/刷新保留草稿，真实导航确认后清理。合成 persisted 仅验证恢复归属，不宣称真实 BFCache。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。 r3 已合入 root 确认的双审 S02 startup r7 integration；真实 entry/SSE 首次同步门、native history、先前 0 GET/POST、唯一挂页与首次同步后合法断连 HTTP 读取已组合验证。默认折叠 Models 的断言只验证可见模型行和已挂载字段，保留 MainBar 焦点。"
+      ],
+      "evidence": [
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/15-browser-after-lifecycle.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/26-shell-regression.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/28-shell-visual-recheck.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/36-final-candidate-diff-check.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-01-integration-merge.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-02-merge-commit.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-03-STD01-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-05-STD02-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-08-STD02-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-09-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-13-S04-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-14-connections-pending.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/01-lost-read-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/02-lost-read-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/03-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/05-instance-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/06-models-settings-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/09-repair-commit.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/10-reviewed-integration-merge.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/11-reviewed-base-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/13-full-candidate-diff.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/15-startup-composition-green.log"
+      ],
+      "remaining": "S11 最终候选组合、独立双审、原生 200%/IME、四组安装与全仓 gates；完整 G05/G06 涉及 S03/S07/S09 后继页面。",
+      "standards_responsibility_reviewed": true,
+      "reviewer_assessment": [
+        "#91 完整适用原文与 canonical source/owners/AC 链比对；c34d846 独立 backend clear 提交是候选祖先且生产字节保留，父生产文件等于旧产品 22c8720。冻结文档未改，rollback 候选执行未发生。",
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。"
+      ]
+    },
+    {
+      "acceptance_id": "AC23",
+      "source_requirement": "| AC23 | 下表 G01–G08 在两端均迁移后的真实组合走通；片内 mock、单边入口通过和旧候选结果不得代替最终组合。保留仍适用的证据，只补组合改变的风险。 | S11 与涉及切片；实际跨页请求、URL／身份、结果及返回位置 |",
+      "result": "NOT RUN",
+      "slice": "S08",
+      "fragment_groups": [
+        "authorization",
+        "connections",
+        "governance",
+        "probe",
+        "shell",
+        "visual"
+      ],
+      "fragment_scope": [
+        "S08 Connections 仅呈现当前维护/连接/可用事实与 Tools 入口，不写工具授权、也不根据已连接推断暴露 real；真实 Tavily/MCP 集成浏览器路径仍要求 Tools 逐项授权。S07 目录/授权页完整新布局及跨两端 G06 归 S11 合并后验收。",
+        "S08 模型端点/可选集成/MCP 三组详情；endpoint-only 探针、.env 明确重读，Tavily 历史观测/本次尝试/usage/冷却分离，MCP 启动许可/工具可用/Tools 授权不同；显式 apply/reconnect/cleanup，丢真实回执后相同 operation_id 显式重试且不新建第二进程，focus/跨标签/旧实例迟到不能覆盖较新状态或未生效提示。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。",
+        "S08 固定 source/AC/owners/hash 保真、独立清空修复 commit、资源静态依赖闭包及 first FAIL 保留；只交付片内候选，不提升整体 source/AC/G、原生缺口或发布状态。",
+        "S08 具体 endpoint/model 的 saved-setting inference_probe，可能计费提示、Run 精确链接、真实离线 Attempt/持久费用证据；dirty 输入不进入请求，202 只表示受理，真实 accepted 响应丢失后 focus/重入零重送，不猜 Run ID。S03/S09 新 Run/Ops 组合与 G05/G06 最终双端路径仍待 S11。",
+        "S08 Models/Connections 通过既有 page owner、leave state、safe source port 接入唯一壳；面板不卸载页面，详情折叠/刷新保留草稿，真实导航确认后清理。合成 persisted 仅验证恢复归属，不宣称真实 BFCache。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。 r3 已合入 root 确认的双审 S02 startup r7 integration；真实 entry/SSE 首次同步门、native history、先前 0 GET/POST、唯一挂页与首次同步后合法断连 HTTP 读取已组合验证。默认折叠 Models 的断言只验证可见模型行和已挂载字段，保留 MainBar 焦点。",
+        "S08 Chromium 1440x900/1280x800/390x844/320x800 实际 Models/Connections 保存/维护/详情/长文本与横向溢出检查；中央宽实测 888/728/390/320px、键盘焦点、reducedMotion。真实原生 200% 与中文 IME 未在本片执行；手机仅 Chromium viewport 模拟。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。"
+      ],
+      "evidence": [
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/15-browser-after-lifecycle.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/20-backend.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/21-assets-mcp-pricing.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/22-extra-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/23-auth-probe.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/26-shell-regression.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/28-shell-visual-recheck.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/36-final-candidate-diff-check.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-01-integration-merge.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-02-merge-commit.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-03-STD01-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-05-STD02-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-08-STD02-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-09-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-13-S04-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-14-connections-pending.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/01-lost-read-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/02-lost-read-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/03-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/05-instance-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/06-models-settings-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/09-repair-commit.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/10-reviewed-integration-merge.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/11-reviewed-base-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/13-full-candidate-diff.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/15-startup-composition-green.log"
+      ],
+      "remaining": "S11 最终候选组合、独立双审、原生 200%/IME、四组安装与全仓 gates；完整 G05/G06 涉及 S03/S07/S09 后继页面。",
+      "standards_responsibility_reviewed": true,
+      "reviewer_assessment": [
+        "#90 R08 与 P14/P15/CE21–24 全文复核：Connections 的连接/启动维护/历史观测不推定 Tools 已授权或有效暴露，去工具页核对链接保留明确所有权。共享 focus helper 不写授权。S07/S08 最终组合 NOT RUN。",
+        "完整 Connections 模块和 r1→r3 增量复核：实例/generation/read sequence/operation_id 归属、凭据重读、Tavily 历史观测与最近失败、MCP 同 operation 明确重试和 completed 非全成功保持。新增即时 pending 摘要、Tools 链接焦点身份与共享恢复边界；实际 A/B 迟到回执及 restart 用例通过。",
+        "#91 完整适用原文与 canonical source/owners/AC 链比对；c34d846 独立 backend clear 提交是候选祖先且生产字节保留，父生产文件等于旧产品 22c8720。冻结文档未改，rollback 候选执行未发生。",
+        "复用未变的 exact target 保存设置探针、原 operation/Run 回执、busy/error/unknown 与无自动重送路径，复核新增准确焦点身份与 pending 呈现。所用真实 Host/HTTP 测试连接至受控离线 transport；不宣称真实模型/付费 execution。",
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。",
+        "settings.css 与 r1 字节相同；复核新增 focus helper、所有模型操作控件身份与 Connections 焦点路径，检查 r3 Models 和 r2 最终 Connections 的 1440/320 实际截图无新增遮挡/溢出。原生 200% 与真实中文 IME 未运行，Chromium viewport 不冒充移动设备验收。"
+      ]
+    },
+    {
+      "acceptance_id": "AC25",
+      "source_requirement": "| AC25 | 源输入、候选、独立 Standards／Spec 评审、项目门禁及 wheel/sdist 身份一致；安装包文件与新增／变更资源 HTTP 路径均受检。默认入口最后修改、残留 dist 或集成分支无 CI 等缺口不能借旧绿灯通过。 | S11；各片提供身份与适用性；构建、四组隔离安装、源码浏览器分别报告 |",
+      "result": "NOT RUN",
+      "slice": "S08",
+      "fragment_groups": [
+        "governance",
+        "shell"
+      ],
+      "fragment_scope": [
+        "S08 固定 source/AC/owners/hash 保真、独立清空修复 commit、资源静态依赖闭包及 first FAIL 保留；只交付片内候选，不提升整体 source/AC/G、原生缺口或发布状态。",
+        "S08 Models/Connections 通过既有 page owner、leave state、safe source port 接入唯一壳；面板不卸载页面，详情折叠/刷新保留草稿，真实导航确认后清理。合成 persisted 仅验证恢复归属，不宣称真实 BFCache。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。 r3 已合入 root 确认的双审 S02 startup r7 integration；真实 entry/SSE 首次同步门、native history、先前 0 GET/POST、唯一挂页与首次同步后合法断连 HTTP 读取已组合验证。默认折叠 Models 的断言只验证可见模型行和已挂载字段，保留 MainBar 焦点。"
+      ],
+      "evidence": [
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/15-browser-after-lifecycle.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/26-shell-regression.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/28-shell-visual-recheck.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/36-final-candidate-diff-check.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-01-integration-merge.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-02-merge-commit.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-03-STD01-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-05-STD02-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-08-STD02-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-09-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-13-S04-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-14-connections-pending.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/01-lost-read-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/02-lost-read-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/03-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/05-instance-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/06-models-settings-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/09-repair-commit.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/10-reviewed-integration-merge.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/11-reviewed-base-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/13-full-candidate-diff.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/15-startup-composition-green.log"
+      ],
+      "remaining": "S11 最终候选组合、独立双审、原生 200%/IME、四组安装与全仓 gates；完整 G05/G06 涉及 S03/S07/S09 后继页面。",
+      "standards_responsibility_reviewed": true,
+      "reviewer_assessment": [
+        "#91 完整适用原文与 canonical source/owners/AC 链比对；c34d846 独立 backend clear 提交是候选祖先且生产字节保留，父生产文件等于旧产品 22c8720。冻结文档未改，rollback 候选执行未发生。",
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。"
+      ]
+    },
+    {
+      "acceptance_id": "AC26",
+      "source_requirement": "| AC26 | 移动只报告 Chromium 视口／触控模拟；iPhone／iOS Safari／真实软键盘 NOT RUN 且范围外，不阻塞本次限定范围。保留历史 BFCache BLOCKED 和首次 FAIL；必需项缺证仍阻塞，文档检查不冒产品通过。 | S11；执行环境、scope、结果和历史证据分别记录 |",
+      "result": "NOT RUN",
+      "slice": "S08",
+      "fragment_groups": [
+        "governance",
+        "shell",
+        "visual"
+      ],
+      "fragment_scope": [
+        "S08 固定 source/AC/owners/hash 保真、独立清空修复 commit、资源静态依赖闭包及 first FAIL 保留；只交付片内候选，不提升整体 source/AC/G、原生缺口或发布状态。",
+        "S08 Models/Connections 通过既有 page owner、leave state、safe source port 接入唯一壳；面板不卸载页面，详情折叠/刷新保留草稿，真实导航确认后清理。合成 persisted 仅验证恢复归属，不宣称真实 BFCache。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。 r3 已合入 root 确认的双审 S02 startup r7 integration；真实 entry/SSE 首次同步门、native history、先前 0 GET/POST、唯一挂页与首次同步后合法断连 HTTP 读取已组合验证。默认折叠 Models 的断言只验证可见模型行和已挂载字段，保留 MainBar 焦点。",
+        "S08 Chromium 1440x900/1280x800/390x844/320x800 实际 Models/Connections 保存/维护/详情/长文本与横向溢出检查；中央宽实测 888/728/390/320px、键盘焦点、reducedMotion。真实原生 200% 与中文 IME 未在本片执行；手机仅 Chromium viewport 模拟。 r2：Models 回执按 generation+request id 清理自身 pending；准确字段/模型/操作焦点跨只读重绘和暂时禁用保留，新 pointer/key/focus/scroll 意图或离页立即退休待恢复焦点。Connections 真实断连的 epoch 隔离与提交提示即时显示一并核验。"
+      ],
+      "evidence": [
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/15-browser-after-lifecycle.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/22-extra-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/26-shell-regression.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/28-shell-visual-recheck.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/36-final-candidate-diff-check.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-01-integration-merge.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-02-merge-commit.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-03-STD01-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-05-STD02-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-08-STD02-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-09-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-13-S04-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/logs/r2-14-connections-pending.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/01-lost-read-red.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/02-lost-read-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/03-related-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/05-instance-green.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/06-models-settings-browser.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/09-repair-commit.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/10-reviewed-integration-merge.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/11-reviewed-base-composition.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/13-full-candidate-diff.log",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/logs/15-startup-composition-green.log"
+      ],
+      "remaining": "S11 最终候选组合、独立双审、原生 200%/IME、四组安装与全仓 gates；完整 G05/G06 涉及 S03/S07/S09 后继页面。",
+      "standards_responsibility_reviewed": true,
+      "reviewer_assessment": [
+        "#91 完整适用原文与 canonical source/owners/AC 链比对；c34d846 独立 backend clear 提交是候选祖先且生产字节保留，父生产文件等于旧产品 22c8720。冻结文档未改，rollback 候选执行未发生。",
+        "复用已完整阅读的 #87 页面生命周期原文；Models/Connections 沿用唯一 page owner/Session/Stream，离页清理读取与 focus listener，隐藏保持保护责任。旧请求按 generation + request 清理；S02 r7 app/shell 字节相同，当前 startup 仅适配折叠内容定位。最终十页链保持 NOT RUN。",
+        "settings.css 与 r1 字节相同；复核新增 focus helper、所有模型操作控件身份与 Connections 焦点路径，检查 r3 Models 和 r2 最终 Connections 的 1440/320 实际截图无新增遮挡/溢出。原生 200% 与真实中文 IME 未运行，Chromium viewport 不冒充移动设备验收。"
+      ]
+    }
+  ],
+  "integration_chains": [
+    {
+      "id": "G01",
+      "result": "NOT RUN",
+      "owner": "S11",
+      "reason": "Both migrated endpoint pages and final integration candidate are required."
+    },
+    {
+      "id": "G04",
+      "result": "NOT RUN",
+      "owner": "S11",
+      "reason": "Both migrated endpoint pages and final integration candidate are required."
+    },
+    {
+      "id": "G05",
+      "result": "NOT RUN",
+      "owner": "S11",
+      "reason": "Both migrated endpoint pages and final integration candidate are required."
+    },
+    {
+      "id": "G06",
+      "result": "NOT RUN",
+      "owner": "S11",
+      "reason": "Both migrated endpoint pages and final integration candidate are required."
+    },
+    {
+      "id": "G07",
+      "result": "NOT RUN",
+      "owner": "S11",
+      "reason": "Both migrated endpoint pages and final integration candidate are required."
+    }
+  ],
+  "checks": {
+    "reuse_conditions": "12 original candidate files, 26 applicable standards, dependencies/fixtures byte-identical; 7 inherited files match own S02 r7/S04 r4 and current base. models.js equals ed1149; connections/helper equal r2. Changed startup assertions only relevant 4 rerun; composed app/shell real behavior covered by r3-11/15.",
+    "results": [
+      "r2 assets 20 PASS",
+      "r2 S04 composition 4 PASS",
+      "r2 final Connections/settings/MCP 29 PASS",
+      "r3 Models/settings/shell-controls 25 PASS",
+      "r3 affected composition 10 PASS with 4 startup FAIL preserved",
+      "r3 final startup 4 PASS, real server exit [0,0], 1 page, /api/models only, no POST",
+      "actual HTTP record: 24 resources exact SHA-256/MIME/200, controlled Host instance, no model_calls",
+      "Ruff/typecheck and fixed candidate diff check PASS"
+    ],
+    "counts_are_nonadditive": true,
+    "first_failures": [
+      {
+        "evidence": "r2-03",
+        "kind": "product",
+        "failure": "retired A clears B pending",
+        "successor": "r2-04/r2-08/r3-06/r3-11"
+      },
+      {
+        "evidence": "r2-05",
+        "kind": "product",
+        "failure": "Models Save/Connections Tools link focus lost",
+        "successor": "r2-08/r2-14/r3-06/r3-11"
+      },
+      {
+        "evidence": "r2-06",
+        "kind": "fixture",
+        "failure": "new intent target was disabled MainBar textbox",
+        "successor": "actual enabled New Session control in r2-08; focus non-theft assertions retained"
+      },
+      {
+        "evidence": "r2-09",
+        "kind": "product",
+        "failure": "55 PASS/1 FAIL: B pending button protected but immediate summary absent",
+        "successor": "real pending summary render before request; r2-14 29 PASS"
+      },
+      {
+        "evidence": "r3-01",
+        "kind": "product",
+        "failure": "unknown save can adopt stale pre-failure projection",
+        "successor": "r3-02 1 PASS, r3-06 25 PASS, r3-11 affected composition PASS"
+      },
+      {
+        "evidence": "r3-03",
+        "kind": "fixture",
+        "failure": "5 PASS/1 FAIL: /api/entry uses instance_id, not process_instance_id",
+        "successor": "r3-05 1 PASS, r3-06/r3-11 actual restart identity assertions"
+      },
+      {
+        "evidence": "r3-11",
+        "kind": "composition assertion",
+        "failure": "10 PASS/4 FAIL: default collapsed Models input expected visible",
+        "successor": "visible real model row plus mounted hidden actual field; r3-15 4 PASS; startup guards/HTTP/history/uniqueness retained"
+      },
+      {
+        "evidence": "r3-14",
+        "kind": "fixture",
+        "failure": "4 FAIL: role locator omitted includeHidden for mounted collapsed input",
+        "successor": "r3-15 4 PASS; no production change"
+      }
+    ],
+    "reviewer_new_runtime_execution": false,
+    "no_uncertainty_required_extra_probe": true
+  },
+  "visual_inspection": [
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/06-related-artifacts/models-migration-S08-catal-2e630-in-usable-in-four-viewports/models-1440.png",
+      "sha256": "ada9e181895e5ca0e936b6b116dcb5620ed8eee2e93321b92841518f2682d9b0"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/06-related-artifacts/models-migration-S08-catal-2e630-in-usable-in-four-viewports/models-320.png",
+      "sha256": "ce05fce1005046a6d661061ff488783a2fdda8b5eb5928d9c1959dd170f71e2e"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r2-14-artifacts/mcp-S08-lost-MCP-receipt-r-20f19-reserves-connection-details/connections-1440.png",
+      "sha256": "7d3482194deaa3a85bcfca4ca42a6afd3c76d9c15ad45278c5b00c6c71f1dea6"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r2-14-artifacts/mcp-S08-lost-MCP-receipt-r-20f19-reserves-connection-details/connections-320.png",
+      "sha256": "91df8a561e4f6c3dd6ce82718aadfdc1a1a28c95e55aaab9daa48711c5d728e2"
+    }
+  ],
+  "proof": "S08-r3-standards-verification.json",
+  "limits": [
+    "Full source/AC/G product acceptance NOT RUN",
+    "Final G05/G06 migrated counterpart composition NOT RUN",
+    "S11 wheel/sdist x base/mcp installation matrix NOT RUN",
+    "S11 full repo final gates NOT RUN",
+    "Native desktop 200% zoom NOT RUN",
+    "Real Chinese IME NOT RUN",
+    "Actual BFCache BLOCKED by historical no-store boundary; synthetic pageshow does not upgrade it",
+    "iPhone/iOS/real mobile keyboards excluded by user",
+    "S02 r8 test-only integration 87aab611 not yet present in r3; future sync review required for affected delta.",
+    "S03/S05/S06 current future peer combinations excluded; no future integration PASS inferred."
+  ],
+  "independence": {
+    "read_other_axis_reports_or_probes": false,
+    "edited_product": false,
+    "spawned_agents": false,
+    "wrote_ledger_tracker_or_GitHub": false,
+    "ran_broad_tests": false,
+    "source_reads": "fixed git show/diff only"
+  }
+}

@@ -19,6 +19,31 @@ async function saved(page) {
   return data.endpoints.flatMap(group=>group.models).find(model=>model.endpoint_id==='opencode-go' && model.model_id==='deepseek-v4-flash');
 }
 
+for (const lost of [false,true])
+test(`S11 model ${lost?'unknown':'pending'} save protects a successor equal to its old saved value`,async({browser})=>{
+  const s=await server(),context=await browser.newContext({baseURL:s.origin});let release=()=>{};
+  try{
+    const page=await context.newPage();await open(page,s.origin);const row=selected(page);
+    const input=row.getByRole('textbox',{name:'显示名',exact:true}),save=row.getByRole('button',{name:'保存显示名',exact:true});
+    await input.fill('A');await save.click();await expect(row.getByText('已确认保存',{exact:true})).toBeVisible();
+    let received;const arrived=new Promise(resolve=>received=resolve),gate=new Promise(resolve=>release=resolve);const posts=[];
+    await page.route('**/api/settings',async route=>{posts.push(route.request().postDataJSON());const response=await route.fetch();received();await gate;if(lost)await route.abort();else await route.fulfill({response});});
+    await input.fill('B');await save.click();await arrived;
+    if(lost){release();await expect(row.getByText('保存结果未确认。先核对当前值；不会自动重送。',{exact:true})).toBeVisible();}
+    await input.fill('A');
+    await page.locator('nav a[href="/overview"]').click();
+    await expect(page.getByRole('button',{name:'留在此页',exact:true})).toBeFocused();
+    await page.keyboard.press('Escape');await expect(input).toHaveValue('A');
+    if(lost){await page.getByRole('button',{name:'核对当前模型设置',exact:true}).click();await expect(row.getByText('当前保存值：B',{exact:true})).toBeVisible();await expect(input).toHaveValue('A');}
+    await input.fill('B'); // The submitted value itself is no unsaved successor.
+    await page.locator('nav a[href="/overview"]').click();
+    await expect(page).toHaveURL(/\/overview$/);await expect(page.getByRole('dialog')).toHaveCount(0);
+    release();expect(posts.map(p=>[p.display_name,p.expected_revision])).toEqual([['B',1]]);
+    expect((await saved(page)).display_name_override).toBe('B');
+    expect((await (await fetch(s.control)).json()).model_calls).toHaveLength(0);
+  }finally{release();await context.close();await s.close();}
+});
+
 test('S08 real catalog label and explicit clearing survive HTTP read and page reentry',async({browser})=>{
   const s=await server(), context=await browser.newContext({baseURL:s.origin});
   try {
@@ -194,12 +219,18 @@ test('S08 saved model probe preserves drafts and links its real Attempt and cost
 test('S08 a lost real accepted probe response never replays on focus or reentry',async({browser})=>{
   const s=await server(),context=await browser.newContext({baseURL:s.origin});
   try {
-    const page=await context.newPage();await open(page,s.origin);let count=0;
+    const page=await context.newPage();await open(page,s.origin);const row=selected(page);let count=0;
     await page.route('**/api/runs',async route=>{if(route.request().method()==='POST'){count++;await route.fetch();await route.abort();}else await route.continue();});
     await selected(page).getByRole('button',{name:'测试真实调用（可能计费）',exact:true}).click();
     await expect(selected(page).getByText(/探针受理结果未确认/).first()).toBeVisible();
     await expect(selected(page).getByRole('link',{name:/查看探针 Run/})).toHaveCount(0);
     await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+    await expect(row.getByRole('link',{name:/查看探针 Run/})).toHaveCount(0);
+    await row.getByRole('link',{name:'核对运行记录',exact:true}).click();
+    await expect(page).toHaveURL(/\/runs\?filter=system$/);
+    await expect(page.getByRole('region',{name:'运行列表'}).getByRole('link',{name:'查看运行',exact:true})).toHaveCount(1);
+    await page.locator('nav a[href="/ops"]').click();
+    await expect(page.getByRole('button',{name:/查看账目 /})).toHaveCount(1);
     await page.locator('nav a[href="/connections"]').click();await page.locator('nav a[href="/models"]').click();
     expect(count).toBe(1);expect((await (await fetch(s.control)).json()).model_calls).toHaveLength(1);
   }finally{await context.close();await s.close();}
@@ -331,10 +362,54 @@ test('S08 STD02 model action focus survives refresh and completion without steal
     release();await expect(row.getByText('已确认保存',{exact:true})).toBeVisible();await expect(chat).toBeFocused();
     received=new Promise(resolve=>entered=resolve);held=new Promise(resolve=>release=resolve);
     await input.fill('page has retired');await save.click();await received;
+    await input.fill('new unsaved input before retirement');
     await page.locator('nav a[href="/connections"]').click();await page.getByRole('button',{name:'放弃并离开',exact:true}).click();
     const reread=page.getByRole('button',{name:'重新读取 .env',exact:true});await reread.focus();
     const finished=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/settings');release();await finished;
     await expect(reread).toBeFocused();expect(posts).toBe(3);
     expect((await (await fetch(s.control)).json()).model_calls).toHaveLength(0);
   }finally{release();await context.close();await s.close();}
+});
+
+
+test('S11 clear final price changes the next probe and Ops while the old snapshot stays fixed',async({browser})=>{
+  const s=await server(),context=await browser.newContext({baseURL:s.origin});
+  try{
+    const page=await context.newPage();await open(page,s.origin);const row=selected(page);
+    const price=row.getByRole('textbox',{name:'output',exact:true}),save=row.getByRole('button',{name:'保存 output',exact:true});
+    await price.fill('0');await save.click();await expect.poll(async()=>(await saved(page)).price_override?.output).toBe('0');
+    async function probe(){
+      const accepted=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/runs'&&r.request().method()==='POST');
+      await row.getByRole('button',{name:'测试真实调用（可能计费）',exact:true}).click();
+      const response=await accepted;expect(response.status()).toBe(202);const {run_id}=await response.json();
+      await expect.poll(async()=>(await(await page.request.get('/api/runs?filter=all')).json()).runs.some(run=>run.run_id===run_id)).toBe(true);
+      return run_id;
+    }
+    const first=await probe();
+    const {csrf_token}=await(await page.request.get('/api/entry')).json();
+    const snapshot=await(await page.request.post('/api/ops/snapshots',{headers:{'x-agent-alfred-csrf':csrf_token},data:{range:'all',timezone:'UTC'}})).json();
+    const detailPath='/api/ops/detail?'+new URLSearchParams({snapshot_id:snapshot.snapshot_id,run_id:first});
+    const frozen=await(await page.request.get(detailPath)).json();
+    expect(frozen.run.attempts[0].cost.state).toBe('estimated');
+    // Fixture emits 1,000 uncached + 1,000 output tokens: .22/million input, zero output override.
+    expect(frozen.run.attempts[0].cost.amount).toBe('0.00022');
+    expect(frozen.run.attempts[0].cost.price_components.find(part=>part.dimension==='output').unit_price).toBe('0');
+    await price.fill('');await save.click();await expect.poll(async()=>(await saved(page)).price_override).toBeNull();
+    const second=await probe();expect(second).not.toBe(first);
+    expect(await(await page.request.get(detailPath)).json()).toEqual(frozen);
+    await row.getByRole('link',{name:'查看探针 Run '+second,exact:true}).click();
+    await expect(page.getByRole('region',{name:'运行摘要',exact:true})).toContainText(second);
+    await expect(page.locator('#page')).toContainText('USD 0.00088');
+    await page.locator('nav a[href="/ops"]').click();
+    await page.getByRole('button',{name:'查看账目 '+second,exact:true}).click();
+    await expect(page.getByRole('table',{name:'模型 Attempt'})).toContainText('settings-probe');
+    await expect(page.getByRole('table',{name:'模型 Attempt'})).toContainText('估算费用 USD 0.00088');
+    const before=await page.getByRole('region',{name:'当前账目快照'}).textContent();
+    await page.getByRole('link',{name:'进入运行过程（保留账目快照）',exact:true}).click();
+    await page.getByRole('link',{name:'返回来源',exact:true}).click();
+    await expect(page.getByRole('region',{name:'当前账目快照'})).toHaveText(before);
+    await expect(page.getByRole('link',{name:'进入运行过程（保留账目快照）',exact:true})).toBeFocused();
+    expect((await(await fetch(s.control)).json()).model_calls).toHaveLength(2);
+    expect(await(await page.request.get(detailPath)).json()).toEqual(frozen);
+  }finally{await context.close();await s.close();}
 });
