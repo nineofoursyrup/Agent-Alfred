@@ -9,6 +9,8 @@ PAGE_POLICY = (
 )
 
 ASSETS = {
+    "/assets/behaviour.js": ("behaviour.js", "text/javascript"),
+    "/assets/behaviour.css": ("behaviour.css", "text/css"),
     "/assets/inbox.js": ("inbox.js", "text/javascript"),
     "/assets/source.js": ("source.js", "text/javascript"),
     "/assets/run-fields.js": ("run-fields.js", "text/javascript"),

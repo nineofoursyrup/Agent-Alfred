@@ -2,6 +2,26 @@ import {test, expect} from '@playwright/test';
 import {memoryServer} from './memory-server.js';
 import {observeTopology} from './topology-observation.js';
 
+test('S06 CE-15/26: selected detail follows the graph and collapsed failure retains its identity',async({page},testInfo)=>{
+  const server = await memoryServer({script:'tests/browser/routing_server.py'});
+  try {
+    const region = await openGraph(page,server);
+    await region.getByRole('button',{name:'判断消息类型 · classify',exact:true}).click();
+    const detail = region.locator('[aria-label="节点详情"]');
+    await expect(detail.getByRole('heading',{name:'判断消息类型 · classify'})).toBeVisible();
+    expect(await detail.evaluate(el=>Boolean(el.compareDocumentPosition(el.parentElement.querySelector('.topology-full-details')) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+    await expect(detail.locator('pre')).toBeHidden();
+    await detail.getByText('节点原始定义',{exact:true}).click();
+    await expect(detail.locator('pre')).toBeVisible();
+    await page.route('**/api/behaviour/topology?workflow=message_routing',route=>route.abort());
+    await region.getByRole('button',{name:'重新读取',exact:true}).click();
+    await expect(region.getByText(/旧快照 \/ 本次读取失败/)).toBeVisible();
+    await region.getByRole('button',{name:'收起流程',exact:true}).click();
+    await expect(region.getByText(/旧快照 \/ 本次读取失败/)).toBeVisible();
+    await page.screenshot({path:testInfo.outputPath('topology-collapsed-failure.png')});
+  } finally {await server.close();}
+});
+
 test('CE-01/02/05/08: real graphs, complete details and independent business forms', async ({page}) => {
   const server = await memoryServer({script:'tests/browser/routing_server.py'});
   const writes = [];
