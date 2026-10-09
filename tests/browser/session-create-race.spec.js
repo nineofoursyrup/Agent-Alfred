@@ -157,3 +157,40 @@ for(const intent of ['unchanged','navigate','focus'])test(`first native mount be
     await oneStream(page);expect(posts).toEqual(['/api/sessions']);
   } finally {releaseSSE?.();if(held)await held.release();await server.close();}
 });
+
+for(const viewport of [{width:320,height:360},{width:320,height:800},{width:1440,height:360}])test(`a delayed receipt keeps the editing controls reachable at ${viewport.width}x${viewport.height}`,async({page},testInfo)=>{
+  const server=await memoryServer({script:'tests/browser/overview_server.py'});let held;
+  try {
+    await page.setViewportSize(viewport);await observeStream(page);await page.goto(server.origin+'/inbox');
+    if(viewport.width<1100)await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
+    await page.getByRole('button',{name:'新建会话',exact:true}).click();
+    const input=page.getByRole('textbox',{name:'消息',exact:true}),send=page.getByRole('button',{name:'发送',exact:true});
+    await expect(input).toBeEnabled();await expect.poll(async()=>(await runtime(page)).connected).toBe(true);
+    const a=await selected(page);await input.fill('原会话草稿');
+    const posts=[];page.on('request',request=>{if(request.method()==='POST')posts.push(new URL(request.url()).pathname);});
+    held=await holdCreate(page);await page.getByRole('button',{name:'新建会话',exact:true}).click();await held.ready;
+    await input.fill('201 回执等待期间输入的新草稿');await input.evaluate(element=>element.setSelectionRange(2,8));
+    await expect(input).toBeInViewport({ratio:1});await expect(send).toBeInViewport({ratio:1});
+    const b=held.body.session_id;await held.release();
+    const receipt=page.getByRole('region',{name:'新建会话回执',exact:true});await expect(receipt).toContainText(b);await expect(receipt).toContainText('已有新的页面或阅读意图');
+    await expect(input).toBeFocused();expect(await input.evaluate(element=>[element.selectionStart,element.selectionEnd])).toEqual([2,8]);
+    await expect(input).toBeInViewport({ratio:1});await expect(send).toBeInViewport({ratio:1});
+    await expect(input).toHaveValue('201 回执等待期间输入的新草稿');expect(await selected(page)).toBe(a);
+    await expect(send).toBeEnabled();await expect(page.getByRole('button',{name:'收起主对话',exact:true})).toBeInViewport({ratio:1});
+    await page.screenshot({path:testInfo.outputPath('receipt-before-scroll.png')});
+    const status=page.locator('#shell-status'),open=receipt.getByRole('button',{name:'打开已创建会话',exact:true}),inspect=receipt.getByRole('link',{name:'查看已创建会话',exact:true});
+    const statusBox=await status.boundingBox();await page.mouse.move(statusBox.x+statusBox.width/2,statusBox.y+statusBox.height/2);await page.mouse.wheel(0,1200);
+    await expect(open).toBeInViewport({ratio:1});await expect(inspect).toBeInViewport({ratio:1});
+    await expect(input).toBeFocused();expect(await input.evaluate(element=>[element.selectionStart,element.selectionEnd])).toEqual([2,8]);
+    await page.screenshot({path:testInfo.outputPath('receipt-after-wheel.png')});
+    // Reach Send and receipt actions with real keyboard input; no focus repair.
+    await page.keyboard.press('Tab');await expect(send).toBeFocused();await expect(send).toBeInViewport({ratio:1});
+    await send.click({trial:true});
+    for(let step=0;step<12&&!(await inspect.evaluate(element=>element===document.activeElement));step++)await page.keyboard.press('Shift+Tab');
+    await expect(inspect).toBeFocused();await expect(inspect).toBeInViewport({ratio:1});
+    await page.keyboard.press('Shift+Tab');await expect(open).toBeFocused();await expect(open).toBeInViewport({ratio:1});
+    await page.getByRole('button',{name:'收起主对话',exact:true}).click();await expect(page.locator('#mainbar')).toBeHidden();
+    if(viewport.width<1100){await page.locator('#shell-toolbar [data-open-panel="navigation"]').click();await expect(page.getByRole('navigation',{name:'主导航',exact:true}).getByRole('link',{name:'收件箱',exact:true})).toBeInViewport({ratio:1});}
+    expect(posts).toEqual(['/api/sessions']);await oneStream(page);
+  } finally {if(held)await held.release();await server.close();}
+});

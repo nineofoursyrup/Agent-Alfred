@@ -34,6 +34,10 @@ nav a[aria-current=page] {background:var(--selected);color:var(--text);font-weig
 #shell-status p {margin:0}
 #shell-status:has(>[data-created-receipt]) {max-width:100%}
 #shell-status>[data-created-receipt] {min-width:0;max-width:100%}
+/* Deferred receipts share finite MainBar height with the focused composer. */
+#mainbar>#shell-status:has(>[data-created-receipt]) {flex-shrink:1;min-height:48px;padding-block:4px;overflow:auto;overscroll-behavior:contain}
+#mainbar:has(>#shell-status>[data-created-receipt])>.bar-session,
+#mainbar:has(>#shell-status>[data-created-receipt])>.panel-actions {margin-block:3px}
 #page {overflow:auto;overscroll-behavior:contain;padding:28px;min-width:0;min-height:0;flex:1;scrollbar-gutter:stable}
 .page-body {min-width:0;container-type:inline-size}
 .page-body>section {margin:16px 0;min-width:0}
