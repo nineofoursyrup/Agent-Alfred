@@ -502,11 +502,24 @@ export function databasePage(root, ctx) {
       else setState("complete");
       await probeMissing(attempt, true);
     } catch {
-      if (!ownsPage(attempt) || attempt.cancelled) return;
+      if (!ownsPage(attempt)) return;
       inFlight = false;
+      if (attempt.id) {
+        if (!attempt.cancelled) await probeMissing(attempt);
+      } else {
+        // Issuance has settled without an ID, so this page never sent execute.
+        // An unknown unused handle owns no worker; require a fresh capability
+        // check, but do not wait for cleanup evidence that cannot be looked up.
+        execution = null;
+        cleanupVerified = true;
+        catalogVerified = false;
+        clearResult();
+        availability.textContent = "可用性：需要重新核验";
+        bodyState.textContent = "未发送执行请求";
+        cleanupText.textContent = "未启动执行，无执行资源待清理。";
+        setState("unavailable", "签发回执未收到；请核验后显式执行。");
+      }
       updateControls();
-      if (attempt.id) await probeMissing(attempt);
-      else setState("unavailable", "网络失败");
     } finally {
       if (ownsPage(attempt)) {
         inFlight = false;

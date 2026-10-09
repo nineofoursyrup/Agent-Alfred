@@ -156,3 +156,86 @@ test('S10 failed cleanup blocks queries until both release and capability are ve
     await expect(page.getByRole('region', {name:'查询结果'}).locator('td')).toHaveText('7');
   } finally {await server.close();}
 });
+
+for (const lost of ['issuance', 'execute']) {
+  test(`S10 lost ${lost} receipt preserves the boundary for explicit capability recovery`, async ({page}, testInfo) => {
+    const server = await memoryServer();
+    const evidence = {lost, handles:[], executes:0, lostStatusReads:0};
+    try {
+      await page.goto(server.origin+'/database');
+      await expect(page.getByText('可执行',{exact:true})).toBeVisible();
+      const sql = page.getByRole('textbox',{name:'SQL',exact:true});
+      const run = page.getByRole('button',{name:'执行',exact:true});
+      const recheck = page.getByRole('button',{name:'核验查询与可用性',exact:true});
+      page.on('request', request => {if(request.url().endsWith('/execute')) evidence.executes++;});
+      await page.route('**/api/database/queries', async route => {
+        const response = await route.fetch();
+        expect(response.status()).toBe(200);
+        evidence.handles.push((await response.json()).query_id);
+        if (lost === 'issuance' && evidence.handles.length === 1) await route.abort('failed');
+        else await route.fulfill({response});
+      });
+      if (lost === 'execute') {
+        await page.route('**/api/database/queries/*/execute', async route => {
+          const response = await route.fetch();
+          expect(response.status()).toBe(200);
+          await route.abort('failed');
+        }, {times:1});
+        await page.route('**/api/database/queries/*', async route => {
+          if(route.request().method() !== 'GET') return route.fallback();
+          evidence.lostStatusReads++;
+          await route.abort('failed');
+        });
+      }
+      await sql.fill('SELECT 42 AS first_draft');
+      await run.click();
+      await expect(page.locator('[data-state]')).toHaveAttribute('data-state','unavailable');
+      await expect(run).toBeDisabled();
+      await expect(sql).toHaveValue('SELECT 42 AS first_draft');
+      expect(evidence.handles).toHaveLength(1);
+      expect(evidence.executes).toBe(lost === 'issuance' ? 0 : 1);
+      // Independent public read observes the real handle; the browser has not
+      // received this identity/status and must not use test knowledge as proof.
+      evidence.actual = await (await page.request.get(server.origin+'/api/database/queries/'+evidence.handles[0])).json();
+      expect(evidence.actual.status).toBe(lost === 'issuance' ? 'unused' : 'completed');
+      expect(evidence.actual.cleanup).toBe('released');
+      const catalog = await (await page.request.get(server.origin+'/api/database')).json();
+      evidence.capability = {instance:catalog.instance_id, available:catalog.available};
+      expect(catalog.available).toBe(true);
+      expect(catalog.instance_id).toBe(evidence.actual.instance_id);
+      if(lost === 'issuance') {
+        const response = page.waitForResponse(r => new URL(r.url()).pathname === '/api/database');
+        await recheck.click();
+        expect((await (await response).json()).available).toBe(true);
+        await expect(run).toBeEnabled();
+        await expect(page.getByText('可执行',{exact:true})).toBeVisible();
+      } else {
+        const failed = page.waitForEvent('requestfailed', {predicate:r => r.method()==='GET' && r.url().endsWith('/'+evidence.handles[0])});
+        await recheck.click();
+        await failed;
+        await expect(run).toBeDisabled();
+        expect(evidence.lostStatusReads).toBe(2);
+        expect(evidence.handles).toHaveLength(1);
+        expect(evidence.executes).toBe(1);
+        // A real known-handle status, not merely catalog availability, is
+        // required after the browser has sent execution.
+        await page.unroute('**/api/database/queries/*');
+        await recheck.click();
+        await expect(run).toBeEnabled();
+        await expect(page.getByText('结果未收到',{exact:true})).toBeVisible();
+      }
+      await expect(page.getByRole('region',{name:'查询结果',exact:true})).toBeEmpty();
+      expect(evidence.handles).toHaveLength(1);
+      expect(evidence.executes).toBe(lost === 'issuance' ? 0 : 1);
+      await sql.fill('SELECT 84 AS explicit_next');
+      await run.click();
+      await expect(page.getByRole('region',{name:'查询结果',exact:true}).locator('td')).toHaveText('84');
+      expect(evidence.handles).toHaveLength(2);
+      expect(evidence.executes).toBe(lost === 'issuance' ? 1 : 2);
+      console.log('lost-receipt-recovery',JSON.stringify(evidence));
+    } finally {
+      try {await page.close();} finally {await server.close();}
+      await testInfo.attach('actual-receipt-recovery',{body:JSON.stringify(evidence,null,2),contentType:'application/json'});
+    }
+  });
+}
