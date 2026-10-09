@@ -188,7 +188,8 @@ export function accountingPage(root, csrf) {
     if (!online || refreshing) return;
     begun=true;pendingRestore=null;retrySource.hidden=true;restoreSeed=null;sourceReadPending=false;
     const mine = ++generation, requestedInstance=instance;
-    refreshing = true; more.disabled = true;
+    // The retired generation no longer owns the page-loading state.
+    paging = false; refreshing = true; more.disabled = true;
     state.textContent = '正在创建账目快照…'; refresh.disabled = true;
     const body = draft();
     try {
@@ -287,7 +288,7 @@ export function accountingPage(root, csrf) {
     if(!alive||!online){state.textContent='断连；保留原快照身份，连接后再核验。';retrySource.hidden=false;return;}
     if(snapshotInstance&&snapshotInstance!==instance){expired(true);return;}
     const mine=++generation,requestedSnapshot=snapshot,requestedInstance=instance;
-    refreshing=true;sourceReadPending=true;controls();state.textContent='正在核验原账目快照…';
+    paging=false;refreshing=true;sourceReadPending=true;controls();state.textContent='正在核验原账目快照…';
     const offset=Number.isSafeInteger(source.offset)&&source.offset>=0?source.offset:0;
     try{
       const result=await fetchData('/api/ops?'+new URLSearchParams({snapshot_id:requestedSnapshot,offset:String(offset)}));

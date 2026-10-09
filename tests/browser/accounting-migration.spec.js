@@ -1,6 +1,76 @@
 import {test, expect} from '@playwright/test';
 import {memoryServer} from './memory-server.js';
 
+async function holdPages(page) {
+  const pending=[];
+  await page.route('**/api/ops?**',async route=>{
+    const response=await route.fetch();
+    let release;const gate=new Promise(resolve=>{release=resolve;});
+    pending.push({url:new URL(route.request().url()),release});
+    if(await gate==='abort')await route.abort('failed');
+    else await route.fulfill({response});
+  });
+  return pending;
+}
+
+test('S09 refresh retires old paging ownership without releasing a newer page request',async({page})=>{
+  const server=await memoryServer({script:'tests/browser/ops_server.py'});
+  const pending=await holdPages(page);
+  try{
+    await server.send('bulk');
+    await page.goto(server.origin+'/ops?range=all&timezone=UTC');
+    const rows=page.getByRole('button',{name:/查看账目 /}),next=page.getByRole('button',{name:'下一页',exact:true});
+    await expect(rows).toHaveCount(50);
+    await next.click();await expect.poll(()=>pending.length).toBe(1);
+    const original=pending[0].url.searchParams.get('snapshot_id');
+    const refreshed=page.waitForResponse(response=>response.url().endsWith('/api/ops/snapshots'));
+    await page.getByRole('button',{name:'刷新账目',exact:true}).click();
+    const snapshot=await(await refreshed).json();
+    expect(snapshot.snapshot_id).not.toBe(original);expect(snapshot.summary.run_count).toBe(55);expect(snapshot.next_offset).toBe(50);
+    await expect(next).toBeEnabled();
+    await next.click();await expect.poll(()=>pending.length).toBe(2);
+    expect(pending[1].url.searchParams.get('snapshot_id')).toBe(snapshot.snapshot_id);
+    const oldResponse=page.waitForResponse(response=>response.url()===pending[0].url.href);
+    pending[0].release();await(await oldResponse).finished();
+    await page.evaluate(()=>new Promise(requestAnimationFrame));
+    await expect(rows).toHaveCount(50);await expect(next).toBeDisabled();
+    pending[1].release();await expect(rows).toHaveCount(55);
+    await expect(next).toBeHidden();
+    await expect(page.getByRole('region',{name:'当前账目快照'})).toContainText(snapshot.snapshot_id);
+  }finally{for(const item of pending)item.release();await page.unrouteAll({behavior:'wait'});await server.close();}
+});
+
+test('S09 failed refresh retires old paging and allows original-page and refresh retries',async({page})=>{
+  const server=await memoryServer({script:'tests/browser/ops_server.py'});
+  const pending=await holdPages(page);
+  try{
+    await server.send('bulk');
+    await page.goto(server.origin+'/ops?range=all&timezone=UTC');
+    const rows=page.getByRole('button',{name:/查看账目 /}),next=page.getByRole('button',{name:'下一页',exact:true});
+    const scope=page.getByRole('region',{name:'当前账目快照'}),refresh=page.getByRole('button',{name:'刷新账目',exact:true});
+    await expect(rows).toHaveCount(50);const fixed=await scope.textContent();
+    let posts=0;page.on('request',request=>{if(new URL(request.url()).pathname==='/api/ops/snapshots')posts++;});
+    await next.click();await expect.poll(()=>pending.length).toBe(1);
+    await page.getByLabel('IANA 时区',{exact:true}).fill('Invalid/Zone');
+    await refresh.click();await expect(page.getByRole('status').filter({hasText:'invalid_timezone'})).toBeVisible();
+    await expect(scope).toHaveText(fixed);await expect(next).toBeEnabled();
+    await next.click();await expect.poll(()=>pending.length).toBe(2);
+    expect(pending[1].url.href).toBe(pending[0].url.href);
+    const oldResponse=page.waitForResponse(response=>response.url()===pending[0].url.href);
+    pending[0].release();await(await oldResponse).finished();
+    await page.evaluate(()=>new Promise(requestAnimationFrame));
+    await expect(rows).toHaveCount(50);await expect(next).toBeDisabled();
+    pending[1].release('abort');
+    await expect(page.getByText('翻页读取失败；保留旧快照。',{exact:true})).toBeVisible();
+    await expect(next).toBeEnabled();
+    await page.unrouteAll({behavior:'wait'});
+    await next.click();await expect(rows).toHaveCount(55);await expect(scope).toHaveText(fixed);expect(posts).toBe(1);
+    await page.getByLabel('IANA 时区',{exact:true}).fill('UTC');
+    await refresh.click();await expect(rows).toHaveCount(50);await expect(next).toBeEnabled();
+    await expect(scope).not.toHaveText(fixed);expect(posts).toBe(2);
+  }finally{for(const item of pending)item.release();await page.unrouteAll({behavior:'wait'});await server.close();}
+});
+
 test('S09 mixed Attempt accounting exposes four price dimensions and freezes prices until explicit refresh', async ({page}) => {
   const server=await memoryServer({script:'tests/browser/ops_migration_server.py'});
   try {
