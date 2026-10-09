@@ -47,6 +47,8 @@ export function toolsPage(root, csrf) {
   /** @type {Wire|null} */ let current=null;
   /** @type {Wire|null} */ let submission=null;
   /** @type {Map<string,{value:string, revision:number, instance:string}>} */ const drafts=new Map();
+  // Submitted input remains distinct from later edits after its request settles.
+  /** @type {Map<string,{value:string, revision:number, instance:string}>} */ const submittedDrafts=new Map();
   /** @type {Map<string,string>} */ const notices=new Map();
   /** @type {Map<string,Wire>} */ const retired=new Map();
   /** @type {Map<string,ReturnType<typeof createRow>>} */ const rows=new Map();
@@ -109,6 +111,7 @@ export function toolsPage(root, csrf) {
     /** @param {Wire} item */
     function update(item) {
       const external=item.effect==='external', draft=drafts.get(item.identity);
+      const submitted=draft&&submittedDrafts.get(item.identity)===draft;
       title.textContent=item.name;
       origin.textContent=`来源 ${item.source_id||'未知'} · 能力 ${item.capability_id||item.name||'未知'}`;
       brief.textContent=item.description||'未提供描述';
@@ -117,7 +120,7 @@ export function toolsPage(root, csrf) {
       authorization.textContent=external?`已保存授权：${saved(item)} · 实际应用：${historical?'不可调用':verified&&online?(current?.application_state||'未知'):'未知，待核验'}`:'授权：不适用';
       exposure.textContent=`模型暴露：${historical?'hidden':external&&(!verified||!online)?'unverified':item.exposure||'未知'}`;
       reason.textContent=`阻止原因：${historical?(item.reason||'已不在当前目录'):external&&(!verified||!online)?'当前授权状态无法核实':item.reason||'无已报告阻止原因'}`;
-      draftState.textContent=draft?`未保存草稿：${draft.value} · 基线版本 ${draft.revision}${conflict(draft)?' · 版本冲突，需显式比较确认':''}`:'';
+      draftState.textContent=draft?`${submitted?'已提交输入':'未保存草稿'}：${draft.value} · 基线版本 ${draft.revision}${conflict(draft)?submitted?' · 原基线与当前版本不同，需显式比较确认':' · 版本冲突，需显式比较确认':''}`:'';
       draftState.hidden=!draft;
       feedback.textContent=notices.get(item.identity)||item.retirement_notice||'';feedback.hidden=!feedback.textContent;
       identity.textContent=`完整能力身份：${item.identity||'未知'}；完整来源：${item.source_id||'未知'}；能力：${item.capability_id||item.name||'未知'}`;
@@ -128,7 +131,7 @@ export function toolsPage(root, csrf) {
       stored.textContent=external?`服务端当前保存值：${saved(item)} · 保存版本 ${current?.revision??'未知'}`:'本地工具，不需要外部授权';
       disk.textContent=current?.disk_configuration?`磁盘外部版本 ${current.disk_configuration.revision}：${current.disk_configuration.authorizations?.[item.identity]||'unset'}；保留当前运行时配置，请核对文件并重启加载。`:'';
       disk.hidden=!disk.textContent;
-      baseline.textContent=draft?`草稿基于版本 ${draft.revision}；当前版本 ${current?.revision}，${conflict(draft)?'请比较后确认。':'仅显式保存才提交。'} 基线实例 ${draft.instance}`:'';
+      baseline.textContent=draft?`${submitted?'原提交':'草稿'}基于版本 ${draft.revision}；当前版本 ${current?.revision}，${conflict(draft)?'请比较后确认。':submitted?'原操作结果以回执为准。':'仅显式保存才提交。'} 基线实例 ${draft.instance}`:'';
       baseline.hidden=!draft;
       if(external&&!historical){
         select.setAttribute('aria-label',`${item.name} 授权草稿`);select.value=draft?.value||saved(item);
@@ -178,6 +181,7 @@ export function toolsPage(root, csrf) {
     const live=new Set(value.tools.map(/** @param {Wire} tool */tool=>tool.identity));
     for(const tool of current?.tools||[])if(!live.has(tool.identity)){
       const discarded=drafts.delete(tool.identity);
+      submittedDrafts.delete(tool.identity);
       const priorReceipt=notices.get(tool.identity);
       notices.delete(tool.identity);
       retired.set(tool.identity,{...tool,historical:true,reason:'已不在当前目录，来源已消失或被替换',retirement_notice:(discarded?'原身份授权草稿已失效并清除；不转移到同名新工具。':'本页先前观察的目录，不能证明当前仍可调用。')+(priorReceipt?' 历史操作回执：'+priorReceipt:'')});
@@ -208,6 +212,7 @@ export function toolsPage(root, csrf) {
     busy=true;++generation;
     const instance=current.process_instance_id, submitted=drafts.get(body.identity);
     submission={identity:body.identity,draft:submitted};
+    if(body.identity&&submitted)submittedDrafts.set(body.identity,submitted);
     let notice='提交结果尚未确认，仅核对当前值；不会自动重送。';
     /** @type {Wire|null} */let receipt=null;
     operation.textContent='正在提交；之后的新草稿不会改变本次请求。';render();
@@ -216,7 +221,10 @@ export function toolsPage(root, csrf) {
       if(!alive)return;
       if(result.ok&&Array.isArray(result.value.tools)&&!result.value.error&&(!body.identity||result.value.saved===true)){
         receipt=result.value;notice=`服务端收到版本 ${result.value.revision} 操作回执；当前状态以回读为准。`;
-      }else if(result.value.error||result.value.code)notice=`保存未完成：${result.value.error?.code||result.value.code}。草稿保留，请比较当前值。`;
+      }else if(result.value.error||result.value.code){
+        if(submittedDrafts.get(body.identity)===submitted)submittedDrafts.delete(body.identity);
+        notice=`保存未完成：${result.value.error?.code||result.value.code}。草稿保留，请比较当前值。`;
+      }
     }catch{/* A missing receipt is never permission to repeat a command. */}
     finally{
       if(alive){
@@ -224,6 +232,7 @@ export function toolsPage(root, csrf) {
         const checked=await load();
         if(alive&&online&&checked&&checked.process_instance_id===instance&&receipt&&checked.revision===receipt.revision&&checked.application_state===receipt.application_state&&!checked.external_change&&(!body.identity||checked.authorizations[body.identity]===body.authorization)){
           if(body.identity&&drafts.get(body.identity)===submitted)drafts.delete(body.identity);
+          if(submittedDrafts.get(body.identity)===submitted)submittedDrafts.delete(body.identity);
           notice=checked.application_state==='applied'?'服务端确认操作，授权已生效。':'已保存，尚未生效；请显式重新应用。';
           if(body.identity)notices.set(body.identity,notice);operation.textContent=body.identity?'':notice;render();
         }
@@ -235,10 +244,10 @@ export function toolsPage(root, csrf) {
   const focus=()=>{if(!busy)void load();};window.addEventListener('focus',focus);
   reapply.disabled=true;void load();
   return {
-    getLeaveState(){return {dirty:[...drafts].some(([identity,draft])=>!(submission?.identity===identity&&submission?.draft===draft)),summary:'工具授权草稿尚未确认保存。',pending:busy};},
+    getLeaveState(){return {dirty:[...drafts].some(([identity,draft])=>submittedDrafts.get(identity)!==draft),summary:'工具授权草稿尚未确认保存。',pending:busy};},
     /** @param {string} [instance] */
     sync(instance){online=true;if(instance){expectedInstance=instance;if(current&&current.process_instance_id!==instance){verified=false;++generation;render();}}focus();},
     disconnect(){online=false;verified=false;++generation;readState.textContent='离线，当前生效状态待核验；草稿保留。';render();},
-    close(){alive=false;++generation;controller.abort();window.removeEventListener('focus',focus);drafts.clear();rows.clear();groups.clear();retired.clear();}
+    close(){alive=false;++generation;controller.abort();window.removeEventListener('focus',focus);drafts.clear();submittedDrafts.clear();rows.clear();groups.clear();retired.clear();}
   };
 }

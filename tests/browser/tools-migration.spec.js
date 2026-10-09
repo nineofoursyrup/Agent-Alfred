@@ -157,6 +157,93 @@ test('S07 an already submitted authorization can leave without discarding input 
   } finally {release?.();await server.close();}
 });
 
+test('S07 Spec F1 a lost authorization receipt without newer input can leave after current readback', async ({page}) => {
+  const server=await memoryServer({script:'tests/browser/ops_server.py'});
+  try {
+    await page.goto(server.origin+'/tools');
+    const card=external(page),select=card.getByRole('combobox'),save=card.getByRole('button',{name:'保存授权',exact:true});
+    await card.getByRole('button',{name:'展开详情',exact:true}).click();
+    const posts=[];
+    await page.route('**/api/tools/authorization',async route=>{
+      const response=await route.fetch();posts.push({body:route.request().postDataJSON(),status:response.status()});
+      await route.abort('failed');
+    });
+    await select.selectOption('allowed');await save.click();
+    await expect(save).toBeEnabled();
+    await expect(card).toContainText('提交结果尚未确认');
+    await expect(card).toContainText('服务端当前保存值：allowed · 保存版本 1');
+    await expect(card).toContainText('基线版本 0');
+    await expect(card).not.toContainText('服务端确认操作');
+    await page.getByRole('button',{name:'核对当前授权',exact:true}).click();
+    await expect(select).toHaveValue('allowed');
+    await expect(card).toContainText('提交结果尚未确认');
+    await card.getByRole('link',{name:'连接维护',exact:true}).click();
+    await expect(page).toHaveURL(server.origin+'/connections');
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await page.getByRole('link',{name:'工具',exact:true}).click();
+    await expect(card).toContainText('已保存授权：allowed');
+    await expect(card).not.toContainText('服务端确认操作');
+    expect(posts).toEqual([{body:{identity:'["test-service","test-capability"]',authorization:'allowed',expected_revision:0},status:200}]);
+  } finally {await server.close();}
+});
+
+test('S07 Spec F1 a definite authorization refusal keeps unsubmitted input until explicit retry', async ({page}) => {
+  const server=await memoryServer({script:'tests/browser/ops_server.py'});
+  try {
+    await page.goto(server.origin+'/tools');
+    const card=external(page),select=card.getByRole('combobox'),save=card.getByRole('button',{name:'保存授权',exact:true});
+    await card.getByRole('button',{name:'展开详情',exact:true}).click();
+    const posts=[];
+    await page.route('**/api/tools/authorization',async route=>{
+      const response=await route.fetch();posts.push({body:route.request().postDataJSON(),status:response.status()});
+      await route.fulfill({response});
+    });
+    await server.send('busy');await select.selectOption('allowed');await save.click();
+    await expect(save).toBeEnabled();
+    await expect(card).toContainText('保存未完成：mutation_in_flight');
+    await expect(card.getByLabel('工具状态摘要')).toContainText('未保存草稿：allowed · 基线版本 0');
+    await server.send('idle');
+    await card.getByRole('link',{name:'连接维护',exact:true}).click();
+    await expect(page.getByRole('button',{name:'留在此页',exact:true})).toBeFocused();
+    await page.getByRole('button',{name:'留在此页',exact:true}).click();
+    await expect(select).toHaveValue('allowed');expect(posts).toHaveLength(1);
+    await save.click();await expect(save).toBeEnabled();
+    await expect(card).toContainText('授权已生效');
+    await card.getByRole('link',{name:'连接维护',exact:true}).click();
+    await expect(page).toHaveURL(server.origin+'/connections');
+    expect(posts.map(post=>[post.status,post.body.expected_revision])).toEqual([[409,0],[200,0]]);
+  } finally {await server.send('idle');await server.close();}
+});
+
+test('S07 Spec F1 discarding only a successor draft retains the unknown submitted action', async ({page}) => {
+  const server=await memoryServer({script:'tests/browser/ops_server.py'});
+  try {
+    await page.goto(server.origin+'/tools');
+    const card=external(page),select=card.getByRole('combobox'),save=card.getByRole('button',{name:'保存授权',exact:true});
+    await card.getByRole('button',{name:'展开详情',exact:true}).click();
+    let posts=0;
+    await page.route('**/api/tools/authorization',async route=>{posts++;expect((await route.fetch()).status()).toBe(200);await route.abort('failed');});
+    await select.selectOption('allowed');await save.click();await expect(save).toBeEnabled();
+    await expect(card).toContainText('提交结果尚未确认');
+    await expect(card).toContainText('服务端当前保存值：allowed · 保存版本 1');
+    await select.selectOption('unset');
+    await expect(card.getByLabel('工具状态摘要')).toContainText('未保存草稿：unset · 基线版本 0 · 版本冲突');
+    await card.getByRole('link',{name:'连接维护',exact:true}).click();
+    await expect(page.getByRole('button',{name:'留在此页',exact:true})).toBeFocused();
+    await page.getByRole('button',{name:'留在此页',exact:true}).click();
+    await expect(select).toHaveValue('unset');
+    await card.getByRole('button',{name:'基于当前版本继续编辑',exact:true}).click();
+    await select.selectOption('allowed');
+    await expect(card.getByLabel('工具状态摘要')).not.toContainText('未保存草稿');
+    await card.getByRole('button',{name:'收起详情',exact:true}).click();
+    await expect(card).toContainText('提交结果尚未确认');
+    await expect(page.getByRole('button',{name:'核对当前授权',exact:true})).toBeEnabled();
+    await expect(card.getByRole('link',{name:'查看包含该工具的运行',exact:true})).toHaveAttribute('href','/ops?tool='+encodeURIComponent('["test-service","test-capability"]'));
+    await card.getByRole('link',{name:'连接维护',exact:true}).click();
+    await expect(page).toHaveURL(server.origin+'/connections');expect(posts).toBe(1);
+  } finally {await server.close();}
+});
+
 for(const receipt of ['success','missing','rejected']) test(`S07 F1 an in-flight edit back to the saved baseline remains a new draft (${receipt})`, async ({page}) => {
   const server=await memoryServer({script:'tests/browser/ops_server.py'});
   let release;
