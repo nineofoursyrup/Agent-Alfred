@@ -14,7 +14,11 @@ export function traceExport(root, runId, csrf, memory) {
   const start=node('button','生成追踪导出');
   const cancel=node('button','取消导出');
   const download=node('button','下载 ZIP');
-  section.append(node('h2','追踪导出'),mode,warning,start,cancel,download,status);
+  const actions=node('details');actions.open=true;
+  const actionsTitle=node('summary','追踪导出操作');
+  actions.append(actionsTitle,mode,warning,start,cancel,download);
+  // Folding is presentation only: the resource owner and task status remain.
+  section.append(node('h2','追踪导出'),status,actions);
   root.append(section);
   /** @type {Wire|null} */ let task=null;
   let generation=0, disposed=false, downloading=false;
@@ -113,5 +117,5 @@ export function traceExport(root, runId, csrf, memory) {
     task=null;window.removeEventListener('pagehide',dispose);
   }
   window.addEventListener('pagehide',dispose);
-  render();return {dispose};
+  render();return {dispose,reveal(){actions.open=true;actionsTitle.focus();section.scrollIntoView({block:'start'});}};
 }

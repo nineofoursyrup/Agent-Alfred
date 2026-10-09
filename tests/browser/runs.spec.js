@@ -93,6 +93,9 @@ test("unconfirmed input registration remains unknown after reload", async ({ pag
 
 
 test("oversized input shows preparation failure without an invented Attempt", async ({ page }) => {
+  // Two real 64k-character preparation reads plus the reload are intentionally
+  // larger than the ordinary 15-second interaction fixture budget.
+  test.setTimeout(30000);
   await page.goto("/");
   await page.getByRole("button", { name: "新建会话", exact: true }).click();
   await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
@@ -169,9 +172,8 @@ test("a real recorded Run deep link loads published Attempt evidence and exact c
     "已保存",
   );
   await page.goto(`/runs/${encodeURIComponent(run_id)}?filter=system`);
-  await expect(page.getByRole("combobox", { name: "运行筛选" })).toHaveValue(
-    "chat",
-  );
+  await expect(page.getByRole("region", { name: "运行摘要" })).toContainText("会话运行");
+  await expect(page.getByRole("link", { name: "返回运行列表",exact:true })).toHaveAttribute("href", "/runs?filter=system");
   const detail = page.getByRole("region", { name: "运行过程" });
   await expect(detail).toContainText("事件发布顺序");
   await expect(detail).toContainText("committed");
@@ -324,9 +326,7 @@ test("aborted attempts stay in publication position and unknown cost never has a
     }),
   );
   await page.goto("/runs/system-run?filter=chat");
-  await expect(page.getByRole("combobox", { name: "运行筛选" })).toHaveValue(
-    "system",
-  );
+  await expect(page.getByRole("region", { name: "运行摘要" })).toContainText("系统运行");
   await expect(page.getByRole("main")).toContainText("<future-purpose>");
   const detail = page.getByRole("region", { name: "运行过程" });
   const summaries = detail.locator("details.attempt > summary");
@@ -421,9 +421,9 @@ test("global busy stays in MainBar while pinned Runs obey filters and deep-link 
   await page.route("**/api/runs/locate/*", route => route.fulfill({json:{filter:"system", runs:[{run_id:"old-system",purpose:"maintenance",phase:"finished",outcome:"completed",filter:"system"}],next_cursor:null}}));
   await page.route("**/api/run-evidence?*", route => route.fulfill({json:{run_id:"old-system",trace_status:"unavailable",events:[],attempts:[]}}));
   await page.evaluate(() => {history.pushState(null,"","/runs/old-system?filter=chat");window.dispatchEvent(new PopStateEvent("popstate"));});
-  await expect(page.getByRole("combobox", {name:"运行筛选"})).toHaveValue("system");
-  await expect(list.getByRole("link", {name:"查看运行"})).toHaveCount(1);
-  await expect(list).not.toContainText("运行中");
+  await expect(page.getByRole("region", {name:"运行摘要"})).toContainText("系统运行");
+  await expect(list).toHaveCount(0);
+  await expect(page.getByRole("link", {name:"返回运行列表",exact:true})).toHaveAttribute("href","/runs?filter=chat");
   await expect(page.getByRole("region", {name:"当前运行"})).toContainText("运行中");
 });
 
@@ -540,6 +540,8 @@ for (const mode of ["streamed", "nonstreamed", "missing", "terminal-only"])
       if (reload) await page.reload();
       const attempt = page.getByRole("region", {name: "运行过程"}).locator("details.attempt");
       await expect(attempt).toHaveCount(1);
+      await expect(attempt).not.toHaveAttribute("open", "");
+      await attempt.locator("summary").click();
       await expect(attempt.getByText(expected, {exact: true})).toBeVisible();
       if (mode !== "nonstreamed")
         await expect(attempt.getByText("非流式", {exact: true})).toHaveCount(0);
