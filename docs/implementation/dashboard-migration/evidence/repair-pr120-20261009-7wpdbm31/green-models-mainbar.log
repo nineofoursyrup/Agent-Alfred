@@ -1,0 +1,40 @@
+
+> test:browser
+> playwright test tests/browser/mainbar-location.spec.js tests/browser/models-migration.spec.js --output /Users/nineofour/.codex/dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/green-models-mainbar
+
+
+Running 28 tests using 1 worker
+
+(node:57447) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/browser/mainbar-location.spec.js:16:1 › exact MainBar location is one bounded read with a marked preview and separate history cursor (432ms)
+  ✓   2 tests/browser/mainbar-location.spec.js:30:1 › successive exact locations stay separate until ordinary history or SSE owns the same records (604ms)
+  ✓   3 tests/browser/mainbar-location.spec.js:67:51 › exact location retires on offline and cannot overwrite a new location after reconnect (338ms)
+  ✓   4 tests/browser/mainbar-location.spec.js:67:51 › exact location retires on sse-error and cannot overwrite a new location after reconnect (343ms)
+  ✓   5 tests/browser/mainbar-location.spec.js:91:1 › process-gap navigation distinguishes a legal empty Run ID from an absent target (410ms)
+  ✓   6 tests/browser/mainbar-location.spec.js:100:1 › retired location cannot leave a loading state or late content after page navigation (371ms)
+  ✓   7 tests/browser/mainbar-location.spec.js:113:1 › failed exact location has an explicit read-only retry and does not create a Run (470ms)
+  ✓   8 tests/browser/mainbar-location.spec.js:126:1 › a later unavailable request cannot erase a retained preview marker (319ms)
+  ✓   9 tests/browser/mainbar-location.spec.js:135:1 › hidden no-reply failure retains outcome attention without inventing a new reply (370ms)
+  ✓  10 tests/browser/mainbar-location.spec.js:145:1 › restored unread identity remains unconfirmed when another history item is visible (379ms)
+  ✓  11 tests/browser/mainbar-location.spec.js:155:1 › a later preview cannot downgrade the same target full request or recorded state (335ms)
+  ✓  12 tests/browser/mainbar-location.spec.js:165:1 › idle reconnect verifies the same Run and does not infer saving from an unrelated persisted pair (391ms)
+  ✓  13 tests/browser/models-migration.spec.js:23:1 › S11 model pending save protects a successor equal to its old saved value (1.1s)
+  ✓  14 tests/browser/models-migration.spec.js:23:1 › S11 model unknown save protects a successor equal to its old saved value (1.1s)
+  ✓  15 tests/browser/models-migration.spec.js:47:1 › S08 real catalog label and explicit clearing survive HTTP read and page reentry (1.0s)
+  ✓  16 tests/browser/models-migration.spec.js:73:1 › S08 real two-tab conflict retains baseline and requires explicit adoption (1.2s)
+  ✓  17 tests/browser/models-migration.spec.js:92:1 › S08 SPEC F1 lost saved receipt requires a post-failure read before explicit adoption (1.1s)
+  ✓  18 tests/browser/models-migration.spec.js:135:1 › S08 SPEC F1 real conflict with a failed comparison keeps its baseline even when values match (1.2s)
+  ✓  19 tests/browser/models-migration.spec.js:163:1 › S08 SPEC F1 real instance change retires the old comparison read and qualification (2.5s)
+  ✓  20 tests/browser/models-migration.spec.js:192:1 › S08 saved model probe preserves drafts and links its real Attempt and cost (1.0s)
+  ✓  21 tests/browser/models-migration.spec.js:219:1 › S08 a lost real accepted probe response never replays on focus or reentry (978ms)
+S08 Models central widths [{"viewport":[1440,900],"central":{"x":232,"y":65.390625,"width":888,"height":834.609375}},{"viewport":[1280,800],"central":{"x":232,"y":65.390625,"width":728,"height":734.609375}},{"viewport":[390,844],"central":{"x":0,"y":61.390625,"width":390,"height":782.609375}},{"viewport":[320,800],"central":{"x":0,"y":61.390625,"width":320,"height":738.609375}}]
+  ✓  22 tests/browser/models-migration.spec.js:239:1 › S08 catalog refresh stays one request and settings remain usable in four viewports (989ms)
+  ✓  23 tests/browser/models-migration.spec.js:262:1 › S08 rejected unpin keeps the original dirty draft (845ms)
+  ✓  24 tests/browser/models-migration.spec.js:278:1 › S08 unknown unpin unlocks fields only after a connected current read and keeps its receipt (1.0s)
+  ✓  25 tests/browser/models-migration.spec.js:324:1 › S08 each saved field is independent and uses the public HTTP value (1.0s)
+  ✓  26 tests/browser/models-migration.spec.js:347:1 › S08 STD01 retired save cannot clear a successor request after real Stream reconnect (1.0s)
+  ✓  27 tests/browser/models-migration.spec.js:386:1 › S08 STD02 model action focus survives refresh and completion without stealing a new intent (1.2s)
+  ✓  28 tests/browser/models-migration.spec.js:421:1 › S11 clear final price changes the next probe and Ops while the old snapshot stays fixed (1.5s)
+
+  28 passed (24.7s)

@@ -7,7 +7,7 @@ test('aggregation CE-02/04/14: Behaviour to same Session, refresh and restart', 
   try {
     await page.goto(server.origin + '/behaviour');
     await page.getByRole('button',{name:'新建会话',exact:true}).click();
-    await page.getByRole('button',{name:'展开对话',exact:true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     await page.getByRole('textbox',{name:'消息',exact:true}).fill('hello history');
     await page.getByRole('button',{name:'发送',exact:true}).click();
     await expect(page.locator('#messages').getByText('离线路由回复')).toBeVisible();
@@ -59,7 +59,7 @@ async function prepareDraft(page, server, beforeCreate = async () => {}) {
   expect(body.session_id).toEqual(expect.any(String));
   const session = body.session_id;
   await expect.poll(() => page.evaluate(() => sessionStorage.getItem('alfred.session'))).toBe(session);
-  await page.getByRole('button',{name:'展开对话',exact:true}).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   await page.getByRole('button',{name:'刷新会话',exact:true}).click();
   await page.getByRole('combobox',{name:'目标会话'}).selectOption(session);
   await page.getByRole('textbox',{name:'聚合目标',exact:true}).fill('draft goal');
@@ -68,6 +68,23 @@ async function prepareDraft(page, server, beforeCreate = async () => {}) {
   await page.getByRole('checkbox',{name:'会话窗口',exact:true}).uncheck();
   return {other, session, memoryId:saved.body.result.memory_id};
 }
+
+test('S06 CE-18/19: a fresh form never adopts another aggregation terminal projection', async ({page},testInfo) => {
+  const server = await memoryServer({script:'tests/browser/aggregation_server.py'});
+  try {
+    await prepareDraft(page,server);
+    await server.send('fail-recording');
+    await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
+    await expect(page.getByText('草稿未保存，请查看运行记录状态。',{exact:true})).toBeVisible();
+    await page.getByText('草稿未保存，请查看运行记录状态。',{exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:testInfo.outputPath('aggregation-recording-failed.png')});
+    await page.reload();
+    await expect(page.locator('#messages').getByText('已验证草稿 [[S1]]',{exact:true})).toBeVisible();
+    const form = page.getByRole('region',{name:'手动聚合',exact:true});
+    await expect(form.getByText('尚未提交聚合请求。',{exact:true})).toBeVisible();
+    await expect(form.getByRole('heading',{name:'聚合草稿',exact:true})).toHaveCount(0);
+    await expect(form.getByRole('button',{name:'语义记忆 S1',exact:true})).toHaveCount(0);
+  } finally {await server.close();}
+});
 
 test('aggregation CE-08/11: candidate hidden, recording pending busy and failed recovery', async ({page}) => {
   const server = await memoryServer({script:'tests/browser/aggregation_server.py'});
@@ -134,6 +151,14 @@ test('aggregation CE-08: dropped accepted response does not resubmit or move Ses
     });
     await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
     await expect(page.getByText(/准入未确认；请查看已有运行/)).toBeVisible();
+    const draft=page.getByRole('region',{name:'手动聚合',exact:true}).locator('.behaviour-draft');
+    await expect(draft).toHaveAttribute('data-dirty','false');
+    await page.getByRole('textbox',{name:'聚合目标',exact:true}).fill('unknown successor');
+    await expect(draft).toHaveAttribute('data-dirty','true');
+    await page.getByRole('link',{name:'运行',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('button',{name:'留在此页',exact:true}).click();
+    await page.getByRole('textbox',{name:'聚合目标',exact:true}).fill('draft goal');
+    await expect(draft).toHaveAttribute('data-dirty','false');
     await server.send('wait-stream');
     expect(accepted.session_id).toBe(session);
     expect(sent).toBe(1);
@@ -216,6 +241,30 @@ test('aggregation CE-12: real HTTP forgetting keeps draft and disables source', 
   } finally { await server.close(); }
 });
 
+test('S06/S03: retiring Behaviour and Run owners clears their opened aggregation source',async({page})=>{
+  const server=await memoryServer({script:'tests/browser/aggregation_server.py'});
+  try {
+    const {other}=await prepareDraft(page,server);
+    await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
+    const form=page.getByRole('region',{name:'手动聚合',exact:true});
+    await expect(form.getByText('本次聚合已结束；草稿请在目标会话查看。',{exact:true})).toBeVisible();
+    await form.getByRole('button',{name:'语义记忆 S1',exact:true}).click();
+    await expect(form.getByText('coffee source',{exact:true})).toBeVisible();
+    const formSource=await form.getByText('coffee source',{exact:true}).elementHandle();
+    await form.getByRole('link',{name:'查看同一运行与资料',exact:true}).click();
+    await expect(page).toHaveURL(/\/runs\//);
+    expect(await formSource.evaluate(element=>({connected:element.isConnected,text:element.textContent}))).toEqual({connected:false,text:''});
+    const detail=page.getByRole('region',{name:'运行过程',exact:true});
+    await detail.getByRole('button',{name:'语义记忆 S1',exact:true}).click();
+    await expect(detail.getByText('coffee source',{exact:true})).toBeVisible();
+    const runSource=await detail.getByText('coffee source',{exact:true}).elementHandle();
+    await page.getByRole('link',{name:'行为',exact:true}).click();await expect(page).toHaveURL(/\/behaviour$/);
+    expect(await runSource.evaluate(element=>({connected:element.isConnected,text:element.textContent}))).toEqual({connected:false,text:''});
+    await expect(page.getByRole('region',{name:'手动聚合',exact:true}).getByText('尚未提交聚合请求。',{exact:true})).toBeVisible();
+    expect((await other.get('/api/runs?filter=chat&limit=25')).body.runs.filter(item=>item.purpose==='aggregation')).toHaveLength(1);
+  }finally{await server.close();}
+});
+
 
 test('aggregation CE-14: every source combination through Behaviour', async ({page}) => {
   const server = await memoryServer({script:'tests/browser/routing_server.py'});
@@ -274,7 +323,7 @@ for (const surface of ['mainbar','behaviour','runs']) for (const timing of ['ope
       }
       const area = surface === 'mainbar' ? page.locator('#messages') : surface === 'behaviour' ? page.getByRole('region',{name:'手动聚合',exact:true}) : page.getByRole('region',{name:'运行过程',exact:true});
       if (surface !== 'mainbar') {
-        const collapse=page.getByRole('button',{name:'收起对话',exact:true});
+        const collapse=page.getByRole('button',{name:'收起主对话',exact:true});
         if (await collapse.isVisible()) await collapse.click();
       }
       const source = area.getByRole('button',{name:'语义记忆 S1',exact:true});
@@ -337,7 +386,7 @@ for (const surface of ['mainbar','behaviour','runs']) for (const timing of ['ope
       await expect(area).toContainText(/不可用|已变化|无法核验/);
       await page.unroute('**/api/memory/record?*');
       await page.goto(server.origin+'/behaviour');
-      const expand=page.getByRole('button',{name:'展开对话',exact:true});
+      const expand=page.locator('#shell-toolbar [data-open-panel="mainbar"]');
       if(await expand.isVisible()) await expand.click();
       await expect(page.locator('#messages').getByText('已验证草稿 [[S1]]',{exact:true})).toBeVisible();
     } finally { release(); releaseVerification(); await server.close(); }
@@ -367,10 +416,25 @@ test('SPEC-03 CE-08: accepted POST remains fixed while response waits and Sessio
     await expect.poll(async () => (await other.get('/api/run-evidence?run_id='+run_id)).body.memory?.aggregation?.graph_result).toBe('Completed');
     // The real server has accepted/completed A, but its HTTP acceptance has
     // not reached the form. All following changes occur with that POST pending.
+    const draft=page.getByRole('region',{name:'手动聚合',exact:true}).locator('.behaviour-draft');
+    await expect(draft).toHaveAttribute('data-dirty','false');
+    await page.getByRole('textbox',{name:'聚合关键词',exact:true}).fill('NEXT_KEYWORDS');
+    await expect(draft).toHaveAttribute('data-dirty','true');
+    await page.getByRole('textbox',{name:'聚合关键词',exact:true}).fill('coffee');
+    await expect(draft).toHaveAttribute('data-dirty','false');
+    await page.getByRole('checkbox',{name:'语义记忆',exact:true}).uncheck();
+    await expect(draft).toHaveAttribute('data-dirty','true');
+    await page.getByRole('checkbox',{name:'语义记忆',exact:true}).check();
+    await expect(draft).toHaveAttribute('data-dirty','false');
     await page.getByRole('button',{name:'新建会话',exact:true}).click();
     await expect.poll(() => page.evaluate(() => sessionStorage.getItem('alfred.session'))).not.toBe(session);
     const second=await page.evaluate(() => sessionStorage.getItem('alfred.session'));
     await page.getByRole('button',{name:'刷新会话',exact:true}).click();
+    await expect(draft).toHaveAttribute('data-dirty','false');
+    await page.getByRole('combobox',{name:'目标会话'}).selectOption(second);
+    await expect(draft).toHaveAttribute('data-dirty','true');
+    await page.getByRole('combobox',{name:'目标会话'}).selectOption(session);
+    await expect(draft).toHaveAttribute('data-dirty','false');
     await page.getByRole('combobox',{name:'目标会话'}).selectOption(second);
     await page.getByRole('textbox',{name:'聚合目标',exact:true}).fill('CHANGED_GOAL');
     await page.getByRole('textbox',{name:'聚合关键词',exact:true}).fill('CHANGED_KEYWORDS');
@@ -383,6 +447,10 @@ test('SPEC-03 CE-08: accepted POST remains fixed while response waits and Sessio
     expect(submitted).toEqual([{purpose:'aggregation',session_id:session,message:'draft goal',keywords:'coffee',sources:['semantic']}]);
     expect((await other.get('/api/runs?filter=chat&limit=25')).body.runs.filter(r=>r.purpose==='aggregation')).toHaveLength(1);
     await expect(page.locator('#messages')).not.toContainText('已验证草稿');
+    await expect(page.getByRole('textbox',{name:'聚合目标',exact:true})).toHaveValue('CHANGED_GOAL');
+    await page.getByRole('button',{name:'切换到此会话并查看草稿',exact:true}).click();
+    await expect.poll(()=>page.evaluate(()=>sessionStorage.getItem('alfred.session'))).toBe(session);
+    await expect(page.locator('#messages').getByText('已验证草稿 [[S1]]',{exact:true})).toHaveCount(1);
     await expect(page.getByRole('textbox',{name:'聚合目标',exact:true})).toHaveValue('CHANGED_GOAL');
   } finally { release(); await server.close(); }
 });
@@ -426,7 +494,7 @@ for (const rounds of [0, 1, 3]) {
     try {
       await page.goto(server.origin+'/behaviour');
       await page.getByRole('button',{name:'新建会话',exact:true}).click();
-      await page.getByRole('button',{name:'展开对话',exact:true}).click();
+      await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
       const other = await api(page.request,server.origin);
       const history = [];
       for (const text of ['old history question','new history question']) {
@@ -494,8 +562,9 @@ test('CI-01: delayed initial Session list cannot erase a newer selected target',
   const server = await memoryServer({script:'tests/browser/aggregation_server.py'});
   let release = () => {};
   try {
-    let first = true, captured;
+    let first = true, captured, finished;
     const received = new Promise(resolve => { captured = resolve; });
+    const settled = new Promise(resolve => { finished = resolve; });
     const held = new Promise(resolve => { release = resolve; });
     await page.route('**/api/sessions?*', async route => {
       if (!first) return route.continue();
@@ -503,11 +572,13 @@ test('CI-01: delayed initial Session list cannot erase a newer selected target',
       const response = await route.fetch();
       expect(response.status()).toBe(200);
       expect((await response.json()).sessions).toEqual([]);
-      captured(); await held; await route.fulfill({response});
+      captured(); await held; await route.fulfill({response}).catch(() => {}); finished();
     });
     const {other, session} = await prepareDraft(page, server, () => received);
     await expect(page.getByRole('combobox',{name:'目标会话'})).toHaveValue(session);
-    await deliverSessionList(page, release);
+    // Refresh cancels the superseded GET. Await the intercepted response's
+    // completion, since an aborted fetch correctly emits no browser response.
+    release(); await settled;
     // Keep the original HTTP acceptance assertion as well as the selected value.
     const accepted = page.waitForResponse(r => r.url().endsWith('/api/runs') && r.request().method() === 'POST');
     await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
@@ -556,4 +627,155 @@ test('CI-01: an in-flight Session refresh preserves the latest user selection', 
     expect(body.session_id).toBe(second);
     await expect.poll(async () => (await other.get('/api/run-evidence?run_id='+body.run_id)).body.memory?.aggregation?.request?.session_id).toBe(second);
   } finally { release(); await server.close(); }
+});
+
+test('S06 CE-19: a retained failed-recording form uses the restarted Run outcome instead of old trace success',async({page})=>{
+  const server=await memoryServer({script:'tests/browser/aggregation_server.py'});
+  const posts=[];page.on('request',r=>{if(r.method()==='POST'&&r.url().endsWith('/api/runs'))posts.push(r.postDataJSON());});
+  try {
+    await prepareDraft(page,server);await server.send('fail-recording');
+    await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
+    await expect(page.getByText('草稿未保存，请查看运行记录状态。',{exact:true})).toBeVisible();
+    const form=page.getByRole('region',{name:'手动聚合',exact:true});
+    await form.getByRole('textbox',{name:'聚合目标',exact:true}).fill('重启后仍应保留的新目标');
+    const prior=(await(await page.request.get(server.origin+'/api/entry')).json()).instance_id;
+    const changed=page.waitForResponse(async r=>r.url().endsWith('/api/entry')&&r.ok()&&(await r.json()).instance_id!==prior);
+    await server.send('repair-recording');await server.restart();await changed;
+    await form.getByRole('button',{name:'重新核对本次运行',exact:true}).click();
+    await expect(form.getByText(/本次运行已中断（interrupted）/)).toBeVisible();
+    await expect(form.getByRole('heading',{name:'聚合草稿',exact:true})).toHaveCount(0);
+    await expect(form.getByRole('textbox',{name:'聚合目标',exact:true})).toHaveValue('重启后仍应保留的新目标');
+    await expect(form.getByRole('button',{name:'生成聚合草稿',exact:true})).toBeEnabled();expect(posts).toHaveLength(1);
+  }finally{await server.close();}
+});
+
+test('S06 CE-24/27: leaving a form with an accepted delayed POST retires only its UI owner',async({page})=>{
+  const server=await memoryServer({script:'tests/browser/aggregation_server.py'});
+  let release=()=>{};
+  try {
+    const {other,session}=await prepareDraft(page,server);let accepted,finished;
+    const submitted=new Promise(resolve=>accepted=resolve),settled=new Promise(resolve=>finished=resolve),gate=new Promise(resolve=>release=resolve);
+    const posts=[];
+    await page.route('**/api/runs',async route=>{
+      if(route.request().method()!=='POST')return route.continue();
+      posts.push(route.request().postDataJSON());const response=await route.fetch();accepted(await acceptedRun(response));
+      await gate;await route.fulfill({response}).catch(()=>{});finished();
+    });
+    await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();const {run_id}=await submitted;
+    const draft=page.getByRole('region',{name:'手动聚合',exact:true}).locator('.behaviour-draft');
+    await expect(draft).toHaveAttribute('data-dirty','false');
+    await page.getByRole('textbox',{name:'聚合目标',exact:true}).fill('提交后新增的草稿');
+    await expect(draft).toHaveAttribute('data-dirty','true');
+    await page.getByRole('link',{name:'运行',exact:true}).click();await page.getByRole('button',{name:'留在此页',exact:true}).click();
+    await expect(page.getByRole('textbox',{name:'聚合目标',exact:true})).toHaveValue('提交后新增的草稿');
+    await page.getByRole('textbox',{name:'聚合目标',exact:true}).fill('draft goal');
+    await expect(draft).toHaveAttribute('data-dirty','false');
+    await page.getByRole('textbox',{name:'聚合目标',exact:true}).fill('提交后新增的草稿');
+    await page.getByRole('link',{name:'运行',exact:true}).click();await page.getByRole('button',{name:'放弃并离开',exact:true}).click();
+    await expect(page).toHaveURL(/\/runs$/);release();await settled;
+    await expect(page.getByRole('region',{name:'手动聚合',exact:true})).toHaveCount(0);
+    await expect.poll(async()=>(await other.get('/api/run-evidence?run_id='+run_id)).body.memory?.aggregation?.graph_result).toBe('Completed');
+    expect(posts).toEqual([{purpose:'aggregation',session_id:session,message:'draft goal',keywords:'coffee',sources:['semantic']}]);
+    expect((await other.get('/api/runs?filter=chat&limit=25')).body.runs.filter(item=>item.purpose==='aggregation')).toHaveLength(1);
+    await page.getByRole('link',{name:'行为',exact:true}).click();
+    const form=page.getByRole('region',{name:'手动聚合',exact:true});await expect(form.getByRole('textbox',{name:'聚合目标',exact:true})).toHaveValue('');
+    await expect(form.getByText('尚未提交聚合请求。',{exact:true})).toBeVisible();
+  }finally{release();await server.close();}
+});
+
+for(const outcome of ['accepted','rejected']) {
+  test(`S06-ST-01: aggregation ${outcome} delayed receipt separates submitted inputs from confirmation`,async({page})=>{
+    const server=await memoryServer({script:'tests/browser/aggregation_server.py'});
+    let release=()=>{};
+    try {
+      const {other,session}=await prepareDraft(page,server);
+      if(outcome==='rejected')await page.getByRole('textbox',{name:'聚合目标',exact:true}).fill('');
+      let accepted,finished;
+      const submitted=new Promise(resolve=>accepted=resolve),settled=new Promise(resolve=>finished=resolve),gate=new Promise(resolve=>release=resolve);
+      const posts=[];
+      await page.route('**/api/runs',async route=>{
+        if(route.request().method()!=='POST')return route.continue();
+        posts.push(route.request().postDataJSON());const response=await route.fetch();accepted({status:response.status(),body:await response.json()});
+        await gate;await route.fulfill({response}).catch(()=>{});finished();
+      });
+      await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();const receipt=await submitted;
+      expect(receipt.status).toBe(outcome==='accepted'?202:400);
+      const form=page.getByRole('region',{name:'手动聚合',exact:true}),draft=form.locator('.behaviour-draft');
+      await expect(draft).toHaveAttribute('data-dirty','false');await expect(form.getByText('正在提交…',{exact:true})).toBeVisible();
+      await expect(form.getByText(/本次 Run：/)).toHaveCount(0);
+      if(outcome==='rejected') {
+        expect(receipt.body.code).toBe('empty_message');release();await settled;
+        await expect(form.getByText('未提交：empty_message；表单已保留。',{exact:true})).toBeVisible();
+        await expect(draft).toHaveAttribute('data-dirty','true');
+        await page.getByRole('link',{name:'运行',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();
+        await page.getByRole('button',{name:'留在此页',exact:true}).click();
+        expect((await other.get('/api/runs?filter=chat&limit=25')).body.runs.filter(item=>item.purpose==='aggregation')).toHaveLength(0);
+      } else {
+        expect(receipt.body.session_id).toBe(session);
+        await page.getByRole('link',{name:'运行',exact:true}).click();await expect(page).toHaveURL(/\/runs$/);
+        await expect(page.getByRole('dialog')).toHaveCount(0);release();await settled;
+        await expect.poll(async()=>(await other.get('/api/run-evidence?run_id='+receipt.body.run_id)).body.memory?.aggregation?.graph_result).toBe('Completed');
+        expect((await other.get('/api/runs?filter=chat&limit=25')).body.runs.filter(item=>item.purpose==='aggregation')).toHaveLength(1);
+      }
+      expect(posts).toHaveLength(1);expect(posts[0].session_id).toBe(session);
+    } finally {release();await server.close();}
+  });
+}
+
+test('S11 one real forgetting event retires hidden Run, aggregation, Overview and Database owners',async({page,context})=>{
+  const server=await memoryServer({script:'tests/browser/aggregation_server.py'});
+  let releaseDatabase=()=>{},releaseCounts=()=>{};
+  const others=[];
+  try{
+    const {other,memoryId}=await prepareDraft(page,server);
+    const accepted=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/runs'&&r.request().method()==='POST');
+    await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
+    const {run_id}=await acceptedRun(await accepted);
+    const form=page.getByRole('region',{name:'手动聚合',exact:true,includeHidden:true});
+    await expect(form.getByText('本次聚合已结束；草稿请在目标会话查看。',{exact:true})).toBeVisible();
+    await page.getByRole('button',{name:'收起主对话',exact:true}).click();
+    await form.getByRole('button',{name:'语义记忆 S1',exact:true}).click();
+    await expect(form.getByText('coffee source',{exact:true})).toBeVisible();
+    await page.setViewportSize({width:390,height:844});
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
+    const run=await context.newPage();others.push(run);await run.setViewportSize({width:390,height:844});
+    await run.goto(server.origin+'/runs/'+run_id);
+    const process=run.getByRole('region',{name:'运行过程',exact:true,includeHidden:true});
+    await process.getByRole('button',{name:'语义记忆 S1',exact:true}).click();
+    await expect(process.getByText('coffee source',{exact:true})).toBeVisible();
+    await run.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
+    const overview=await context.newPage();others.push(overview);await overview.setViewportSize({width:390,height:844});
+    await overview.goto(server.origin+'/overview');const counts=overview.getByLabel('当前记忆条目数');
+    await expect(counts).toContainText('语义 1 条');
+    let countsArrived;const countsReceived=new Promise(resolve=>countsArrived=resolve),countsGate=new Promise(resolve=>releaseCounts=resolve);
+    await overview.route('**/api/overview/memory-counts?**',async route=>{const response=await route.fetch();countsArrived();await countsGate;await route.fulfill({response});});
+    await overview.getByRole('button',{name:'刷新记忆计数',exact:true}).click();await countsReceived;
+    await overview.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
+    const database=await context.newPage();others.push(database);await database.setViewportSize({width:390,height:844});
+    await database.goto(server.origin+'/database');await expect(database.getByText('可执行',{exact:true})).toBeVisible();
+    await database.getByRole('textbox',{name:'SQL',exact:true}).fill('SELECT fact FROM diag_facts');
+    await database.getByRole('button',{name:'执行',exact:true}).click();
+    await expect(database.getByRole('region',{name:'查询结果',exact:true})).toContainText('coffee source');
+    await expect(database.getByRole('button',{name:'复制本页结果',exact:true})).toBeEnabled();
+    let queryArrived;const queryReceived=new Promise(resolve=>queryArrived=resolve),queryGate=new Promise(resolve=>releaseDatabase=resolve);
+    await database.route('**/api/database/queries/*/execute',async route=>{const response=await route.fetch();queryArrived();await queryGate;await route.fulfill({response});});
+    await database.getByRole('button',{name:'执行',exact:true}).click();await queryReceived;
+    await database.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
+    const deletion=await other.command({operation_id:'S11-fanout-delete',kind:'semantic',action:'delete',payload:{id:memoryId},expected_version:1});
+    expect(deletion.status).toBe(200);expect(deletion.body.forgetting.state).toBe('complete');
+    await expect(form.getByText('coffee source',{exact:true})).toHaveCount(0);
+    await expect(process.getByText('coffee source',{exact:true})).toHaveCount(0);
+    await expect(counts).not.toContainText('语义 1 条');
+    await expect(database.getByRole('button',{name:'复制本页结果',exact:true,includeHidden:true})).toBeDisabled();
+    const verified=await other.get('/api/database');expect(verified.status).toBe(200);
+    await expect(database.getByRole('region',{name:'诊断对象目录',includeHidden:true})).toContainText('记忆修订 '+verified.body.memory_revision);
+    releaseCounts();releaseDatabase();await overview.unrouteAll({behavior:'wait'});await database.unrouteAll({behavior:'wait'});
+    await expect(counts).not.toContainText('语义 1 条');
+    await expect(database.getByRole('region',{name:'查询结果',includeHidden:true})).toBeEmpty();
+    for(const tab of [page,run,overview,database])await tab.getByRole('button',{name:'收起主对话',exact:true}).click();
+    await overview.getByRole('button',{name:'刷新记忆计数',exact:true}).click();await expect(counts).toContainText('语义 0 条');
+    await database.getByRole('button',{name:'执行',exact:true}).click();await expect(database.getByRole('region',{name:'查询结果',exact:true})).toContainText('0 行');
+    expect((await other.get('/api/runs?filter=all')).body.runs.map(value=>value.run_id)).toEqual([run_id]);
+    expect((await other.get('/api/memory/record?kind=semantic&id='+memoryId)).status).toBe(404);
+  }finally{releaseCounts();releaseDatabase();for(const tab of others)await tab.close();await server.close();}
 });

@@ -1,0 +1,623 @@
+{
+  "scope": "Immutable local observations, reviews and acceptance proposal before current remote CI. Publication does not promote pending delivery gates.",
+  "evidence_root": "docs/implementation/dashboard-migration/evidence",
+  "local_evidence_root": "/Users/nineofour/.codex/dashboard-migration-20261009",
+  "files": [
+    {
+      "source": "closeout-20261009/APPLICABILITY.md",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/APPLICABILITY.md",
+      "sha256": "bdef0f29785467e200081994e3f6cb6c9da4eef7da508f54be95f68aec24e7f9",
+      "bytes": 7577,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/acceptance-proposal.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/acceptance-proposal.json",
+      "sha256": "b6ccba8ac14c7ecbb46caa3332ce3d944ae7b0afd864c4b6890647b28b392070",
+      "bytes": 1639849,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/acceptance-summary.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/acceptance-summary.json",
+      "sha256": "5b81b65bd7c7db1e06b650e6f58c6e9c6aa84df80c00445330ca906236087386",
+      "bytes": 5524,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/candidate.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/candidate.json",
+      "sha256": "7cbc63240305ec4d4c9e187add37836de1376582d78f81af5a20ce229c0ec652",
+      "bytes": 1241,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/commits.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/commits.json",
+      "sha256": "cf71e8fc327cd568b729042c77da632328b7020ad46b82b5726db8024906112d",
+      "bytes": 431,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/installation-results.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/installation-results.json",
+      "sha256": "4efa509d7d8f7e289478c5d79ec701cf0e8da24f1e89281f8364af37df5adafc",
+      "bytes": 619796,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/build.log",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/build.log",
+      "sha256": "0a53f0756129d6d020ab1df3601cdb91be56eca6004f93499d48f8bc49d87e8d",
+      "bytes": 327,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/evidence-review-first-findings.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/evidence-review-first-findings.json",
+      "sha256": "1a646641ede9f904581cea03684701cbf8458e92dea83954f1b894fb4e29865b",
+      "bytes": 622,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/reviews/spec-r1.md",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/reviews/spec-r1.md",
+      "sha256": "5c4c248e08780f784a43b1b52da6039e48877a503a30454017e7a720a9206ba5",
+      "bytes": 2088,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/reviews/spec.md",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/reviews/spec.md",
+      "sha256": "892504e17ecd125d05d63219ccece782ec2d46d49f516b39ac755417a42eefec",
+      "bytes": 3059,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/reviews/standards.md",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/reviews/standards.md",
+      "sha256": "6091ca00a2cf7b5f0b086304d9664279ec521289e31aa6432dfef036a09223c8",
+      "bytes": 2876,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native/result.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native/result.json",
+      "sha256": "b3f723b43352dc6cfd2444887383be09b91f99f6080c1bb0739b0c7c148d6b96",
+      "bytes": 4271,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native/events.jsonl",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native/events.jsonl",
+      "sha256": "594e5ec6652d2f67382fd5e43b118835cbf5a9c56a035ac33633ac699df32905",
+      "bytes": 16125,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native/events-sequence-order.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native/events-sequence-order.json",
+      "sha256": "b6def1cd628823d37a28e2b82fd677c5916eaf53247a7eeee5b1373c2d9e39a9",
+      "bytes": 19848,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native/evidence-manifest.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native/evidence-manifest.json",
+      "sha256": "f3ff870237e5364cd4bb67b5a654e9b7c15e14e0f0bf61a4597e5d9fe8140675",
+      "bytes": 1308,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native/final-dom.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native/final-dom.json",
+      "sha256": "85640f568734d42c62f20e5b6fec6aaff3ebbb0358503b8f50cac35235020ca9",
+      "bytes": 276,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native/final-state.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native/final-state.json",
+      "sha256": "c7a461168aafebe861eef4311493215c97e48647e88aa9bc750feb3fb77697d7",
+      "bytes": 4676,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native/served-product-manifest.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native/served-product-manifest.json",
+      "sha256": "dbf256656fc134abbf9f20e4a65c803fe311343bd403e7a108c2bf3523a4ccb5",
+      "bytes": 4071,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native/instrument.js",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native/instrument.js",
+      "sha256": "4f58ccadbc3311f18682a989e94d9018a8f610b518a9425c434ea11c1113fb95",
+      "bytes": 1133,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native/instrumented_server.py",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native/instrumented_server.py",
+      "sha256": "ca610725abe0a2cd4118c3a7c2ab999e6bb6ba5160ded61bc262b28d971a20b1",
+      "bytes": 2206,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat/result.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat/result.json",
+      "sha256": "3da2b701c9e994a1cf9173b206c38121c3326f1aea9b7cfb8caf0b6bdb73c2eb",
+      "bytes": 2454,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat/events.jsonl",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat/events.jsonl",
+      "sha256": "32ff2c6efeb43a34bf5955c9b4a494b9d014f429b77365bd540e059ae60da744",
+      "bytes": 4479,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat/events-sequence-order.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat/events-sequence-order.json",
+      "sha256": "da3668e3494663fa0f752c0fa22a56b7e6cf096772c1e27a334328875071a219",
+      "bytes": 5483,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat/evidence-manifest.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat/evidence-manifest.json",
+      "sha256": "ea9b3b2d40bc4fbb020057a44aa9401ceef96d2153322c6344123f587335f2ce",
+      "bytes": 1288,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat/final-dom.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat/final-dom.json",
+      "sha256": "b57cf7efdbd5315db5b84c45099acd14d81cc2b4229b174f5f9940099192feb6",
+      "bytes": 611,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat/final-state.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat/final-state.json",
+      "sha256": "9ee1b72ca0747fa723ac84769d407a2a10c7bc667048ace9d8a73702e71b1717",
+      "bytes": 725,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat/served-product-manifest.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat/served-product-manifest.json",
+      "sha256": "dbf256656fc134abbf9f20e4a65c803fe311343bd403e7a108c2bf3523a4ccb5",
+      "bytes": 4071,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat/instrument.js",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat/instrument.js",
+      "sha256": "4f58ccadbc3311f18682a989e94d9018a8f610b518a9425c434ea11c1113fb95",
+      "bytes": 1133,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat/instrumented_server.py",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat/instrumented_server.py",
+      "sha256": "091f654ab21b0f740ab9fea7dcf43138f94e89f5346846c16cdb0491aac5f969",
+      "bytes": 3001,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat-r2/result.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat-r2/result.json",
+      "sha256": "c251b9138da52deaeb83e80817fc322e6b1771b992004fd5c5e948200c3d159b",
+      "bytes": 2873,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat-r2/events.jsonl",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat-r2/events.jsonl",
+      "sha256": "3e176d0fe8d90cfb5751d046e9d1ec0df591f8f920802248639f6abbe9af39a1",
+      "bytes": 4479,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat-r2/events-sequence-order.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat-r2/events-sequence-order.json",
+      "sha256": "42272c5674eb39e9c486b330b0a52ed5250c1e61abed252d75870f1847127e04",
+      "bytes": 5483,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat-r2/evidence-manifest.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat-r2/evidence-manifest.json",
+      "sha256": "bd277ba10e74fbe37d868f785d6248f613abeff40972bbd71bad36135b88f49e",
+      "bytes": 1373,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat-r2/final-dom.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat-r2/final-dom.json",
+      "sha256": "b57cf7efdbd5315db5b84c45099acd14d81cc2b4229b174f5f9940099192feb6",
+      "bytes": 611,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat-r2/final-state.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat-r2/final-state.json",
+      "sha256": "4f33268a4b53d762919dfce505f0ffbe216795a1834931d904ecdf018e6b5663",
+      "bytes": 725,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat-r2/served-product-manifest.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat-r2/served-product-manifest.json",
+      "sha256": "dbf256656fc134abbf9f20e4a65c803fe311343bd403e7a108c2bf3523a4ccb5",
+      "bytes": 4071,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat-r2/instrument.js",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat-r2/instrument.js",
+      "sha256": "4f58ccadbc3311f18682a989e94d9018a8f610b518a9425c434ea11c1113fb95",
+      "bytes": 1133,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat-r2/instrumented_server.py",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat-r2/instrumented_server.py",
+      "sha256": "a245aa2356950641faddf88d3d8b0ce1c44fd94a57bc4eb9a2967998394e8790",
+      "bytes": 3019,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native/after-composition-enter.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native/after-composition-enter.json",
+      "sha256": "f1845d7c8971c32957ffbb3f6935c6b8af856adbd3c865f3ee6a81f3cd166b62",
+      "bytes": 77,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native/after-newline-chinese.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native/after-newline-chinese.json",
+      "sha256": "d7ad243f9b6bc10a4446af02dbd894b1eac179a7c3eb3be3b4eb54d116f1b95e",
+      "bytes": 77,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native/environment.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native/environment.json",
+      "sha256": "078f2ad84631b1b3a52967a9428a6972e6aa17077bf8a3d853a9976a93d3f6f2",
+      "bytes": 346,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native/current-input-source.txt",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native/current-input-source.txt",
+      "sha256": "455f6f7a4a08d4b97940ab93ec676fdb5271f7d3d8c725b3f8d35c3d79ba478d",
+      "bytes": 59,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native/final-product.png",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native/final-product.png",
+      "sha256": "e53aab81ef75e3d869e46a0060d6d5a00f2dc004aecb9a42e1e450e83a2e6903",
+      "bytes": 81149,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat/diagnostics.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat/diagnostics.json",
+      "sha256": "14b4a486398192730f3e4d7dbbb7e8a32a5313ff55edcd58457d852231e6de8b",
+      "bytes": 1125,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat/dispatches.jsonl",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat/dispatches.jsonl",
+      "sha256": "03d2a8930b2e07e0c0527008d38340a59d855c611e082fd92c636399990460cb",
+      "bytes": 65,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat/accepted-before-response.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat/accepted-before-response.json",
+      "sha256": "b0daf5db4cb438b13ef1acc40beda73be6b08a486871899d611fb323e508d836",
+      "bytes": 40,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat/pending-dom.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat/pending-dom.json",
+      "sha256": "1d44f0a4ed17da8ef97d2b0082e09eaa12da295831fecd87bb80537264c6e963",
+      "bytes": 351,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat/pending-state.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat/pending-state.json",
+      "sha256": "d6bb054515795f82831c16038635562d61e5ebdcc5b541a972ecdaa03ae14f76",
+      "bytes": 356,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat-r2/fixture.log",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat-r2/fixture.log",
+      "sha256": "b38bf5585867a2e76468ec46c82bb21c04eac23088292420917ca14524166da3",
+      "bytes": 3614,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat-r2/dispatches.jsonl",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat-r2/dispatches.jsonl",
+      "sha256": "eebc0f66416a86be9431991e19704d1a7ecd0c845c3cae03fd13609bbc1ec1ed",
+      "bytes": 66,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat-r2/accepted-before-response.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat-r2/accepted-before-response.json",
+      "sha256": "de79315972f19afbe0daeec7f698d8d6125e9a295f0a97733244ece7e435b65e",
+      "bytes": 40,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat-r2/pending-dom.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat-r2/pending-dom.json",
+      "sha256": "9b48c288abcb35dd92f6d9fec322fa5476503bd9465147081b68f148619de48b",
+      "bytes": 351,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat-r2/pending-state.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat-r2/pending-state.json",
+      "sha256": "773bee3fed8b11dcef2284550100329513843fefef20a97f73bf08b564fd070d",
+      "bytes": 353,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/native-repeat-r2/final-product.png",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/native-repeat-r2/final-product.png",
+      "sha256": "98cd5e4a542b78d9dea6c93031b7f52db942123fe0912e228fa74422b55ff150",
+      "bytes": 86156,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/support-preparation/REPORT.md",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/support-preparation/REPORT.md",
+      "sha256": "6bc09c235676661289f19e017d9a2128e46786e4cd1f2262568f2deb12ada390",
+      "bytes": 6360,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/support-preparation/candidate-identity.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/support-preparation/candidate-identity.json",
+      "sha256": "1cc7e1f153e2b7ee2843ecc9fa15dcf205e4058bd743f128a23b468e8294a729",
+      "bytes": 632,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/support-preparation/candidate-manifest.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/support-preparation/candidate-manifest.json",
+      "sha256": "54235b595fe2a096f1ebb33b1920efc8f5956dd36205c281fbfbd15833d0d60b",
+      "bytes": 82496,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/support-preparation/installed-source-binding.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/support-preparation/installed-source-binding.json",
+      "sha256": "cde044ad374fe6d5c501cb407dde7bd134dd47fe18d4ef4ff7c333e4d4604f2c",
+      "bytes": 239678,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/support-preparation/wheel-source-binding.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/support-preparation/wheel-source-binding.json",
+      "sha256": "6a7386aa097162b0dffcfcf9640d2f9f23d5cf99dbd6a2da5bc5fad69e2be6a3",
+      "bytes": 231141,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/support-preparation/final-verification.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/support-preparation/final-verification.json",
+      "sha256": "d18e58c1df825d4c486b29ab9685f9e203256ce5bc2c4da33aa4d9e5c9dafa8f",
+      "bytes": 2262,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/support-preparation/lifecycle-01-summary.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/support-preparation/lifecycle-01-summary.json",
+      "sha256": "ef717731e9fd1e390b87fdcd30728d2902db838f23f3cf4bb69f481149e52546",
+      "bytes": 4392,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/support-preparation/lifecycle-01-portable.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/support-preparation/lifecycle-01-portable.json",
+      "sha256": "fadab8f1787c0cadf54743bd9f23d5b83a01c9930f6f402c54e4c5801957aa72",
+      "bytes": 59677,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/support-preparation/lifecycle-manifest.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/support-preparation/lifecycle-manifest.json",
+      "sha256": "f2b8fab79f958962f39aa2c958fcb995ba9235df38f5147da68eb5fac778ef02",
+      "bytes": 4196,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/support-preparation/build-result.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/support-preparation/build-result.json",
+      "sha256": "22b74adbac7b094c341db9ab06749d1cb7db50f76072711544e03ad2aee745d0",
+      "bytes": 1263,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "closeout-20261009/support-preparation/installation-setup.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/closeout-20261009/support-preparation/installation-setup.json",
+      "sha256": "1a986e077549a8f99bdb540bfda227ed57ae994ba7f76bea4765879a8292f717",
+      "bytes": 4665,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "repair-pr120-20261009-7wpdbm31/REPORT.md",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/repair-pr120-20261009-7wpdbm31/REPORT.md",
+      "sha256": "adeac98ca4f48d8fe8524c591c1896a643f492aa622a2371e1b242e50354635f",
+      "bytes": 4915,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "repair-pr120-20261009-7wpdbm31/REVIEW.md",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/repair-pr120-20261009-7wpdbm31/REVIEW.md",
+      "sha256": "b86845e842724e2ed2cd7f2300b2ae6304a12c11933e1fa7a8d0b0c67310697b",
+      "bytes": 3744,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "repair-pr120-20261009-7wpdbm31/final-manifest.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/repair-pr120-20261009-7wpdbm31/final-manifest.json",
+      "sha256": "274775393b6f209350e45f2920b8abb5daa814f31160246421fbe84d1c822984",
+      "bytes": 867,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "repair-pr120-20261009-7wpdbm31/validation-summary.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/repair-pr120-20261009-7wpdbm31/validation-summary.json",
+      "sha256": "6e34d83b63fbef63b5f2db06863b891e6178e72a627820ed75252cbe327e41f4",
+      "bytes": 18603,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "repair-pr120-20261009-7wpdbm31/red-browser.log",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/repair-pr120-20261009-7wpdbm31/red-browser.log",
+      "sha256": "06c3874ccef6fe0a5c82d03720b3327aac850a87550fa76a883fa5608a372ef8",
+      "bytes": 12247,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "repair-pr120-20261009-7wpdbm31/green-focused.log",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/repair-pr120-20261009-7wpdbm31/green-focused.log",
+      "sha256": "a0c2a45db901826478daed34a6631ef180224e0534e5a37242561d40015149de",
+      "bytes": 8534,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "repair-pr120-20261009-7wpdbm31/affected-browser.log",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/repair-pr120-20261009-7wpdbm31/affected-browser.log",
+      "sha256": "4cf8ec7836dbc8ae5914255e5a2b5123c50072fdbeb25a9ae67a5554d149fd54",
+      "bytes": 20631,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "repair-pr120-20261009-7wpdbm31/green-models-mainbar.log",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/repair-pr120-20261009-7wpdbm31/green-models-mainbar.log",
+      "sha256": "d124cfdcbf52a29f9870d6ff9b4a701d7f69f2c0f3525ef2d73bc24a578ed501",
+      "bytes": 4956,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "repair-pr120-20261009-7wpdbm31/green-location-final.log",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/repair-pr120-20261009-7wpdbm31/green-location-final.log",
+      "sha256": "e64c17c27de86a33b8ebf93382bf7cb1f5552adbf0c2d4bb426ca8c15bdfc3b6",
+      "bytes": 2962,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "repair-pr120-20261009-7wpdbm31/green-purposes-final.log",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/repair-pr120-20261009-7wpdbm31/green-purposes-final.log",
+      "sha256": "f7e59a8abfcae3371047364d6786c7caca3ea14eec8765528a33181da5108ba1",
+      "bytes": 545,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "repair-pr120-20261009-7wpdbm31/typecheck.log",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/repair-pr120-20261009-7wpdbm31/typecheck.log",
+      "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f",
+      "bytes": 29,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "review-pr120-20261009/review-summary.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/review-pr120-20261009/review-summary.json",
+      "sha256": "efc83e60453224fa277ff6019e55c931ab488a4db492c48d98b7a748add87a99",
+      "bytes": 2161,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "review-pr120-20261009/spec/REPORT.md",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/review-pr120-20261009/spec/REPORT.md",
+      "sha256": "6668a318c7108c2e6df7de51f0ca7338766364210d2a85823d7066389fe25b8d",
+      "bytes": 2412,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "review-pr120-20261009/spec/EVIDENCE.md",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/review-pr120-20261009/spec/EVIDENCE.md",
+      "sha256": "6afeecbbc580b9d4be349f155e0c817895fbe6f63cf1dd680019223b98b53070",
+      "bytes": 1635,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "review-pr120-20261009/spec/mainbar-repro.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/review-pr120-20261009/spec/mainbar-repro.json",
+      "sha256": "f02b79006175b2238724b2fa35728740a5791d19132326835adcbbfc737ef6b3",
+      "bytes": 1976,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "review-pr120-20261009/spec/first-harness-failure.txt",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/review-pr120-20261009/spec/first-harness-failure.txt",
+      "sha256": "94aa4a874ec1992d4485d51109849ee3c42e7cc61cce08264d3edf1bdbfe29d1",
+      "bytes": 708,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "review-pr120-20261009/standards/REPORT.md",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/review-pr120-20261009/standards/REPORT.md",
+      "sha256": "c623ccac760697fe1cefeb8f17d7d897db756a90aeda0e0e45b7171849af31b5",
+      "bytes": 5291,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "review-pr120-20261009/standards/current-proof-output.txt",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/review-pr120-20261009/standards/current-proof-output.txt",
+      "sha256": "f272b38f413db0328450a66af8f3461e7c4b394222ae31cc11b50f71500219e9",
+      "bytes": 1868,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "recheck-pr120-20261009/review-summary.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/recheck-pr120-20261009/review-summary.json",
+      "sha256": "f686861cd15e6d92fdb998eb2bcdffdbd2aa3f6f44f60f3c2db43eacbf6b52e3",
+      "bytes": 743,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "recheck-pr120-20261009/standards/REPORT.md",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/recheck-pr120-20261009/standards/REPORT.md",
+      "sha256": "6aa20c52cb3daa7d24e76928a7dc63f2658e56d4768eaffbb6cbacdc60426e0a",
+      "bytes": 2173,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "recheck-pr120-20261009/spec/SPEC-RECHECK.md",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/recheck-pr120-20261009/spec/SPEC-RECHECK.md",
+      "sha256": "3a362a0c3102b321d890f067816bdc3b799a824714a6d07e42700cdf0fecc512",
+      "bytes": 2397,
+      "copy": "byte-identical"
+    },
+    {
+      "source": "recheck-pr120-20261009/spec/candidate-verification.json",
+      "repository_path": "docs/implementation/dashboard-migration/evidence/recheck-pr120-20261009/spec/candidate-verification.json",
+      "sha256": "8dea7baf4f4985d10a3f8e1106c9bac9c2594394ff0a0adfa3628bca15f77073",
+      "bytes": 2985,
+      "copy": "byte-identical"
+    }
+  ],
+  "omissions": [
+    "native/final-native.png includes unrelated browser UI; retained locally only. Product-only screenshot is included.",
+    "Raw G08 result contains three fixture CSRF values; public lifecycle-01-portable.json replaces exactly those, with raw and derivative hashes retained.",
+    "Virtual environments, SQLite files, builds, temporary indexes and raw terminal outputs containing fixture tokens are not published.",
+    "First proposal and pre-closeout canonical snapshots remain local; their hashes/history and first findings are retained by the immutable current proposal and review records.",
+    "Historical relative evidence paths outside this set resolve in the earlier evidence packages or retained local root; no claim that every historical attachment was copied here."
+  ]
+}

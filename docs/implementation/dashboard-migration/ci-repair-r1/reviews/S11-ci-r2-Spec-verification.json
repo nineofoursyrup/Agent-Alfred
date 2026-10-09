@@ -1,0 +1,277 @@
+{
+  "head": "4da39e52194e62f0f23637a83c8556069eb6a07d",
+  "base": "37cd0180fd5222d0753a0f3203ae56b1df6e0f0a",
+  "previous_candidate": "b21451fb4674ce693cec2d53d16bc94647fa4965",
+  "tree": "4ce90f7a91c21a9a5c14834e352500b5088cb405",
+  "src_tree": "598ca385e9c873a2f67815e0f5c638b6b4b85ffe",
+  "package_tree": "8496b4a454f9a84b9a1f0b6c8c507e0e0387e1b4",
+  "review_result": "FAIL",
+  "open_findings": [
+    {
+      "priority": "P2",
+      "title": "Real navigation before first mount does not retire pending location",
+      "file": "src/agent_alfred/ops/static/app.js",
+      "line": 316,
+      "source_contracts": [
+        "I06:142",
+        "I07:163",
+        "issue-89:D08:163"
+      ],
+      "observed": "real held200 released after pre-start navigation; reading-status stays loading",
+      "evidence": "S11/ci-r1/startup-navigation-probe-01.log",
+      "required_boundary": "cleanup before held response release; preserve newer request and cancelled/same-target navigation"
+    }
+  ],
+  "closed_findings": [
+    {
+      "prior_report": "S11-ci-r1-Spec.md",
+      "priority": "P2",
+      "closure": "Compatibility mousedown binds same opener through delayed touch focus; mouseup clears token; fixed held201 click/tap x existing/no-session all PASS."
+    }
+  ],
+  "files": [
+    {
+      "path": "src/agent_alfred/ops/static/app.js",
+      "sha256": "eef37f4b0a7f18deb007fcebe230b1a8cb50a7959a6574f8695a4ff4e2ce0e00",
+      "bytes": 48966
+    },
+    {
+      "path": "src/agent_alfred/ops/static/shell.js",
+      "sha256": "d21a55537fdc484701bf4d0fb0614993ea09bf0258b07b03f54c5630f39e2665",
+      "bytes": 18925
+    },
+    {
+      "path": "tests/browser/inbox-run-navigation.spec.js",
+      "sha256": "a78c84b8dbee0a41fc6039a357aee6ca18f980c5a35e0d2aefaee67ec8a08bbd",
+      "bytes": 31525
+    },
+    {
+      "path": "tests/browser/mainbar-empty-identity.spec.js",
+      "sha256": "8904b15637462cfd53db5566a645bce2a70f1587ff6c3f9f5158f01a82b6f409",
+      "bytes": 3655
+    },
+    {
+      "path": "tests/browser/mainbar-location.spec.js",
+      "sha256": "0e679a5f33b26511a532acc56234ae8910ac05a75416191a3b66d22d5cb09ca0",
+      "bytes": 9399
+    },
+    {
+      "path": "tests/browser/session-create-race.spec.js",
+      "sha256": "da7922d8d3f115a076dc85695462ccba70bfa7825c920085ec68be5ccbbea6f9",
+      "bytes": 18623
+    }
+  ],
+  "delta_from_r1": [
+    "src/agent_alfred/ops/static/app.js",
+    "tests/browser/session-create-race.spec.js"
+  ],
+  "diff_stats": " src/agent_alfred/ops/static/app.js           | 24 +++++++++++++++---\n src/agent_alfred/ops/static/shell.js         | 11 +++++++--\n tests/browser/inbox-run-navigation.spec.js   | 12 ++++++---\n tests/browser/mainbar-empty-identity.spec.js | 16 +++++++++++-\n tests/browser/mainbar-location.spec.js       |  5 ++++\n tests/browser/session-create-race.spec.js    | 37 ++++++++++++++++++++++++++--\n 6 files changed, 93 insertions(+), 12 deletions(-)\n",
+  "evidence": [
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/creation-red.log",
+      "sha256": "5f7ea828e4d6820b6775b74c181dc19359be8ef3be042fa392d1cb9dd4a788d8",
+      "bytes": 6721,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/empty-identity-red.log",
+      "sha256": "2eb2628ac754ca130a40a0b0dbcdb6f7ee702d57810d3c775f6d1da4043e9671",
+      "bytes": 3564,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/opener-focus-red.log",
+      "sha256": "005a5ce520a13345a52516b0367b9ba531e6be4beb1afa57440ef5f9b5b8d0aa",
+      "bytes": 3932,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/affected-green-01.log",
+      "sha256": "82ea513bba43951ad3a4bda13a9794b191759729454d063a2a372b3883aef402",
+      "bytes": 3826,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/affected-green-02.log",
+      "sha256": "6c12e639ff06b807ae98f2fc391182dfba80026f8998e4d5c549eacbfa7ddd76",
+      "bytes": 7601,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/affected-green-03.log",
+      "sha256": "c5d226603228b6c0fdb0664273932e4bce66fa54c0965f90017c98a73027b122",
+      "bytes": 4271,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/typecheck-02.log",
+      "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f",
+      "bytes": 29,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/python-assets-protocol-01.log",
+      "sha256": "a49716bea29ccd882382b19c1580803815ade1a884221197a789e757764c6928",
+      "bytes": 603,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/trace-order.json",
+      "sha256": "4864c96e3a7ce3687d7fcca2c4908c530637730a20c5423a5940e02058687ed2",
+      "bytes": 27175,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/empty-identity-trace-order.json",
+      "sha256": "d8ca74a8774bea2eae0903597c4f74af794f234c5e3afd6b7712630dff5ca705",
+      "bytes": 3980,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/controlled-red-tests.patch",
+      "sha256": "b995e560be117022d5f0925b16167d4aa57f92f9131f7e53b3df61c088417f14",
+      "bytes": 4172,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/touch-probe-01.log",
+      "sha256": "f3cdbf1d0d9abc9025f0e6a224b3f196e575ac784be486202c6f3545a7ca73e7",
+      "bytes": 3344,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/affected-green-04.log",
+      "sha256": "e564aa86ef911ea4deb1c8412606f8af91c6e9b73197dc98251f5abb4d3360b4",
+      "bytes": 4678,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/typecheck-03.log",
+      "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f",
+      "bytes": 29,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/python-assets-protocol-02.log",
+      "sha256": "0a2a4c862daf524885b11e7e77d27c542ecaabc1d92cc5e7342359974caec777",
+      "bytes": 603,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/browser-full-01-result.json",
+      "sha256": "897fb9c9b77111f4b197737f94dbc93d02a8129d6b218253432053d9d16bc269",
+      "bytes": 515,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/browser-full-01-interruption.json",
+      "sha256": "a236a35f45f5e53bd19ab767f020bff131946007c5c9259a04eb8642968fd7cb",
+      "bytes": 655,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/stability-02.log",
+      "sha256": "bb2e06e366310ad137db36f5ce2dab67392648a17f2ee0402eb4e512bf35f336",
+      "bytes": 9664
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/startup-navigation-probe-01.log",
+      "sha256": "bf7ea513ef903a19a205e4dab409950eac2ebc0e164e5d22151db83b88f1ca9c",
+      "bytes": 3693
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/startup-navigation-probe.spec.mjs",
+      "sha256": "8a84f3ce4d3221ff4720519199b2aa1b2ec90653e1c684dafd3e8ecb1c57c4f9",
+      "bytes": 2150
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/startup-navigation-probe.config.mjs",
+      "sha256": "bddfa6887436d668da27e3ff2e7baffdd9de8a461eec41df3470289cbe36ef2f",
+      "bytes": 852
+    }
+  ],
+  "fixed_diff_check": {
+    "37cd0180fd5222d0753a0f3203ae56b1df6e0f0a": {
+      "exit": 0,
+      "output": ""
+    },
+    "b21451fb4674ce693cec2d53d16bc94647fa4965": {
+      "exit": 0,
+      "output": ""
+    }
+  },
+  "unchanged_inputs": [
+    "normative docs/design",
+    "Python product and tests",
+    "dependencies",
+    "Playwright config",
+    "wire protocol",
+    "public HTTP handlers"
+  ],
+  "current_checks": {
+    "affected_green_04": {
+      "passed": 24,
+      "seconds": 28.3
+    },
+    "typecheck_03": "PASS",
+    "python_assets_protocol_02": {
+      "passed": 29
+    },
+    "b214_stability": "historical only, 40 PASS does not prove final tap repair stability",
+    "b214_full_browser": "SIGINT exit130 incomplete, not PASS",
+    "stability_02": {
+      "passed": 50,
+      "repeat_each": 5,
+      "scenarios": 10,
+      "seconds": 59.9
+    }
+  },
+  "review_scope": "Independent Spec review of complete 37cd..4da code/test delta, with targeted b214..4da followup; no full S11 or final gate acceptance.",
+  "pending_separate_gates": [
+    "final full browser",
+    "four final installed resource HTTP checks",
+    "final native 200 percent applicability",
+    "same-state G08 on repaired supported target",
+    "final CI",
+    "real IME remains BLOCKED"
+  ],
+  "preserved_previous_artifacts": [
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S11-ci-r1-Spec.md",
+      "sha256": "38152d0a7fdc7cb6c8349e865d10885d103064216eceb440f4c8e2f2791da292",
+      "bytes": 1631
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S11-ci-r1-Spec-details.md",
+      "sha256": "032b3a57e575c9b6c2b88601d7b2fd9c725d9b3f090085b7b6a179fc3bb58a68",
+      "bytes": 4973
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S11-ci-r1-Spec-verification.json",
+      "sha256": "96e87b256d9c2778bce3d20805339a85a2d7a076c6467d86f7bf0b0a6cb61b6b",
+      "bytes": 7471
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S11-ci-r1-Spec-diagnosis.json",
+      "sha256": "2d0cf590ffb12dbc373eb81ff6d79aa5bbbbaef66ae5c0f401b36bfd02dfbaf7",
+      "bytes": 31707
+    }
+  ],
+  "reports": [
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S11-ci-r2-Spec.md",
+      "sha256": "d2cdea558b6dca6d86e2b6cd619a0f64b128fc2d6decbab6142e98114095a040",
+      "bytes": 2371
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S11-ci-r2-Spec-details.md",
+      "sha256": "d4906bd9bb0718c68de7d214eec56c65fe9b7c40a7796e0131d06cfaeb457bfd",
+      "bytes": 7054
+    }
+  ],
+  "draft_preservation": {
+    "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S11-ci-r2-pre-probe-report",
+    "status": "UNISSUED_DRAFT",
+    "root_adopted": false
+  }
+}

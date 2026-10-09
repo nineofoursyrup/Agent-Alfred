@@ -886,6 +886,7 @@ def test_the_mainbar_targets_the_requested_session() -> None:
         "blocks": [{"type": "text", "text": "old hello"}],
         "source": "cli",
         "created_at": "2026-08-26T12:00:00Z",
+        "message_anchor": None,
     }
 
 

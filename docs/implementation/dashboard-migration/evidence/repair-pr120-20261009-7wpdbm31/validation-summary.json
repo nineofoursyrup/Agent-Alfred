@@ -1,0 +1,466 @@
+{
+  "unique_passed_browser_tests": 114,
+  "spec_files": 16,
+  "final_manifest_matches": true,
+  "head_unchanged": true,
+  "index_unchanged": true,
+  "cases": [
+    {
+      "file": "tests/browser/mainbar-aggregation-location.spec.js",
+      "test": "exact aggregation NoAction keeps independent disposition and no_matching_sources"
+    },
+    {
+      "file": "tests/browser/mainbar-aggregation-location.spec.js",
+      "test": "exact aggregation NoAction keeps independent disposition and sources_not_selected"
+    },
+    {
+      "file": "tests/browser/mainbar-empty-identity.spec.js",
+      "test": "restored unread for real empty Session and Run IDs uses one guarded read and preserves its draft: navigate"
+    },
+    {
+      "file": "tests/browser/mainbar-empty-identity.spec.js",
+      "test": "restored unread for real empty Session and Run IDs uses one guarded read and preserves its draft: same-page"
+    },
+    {
+      "file": "tests/browser/mainbar-integration.spec.js",
+      "test": "real S01 records compose with S02 exact location, identity merge and cross-Session drafts"
+    },
+    {
+      "file": "tests/browser/mainbar-location.spec.js",
+      "test": "a later preview cannot downgrade the same target full request or recorded state"
+    },
+    {
+      "file": "tests/browser/mainbar-location.spec.js",
+      "test": "a later unavailable request cannot erase a retained preview marker"
+    },
+    {
+      "file": "tests/browser/mainbar-location.spec.js",
+      "test": "an explicit cross-Session location can finish before the new Stream snapshot"
+    },
+    {
+      "file": "tests/browser/mainbar-location.spec.js",
+      "test": "exact MainBar location is one bounded read with a marked preview and separate history cursor"
+    },
+    {
+      "file": "tests/browser/mainbar-location.spec.js",
+      "test": "exact location retires on offline and cannot overwrite a new location after reconnect"
+    },
+    {
+      "file": "tests/browser/mainbar-location.spec.js",
+      "test": "exact location retires on sse-error and cannot overwrite a new location after reconnect"
+    },
+    {
+      "file": "tests/browser/mainbar-location.spec.js",
+      "test": "failed exact location has an explicit read-only retry and does not create a Run"
+    },
+    {
+      "file": "tests/browser/mainbar-location.spec.js",
+      "test": "hidden no-reply failure retains outcome attention without inventing a new reply"
+    },
+    {
+      "file": "tests/browser/mainbar-location.spec.js",
+      "test": "idle reconnect verifies the same Run and does not infer saving from an unrelated persisted pair"
+    },
+    {
+      "file": "tests/browser/mainbar-location.spec.js",
+      "test": "process-gap navigation distinguishes a legal empty Run ID from an absent target"
+    },
+    {
+      "file": "tests/browser/mainbar-location.spec.js",
+      "test": "restored unread identity remains unconfirmed when another history item is visible"
+    },
+    {
+      "file": "tests/browser/mainbar-location.spec.js",
+      "test": "retired location cannot leave a loading state or late content after page navigation"
+    },
+    {
+      "file": "tests/browser/mainbar-location.spec.js",
+      "test": "successive exact locations stay separate until ordinary history or SSE owns the same records"
+    },
+    {
+      "file": "tests/browser/mainbar-reading.spec.js",
+      "test": "new reply preserves a selected old message and only explicit latest follows it"
+    },
+    {
+      "file": "tests/browser/mainbar-reading.spec.js",
+      "test": "opening hidden MainBar at an old position does not acknowledge the new reply"
+    },
+    {
+      "file": "tests/browser/mainbar.spec.js",
+      "test": "MainBar keeps its draft and drawer across pages and a refresh"
+    },
+    {
+      "file": "tests/browser/mainbar.spec.js",
+      "test": "an accepted message receives one recorded reply, also after refresh"
+    },
+    {
+      "file": "tests/browser/models-migration.spec.js",
+      "test": "S08 SPEC F1 lost saved receipt requires a post-failure read before explicit adoption"
+    },
+    {
+      "file": "tests/browser/models-migration.spec.js",
+      "test": "S08 SPEC F1 real conflict with a failed comparison keeps its baseline even when values match"
+    },
+    {
+      "file": "tests/browser/models-migration.spec.js",
+      "test": "S08 SPEC F1 real instance change retires the old comparison read and qualification"
+    },
+    {
+      "file": "tests/browser/models-migration.spec.js",
+      "test": "S08 STD01 retired save cannot clear a successor request after real Stream reconnect"
+    },
+    {
+      "file": "tests/browser/models-migration.spec.js",
+      "test": "S08 STD02 model action focus survives refresh and completion without stealing a new intent"
+    },
+    {
+      "file": "tests/browser/models-migration.spec.js",
+      "test": "S08 a lost real accepted probe response never replays on focus or reentry"
+    },
+    {
+      "file": "tests/browser/models-migration.spec.js",
+      "test": "S08 catalog refresh stays one request and settings remain usable in four viewports"
+    },
+    {
+      "file": "tests/browser/models-migration.spec.js",
+      "test": "S08 each saved field is independent and uses the public HTTP value"
+    },
+    {
+      "file": "tests/browser/models-migration.spec.js",
+      "test": "S08 real catalog label and explicit clearing survive HTTP read and page reentry"
+    },
+    {
+      "file": "tests/browser/models-migration.spec.js",
+      "test": "S08 real two-tab conflict retains baseline and requires explicit adoption"
+    },
+    {
+      "file": "tests/browser/models-migration.spec.js",
+      "test": "S08 rejected unpin keeps the original dirty draft"
+    },
+    {
+      "file": "tests/browser/models-migration.spec.js",
+      "test": "S08 saved model probe preserves drafts and links its real Attempt and cost"
+    },
+    {
+      "file": "tests/browser/models-migration.spec.js",
+      "test": "S08 unknown unpin unlocks fields only after a connected current read and keeps its receipt"
+    },
+    {
+      "file": "tests/browser/models-migration.spec.js",
+      "test": "S11 clear final price changes the next probe and Ops while the old snapshot stays fixed"
+    },
+    {
+      "file": "tests/browser/models-migration.spec.js",
+      "test": "S11 model pending save protects a successor equal to its old saved value"
+    },
+    {
+      "file": "tests/browser/models-migration.spec.js",
+      "test": "S11 model unknown save protects a successor equal to its old saved value"
+    },
+    {
+      "file": "tests/browser/overview.spec.js",
+      "test": "A real recorded read merges into the held current slot without duplicate or old pending downgrade"
+    },
+    {
+      "file": "tests/browser/overview.spec.js",
+      "test": "Current saving Run shares one slot; ordinary completion only prompts a manual history refresh"
+    },
+    {
+      "file": "tests/browser/overview.spec.js",
+      "test": "Disconnect, same-instance reconnect and restart cannot renew or resurrect observations"
+    },
+    {
+      "file": "tests/browser/overview.spec.js",
+      "test": "Gap and disconnect retire slow real reads even after a same-instance reconnect"
+    },
+    {
+      "file": "tests/browser/overview.spec.js",
+      "test": "Hidden Overview revokes a changed memory revision and rejects its delayed response"
+    },
+    {
+      "file": "tests/browser/overview.spec.js",
+      "test": "Invalid range and IANA timezone expose correction without blocking other sources"
+    },
+    {
+      "file": "tests/browser/overview.spec.js",
+      "test": "Original observation expires despite a failed refresh and layout changes; earlier source expiry wins"
+    },
+    {
+      "file": "tests/browser/overview.spec.js",
+      "test": "Overview keeps opaque colliding identities and reference layouts readable"
+    },
+    {
+      "file": "tests/browser/overview.spec.js",
+      "test": "Overview preserves full counts, separate costs and fixed calendar source on navigation"
+    },
+    {
+      "file": "tests/browser/overview.spec.js",
+      "test": "Overview reads three real independent sources without selecting a Session"
+    },
+    {
+      "file": "tests/browser/overview.spec.js",
+      "test": "Repeated Overview reads preserve another Ops snapshot and trace pruning keeps accounting"
+    },
+    {
+      "file": "tests/browser/overview.spec.js",
+      "test": "Source navigation records only identity and restores Overview after a real reread"
+    },
+    {
+      "file": "tests/browser/overview.spec.js",
+      "test": "Three sources fail independently, retire replaced ranges and allow local retries"
+    },
+    {
+      "file": "tests/browser/overview.spec.js",
+      "test": "Unknown, proven zero, no consumption, tiny positive and damaged membership stay distinct"
+    },
+    {
+      "file": "tests/browser/read-retirement.spec.js",
+      "test": "active Run evidence retires its response without clearing stale after broker replay gap"
+    },
+    {
+      "file": "tests/browser/read-retirement.spec.js",
+      "test": "active Run evidence retires its response without clearing stale after reconnect"
+    },
+    {
+      "file": "tests/browser/read-retirement.spec.js",
+      "test": "active Run summary retires its response without clearing stale after broker replay gap"
+    },
+    {
+      "file": "tests/browser/read-retirement.spec.js",
+      "test": "active Run summary retires its response without clearing stale after reconnect"
+    },
+    {
+      "file": "tests/browser/read-retirement.spec.js",
+      "test": "real Session response is retired across broker replay gap and same-instance reconnect"
+    },
+    {
+      "file": "tests/browser/read-retirement.spec.js",
+      "test": "real Session response is retired across disconnect and same-instance reconnect"
+    },
+    {
+      "file": "tests/browser/recording.spec.js",
+      "test": "real pending reconnect and second-tab draft survive failed settlement"
+    },
+    {
+      "file": "tests/browser/recording.spec.js",
+      "test": "real pending reconnect and second-tab draft survive recorded settlement"
+    },
+    {
+      "file": "tests/browser/run-purposes.spec.js",
+      "test": "Overview, Run list and details distinguish all known purposes from an unknown purpose"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "a Run admitted after opening the list appears once as the pinned running row"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "a real recorded Run deep link loads published Attempt evidence and exact cost"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "aborted attempts stay in publication position and unknown cost never has an amount"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "cached aborted evidence survives unavailable receipts correctly"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "cached block evidence survives unavailable receipts correctly"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "cached committed evidence survives unavailable receipts correctly"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "cached start-only evidence survives unavailable receipts correctly"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "cached terminal-only evidence survives unavailable receipts correctly"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "confirmed input survives unavailable accounting (terminal=false)"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "confirmed input survives unavailable accounting (terminal=true)"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "durable accounting survives absent trace and event usage cannot manufacture a charge"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "global busy stays in MainBar while pinned Runs obey filters and deep-link correction"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "input source failure stays explicit after reloading run details"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "later failed preparation displays its own final exclusions after reload"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "live Attempt updates keep keyboard focus and collapse only the new abort"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "oversized input shows preparation failure without an invented Attempt"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "preparation exclusions use server counts without manufacturing actual input"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "stream mode uses actual start metadata (missing)"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "stream mode uses actual start metadata (nonstreamed)"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "stream mode uses actual start metadata (streamed)"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "stream mode uses actual start metadata (terminal-only)"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "unconfirmed input registration remains unknown after reload"
+    },
+    {
+      "file": "tests/browser/runs.spec.js",
+      "test": "unsent SSE preparation never becomes an actual Attempt"
+    },
+    {
+      "file": "tests/browser/send-flow.spec.js",
+      "test": "one real UI flow reaches 202, Step, Attempt, deltas and one reply across pages and reload"
+    },
+    {
+      "file": "tests/browser/session-create-race.spec.js",
+      "test": "MainBar click › opening the same MainBar during a real creation receipt keeps the selection intent (existing=false)"
+    },
+    {
+      "file": "tests/browser/session-create-race.spec.js",
+      "test": "MainBar click › opening the same MainBar during a real creation receipt keeps the selection intent (existing=true)"
+    },
+    {
+      "file": "tests/browser/session-create-race.spec.js",
+      "test": "MainBar tap › opening the same MainBar during a real creation receipt keeps the selection intent (existing=false)"
+    },
+    {
+      "file": "tests/browser/session-create-race.spec.js",
+      "test": "MainBar tap › opening the same MainBar during a real creation receipt keeps the selection intent (existing=true)"
+    },
+    {
+      "file": "tests/browser/session-create-race.spec.js",
+      "test": "a delayed receipt keeps the editing controls reachable at 1440x360"
+    },
+    {
+      "file": "tests/browser/session-create-race.spec.js",
+      "test": "a delayed receipt keeps the editing controls reachable at 320x360"
+    },
+    {
+      "file": "tests/browser/session-create-race.spec.js",
+      "test": "a delayed receipt keeps the editing controls reachable at 320x800"
+    },
+    {
+      "file": "tests/browser/session-create-race.spec.js",
+      "test": "a successful creation from an earlier process stays a receipt until explicit current-process verification"
+    },
+    {
+      "file": "tests/browser/session-create-race.spec.js",
+      "test": "an external real Run prevents late creation from switching the recording Session and never queues the switch"
+    },
+    {
+      "file": "tests/browser/session-create-race.spec.js",
+      "test": "creating closes Send and Enter while a newer draft keeps the successful receipt explicit"
+    },
+    {
+      "file": "tests/browser/session-create-race.spec.js",
+      "test": "first native mount before the real creation receipt preserves close intent"
+    },
+    {
+      "file": "tests/browser/session-create-race.spec.js",
+      "test": "first native mount before the real creation receipt preserves focus intent"
+    },
+    {
+      "file": "tests/browser/session-create-race.spec.js",
+      "test": "first native mount before the real creation receipt preserves navigate intent"
+    },
+    {
+      "file": "tests/browser/session-create-race.spec.js",
+      "test": "first native mount before the real creation receipt preserves opener-focus intent"
+    },
+    {
+      "file": "tests/browser/session-create-race.spec.js",
+      "test": "first native mount before the real creation receipt preserves reading intent"
+    },
+    {
+      "file": "tests/browser/session-create-race.spec.js",
+      "test": "first native mount before the real creation receipt preserves unchanged intent"
+    },
+    {
+      "file": "tests/browser/settings.spec.js",
+      "test": "Models and Connections navigation keeps MainBar"
+    },
+    {
+      "file": "tests/browser/settings.spec.js",
+      "test": "S08 fields save explicitly and a delayed receipt keeps newer drafts"
+    },
+    {
+      "file": "tests/browser/settings.spec.js",
+      "test": "assigned inference probe names the row and catalog refresh exists"
+    },
+    {
+      "file": "tests/browser/settings.spec.js",
+      "test": "auth probe button posts only endpoint_id, shows result, and restores"
+    },
+    {
+      "file": "tests/browser/settings.spec.js",
+      "test": "auth probe button posts only endpoint_id, shows result, and restores after focus refresh"
+    },
+    {
+      "file": "tests/browser/settings.spec.js",
+      "test": "auth probe error restores the button and shows the machine code"
+    },
+    {
+      "file": "tests/browser/settings.spec.js",
+      "test": "auth probe error restores the button and shows the machine code after focus refresh"
+    },
+    {
+      "file": "tests/browser/settings.spec.js",
+      "test": "unsupported grok rows do not show 支持"
+    },
+    {
+      "file": "tests/browser/streaming.spec.js",
+      "test": "a terminal Attempt snapshot settles the affected dropped-delta notice without inventing events"
+    },
+    {
+      "file": "tests/browser/streaming.spec.js",
+      "test": "an unrecorded terminal snapshot recovers full text and refuses stale pending"
+    },
+    {
+      "file": "tests/browser/streaming.spec.js",
+      "test": "deltas_dropped withdraws text until every affected Attempt closes"
+    },
+    {
+      "file": "tests/browser/streaming.spec.js",
+      "test": "disconnect clears an unfinished Attempt and suppresses its later deltas"
+    },
+    {
+      "file": "tests/browser/streaming.spec.js",
+      "test": "duplicate, regressing and foreign patches do not replace authoritative state"
+    }
+  ],
+  "reused_results": "Unchanged model, purpose and non-location behavior retains passing results. All location lifecycle tests were rerun after removing overly broad connected guards."
+}

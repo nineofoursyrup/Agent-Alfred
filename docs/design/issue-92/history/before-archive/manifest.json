@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "contract": "DASHBOARD-MIGRATION-IMPLEMENTATION-CONTRACT-r1",
+  "recorded_at": "2026-10-09T01:08:35+08:00",
+  "scope": "Design documents only; consolidated from already confirmed Q1-Q7 with Q6 mobile-emulation override.",
+  "authority_note": "Document hashes identify this local deliverable; they do not assert separate user approval of these exact hashes or Git delivery authorization.",
+  "branch": "codex/issue-92-migration-contract",
+  "document_base": "1a343ae1894554ad0167273a34b1f6bce171fb5b",
+  "product_baseline": "22c8720e1ec874fd012cc79b086cd8aace4c79b6",
+  "files": [
+    {
+      "path": "docs/design/issue-92/ACCEPTANCE.md",
+      "sha256": "b5b9ba4eaf6fed836823932414d922cb75a59fc052e80ebeaa1d72abc1574a9b",
+      "bytes": 14944
+    },
+    {
+      "path": "docs/design/issue-92/APPROVAL.md",
+      "sha256": "4783ff60c689e81ce5d5e24f5d78bbec20de636d081e61c58f911edf69f1c770",
+      "bytes": 3904
+    },
+    {
+      "path": "docs/design/issue-92/DECISIONS.md",
+      "sha256": "07fa956e7c4cae77bf99de6ddf701141ac4b2b255a2820e59a4941da991efca9",
+      "bytes": 9828
+    },
+    {
+      "path": "docs/design/issue-92/FACTS.md",
+      "sha256": "e8afcf4846683da5086beb335d88a33362649b7c1a4f29e18ff7475c23b94222",
+      "bytes": 10189
+    },
+    {
+      "path": "docs/design/issue-92/SLICES-DRAFT.md",
+      "sha256": "bb839ca2622a746d8257042b41e96841911bbae0907d0f934feb384fe2d351e1",
+      "bytes": 7224
+    },
+    {
+      "path": "docs/design/issue-92/SLICES.md",
+      "sha256": "4411d52c0ff5f08da699d23b6be008437d47974bc591f4ac9efc4d841d9500fe",
+      "bytes": 8727
+    },
+    {
+      "path": "docs/design/issue-92/SPEC.md",
+      "sha256": "a5fd2ef17226a5ef0c7690b828b3ddc915d3fea9d5427744aaef9c6cae35be60",
+      "bytes": 16725
+    },
+    {
+      "path": "docs/design/issue-92/VALIDATION-PLAN.md",
+      "sha256": "db4640fa3dd7a8091931df84a657951ff2e61bc632c64ab8427ad39ff2e6a52e",
+      "bytes": 9862
+    },
+    {
+      "path": "docs/design/issue-92/VALIDATION.md",
+      "sha256": "790c0b633b9ee0070fecf8a5faae63d024b6f1900789edeac16464e1c7cd1e40",
+      "bytes": 4736
+    },
+    {
+      "path": "docs/design/issue-92/acceptance-map.json",
+      "sha256": "e903757969d1e6ce2e3afb4b04e135940bc2420c97096723db353fcfe7b98388",
+      "bytes": 313287
+    },
+    {
+      "path": "docs/design/issue-92/source-index.json",
+      "sha256": "d84428996ab25994688b7c46681f47dbd4b80f053a7eedecccef03c19509408a",
+      "bytes": 14188
+    }
+  ],
+  "manifest_self_hash_included": false,
+  "observed_checks": {
+    "document_static": "PASS",
+    "markdown_files": 9,
+    "local_links_checked": 67,
+    "identified_source_files": 31,
+    "source_items": 309,
+    "user_paths": 72,
+    "source_counterexamples": 128,
+    "migration_counterexamples": 12,
+    "slice_dependency_DAG": "PASS / acyclic",
+    "whole_section_responsibility_union": "PASS",
+    "git_diff_check": "PASS",
+    "product_scope_diff": "none",
+    "product_tests": "NOT RUN",
+    "browser_and_native_interaction": "NOT RUN",
+    "build_and_isolated_install": "NOT RUN",
+    "upgrade_and_rollback": "NOT RUN",
+    "independent_product_review": "NOT RUN",
+    "github_delivery": "NOT PERFORMED"
+  },
+  "source_handoff": {
+    "status": "BLOCKED",
+    "open_native_dependency": 89,
+    "reason": "Confirmed local design has no fixed archive commit or closed native dependency."
+  },
+  "preserved_history": "VALIDATION.md records first static link failure and corrected mapping/tool observations.",
+  "excluded_mobile_environments": {
+    "scope": "excluded_by_user_Q6",
+    "environments": [
+      "iPhone hardware",
+      "iOS Safari",
+      "real mobile software keyboard"
+    ],
+    "result": "NOT RUN",
+    "blocks_scoped_acceptance": false
+  }
+}

@@ -4,7 +4,7 @@ import {test, createChatSession, sendChat} from "./chat-fixture.js";
 test("real tool creation and next-Step query reach the chat and survive reload", async ({page, chatServer}) => {
   await page.goto(chatServer.origin + "/");
   await createChatSession(page);
-  await page.getByRole("button", {name:"展开对话", exact:true}).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   await sendChat(page, chatServer, "创建工具测试日程");
   const chat = page.getByRole("region", {name:"主对话"});
   await expect(chat).toContainText("已查询到工具测试日程");
@@ -17,7 +17,7 @@ for (const action of ["确认", "取消"]) {
   test(`host handles ${action}, reread and recovery without model approval`, async ({page, chatServer}) => {
     await page.goto(chatServer.origin + "/");
     await createChatSession(page);
-    await page.getByRole("button", {name:"展开对话", exact:true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     const chat = page.getByRole("region", {name:"主对话"});
     const send = text => sendChat(page, chatServer, text);
     await send(`创建${action}测试Skill`);
@@ -43,7 +43,7 @@ for (const next of ['session', 'run']) {
   test(`CI-02: ${next} admission during saved-chat scheduling preserves the draft and recovers`, async ({page, context, chatServer}) => {
     await page.goto(chatServer.origin + '/');
     const session = await createChatSession(page);
-    await page.getByRole('button',{name:'展开对话',exact:true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     await chatServer.send('hold-scheduling');
     try {
       await page.getByRole('textbox',{name:'消息',exact:true}).fill('创建确认测试Skill');
@@ -75,7 +75,7 @@ for (const next of ['session', 'run']) {
         if (isolated) {
           const newSession = await createChatSession(target);
           expect(newSession).not.toBe(session);
-          await target.getByRole('button',{name:'展开对话',exact:true}).click();
+          await target.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
           await sendChat(target, chatServer, '创建工具测试日程');
           await expect(target.getByRole('region',{name:'主对话'})).toContainText('已查询到工具测试日程');
         } else {

@@ -19,7 +19,7 @@ async function chat(page, origin) {
   expect(created.status()).toBe(201);
   const session = (await created.json()).session_id;
   await page.waitForFunction(id => sessionStorage.getItem("alfred.session") === id, session);
-  const expand = page.getByRole("button", {name: "展开对话", exact: true});
+  const expand = page.locator('#shell-toolbar [data-open-panel="mainbar"]');
   if (await expand.isVisible()) await expand.click();
 }
 async function send(page, text) {
@@ -90,6 +90,7 @@ test("CE-23: a late real evidence response cannot replace the next Run", async (
     });
     await page.goto(`${server.origin}/runs/${first}`, {waitUntil: "domcontentloaded"});
     await intercepted;
+    await page.getByRole('link',{name:'返回运行列表',exact:true}).click();
     await page.locator(`a[href^="/runs/${second}"]`).click();
     const input = page.locator('details[data-attempt="input-explanation"]');
     await input.locator("summary").click();

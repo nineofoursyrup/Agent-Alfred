@@ -1685,6 +1685,11 @@ def test_mainbar_never_sends_historic_telemetry_to_the_browser() -> None:
         )
         assert status == 200
         [historic] = payload["items"]
+        from agent_alfred.runtime.source_locations import message_anchor
+
+        assert historic.pop("message_anchor") == message_anchor(
+            "s-historic-telemetry", "historic", 1
+        )
         assert historic == {
             "type": "historic_message",
             "run_id": None,

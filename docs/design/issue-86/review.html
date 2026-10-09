@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>#86 · 视觉原型评审</title>
+<link rel="icon" href="data:,">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#232329;color:#eeedf4;font:14px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}header{padding:14px 18px;display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap;border-bottom:1px solid #575560;background:#19191e}h1{font-size:16px;margin:0 0 3px}p{margin:0;color:#bcbac7;font-size:12px}label{font-size:12px;display:flex;align-items:center;gap:8px}select,a{font:inherit;font-size:13px;border:1px solid #8b889b;border-radius:7px;background:#292831;color:#e4e1f3;padding:7px 9px}a{display:inline-block;text-decoration:none}select:focus-visible,a:focus-visible{outline:3px solid #b9b0ff;outline-offset:3px}.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}#canvas{padding:18px 12px;overflow:auto}#frame-box{margin:0 auto;position:relative}iframe{position:absolute;inset:0;border:0;transform-origin:top left;background:#101012;box-shadow:0 0 0 1px #575560}footer{padding:0 18px 20px;font-size:12px;color:#c3c0cc}
+</style>
+</head>
+<body>
+<header><div><h1>#86 · Dashboard 视觉基线 A 已确认</h1><p>A 为获批方案，B/C 留作对照。画布保留初审标记；全部数据为样例。</p></div><div class="controls"><label>画布<select id="viewport"><option value="1440,900">1440 × 900</option><option value="1280,800">1280 × 800</option><option value="390,844">390 × 844</option><option value="320,800">320 × 800</option></select></label><a href="dashboard-prototype.html?variant=A&page=overview&state=normal" target="_blank" rel="noopener">直接打开原型</a></div></header>
+<div id="canvas"><div id="frame-box"><iframe title="Agent-Alfred 视觉原型，可切换三个方案" src="dashboard-prototype.html?variant=A&amp;page=overview&amp;state=normal"></iframe></div></div>
+<footer id="size-note"></footer>
+<script>
+const chooser=document.querySelector('#viewport'),frame=document.querySelector('iframe'),box=document.querySelector('#frame-box');
+function fit(){const [width,height]=chooser.value.split(',').map(Number);const available=document.querySelector('#canvas').clientWidth-24;const scale=Math.min(1,available/width);frame.style.width=`${width}px`;frame.style.height=`${height}px`;frame.style.transform=`scale(${scale})`;box.style.width=`${width*scale}px`;box.style.height=`${height*scale}px`;document.querySelector('#size-note').textContent=`画布 ${width} × ${height} CSS px；展示缩放 ${Math.round(scale*100)}%。缩放只用于在评审面板中容纳画布，原型内部视口保持指定尺寸。`;}
+chooser.addEventListener('change',fit);addEventListener('resize',fit);fit();
+</script>
+</body>
+</html>

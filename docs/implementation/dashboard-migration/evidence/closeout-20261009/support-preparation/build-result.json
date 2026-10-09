@@ -1,0 +1,31 @@
+{
+  "command": [
+    "uv",
+    "build",
+    "--out-dir",
+    "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-dist"
+  ],
+  "cwd": "/Users/nineofour/.codex/worktrees/dashboard-rollback-closeout/Agent-Alfred",
+  "started_at": "2026-10-09T11:35:47.642129+00:00",
+  "seconds": 3.63,
+  "exit_code": 0,
+  "log_sha256": "471fb79fe454ceaa8b9a44a53f715219759374575cd62f6be92b6563771c7f5c",
+  "candidate_manifest_sha256": "54235b595fe2a096f1ebb33b1920efc8f5956dd36205c281fbfbd15833d0d60b",
+  "artifacts": [
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-dist/.gitignore",
+      "bytes": 1,
+      "sha256": "684888c0ebb17f374298b65ee2807526c066094c701bcc7ebbe1c1095f494fc1"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-dist/agent_alfred-0.1.0-py3-none-any.whl",
+      "bytes": 4285706,
+      "sha256": "e42c4cf600f20186c2045868b0696a3c4c1f2e61f7b56e9a3d04e1dd2724d87e"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-dist/agent_alfred-0.1.0.tar.gz",
+      "bytes": 8845622,
+      "sha256": "f9735d131e1e174086dba21ff2bab90b87326bc531196298054ab962f6ec79dc"
+    }
+  ]
+}

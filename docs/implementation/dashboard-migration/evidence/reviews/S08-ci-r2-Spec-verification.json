@@ -1,0 +1,387 @@
+{
+  "axis": "Spec",
+  "scope": "Only accepted S05/listener synchronization and evidence binding increment",
+  "head": "abb3817cee1c6491094f589c2c25c5257d5a1ac8",
+  "tree": "cbe04daa248ffe4020316544f9c7ee5630fadafd",
+  "base": "da7d6b84899b19d690d574c74397a45b0239078b",
+  "previous": "e6a91d0d8c5eae5d75829e543a79140f9e060935",
+  "candidate": {
+    "parents": [
+      "e6a91d0d8c5eae5d75829e543a79140f9e060935",
+      "da7d6b84899b19d690d574c74397a45b0239078b"
+    ],
+    "base_tree": "20821980c0bb7977c157416a52db5ac80327b307",
+    "src_tree": "22706c002421b5393ae4a830b989afa53e68b33b",
+    "backend_blob": "b43452e7f063546cdff569636add6aba3c9aef96",
+    "accepted_changed_paths": [
+      "src/agent_alfred/evals/deterministic/test_web_listener_burst.py",
+      "src/agent_alfred/gateway/web/assets.py",
+      "src/agent_alfred/gateway/web/lifecycle.py",
+      "src/agent_alfred/ops/static/index.html",
+      "src/agent_alfred/ops/static/memory.css",
+      "src/agent_alfred/ops/static/memory.js",
+      "tests/browser/memory-migration.spec.js",
+      "tests/browser/memory.spec.js"
+    ],
+    "owned_unchanged_paths": [
+      "src/agent_alfred/ops/static/models.js",
+      "src/agent_alfred/ops/static/connections.js",
+      "src/agent_alfred/ops/static/settings-focus.js",
+      "src/agent_alfred/ops/static/settings.css",
+      "src/agent_alfred/settings_commands.py",
+      "tests/browser/mcp.spec.js",
+      "tests/browser/mcp_server.py",
+      "tests/browser/settings_server.py",
+      "playwright.config.js",
+      "package.json",
+      "package-lock.json"
+    ],
+    "test_sha256": "f4785fbace403d5b8b8189a102400975e192a7349919b17533bd12a4ea80577a",
+    "diff_sha256": "83749967a05717cc1d98a5e163805bade15fdbbd4f359c841f607a2e509bf9d7",
+    "working_tree_clean": true
+  },
+  "manifest_bindings": {
+    "ci_r2": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/ci-r2/MANIFEST.json",
+      "count": 67,
+      "sha256": "0dca8a6923ef6b7721c6769e905bddcd68d8832453ad089ed6c8ff5979c70565"
+    },
+    "ci_r1_archive": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/ci-r2/ci-r1-candidate/ARCHIVE-MANIFEST.json",
+      "count": 23,
+      "sha256": "fc45737675198ecd1476e103c400ea51c569642bc21da7aa2eebd522122c9d6f"
+    },
+    "ci_r1_in_place": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/ci-r1/MANIFEST.json",
+      "count": 63,
+      "sha256": "225f0795d0162df1d6aac6db7f94bfa72f2ae6b54bd4eb6c1e15a3e50103c95e"
+    },
+    "PR_original_failure": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/ci/after-s08/pr-browser-first-failure/manifest.json",
+      "count": 28,
+      "sha256": "793fb144a28858dd39b4b1efa639568c2fe7d9a3dc45db6ad10fcfbf15c35a54"
+    },
+    "push_original_failure": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/ci/after-s08/push-browser-first-failure/manifest.json",
+      "count": 27,
+      "sha256": "ac48c10ebf8365be75466ef4586f324ce59d87a357407bb2f58f51b26e548b24"
+    }
+  },
+  "prior_independent_Spec_bindings": {
+    "S08-ci-r1-Spec.md": "5da2254e3e2bde24758f01720e29ba2efb72f5a3ffc7380703d3591728ee8d42",
+    "S08-ci-r1-Spec-details.md": "ae49d5db22a74126c0e2faa35243168c7b1ad4fc9eb55e284236f19fc9d2d43f",
+    "S08-ci-r1-Spec-verification.json": "ee3b6ef4a4cf693b88cfc8e25a3cef7cb157784b3c5ff1e3182dd8c0906a65c8"
+  },
+  "source_inheritance": {
+    "sources": 55,
+    "AC": 19,
+    "integration_chains": 5,
+    "original_records_equal_to_r3": true,
+    "frozen_source_metadata_equal_except_separately_inherited_historical_fragments": true,
+    "overall_result": "NOT RUN",
+    "current_table_sha256": "8b935aafe88211bfdbad960705e9df2d7001f4a84778db7b559e65ec1f6ae80a",
+    "r3_table_sha256": "e76b018aad5ddaf406f11bb9082d98d2e582617ad79b1343e076c0d444e9164f"
+  },
+  "resources": {
+    "count": 33,
+    "edges": 77,
+    "independent_discovery_matches": true,
+    "discovery": "HTMLParser links and independent import/export/dynamic import/CSS reference matching against fixed Git objects, then AST ASSETS comparison",
+    "http_status_MIME_hash_matches": 33,
+    "model_calls": [],
+    "fixture_exit_code": 0,
+    "origin": "http://127.0.0.1:17928",
+    "instance_id": "dc598e5e2c80448a9c4f8b2718d4a68d",
+    "rows": [
+      {
+        "url": "/assets/accounting.js",
+        "sha256": "1abe882be2ff6011b52fdd7f6c9d3e093d5f501b78883786fde2dbf64d94253d",
+        "bytes": 15097,
+        "owner": "existing Ops resource; future S09 integration responsibility retained"
+      },
+      {
+        "url": "/assets/aggregation.js",
+        "sha256": "2ed4534a18114be56b0df33850040828305d316e794b52ec62e49103384e5ebb",
+        "bytes": 22093,
+        "owner": "S06 accepted Behaviour"
+      },
+      {
+        "url": "/assets/app.css",
+        "sha256": "49e473753f1649223a75171147daf99291fcc369bbab4ac6370e8c61431ed048",
+        "bytes": 8805,
+        "owner": "S02 accepted shell/shared presentation"
+      },
+      {
+        "url": "/assets/app.js",
+        "sha256": "1f9bde937e74076035cd7e3d8939426428bcc78ec7a7a6e87ba53c227e36e5b8",
+        "bytes": 47586,
+        "owner": "S02 accepted shell/shared presentation"
+      },
+      {
+        "url": "/assets/behaviour.css",
+        "sha256": "3e964537993aa60787759c526444ddb52a29d6d10884012f1b2a0e79af45e1df",
+        "bytes": 3246,
+        "owner": "S06 accepted Behaviour"
+      },
+      {
+        "url": "/assets/behaviour.js",
+        "sha256": "265c1513fbfafab108ae3248391487a7c835b4dc04ae2bd45a1782c40b382345",
+        "bytes": 9657,
+        "owner": "S06 accepted Behaviour"
+      },
+      {
+        "url": "/assets/connections.js",
+        "sha256": "e057f5fe1d80ec8f52534b2f45df2d05f96a60fac4335f2ebda08f429f7ab891",
+        "bytes": 18440,
+        "owner": "S08 accepted Models/Connections"
+      },
+      {
+        "url": "/assets/database.css",
+        "sha256": "cca6666231bd58ef0baa03953d30cb52edb47175698e07471fe1660d26b85f11",
+        "bytes": 2763,
+        "owner": "S10 accepted Database"
+      },
+      {
+        "url": "/assets/database.js",
+        "sha256": "10feb91aa4d9527cac87571fa5750a82e34ed0ff51d69e1aa4c027b4c870d6a6",
+        "bytes": 33005,
+        "owner": "S10 accepted Database"
+      },
+      {
+        "url": "/assets/dom.js",
+        "sha256": "9c1509ed4ace2139e6319e73bd2b4675edf8ea901720d98c51d1bbec765e474a",
+        "bytes": 422,
+        "owner": "S02 accepted shell/shared presentation"
+      },
+      {
+        "url": "/assets/inbox-runs.css",
+        "sha256": "e499e15bbc4f7cdb534395f0069892be9615e6a65d81610eade5b5478aa44bf0",
+        "bytes": 2955,
+        "owner": "S03 accepted Inbox/Runs/source"
+      },
+      {
+        "url": "/assets/inbox.js",
+        "sha256": "44f4e9d41c6b0d0c772b158a2eaaca547a3adba48475da2ea5a637b25e1100c4",
+        "bytes": 15458,
+        "owner": "S03 accepted Inbox/Runs/source"
+      },
+      {
+        "url": "/",
+        "sha256": "309d02641331b749be72b78b4dbea511657437aa7b91dddd151c15eb3642bd31",
+        "bytes": 3100,
+        "owner": "shared entry/composition inherited from accepted tip"
+      },
+      {
+        "url": "/assets/memory.css",
+        "sha256": "18e7eceb5741197cb99cf8ae6172fee8d832d93956b1980f342c0b9239606e2c",
+        "bytes": 3104,
+        "owner": "S05 accepted Memory"
+      },
+      {
+        "url": "/assets/memory.js",
+        "sha256": "fd3640b88d84cbb87d62a1e9ff684ec13fd1b3d289b0f4ec370118509d850d97",
+        "bytes": 102356,
+        "owner": "S05 accepted Memory"
+      },
+      {
+        "url": "/assets/models.js",
+        "sha256": "df2c3d3026539e4a251f3f4d4a227c1a4a022e37a037608389888385a8c9d3e5",
+        "bytes": 27861,
+        "owner": "S08 accepted Models/Connections"
+      },
+      {
+        "url": "/assets/notices.js",
+        "sha256": "a49cc5ae76c240990f4a1439e60abf1999c2c23391305c952a08ab7fe59c8998",
+        "bytes": 3199,
+        "owner": "S02 accepted shell/shared presentation"
+      },
+      {
+        "url": "/assets/overview.css",
+        "sha256": "90e1ccd20bb9949e5e69c23acc812f959d48c242277ca8ab444500a6178a6205",
+        "bytes": 1996,
+        "owner": "S04 accepted Overview"
+      },
+      {
+        "url": "/assets/overview.js",
+        "sha256": "a5e8a66afa53aac280a3037318ebc49c2fba7a177d8e847fd471c1d482d96568",
+        "bytes": 25246,
+        "owner": "S04 accepted Overview"
+      },
+      {
+        "url": "/assets/pages.js",
+        "sha256": "3c1782eb300215494e3c349436706de84e083c08051f18244151bc0bab4b20a4",
+        "bytes": 136,
+        "owner": "shared entry/composition inherited from accepted tip"
+      },
+      {
+        "url": "/assets/progress.js",
+        "sha256": "45820eddec8a0313c0e4ee7181b4e9fffe1d36fe4591dece3c184cd504e2a7a4",
+        "bytes": 3820,
+        "owner": "S02 accepted shell/shared presentation"
+      },
+      {
+        "url": "/assets/routing-statistics.js",
+        "sha256": "88bc39a98ce302a61dee408582611d89032e9f686b903577936aae1881bbe69d",
+        "bytes": 11545,
+        "owner": "S06 accepted Behaviour"
+      },
+      {
+        "url": "/assets/run-evidence.js",
+        "sha256": "2a5b60679d22b1be9721d2cdd516430a602cdc246a845a84f8a718494258ef5f",
+        "bytes": 18766,
+        "owner": "S03 accepted Inbox/Runs/source"
+      },
+      {
+        "url": "/assets/run-fields.js",
+        "sha256": "09044f7eda7142e5fd1f94b5365706bc8d6bb4163d57ff361812203c85533919",
+        "bytes": 5477,
+        "owner": "S03 accepted Inbox/Runs/source"
+      },
+      {
+        "url": "/assets/runs.js",
+        "sha256": "43f767c50980c1ac173638567e0bbc7f3aafc005f1090a73c6583bf1c9b32c66",
+        "bytes": 28772,
+        "owner": "S03 accepted Inbox/Runs/source"
+      },
+      {
+        "url": "/assets/settings-focus.js",
+        "sha256": "07229e0d2f90554cbd3a26d7a1e079b4843cebef587945381a60a65b328e2915",
+        "bytes": 1920,
+        "owner": "S08 accepted Models/Connections"
+      },
+      {
+        "url": "/assets/settings.css",
+        "sha256": "18b9b3df8c5d8c12b3d4504a976d126d51126ffa06c30b8a7ec71814d1620b5c",
+        "bytes": 1765,
+        "owner": "S08 accepted Models/Connections"
+      },
+      {
+        "url": "/assets/shell.js",
+        "sha256": "42e6d2dd36e1f9bd497db49f1c4d145095bb5601b31f3a1a7b5c69f1b8090759",
+        "bytes": 18540,
+        "owner": "S02 accepted shell/shared presentation"
+      },
+      {
+        "url": "/assets/source.js",
+        "sha256": "9fb3c5c2c1892ac576dd7905d35988126458c6f884ad5c5f7db7fe375865e368",
+        "bytes": 12874,
+        "owner": "S03 accepted Inbox/Runs/source"
+      },
+      {
+        "url": "/assets/stream.js",
+        "sha256": "c81a6ce6a75a2a7c6ba060a1a014fa794ff386e95aa64869f926850ee36267a1",
+        "bytes": 4248,
+        "owner": "S02 accepted shell/shared presentation"
+      },
+      {
+        "url": "/assets/tools.js",
+        "sha256": "3bb0ba23b994b9d7cd6f8e96e77c3bb406ed4dd72459c59466cd849650e99812",
+        "bytes": 8206,
+        "owner": "existing Tools resource; future S07 integration responsibility retained"
+      },
+      {
+        "url": "/assets/topology.js",
+        "sha256": "84fc00033a190fd932164a86c7b770f5ae0773aee08801a68b5094ab2bb2a8f5",
+        "bytes": 26090,
+        "owner": "S06 accepted Behaviour"
+      },
+      {
+        "url": "/assets/trace_export.js",
+        "sha256": "6911c7060ce8ecfaaaa1c8ada0f0bd47f06b98dc0807e60fb17291e2592a133b",
+        "bytes": 6689,
+        "owner": "existing trace export shared resource"
+      }
+    ]
+  },
+  "checks": {
+    "new_listener_target": "1 PASS; retries 0",
+    "target_dimensions": [
+      {
+        "viewport": [
+          1440,
+          900
+        ],
+        "central": {
+          "x": 232,
+          "y": 65.390625,
+          "width": 888,
+          "height": 834.609375
+        }
+      },
+      {
+        "viewport": [
+          1280,
+          800
+        ],
+        "central": {
+          "x": 232,
+          "y": 65.390625,
+          "width": 728,
+          "height": 734.609375
+        }
+      },
+      {
+        "viewport": [
+          390,
+          844
+        ],
+        "central": {
+          "x": 0,
+          "y": 61.390625,
+          "width": 390,
+          "height": 782.609375
+        }
+      },
+      {
+        "viewport": [
+          320,
+          800
+        ],
+        "central": {
+          "x": 0,
+          "y": 61.390625,
+          "width": 320,
+          "height": 738.609375
+        }
+      }
+    ],
+    "prior_GET_probe_and_repeat5": "Inherited ci-r1 only, not rerun",
+    "HTTP_check": "Implementation evidence reused; not rerun by reviewer",
+    "first_failure_ids_retained": [
+      "ASSET-SCRIPT-FIRST",
+      "ASSET-SCRIPT-POST-CLOSE-BIND",
+      "EVIDENCE-MANIFEST-FIRST",
+      "EVIDENCE-PUSH-PATH-FIRST",
+      "EVIDENCE-FRAGMENT-BASELINE-FIRST"
+    ],
+    "original_remote_results": [
+      [
+        37871594920,
+        "FAIL"
+      ],
+      [
+        37871590592,
+        "FAIL"
+      ]
+    ],
+    "cleanup_ports": 10,
+    "cleanup_processes": 0,
+    "lsof_warning_retained": true
+  },
+  "boundaries": {
+    "future_responsibilities": {
+      "S07": "When accepted, compose its mcp.spec.js details expansion and nested cleanup without losing the four-line wait. No private S07 candidate imported.",
+      "S11/root": "Final integration reviews, source/AC/G, full CI and install matrix; original two CI FAIL remain unchanged."
+    },
+    "whole_source_AC_G": "NOT RUN",
+    "final_CI_install_native": "Not completed by this increment",
+    "no_new_product_runs_by_reviewer": true,
+    "current_root_Standards_content_read": false,
+    "product_Git_ledger_GitHub_writes": false
+  },
+  "reviewer_tooling_notes": [
+    "Initial diagnostic lookup used absent frozen-map acceptance_items key. Read-only KeyError retained in conversation; correct schema uses source_items and current 19 acceptance records were compared intact with historical r3. No source/evidence original changed."
+  ],
+  "result": "PASS",
+  "errors": []
+}

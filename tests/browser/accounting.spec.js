@@ -4,15 +4,15 @@ import {test, createChatSession, sendChat} from './chat-fixture.js';
 test('A01 A02 A23 A28: MainBar to real Tools and immutable Ops ledger', async ({page, chatServer}) => {
   await page.goto(chatServer.origin + '/inbox');
   await createChatSession(page);
-  await page.getByRole('button', {name:'展开对话', exact:true}).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   await sendChat(page, chatServer, '创建工具测试日程');
   await expect(page.getByRole('region', {name:'主对话'})).toContainText('已查询到工具测试日程');
-  await page.getByRole('link', {name:'Tools', exact:true}).click();
+  await page.getByRole('link', {name:'工具', exact:true}).click();
   const tool = page.locator('article').filter({has:page.getByRole('heading',{name:'create_event',exact:true})});
   await expect(tool).toContainText('不需要外部授权');
   await expect(tool.locator('select')).toHaveCount(0);
   await tool.getByRole('link',{name:'查看包含该工具的运行'}).click();
-  await expect(page.getByRole('heading',{name:'Ops 账本'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'用量账本'})).toBeVisible();
   await expect(page.getByLabel('账目汇总')).toContainText('工具请求');
   await page.getByRole('button',{name:/查看账目 /}).first().click();
   const detail = page.getByLabel('运行账目明细');
@@ -22,7 +22,7 @@ test('A01 A02 A23 A28: MainBar to real Tools and immutable Ops ledger', async ({
   await expect(page.getByLabel('历史正文当前段')).toContainText('created');
   await detail.getByRole('button',{name:'模型提交参数（脱敏）'}).first().click();
   await expect(page.getByLabel('历史正文当前段')).toContainText('title');
-  await page.getByRole('link',{name:'Tools',exact:true}).click();
+  await page.getByRole('link',{name:'工具',exact:true}).click();
   await expect(page.getByLabel('历史正文当前段')).toHaveCount(0);
 });
 
@@ -50,10 +50,12 @@ test('A06: a late successful authorization receipt does not replace newer pendin
   const persisted=new Promise(resolve=>{saved=resolve;});
   try {
     await page.goto(server.origin+'/tools');
+    await externalCard(page).getByRole('button',{name:'展开详情',exact:true}).click();
     await page.route('**/api/tools/authorization',async route=>{const response=await route.fetch(); saved(); await gate; await route.fulfill({response});});
     await externalCard(page).getByLabel('external_fixture 授权草稿').selectOption('allowed');
     await externalCard(page).getByRole('button',{name:'保存授权',exact:true}).click(); await persisted;
     await other.goto(server.origin+'/tools');
+    await externalCard(other).getByRole('button',{name:'展开详情',exact:true}).click();
     await server.send('apply-fail');
     await externalCard(other).getByLabel('external_fixture 授权草稿').selectOption('denied');
     await externalCard(other).getByRole('button',{name:'保存授权',exact:true}).click();
@@ -71,6 +73,8 @@ test('A04 A05 A06 A08: two tabs keep drafts, reject busy, and distinguish lost r
   const server=await fixture(); const other=await context.newPage();
   try {
     await page.goto(server.origin+'/tools'); await other.goto(server.origin+'/tools');
+    await externalCard(page).getByRole('button',{name:'展开详情',exact:true}).click();
+    await externalCard(other).getByRole('button',{name:'展开详情',exact:true}).click();
     const card=externalCard(page), second=externalCard(other);
     await card.getByLabel('external_fixture 授权草稿').selectOption('allowed');
     await second.getByLabel('external_fixture 授权草稿').selectOption('denied');
@@ -110,11 +114,11 @@ test('A24 A32 A33: snapshot expiry, offline body, reconnect prune and page clean
   try {
     await page.goto(server.origin+'/inbox');
     await page.getByRole('button',{name:'新建会话',exact:true}).click();
-    await page.getByRole('button',{name:'展开对话',exact:true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     await page.getByLabel('消息',{exact:true}).fill('创建工具测试日程');
     await page.getByRole('button',{name:'发送',exact:true}).click();
     await expect(page.getByRole('region',{name:'主对话'})).toContainText('已查询到工具测试日程');
-    await page.getByRole('link',{name:'Ops',exact:true}).click();
+    await page.getByRole('link',{name:'用量账本',exact:true}).click();
     await page.getByRole('button',{name:/查看账目 /}).first().click();
     await page.getByRole('button',{name:'展开模型结果投影'}).first().click();
     const preview=page.getByLabel('历史正文当前段');
@@ -147,6 +151,7 @@ for (const trigger of ['focus', 'reconnect']) test(`A07: ${trigger} detects malf
   try {
     await page.goto(server.origin+'/tools');
     const card = externalCard(page);
+    await card.getByRole('button',{name:'展开详情',exact:true}).click();
     await card.getByLabel('external_fixture 授权草稿').selectOption('allowed');
     await card.getByRole('button', {name:'保存授权',exact:true}).click();
     await expect(card).toContainText('模型暴露：real');
@@ -169,11 +174,11 @@ test('A23 A24: expired Ops to Run snapshot has explicit refresh preserving norma
   try {
     await page.goto(server.origin+'/inbox');
     await page.getByRole('button', {name:'新建会话',exact:true}).click();
-    await page.getByRole('button', {name:'展开对话',exact:true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     await page.getByLabel('消息', {exact:true}).fill('创建工具测试日程');
     await page.getByRole('button', {name:'发送',exact:true}).click();
     await expect(page.getByRole('region', {name:'主对话'})).toContainText('已查询到工具测试日程');
-    await page.getByRole('link', {name:'Tools',exact:true}).click();
+    await page.getByRole('link', {name:'工具',exact:true}).click();
     await page.locator('article').filter({has:page.getByRole('heading',{name:'create_event',exact:true})})
       .getByRole('link',{name:'查看包含该工具的运行'}).click();
     await page.getByRole('button',{name:/查看账目 /}).first().click();

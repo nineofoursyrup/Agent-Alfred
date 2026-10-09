@@ -1,0 +1,64 @@
+{
+  "result": "FAIL",
+  "summary": "514 passed /11 failed, exit1, 13.8m",
+  "candidate_product": "593564fc4b6ed08bc332bbfcf76dcf67107929c0",
+  "note": "All 11 first failures are preserved; successor retains business assertions and addresses stale entry/role/presentation assumptions. No timeout/retry widening. Final full gate must run on frozen tests.",
+  "log_sha256": "89901e1cda1be25d3a704d8bd171ea9f77246eaff88f4924a17c9789375cbca5",
+  "failures": [
+    {
+      "index": "58",
+      "test": "tests/browser/cli-flow.spec.js:57:1 › the real CLI entry holds admission while a Web UI send preserves its draft",
+      "time": "15.1s"
+    },
+    {
+      "index": "123",
+      "test": "tests/browser/inbox.spec.js:111:1 › a real v2 upgrade shows all historic messages and creates no synthetic Run",
+      "time": "15.1s"
+    },
+    {
+      "index": "126",
+      "test": "tests/browser/inbox.spec.js:208:1 › inbox Run outcomes reuse distinct terminal wording independent of recording state",
+      "time": "15.1s"
+    },
+    {
+      "index": "132",
+      "test": "tests/browser/integrations.spec.js:179:1 › CE-04 CE-05 over-limit reported numbers keep results, missing balance and readable Ops",
+      "time": "5.5s"
+    },
+    {
+      "index": "156",
+      "test": "tests/browser/mainbar.spec.js:3:1 › MainBar keeps its draft and drawer across pages and a refresh",
+      "time": "4.2s"
+    },
+    {
+      "index": "290",
+      "test": "tests/browser/pagination.spec.js:3:1 › Session, chat Run and all Run pages keep independent opaque cursors",
+      "time": "4.2s"
+    },
+    {
+      "index": "301",
+      "test": "tests/browser/recording.spec.js:7:3 › real pending reconnect and second-tab draft survive recorded settlement",
+      "time": "15.1s"
+    },
+    {
+      "index": "302",
+      "test": "tests/browser/recording.spec.js:7:3 › real pending reconnect and second-tab draft survive failed settlement",
+      "time": "15.3s"
+    },
+    {
+      "index": "429",
+      "test": "tests/browser/settings.spec.js:3:1 › Models and Connections navigation keeps MainBar",
+      "time": "218ms"
+    },
+    {
+      "index": "439",
+      "test": "tests/browser/shell-controls.spec.js:3:50 › tools registers real unsaved input across panel visibility and confirmed navigation",
+      "time": "15.1s"
+    },
+    {
+      "index": "524",
+      "test": "tests/browser/upgrade-flow.spec.js:4:1 › a real upgraded Session combines a new UI Run with every historic message in order",
+      "time": "15.1s"
+    }
+  ]
+}

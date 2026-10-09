@@ -1,0 +1,15 @@
+{
+  "head": "0f0911c15b95c3b4501ceb7228f8b61784f6da14",
+  "tree": "2b4471749763c39cdce1bfa0c22c915b4d4c53e0",
+  "base": "a4168881bd9057a900e8d353002307adff714c42",
+  "changed_files": 45,
+  "resources_with_html": 18,
+  "registered_assets": 17,
+  "reference_edges": 38,
+  "source_ids": 164,
+  "acceptance_ids": 25,
+  "source_identity_fields_equal_r3": true,
+  "resource_hashes_match_fixed_head": true,
+  "independent_reference_closure_equal_inventory": true,
+  "reviewer_tooling_first_failure": "KeyError source_end_line: reviewer initially treated optional source fields as universal; changed to optional comparison. No production failure."
+}

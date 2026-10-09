@@ -1,0 +1,9 @@
+{
+  "supplements": "S11-ci-r1-Spec-diagnosis.json",
+  "supplemented_sha256": "2d0cf590ffb12dbc373eb81ff6d79aa5bbbbaef66ae5c0f401b36bfd02dfbaf7",
+  "source_id": "issue-89:D09",
+  "relation": "related_only",
+  "recommendation": "Do not change overall or owner result to FAIL based on this first-failure batch; no distinct actual failure/owner cause was established for D09.",
+  "D04_D08_S03_note": "Any FAIL writeback is affected final-combination evidence, not a confirmed S03 implementation defect.",
+  "R07_note": "Observed executed FAIL can dominate aggregate status; preserve unresolved IME subresponsibility. After repair do not restore overall PASS while required IME remains BLOCKED."
+}

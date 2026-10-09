@@ -1,0 +1,80 @@
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+ExpectError: expect(locator).toContainText(expected) failed
+
+Locator: getByRole('region', { name: '主对话', exact: true })
+Expected substring: "已保存"
+Timeout: 5000ms
+Error: element(s) not found
+
+Call log:
+  - Expect "toContainText" getByRole('region', { name: '主对话', exact: true }) with timeout 5000ms
+  - waiting for getByRole('region', { name: '主对话', exact: true })
+
+    at captureRawStack (/Users/nineofour/.codex/worktrees/dashboard-s11/Agent-Alfred/node_modules/playwright-core/lib/coreBundle.js:8588:17)
+    at callMatcherAsStep (/Users/nineofour/.codex/worktrees/dashboard-s11/Agent-Alfred/node_modules/playwright/lib/matchers/expect.js:13310:57)
+    at Object.toContainText (/Users/nineofour/.codex/worktrees/dashboard-s11/Agent-Alfred/node_modules/playwright/lib/matchers/expect.js:13302:23)
+    at send (/Users/nineofour/.codex/worktrees/dashboard-s11/Agent-Alfred/scripts/check_dashboard_lifecycle.mjs:54:66)
+    at async file:///Users/nineofour/.codex/worktrees/dashboard-s11/Agent-Alfred/scripts/check_dashboard_lifecycle.mjs:61:16 {
+  matcherResult: {
+    name: 'toContainText',
+    expected: '已保存',
+    message: 'expect(locator).toContainText(expected) failed\n' +
+      '\n' +
+      "Locator: getByRole('region', { name: '主对话', exact: true })\n" +
+      'Expected substring: "已保存"\n' +
+      'Timeout: 5000ms\n' +
+      'Error: element(s) not found\n' +
+      '\n' +
+      'Call log:\n' +
+      `  - Expect "toContainText" getByRole('region', { name: '主对话', exact: true }) with timeout 5000ms\n` +
+      "  - waiting for getByRole('region', { name: '主对话', exact: true })\n",
+    pass: false,
+    actual: undefined,
+    log: [
+      `  - Expect "toContainText" getByRole('region', { name: '主对话', exact: true }) with timeout 5000ms`,
+      "  - waiting for getByRole('region', { name: '主对话', exact: true })"
+    ],
+    timeout: 5000,
+    ariaSnapshot: '- banner:\n' +
+      '  - link "Alfred本地助手":\n' +
+      '    - /url: /inbox\n' +
+      '  - navigation "主导航":\n' +
+      '    - link "收件箱":\n' +
+      '      - /url: /inbox\n' +
+      '    - link "运行":\n' +
+      '      - /url: /runs\n' +
+      '    - link "记忆":\n' +
+      '      - /url: /memory\n' +
+      '    - link "模型":\n' +
+      '      - /url: /models\n' +
+      '    - link "连接":\n' +
+      '      - /url: /connections\n' +
+      '    - link "Behaviour":\n' +
+      '      - /url: /behaviour\n' +
+      '    - link "Tools":\n' +
+      '      - /url: /tools\n' +
+      '    - link "Ops":\n' +
+      '      - /url: /ops\n' +
+      '    - link "Database":\n' +
+      '      - /url: /database\n' +
+      '- main:\n' +
+      '  - heading "Gateway 收件箱" [level=1]\n' +
+      '  - paragraph: 还没有会话。点击下方「新建会话」开始。\n' +
+      '  - region "会话只读预览"\n' +
+      '- region "MainBar":\n' +
+      '  - text: 会话\n' +
+      '  - button "新建会话"\n' +
+      '  - button "展开对话"\n' +
+      '  - text: 消息\n' +
+      '  - textbox "消息":\n' +
+      '    - /placeholder: 写下消息；首行 /skills A B 指定流程，/skills off 禁用，下一行写任务…\n' +
+      '  - button "发送" [disabled]\n' +
+      '- status: 就绪\n' +
+      '- alert'
+  }
+}
+
+Node.js v22.23.2

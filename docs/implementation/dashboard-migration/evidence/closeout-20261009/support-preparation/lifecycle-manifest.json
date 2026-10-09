@@ -1,0 +1,60 @@
+{
+  "directory": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-lifecycle-01",
+  "port": 53528,
+  "port_preflight": "Successfully bound localhost port with an isolated socket immediately before fixture setup, then released it.",
+  "created_at": "2026-10-09T11:38:01.968361+00:00",
+  "old": {
+    "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-old-env/bin/python",
+    "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/lifecycle-old-dist/agent_alfred-0.1.0-py3-none-any.whl",
+    "sha256": "d688a7aebdcc9451003e12f316be9930fd9fb7ffff8b5c12557fdb513fec4a46",
+    "head": "22c8720e1ec874fd012cc79b086cd8aace4c79b6",
+    "source_tree": "92c61b048894a24f040ab99bfbd913f8abb94812",
+    "source_path": "src/agent_alfred",
+    "src_tree": "5e2ea4ebaf3684938ca09012f8219ac2e0021e49"
+  },
+  "current": {
+    "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-current-env/bin/python",
+    "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/dist/agent_alfred-0.1.0-py3-none-any.whl",
+    "sha256": "55648a28cdfae7ca479033739ace599ab8f22546ebd5d03b5214d7d40cc96e5a",
+    "identity_state": "UNCOMMITTED_PRODUCT_CANDIDATE",
+    "base_head": "11dcc66f18ceb264ade1c1bcc1b48287dc4f1516",
+    "candidate_identity": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/candidate.json",
+    "candidate_identity_sha256": "7cbc63240305ec4d4c9e187add37836de1376582d78f81af5a20ce229c0ec652",
+    "tree": "d5ae23a4c989b3624b853a5493f61af38a11c7aa",
+    "src_tree": "08582ef657e69669a3333606021918f9b0509e6f",
+    "package_tree": "f58442b625b51373f5389a3baa9bec0ba11cd0e9",
+    "manifest": "/Users/nineofour/.codex/dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/final-manifest.json",
+    "manifest_sha256": "274775393b6f209350e45f2920b8abb5daa814f31160246421fbe84d1c822984"
+  },
+  "supported": {
+    "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-supported-env/bin/python",
+    "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-dist/agent_alfred-0.1.0-py3-none-any.whl",
+    "sha256": "e42c4cf600f20186c2045868b0696a3c4c1f2e61f7b56e9a3d04e1dd2724d87e",
+    "identity_state": "UNCOMMITTED_PRODUCT_CANDIDATE",
+    "candidate": "support-closeout-r1-uncommitted",
+    "base_head": "8d4adbc97cf1f5d55e3d36b65da7dbf2a1a1be2a",
+    "tree": "641dba43d5e468f2d62be709953765b42b4bcaca",
+    "src_tree": "534f2caae73702d69a57ddf54b9af20dd207b326",
+    "package_tree": "ac9c0adf3bd35595e8280ecc1876fd0a1d5d2929",
+    "manifest": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation/candidate-manifest.json",
+    "manifest_sha256": "54235b595fe2a096f1ebb33b1920efc8f5956dd36205c281fbfbd15833d0d60b",
+    "calculation": "Temporary GIT_INDEX_FILE from base plus the exact seven included paths; real index unchanged; no commit."
+  },
+  "preflight_evidence": {
+    "wheel_source_binding": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation/wheel-source-binding.json",
+    "wheel_source_binding_sha256": "6a7386aa097162b0dffcfcf9640d2f9f23d5cf99dbd6a2da5bc5fad69e2be6a3",
+    "installed_source_binding": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation/installed-source-binding.json",
+    "installed_source_binding_sha256": "cde044ad374fe6d5c501cb407dde7bd134dd47fe18d4ef4ff7c333e4d4604f2c"
+  },
+  "source_checks_reused": [
+    "repair-pr120-20261009-7wpdbm31/validation-summary.json",
+    "recheck-pr120-20261009/standards/REPORT.md",
+    "recheck-pr120-20261009/spec/SPEC-RECHECK.md"
+  ],
+  "runner": {
+    "path": "/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/scripts/check_dashboard_lifecycle.mjs",
+    "sha256": "25009de7efa91563297a08304690cd698244b998ab612fcf4a2e49cdd8dda9c7",
+    "server": "/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/scripts/dashboard_lifecycle_server.py",
+    "server_sha256": "076efab69bfe060a27de4950b5ba8c037c5fde7aca2c97386183104140a997e4"
+  }
+}

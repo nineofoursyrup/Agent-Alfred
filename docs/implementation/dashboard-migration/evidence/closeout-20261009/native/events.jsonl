@@ -1,0 +1,80 @@
+{"seq": 1, "at": "2026-10-09T11:31:55.601Z", "type": "focusin", "trusted": true, "target": "H1", "value": null, "active": "", "route": "/overview"}
+{"seq": 2, "at": "2026-10-09T11:32:44.427Z", "type": "focusout", "trusted": true, "target": "H1", "value": null, "active": "", "route": "/overview"}
+{"seq": 3, "at": "2026-10-09T11:32:44.428Z", "type": "focusin", "trusted": true, "target": "message", "value": "ni", "active": "message", "route": "/overview"}
+{"seq": 4, "at": "2026-10-09T11:32:44.569Z", "type": "click", "trusted": true, "target": "message", "value": "ni", "active": "message", "route": "/overview"}
+{"seq": 5, "at": "2026-10-09T11:32:46.675Z", "type": "keydown", "trusted": true, "target": "message", "key": "Meta", "isComposing": false, "value": "ni", "active": "message", "route": "/overview"}
+{"seq": 6, "at": "2026-10-09T11:32:46.926Z", "type": "keyup", "trusted": true, "target": "message", "key": "Meta", "isComposing": false, "value": "ni", "active": "message", "route": "/overview"}
+{"seq": 7, "at": "2026-10-09T11:33:05.499Z", "type": "click", "trusted": true, "target": "message", "value": "ni", "active": "message", "route": "/overview"}
+{"seq": 8, "at": "2026-10-09T11:33:05.522Z", "type": "keydown", "trusted": true, "target": "message", "key": "a", "isComposing": false, "value": "ni", "active": "message", "route": "/overview"}
+{"seq": 9, "at": "2026-10-09T11:33:05.522Z", "type": "keyup", "trusted": true, "target": "message", "key": "a", "isComposing": false, "value": "ni", "active": "message", "route": "/overview"}
+{"seq": 10, "at": "2026-10-09T11:33:05.528Z", "type": "keydown", "trusted": true, "target": "message", "key": "Backspace", "isComposing": false, "value": "ni", "active": "message", "route": "/overview"}
+{"seq": 11, "at": "2026-10-09T11:33:05.528Z", "type": "beforeinput", "trusted": true, "target": "message", "isComposing": false, "data": null, "inputType": "deleteContentBackward", "value": "ni", "active": "message", "route": "/overview"}
+{"seq": 12, "at": "2026-10-09T11:33:05.529Z", "type": "input", "trusted": true, "target": "message", "isComposing": false, "data": null, "inputType": "deleteContentBackward", "value": "n", "active": "message", "route": "/overview"}
+{"seq": 13, "at": "2026-10-09T11:33:05.529Z", "type": "keyup", "trusted": true, "target": "message", "key": "Backspace", "isComposing": false, "value": "n", "active": "message", "route": "/overview"}
+{"seq": 14, "at": "2026-10-09T11:33:05.589Z", "type": "keydown", "trusted": true, "target": "message", "key": "n", "isComposing": false, "value": "n", "active": "message", "route": "/overview"}
+{"seq": 18, "at": "2026-10-09T11:33:05.591Z", "type": "input", "trusted": true, "target": "message", "isComposing": true, "data": "n", "inputType": "insertCompositionText", "value": "n", "active": "message", "route": "/overview"}
+{"seq": 16, "at": "2026-10-09T11:33:05.590Z", "type": "compositionupdate", "trusted": true, "target": "message", "data": "n", "value": "n", "active": "message", "route": "/overview"}
+{"seq": 17, "at": "2026-10-09T11:33:05.590Z", "type": "beforeinput", "trusted": true, "target": "message", "isComposing": true, "data": "n", "inputType": "insertCompositionText", "value": "n", "active": "message", "route": "/overview"}
+{"seq": 15, "at": "2026-10-09T11:33:05.590Z", "type": "compositionstart", "trusted": true, "target": "message", "data": "n", "value": "n", "active": "message", "route": "/overview"}
+{"seq": 19, "at": "2026-10-09T11:33:05.591Z", "type": "keyup", "trusted": true, "target": "message", "key": "n", "isComposing": true, "value": "n", "active": "message", "route": "/overview"}
+{"seq": 20, "at": "2026-10-09T11:33:05.652Z", "type": "keydown", "trusted": true, "target": "message", "key": "i", "isComposing": true, "value": "n", "active": "message", "route": "/overview"}
+{"seq": 21, "at": "2026-10-09T11:33:05.653Z", "type": "compositionupdate", "trusted": true, "target": "message", "data": "ni", "value": "n", "active": "message", "route": "/overview"}
+{"seq": 22, "at": "2026-10-09T11:33:05.653Z", "type": "beforeinput", "trusted": true, "target": "message", "isComposing": true, "data": "ni", "inputType": "insertCompositionText", "value": "n", "active": "message", "route": "/overview"}
+{"seq": 23, "at": "2026-10-09T11:33:05.654Z", "type": "input", "trusted": true, "target": "message", "isComposing": true, "data": "ni", "inputType": "insertCompositionText", "value": "ni", "active": "message", "route": "/overview"}
+{"seq": 24, "at": "2026-10-09T11:33:05.656Z", "type": "keyup", "trusted": true, "target": "message", "key": "i", "isComposing": true, "value": "ni", "active": "message", "route": "/overview"}
+{"seq": 25, "at": "2026-10-09T11:33:48.748Z", "type": "keydown", "trusted": true, "target": "message", "key": "Enter", "isComposing": true, "value": "ni", "active": "message", "route": "/overview"}
+{"seq": 26, "at": "2026-10-09T11:33:48.749Z", "type": "compositionupdate", "trusted": true, "target": "message", "data": "ni", "value": "ni", "active": "message", "route": "/overview"}
+{"seq": 28, "at": "2026-10-09T11:33:48.749Z", "type": "input", "trusted": true, "target": "message", "isComposing": true, "data": "ni", "inputType": "insertCompositionText", "value": "ni", "active": "message", "route": "/overview"}
+{"seq": 27, "at": "2026-10-09T11:33:48.749Z", "type": "beforeinput", "trusted": true, "target": "message", "isComposing": true, "data": "ni", "inputType": "insertCompositionText", "value": "ni", "active": "message", "route": "/overview"}
+{"seq": 29, "at": "2026-10-09T11:33:48.749Z", "type": "compositionend", "trusted": false, "target": "message", "data": "ni", "value": "ni", "active": "message", "route": "/overview"}
+{"seq": 30, "at": "2026-10-09T11:33:48.750Z", "type": "keyup", "trusted": true, "target": "message", "key": "Enter", "isComposing": false, "value": "ni", "active": "message", "route": "/overview"}
+{"seq": 31, "at": "2026-10-09T11:34:07.994Z", "type": "keydown", "trusted": true, "target": "message", "key": "Enter", "isComposing": false, "value": "ni", "active": "message", "route": "/overview"}
+{"seq": 32, "at": "2026-10-09T11:34:07.996Z", "type": "beforeinput", "trusted": true, "target": "message", "isComposing": false, "data": null, "inputType": "insertLineBreak", "value": "ni", "active": "message", "route": "/overview"}
+{"seq": 33, "at": "2026-10-09T11:34:07.997Z", "type": "input", "trusted": true, "target": "message", "isComposing": false, "data": null, "inputType": "insertLineBreak", "value": "ni\n", "active": "message", "route": "/overview"}
+{"seq": 34, "at": "2026-10-09T11:34:07.997Z", "type": "keyup", "trusted": true, "target": "message", "key": "Enter", "isComposing": false, "value": "ni\n", "active": "message", "route": "/overview"}
+{"seq": 35, "at": "2026-10-09T11:34:08.048Z", "type": "keydown", "trusted": true, "target": "message", "key": "n", "isComposing": false, "value": "ni\n", "active": "message", "route": "/overview"}
+{"seq": 40, "at": "2026-10-09T11:34:08.050Z", "type": "keyup", "trusted": true, "target": "message", "key": "n", "isComposing": true, "value": "ni\nn", "active": "message", "route": "/overview"}
+{"seq": 38, "at": "2026-10-09T11:34:08.049Z", "type": "beforeinput", "trusted": true, "target": "message", "isComposing": true, "data": "n", "inputType": "insertCompositionText", "value": "ni\n", "active": "message", "route": "/overview"}
+{"seq": 36, "at": "2026-10-09T11:34:08.049Z", "type": "compositionstart", "trusted": true, "target": "message", "data": "", "value": "ni\n", "active": "message", "route": "/overview"}
+{"seq": 39, "at": "2026-10-09T11:34:08.050Z", "type": "input", "trusted": true, "target": "message", "isComposing": true, "data": "n", "inputType": "insertCompositionText", "value": "ni\nn", "active": "message", "route": "/overview"}
+{"seq": 37, "at": "2026-10-09T11:34:08.049Z", "type": "compositionupdate", "trusted": true, "target": "message", "data": "n", "value": "ni\n", "active": "message", "route": "/overview"}
+{"seq": 41, "at": "2026-10-09T11:34:08.175Z", "type": "keydown", "trusted": true, "target": "message", "key": "i", "isComposing": true, "value": "ni\nn", "active": "message", "route": "/overview"}
+{"seq": 42, "at": "2026-10-09T11:34:08.176Z", "type": "compositionupdate", "trusted": true, "target": "message", "data": "ni", "value": "ni\nn", "active": "message", "route": "/overview"}
+{"seq": 43, "at": "2026-10-09T11:34:08.176Z", "type": "beforeinput", "trusted": true, "target": "message", "isComposing": true, "data": "ni", "inputType": "insertCompositionText", "value": "ni\nn", "active": "message", "route": "/overview"}
+{"seq": 45, "at": "2026-10-09T11:34:08.177Z", "type": "keyup", "trusted": true, "target": "message", "key": "i", "isComposing": true, "value": "ni\nni", "active": "message", "route": "/overview"}
+{"seq": 44, "at": "2026-10-09T11:34:08.177Z", "type": "input", "trusted": true, "target": "message", "isComposing": true, "data": "ni", "inputType": "insertCompositionText", "value": "ni\nni", "active": "message", "route": "/overview"}
+{"seq": 46, "at": "2026-10-09T11:34:08.208Z", "type": "keydown", "trusted": true, "target": "message", "key": " ", "isComposing": true, "value": "ni\nni", "active": "message", "route": "/overview"}
+{"seq": 47, "at": "2026-10-09T11:34:08.209Z", "type": "compositionupdate", "trusted": true, "target": "message", "data": "你", "value": "ni\nni", "active": "message", "route": "/overview"}
+{"seq": 48, "at": "2026-10-09T11:34:08.209Z", "type": "beforeinput", "trusted": true, "target": "message", "isComposing": true, "data": "你", "inputType": "insertCompositionText", "value": "ni\nni", "active": "message", "route": "/overview"}
+{"seq": 49, "at": "2026-10-09T11:34:08.209Z", "type": "input", "trusted": true, "target": "message", "isComposing": true, "data": "你", "inputType": "insertCompositionText", "value": "ni\n你", "active": "message", "route": "/overview"}
+{"seq": 50, "at": "2026-10-09T11:34:08.209Z", "type": "compositionend", "trusted": false, "target": "message", "data": "你", "value": "ni\n你", "active": "message", "route": "/overview"}
+{"seq": 51, "at": "2026-10-09T11:34:08.210Z", "type": "keyup", "trusted": true, "target": "message", "key": " ", "isComposing": false, "value": "ni\n你", "active": "message", "route": "/overview"}
+{"seq": 52, "at": "2026-10-09T11:34:23.684Z", "type": "keydown", "trusted": true, "target": "message", "key": "Enter", "isComposing": false, "value": "ni\n你", "active": "message", "route": "/overview"}
+{"seq": 53, "at": "2026-10-09T11:34:23.687Z", "type": "keyup", "trusted": true, "target": "message", "key": "Enter", "isComposing": false, "value": "ni\n你", "active": "message", "route": "/overview"}
+{"seq": 54, "at": "2026-10-09T11:34:23.719Z", "type": "keydown", "trusted": true, "target": "message", "key": "h", "isComposing": false, "value": "", "active": "message", "route": "/overview"}
+{"seq": 55, "at": "2026-10-09T11:34:23.719Z", "type": "compositionstart", "trusted": true, "target": "message", "data": "", "value": "", "active": "message", "route": "/overview"}
+{"seq": 56, "at": "2026-10-09T11:34:23.719Z", "type": "compositionupdate", "trusted": true, "target": "message", "data": "h", "value": "", "active": "message", "route": "/overview"}
+{"seq": 57, "at": "2026-10-09T11:34:23.720Z", "type": "beforeinput", "trusted": true, "target": "message", "isComposing": true, "data": "h", "inputType": "insertCompositionText", "value": "", "active": "message", "route": "/overview"}
+{"seq": 59, "at": "2026-10-09T11:34:23.724Z", "type": "keyup", "trusted": true, "target": "message", "key": "h", "isComposing": true, "value": "h", "active": "message", "route": "/overview"}
+{"seq": 58, "at": "2026-10-09T11:34:23.720Z", "type": "input", "trusted": true, "target": "message", "isComposing": true, "data": "h", "inputType": "insertCompositionText", "value": "h", "active": "message", "route": "/overview"}
+{"seq": 60, "at": "2026-10-09T11:34:23.796Z", "type": "keydown", "trusted": true, "target": "message", "key": "a", "isComposing": true, "value": "h", "active": "message", "route": "/overview"}
+{"seq": 61, "at": "2026-10-09T11:34:23.797Z", "type": "compositionupdate", "trusted": true, "target": "message", "data": "ha", "value": "h", "active": "message", "route": "/overview"}
+{"seq": 62, "at": "2026-10-09T11:34:23.797Z", "type": "beforeinput", "trusted": true, "target": "message", "isComposing": true, "data": "ha", "inputType": "insertCompositionText", "value": "h", "active": "message", "route": "/overview"}
+{"seq": 63, "at": "2026-10-09T11:34:23.797Z", "type": "input", "trusted": true, "target": "message", "isComposing": true, "data": "ha", "inputType": "insertCompositionText", "value": "ha", "active": "message", "route": "/overview"}
+{"seq": 64, "at": "2026-10-09T11:34:23.798Z", "type": "keyup", "trusted": true, "target": "message", "key": "a", "isComposing": true, "value": "ha", "active": "message", "route": "/overview"}
+{"seq": 65, "at": "2026-10-09T11:34:23.825Z", "type": "keydown", "trusted": true, "target": "message", "key": "o", "isComposing": true, "value": "ha", "active": "message", "route": "/overview"}
+{"seq": 66, "at": "2026-10-09T11:34:23.826Z", "type": "compositionupdate", "trusted": true, "target": "message", "data": "hao", "value": "ha", "active": "message", "route": "/overview"}
+{"seq": 67, "at": "2026-10-09T11:34:23.826Z", "type": "beforeinput", "trusted": true, "target": "message", "isComposing": true, "data": "hao", "inputType": "insertCompositionText", "value": "ha", "active": "message", "route": "/overview"}
+{"seq": 68, "at": "2026-10-09T11:34:23.826Z", "type": "input", "trusted": true, "target": "message", "isComposing": true, "data": "hao", "inputType": "insertCompositionText", "value": "hao", "active": "message", "route": "/overview"}
+{"seq": 69, "at": "2026-10-09T11:34:23.827Z", "type": "keyup", "trusted": true, "target": "message", "key": "o", "isComposing": true, "value": "hao", "active": "message", "route": "/overview"}
+{"seq": 70, "at": "2026-10-09T11:34:23.850Z", "type": "keydown", "trusted": true, "target": "message", "key": " ", "isComposing": true, "value": "hao", "active": "message", "route": "/overview"}
+{"seq": 71, "at": "2026-10-09T11:34:23.850Z", "type": "compositionupdate", "trusted": true, "target": "message", "data": "好", "value": "hao", "active": "message", "route": "/overview"}
+{"seq": 72, "at": "2026-10-09T11:34:23.851Z", "type": "beforeinput", "trusted": true, "target": "message", "isComposing": true, "data": "好", "inputType": "insertCompositionText", "value": "hao", "active": "message", "route": "/overview"}
+{"seq": 73, "at": "2026-10-09T11:34:23.851Z", "type": "input", "trusted": true, "target": "message", "isComposing": true, "data": "好", "inputType": "insertCompositionText", "value": "好", "active": "message", "route": "/overview"}
+{"seq": 74, "at": "2026-10-09T11:34:23.851Z", "type": "compositionend", "trusted": false, "target": "message", "data": "好", "value": "好", "active": "message", "route": "/overview"}
+{"seq": 75, "at": "2026-10-09T11:34:23.852Z", "type": "keyup", "trusted": true, "target": "message", "key": " ", "isComposing": false, "value": "好", "active": "message", "route": "/overview"}
+{"seq": 76, "at": "2026-10-09T11:34:23.908Z", "type": "focusout", "trusted": true, "target": "message", "value": "好", "active": "", "route": "/overview"}
+{"seq": 77, "at": "2026-10-09T11:34:23.909Z", "type": "focusin", "trusted": true, "target": "IANA 时区", "value": "Asia/Shanghai", "active": "", "route": "/overview"}
+{"seq": 78, "at": "2026-10-09T11:34:23.960Z", "type": "click", "trusted": true, "target": "IANA 时区", "value": "Asia/Shanghai", "active": "", "route": "/overview"}
+{"seq": 79, "at": "2026-10-09T11:35:36.257Z", "type": "keydown", "trusted": true, "target": "IANA 时区", "key": "Meta", "isComposing": false, "value": "Asia/Shanghai", "active": "", "route": "/overview"}
+{"seq": 80, "at": "2026-10-09T11:36:23.184Z", "type": "focusout", "trusted": true, "target": "IANA 时区", "value": "Asia/Shanghai", "active": "", "route": "/overview"}

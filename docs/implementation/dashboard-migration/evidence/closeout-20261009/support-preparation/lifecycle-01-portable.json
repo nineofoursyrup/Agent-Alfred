@@ -1,0 +1,1762 @@
+{
+  "manifest": {
+    "directory": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-lifecycle-01",
+    "port": 53528,
+    "port_preflight": "Successfully bound localhost port with an isolated socket immediately before fixture setup, then released it.",
+    "created_at": "2026-10-09T11:38:01.968361+00:00",
+    "old": {
+      "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-old-env/bin/python",
+      "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/lifecycle-old-dist/agent_alfred-0.1.0-py3-none-any.whl",
+      "sha256": "d688a7aebdcc9451003e12f316be9930fd9fb7ffff8b5c12557fdb513fec4a46",
+      "head": "22c8720e1ec874fd012cc79b086cd8aace4c79b6",
+      "source_tree": "92c61b048894a24f040ab99bfbd913f8abb94812",
+      "source_path": "src/agent_alfred",
+      "src_tree": "5e2ea4ebaf3684938ca09012f8219ac2e0021e49"
+    },
+    "current": {
+      "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-current-env/bin/python",
+      "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/dist/agent_alfred-0.1.0-py3-none-any.whl",
+      "sha256": "55648a28cdfae7ca479033739ace599ab8f22546ebd5d03b5214d7d40cc96e5a",
+      "identity_state": "UNCOMMITTED_PRODUCT_CANDIDATE",
+      "base_head": "11dcc66f18ceb264ade1c1bcc1b48287dc4f1516",
+      "candidate_identity": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/candidate.json",
+      "candidate_identity_sha256": "7cbc63240305ec4d4c9e187add37836de1376582d78f81af5a20ce229c0ec652",
+      "tree": "d5ae23a4c989b3624b853a5493f61af38a11c7aa",
+      "src_tree": "08582ef657e69669a3333606021918f9b0509e6f",
+      "package_tree": "f58442b625b51373f5389a3baa9bec0ba11cd0e9",
+      "manifest": "/Users/nineofour/.codex/dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/final-manifest.json",
+      "manifest_sha256": "274775393b6f209350e45f2920b8abb5daa814f31160246421fbe84d1c822984"
+    },
+    "supported": {
+      "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-supported-env/bin/python",
+      "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-dist/agent_alfred-0.1.0-py3-none-any.whl",
+      "sha256": "e42c4cf600f20186c2045868b0696a3c4c1f2e61f7b56e9a3d04e1dd2724d87e",
+      "identity_state": "UNCOMMITTED_PRODUCT_CANDIDATE",
+      "candidate": "support-closeout-r1-uncommitted",
+      "base_head": "8d4adbc97cf1f5d55e3d36b65da7dbf2a1a1be2a",
+      "tree": "641dba43d5e468f2d62be709953765b42b4bcaca",
+      "src_tree": "534f2caae73702d69a57ddf54b9af20dd207b326",
+      "package_tree": "ac9c0adf3bd35595e8280ecc1876fd0a1d5d2929",
+      "manifest": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation/candidate-manifest.json",
+      "manifest_sha256": "54235b595fe2a096f1ebb33b1920efc8f5956dd36205c281fbfbd15833d0d60b",
+      "calculation": "Temporary GIT_INDEX_FILE from base plus the exact seven included paths; real index unchanged; no commit."
+    },
+    "preflight_evidence": {
+      "wheel_source_binding": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation/wheel-source-binding.json",
+      "wheel_source_binding_sha256": "6a7386aa097162b0dffcfcf9640d2f9f23d5cf99dbd6a2da5bc5fad69e2be6a3",
+      "installed_source_binding": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation/installed-source-binding.json",
+      "installed_source_binding_sha256": "cde044ad374fe6d5c501cb407dde7bd134dd47fe18d4ef4ff7c333e4d4604f2c"
+    },
+    "source_checks_reused": [
+      "repair-pr120-20261009-7wpdbm31/validation-summary.json",
+      "recheck-pr120-20261009/standards/REPORT.md",
+      "recheck-pr120-20261009/spec/SPEC-RECHECK.md"
+    ],
+    "runner": {
+      "path": "/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/scripts/check_dashboard_lifecycle.mjs",
+      "sha256": "25009de7efa91563297a08304690cd698244b998ab612fcf4a2e49cdd8dda9c7",
+      "server": "/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/scripts/dashboard_lifecycle_server.py",
+      "server_sha256": "076efab69bfe060a27de4950b5ba8c037c5fde7aca2c97386183104140a997e4"
+    }
+  },
+  "stages": [
+    {
+      "label": "old",
+      "ready": {
+        "event": "ready",
+        "instance": "7c85c1bcf706480093a6616fc71e0a3a",
+        "package": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-old-env/lib/python3.14/site-packages/agent_alfred",
+        "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-old-env/bin/python",
+        "html_sha256": "dbc0fc0b6bd0a83c1380ce598f9af7ab6285c4ba6e8fc235d011e1483177d279"
+      },
+      "entry": {
+        "instance_id": "7c85c1bcf706480093a6616fc71e0a3a"
+      },
+      "artifact": {
+        "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-old-env/bin/python",
+        "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/lifecycle-old-dist/agent_alfred-0.1.0-py3-none-any.whl",
+        "sha256": "d688a7aebdcc9451003e12f316be9930fd9fb7ffff8b5c12557fdb513fec4a46",
+        "head": "22c8720e1ec874fd012cc79b086cd8aace4c79b6",
+        "source_tree": "92c61b048894a24f040ab99bfbd913f8abb94812",
+        "source_path": "src/agent_alfred",
+        "src_tree": "5e2ea4ebaf3684938ca09012f8219ac2e0021e49"
+      },
+      "close": {
+        "code": 0,
+        "signal": null,
+        "events": [
+          {
+            "event": "ready",
+            "instance": "7c85c1bcf706480093a6616fc71e0a3a",
+            "package": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-old-env/lib/python3.14/site-packages/agent_alfred",
+            "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-old-env/bin/python",
+            "html_sha256": "dbc0fc0b6bd0a83c1380ce598f9af7ab6285c4ba6e8fc235d011e1483177d279"
+          },
+          {
+            "event": "closed",
+            "closed": true,
+            "model_calls": 2
+          }
+        ],
+        "stderr": ""
+      }
+    },
+    {
+      "label": "current",
+      "ready": {
+        "event": "ready",
+        "instance": "7ba96762d36f45c7820942c0ba575242",
+        "package": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-current-env/lib/python3.14/site-packages/agent_alfred",
+        "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-current-env/bin/python",
+        "html_sha256": "95c08606a8ef01193eb476364cfbcf59270ed89f48b0d84d4ef759ae5ce597ac"
+      },
+      "entry": {
+        "instance_id": "7ba96762d36f45c7820942c0ba575242"
+      },
+      "artifact": {
+        "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-current-env/bin/python",
+        "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/dist/agent_alfred-0.1.0-py3-none-any.whl",
+        "sha256": "55648a28cdfae7ca479033739ace599ab8f22546ebd5d03b5214d7d40cc96e5a",
+        "identity_state": "UNCOMMITTED_PRODUCT_CANDIDATE",
+        "base_head": "11dcc66f18ceb264ade1c1bcc1b48287dc4f1516",
+        "candidate_identity": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/candidate.json",
+        "candidate_identity_sha256": "7cbc63240305ec4d4c9e187add37836de1376582d78f81af5a20ce229c0ec652",
+        "tree": "d5ae23a4c989b3624b853a5493f61af38a11c7aa",
+        "src_tree": "08582ef657e69669a3333606021918f9b0509e6f",
+        "package_tree": "f58442b625b51373f5389a3baa9bec0ba11cd0e9",
+        "manifest": "/Users/nineofour/.codex/dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/final-manifest.json",
+        "manifest_sha256": "274775393b6f209350e45f2920b8abb5daa814f31160246421fbe84d1c822984"
+      },
+      "close": {
+        "code": 0,
+        "signal": null,
+        "events": [
+          {
+            "event": "ready",
+            "instance": "7ba96762d36f45c7820942c0ba575242",
+            "package": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-current-env/lib/python3.14/site-packages/agent_alfred",
+            "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-current-env/bin/python",
+            "html_sha256": "95c08606a8ef01193eb476364cfbcf59270ed89f48b0d84d4ef759ae5ce597ac"
+          },
+          {
+            "event": "closed",
+            "closed": true,
+            "model_calls": 2
+          }
+        ],
+        "stderr": ""
+      }
+    },
+    {
+      "label": "supported",
+      "ready": {
+        "event": "ready",
+        "instance": "d390e627b33745928a81e49163cbd5da",
+        "package": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-supported-env/lib/python3.14/site-packages/agent_alfred",
+        "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-supported-env/bin/python",
+        "html_sha256": "5c0ac8efdf43a0fe7b4a18909a3c40e477c4d8f126e5ec03e1456a02d8674da6"
+      },
+      "entry": {
+        "instance_id": "d390e627b33745928a81e49163cbd5da"
+      },
+      "artifact": {
+        "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-supported-env/bin/python",
+        "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-dist/agent_alfred-0.1.0-py3-none-any.whl",
+        "sha256": "e42c4cf600f20186c2045868b0696a3c4c1f2e61f7b56e9a3d04e1dd2724d87e",
+        "identity_state": "UNCOMMITTED_PRODUCT_CANDIDATE",
+        "candidate": "support-closeout-r1-uncommitted",
+        "base_head": "8d4adbc97cf1f5d55e3d36b65da7dbf2a1a1be2a",
+        "tree": "641dba43d5e468f2d62be709953765b42b4bcaca",
+        "src_tree": "534f2caae73702d69a57ddf54b9af20dd207b326",
+        "package_tree": "ac9c0adf3bd35595e8280ecc1876fd0a1d5d2929",
+        "manifest": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation/candidate-manifest.json",
+        "manifest_sha256": "54235b595fe2a096f1ebb33b1920efc8f5956dd36205c281fbfbd15833d0d60b",
+        "calculation": "Temporary GIT_INDEX_FILE from base plus the exact seven included paths; real index unchanged; no commit."
+      },
+      "close": {
+        "code": 0,
+        "signal": null,
+        "events": [
+          {
+            "event": "ready",
+            "instance": "d390e627b33745928a81e49163cbd5da",
+            "package": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-supported-env/lib/python3.14/site-packages/agent_alfred",
+            "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-supported-env/bin/python",
+            "html_sha256": "5c0ac8efdf43a0fe7b4a18909a3c40e477c4d8f126e5ec03e1456a02d8674da6"
+          },
+          {
+            "event": "closed",
+            "closed": true,
+            "model_calls": 0
+          }
+        ],
+        "stderr": ""
+      }
+    }
+  ],
+  "requests": [
+    {
+      "stage": "old",
+      "path": "/api/sessions",
+      "body": {}
+    },
+    {
+      "stage": "old",
+      "path": "/api/runs",
+      "body": {
+        "message": "旧包的持久消息",
+        "session_id": "6af233cf07e0486c8d72798d3e3bc447"
+      }
+    },
+    {
+      "stage": "current",
+      "path": "/api/runs",
+      "body": {
+        "message": "新包的持久消息",
+        "session_id": "6af233cf07e0486c8d72798d3e3bc447"
+      }
+    }
+  ],
+  "old": {
+    "oldRun": {
+      "run_id": "cc84a908648347eb8294f430ccdffff5",
+      "session_id": "6af233cf07e0486c8d72798d3e3bc447"
+    },
+    "session": "6af233cf07e0486c8d72798d3e3bc447",
+    "retained": {
+      "schema_version": 1,
+      "process_instance_id": "7c85c1bcf706480093a6616fc71e0a3a",
+      "memory_revision": 27,
+      "operation_id": "old-retained",
+      "result": {
+        "operation_id": "old-retained",
+        "action": "save",
+        "kind": "semantic",
+        "status": "saved",
+        "memory_id": "d18119a4-49e0-48f5-80e7-93135f84fb46",
+        "record_version": 1,
+        "affected_count": 1,
+        "committed_at": "2026-10-09T11:38:28.368434+00:00"
+      },
+      "forgetting": null
+    },
+    "forgotten": {
+      "schema_version": 1,
+      "process_instance_id": "7c85c1bcf706480093a6616fc71e0a3a",
+      "memory_revision": 40,
+      "operation_id": "old-forget",
+      "result": {
+        "operation_id": "old-forget",
+        "action": "save",
+        "kind": "semantic",
+        "status": "saved",
+        "memory_id": "0a8d1e37-8165-4eae-a071-349652b3e54b",
+        "record_version": 1,
+        "affected_count": 1,
+        "committed_at": "2026-10-09T11:38:28.378493+00:00"
+      },
+      "forgetting": null
+    },
+    "oldAccounting": {
+      "snapshot_id": "bcf29484c3f44fb5a6e0c59c09370aa6",
+      "process_instance_id": "7c85c1bcf706480093a6616fc71e0a3a",
+      "computed_at": "2026-10-09T11:38:28Z",
+      "filters": {
+        "range": "all",
+        "timezone": "UTC",
+        "start": null,
+        "end": null
+      },
+      "expires_at": "2026-10-09T11:53:28Z",
+      "summary": {
+        "run_count": 1,
+        "attempt_count": 2,
+        "unknown_cost_attempts": 0,
+        "incomplete_runs": 0,
+        "tool_requests": 0,
+        "confirmed_starts": 0,
+        "not_started": 0,
+        "unconfirmed_starts": 0,
+        "tokens": {
+          "total_input_tokens": {
+            "known": 0,
+            "missing_attempts": 2
+          },
+          "uncached_input_tokens": {
+            "known": 0,
+            "missing_attempts": 2
+          },
+          "cache_read_tokens": {
+            "known": 0,
+            "missing_attempts": 2
+          },
+          "cache_write_tokens": {
+            "known": 0,
+            "missing_attempts": 2
+          },
+          "output_tokens": {
+            "known": 8,
+            "missing_attempts": 0
+          },
+          "reasoning_tokens": {
+            "known": 0,
+            "missing_attempts": 2
+          }
+        },
+        "tool_cost_states": {
+          "not_billable": 0,
+          "reported": 0,
+          "unknown": 0,
+          "unrecorded": 0
+        },
+        "exact_usd": "0.250",
+        "estimated_usd": "0",
+        "tool_costs": []
+      },
+      "unresolved_membership": [],
+      "history_boundary": "Persistent Runs only; legacy messages excluded.",
+      "price_version": "9efe6500119469a312293f6cb99f663655085641834b8b8780a3a46a9e99e368",
+      "runs": [
+        {
+          "run_id": "cc84a908648347eb8294f430ccdffff5",
+          "session_id": "6af233cf07e0486c8d72798d3e3bc447",
+          "purpose": "chat",
+          "phase": "finished",
+          "outcome": "completed",
+          "accepted_at": "2026-10-09T11:38:28Z",
+          "started_at": "2026-10-09T11:38:28Z",
+          "activity_revision": 4,
+          "at": "2026-10-09T11:38:28Z",
+          "time_basis": "started_at",
+          "coverage": [],
+          "trace_incomplete": false,
+          "prune_reason": null
+        }
+      ],
+      "next_offset": null
+    },
+    "oldDetail": {
+      "snapshot_id": "bcf29484c3f44fb5a6e0c59c09370aa6",
+      "process_instance_id": "7c85c1bcf706480093a6616fc71e0a3a",
+      "computed_at": "2026-10-09T11:38:28Z",
+      "filters": {
+        "range": "all",
+        "timezone": "UTC",
+        "start": null,
+        "end": null
+      },
+      "expires_at": "2026-10-09T11:53:28Z",
+      "summary": {
+        "run_count": 1,
+        "attempt_count": 2,
+        "unknown_cost_attempts": 0,
+        "incomplete_runs": 0,
+        "tool_requests": 0,
+        "confirmed_starts": 0,
+        "not_started": 0,
+        "unconfirmed_starts": 0,
+        "tokens": {
+          "total_input_tokens": {
+            "known": 0,
+            "missing_attempts": 2
+          },
+          "uncached_input_tokens": {
+            "known": 0,
+            "missing_attempts": 2
+          },
+          "cache_read_tokens": {
+            "known": 0,
+            "missing_attempts": 2
+          },
+          "cache_write_tokens": {
+            "known": 0,
+            "missing_attempts": 2
+          },
+          "output_tokens": {
+            "known": 8,
+            "missing_attempts": 0
+          },
+          "reasoning_tokens": {
+            "known": 0,
+            "missing_attempts": 2
+          }
+        },
+        "tool_cost_states": {
+          "not_billable": 0,
+          "reported": 0,
+          "unknown": 0,
+          "unrecorded": 0
+        },
+        "exact_usd": "0.250",
+        "estimated_usd": "0",
+        "tool_costs": []
+      },
+      "unresolved_membership": [],
+      "history_boundary": "Persistent Runs only; legacy messages excluded.",
+      "price_version": "9efe6500119469a312293f6cb99f663655085641834b8b8780a3a46a9e99e368",
+      "run": {
+        "run_id": "cc84a908648347eb8294f430ccdffff5",
+        "session_id": "6af233cf07e0486c8d72798d3e3bc447",
+        "purpose": "chat",
+        "phase": "finished",
+        "outcome": "completed",
+        "accepted_at": "2026-10-09T11:38:28Z",
+        "started_at": "2026-10-09T11:38:28Z",
+        "activity_revision": 4,
+        "at": "2026-10-09T11:38:28Z",
+        "time_basis": "started_at",
+        "tools": [],
+        "coverage": [],
+        "trace_incomplete": false,
+        "prune_reason": null,
+        "attempts": [
+          {
+            "attempt_id": "e347938f-ec15-4957-b7a8-d73a7b88933d",
+            "outcome": "committed",
+            "model": {
+              "endpoint_id": "opencode-go",
+              "model_id": "deepseek-v4-flash"
+            },
+            "usage": {
+              "total_input_tokens": null,
+              "uncached_input_tokens": null,
+              "cache_read_tokens": null,
+              "cache_write_tokens": null,
+              "output_tokens": 4,
+              "reasoning_tokens": null,
+              "endpoint_reported_cost_usd": "0.125"
+            },
+            "cost": {
+              "state": "exact",
+              "amount": "0.125",
+              "currency": "USD",
+              "computed_at": "2026-10-09T11:38:28Z"
+            }
+          },
+          {
+            "attempt_id": "bed09ce0-31d2-48c9-aaaa-868bf7b68454",
+            "outcome": "committed",
+            "model": {
+              "endpoint_id": "opencode-go",
+              "model_id": "deepseek-v4-flash"
+            },
+            "usage": {
+              "total_input_tokens": null,
+              "uncached_input_tokens": null,
+              "cache_read_tokens": null,
+              "cache_write_tokens": null,
+              "output_tokens": 4,
+              "reasoning_tokens": null,
+              "endpoint_reported_cost_usd": "0.125"
+            },
+            "cost": {
+              "state": "exact",
+              "amount": "0.125",
+              "currency": "USD",
+              "computed_at": "2026-10-09T11:38:28Z"
+            }
+          }
+        ]
+      }
+    },
+    "deepLink": "/runs/cc84a908648347eb8294f430ccdffff5?filter=all"
+  },
+  "current": {
+    "nextRun": {
+      "run_id": "3ee78da8a8754e9f8e85bfb741e6cc39",
+      "session_id": "6af233cf07e0486c8d72798d3e3bc447"
+    },
+    "newMemory": {
+      "schema_version": 1,
+      "process_instance_id": "7ba96762d36f45c7820942c0ba575242",
+      "memory_revision": 57,
+      "operation_id": "new-retained",
+      "result": {
+        "operation_id": "new-retained",
+        "action": "save",
+        "kind": "semantic",
+        "status": "saved",
+        "memory_id": "586944e2-d5fd-4741-946f-421d2f6018c5",
+        "record_version": 1,
+        "affected_count": 1,
+        "committed_at": "2026-10-09T11:38:29.806464+00:00"
+      },
+      "forgetting": null
+    },
+    "deletion": {
+      "schema_version": 1,
+      "process_instance_id": "7ba96762d36f45c7820942c0ba575242",
+      "memory_revision": 79,
+      "operation_id": "new-forget",
+      "result": {
+        "operation_id": "new-forget",
+        "action": "delete",
+        "kind": "semantic",
+        "status": "deleted",
+        "memory_id": "0a8d1e37-8165-4eae-a071-349652b3e54b",
+        "record_version": null,
+        "affected_count": 1,
+        "committed_at": "2026-10-09T11:38:29.818384+00:00",
+        "fingerprint": "96cdbf16f1c91a735a75acf72e3c67aa0a37cba9d4eb57f0a4c66d907d82a830",
+        "key_id": "7bec8db1738059ff58494c795614ee17"
+      },
+      "forgetting": {
+        "operation_id": "new-forget",
+        "kind": "semantic",
+        "memory_id": "0a8d1e37-8165-4eae-a071-349652b3e54b",
+        "completeness": "known",
+        "state": "complete",
+        "unresolved_scopes": 0,
+        "projection_recovery_error": null,
+        "projection_recovery_failed_at": null,
+        "projection_recovery_pending": false,
+        "observations": [
+          {
+            "progress_revision": 5,
+            "observed_at": "2026-10-09T11:38:29.819038+00:00",
+            "state": "cleaning"
+          },
+          {
+            "progress_revision": 13,
+            "observed_at": "2026-10-09T11:38:29.834095+00:00",
+            "state": "complete"
+          }
+        ],
+        "cleanup": [
+          {
+            "target_id": "database-console",
+            "revision": 1,
+            "state": "complete",
+            "error": null
+          },
+          {
+            "target_id": "memory/episodes.md",
+            "revision": 1,
+            "state": "complete",
+            "error": null
+          },
+          {
+            "target_id": "memory/facts.md",
+            "revision": 1,
+            "state": "complete",
+            "error": null
+          },
+          {
+            "target_id": "trace-export:managed",
+            "revision": 1,
+            "state": "complete",
+            "error": null
+          }
+        ],
+        "progress_revision": 13,
+        "limits": []
+      }
+    },
+    "beforeRollback": {
+      "status": "ok",
+      "revision": 4,
+      "assignments": {
+        "primary": {
+          "endpoint_id": "opencode-go",
+          "model_id": "deepseek-v4-flash"
+        },
+        "retrieval_gate": null
+      },
+      "endpoints": [
+        {
+          "endpoint_id": "anthropic",
+          "base_url": "https://api.anthropic.com/v1",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": []
+        },
+        {
+          "endpoint_id": "openai",
+          "base_url": "https://api.openai.com/v1",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": []
+        },
+        {
+          "endpoint_id": "xai",
+          "base_url": "https://api.x.ai/v1",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": []
+        },
+        {
+          "endpoint_id": "deepseek",
+          "base_url": "https://api.deepseek.com",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": []
+        },
+        {
+          "endpoint_id": "opencode",
+          "base_url": "https://opencode.ai/zen/v1",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": [
+            {
+              "endpoint_id": "opencode",
+              "model_id": "deepseek-v4-flash",
+              "sources": [
+                "builtin"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": false,
+              "assignable": false,
+              "support": "supported",
+              "support_basis": "builtin_table",
+              "wire_style": "openai",
+              "wire_style_source": "builtin_table",
+              "support_label": "支持",
+              "reason": null,
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": false,
+              "probe_enabled": false
+            },
+            {
+              "endpoint_id": "opencode",
+              "model_id": "qwen3.7-max",
+              "sources": [
+                "builtin"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": false,
+              "assignable": false,
+              "support": "supported",
+              "support_basis": "builtin_table",
+              "wire_style": "anthropic",
+              "wire_style_source": "builtin_table",
+              "support_label": "支持",
+              "reason": null,
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": false,
+              "probe_enabled": false
+            },
+            {
+              "endpoint_id": "opencode",
+              "model_id": "grok-4.6",
+              "sources": [
+                "builtin"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": false,
+              "assignable": false,
+              "support": "unsupported",
+              "support_basis": "builtin_table",
+              "wire_style": "responses",
+              "wire_style_source": "builtin_table",
+              "support_label": "unsupported_wire_style: responses",
+              "reason": "unsupported_wire_style: responses",
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": false,
+              "probe_enabled": false
+            }
+          ]
+        },
+        {
+          "endpoint_id": "opencode-go",
+          "base_url": "https://opencode.ai/zen/go/v1",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": [
+            {
+              "endpoint_id": "opencode-go",
+              "model_id": "deepseek-v4-flash",
+              "sources": [
+                "builtin",
+                "pinned"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": true,
+              "assignable": true,
+              "support": "supported",
+              "support_basis": "builtin_table",
+              "wire_style": "openai",
+              "wire_style_source": "builtin_table",
+              "support_label": "支持",
+              "reason": null,
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": true,
+              "probe_enabled": false
+            },
+            {
+              "endpoint_id": "opencode-go",
+              "model_id": "qwen3.7-max",
+              "sources": [
+                "builtin"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": false,
+              "assignable": false,
+              "support": "supported",
+              "support_basis": "builtin_table",
+              "wire_style": "anthropic",
+              "wire_style_source": "builtin_table",
+              "support_label": "支持",
+              "reason": null,
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": false,
+              "probe_enabled": false
+            },
+            {
+              "endpoint_id": "opencode-go",
+              "model_id": "grok-4.6",
+              "sources": [
+                "builtin"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": false,
+              "assignable": false,
+              "support": "unsupported",
+              "support_basis": "builtin_table",
+              "wire_style": "responses",
+              "wire_style_source": "builtin_table",
+              "support_label": "unsupported_wire_style: responses",
+              "reason": "unsupported_wire_style: responses",
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": false,
+              "probe_enabled": false
+            }
+          ]
+        }
+      ]
+    },
+    "currentAccounting": {
+      "snapshot_id": "a9ba1056a91b46489302a319bf62bbcd",
+      "process_instance_id": "7ba96762d36f45c7820942c0ba575242",
+      "computed_at": "2026-10-09T11:38:29Z",
+      "filters": {
+        "range": "all",
+        "timezone": "UTC",
+        "start": null,
+        "end": null
+      },
+      "expires_at": "2026-10-09T11:53:29Z",
+      "summary": {
+        "run_count": 2,
+        "attempt_count": 4,
+        "unknown_cost_attempts": 0,
+        "exact_attempts": 4,
+        "estimated_attempts": 0,
+        "price_sources": {},
+        "stale_price_attempts": 0,
+        "tiered_price_attempts": 0,
+        "incomplete_runs": 0,
+        "tool_requests": 0,
+        "confirmed_starts": 0,
+        "not_started": 0,
+        "unconfirmed_starts": 0,
+        "tokens": {
+          "total_input_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "uncached_input_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "cache_read_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "cache_write_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "output_tokens": {
+            "known": 16,
+            "missing_attempts": 0
+          },
+          "reasoning_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          }
+        },
+        "tool_cost_states": {
+          "not_billable": 0,
+          "reported": 0,
+          "unknown": 0,
+          "unrecorded": 0
+        },
+        "exact_usd": "0.500",
+        "estimated_usd": "0",
+        "tool_costs": []
+      },
+      "unresolved_membership": [],
+      "history_boundary": "Persistent Runs only; legacy messages excluded.",
+      "price_version": "8b65cbfdc14e396263c02bdd24d2f20b9b228025b14c86e529942c5bff5e37ab",
+      "runs": [
+        {
+          "run_id": "3ee78da8a8754e9f8e85bfb741e6cc39",
+          "session_id": "6af233cf07e0486c8d72798d3e3bc447",
+          "purpose": "chat",
+          "phase": "finished",
+          "outcome": "completed",
+          "accepted_at": "2026-10-09T11:38:29Z",
+          "started_at": "2026-10-09T11:38:29Z",
+          "activity_revision": 7,
+          "at": "2026-10-09T11:38:29Z",
+          "time_basis": "started_at",
+          "coverage": [],
+          "trace_incomplete": false,
+          "prune_reason": null
+        },
+        {
+          "run_id": "cc84a908648347eb8294f430ccdffff5",
+          "session_id": "6af233cf07e0486c8d72798d3e3bc447",
+          "purpose": "chat",
+          "phase": "finished",
+          "outcome": "completed",
+          "accepted_at": "2026-10-09T11:38:28Z",
+          "started_at": "2026-10-09T11:38:28Z",
+          "activity_revision": 4,
+          "at": "2026-10-09T11:38:28Z",
+          "time_basis": "started_at",
+          "coverage": [],
+          "trace_incomplete": false,
+          "prune_reason": null
+        }
+      ],
+      "next_offset": null
+    },
+    "currentOldDetail": {
+      "snapshot_id": "a9ba1056a91b46489302a319bf62bbcd",
+      "process_instance_id": "7ba96762d36f45c7820942c0ba575242",
+      "computed_at": "2026-10-09T11:38:29Z",
+      "filters": {
+        "range": "all",
+        "timezone": "UTC",
+        "start": null,
+        "end": null
+      },
+      "expires_at": "2026-10-09T11:53:29Z",
+      "summary": {
+        "run_count": 2,
+        "attempt_count": 4,
+        "unknown_cost_attempts": 0,
+        "exact_attempts": 4,
+        "estimated_attempts": 0,
+        "price_sources": {},
+        "stale_price_attempts": 0,
+        "tiered_price_attempts": 0,
+        "incomplete_runs": 0,
+        "tool_requests": 0,
+        "confirmed_starts": 0,
+        "not_started": 0,
+        "unconfirmed_starts": 0,
+        "tokens": {
+          "total_input_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "uncached_input_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "cache_read_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "cache_write_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "output_tokens": {
+            "known": 16,
+            "missing_attempts": 0
+          },
+          "reasoning_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          }
+        },
+        "tool_cost_states": {
+          "not_billable": 0,
+          "reported": 0,
+          "unknown": 0,
+          "unrecorded": 0
+        },
+        "exact_usd": "0.500",
+        "estimated_usd": "0",
+        "tool_costs": []
+      },
+      "unresolved_membership": [],
+      "history_boundary": "Persistent Runs only; legacy messages excluded.",
+      "price_version": "8b65cbfdc14e396263c02bdd24d2f20b9b228025b14c86e529942c5bff5e37ab",
+      "run": {
+        "run_id": "cc84a908648347eb8294f430ccdffff5",
+        "session_id": "6af233cf07e0486c8d72798d3e3bc447",
+        "purpose": "chat",
+        "phase": "finished",
+        "outcome": "completed",
+        "accepted_at": "2026-10-09T11:38:28Z",
+        "started_at": "2026-10-09T11:38:28Z",
+        "activity_revision": 4,
+        "at": "2026-10-09T11:38:28Z",
+        "time_basis": "started_at",
+        "tools": [],
+        "coverage": [],
+        "trace_incomplete": false,
+        "prune_reason": null,
+        "attempts": [
+          {
+            "attempt_id": "e347938f-ec15-4957-b7a8-d73a7b88933d",
+            "outcome": "committed",
+            "model": {
+              "endpoint_id": "opencode-go",
+              "model_id": "deepseek-v4-flash"
+            },
+            "usage": {
+              "total_input_tokens": null,
+              "uncached_input_tokens": null,
+              "cache_read_tokens": null,
+              "cache_write_tokens": null,
+              "output_tokens": 4,
+              "reasoning_tokens": null,
+              "endpoint_reported_cost_usd": "0.125"
+            },
+            "cost": {
+              "state": "exact",
+              "amount": "0.125",
+              "currency": "USD",
+              "computed_at": "2026-10-09T11:38:29Z"
+            }
+          },
+          {
+            "attempt_id": "bed09ce0-31d2-48c9-aaaa-868bf7b68454",
+            "outcome": "committed",
+            "model": {
+              "endpoint_id": "opencode-go",
+              "model_id": "deepseek-v4-flash"
+            },
+            "usage": {
+              "total_input_tokens": null,
+              "uncached_input_tokens": null,
+              "cache_read_tokens": null,
+              "cache_write_tokens": null,
+              "output_tokens": 4,
+              "reasoning_tokens": null,
+              "endpoint_reported_cost_usd": "0.125"
+            },
+            "cost": {
+              "state": "exact",
+              "amount": "0.125",
+              "currency": "USD",
+              "computed_at": "2026-10-09T11:38:29Z"
+            }
+          }
+        ]
+      }
+    },
+    "query": {
+      "query_id": "JSfFPjk4jF6fmXxMXSXgHfm8",
+      "instance_id": "7ba96762d36f45c7820942c0ba575242",
+      "expires_in_s": 30
+    },
+    "queryResult": {
+      "query_id": "JSfFPjk4jF6fmXxMXSXgHfm8",
+      "instance_id": "7ba96762d36f45c7820942c0ba575242",
+      "memory_revision": "79",
+      "protection_version": "5",
+      "objects": [
+        "diag_sessions"
+      ],
+      "coverage": {
+        "attempts": {
+          "recorded": 0,
+          "recorded_empty": 0,
+          "unrecorded": 0,
+          "in_progress_runs": 0
+        },
+        "notice": "缺行不证明未发生请求"
+      },
+      "read_at": "2026-10-09T11:38:29.999503Z",
+      "columns": [
+        "n"
+      ],
+      "rows": [
+        [
+          {
+            "type": "integer",
+            "value": "1"
+          }
+        ]
+      ],
+      "returned_rows": 1,
+      "truncated": false,
+      "truncation_reasons": []
+    },
+    "automaticPostsOnRefresh": 0
+  },
+  "supported": {
+    "modelState": {
+      "status": "ok",
+      "revision": 4,
+      "assignments": {
+        "primary": {
+          "endpoint_id": "opencode-go",
+          "model_id": "deepseek-v4-flash"
+        },
+        "retrieval_gate": null
+      },
+      "endpoints": [
+        {
+          "endpoint_id": "anthropic",
+          "base_url": "https://api.anthropic.com/v1",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": []
+        },
+        {
+          "endpoint_id": "openai",
+          "base_url": "https://api.openai.com/v1",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": []
+        },
+        {
+          "endpoint_id": "xai",
+          "base_url": "https://api.x.ai/v1",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": []
+        },
+        {
+          "endpoint_id": "deepseek",
+          "base_url": "https://api.deepseek.com",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": []
+        },
+        {
+          "endpoint_id": "opencode",
+          "base_url": "https://opencode.ai/zen/v1",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": [
+            {
+              "endpoint_id": "opencode",
+              "model_id": "deepseek-v4-flash",
+              "sources": [
+                "builtin"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": false,
+              "assignable": false,
+              "support": "supported",
+              "support_basis": "builtin_table",
+              "wire_style": "openai",
+              "wire_style_source": "builtin_table",
+              "support_label": "支持",
+              "reason": null,
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": false,
+              "probe_enabled": false
+            },
+            {
+              "endpoint_id": "opencode",
+              "model_id": "qwen3.7-max",
+              "sources": [
+                "builtin"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": false,
+              "assignable": false,
+              "support": "supported",
+              "support_basis": "builtin_table",
+              "wire_style": "anthropic",
+              "wire_style_source": "builtin_table",
+              "support_label": "支持",
+              "reason": null,
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": false,
+              "probe_enabled": false
+            },
+            {
+              "endpoint_id": "opencode",
+              "model_id": "grok-4.6",
+              "sources": [
+                "builtin"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": false,
+              "assignable": false,
+              "support": "unsupported",
+              "support_basis": "builtin_table",
+              "wire_style": "responses",
+              "wire_style_source": "builtin_table",
+              "support_label": "unsupported_wire_style: responses",
+              "reason": "unsupported_wire_style: responses",
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": false,
+              "probe_enabled": false
+            }
+          ]
+        },
+        {
+          "endpoint_id": "opencode-go",
+          "base_url": "https://opencode.ai/zen/go/v1",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": [
+            {
+              "endpoint_id": "opencode-go",
+              "model_id": "deepseek-v4-flash",
+              "sources": [
+                "builtin",
+                "pinned"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": true,
+              "assignable": true,
+              "support": "supported",
+              "support_basis": "builtin_table",
+              "wire_style": "openai",
+              "wire_style_source": "builtin_table",
+              "support_label": "支持",
+              "reason": null,
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": true,
+              "probe_enabled": false
+            },
+            {
+              "endpoint_id": "opencode-go",
+              "model_id": "qwen3.7-max",
+              "sources": [
+                "builtin"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": false,
+              "assignable": false,
+              "support": "supported",
+              "support_basis": "builtin_table",
+              "wire_style": "anthropic",
+              "wire_style_source": "builtin_table",
+              "support_label": "支持",
+              "reason": null,
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": false,
+              "probe_enabled": false
+            },
+            {
+              "endpoint_id": "opencode-go",
+              "model_id": "grok-4.6",
+              "sources": [
+                "builtin"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": false,
+              "assignable": false,
+              "support": "unsupported",
+              "support_basis": "builtin_table",
+              "wire_style": "responses",
+              "wire_style_source": "builtin_table",
+              "support_label": "unsupported_wire_style: responses",
+              "reason": "unsupported_wire_style: responses",
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": false,
+              "probe_enabled": false
+            }
+          ]
+        }
+      ]
+    },
+    "history": {
+      "session_id": "6af233cf07e0486c8d72798d3e3bc447",
+      "title": "旧包的持久消息",
+      "messages": [
+        {
+          "role": "user",
+          "blocks": [
+            {
+              "type": "text",
+              "text": "旧包的持久消息"
+            }
+          ],
+          "source": "web",
+          "created_at": "2026-10-09T11:38:28Z",
+          "run_id": "cc84a908648347eb8294f430ccdffff5",
+          "message_anchor": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoiNmFmMjMzY2YwN2UwNDg2YzhkNzI3OThkM2UzYmM0NDciLCJzZWciOiJydW5zIiwiaWQiOjF9"
+        },
+        {
+          "role": "assistant",
+          "blocks": [
+            {
+              "type": "text",
+              "text": "离线生命周期回复"
+            }
+          ],
+          "source": "web",
+          "created_at": "2026-10-09T11:38:28Z",
+          "run_id": "cc84a908648347eb8294f430ccdffff5",
+          "message_anchor": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoiNmFmMjMzY2YwN2UwNDg2YzhkNzI3OThkM2UzYmM0NDciLCJzZWciOiJydW5zIiwiaWQiOjJ9"
+        },
+        {
+          "role": "user",
+          "blocks": [
+            {
+              "type": "text",
+              "text": "新包的持久消息"
+            }
+          ],
+          "source": "web",
+          "created_at": "2026-10-09T11:38:29Z",
+          "run_id": "3ee78da8a8754e9f8e85bfb741e6cc39",
+          "message_anchor": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoiNmFmMjMzY2YwN2UwNDg2YzhkNzI3OThkM2UzYmM0NDciLCJzZWciOiJydW5zIiwiaWQiOjN9"
+        },
+        {
+          "role": "assistant",
+          "blocks": [
+            {
+              "type": "text",
+              "text": "离线生命周期回复"
+            }
+          ],
+          "source": "web",
+          "created_at": "2026-10-09T11:38:29Z",
+          "run_id": "3ee78da8a8754e9f8e85bfb741e6cc39",
+          "message_anchor": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoiNmFmMjMzY2YwN2UwNDg2YzhkNzI3OThkM2UzYmM0NDciLCJzZWciOiJydW5zIiwiaWQiOjR9"
+        }
+      ],
+      "next_cursor": null,
+      "runs_pending": false
+    },
+    "runs": {
+      "filter": "all",
+      "runs": [
+        {
+          "run_id": "3ee78da8a8754e9f8e85bfb741e6cc39",
+          "purpose": "chat",
+          "filter": "chat",
+          "purpose_known": true,
+          "admission_state": "admitted",
+          "admission_label": "已获准",
+          "session_id": "6af233cf07e0486c8d72798d3e3bc447",
+          "gateway": "web",
+          "entry_surface_id": "mainbar",
+          "prompt_preview": "新包的持久消息",
+          "phase": "finished",
+          "outcome": "completed",
+          "accepted_at": "2026-10-09T11:38:29Z",
+          "started_at": "2026-10-09T11:38:29Z",
+          "finished_at": "2026-10-09T11:38:29Z",
+          "activity_revision": 7,
+          "recording_state": "recorded",
+          "recording_source": "durable_finalization",
+          "aggregation": null
+        },
+        {
+          "run_id": "cc84a908648347eb8294f430ccdffff5",
+          "purpose": "chat",
+          "filter": "chat",
+          "purpose_known": true,
+          "admission_state": "admitted",
+          "admission_label": "已获准",
+          "session_id": "6af233cf07e0486c8d72798d3e3bc447",
+          "gateway": "web",
+          "entry_surface_id": "mainbar",
+          "prompt_preview": "旧包的持久消息",
+          "phase": "finished",
+          "outcome": "completed",
+          "accepted_at": "2026-10-09T11:38:28Z",
+          "started_at": "2026-10-09T11:38:28Z",
+          "finished_at": "2026-10-09T11:38:28Z",
+          "activity_revision": 4,
+          "recording_state": "recorded",
+          "recording_source": "durable_finalization",
+          "aggregation": null
+        }
+      ],
+      "non_terminal": null,
+      "next_cursor": null
+    },
+    "absent": {
+      "error": {
+        "code": "not_found",
+        "memory_revision": 99
+      }
+    },
+    "receipt": {
+      "schema_version": 1,
+      "process_instance_id": "d390e627b33745928a81e49163cbd5da",
+      "memory_revision": 99,
+      "operation_id": "new-forget",
+      "result": {
+        "action": "delete",
+        "affected_count": 1,
+        "committed_at": "2026-10-09T11:38:29.818384+00:00",
+        "fingerprint": "96cdbf16f1c91a735a75acf72e3c67aa0a37cba9d4eb57f0a4c66d907d82a830",
+        "key_id": "7bec8db1738059ff58494c795614ee17",
+        "kind": "semantic",
+        "memory_id": "0a8d1e37-8165-4eae-a071-349652b3e54b",
+        "operation_id": "new-forget",
+        "record_version": null,
+        "status": "deleted"
+      },
+      "forgetting": {
+        "operation_id": "new-forget",
+        "kind": "semantic",
+        "memory_id": "0a8d1e37-8165-4eae-a071-349652b3e54b",
+        "completeness": "known",
+        "state": "complete",
+        "unresolved_scopes": 0,
+        "projection_recovery_error": null,
+        "projection_recovery_failed_at": null,
+        "projection_recovery_pending": false,
+        "observations": [
+          {
+            "progress_revision": 5,
+            "observed_at": "2026-10-09T11:38:29.819038+00:00",
+            "state": "cleaning"
+          },
+          {
+            "progress_revision": 13,
+            "observed_at": "2026-10-09T11:38:29.834095+00:00",
+            "state": "complete"
+          },
+          {
+            "progress_revision": 14,
+            "observed_at": "2026-10-09T11:38:30.939936+00:00",
+            "state": "cleaning"
+          },
+          {
+            "progress_revision": 25,
+            "observed_at": "2026-10-09T11:38:30.955897+00:00",
+            "state": "complete"
+          }
+        ],
+        "cleanup": [
+          {
+            "target_id": "database-console",
+            "revision": 5,
+            "state": "complete",
+            "error": null
+          },
+          {
+            "target_id": "memory/episodes.md",
+            "revision": 3,
+            "state": "complete",
+            "error": null
+          },
+          {
+            "target_id": "memory/facts.md",
+            "revision": 3,
+            "state": "complete",
+            "error": null
+          },
+          {
+            "target_id": "trace-export:managed",
+            "revision": 5,
+            "state": "complete",
+            "error": null
+          }
+        ],
+        "progress_revision": 25,
+        "limits": []
+      },
+      "scopes": []
+    },
+    "accounting": {
+      "snapshot_id": "3dbc7990f50640b5aa914d690c2012a0",
+      "process_instance_id": "d390e627b33745928a81e49163cbd5da",
+      "computed_at": "2026-10-09T11:38:31Z",
+      "filters": {
+        "range": "all",
+        "timezone": "UTC",
+        "start": null,
+        "end": null
+      },
+      "expires_at": "2026-10-09T11:53:31Z",
+      "summary": {
+        "run_count": 2,
+        "attempt_count": 4,
+        "unknown_cost_attempts": 0,
+        "exact_attempts": 4,
+        "estimated_attempts": 0,
+        "price_sources": {},
+        "stale_price_attempts": 0,
+        "tiered_price_attempts": 0,
+        "incomplete_runs": 0,
+        "tool_requests": 0,
+        "confirmed_starts": 0,
+        "not_started": 0,
+        "unconfirmed_starts": 0,
+        "tokens": {
+          "total_input_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "uncached_input_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "cache_read_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "cache_write_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "output_tokens": {
+            "known": 16,
+            "missing_attempts": 0
+          },
+          "reasoning_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          }
+        },
+        "tool_cost_states": {
+          "not_billable": 0,
+          "reported": 0,
+          "unknown": 0,
+          "unrecorded": 0
+        },
+        "exact_usd": "0.500",
+        "estimated_usd": "0",
+        "tool_costs": []
+      },
+      "unresolved_membership": [],
+      "history_boundary": "Persistent Runs only; legacy messages excluded.",
+      "price_version": "8b65cbfdc14e396263c02bdd24d2f20b9b228025b14c86e529942c5bff5e37ab",
+      "runs": [
+        {
+          "run_id": "3ee78da8a8754e9f8e85bfb741e6cc39",
+          "session_id": "6af233cf07e0486c8d72798d3e3bc447",
+          "purpose": "chat",
+          "phase": "finished",
+          "outcome": "completed",
+          "accepted_at": "2026-10-09T11:38:29Z",
+          "started_at": "2026-10-09T11:38:29Z",
+          "activity_revision": 7,
+          "at": "2026-10-09T11:38:29Z",
+          "time_basis": "started_at",
+          "coverage": [],
+          "trace_incomplete": false,
+          "prune_reason": null
+        },
+        {
+          "run_id": "cc84a908648347eb8294f430ccdffff5",
+          "session_id": "6af233cf07e0486c8d72798d3e3bc447",
+          "purpose": "chat",
+          "phase": "finished",
+          "outcome": "completed",
+          "accepted_at": "2026-10-09T11:38:28Z",
+          "started_at": "2026-10-09T11:38:28Z",
+          "activity_revision": 4,
+          "at": "2026-10-09T11:38:28Z",
+          "time_basis": "started_at",
+          "coverage": [],
+          "trace_incomplete": false,
+          "prune_reason": null
+        }
+      ],
+      "next_offset": null
+    },
+    "detail": {
+      "snapshot_id": "3dbc7990f50640b5aa914d690c2012a0",
+      "process_instance_id": "d390e627b33745928a81e49163cbd5da",
+      "computed_at": "2026-10-09T11:38:31Z",
+      "filters": {
+        "range": "all",
+        "timezone": "UTC",
+        "start": null,
+        "end": null
+      },
+      "expires_at": "2026-10-09T11:53:31Z",
+      "summary": {
+        "run_count": 2,
+        "attempt_count": 4,
+        "unknown_cost_attempts": 0,
+        "exact_attempts": 4,
+        "estimated_attempts": 0,
+        "price_sources": {},
+        "stale_price_attempts": 0,
+        "tiered_price_attempts": 0,
+        "incomplete_runs": 0,
+        "tool_requests": 0,
+        "confirmed_starts": 0,
+        "not_started": 0,
+        "unconfirmed_starts": 0,
+        "tokens": {
+          "total_input_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "uncached_input_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "cache_read_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "cache_write_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "output_tokens": {
+            "known": 16,
+            "missing_attempts": 0
+          },
+          "reasoning_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          }
+        },
+        "tool_cost_states": {
+          "not_billable": 0,
+          "reported": 0,
+          "unknown": 0,
+          "unrecorded": 0
+        },
+        "exact_usd": "0.500",
+        "estimated_usd": "0",
+        "tool_costs": []
+      },
+      "unresolved_membership": [],
+      "history_boundary": "Persistent Runs only; legacy messages excluded.",
+      "price_version": "8b65cbfdc14e396263c02bdd24d2f20b9b228025b14c86e529942c5bff5e37ab",
+      "run": {
+        "run_id": "cc84a908648347eb8294f430ccdffff5",
+        "session_id": "6af233cf07e0486c8d72798d3e3bc447",
+        "purpose": "chat",
+        "phase": "finished",
+        "outcome": "completed",
+        "accepted_at": "2026-10-09T11:38:28Z",
+        "started_at": "2026-10-09T11:38:28Z",
+        "activity_revision": 4,
+        "at": "2026-10-09T11:38:28Z",
+        "time_basis": "started_at",
+        "tools": [],
+        "coverage": [],
+        "trace_incomplete": false,
+        "prune_reason": null,
+        "attempts": [
+          {
+            "attempt_id": "e347938f-ec15-4957-b7a8-d73a7b88933d",
+            "outcome": "committed",
+            "model": {
+              "endpoint_id": "opencode-go",
+              "model_id": "deepseek-v4-flash"
+            },
+            "usage": {
+              "total_input_tokens": null,
+              "uncached_input_tokens": null,
+              "cache_read_tokens": null,
+              "cache_write_tokens": null,
+              "output_tokens": 4,
+              "reasoning_tokens": null,
+              "endpoint_reported_cost_usd": "0.125"
+            },
+            "cost": {
+              "state": "exact",
+              "amount": "0.125",
+              "currency": "USD",
+              "computed_at": "2026-10-09T11:38:31Z"
+            }
+          },
+          {
+            "attempt_id": "bed09ce0-31d2-48c9-aaaa-868bf7b68454",
+            "outcome": "committed",
+            "model": {
+              "endpoint_id": "opencode-go",
+              "model_id": "deepseek-v4-flash"
+            },
+            "usage": {
+              "total_input_tokens": null,
+              "uncached_input_tokens": null,
+              "cache_read_tokens": null,
+              "cache_write_tokens": null,
+              "output_tokens": 4,
+              "reasoning_tokens": null,
+              "endpoint_reported_cost_usd": "0.125"
+            },
+            "cost": {
+              "state": "exact",
+              "amount": "0.125",
+              "currency": "USD",
+              "computed_at": "2026-10-09T11:38:31Z"
+            }
+          }
+        ]
+      }
+    },
+    "automaticPostsOnRefresh": 0
+  },
+  "lostCapabilities": [
+    "默认根地址与品牌入口回到收件箱；已迁移十页和全部语义修复仍可用"
+  ],
+  "status": "PASS",
+  "portable_derivation": {
+    "source_raw_result": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-lifecycle-01/result.json",
+    "source_sha256": "d08ecec57c384b3f34df3ae593e0cbd59d105a6080301e3bb7b9934394e22a5f",
+    "removed_fields": [
+      "stages[0].entry.csrf_token",
+      "stages[1].entry.csrf_token",
+      "stages[2].entry.csrf_token"
+    ],
+    "reason": "Ephemeral isolated-fixture CSRF credentials removed; all behavior and candidate identities retained.",
+    "derivation": "JSON structural copy with only the three listed field removals plus this metadata."
+  }
+}

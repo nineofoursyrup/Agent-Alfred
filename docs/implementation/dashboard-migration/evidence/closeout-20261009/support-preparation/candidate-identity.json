@@ -1,0 +1,10 @@
+{
+  "candidate": "support-closeout-r1-uncommitted",
+  "base_head": "8d4adbc97cf1f5d55e3d36b65da7dbf2a1a1be2a",
+  "tree": "641dba43d5e468f2d62be709953765b42b4bcaca",
+  "src_tree": "534f2caae73702d69a57ddf54b9af20dd207b326",
+  "package_tree": "ac9c0adf3bd35595e8280ecc1876fd0a1d5d2929",
+  "manifest": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation/candidate-manifest.json",
+  "manifest_sha256": "54235b595fe2a096f1ebb33b1920efc8f5956dd36205c281fbfbd15833d0d60b",
+  "calculation": "Temporary GIT_INDEX_FILE from base plus the exact seven included paths; real index unchanged; no commit."
+}

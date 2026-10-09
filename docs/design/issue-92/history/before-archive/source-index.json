@@ -1,0 +1,286 @@
+{
+  "contract": "DASHBOARD-MIGRATION-IMPLEMENTATION-CONTRACT-r1",
+  "status": "CONSOLIDATED_FROM_CONFIRMED_DECISIONS",
+  "date_local": "2026-10-09",
+  "timezone": "Asia/Shanghai",
+  "repository": "nineofoursyrup/Agent-Alfred",
+  "product_baseline": "22c8720e1ec874fd012cc79b086cd8aace4c79b6",
+  "document_base": "1a343ae1894554ad0167273a34b1f6bce171fb5b",
+  "scope": "Design and validation planning only; no product verification or delivery performed.",
+  "dependency_readback": {
+    "issue": 92,
+    "native_blockers": [
+      86,
+      87,
+      88,
+      89,
+      90,
+      91
+    ],
+    "open_native_blockers": [
+      89
+    ],
+    "observed_utc": "2026-10-08T16:53:44Z",
+    "method": "gh api repos/nineofoursyrup/Agent-Alfred/issues/92/dependencies/blocked_by",
+    "handoff_ready": false,
+    "blocking_reason": "Issue 89 is confirmed locally but has no archived commit or closed native dependency."
+  },
+  "sources": [
+    {
+      "issue": 86,
+      "issue_url": "https://github.com/nineofoursyrup/Agent-Alfred/issues/86",
+      "state_observed": "CLOSED",
+      "authority": "archived_commit",
+      "commit": "541befcbe4f771d6f0d7ce3dfc820357c91c7cbc",
+      "documents": [
+        {
+          "path": "docs/design/issue-86/DECISIONS.md",
+          "sha256": "a16fbb26aa6babc995cc42f5d4b8c64bdfcb57d7cf9508270665df7dbc314097",
+          "bytes": 12505,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/541befcbe4f771d6f0d7ce3dfc820357c91c7cbc/docs/design/issue-86/DECISIONS.md"
+        },
+        {
+          "path": "docs/design/issue-86/APPROVAL.md",
+          "sha256": "1baedbb9d9a9696c415d660e7c26bdc3257e6224c5fa11a6ca46b0d68335e769",
+          "bytes": 1367,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/541befcbe4f771d6f0d7ce3dfc820357c91c7cbc/docs/design/issue-86/APPROVAL.md"
+        },
+        {
+          "path": "docs/design/issue-86/tokens.json",
+          "sha256": "de5289bd897cd6ca456c943ee4d519a380cdbc8ae39fef5d15fd064baad29597",
+          "bytes": 2053,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/541befcbe4f771d6f0d7ce3dfc820357c91c7cbc/docs/design/issue-86/tokens.json"
+        },
+        {
+          "path": "docs/design/issue-86/manifest.json",
+          "sha256": "d670fd3b42c7f31e1a2a38272f1fbfbfaecdb15ee6f4987b6a25d1115c792840",
+          "bytes": 8587,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/541befcbe4f771d6f0d7ce3dfc820357c91c7cbc/docs/design/issue-86/manifest.json"
+        },
+        {
+          "path": "docs/design/issue-86/baseline/r1/APPROVAL.md",
+          "sha256": "1baedbb9d9a9696c415d660e7c26bdc3257e6224c5fa11a6ca46b0d68335e769",
+          "bytes": 1367,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/541befcbe4f771d6f0d7ce3dfc820357c91c7cbc/docs/design/issue-86/baseline/r1/APPROVAL.md"
+        },
+        {
+          "path": "docs/design/issue-86/baseline/r1/README.md",
+          "sha256": "b20d7bcf60ebac9b37df98565b00cb0b58432e4008770566dc7728a50dea919d",
+          "bytes": 710,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/541befcbe4f771d6f0d7ce3dfc820357c91c7cbc/docs/design/issue-86/baseline/r1/README.md"
+        },
+        {
+          "path": "docs/design/issue-86/baseline/r1/capture-observations.json",
+          "sha256": "8446517b4caf0b0aa09e09bbeefbfd749dd3bc389279f79fc71a5a8d506b5267",
+          "bytes": 1920,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/541befcbe4f771d6f0d7ce3dfc820357c91c7cbc/docs/design/issue-86/baseline/r1/capture-observations.json"
+        },
+        {
+          "path": "docs/design/issue-86/baseline/r1/dashboard-prototype.html",
+          "sha256": "44936e6b85558dfb78d1df6e6aec08ea300575e598cfa3e284c187cc9492bfdf",
+          "bytes": 44201,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/541befcbe4f771d6f0d7ce3dfc820357c91c7cbc/docs/design/issue-86/baseline/r1/dashboard-prototype.html"
+        },
+        {
+          "path": "docs/design/issue-86/baseline/r1/manifest.json",
+          "sha256": "95af762d98d31d878369602d9fb8bc2028db83d0507c6477c2a6483859f0cd5e",
+          "bytes": 2854,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/541befcbe4f771d6f0d7ce3dfc820357c91c7cbc/docs/design/issue-86/baseline/r1/manifest.json"
+        },
+        {
+          "path": "docs/design/issue-86/baseline/r1/reference/syrup-original-preview.webp",
+          "sha256": "3784ac9b491b3db6ea5670abf22d490a972b1c839fb45a7b5a80c6de12ee6051",
+          "bytes": 14560,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/541befcbe4f771d6f0d7ce3dfc820357c91c7cbc/docs/design/issue-86/baseline/r1/reference/syrup-original-preview.webp"
+        },
+        {
+          "path": "docs/design/issue-86/baseline/r1/reference/syrup-original.html",
+          "sha256": "54807adb38541fa2966e5b0c334b9d0e8d71c60b814245601bc4f35b8ec54b84",
+          "bytes": 79561,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/541befcbe4f771d6f0d7ce3dfc820357c91c7cbc/docs/design/issue-86/baseline/r1/reference/syrup-original.html"
+        },
+        {
+          "path": "docs/design/issue-86/baseline/r1/screenshots/A-chat-edge-390.png",
+          "sha256": "48c3a7aed1679dd77542cd8f2716d725e7bb026ec81d5c09dffccfc14d6d3fcd",
+          "bytes": 65098,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/541befcbe4f771d6f0d7ce3dfc820357c91c7cbc/docs/design/issue-86/baseline/r1/screenshots/A-chat-edge-390.png"
+        },
+        {
+          "path": "docs/design/issue-86/baseline/r1/screenshots/A-components-1440.png",
+          "sha256": "62d3053642332e5ae0ab8e3551582ed194fc837f70e8605e900bd7e7568d44bf",
+          "bytes": 204127,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/541befcbe4f771d6f0d7ce3dfc820357c91c7cbc/docs/design/issue-86/baseline/r1/screenshots/A-components-1440.png"
+        },
+        {
+          "path": "docs/design/issue-86/baseline/r1/screenshots/A-overview-1280.png",
+          "sha256": "70eda2444d493d734185dbf2562e746f1a4c617045afac90e04080a08c09628f",
+          "bytes": 180929,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/541befcbe4f771d6f0d7ce3dfc820357c91c7cbc/docs/design/issue-86/baseline/r1/screenshots/A-overview-1280.png"
+        },
+        {
+          "path": "docs/design/issue-86/baseline/r1/screenshots/A-overview-1440.png",
+          "sha256": "6887171b6e0bdc780f3d6f710dd37c7a8bfe95a8e6c68765eabc6f0a64ba89d5",
+          "bytes": 207413,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/541befcbe4f771d6f0d7ce3dfc820357c91c7cbc/docs/design/issue-86/baseline/r1/screenshots/A-overview-1440.png"
+        },
+        {
+          "path": "docs/design/issue-86/baseline/r1/screenshots/A-overview-390.png",
+          "sha256": "6a5698f234aae24a2015050ebb180ffa422ac2c3570d03a0465629ff69ec5237",
+          "bytes": 59421,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/541befcbe4f771d6f0d7ce3dfc820357c91c7cbc/docs/design/issue-86/baseline/r1/screenshots/A-overview-390.png"
+        },
+        {
+          "path": "docs/design/issue-86/baseline/r1/screenshots/A-runs-edge-1280.png",
+          "sha256": "e3eebe0571bcf8704dafffdca4eb5314d6ecf35acf347147a257f3fbefc028f0",
+          "bytes": 192479,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/541befcbe4f771d6f0d7ce3dfc820357c91c7cbc/docs/design/issue-86/baseline/r1/screenshots/A-runs-edge-1280.png"
+        },
+        {
+          "path": "docs/design/issue-86/baseline/r1/screenshots/A-runs-edge-320.png",
+          "sha256": "053d83284fae641f6a76bcaab8c13066df201ecd5f776b76d6b64a72d1f32052",
+          "bytes": 61159,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/541befcbe4f771d6f0d7ce3dfc820357c91c7cbc/docs/design/issue-86/baseline/r1/screenshots/A-runs-edge-320.png"
+        },
+        {
+          "path": "docs/design/issue-86/baseline/r1/tokens.json",
+          "sha256": "de5289bd897cd6ca456c943ee4d519a380cdbc8ae39fef5d15fd064baad29597",
+          "bytes": 2053,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/541befcbe4f771d6f0d7ce3dfc820357c91c7cbc/docs/design/issue-86/baseline/r1/tokens.json"
+        }
+      ]
+    },
+    {
+      "issue": 87,
+      "issue_url": "https://github.com/nineofoursyrup/Agent-Alfred/issues/87",
+      "state_observed": "CLOSED",
+      "authority": "archived_commit",
+      "commit": "751d5b84e1b7a633019920a805ab647c1b15a419",
+      "documents": [
+        {
+          "path": "docs/design/issue-87/SPEC.md",
+          "sha256": "60a5342a1c2bdd3d6b7f7891c7268aa922898bf09203c81ffa1a26917c804f71",
+          "bytes": 31845,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/751d5b84e1b7a633019920a805ab647c1b15a419/docs/design/issue-87/SPEC.md"
+        },
+        {
+          "path": "docs/design/issue-87/APPROVAL.md",
+          "sha256": "8f4853f9d126eb3613c85aa02bd5601922f170c20b561784f984b1340e71d84a",
+          "bytes": 1375,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/751d5b84e1b7a633019920a805ab647c1b15a419/docs/design/issue-87/APPROVAL.md"
+        }
+      ]
+    },
+    {
+      "issue": 88,
+      "issue_url": "https://github.com/nineofoursyrup/Agent-Alfred/issues/88",
+      "state_observed": "CLOSED",
+      "authority": "archived_commit",
+      "commit": "0e9915b5f020a756776f3e67fe13f352da3bb983",
+      "documents": [
+        {
+          "path": "docs/design/issue-88/DESIGN.md",
+          "sha256": "16c7a7f564d8bd63e0a7d64399c94af87816be7f456afdc331fb0e274fe3e356",
+          "bytes": 26054,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/0e9915b5f020a756776f3e67fe13f352da3bb983/docs/design/issue-88/DESIGN.md"
+        },
+        {
+          "path": "docs/design/issue-88/APPROVAL.md",
+          "sha256": "b2e84dddaade0d3b326a75b0efd16eb01ea27b5a205176f83d3a3e8f8b21ab9b",
+          "bytes": 2211,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/0e9915b5f020a756776f3e67fe13f352da3bb983/docs/design/issue-88/APPROVAL.md"
+        }
+      ]
+    },
+    {
+      "issue": 89,
+      "issue_url": "https://github.com/nineofoursyrup/Agent-Alfred/issues/89",
+      "state_observed": "OPEN",
+      "authority": "local_confirmed_unarchived",
+      "commit": null,
+      "documents": [
+        {
+          "path": "docs/design/issue-89/DESIGN.md",
+          "sha256": "35ba39e52415b8e349d3658970932bcbd23019ef561f55a41642369afbe0af84",
+          "bytes": 48130,
+          "local_path": "/Users/nineofour/.codex/worktrees/issue-89-inbox-runs-design/Agent-Alfred/docs/design/issue-89/DESIGN.md",
+          "url": null
+        },
+        {
+          "path": "docs/design/issue-89/APPROVAL.md",
+          "sha256": "40061bc6e21d5c7209512565928fa81493376f15069f4953759f4f081f94a524",
+          "bytes": 3847,
+          "local_path": "/Users/nineofour/.codex/worktrees/issue-89-inbox-runs-design/Agent-Alfred/docs/design/issue-89/APPROVAL.md",
+          "url": null
+        }
+      ]
+    },
+    {
+      "issue": 90,
+      "issue_url": "https://github.com/nineofoursyrup/Agent-Alfred/issues/90",
+      "state_observed": "CLOSED",
+      "authority": "archived_commit",
+      "commit": "7d175d6a65a93aec725cf86e6be3df167d3ca74c",
+      "documents": [
+        {
+          "path": "docs/design/issue-90/DESIGN.md",
+          "sha256": "9788e488c7b32dfbe15876193c2fc4958f44b82961ae7f091b8284b073863697",
+          "bytes": 22437,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/7d175d6a65a93aec725cf86e6be3df167d3ca74c/docs/design/issue-90/DESIGN.md"
+        },
+        {
+          "path": "docs/design/issue-90/APPROVAL.md",
+          "sha256": "e74d51b236817c448f3f51e2b58a6e96bc6ac5684491a463fe04b24833e2104c",
+          "bytes": 3932,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/7d175d6a65a93aec725cf86e6be3df167d3ca74c/docs/design/issue-90/APPROVAL.md"
+        },
+        {
+          "path": "docs/design/issue-90/ACCEPTANCE.md",
+          "sha256": "275a4e1e4817f8ee36c2adeb5463075c7315f8f8c049e117792563b028b5acba",
+          "bytes": 16314,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/7d175d6a65a93aec725cf86e6be3df167d3ca74c/docs/design/issue-90/ACCEPTANCE.md"
+        }
+      ]
+    },
+    {
+      "issue": 91,
+      "issue_url": "https://github.com/nineofoursyrup/Agent-Alfred/issues/91",
+      "state_observed": "CLOSED",
+      "authority": "archived_commit",
+      "commit": "1a343ae1894554ad0167273a34b1f6bce171fb5b",
+      "documents": [
+        {
+          "path": "docs/design/issue-91/DESIGN.md",
+          "sha256": "7281673419190f5ec2e2296eae566df3d5bdefed4be125b7e48832dc947c94a1",
+          "bytes": 30341,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/1a343ae1894554ad0167273a34b1f6bce171fb5b/docs/design/issue-91/DESIGN.md"
+        },
+        {
+          "path": "docs/design/issue-91/APPROVAL.md",
+          "sha256": "86d29c6d5dc930604b523d70f8d9600ade2a41114806c890f4f4b682f2983a35",
+          "bytes": 5192,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/1a343ae1894554ad0167273a34b1f6bce171fb5b/docs/design/issue-91/APPROVAL.md"
+        },
+        {
+          "path": "docs/design/issue-91/ACCEPTANCE.md",
+          "sha256": "1e4198bd5c678045c3447fdd958b358cabb0dc2dabbc07cdabdc9119d48fc2e0",
+          "bytes": 14936,
+          "url": "https://github.com/nineofoursyrup/Agent-Alfred/blob/1a343ae1894554ad0167273a34b1f6bce171fb5b/docs/design/issue-91/ACCEPTANCE.md"
+        }
+      ]
+    }
+  ],
+  "scope_override": {
+    "decision": "Q6",
+    "source": "APPROVAL.md",
+    "mobile": "Chromium viewport and touch emulation only",
+    "excluded": [
+      "iPhone hardware",
+      "iOS Safari",
+      "real mobile software keyboard"
+    ],
+    "excluded_result": "NOT RUN",
+    "excluded_is_acceptance_blocker": false,
+    "desktop_native_zoom_and_ime": "Required by retained Q4; product verification NOT RUN",
+    "historical_bfcache": "Retain BLOCKED separately; no new unconditional BFCache requirement."
+  }
+}

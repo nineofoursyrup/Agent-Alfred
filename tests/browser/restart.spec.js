@@ -43,7 +43,7 @@ test("an actual Dashboard process restart preserves an empty Session and its dra
     await expect(page.getByRole("textbox", {name:"消息"})).toHaveValue("真实重启的草稿");
     expect(await page.evaluate(() => sessionStorage.getItem("alfred.session"))).toBe(session);
     await expect(page.getByRole("button", {name:"发送", exact:true})).toBeEnabled({timeout:10000});
-    await page.getByRole("button", {name:"展开对话", exact:true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     await page.getByRole("button", {name:"发送", exact:true}).click();
     expect((await accepted).status()).toBe(202);
     await expect(page.getByRole("region", {name:"主对话"})).toContainText("已保存");

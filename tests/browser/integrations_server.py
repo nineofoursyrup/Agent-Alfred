@@ -1,6 +1,7 @@
 """Real Dashboard/Host + loopback Tavily, with explicit IO barriers."""
 
 import json
+import os
 import signal
 import sys
 import threading
@@ -152,7 +153,7 @@ def main():
 
         dashboard = build_dashboard(
             state_dir=Path(directory) / "state",
-            port=17744,
+            port=int(os.environ.get("ALFRED_BROWSER_TEST_PORT", "17736")) + 6,
             credentials=CredentialOverlay({}, str(path)),
             factory=factory,
         )

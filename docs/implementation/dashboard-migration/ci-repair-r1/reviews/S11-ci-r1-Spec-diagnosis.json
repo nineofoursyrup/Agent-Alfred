@@ -1,0 +1,832 @@
+{
+  "scope": "read-only CI first-failure diagnosis; no successor review or new test execution",
+  "head": "37cd0180fd5222d0753a0f3203ae56b1df6e0f0a",
+  "tree": "a69c4abe71569defeaa6b901e414a5f064d6f5d3",
+  "observed_result": "FAIL",
+  "causal_certainty": "Confirmed observations and code-supported hypotheses are separated in the companion report.",
+  "runs": [
+    {
+      "run": 37886281186,
+      "event": "pr",
+      "manifest_sha256": "8630c19e87ffe50e0b94313385c7154bf38d9e6c50ba8f54face1bea9106f127",
+      "traces": [
+        {
+          "case": "aggregation-SPEC-07-rounds-77840-n-Behaviour-MainBar-and-Run",
+          "trace_path": "/Users/nineofour/.codex/dashboard-migration-20261009/ci/final-candidate/pr-browser-first-failure/aggregation-SPEC-07-rounds-77840-n-Behaviour-MainBar-and-Run/trace.zip",
+          "trace_sha256": "1792b2d8171908afe1365354c654c1215f4ad4f0a1b3b0e037701cde4271dd70",
+          "source_matches": [
+            {
+              "path": "tests/browser/aggregation.spec.js",
+              "sha256": "fefa5c2a312259d5b0f974bca77126876091e7e5eefbfbd3cbecab433a208d7b",
+              "matches_fixed_candidate": true
+            }
+          ],
+          "app_asset_matches": [],
+          "api_timeline": [
+            {
+              "start_ms": 122960.117,
+              "duration_ms": 111.434,
+              "method": "POST",
+              "path": "/api/sessions",
+              "query": "",
+              "status": 201,
+              "failure": null,
+              "body_sha256": "534fc3f0ad05694b13c488f7000b5ac63fd8d4838f9e94a29459abc3a253d75b",
+              "identity_facts": {
+                "session_id": "988a3662c78e4bdbb9f3f30e709f875d"
+              }
+            }
+          ],
+          "error_context_sha256": "fd362189808ce43360abd986467fcb580b4a515f882f321994be8692630f739b"
+        },
+        {
+          "case": "database-chat-then-Databas-6e852-s-the-saved-assistant-reply",
+          "trace_path": "/Users/nineofour/.codex/dashboard-migration-20261009/ci/final-candidate/pr-browser-first-failure/database-chat-then-Databas-6e852-s-the-saved-assistant-reply/trace.zip",
+          "trace_sha256": "e89cf3d6db66c042fd66807d8f0f69a3a89d0deaeaf34a6b281f8e63c92edde3",
+          "source_matches": [
+            {
+              "path": "tests/browser/database.spec.js",
+              "sha256": "bc9eedff2324f86ae7718f98a685cdb8ad4092522896abe5359b472467b04ff3",
+              "matches_fixed_candidate": true
+            }
+          ],
+          "app_asset_matches": [],
+          "api_timeline": [
+            {
+              "start_ms": 230451.615,
+              "duration_ms": 79.07700000000001,
+              "method": "POST",
+              "path": "/api/sessions",
+              "query": "",
+              "status": 201,
+              "failure": null,
+              "body_sha256": "6c71af7d15b3a85c0ddff6d8451dcf05e1a0aef1855f4c8fee80d843fec279b3",
+              "identity_facts": {
+                "session_id": "84d353ef98274a6797211eee3b9b854d"
+              }
+            }
+          ],
+          "error_context_sha256": "7b41e99dc9bb5f478bbab86093a54e285da606d9e5a3ea9ca57d1b8b87af3083"
+        },
+        {
+          "case": "inbox-run-navigation-real--bdae4--the-selected-Session-draft",
+          "trace_path": "/Users/nineofour/.codex/dashboard-migration-20261009/ci/final-candidate/pr-browser-first-failure/inbox-run-navigation-real--bdae4--the-selected-Session-draft/trace.zip",
+          "trace_sha256": "c8a3a15fdc7fb0f100d11682a2026d9f4d793547c40eb906036f40bd2081a37d",
+          "source_matches": [
+            {
+              "path": "tests/browser/inbox-run-navigation.spec.js",
+              "sha256": "81555c638302affd17f9fe9bd8b9627138afb9d7e12804f609b4172e6f61537d",
+              "matches_fixed_candidate": true
+            }
+          ],
+          "app_asset_matches": [],
+          "api_timeline": [
+            {
+              "start_ms": 263100.605,
+              "duration_ms": 25.099,
+              "method": "POST",
+              "path": "/api/sessions",
+              "query": "",
+              "status": 201,
+              "failure": null,
+              "body_sha256": "533a850a9f607f2dea457966e15e61419d57cd43330d422dd42e4853920a90c4",
+              "identity_facts": {
+                "session_id": "c75f65d57e1542d79afe42651d8aacad"
+              }
+            },
+            {
+              "start_ms": 263127.887,
+              "duration_ms": 42.068,
+              "method": "GET",
+              "path": "/api/mainbar",
+              "query": "session_id=c75f65d57e1542d79afe42651d8aacad",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "5ae9c61a624742adbf9222ce9f1b64a51636d0c812b762deb784b25115387c37",
+              "identity_facts": {},
+              "history_item_identities": []
+            },
+            {
+              "start_ms": 263480.184,
+              "duration_ms": 9.424,
+              "method": "GET",
+              "path": "/api/mainbar",
+              "query": "session_id=c75f65d57e1542d79afe42651d8aacad",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "3c77abea3f92216e8c6884fd69ffca431de1e2422964d7ec4b5f4af1ec1361c8",
+              "identity_facts": {},
+              "history_item_identities": [
+                {
+                  "type": "run_pair",
+                  "run_id": "b0f7807b2ff54b2eb2c5b2ec58a1ca6a",
+                  "session_id": "c75f65d57e1542d79afe42651d8aacad"
+                }
+              ]
+            },
+            {
+              "start_ms": 263493.071,
+              "duration_ms": 42.175,
+              "method": "GET",
+              "path": "/api/mainbar",
+              "query": "session_id=c75f65d57e1542d79afe42651d8aacad",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "3c77abea3f92216e8c6884fd69ffca431de1e2422964d7ec4b5f4af1ec1361c8",
+              "identity_facts": {},
+              "history_item_identities": [
+                {
+                  "type": "run_pair",
+                  "run_id": "b0f7807b2ff54b2eb2c5b2ec58a1ca6a",
+                  "session_id": "c75f65d57e1542d79afe42651d8aacad"
+                }
+              ]
+            },
+            {
+              "start_ms": 263582.08,
+              "duration_ms": 8.794,
+              "method": "POST",
+              "path": "/api/sessions",
+              "query": "",
+              "status": 201,
+              "failure": null,
+              "body_sha256": "cd3a932c7d78da93a25d0c14d8baf790e8b579dc842b18a2c11a1afe773a87aa",
+              "identity_facts": {
+                "session_id": "6aaeec54bcc045e2984d002125975800"
+              }
+            },
+            {
+              "start_ms": 263597.622,
+              "duration_ms": 41.346999999999994,
+              "method": "GET",
+              "path": "/api/mainbar",
+              "query": "session_id=6aaeec54bcc045e2984d002125975800",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "5ae9c61a624742adbf9222ce9f1b64a51636d0c812b762deb784b25115387c37",
+              "identity_facts": {},
+              "history_item_identities": []
+            },
+            {
+              "start_ms": 263959.189,
+              "duration_ms": 41.936,
+              "method": "GET",
+              "path": "/api/mainbar",
+              "query": "session_id=6aaeec54bcc045e2984d002125975800",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "5ae9c61a624742adbf9222ce9f1b64a51636d0c812b762deb784b25115387c37",
+              "identity_facts": {},
+              "history_item_identities": []
+            },
+            {
+              "start_ms": 264339.153,
+              "duration_ms": 42.239,
+              "method": "GET",
+              "path": "/api/mainbar",
+              "query": "session_id=c75f65d57e1542d79afe42651d8aacad",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "3c77abea3f92216e8c6884fd69ffca431de1e2422964d7ec4b5f4af1ec1361c8",
+              "identity_facts": {},
+              "history_item_identities": [
+                {
+                  "type": "run_pair",
+                  "run_id": "b0f7807b2ff54b2eb2c5b2ec58a1ca6a",
+                  "session_id": "c75f65d57e1542d79afe42651d8aacad"
+                }
+              ]
+            },
+            {
+              "start_ms": 264339.599,
+              "duration_ms": 2.854,
+              "method": "GET",
+              "path": "/api/mainbar/locate",
+              "query": "process_instance_id=1ca0a0b9e2fd463b9a500f7cbb0f57d9&session_id=c75f65d57e1542d79afe42651d8aacad&run_id=b0f7807b2ff54b2eb2c5b2ec58a1ca6a",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "c1e7c872699158aace5123873bff12135c9028344f30b2dc61609136f87c806b",
+              "identity_facts": {
+                "process_instance_id": "1ca0a0b9e2fd463b9a500f7cbb0f57d9",
+                "session_id": "c75f65d57e1542d79afe42651d8aacad",
+                "run_id": "b0f7807b2ff54b2eb2c5b2ec58a1ca6a",
+                "recording_state": "recorded",
+                "history_contiguous": false,
+                "purpose": "chat"
+              },
+              "reply_text_present": true,
+              "user_availability": "full"
+            }
+          ],
+          "error_context_sha256": "97efccc95ea5db1001f795c99feaf5a6cd9a4b575d97b2ad779a0741667584a5"
+        },
+        {
+          "case": "integrations-CE-03-CE-08-C-88a13-ps-credits-newer-error-wins",
+          "trace_path": "/Users/nineofour/.codex/dashboard-migration-20261009/ci/final-candidate/pr-browser-first-failure/integrations-CE-03-CE-08-C-88a13-ps-credits-newer-error-wins/trace.zip",
+          "trace_sha256": "a2cd141876870839999e77d9b42c637c5fc64faf0749feb6024ceb403fd6e8d7",
+          "source_matches": [
+            {
+              "path": "tests/browser/integrations.spec.js",
+              "sha256": "38419ba8653e53f4f5f458f6250f49e52539e9e3af8e7bac213db2ce0c57b81f",
+              "matches_fixed_candidate": true
+            }
+          ],
+          "app_asset_matches": [],
+          "api_timeline": [
+            {
+              "start_ms": 302747.994,
+              "duration_ms": 365.033,
+              "method": "POST",
+              "path": "/api/sessions",
+              "query": "",
+              "status": 201,
+              "failure": null,
+              "body_sha256": "1f264ccf6002e54876de2e1457df953e5d3a2b0e893efdb54d5f9f387fdcfff0",
+              "identity_facts": {
+                "session_id": "c7a95615b2594b6a898829c2ad6d9c07"
+              }
+            }
+          ],
+          "error_context_sha256": "a1128e028a7050ede6b6da75025a4490fe91ea1ec7d65b8d0c078df1ba9b5298"
+        },
+        {
+          "case": "mainbar-location-idle-reco-d94a9-an-unrelated-persisted-pair",
+          "trace_path": "/Users/nineofour/.codex/dashboard-migration-20261009/ci/final-candidate/pr-browser-first-failure/mainbar-location-idle-reco-d94a9-an-unrelated-persisted-pair/trace.zip",
+          "trace_sha256": "2aeadc638bb79bab5c59a247d844776c941085efd927168b9227c9dc3bedb1c3",
+          "source_matches": [
+            {
+              "path": "tests/browser/mainbar-location.spec.js",
+              "sha256": "e30bea85f6678ca533a35a455914380fe4532ab8f1c56c912ad00bfe67307adf",
+              "matches_fixed_candidate": true
+            }
+          ],
+          "app_asset_matches": [],
+          "api_timeline": [
+            {
+              "start_ms": 352346.906,
+              "duration_ms": 33.962999999999994,
+              "method": "POST",
+              "path": "/api/sessions",
+              "query": "",
+              "status": 201,
+              "failure": null,
+              "body_sha256": "cee3bbf5e4ea4c7e9d05f2275029cf81a08794ca062dd7d66776c61d7bcb6bc3",
+              "identity_facts": {
+                "session_id": "551b3b5ac18c4871a8eacc141ecf289c"
+              }
+            },
+            {
+              "start_ms": 352382.544,
+              "duration_ms": 41.512,
+              "method": "GET",
+              "path": "/api/mainbar",
+              "query": "session_id=551b3b5ac18c4871a8eacc141ecf289c",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "5ae9c61a624742adbf9222ce9f1b64a51636d0c812b762deb784b25115387c37",
+              "identity_facts": {},
+              "history_item_identities": []
+            },
+            {
+              "start_ms": 352452.7,
+              "duration_ms": 45.347,
+              "method": "GET",
+              "path": "/api/mainbar",
+              "query": "session_id=551b3b5ac18c4871a8eacc141ecf289c",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "5ae9c61a624742adbf9222ce9f1b64a51636d0c812b762deb784b25115387c37",
+              "identity_facts": {},
+              "history_item_identities": []
+            },
+            {
+              "start_ms": 352511.035,
+              "duration_ms": 3.565,
+              "method": "GET",
+              "path": "/api/mainbar",
+              "query": "session_id=551b3b5ac18c4871a8eacc141ecf289c",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "b4d00ff582a924d2b119dad5f43ebe76b724e614577e280ad379b0e261dc7d07",
+              "identity_facts": {},
+              "history_item_identities": [
+                {
+                  "type": "run_pair",
+                  "run_id": "other-recorded-run"
+                }
+              ]
+            },
+            {
+              "start_ms": 352517.378,
+              "duration_ms": 3.23,
+              "method": "GET",
+              "path": "/api/mainbar",
+              "query": "session_id=551b3b5ac18c4871a8eacc141ecf289c",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "9a2cd30ccfa3c819c3d0a5e7c288b6fe79a880b163d90d39a2928c19e6970bcf",
+              "identity_facts": {},
+              "history_item_identities": [
+                {
+                  "type": "run_pair",
+                  "run_id": "r1"
+                }
+              ]
+            }
+          ],
+          "error_context_sha256": "978f8867cbe648adf49141701063d4b463841444386438446eefc5b6f37a007a"
+        }
+      ],
+      "browser_log": {
+        "path": "/Users/nineofour/.codex/dashboard-migration-20261009/ci/final-candidate/37886281186-raw-logs/lint _ skills _ env _ tests/16_Offline Dashboard browser tests.txt",
+        "sha256": "1ff320ca67501012eb082235c889be60a4e88b237d37abb90e4e2a0f9d2aad20",
+        "summary": [
+          "2026-10-09T06:05:47.7792748Z   5 failed",
+          "2026-10-09T06:05:47.7797055Z   522 passed (18.0m)",
+          "2026-10-09T06:05:47.8002203Z ##[error]Process completed with exit code 1."
+        ]
+      }
+    },
+    {
+      "run": 37886278313,
+      "event": "push",
+      "manifest_sha256": "f9b1150b58a7bbaecaec727d55df40d23627ff6057482d7f54ea041fe5cecb18",
+      "traces": [
+        {
+          "case": "inbox-run-navigation-real--bdae4--the-selected-Session-draft",
+          "trace_path": "/Users/nineofour/.codex/dashboard-migration-20261009/ci/final-candidate/push-browser-first-failure/inbox-run-navigation-real--bdae4--the-selected-Session-draft/trace.zip",
+          "trace_sha256": "f319d8ae342138d785cb74b0ff678544787f5b9c545a8fd07980e50885d62fa6",
+          "source_matches": [
+            {
+              "path": "tests/browser/inbox-run-navigation.spec.js",
+              "sha256": "81555c638302affd17f9fe9bd8b9627138afb9d7e12804f609b4172e6f61537d",
+              "matches_fixed_candidate": true
+            }
+          ],
+          "app_asset_matches": [],
+          "api_timeline": [
+            {
+              "start_ms": 236619.156,
+              "duration_ms": 4.12,
+              "method": "POST",
+              "path": "/api/sessions",
+              "query": "",
+              "status": 201,
+              "failure": null,
+              "body_sha256": "d107833c2753684983f1cf2cd4b8f814038a64d3f2b089a3a9544d2e563df91c",
+              "identity_facts": {
+                "session_id": "cfd7f43d98424c32a3a826ec89b89e73"
+              }
+            },
+            {
+              "start_ms": 236632.077,
+              "duration_ms": 43.187,
+              "method": "GET",
+              "path": "/api/mainbar",
+              "query": "session_id=cfd7f43d98424c32a3a826ec89b89e73",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "5ae9c61a624742adbf9222ce9f1b64a51636d0c812b762deb784b25115387c37",
+              "identity_facts": {},
+              "history_item_identities": []
+            },
+            {
+              "start_ms": 236774.055,
+              "duration_ms": 44.692,
+              "method": "GET",
+              "path": "/api/mainbar",
+              "query": "session_id=cfd7f43d98424c32a3a826ec89b89e73",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "b1e541a0674273691f56b611c7b4cd7e9e30f31a3eee9fe04e57d6d78c727120",
+              "identity_facts": {},
+              "history_item_identities": [
+                {
+                  "type": "run_pair",
+                  "run_id": "22edf359a72446199783a66b61045b23",
+                  "session_id": "cfd7f43d98424c32a3a826ec89b89e73"
+                }
+              ]
+            },
+            {
+              "start_ms": 236823.835,
+              "duration_ms": 42.382,
+              "method": "GET",
+              "path": "/api/mainbar",
+              "query": "session_id=cfd7f43d98424c32a3a826ec89b89e73",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "b1e541a0674273691f56b611c7b4cd7e9e30f31a3eee9fe04e57d6d78c727120",
+              "identity_facts": {},
+              "history_item_identities": [
+                {
+                  "type": "run_pair",
+                  "run_id": "22edf359a72446199783a66b61045b23",
+                  "session_id": "cfd7f43d98424c32a3a826ec89b89e73"
+                }
+              ]
+            },
+            {
+              "start_ms": 236827.664,
+              "duration_ms": 9.37,
+              "method": "POST",
+              "path": "/api/sessions",
+              "query": "",
+              "status": 201,
+              "failure": null,
+              "body_sha256": "82ceee30f27f05b7865b64c3e14febc9685c7ae0d806211cc193daf7b3518970",
+              "identity_facts": {
+                "session_id": "5fdafc9b424e468a81dfc0a03e3d2cc7"
+              }
+            },
+            {
+              "start_ms": 236851.757,
+              "duration_ms": 45.773,
+              "method": "GET",
+              "path": "/api/mainbar",
+              "query": "session_id=5fdafc9b424e468a81dfc0a03e3d2cc7",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "5ae9c61a624742adbf9222ce9f1b64a51636d0c812b762deb784b25115387c37",
+              "identity_facts": {},
+              "history_item_identities": []
+            },
+            {
+              "start_ms": 237289.144,
+              "duration_ms": 42.666999999999994,
+              "method": "GET",
+              "path": "/api/mainbar",
+              "query": "session_id=5fdafc9b424e468a81dfc0a03e3d2cc7",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "5ae9c61a624742adbf9222ce9f1b64a51636d0c812b762deb784b25115387c37",
+              "identity_facts": {},
+              "history_item_identities": []
+            },
+            {
+              "start_ms": 237592.404,
+              "duration_ms": 43.178,
+              "method": "GET",
+              "path": "/api/mainbar",
+              "query": "session_id=cfd7f43d98424c32a3a826ec89b89e73",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "b1e541a0674273691f56b611c7b4cd7e9e30f31a3eee9fe04e57d6d78c727120",
+              "identity_facts": {},
+              "history_item_identities": [
+                {
+                  "type": "run_pair",
+                  "run_id": "22edf359a72446199783a66b61045b23",
+                  "session_id": "cfd7f43d98424c32a3a826ec89b89e73"
+                }
+              ]
+            },
+            {
+              "start_ms": 237592.628,
+              "duration_ms": 3.3449999999999998,
+              "method": "GET",
+              "path": "/api/mainbar/locate",
+              "query": "process_instance_id=769cbdae923d48b6be014f019ec1d1cf&session_id=cfd7f43d98424c32a3a826ec89b89e73&run_id=22edf359a72446199783a66b61045b23",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "57eafbbf1115444ec70c6ccaebe36f60e8cbd1f574ce63e78ec4d21ee90b4ce1",
+              "identity_facts": {
+                "process_instance_id": "769cbdae923d48b6be014f019ec1d1cf",
+                "session_id": "cfd7f43d98424c32a3a826ec89b89e73",
+                "run_id": "22edf359a72446199783a66b61045b23",
+                "recording_state": "recorded",
+                "history_contiguous": false,
+                "purpose": "chat"
+              },
+              "reply_text_present": true,
+              "user_availability": "full"
+            }
+          ],
+          "error_context_sha256": "97efccc95ea5db1001f795c99feaf5a6cd9a4b575d97b2ad779a0741667584a5"
+        },
+        {
+          "case": "mainbar-empty-identity-res-f4f54-ead-and-preserves-its-draft",
+          "trace_path": "/Users/nineofour/.codex/dashboard-migration-20261009/ci/final-candidate/push-browser-first-failure/mainbar-empty-identity-res-f4f54-ead-and-preserves-its-draft/trace.zip",
+          "trace_sha256": "5a1c6b130f50e9ecd7351365d0ef0eb0a21d405520afb2e55277f0eff785a44a",
+          "source_matches": [
+            {
+              "path": "tests/browser/mainbar-empty-identity.spec.js",
+              "sha256": "44419c94719e6dd414f3c5b0e16265317c6d356a97ab5310acb72eb7aaa7e846",
+              "matches_fixed_candidate": true
+            }
+          ],
+          "app_asset_matches": [],
+          "api_timeline": [
+            {
+              "start_ms": 306765.89,
+              "duration_ms": 4.767,
+              "method": "POST",
+              "path": "/api/sessions",
+              "query": "",
+              "status": 201,
+              "failure": null,
+              "body_sha256": "410cf233daec218e26367b129eff187866fecc48318728f408e80152d47c3f49",
+              "identity_facts": {
+                "session_id": "d318d6e6d2f9428c80759c5dc3086ef3"
+              }
+            },
+            {
+              "start_ms": 306788.937,
+              "duration_ms": 42.476,
+              "method": "GET",
+              "path": "/api/mainbar",
+              "query": "session_id=d318d6e6d2f9428c80759c5dc3086ef3",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "5ae9c61a624742adbf9222ce9f1b64a51636d0c812b762deb784b25115387c37",
+              "identity_facts": {},
+              "history_item_identities": []
+            },
+            {
+              "start_ms": 306954.935,
+              "duration_ms": 3.672,
+              "method": "GET",
+              "path": "/api/mainbar",
+              "query": "session_id=d318d6e6d2f9428c80759c5dc3086ef3",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "68790a141f858ec6c1838109fc1b4a97dcd32ab6cf7c881f627944a9454f8c00",
+              "identity_facts": {},
+              "history_item_identities": [
+                {
+                  "type": "run_pair",
+                  "run_id": "857a1f171b0f4644add77c7d06387617",
+                  "session_id": "d318d6e6d2f9428c80759c5dc3086ef3"
+                }
+              ]
+            },
+            {
+              "start_ms": 306960.678,
+              "duration_ms": 2.463,
+              "method": "GET",
+              "path": "/api/mainbar",
+              "query": "session_id=d318d6e6d2f9428c80759c5dc3086ef3",
+              "status": 404,
+              "failure": null
+            },
+            {
+              "start_ms": 307278.81,
+              "duration_ms": 5.233000000007451,
+              "method": "GET",
+              "path": "/api/mainbar",
+              "query": "session_id=",
+              "status": -1,
+              "failure": "net::ERR_FAILED"
+            },
+            {
+              "start_ms": 307316.958,
+              "duration_ms": 2.644,
+              "method": "GET",
+              "path": "/api/mainbar/locate",
+              "query": "process_instance_id=dd0626fefa3740dc94a5d89447c1a991&session_id=&run_id=",
+              "status": 200,
+              "failure": null,
+              "body_sha256": "16d30d668c2f47281d93fe6bb6ac7d8782b79b0e6e7e15697ccef95b77bf47ff",
+              "identity_facts": {
+                "process_instance_id": "dd0626fefa3740dc94a5d89447c1a991",
+                "session_id": "",
+                "run_id": "",
+                "recording_state": "recorded",
+                "history_contiguous": false,
+                "purpose": "chat"
+              },
+              "reply_text_present": true,
+              "user_availability": "full"
+            }
+          ],
+          "error_context_sha256": "7f865f72dd62c7a49df8ae5fad30a6cd92979a1af6a10b0c5c6a28e3737e8b61"
+        }
+      ],
+      "browser_log": {
+        "path": "/Users/nineofour/.codex/dashboard-migration-20261009/ci/final-candidate/37886278313-raw-logs/lint _ skills _ env _ tests/16_Offline Dashboard browser tests.txt",
+        "sha256": "abafc72ff8332de0ac7104985bf7b1d455cf7b716511a7c8399b8a47169bd2d3",
+        "summary": [
+          "2026-10-09T06:07:29.7068950Z   2 failed",
+          "2026-10-09T06:07:29.7071429Z   525 passed (17.5m)",
+          "2026-10-09T06:07:29.7252914Z ##[error]Process completed with exit code 1."
+        ]
+      }
+    }
+  ],
+  "source_mapping": [
+    {
+      "source_id": "issue-87:R03",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 52,
+      "source_end_line": 68,
+      "source_text_sha256": "7a1ae851cc62b1bca3ab0764259694fb28ab0e01806de142a317621d8558346e",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC05"
+      ]
+    },
+    {
+      "source_id": "issue-87:R05",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 87,
+      "source_end_line": 104,
+      "source_text_sha256": "16e62dbee3ce47cbf43afb11c91a0dd3dc87be5c380d32be83418f127d697a9c",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC05"
+      ]
+    },
+    {
+      "source_id": "issue-87:R07",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 116,
+      "source_end_line": 127,
+      "source_text_sha256": "fab997274e5744b259e1293a3fcf67074c5437135bd178b2c810c8e84103afeb",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06"
+      ]
+    },
+    {
+      "source_id": "issue-87:R08",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 128,
+      "source_end_line": 144,
+      "source_text_sha256": "0b8f076536aaf70b7b900d10863a668376547eb4d96556bb4f6d4230769533c3",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC06",
+        "AC07"
+      ]
+    },
+    {
+      "source_id": "issue-87:R09",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 145,
+      "source_end_line": 164,
+      "source_text_sha256": "57e9bce3b9f4fbc563d27fc96dabd33bf27bc81068d03c68d81ef4aa352e9ef7",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06",
+        "AC07"
+      ]
+    },
+    {
+      "source_id": "issue-87:section-14",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 238,
+      "source_end_line": 246,
+      "source_text_sha256": "7691923e4a38126457058671da66fb68332752a961c3d4ff01e966d01af158a5",
+      "owners": [
+        "S02",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC23",
+        "AC25",
+        "AC26"
+      ]
+    },
+    {
+      "source_id": "issue-89:D03",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 37,
+      "source_end_line": 60,
+      "source_text_sha256": "6e937e89f525135a6f8f3ef69dc49183d5f9b3c219aa2be6b2ea7145023173ef",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC01",
+        "AC05",
+        "AC07",
+        "AC21"
+      ]
+    },
+    {
+      "source_id": "issue-89:D04",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 61,
+      "source_end_line": 74,
+      "source_text_sha256": "65d945f2d651b565c2005f77ef30d9f98c20e83d83ec7b7052a66798c63aee40",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC07"
+      ]
+    },
+    {
+      "source_id": "issue-89:D08",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 140,
+      "source_end_line": 164,
+      "source_text_sha256": "aacd04f373e2cc3e94b40969e31280759e1a1b7265fed18631484c68e547c99b",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06",
+        "AC07"
+      ]
+    },
+    {
+      "source_id": "issue-89:D09",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 165,
+      "source_end_line": 190,
+      "source_text_sha256": "fb55d75259db33a3a4cfd949ff0785690b5881d9cc417f5932164155dce7c497",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC06",
+        "AC07",
+        "AC21"
+      ]
+    },
+    {
+      "source_id": "issue-89:D15",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 295,
+      "source_end_line": 336,
+      "source_text_sha256": "1e5279de883893fad81a97f92bad461058a9608a487a15d70f498d4f58ac131c",
+      "owners": [
+        "S01",
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S09"
+      ],
+      "acceptance_ids": [
+        "AC01",
+        "AC03",
+        "AC04",
+        "AC05",
+        "AC06",
+        "AC07",
+        "AC08",
+        "AC09",
+        "AC10",
+        "AC14",
+        "AC21",
+        "AC23",
+        "AC25",
+        "AC26"
+      ]
+    }
+  ],
+  "forbidden_inference": [
+    "No evidence of A draft deletion",
+    "No evidence that unrelated run was accepted as saved r1",
+    "No failure of S01 empty-identity HTTP contract",
+    "No confirmed SQL, aggregation or search-domain regression from setup-only failures"
+  ],
+  "recommendations": {
+    "AC25": "FAIL: current CI gates observed failure",
+    "G01": "FAIL: original final return-to-A assertion failed; cause not established as data loss",
+    "AC23": "FAIL: complete combination result cannot remain PASS while required G01 observed failure remains unresolved",
+    "AC04_AC06_AC07": "Attach observed FAIL to affected browser responsibilities; suspend unconditional aggregate PASS, preserve all prior scoped evidence",
+    "unreached_domain_steps": "NOT RUN within the three setup-failed cases only; full cases remain FAIL",
+    "AC03": "BLOCKED: real IME remains separate"
+  },
+  "reports": [
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S11-ci-r1-Spec-diagnosis.md",
+      "sha256": "8a4369c69fffa545d5877aaf5087ec05d1975019853924e1e0a54410744e0198",
+      "bytes": 2592
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S11-ci-r1-Spec-diagnosis-details.md",
+      "sha256": "d857bce6bcf813447f7a5842973ef70c1757261dbeeb031aa1eb43a0ca78b03f",
+      "bytes": 8108
+    }
+  ]
+}

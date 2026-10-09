@@ -1,0 +1,110 @@
+{
+  "steps": [
+    {
+      "label": "old",
+      "stage": "venv",
+      "command": [
+        "uv",
+        "venv",
+        "--python",
+        "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-old-env"
+      ],
+      "cwd": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation",
+      "started_at": "2026-10-09T11:37:02.546878+00:00",
+      "seconds": 0.13,
+      "exit_code": 0,
+      "log": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation/old-venv.log",
+      "log_sha256": "df2b0f2a1805abe67ed76ce47be10168901ab0c0e36ac78c0168f7cad60eb048"
+    },
+    {
+      "label": "old",
+      "stage": "install",
+      "command": [
+        "uv",
+        "pip",
+        "install",
+        "--python",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-old-env/bin/python",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/S11/lifecycle-old-dist/agent_alfred-0.1.0-py3-none-any.whl[mcp]"
+      ],
+      "cwd": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation",
+      "started_at": "2026-10-09T11:37:02.677201+00:00",
+      "seconds": 0.38,
+      "exit_code": 0,
+      "log": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation/old-install.log",
+      "log_sha256": "9cb9afcedb91bb308c541ba64cf8892ad2498f3206ed51d2631f5b098fda0486"
+    },
+    {
+      "label": "current",
+      "stage": "venv",
+      "command": [
+        "uv",
+        "venv",
+        "--python",
+        "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-current-env"
+      ],
+      "cwd": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation",
+      "started_at": "2026-10-09T11:37:03.057112+00:00",
+      "seconds": 0.04,
+      "exit_code": 0,
+      "log": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation/current-venv.log",
+      "log_sha256": "1e8e53b6a9954cf5227a293061e5cb268d49fb4d03eda79ba7435e7ec21007e4"
+    },
+    {
+      "label": "current",
+      "stage": "install",
+      "command": [
+        "uv",
+        "pip",
+        "install",
+        "--python",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-current-env/bin/python",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/dist/agent_alfred-0.1.0-py3-none-any.whl[mcp]"
+      ],
+      "cwd": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation",
+      "started_at": "2026-10-09T11:37:03.097568+00:00",
+      "seconds": 0.23,
+      "exit_code": 0,
+      "log": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation/current-install.log",
+      "log_sha256": "47133c3c4e722cedd82db1d5d1de00d99c4f85116e24d562678ebe864988ee8d"
+    },
+    {
+      "label": "supported",
+      "stage": "venv",
+      "command": [
+        "uv",
+        "venv",
+        "--python",
+        "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-supported-env"
+      ],
+      "cwd": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation",
+      "started_at": "2026-10-09T11:37:03.334475+00:00",
+      "seconds": 0.04,
+      "exit_code": 0,
+      "log": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation/supported-venv.log",
+      "log_sha256": "327adfcd9859356931e778b18fc35d0e6997d8ac4d9bd0434104884861663557"
+    },
+    {
+      "label": "supported",
+      "stage": "install",
+      "command": [
+        "uv",
+        "pip",
+        "install",
+        "--python",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-supported-env/bin/python",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-dist/agent_alfred-0.1.0-py3-none-any.whl[mcp]"
+      ],
+      "cwd": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation",
+      "started_at": "2026-10-09T11:37:03.380454+00:00",
+      "seconds": 0.37,
+      "exit_code": 0,
+      "log": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation/supported-install.log",
+      "log_sha256": "4510dc813ca96d2e7ea7d085f14a7abc87f9b7459fbe0b79ef44c5d634610ff4"
+    }
+  ],
+  "status": "PASS"
+}

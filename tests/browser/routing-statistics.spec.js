@@ -1,11 +1,41 @@
 import {test, expect} from '@playwright/test';
 import {memoryServer} from './memory-server.js';
 
+test('S06 CE-16/26: ratio bars use the same real sample and failures remain visible when collapsed', async ({page},testInfo) => {
+  const server = await memoryServer({script:'tests/browser/statistics_fixed_server.py'});
+  try {
+    await page.goto(server.origin + '/behaviour');
+    const panel = page.locator('.routing-statistics');
+    await expect(panel.getByText('未读取；展开后读取统计。',{exact:true})).toBeVisible();
+    await panel.getByText('路由统计',{exact:true}).click();
+    await page.getByLabel('统计范围').selectOption('all');
+    const full = panel.getByRole('progressbar',{name:'完整回答：3 次；3/6 · 50%',exact:true});
+    await expect(full).toHaveAttribute('value','0.5');
+    await expect(panel.locator('tr').filter({hasText:'完整回答'})).toContainText('3/6 · 50%');
+    await page.setViewportSize({width:390,height:844});await full.scrollIntoViewIfNeeded();await page.screenshot({path:testInfo.outputPath('statistics-real-counts.png')});
+    await page.route('**/api/behaviour/routing-statistics*',async route=>{
+      const response = await route.fetch(), body = await response.json();
+      delete body.groups.at(-1).decisions.ratios.full;await route.fulfill({response,json:body});
+    });
+    await panel.getByRole('button',{name:'刷新统计',exact:true}).click();
+    await expect(panel.getByText(/统计响应不兼容/)).toBeVisible();
+    await expect(panel.getByRole('progressbar')).toHaveCount(0);await expect(panel.locator('tr')).toHaveCount(0);
+    await page.unroute('**/api/behaviour/routing-statistics*');
+    await page.route('**/api/behaviour/routing-statistics*',route=>route.abort());
+    await panel.getByRole('button',{name:'刷新统计',exact:true}).click();
+    await expect(panel.getByText(/读取失败/)).toBeVisible();
+    await panel.getByText('路由统计',{exact:true}).click();
+    await expect(panel.getByText(/读取失败/)).toBeVisible();
+    await expect(panel.getByRole('progressbar')).toHaveCount(0);
+    await page.screenshot({path:testInfo.outputPath('statistics-collapsed-failure.png')});
+  } finally {await server.close();}
+});
+
 test('CE-15 statistics is collapsed, independent of unsaved settings, and keyboard readable', async ({page}) => {
   const server = await memoryServer({script:'tests/browser/routing_server.py'});
   try {
     await page.goto(server.origin + '/behaviour');
-    const toggle = page.getByText('路由统计', {exact:true});
+    const toggle = page.locator('.routing-statistics > summary');
     await expect(toggle).toBeVisible();
     await expect(page.getByRole('button', {name:'刷新统计', exact:true})).toBeHidden();
     await page.getByRole('checkbox', {name:'启用消息分流'}).check();
@@ -34,7 +64,7 @@ test('CE-03/08/14 real recovery counts survive restart and late range responses'
     await server.send('corrupt-context');
     // Use the real MainBar because it also owns and supplies session identity.
     await page.getByRole('button', {name:'新建会话', exact:true}).click();
-    await page.getByRole('button', {name:'展开对话', exact:true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     await page.getByRole('textbox', {name:'消息'}).fill('不用回复');
     await page.getByRole('button', {name:'发送', exact:true}).click();
     await expect(page.locator('#messages').getByText('已保存', {exact:true})).toBeVisible();
@@ -109,7 +139,7 @@ test('CE-01 full failure and graph-internal fallback have separate live HTTP and
     await page.getByRole('checkbox', {name:'启用消息分流'}).check();
     await page.getByRole('button', {name:'保存设置', exact:true}).click();
     await expect(page.getByText('已保存；下一 Run 生效。')).toBeVisible();
-    await page.getByRole('button', {name:'展开对话', exact:true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     for (const task of ['STATS graph fallback', 'STATS full failure', 'STATS classifier failure']) {
       const previousSession = await page.evaluate(() => sessionStorage.getItem('alfred.session'));
       await page.getByRole('button', {name:'新建会话', exact:true}).click();
@@ -208,7 +238,7 @@ test('SPEC-02/CE-14 old process and departed-page responses cannot become curren
     await page.getByRole('link', {name:'运行', exact:true}).click();
     release(); await nextSettled;
     await expect(panel).toHaveCount(0);
-    await page.getByRole('link', {name:'Behaviour', exact:true}).click();
+    await page.getByRole('link', {name:'行为', exact:true}).click();
     await expect(page.getByRole('button', {name:'刷新统计', exact:true})).toBeHidden();
   } finally {release?.(); await server.close();}
 });
@@ -222,7 +252,7 @@ async function submitActual(page, server, message, saved = true) {
   const previous = await page.evaluate(() => sessionStorage.getItem('alfred.session'));
   await page.getByRole('button', {name:'新建会话', exact:true}).click();
   await expect.poll(() => page.evaluate(() => sessionStorage.getItem('alfred.session'))).not.toBe(previous);
-  const expand = page.getByRole('button', {name:'展开对话', exact:true});
+  const expand = page.locator('#shell-toolbar [data-open-panel="mainbar"]');
   if (await expand.isVisible()) await expand.click();
   await expect(page.getByRole('textbox', {name:'消息'})).toBeEnabled();
   await page.getByRole('textbox', {name:'消息'}).fill(message);
@@ -241,6 +271,7 @@ test('SPEC-03 CE-05/12/13/15 legacy counts, unknown metrics and real bad-data er
     const history = panel.locator('section').filter({hasText:'历史／版本未知'});
     await expect(history.locator('tr').filter({hasText:'快速回复'})).toContainText('1');
     await expect(history).not.toContainText('%');
+    await expect(history.getByRole('progressbar')).toHaveCount(0);
     await expect(history).toContainText('仅列次数与缺失');
     await server.send('future-version');
     await page.getByRole('button', {name:'刷新统计', exact:true}).click();
@@ -251,6 +282,7 @@ test('SPEC-03 CE-05/12/13/15 legacy counts, unknown metrics and real bad-data er
     await expect(panel).toContainText('未知决议 1');
     await expect(panel).toContainText('缺少已持久保存的结果摘要');
     await expect(panel).toContainText('发生率 0/0 · 无可计算样本');
+    await expect(panel.locator('section').filter({hasText:'当前版本'}).getByRole('progressbar')).toHaveCount(0);
     await server.send('bad-time');
     await page.getByRole('button', {name:'刷新统计', exact:true}).click();
     await expect(panel).toContainText('样本归属无法判定');
@@ -410,9 +442,10 @@ test('INTEGRATION-75 CE-14/15 statistics and both topologies retain independent 
     await routing.getByRole('button', {name:'刷新统计', exact:true}).click();
     await started;
     await page.getByRole('link', {name:'运行', exact:true}).click();
+    await page.getByRole('button',{name:'放弃并离开',exact:true}).click();
     release(); await page.unrouteAll({behavior:'wait'});
     await expect(page.locator('.topology, .routing-statistics')).toHaveCount(0);
-    await page.getByRole('link', {name:'Behaviour', exact:true}).click();
+    await page.getByRole('link', {name:'行为', exact:true}).click();
     await expect(routing.getByRole('button', {name:'查看流程', exact:true})).toHaveAttribute('aria-expanded', 'false');
     await expect(aggregation.getByRole('button', {name:'查看流程', exact:true})).toHaveAttribute('aria-expanded', 'false');
     await expect(routing.getByRole('button', {name:'刷新统计', exact:true})).toBeHidden();

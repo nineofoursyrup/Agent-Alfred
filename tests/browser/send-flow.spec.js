@@ -15,24 +15,33 @@ test("one real UI flow reaches 202, Step, Attempt, deltas and one reply across p
   try {
     await Promise.race([waitFor("ready"),once(server,"exit").then(()=>{throw new Error(stderr);})]);
     const origin = `http://127.0.0.1:${port}`;
-    const streams = [];
-    page.on("request", request => {if(new URL(request.url()).pathname==="/api/events")streams.push(request.url());});
+    const streams = [],writes=[];
+    page.on("request", request => {if(new URL(request.url()).pathname==="/api/events")streams.push(request.url());if(request.method()==='POST')writes.push(new URL(request.url()).pathname);});
     await page.goto(origin);
     await page.getByRole("button",{name:"新建会话",exact:true}).click();
     await expect(page.getByRole("textbox",{name:"消息"})).toBeEnabled();
-    await page.getByRole("button",{name:"展开对话",exact:true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     await page.getByRole("textbox",{name:"消息"}).fill("完整发送闭环的问题");
     const accepted = page.waitForResponse(response=>response.url().endsWith("/api/runs") && response.request().method()==="POST");
     await page.getByRole("button",{name:"发送",exact:true}).click();
     const response = await accepted;
     expect(response.status()).toBe(202);
-    const {run_id} = await response.json();
+    const {run_id,session_id} = await response.json();
     await waitFor("delta-emitted");
     const chat = page.getByRole("region",{name:"主对话"});
     await expect(chat.getByText("正在流入的临时片段",{exact:true})).toHaveCount(1);
     await expect(chat.getByText("流式流程的唯一正式回复",{exact:true})).toHaveCount(0);
+    await page.getByRole('textbox',{name:'消息',exact:true}).fill('流式回复期间的新草稿');
     const connections = streams.length;
-    await page.getByRole("link",{name:"查看当前运行",exact:true}).click();
+    for(const path of ['overview','inbox','runs','memory','tools','ops','models','connections','behaviour','database']){
+      await page.locator(`nav a[href="/${path}"]`).click();
+      await expect(page.locator(`nav a[href="/${path}"]`)).toHaveAttribute('aria-current','page');
+      await expect(chat.getByText('正在流入的临时片段',{exact:true})).toHaveCount(1);
+      await expect(page.getByRole('textbox',{name:'消息',exact:true})).toHaveValue('流式回复期间的新草稿');
+      expect(await page.evaluate(()=>sessionStorage.getItem('alfred.session'))).toBe(session_id);
+      expect(streams.length).toBe(connections);
+    }
+    await page.getByRole("region",{name:"当前运行",exact:true}).getByRole("link",{name:"查看当前运行",exact:true}).click();
     const detail = page.getByRole("region",{name:"运行过程"});
     await expect(detail.getByRole("heading",{name:"Step 0",exact:true})).toBeVisible();
     await expect(detail.locator("details.attempt > summary")).toContainText("Attempt");
@@ -52,8 +61,11 @@ test("one real UI flow reaches 202, Step, Attempt, deltas and one reply across p
     await page.reload();
     await expect(chat.getByText("流式流程的唯一正式回复",{exact:true})).toHaveCount(1);
     await expect(chat.getByText("完整发送闭环的问题",{exact:true})).toHaveCount(1);
+    await expect(page.getByRole('textbox',{name:'消息',exact:true})).toHaveValue('流式回复期间的新草稿');
     const runs = await (await page.request.get(`${origin}/api/runs?filter=all`)).json();
     expect(runs.runs.map(run=>run.run_id)).toEqual([run_id]);
+    expect(writes.filter(path=>path==='/api/sessions')).toHaveLength(1);
+    expect(writes.filter(path=>path==='/api/runs')).toHaveLength(1);
   } finally {
     server.stdin.end("stop\n");
     if(server.exitCode === null) await once(server,"exit");

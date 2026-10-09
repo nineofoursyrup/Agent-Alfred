@@ -1,0 +1,52 @@
+{
+  "candidate": "11dcc66f18ceb264ade1c1bcc1b48287dc4f1516",
+  "tree": "41adbb9ad2479d16228c68f8c228882c6cd6ae91",
+  "fixture": "tests/browser/server.py: real Host/SQLite/HTTP, TemporaryDirectory, BrowserModel offline scripted model",
+  "controlled": [
+    "Hold a real /api/mainbar/locate response after route.fetch returns its unmodified JSON",
+    "Dispatch window offline event to run the actual app offline handler; no real network/SSE failure claim"
+  ],
+  "provider_calls": "No real providers",
+  "user_state": "No user state",
+  "setup": {
+    "session": "fc8e0e46de824c02b625ea46c753cb0f",
+    "run_count": 27,
+    "ordinary_history_count": 25,
+    "old_targets": [
+      "c13252f8cf2a4b0da02c42330d5c5fd5",
+      "2d136360c6ba4162bb968af8b82ea688"
+    ],
+    "old_targets_absent_from_normal_history": true
+  },
+  "sequential": {
+    "first": {
+      "status": "applied"
+    },
+    "second": {
+      "status": "applied"
+    },
+    "reading_status": "",
+    "first_old_target_visible": true,
+    "second_old_target_visible": false,
+    "rendered_run_count": 26,
+    "expected": "25 ordinary history records; neither independently located target remains after returnLatest"
+  },
+  "disconnect": {
+    "result": {
+      "status": "applied"
+    },
+    "connected": false,
+    "actual_response_status": 200,
+    "actual_response_identity": {
+      "process_instance_id": "c7b44f48735a432994e97ffcfeae8e89",
+      "session_id": "fc8e0e46de824c02b625ea46c753cb0f",
+      "run_id": "c13252f8cf2a4b0da02c42330d5c5fd5",
+      "recording_state": "recorded",
+      "source": "recorded_pair"
+    },
+    "late_target_visible": true,
+    "late_target_text": "review-isolated-0离线模型回复Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。已保存",
+    "reading_status": "已定位历史回复；相邻历史尚未读取。",
+    "expected": "retired request and no newly inserted exact target while disconnected"
+  }
+}

@@ -74,6 +74,28 @@ def main():
                 assert entered.wait(5), "Run did not reach scheduling"
             elif command == "release-scheduling":
                 release.set()
+            elif command.startswith("legacy-empty-identities "):
+                # Prepare a valid historical opaque-ID boundary after the real
+                # Run has settled; all subsequent reads use the actual Host.
+                run_id = command.removeprefix("legacy-empty-identities ")
+                with host._store.transaction() as conn:
+                    row = conn.execute(
+                        "SELECT session_id FROM runs WHERE run_id=?", (run_id,)
+                    ).fetchone()
+                    assert row is not None
+                    conn.execute(
+                        "UPDATE sessions SET session_id='' WHERE session_id=?",
+                        (row[0],),
+                    )
+                    conn.execute(
+                        "UPDATE runs SET session_id='',run_id='' WHERE run_id=?",
+                        (run_id,),
+                    )
+                    conn.execute(
+                        "UPDATE agent_log SET session_id='',run_id='' WHERE run_id=?",
+                        (run_id,),
+                    )
+                    conn.commit()
             else:
                 raise ValueError(f"unknown fixture command: {command}")
             print("ok " + command, flush=True)

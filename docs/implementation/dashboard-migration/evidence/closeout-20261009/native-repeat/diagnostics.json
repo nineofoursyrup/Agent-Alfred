@@ -1,0 +1,17 @@
+{
+  "result": "FAIL",
+  "scope": "First repeat-admission fixture quality; product behavior assertions remain the original PASS observation in result.json",
+  "reason": "Test-only delayed_response hook accessed self.path during BaseHTTPRequestHandler.parse_request error path before path existed, causing AttributeError on malformed/preconnection requests. This is an instrumentation defect, not a product finding.",
+  "observed_error": "AttributeError: 'DashboardHandler' object has no attribute 'path' at native-repeat/instrumented_server.py line57 in delayed_response; BaseHTTPRequestHandler.parse_request -> send_error -> _send -> send_response",
+  "terminal_output": "Observed at shutdown via tools.write_stdin; tool output was truncated (original5203 tokens); original resulting product state/events and source harness are preserved.",
+  "successor": "native-repeat-r2",
+  "repair": "getattr(self, 'path', None) safely forwards non-target responses",
+  "not_rewritten": [
+    "events.jsonl",
+    "dispatches.jsonl",
+    "pending-state.json",
+    "final-state.json",
+    "result.json",
+    "evidence-manifest.json"
+  ]
+}

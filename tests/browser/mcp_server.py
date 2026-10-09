@@ -81,10 +81,10 @@ def main():
             "env": {"TOKEN": "${MCP_TOKEN}"},
         }
 
+        definitions = {"test": definition}
+
         def config():
-            (state / "mcp.json").write_text(
-                json.dumps({"mcpServers": {"test": definition}})
-            )
+            (state / "mcp.json").write_text(json.dumps({"mcpServers": definitions}))
 
         config()
         if len(sys.argv) > 1 and sys.argv[1] == "invalid":
@@ -97,8 +97,11 @@ def main():
                 value = {
                     "requests": [
                         json.loads(s)
-                        for s in ((state / "requests.jsonl").read_text().splitlines()
-                              if (state / "requests.jsonl").exists() else [])
+                        for s in (
+                            (state / "requests.jsonl").read_text().splitlines()
+                            if (state / "requests.jsonl").exists()
+                            else []
+                        )
                     ]
                 }
                 self.send_response(200)
@@ -123,6 +126,16 @@ def main():
                 if "enabled" in body:
                     definition["enabled"] = body["enabled"]
                     config()
+                if "servers" in body:
+                    definitions.clear()
+                    definitions.update(
+                        {key: dict(definition) for key in body["servers"]}
+                    )
+                    config()
+                if "tools" in body:
+                    data = json.loads(behavior.read_text())
+                    data["tools"] = body["tools"]
+                    behavior.write_text(json.dumps(data))
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(b"{}")
@@ -130,14 +143,17 @@ def main():
             def log_message(self, *args):
                 pass
 
-        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        server = ThreadingHTTPServer(
+            ("127.0.0.1", int(os.environ.get("ALFRED_BROWSER_TEST_PORT", "17736")) + 8),
+            Handler,
+        )
         thread = threading.Thread(
             target=lambda: server.serve_forever(poll_interval=0.02)
         )
         thread.start()
         dashboard = build_dashboard(
             state_dir=state,
-            port=17749,
+            port=int(os.environ.get("ALFRED_BROWSER_TEST_PORT", "17736")) + 7,
             credentials=CredentialOverlay({}, str(env)),
             factory=ScriptedModelFactory(Model([])),
         )

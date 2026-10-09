@@ -5,16 +5,16 @@ test("MainBar keeps its draft and drawer across pages and a refresh", async ({
 }) => {
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Gateway 收件箱" }),
+    page.getByRole("heading", { name: "总览" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "新建会话", exact: true }).click();
   const input = page.getByRole("textbox", { name: "消息" });
   await input.fill("跨页保留这份草稿");
-  await page.getByRole("button", { name: "展开对话", exact: true }).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   await expect(page.getByRole("region", { name: "主对话" })).toBeVisible();
   await page.getByRole("link", { name: "运行", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "运行详情", exact: true }),
+    page.getByRole("heading", { name: "运行", exact: true }),
   ).toBeVisible();
   await expect(input).toHaveValue("跨页保留这份草稿");
   await expect(page.getByRole("region", { name: "主对话" })).toBeVisible();
@@ -23,7 +23,7 @@ test("MainBar keeps its draft and drawer across pages and a refresh", async ({
   await expect(page.getByRole("region", { name: "主对话" })).toBeVisible();
   await input.press("Escape");
   await expect(page.getByRole("region", { name: "主对话" })).toBeHidden();
-  await expect(input).toHaveValue("跨页保留这份草稿");
+  await expect(page.locator("#message")).toHaveValue("跨页保留这份草稿");
 });
 
 test("an accepted message receives one recorded reply, also after refresh", async ({
@@ -31,7 +31,7 @@ test("an accepted message receives one recorded reply, also after refresh", asyn
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "新建会话", exact: true }).click();
-  await page.getByRole("button", { name: "展开对话", exact: true }).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   const input = page.getByRole("textbox", { name: "消息" });
   await input.fill("请回复");
   // Session hydration and SSE readiness are asynchronous after creation.

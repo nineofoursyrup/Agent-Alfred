@@ -1,0 +1,8 @@
+{
+  "activeLabel": "IANA 时区",
+  "activeValue": "Asia/Shanghai",
+  "conversation": "重复准入原始请求\n\n离线模型回复\n\nSkill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。\n\n已保存",
+  "draft": "202 前保留的新草稿",
+  "hint": "主对话\n收起主对话\n会话\n新建会话\n\n重复准入原始请求\n\n离线模型回复\n\nSkill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。\n\n已保存\n消息\n发送\n\nEnter 发送 · Shift+Enter 换行",
+  "sendDisabled": false
+}

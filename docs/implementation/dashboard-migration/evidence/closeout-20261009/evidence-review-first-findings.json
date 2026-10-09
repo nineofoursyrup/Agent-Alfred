@@ -1,0 +1,14 @@
+[
+  {
+    "id": "SPEC-EVID-01",
+    "result": "FAIL",
+    "proposal_sha256": "669f8025f88cd4ffbaee8eac59997b80abe664ccc46f44114ff6feccd505d5ea",
+    "reason": "The cited late-202 test proves successor draft/focus but not repeated Enter/click during pending admission. Add concrete scoped evidence; no product defect asserted."
+  },
+  {
+    "id": "SPEC-EVID-02",
+    "result": "FAIL",
+    "proposal_sha256": "669f8025f88cd4ffbaee8eac59997b80abe664ccc46f44114ff6feccd505d5ea",
+    "reason": "AC25 single-item INCOMPLETE is outside specification result enumeration; use BLOCKED pending successor CI/evidence approval."
+  }
+]

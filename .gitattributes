@@ -1,0 +1,5 @@
+# Preserve the original bytes of these machine-generated failure logs.
+# Limit the exception to these frozen records; product and authored docs retain checks.
+docs/implementation/dashboard-migration/evidence/S11/browser-full-01.log -whitespace
+docs/implementation/dashboard-migration/evidence/S11/composition-successor-01.log -whitespace
+docs/implementation/dashboard-migration/evidence/S11/entry-red.log -whitespace

@@ -1,0 +1,161 @@
+{
+  "candidate": {
+    "head": "675cb695fed3d14059dd17071aef160971b3f303",
+    "tree": "e36bf2c212a040dfd3a97187e41517401773f0e5",
+    "src_tree": "5e5affdf0c481f4b5ad38f02cf47d7fc2d5c483a",
+    "package_source_path": "src/agent_alfred",
+    "package_source_tree": "035329e45cb97a7c170538139e510e14c960e995",
+    "base": "8f579a4712075721728b2043d9f626689ff377a8",
+    "product_identity_since": "593564fc4b6ed08bc332bbfcf76dcf67107929c0",
+    "entry_commit": "593564fc4b6ed08bc332bbfcf76dcf67107929c0",
+    "semantic_repair_commit": "c8397368074dacfc9837599b195e0b0dfc686b7a",
+    "browser_test_commit": "ef96f40",
+    "pr_head": null,
+    "pr_test_merge_sha": null,
+    "main_merge_sha": null
+  },
+  "complete_checks": [
+    {
+      "log": "sync-01.log",
+      "command": "uv sync --python /opt/homebrew/opt/python@3.14/bin/python3.14 --extra dev --extra mcp --locked",
+      "result": "PASS",
+      "exit": 0,
+      "sha256": "03d17d713c74a823440da2561f4319f9a5564d16e7ba169b159ff1ae243cce22",
+      "bytes": 1504
+    },
+    {
+      "log": "npm-ci-01.log",
+      "command": "PATH=/opt/homebrew/opt/node@22/bin:$PATH npm ci --ignore-scripts",
+      "result": "PASS",
+      "exit": 0,
+      "sha256": "8f7cbf90141dba9ebaa4d8fad4258c5c0a0822cbc61b9f6e237d33f738b1cbba",
+      "bytes": 76
+    },
+    {
+      "log": "ruff-03.log",
+      "command": "uv run ruff check",
+      "result": "PASS",
+      "exit": 0,
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "bytes": 19
+    },
+    {
+      "log": "skills-02.log",
+      "command": "uv run python scripts/check_skills.py",
+      "result": "PASS",
+      "exit": 0,
+      "sha256": "fd7f151ef9c20676183c52051dc38436a8de140577cf552f4bfb470d5c8058b6",
+      "bytes": 44
+    },
+    {
+      "log": "env-02.log",
+      "command": "uv run python scripts/check_env_example.py",
+      "result": "PASS",
+      "exit": 0,
+      "sha256": "bc243523b805cfaeb64daf1540da71749c485a41d8aed112495ab3f052f28a97",
+      "bytes": 37
+    },
+    {
+      "log": "typecheck-03.log",
+      "command": "PATH=/opt/homebrew/opt/node@22/bin:$PATH npm run typecheck",
+      "result": "PASS",
+      "exit": 0,
+      "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f",
+      "bytes": 29
+    },
+    {
+      "log": "entry-red.log",
+      "command": "playwright test tests/browser/shell.spec.js --grep default Overview --output=/Users/nineofour/.codex/dashboard-migration-20261009/S11/entry-red-artifacts",
+      "result": "FAIL",
+      "exit": 1,
+      "sha256": "ef825dd1e8f5b4b3c48ea19b67b19d397c46a8cc5eacb925fb70c8521b0aecb2",
+      "bytes": 3386,
+      "environment": "PATH=/opt/homebrew/opt/node@22/bin:$PATH; ALFRED_BROWSER_TEST_PORT=17900 unless the original log/handoff explicitly says otherwise"
+    },
+    {
+      "log": "entry-green.log",
+      "command": "playwright test tests/browser/shell.spec.js --grep default Overview|all ten --output=/Users/nineofour/.codex/dashboard-migration-20261009/S11/entry-green-artifacts",
+      "result": "PASS",
+      "exit": 0,
+      "sha256": "4574f1449427c05b624b041980274b16e4fee7a02e923a9dafbeaa6f00d83364",
+      "bytes": 675,
+      "environment": "PATH=/opt/homebrew/opt/node@22/bin:$PATH; ALFRED_BROWSER_TEST_PORT=17900 unless the original log/handoff explicitly says otherwise"
+    },
+    {
+      "log": "composition-successor-01.log",
+      "command": "playwright test --grep S11|one real UI flow|real CLI entry|real v2 upgrade|inbox Run outcomes|CE-04 CE-05 over|MainBar keeps|Session, chat Run|real pending reconnect|Models and Connections|tools registers|real upgraded Session --output=/Users/nineofour/.codex/dashboard-migration-20261009/S11/composition-successor-01-artifacts",
+      "result": "FAIL",
+      "exit": 1,
+      "sha256": "473b225be5beda990d80829488bfdd9c6abba95999eeba26f1193fe5bad8e3ee",
+      "bytes": 5769,
+      "environment": "PATH=/opt/homebrew/opt/node@22/bin:$PATH; ALFRED_BROWSER_TEST_PORT=17900 unless the original log/handoff explicitly says otherwise"
+    },
+    {
+      "log": "models-ops-successor-02.log",
+      "command": "playwright test tests/browser/models-migration.spec.js --grep S11 clear|lost probe --output=/Users/nineofour/.codex/dashboard-migration-20261009/S11/models-ops-successor-02-artifacts",
+      "result": "PASS",
+      "exit": 0,
+      "sha256": "5a15df6acfd058ca3b1c2a5342ce25da6caef9e30a894905bb9d843a34dcff32",
+      "bytes": 570,
+      "environment": "PATH=/opt/homebrew/opt/node@22/bin:$PATH; ALFRED_BROWSER_TEST_PORT=17900 unless the original log/handoff explicitly says otherwise"
+    },
+    {
+      "log": "lost-probe-successor-02.log",
+      "command": "playwright test tests/browser/models-migration.spec.js --grep lost real accepted probe --output=/Users/nineofour/.codex/dashboard-migration-20261009/S11/lost-probe-successor-02-artifacts",
+      "result": "PASS",
+      "exit": 0,
+      "sha256": "fa48a75329684f64fe81f4890f41fa78c3155ec0c635ac7394f04c9d1b0b0875",
+      "bytes": 560,
+      "environment": "PATH=/opt/homebrew/opt/node@22/bin:$PATH; ALFRED_BROWSER_TEST_PORT=17900 unless the original log/handoff explicitly says otherwise"
+    },
+    {
+      "log": "build-02.log",
+      "command": "uv build --out-dir <fresh-dist-02>",
+      "result": "PASS",
+      "exit": 0,
+      "sha256": "0047aeb75901c0da5d2a4dcf02bed34ec5429f2f164c556d2604e09f3eab7715",
+      "bytes": 305
+    },
+    {
+      "log": "lifecycle-01.log",
+      "command": "node scripts/check_dashboard_lifecycle.mjs <manifest-01.json>",
+      "result": "FAIL",
+      "exit": 1,
+      "sha256": "a65fcbb875ec36ee4a355f4a4f1e3372233b5bb7c538d9cf62e2c8afb3c898a6",
+      "bytes": 3379
+    },
+    {
+      "log": "lifecycle-02.log",
+      "command": "node scripts/check_dashboard_lifecycle.mjs <manifest-02.json>",
+      "result": "PASS",
+      "exit": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "log": "lifecycle-03.log",
+      "command": "node scripts/check_dashboard_lifecycle.mjs <manifest-03.json>",
+      "result": "PASS",
+      "exit": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  ],
+  "running_checks": [
+    {
+      "id": "local_full_python",
+      "result": "NOT RUN",
+      "execution": "RUNNING",
+      "log": "S11/python-full-01.log"
+    },
+    {
+      "id": "local_full_browser",
+      "result": "NOT RUN",
+      "execution": "RUNNING",
+      "log": "S11/browser-full-02.log"
+    }
+  ],
+  "source_browser_note": "full-01: 514 PASS / 11 FAIL; all 11 stale test assumptions fixed with preserved business assertions and passed causal successor; final full-02 remains a separate required gate.",
+  "installation_note": "Four actual installed HTTP suites are not four installed full-browser suites.",
+  "fixture_note": "CPython3.14.7 shared SQLite C API, Node22.23.2, isolated local Host/SQLite/HTTP, offline scripted models; no user state or real provider credentials."
+}

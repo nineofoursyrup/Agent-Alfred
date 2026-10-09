@@ -1,0 +1,14 @@
+{
+  "integration": {
+    "head": "d3d0e78f46c9b71f74aee02b276e9eb58a7bb054",
+    "tree": "d5ae23a4c989b3624b853a5493f61af38a11c7aa",
+    "source_tree": "08582ef657e69669a3333606021918f9b0509e6f",
+    "status": ""
+  },
+  "support": {
+    "head": "3f0588d3693d598cc1785c7eee82e3c52707dca0",
+    "tree": "641dba43d5e468f2d62be709953765b42b4bcaca",
+    "source_tree": "534f2caae73702d69a57ddf54b9af20dd207b326",
+    "status": ""
+  }
+}

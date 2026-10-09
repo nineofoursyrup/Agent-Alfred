@@ -1,0 +1,386 @@
+{
+  "axis": "Standards",
+  "result": "PASS for fixed S03 r9 affected scope",
+  "head": "1379bcf45c32319ada4473bcc1c211cf10516c46",
+  "tree": "bcb8daef29e256e0c4743f9f2400f3e069ab0e2c",
+  "base": "18d2ac94743af0df50c5893862cdd8d8d054a142",
+  "prior_own_S03": "342e77b28f967fc7291229805778d679cdb1b85d",
+  "prior_own_S08": "51159d3854db388a6c178f8fea0b560fcda0bd13",
+  "manifests": [
+    {
+      "comparison": "full-candidate-files",
+      "base": "18d2ac94743af0df50c5893862cdd8d8d054a142",
+      "files": 30,
+      "manifest": {
+        "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r9/full-candidate-files.json",
+        "bytes": 5588,
+        "sha256": "8aca4c784f19ca58c8b06074be351d2142b1b7d48140534355cd8278b948740a"
+      },
+      "diff_sha256": "fb83c234c45ae41c74b1f63fd7bd1ebe61a6fb045986c078a9f51ee104f62dcf"
+    },
+    {
+      "comparison": "delta-candidate-files",
+      "base": "342e77b28f967fc7291229805778d679cdb1b85d",
+      "files": 23,
+      "manifest": {
+        "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r9/delta-candidate-files.json",
+        "bytes": 4484,
+        "sha256": "ec6f1d8bc076e70b5278a728a0d40a8e5a5ee9847a2d402bc4c88af04cfe21a4"
+      },
+      "diff_sha256": "eeed56d6930d750f048759612faae9423619971e89ae9d73c5b4f3fc4b1ffb3e"
+    },
+    {
+      "comparison": "accepted-S08-merge-files",
+      "base": "6269a713363f5e1bfb989d2a1f31fda909ec396f",
+      "files": 21,
+      "manifest": {
+        "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r9/accepted-S08-merge-files.json",
+        "bytes": 4137,
+        "sha256": "c6663ff9a0ac74ff493b7a7cf33c83ec141bcbfdc84007207a5211f32f00d17b"
+      },
+      "diff_sha256": "21c749bc777f5ae3553d7bec608b3511005075aef88c1ae90d23ab1552a9d114"
+    }
+  ],
+  "repair": {
+    "files": 2,
+    "CSS_added_lines": 4,
+    "browser_test_added_lines": 37,
+    "pre_sync": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r9/pre-sync.diff",
+      "bytes": 5576,
+      "sha256": "e5ce07dea3ae86b95737e468e7f99c255811904610d5742cee54bb0ccf9064a0"
+    },
+    "runtime_JS_unchanged": true
+  },
+  "reviewed_S08_inheritance": {
+    "accepted_result": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/merges/07-S08-r4-51159d3/result.json",
+      "bytes": 7115,
+      "sha256": "0a740c87823f7d26900579ab2b94a8e76844ff8879df9e6ee3c5a0986a1c1454"
+    },
+    "same_accepted_tree": true,
+    "unchanged_peer_files": [
+      "src/agent_alfred/candidates.py",
+      "src/agent_alfred/evals/deterministic/test_auth_probe.py",
+      "src/agent_alfred/evals/deterministic/test_candidates.py",
+      "src/agent_alfred/evals/deterministic/test_models_page.py",
+      "src/agent_alfred/evals/deterministic/test_settings_commands.py",
+      "src/agent_alfred/ops/static/connections.js",
+      "src/agent_alfred/ops/static/models.js",
+      "src/agent_alfred/ops/static/settings-focus.js",
+      "src/agent_alfred/ops/static/settings.css",
+      "src/agent_alfred/settings_commands.py",
+      "tests/browser/integrations.spec.js",
+      "tests/browser/mcp.spec.js",
+      "tests/browser/models-migration.spec.js",
+      "tests/browser/settings.spec.js",
+      "tests/browser/settings_server.py",
+      "tests/browser/shell-controls.spec.js",
+      "tests/browser/shell.spec.js"
+    ],
+    "conflict_files": [
+      "src/agent_alfred/gateway/web/assets.py",
+      "src/agent_alfred/ops/static/index.html",
+      "src/agent_alfred/ops/static/pages.js"
+    ],
+    "stage_binding": "3 files x common ancestor / exact pre-sync / accepted peer; 3 merged bytes match fixed H",
+    "startup_combination": "Exactly own r8 test plus three accepted Models collapsed-detail locator substitutions; original Send/Enter gates preserved",
+    "clear_commit_and_blob_retained": true
+  },
+  "own_r8_unchanged_files": [
+    "src/agent_alfred/ops/static/aggregation.js",
+    "src/agent_alfred/ops/static/app.js",
+    "src/agent_alfred/ops/static/inbox-runs.css",
+    "src/agent_alfred/ops/static/inbox.js",
+    "src/agent_alfred/ops/static/run-evidence.js",
+    "src/agent_alfred/ops/static/run-fields.js",
+    "src/agent_alfred/ops/static/runs.js",
+    "src/agent_alfred/ops/static/shell.js",
+    "src/agent_alfred/ops/static/source.js",
+    "src/agent_alfred/ops/static/trace_export.js",
+    "tests/browser/admission.spec.js",
+    "tests/browser/inbox-run-navigation.spec.js",
+    "tests/browser/inbox-run-sources.spec.js",
+    "tests/browser/inbox.spec.js",
+    "tests/browser/overview.spec.js",
+    "tests/browser/pagination.spec.js",
+    "tests/browser/read-retirement.spec.js",
+    "tests/browser/runs.spec.js",
+    "tests/browser/skills.spec.js",
+    "tests/browser/tabs.spec.js",
+    "tests/browser/trace_export.spec.js",
+    "tests/browser/trace_export_server.py",
+    "tests/browser/transport.js",
+    "tests/browser/upgrade-flow.spec.js"
+  ],
+  "standards_unchanged": [
+    "CLAUDE.md",
+    "CONTEXT.md",
+    "docs/adr/0003-central-fail-closed-redactor.md",
+    "docs/adr/0005-availability-and-authorization-are-orthogonal.md",
+    "docs/adr/0014-local-dashboard-threat-model.md",
+    "docs/adr/0021-assignment-and-evidence-semantics.md",
+    "docs/adr/0022-dual-conflict-check-for-settings-writes.md",
+    "docs/adr/0023-interrupted-means-the-index-cannot-prove-a-terminal-outcome.md",
+    "docs/adr/0024-only-the-finalizing-transaction-confirms-recorded.md",
+    "docs/adr/0025-state-patches-carry-their-own-revision-not-seq.md",
+    "docs/adr/0026-admission-is-held-until-recording-settles.md",
+    "docs/adr/0027-historic-sessions-are-backfilled-verbatim.md",
+    "docs/adr/0028-admission-is-a-durable-handoff-not-a-response-receipt.md",
+    "docs/adr/0029-reply-recovery-reads-content-not-recording-state.md",
+    "docs/adr/0045-syrup-visual-baseline-preserves-domain-evidence.md",
+    "docs/adr/0046-panel-visibility-preserves-page-lifecycle.md",
+    "docs/adr/0047-overview-preserves-source-snapshot-boundaries.md",
+    "docs/adr/0048-exact-run-reply-location-stays-in-mainbar.md",
+    "docs/agents/domain.md",
+    "docs/agents/issue-tracker.md",
+    "docs/agents/triage-labels.md",
+    "docs/dashboard.md",
+    "docs/design/dashboard-implementation/INTERFACES.md",
+    "docs/design/dashboard-implementation/SLICES.md",
+    "docs/design/dashboard-implementation/SOURCE-AUDIT.md",
+    "docs/design/dashboard-implementation/SPEC.md",
+    "docs/design/dashboard-implementation/VALIDATION.md",
+    "docs/design/dashboard-implementation/traceability.json",
+    "docs/design/issue-86/DECISIONS.md",
+    "docs/design/issue-87/SPEC.md",
+    "docs/design/issue-88/DESIGN.md",
+    "docs/design/issue-89/DESIGN.md",
+    "docs/design/issue-90/ACCEPTANCE.md",
+    "docs/design/issue-90/DESIGN.md",
+    "docs/design/issue-91/ACCEPTANCE.md",
+    "docs/design/issue-91/DESIGN.md",
+    "docs/design/issue-92/ACCEPTANCE.md",
+    "docs/design/issue-92/SPEC.md"
+  ],
+  "source_graph": {
+    "artifact": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r5-candidate/source-coverage.json",
+      "bytes": 550506,
+      "sha256": "6de34ca1b9ca803f8949c6899cac2eee7c32d6183455f1b61392fc700171c7c6"
+    },
+    "sources": 118,
+    "AC": 25,
+    "chains": 7,
+    "raw_documents_and_map_index_unchanged": true,
+    "whole_result": "NOT RUN",
+    "large_tables_reused_by_reference": true
+  },
+  "resources": {
+    "discovered_count": 29,
+    "discovered_runtime_edges": 63,
+    "registered_assets": 28,
+    "inventory": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/resource-inventory.json",
+      "bytes": 16411,
+      "sha256": "5363a93ae23a29ab416360affe8e64b0982dfb070cd89c9f2b5803eb64e2ca04"
+    },
+    "http": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r9/resource-http.json",
+      "bytes": 6223,
+      "sha256": "c16e78da93f27816c2cbfb77b1282b9d5e7b9a44134ef4b94ef6b8361df50693"
+    },
+    "actual_requests": 15,
+    "prior_unchanged_http_hash_bindings_verified": true,
+    "new_HTTP_by_reviewer": false
+  },
+  "archives": {
+    "r8_fixed_copies_verified": 38,
+    "r8_retained_evidence": 29,
+    "earlier_archive_manifests": 7,
+    "formal_original_copy_pairs": 12,
+    "new_first_failure_files": 17,
+    "other_axis_files_opaque_hash_only": true
+  },
+  "visuals": {
+    "six_final_images_visually_inspected": true,
+    "all_twelve_hashes_verified": true,
+    "manifest": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r9/visual/manifest.json",
+      "bytes": 4549,
+      "sha256": "8c6ae650aee0bca4a61cb73d86047d2b8df73fd2232de1ea9390f78ef77ea0e9"
+    }
+  },
+  "observed_logs": [
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r9/logs/01-receipt-height-red.log",
+      "bytes": 4239,
+      "sha256": "076dcefad5c11a4d884e6a7b30a9cc381c9b131b6460fa7a576a5d0836063e6c"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r9/logs/02-receipt-height-green.log",
+      "bytes": 4346,
+      "sha256": "8dfc50d0fa0d20cbd3b042941581d675d7c6dccb4f0682263995d020e476fea2"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r9/logs/03-receipt-height-successor.log",
+      "bytes": 622,
+      "sha256": "9fe2e82c670c49c4264c6fb5a4030a06999b83f4aecb18156a4c1f7b4c6340cf"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r9/logs/04-receipt-visual-keyboard.log",
+      "bytes": 733,
+      "sha256": "fdc7f762ff15092c5d1303a538f333e234ebacaee1b1520e2dbd2f4bd4360d5c"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r9/logs/05-shell-layout-combination.log",
+      "bytes": 1420,
+      "sha256": "797bb779604c6d77a1ea7ab01ce65e239971dd9c950cbd5d0b77afd06d5040b3"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r9/logs/06-typecheck.log",
+      "bytes": 29,
+      "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r9/logs/07-bind-evidence.log",
+      "bytes": 303,
+      "sha256": "53de2606f819e7972e8b2aa57700424607f7516dc319a86e34e377ffca25ccfb"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r9/logs/08-integrated-typecheck.log",
+      "bytes": 29,
+      "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r9/logs/09-integrated-shell-layout.log",
+      "bytes": 3363,
+      "sha256": "0a49c9ed8947e2cb8ee3ff4890f210ec50d1c245bccf75ec1145c31175d131e2"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r9/logs/10-integrated-page-consumers.log",
+      "bytes": 713,
+      "sha256": "3d8bdfa047594919079d90448db030904887a3d28a8213aefcc0134fb80b3c87"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r9/logs/11-bind-integrated-evidence.log",
+      "bytes": 261,
+      "sha256": "37ab96d76af577527a763d7fbad9efa54bd9ef3ad0dc2a8a654e89174ed638a0"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r9/logs/12-resource-http.log",
+      "bytes": 184,
+      "sha256": "20a8885fbb1749d1c08e64fd02b7ac414f270d5922e8508d6fabc7332799e9d3"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r9/logs/13-final-checks.log",
+      "bytes": 268,
+      "sha256": "69644be0a4cbbfd1aa6bded0e6911578cca9769afd6b712eed295d2c58770f3c"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S03/r9/logs/14-final-checks.log",
+      "bytes": 1255,
+      "sha256": "d1eaec57784b38db7e25e0697386b5ef7badbdb7d953a9322e1a9e67d1760da0"
+    }
+  ],
+  "own_prior_reports": [
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S03-r8-Standards.md",
+      "bytes": 2391,
+      "sha256": "7b747803868b981b6264eb10a0ffbb4ece5059a9497c72da28d89a960069ecd4"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S03-r8-Standards-details.json",
+      "bytes": 110608,
+      "sha256": "67b81c0434d5bdcdf895eb571af203aeca3af751737a4371fb2e12260e08e6f0"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S03-r8-standards-verification.json",
+      "bytes": 28801,
+      "sha256": "bfc362edd407e5cb896d3ff86aec7503a4bde92c74be4bec8379fb89aa522c5e"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S08-r4-Standards.md",
+      "bytes": 2240,
+      "sha256": "c95b3d9845c5ac96eab9d59aaff556a945cd8ddfe2a5226689172168ec86129a"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S08-r4-standards-verification.json",
+      "bytes": 8319,
+      "sha256": "800e99447e8dc0fe44b74826be5f10c629273d0af8302fc8411d861343207afa"
+    }
+  ],
+  "limits": [
+    "Overall source/AC/G NOT RUN",
+    "Final S11/all-peer/full CI/wheel-sdist x base-mcp/native 200 percent and real Chinese IME NOT RUN",
+    "Real mobile keyboard/touch not exercised",
+    "Actual BFCache BLOCKED preserved"
+  ],
+  "independence": {
+    "current_other_axis_read": false,
+    "product_edited": false,
+    "new_runtime_probe": false,
+    "broad_tests_rerun": false,
+    "working_tree_clean": true
+  },
+  "tooling_notes": [
+    "Initial combined output truncated long removed legacy page implementation; manually read full final pages, both relevant bounded diffs and independently verify common tail/stage identities. Initial guessed FINAL-CHECKS.md and S03/r9/merges path absent; used actual FINAL-CHECKS.json and root merges path.",
+    "First independent closure traversal found 27 resources/56 edges because its regex did not span multiline JavaScript imports. Extended the parser to multiline declarations, preserved this first verifier failure, and reverified the whole script: 29/63 matches. Reviewer tooling assumption, not product failure."
+  ],
+  "documented_violations": [],
+  "optional_heuristic_smells": [],
+  "closed_prior_findings": [
+    {
+      "id": "S03-r8-Standards-F1",
+      "priority": 2,
+      "rule": "docs/design/issue-87/SPEC.md:181,183 (R10)",
+      "candidate": "1379bcf45c32319ada4473bcc1c211cf10516c46",
+      "implementation": "src/agent_alfred/ops/static/app.css:37-40",
+      "test": "tests/browser/session-create-race.spec.js:161-197",
+      "cause_and_fix": "Only a deferred receipt directly inside MainBar status permits flex shrink with min-height 48px, block padding 4px, and local overflow:auto; related session/panel margins become 3px. MainBar composer and Send do not shrink or move offscreen at 320x360; receipt facts and operations remain in the scrollable DOM. No new focus code or receipt semantics.",
+      "observed": "Actual successful held 201, continued editing in original Session, original focus plus selection [2,8] preserved immediately before wheel/Tab; input/Send fully visible and Send enabled. Wheel reaches both complete receipt actions; Tab reaches Send, trial click proves actionability, Shift+Tab reaches inspect/open, Close and navigation work. Three dimensions 320x360/320x800/1440x360. Six final screenshots visually inspected.",
+      "historical_failure_preserved": true,
+      "frozen_owner": "S02",
+      "repair_owner": "S03",
+      "status": "CLOSED for bounded fixed candidate"
+    }
+  ],
+  "heuristic_review": {
+    "Mysterious Name": "Existing shell-status and created-receipt selectors directly name their owner/state; no ambiguous new interface.",
+    "Duplicated Code": "One conditional CSS rule serves all three viewport cases; the existing behavioral test is parameterized by viewport.",
+    "Feature Envy": "Layout stays in shell stylesheet; receipt state and selection remain in the existing MainBar owner.",
+    "Data Clumps": "The test groups width/height in viewport objects. No independently drifting production field group added.",
+    "Primitive Obsession": "No new domain primitive or change to opaque Session/Run/instance identity; accepted peer identity objects are byte-reused.",
+    "Repeated Switches": "No new repeated dispatch; narrow conditional only opens the corresponding actual UI panel in the test.",
+    "Shotgun Surgery": "Local repair remains CSS plus one existing test. Three registration/page conflicts are explicit composition requirements, not scattered logic.",
+    "Divergent Change": "Styling and user-action semantics remain separate. Combined pages retains only its existing remaining behaviourPage.",
+    "Speculative Generality": "No new abstraction beyond the actual receipt layout case.",
+    "Message Chains": "Only bounded DOM/locator queries and existing test helpers; no new domain traversal layer.",
+    "Middle Man": "No new wrapper or pure forwarding component.",
+    "Refused Bequest": "No inheritance introduced; inherited production code unchanged."
+  },
+  "heuristics_interpretation": "Possible smells only; repository standards prevail. No actionable optional smell. Tool-enforced rules excluded from manual findings.",
+  "first_failures": [
+    {
+      "evidence": "S03-r8-Standards.md and standards-receipt-height.json",
+      "kind": "product",
+      "result": "FAIL P2: original 320x360 receipt clips composer/Send",
+      "preserved": true
+    },
+    {
+      "evidence": "S03/r9/logs/01-receipt-height-red.log",
+      "kind": "product",
+      "result": "1 FAIL viewport ratio 0, 2 size controls PASS on fixed r8",
+      "preserved": true
+    },
+    {
+      "evidence": "S03/r9/logs/02-receipt-height-green.log",
+      "kind": "product",
+      "result": "Despite green filename, 1 FAIL: action viewport ratio 0.9831932783126831 after first CSS fix; 2 controls PASS",
+      "preserved": true
+    },
+    {
+      "evidence": "S03/r9/logs/07-bind-evidence.log",
+      "kind": "evidence tooling",
+      "result": "Integration tip advanced before binding assertion; original script retained",
+      "preserved": true
+    },
+    {
+      "evidence": "S03/r9/logs/13-final-checks.log",
+      "kind": "evidence tooling",
+      "result": "Schema key original absent; actual source/saved schema used by successor",
+      "preserved": true
+    }
+  ],
+  "verification_interpretation": "Actual final 15 layout/startup tests plus 2 independent consumer tests passed; earlier overlapping 3/6 are not added. Typecheck and diff pass. No new browser probe or broad rerun was needed. Existing deterministic checks are reused only for byte-identical code/dependency/configuration and the owner composition evidence above."
+}

@@ -23,7 +23,7 @@ for (const shared of [false, true])
       );
       await other.getByRole("link", { name: "收件箱", exact: true }).click();
       await other
-        .getByRole("button", { name: "共享会话", exact: true })
+        .getByRole("link", { name: "共享会话", exact: true })
         .click();
       await other
         .getByRole("button", { name: "继续此会话", exact: true })
@@ -45,7 +45,7 @@ for (const shared of [false, true])
           active_run: run(first),
         }),
       );
-      const expand = tab.getByRole("button", { name: "展开对话", exact: true });
+      const expand = tab.locator('#shell-toolbar [data-open-panel="mainbar"]');
       if (await expand.isVisible()) await expand.click();
       await tab.getByRole("textbox", { name: "消息" }).fill("本地草稿");
       await domain(
@@ -83,9 +83,9 @@ for (const shared of [false, true])
       "本地草稿",
     );
     const count = await other.evaluate(() => window.sources.length);
-    await other.getByRole("link", { name: "运行", exact: true }).click();
+    await other.getByRole("navigation", { name: "主导航", exact: true }).getByRole("link", { name: "运行", exact: true }).click();
     await expect(
-      other.getByRole("heading", { name: "运行详情", exact: true }),
+      other.getByRole("heading", { name: "运行", exact: true }),
     ).toBeVisible();
     expect(await other.evaluate(() => window.sources.length)).toBe(count);
   });

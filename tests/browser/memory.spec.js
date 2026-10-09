@@ -2,6 +2,25 @@ import {test, expect} from "@playwright/test";
 import {api, memoryServer} from "./memory-server.js";
 import {controlledEventSource, emit, state} from "./transport.js";
 
+// Existing domain regressions explicitly open the migrated presentation groups.
+// Default collapsed behavior is checked separately in memory-migration.spec.js.
+async function expandMemory(page) {
+  if (new URL(page.url()).pathname !== "/memory") return;
+  for (const name of ["操作回执／遗忘进度", "提炼队列", "检索统计", "Markdown 镜像"]) {
+    const toggle = page.getByRole("button", {name,exact:true});
+    if (await toggle.getAttribute("aria-expanded") === "false") await toggle.click();
+  }
+  const selected = await page.getByRole("tab", {selected:true}).textContent();
+  for (const label of ["语义记忆", "情景记忆"]) {
+    await page.getByRole("tab", {name:label,exact:true}).click();
+    const toggle = page.getByRole("button", {name:`新建${label}`,exact:true});
+    if (await toggle.getAttribute("aria-expanded") === "false") await toggle.click();
+  }
+  await page.getByRole("tab", {name:selected,exact:true}).click();
+}
+async function openMemory(page, url) {await page.goto(url);await expandMemory(page);}
+async function reloadMemory(page) {await page.reload();await expandMemory(page);}
+
 // Records, from this point on, whether a text was ever rendered and whether
 // it came back after having been hidden -- not only whether it is absent now.
 async function watchText(page, text, operationId = null) {
@@ -26,7 +45,7 @@ test("A40: empty, no match, read failure, busy and conflicts stay distinct", asy
   const server = await memoryServer();
   try {
     const other = await api(page.request, server.origin);
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const panel = page.getByRole("tabpanel", {name: "语义记忆"});
     await expect(panel.getByText("记忆库为空。", {exact: true})).toBeVisible();
 
@@ -112,7 +131,7 @@ test("A52: explicit save, next-Run hit, source, edit conflict, delete and requer
     const other = await api(page.request, server.origin);
     await page.goto(server.origin + "/inbox");
     await page.getByRole("button", {name: "新建会话", exact: true}).click();
-    await page.getByRole("button", {name: "展开对话", exact: true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     const chat = page.getByRole("region", {name: "主对话"});
     const send = async text => {
       await page.getByRole("textbox", {name: "消息"}).fill(text);
@@ -139,6 +158,7 @@ test("A52: explicit save, next-Run hit, source, edit conflict, delete and requer
     await expect(process.getByRole("link", {name: `Run ${saveRun}`, exact: true}).first()).toBeVisible();
 
     await page.getByRole("link", {name: "记忆", exact: true}).click();
+    await expandMemory(page);
     const panel = page.getByRole("tabpanel", {name: "语义记忆"});
     const list = panel.getByLabel("语义记忆列表");
     await expect(list.getByText("Zephyr likes coriander")).toBeVisible();
@@ -147,7 +167,55 @@ test("A52: explicit save, next-Run hit, source, edit conflict, delete and requer
     await list.getByRole("button", {name: "查看详情", exact: true}).click();
     const detail = panel.getByLabel("语义记忆详情");
     const id = await list.locator("article").first().getAttribute("data-memory-id");
-    await expect(detail.getByRole("link", {name: `Run ${saveRun}`, exact: true})).toBeVisible();
+    const sourceLink = detail.getByRole("link", {name: `Run ${saveRun}`, exact: true});
+    await expect(sourceLink).toBeVisible();
+    const selectedSession = await page.evaluate(() => sessionStorage.getItem("alfred.session"));
+    const sourceURL = new URL(await sourceLink.getAttribute("href"),server.origin).href;
+    await sourceLink.click();
+    await expect(page).toHaveURL(sourceURL);
+    expect(await page.evaluate(() => sessionStorage.getItem("alfred.session"))).toBe(selectedSession);
+    const returnToMemory = page.getByRole("link", {name:"返回来源",exact:true});
+    await expect(returnToMemory).toHaveAttribute("href", "/memory?tab=semantic");
+    const sourceRead = page.waitForResponse(response => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/memory/record" && url.searchParams.get("id") === id && response.status() === 200;
+    });
+    await returnToMemory.click();
+    expect((await (await sourceRead).json()).record.id).toBe(id);
+    await expect(page).toHaveURL(server.origin + "/memory?tab=semantic");
+    await expect(sourceLink).toBeFocused();
+    await expect(detail.locator(".memory-summary")).toContainText(id);
+    expect(await page.evaluate(() => sessionStorage.getItem("alfred.session"))).toBe(selectedSession);
+    // Keep the independent browser Back/Forward and late-focus checks below.
+    await sourceLink.click();
+    await expect(page).toHaveURL(sourceURL);
+    await page.goBack();
+    await expect(sourceLink).toBeVisible();
+    await expect(sourceLink).toBeFocused();
+    const sourceContext = await page.evaluate(() => history.state.alfredShell.source);
+    expect(sourceContext.semanticId).toBe(id);
+    expect(sourceContext.focusHref).toBe(new URL(sourceURL).pathname);
+    expect(JSON.stringify(sourceContext)).not.toContain("coriander");
+    expect(JSON.stringify(sourceContext)).not.toContain("basil");
+    let releaseSource;
+    try {
+      await page.goForward();
+      let arrivedSource;
+      const heldSource = new Promise(resolve=>{releaseSource=resolve;});
+      const sourceRequested = new Promise(resolve=>{arrivedSource=resolve;});
+      let held = false;
+      await page.route("**/api/memory/record?*",async route=>{
+        if(held)return route.continue();
+        held=true;const response=await route.fetch();arrivedSource();await heldSource;await route.fulfill({response});
+      });
+      await page.goBack();await sourceRequested;
+      const composer=page.getByRole("textbox",{name:"消息",exact:true});
+      await composer.fill("来源重读期间的新主对话输入");
+      releaseSource();
+      await expect(sourceLink).toBeVisible();
+      await expect(composer).toBeFocused();
+      await expect(composer).toHaveValue("来源重读期间的新主对话输入");
+    }finally{releaseSource?.();await page.unroute("**/api/memory/record?*");}
 
     await detail.getByRole("button", {name: "编辑", exact: true}).click();
     await panel.getByLabel("事实", {exact: true}).fill("Zephyr likes basil");
@@ -160,9 +228,10 @@ test("A52: explicit save, next-Run hit, source, edit conflict, delete and requer
     await expect(panel.getByText(/版本冲突：记录当前为版本 2/)).toBeVisible();
     await expect(panel.getByLabel("事实", {exact: true})).toHaveValue("Zephyr likes basil");
     await panel.getByRole("button", {name: "放弃草稿", exact: true}).click();
+    await page.getByRole("dialog", {name:"保留当前编辑？"}).getByRole("button", {name:"放弃后继续",exact:true}).click();
 
     await detail.getByRole("button", {name: "删除", exact: true}).click();
-    await expect(detail.getByText(/确认删除版本 2？/)).toBeVisible();
+    await expect(detail.getByText(/确认删除 语义记忆 .+ 的版本 2？/)).toBeVisible();
     await detail.getByRole("button", {name: "确认删除", exact: true}).click();
     await expect(detail.getByText("记忆已删除；遗忘进度见操作回执。")).toBeVisible();
     const receipts = page.getByRole("region", {name: "记忆操作回执"});
@@ -199,6 +268,7 @@ test("A52: explicit save, next-Run hit, source, edit conflict, delete and requer
     await expect(process).not.toContainText("coriander");
 
     await page.getByRole("link", {name: "记忆", exact: true}).click();
+    await expandMemory(page);
     const statistics = page.getByRole("region", {name: "检索统计"});
     await statistics.getByRole("button", {name: "刷新统计", exact: true}).click();
     await expect(statistics).toContainText("全部会话的已记录对话运行");
@@ -228,7 +298,7 @@ test("A35: a delete in one tab clears the other tab and late reads never restore
       payload: {subject: "Zephyr", fact: "Zephyr likes coriander"},
     });
     const id = saved.body.result.memory_id;
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const panel = page.getByRole("tabpanel", {name: "语义记忆"});
     await panel.getByLabel("文本").fill("Zephyr");
     await panel.getByRole("button", {name: "搜索", exact: true}).click();
@@ -256,7 +326,7 @@ test("A35: a delete in one tab clears the other tab and late reads never restore
     await captured;
 
     const second = await context.newPage();
-    await second.goto(server.origin + "/memory");
+    await openMemory(second, server.origin + "/memory");
     const secondPanel = second.getByRole("tabpanel", {name: "语义记忆"});
     await secondPanel.getByRole("button", {name: "查看详情", exact: true}).click();
     await secondPanel.getByLabel("语义记忆详情").getByRole("button", {name: "删除", exact: true}).click();
@@ -321,6 +391,7 @@ test("A36/A55: disconnect hides bodies, reconnect verifies, and stale or foreign
     const stream = await controlledStream(page, server.origin);
     await page.goto(server.origin + "/memory");
     await stream.connect();
+    await expandMemory(page);
     const panel = page.getByRole("tabpanel", {name: "语义记忆"});
     const list = panel.getByLabel("语义记忆列表");
     await list.getByRole("button", {name: "查看详情", exact: true}).click();
@@ -478,6 +549,7 @@ test("A38: equal creation times page in stable internal order and stale cursors 
     const stream = await controlledStream(page, server.origin);
     await page.goto(server.origin + "/memory");
     await stream.connect();
+    await expandMemory(page);
     const panel = page.getByRole("tabpanel", {name: "语义记忆"});
     const list = panel.getByLabel("语义记忆列表");
     const facts = () => list.locator("article > p").allTextContents();
@@ -529,7 +601,7 @@ test("A41/A42: the read-only Skill catalog shows overrides and reloads only afte
     },
   });
   try {
-    await page.goto(server.origin + "/memory?tab=skills");
+    await openMemory(page, server.origin + "/memory?tab=skills");
     const panel = page.getByRole("tabpanel", {name: "Skill 目录"});
     await expect(panel.getByText(/只读目录：启动时建立索引，文件修改需重启后生效/)).toBeVisible();
     const plan = panel.locator("article", {hasText: "browser-plan"});
@@ -541,17 +613,28 @@ test("A41/A42: the read-only Skill catalog shows overrides and reloads only afte
     await plan.getByRole("button", {name: "查看正文", exact: true}).click();
     await expect(plan.locator("pre")).toHaveText("用户正文 v1\n  保留缩进");
     await expect(panel).not.toContainText("内置正文");
+    const posts = [];
+    page.on("request", request => {if (request.method() === "POST") posts.push(request.url());});
+    await page.getByRole("button", {name:"新建会话",exact:true}).click();
+    const message = page.getByRole("textbox", {name:"消息",exact:true});
+    await expect(message).toBeEnabled();
+    await message.fill("保留已有主对话草稿");
+    await page.getByRole("button", {name:"收起主对话",exact:true}).click();
+    const beforeUse = posts.length;
+    await plan.getByRole("button", {name:"在主对话使用 /skills",exact:true}).click();
+    await expect(message).toHaveValue("保留已有主对话草稿");
+    expect(posts.length).toBe(beforeUse);
 
     await skill(server.directory, "v2");
     await plan.getByRole("button", {name: "查看正文", exact: true}).click();
     await expect(plan.locator("pre")).toHaveText("用户正文 v1\n  保留缩进");
-    await page.reload();
+    await reloadMemory(page);
     await page.getByRole("tabpanel", {name: "Skill 目录"}).locator("article", {hasText: "browser-plan"})
       .getByRole("button", {name: "查看正文", exact: true}).click();
     await expect(panel.locator("article", {hasText: "browser-plan"}).locator("pre")).toHaveText("用户正文 v1\n  保留缩进");
 
     await server.restart();
-    await page.reload();
+    await reloadMemory(page);
     await panel.locator("article", {hasText: "browser-plan"}).getByRole("button", {name: "查看正文", exact: true}).click();
     await expect(panel.locator("article", {hasText: "browser-plan"}).locator("pre")).toHaveText("用户正文 v2\n  保留缩进");
   } finally {
@@ -579,6 +662,7 @@ test("A47: queue states and actions are explicit; busy is 409 and nothing bypass
       await page.getByRole("button", {name: "发送", exact: true}).click();
       await chatRun(other, text);
       await page.getByRole("link", {name: "记忆", exact: true}).click();
+    await expandMemory(page);
     };
     const queue = page.getByRole("region", {name: "提炼队列"});
     const batch = label => queue.locator("article[data-batch]", {hasText: label});
@@ -613,6 +697,30 @@ test("A47: queue states and actions are explicit; busy is 409 and nothing bypass
     await expect(first.getByLabel("候选差异")).toContainText(`update ${id} · 饮食：Zephyr likes coriander（提炼改写）`);
     await expect(first.getByLabel("候选差异")).toContainText("情景摘要：浏览器提炼摘要");
     await recorded(first);
+    const generatingRun=first.getByRole("link",{name:/^提炼运行 /});
+    const generatingHref=await generatingRun.getAttribute("href");
+    const generatingBatch=await first.getAttribute("data-batch");
+    await generatingRun.click();
+    await expect(page).toHaveURL(server.origin+generatingHref);
+    const origin = await page.evaluate(() => history.state.alfredShell.source.returnSource);
+    expect(origin.queue.batchId).toBe(generatingBatch);
+    expect(origin.focusHref).toBe(generatingHref);
+    const batchRead = page.waitForResponse(response => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/memory/consolidation" && url.searchParams.get("batch_id") === origin.queue.batchId && response.status() === 200;
+    });
+    await page.getByRole("link",{name:"返回来源",exact:true}).click();
+    await batchRead;
+    await expect(page).toHaveURL(server.origin + origin.route);
+    expect(await page.evaluate(() => history.state.alfredShell.source.queue)).toEqual(origin.queue);
+    await expect(generatingRun).toBeFocused();
+    await expect(first.getByLabel("候选差异")).toContainText("情景摘要：浏览器提炼摘要");
+    await generatingRun.click();
+    await expect(page).toHaveURL(server.origin+generatingHref);
+    await page.goBack();
+    await expect(page.getByRole("button",{name:"提炼队列",exact:true})).toHaveAttribute("aria-expanded","true");
+    await expect(generatingRun).toBeFocused();
+    await expect(first.getByLabel("候选差异")).toContainText("情景摘要：浏览器提炼摘要");
     await server.send("busy");
     await first.getByRole("button", {name: "批准整批", exact: true}).click();
     await expect(queue.getByText("宿主正忙：操作未执行，也不会排队；请稍后手动重试。")).toBeVisible();
@@ -702,7 +810,7 @@ test("A55: an undeliverable memory_patch closes the real stream and reconnect ve
       if (request.url().includes("/api/events")) streams.push(request.url());
       if (request.url().endsWith("/api/memory/state")) states.push(request.url());
     });
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const panel = page.getByRole("tabpanel", {name: "语义记忆"});
     await panel.getByRole("button", {name: "查看详情", exact: true}).click();
     const detail = panel.getByLabel("语义记忆详情");
@@ -729,7 +837,7 @@ test("R14: a mirror write failure is shown apart from the saved record and retri
   const server = await memoryServer();
   try {
     const other = await api(page.request, server.origin);
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const facts = page.getByRole("region", {name: "Markdown 镜像"}).locator('[data-mirror="facts"]');
     await expect(facts).toContainText("已同步并核验。");
     await server.send("mirror-fail on");
@@ -775,7 +883,7 @@ test("R10/R14: an external mirror edit keeps cleanup unfinished until regenerati
     });
     await expect.poll(async () => readFile(`${server.directory}/memory/facts.md`, "utf8")).toContain("coriander");
     await writeFile(`${server.directory}/memory/facts.md`, "外部编辑 coriander");
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const panel = page.getByRole("tabpanel", {name: "语义记忆"});
     await panel.getByRole("button", {name: "查看详情", exact: true}).click();
     await panel.getByRole("button", {name: "删除", exact: true}).click();
@@ -796,7 +904,7 @@ test("R10/R14: an external mirror edit keeps cleanup unfinished until regenerati
     await receipt.getByRole("button", {name: "重试清理", exact: true}).click();
     await expect(receipt).toContainText("记忆已删除，副本清理未完成。");
     // The unfinished cleanup is durable; a reload reads the current observation.
-    await page.reload();
+    await reloadMemory(page);
     await expect(receipt).toContainText("记忆已删除，副本清理未完成。");
     await facts.getByRole("button", {name: "确认重新生成", exact: true}).click();
     await expect(mirrors.getByText("镜像操作完成：regenerated。")).toBeVisible();
@@ -817,7 +925,7 @@ test.describe("episodic time", () => {
   test("R11: aware local input, half-open display and boundary search", async ({page}) => {
     const server = await memoryServer();
     try {
-      await page.goto(server.origin + "/memory?tab=episodic");
+      await openMemory(page, server.origin + "/memory?tab=episodic");
       const panel = page.getByRole("tabpanel", {name: "情景记忆"});
       await expect(panel.getByText("记忆库为空。", {exact: true})).toBeVisible();
       await expect(panel.getByText("时间按本机时区解释并带 offset 提交；终点不含。")).toBeVisible();
@@ -898,6 +1006,7 @@ test("R13: an oversized source blocks its Session until the user explicitly skip
     await page.getByRole("button", {name: "发送", exact: true}).click();
     await chatRun(other, "触发一次机会");
     await page.getByRole("link", {name: "记忆", exact: true}).click();
+    await expandMemory(page);
     const queue = page.getByRole("region", {name: "提炼队列"});
     await expect(queue).toContainText(/来源超限：Run huge 共 \d+ 字符，上限 64000；该会话提炼已停止。/, {timeout: 10000});
     await expect(queue).not.toContainText("PRIVATE");
@@ -913,7 +1022,7 @@ test("R13: an oversized source blocks its Session until the user explicitly skip
 test("R08: a lost response stays unconfirmed until queried or resent with the same id", async ({page}) => {
   const server = await memoryServer();
   try {
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const panel = page.getByRole("tabpanel", {name: "语义记忆"});
     const receipts = page.getByRole("region", {name: "记忆操作回执"});
     const bodies = [];
@@ -942,7 +1051,7 @@ test("R08: a lost response stays unconfirmed until queried or resent with the sa
     await panel.getByRole("button", {name: "保存", exact: true}).click();
     await expect(panel.getByText("结果待确认：草稿已保留，可在操作回执中查询或重新发送同一操作。")).toBeVisible();
     await expect(receipts).toContainText("结果待确认（network）：无回执不等于失败");
-    await page.reload();
+    await reloadMemory(page);
     const pending = receipts.locator("article").first();
     await expect(pending).toContainText("结果待确认（network）");
     // A reconnect query can race the click and remove this button. Hold
@@ -1008,7 +1117,7 @@ for (const committed of [false, true]) {
     const arrived = new Promise(resolve => { received = resolve; });
     const bodies = [];
     try {
-      await page.goto(server.origin + "/memory");
+      await openMemory(page, server.origin + "/memory");
       page.on("request", request => {
         if (request.url().endsWith("/api/memory/commands")) bodies.push(request.postDataJSON());
       });
@@ -1042,7 +1151,7 @@ for (const committed of [false, true]) {
       await panel.getByLabel("新事实").fill("reload before any command response");
       await panel.getByRole("button", {name: "保存", exact: true}).click();
       await arrived;
-      await page.reload();
+      await reloadMemory(page);
       release();
       await page.unroute("**/api/memory/commands");
       const receipt = page.getByRole("region", {name: "记忆操作回执"})
@@ -1074,7 +1183,7 @@ test("R08: more than twenty unanswered commands remain recoverable after reload"
   const server = await memoryServer();
   const bodies = [];
   try {
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     await page.route("**/api/memory/commands", async route => {
       bodies.push(route.request().postDataJSON());
       await route.abort("connectionreset");
@@ -1090,7 +1199,7 @@ test("R08: more than twenty unanswered commands remain recoverable after reload"
       await panel.getByRole("button", {name: "保存", exact: true}).click();
       await expect(receipts.locator("article").first()).toContainText("结果待确认（network）");
     }
-    await page.reload();
+    await reloadMemory(page);
     await expect(receipts.locator("article", {hasText: "结果待确认"})).toHaveCount(21);
     const first = receipts.locator("article", {hasText: bodies[0].operation_id});
     await first.getByRole("button", {name: "查询结果", exact: true}).click();
@@ -1120,7 +1229,7 @@ test("R09: unknown legacy history needs an explicit scope before forgetting comp
     prepare: directory => execFileSync(".venv/bin/python", ["-B", "-c", SEED_LEGACY, directory]),
   });
   try {
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const panel = page.getByRole("tabpanel", {name: "语义记忆"});
     await panel.getByLabel("新主题").fill("饮食");
     await panel.getByLabel("新事实").fill("legacy scoped fact");
@@ -1159,7 +1268,7 @@ for (const action of ["save", "update"]) {
       try {
         const other = await api(page.request, server.origin);
         if (action === "update") await other.command({operation_id: "seed", kind: "semantic", action: "save", payload: {subject: "private", fact: "before"}});
-        await page.goto(server.origin + "/memory");
+        await openMemory(page, server.origin + "/memory");
         const panel = page.getByRole("tabpanel", {name: "语义记忆"});
         const draft = action === "save" ? panel.getByLabel("新事实") : panel.getByLabel("事实", {exact: true});
         if (action === "save") await panel.getByLabel("新主题").fill("private");
@@ -1183,7 +1292,7 @@ for (const action of ["save", "update"]) {
         await expect(draft).toHaveValue("");
         await expect.poll(() => page.evaluate(value => (sessionStorage.getItem("alfred.memory.operations") || "").includes(value), secret)).toBe(false);
         release();
-        await page.reload();
+        await reloadMemory(page);
         await expect.poll(() => page.evaluate(value => (sessionStorage.getItem("alfred.memory.operations") || "").includes(value), secret)).toBe(false);
         await expect(panel.getByLabel("语义记忆列表").locator("article")).toHaveCount(0);
         expect((await other.get(`/api/memory/record?kind=semantic&id=${result.memory_id}`)).status).toBe(404);
@@ -1222,7 +1331,7 @@ for (const action of ["save", "update", "delete"]) {
           };
         }, {action, fault});
         await page.route("**/api/memory/operations?*", route => route.abort("connectionreset"));
-        await page.goto(server.origin + "/memory");
+        await openMemory(page, server.origin + "/memory");
         const panel = page.getByRole("tabpanel", {name: "语义记忆"});
         const receipts = page.getByRole("region", {name: "记忆操作回执"});
         if (action === "save") {
@@ -1262,7 +1371,7 @@ test("G2 D09: all unanswered mirror actions survive navigation and reload", asyn
     await server.send("mirror-fail on");
     await other.command({operation_id: "s", kind: "semantic", action: "save", payload: {subject: "mirror", fact: "fact"}});
     await other.command({operation_id: "e", kind: "episodic", action: "save", payload: {summary: "episode", occurred_at: "2026-09-12T00:00:00+00:00", occurred_until: null}});
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const mirrors = page.getByRole("region", {name: "Markdown 镜像"});
     const bodies = [];
     let drop = true;
@@ -1277,8 +1386,9 @@ test("G2 D09: all unanswered mirror actions survive navigation and reload", asyn
     }
     await page.getByRole("link", {name: "收件箱", exact: true}).click();
     await page.getByRole("link", {name: "记忆", exact: true}).click();
+    await expandMemory(page);
     await expect(mirrors.getByRole("button", {name: "查询结果", exact: true})).toHaveCount(2);
-    await page.reload();
+    await reloadMemory(page);
     await expect(mirrors.getByRole("button", {name: "查询结果", exact: true})).toHaveCount(2);
     expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem("alfred.memory.actions")).map(entry => entry.action))).toEqual(bodies);
     await server.send("mirror-fail off");
@@ -1305,7 +1415,7 @@ test("G2 D09: a late old-page query cannot erase a newer action identity", async
     const other = await api(page.request, server.origin);
     await server.send("mirror-fail on");
     await other.command({operation_id: "s", kind: "semantic", action: "save", payload: {subject: "mirror", fact: "fact"}});
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const mirrors = page.getByRole("region", {name: "Markdown 镜像"});
     const retry = mirrors.locator('[data-mirror="facts"]').getByRole("button", {name: "同步重试", exact: true});
     const bodies = [];
@@ -1329,6 +1439,7 @@ test("G2 D09: a late old-page query cannot erase a newer action identity", async
     await capturedQuery;
     await page.getByRole("link", {name: "收件箱", exact: true}).click();
     await page.getByRole("link", {name: "记忆", exact: true}).click();
+    await expandMemory(page);
     await expect(mirrors.getByRole("button", {name: "查询结果", exact: true})).toHaveCount(0);
     await retry.click();
     await expect(mirrors.getByRole("button", {name: "查询结果", exact: true})).toHaveCount(1);
@@ -1339,7 +1450,7 @@ test("G2 D09: a late old-page query cannot erase a newer action identity", async
     // The completed HTTP read and a browser task boundary allow its consumer
     // to settle before rebuilding from the persisted recovery state.
     await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 0)));
-    await page.reload();
+    await reloadMemory(page);
     await expect(mirrors.getByRole("button", {name: "查询结果", exact: true})).toHaveCount(1);
     expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem("alfred.memory.actions")).map(entry => entry.action.operation_id))).toEqual([bodies[1].operation_id]);
   } finally {
@@ -1364,7 +1475,8 @@ for (const surface of ["mirror", "queue"]) {
           await page.getByRole("button", {name: "发送", exact: true}).click();
           await chatRun(other, "trigger candidate");
           await page.getByRole("link", {name: "记忆", exact: true}).click();
-        } else await page.goto(server.origin + "/memory");
+    await expandMemory(page);
+        } else await openMemory(page, server.origin + "/memory");
         const panel = page.getByRole("region", {name: surface === "mirror" ? "Markdown 镜像" : "提炼队列"});
         const button = surface === "mirror"
           ? panel.locator('[data-mirror="facts"]').getByRole("button", {name: "同步重试", exact: true})
@@ -1383,7 +1495,7 @@ for (const surface of ["mirror", "queue"]) {
         });
         await button.click();
         await expect(panel.getByText("结果待确认（malformed_response）：无回执不等于失败。", {exact: true})).toBeVisible();
-        await page.reload();
+        await reloadMemory(page);
         await expect(panel.getByRole("button", {name: "查询结果", exact: true})).toHaveCount(1);
         expect(await page.evaluate(() => JSON.parse(sessionStorage.getItem("alfred.memory.actions"))[0].action)).toEqual(sent);
         await page.unroute(`**/api/memory/${readPath}?operation_id=*`);
@@ -1409,7 +1521,7 @@ test("G2 D09: a queried durable mirror failure is a definite failure, not undefi
     const other = await api(page.request, server.origin);
     await server.send("mirror-fail on");
     await other.command({operation_id: "s", kind: "semantic", action: "save", payload: {subject: "mirror", fact: "fact"}});
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const mirrors = page.getByRole("region", {name: "Markdown 镜像"});
     await page.route("**/api/memory/consolidation/actions", async route => { await route.fetch(); await route.abort("connectionreset"); });
     await mirrors.locator('[data-mirror="facts"]').getByRole("button", {name: "同步重试", exact: true}).click();
@@ -1433,7 +1545,7 @@ test("G2 R10: a late missing-operation read cannot mask later commit and forgett
   let result;
   try {
     const other = await api(page.request, server.origin);
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const panel = page.getByRole("tabpanel", {name: "语义记忆"});
     await page.route("**/api/memory/commands", async route => {
       await sendGate;
@@ -1480,6 +1592,7 @@ for (const action of ["save", "update"]) {
       const stream = await controlledStream(page, server.origin);
       await page.goto(server.origin + "/memory");
       await stream.connect();
+      await expandMemory(page);
       const panel = page.getByRole("tabpanel", {name: "语义记忆"});
       const draft = panel.getByLabel(action === "save" ? "新事实" : "事实", {exact: true});
       if (action === "save") await panel.getByLabel("新主题").fill("private");
@@ -1532,7 +1645,8 @@ for (const surface of ["mirror", "queue"]) {
           await page.getByRole("button", {name: "发送", exact: true}).click();
           await chatRun(other, "reload candidate");
           await page.getByRole("link", {name: "记忆", exact: true}).click();
-        } else await page.goto(server.origin + "/memory");
+    await expandMemory(page);
+        } else await openMemory(page, server.origin + "/memory");
         const panel = page.getByRole("region", {name: surface === "mirror" ? "Markdown 镜像" : "提炼队列"});
         const button = surface === "mirror" ? panel.locator('[data-mirror="facts"]').getByRole("button", {name: "同步重试", exact: true}) : panel.getByRole("button", {name: "拒绝整批", exact: true});
         await expect(button).toBeVisible();
@@ -1546,7 +1660,7 @@ for (const surface of ["mirror", "queue"]) {
         });
         await button.click();
         await sent;
-        await page.reload();
+        await reloadMemory(page);
         release();
         await page.unroute("**/api/memory/consolidation/actions");
         if (!committed) {
@@ -1573,7 +1687,7 @@ test("G2 D09: restored confirmation never authorizes a newer external file", asy
     await other.command({operation_id: "seed", kind: "semantic", action: "save", payload: {subject: "mirror", fact: "fact"}});
     const path = `${server.directory}/memory/facts.md`;
     await writeFile(path, "external version one");
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const mirrors = page.getByRole("region", {name: "Markdown 镜像"});
     const bodies = [];
     await page.route("**/api/memory/consolidation/actions", async route => {
@@ -1583,7 +1697,7 @@ test("G2 D09: restored confirmation never authorizes a newer external file", asy
     await mirrors.locator('[data-mirror="facts"]').getByRole("button", {name: "确认重新生成", exact: true}).click();
     await expect(mirrors).toContainText("结果待确认（network）");
     await writeFile(path, "external version two must survive");
-    await page.reload();
+    await reloadMemory(page);
     await expect(mirrors).toContainText("尚未找到提交记录：仍未确认，可重新发送同一操作。");
     expect(bodies).toHaveLength(1);
     const stored = await page.evaluate(() => sessionStorage.getItem("alfred.memory.actions"));
@@ -1605,7 +1719,7 @@ for (const action of ["save", "update"]) {
     try {
       const other = await api(page.request, server.origin);
       if (action === "update") await other.command({operation_id: "seed-away", kind: "semantic", action: "save", payload: {subject: "away", fact: "before"}});
-      await page.goto(server.origin + "/memory");
+      await openMemory(page, server.origin + "/memory");
       const panel = page.getByRole("tabpanel", {name: "语义记忆"});
       await page.route("**/api/memory/operations?*", r => r.fulfill({status: 503, json: {error: {code: "storage_read_failed"}}}));
       let finishCommand;
@@ -1636,7 +1750,7 @@ for (const action of ["save", "update"]) {
       const record = records.body.records.find(r => r.id === finished.body.result.memory_id);
       expect(record).toMatchObject({id: finished.body.result.memory_id, record_version: finished.body.result.record_version});
       await page.locator('nav a[href="/runs"]').click();
-      if (action === "update") await page.reload();
+      if (action === "update") await reloadMemory(page);
       const deletion = await other.command({operation_id: "away-delete", kind: "semantic", action: "delete", payload: {id: record.id}, expected_version: record.record_version});
       expect(deletion.status, JSON.stringify(deletion.body)).toBe(200);
       expect(deletion.body.forgetting.state).toBe("complete");
@@ -1646,9 +1760,10 @@ for (const action of ["save", "update"]) {
       // A subsequent real invalidation retries recovery without visiting Memory.
       await other.command({operation_id: "away-wakeup", kind: "semantic", action: "save", payload: {subject: "other", fact: "unrelated"}});
       await expect.poll(() => page.evaluate(() => (sessionStorage.getItem("alfred.memory.operations") || "").includes("AWAY_PRIVATE_BODY"))).toBe(false);
-      await page.reload();
+      await reloadMemory(page);
       expect(await page.evaluate(() => sessionStorage.getItem("alfred.memory.operations"))).not.toContain("AWAY_PRIVATE_BODY");
       await page.getByRole("link", {name: "记忆", exact: true}).click();
+    await expandMemory(page);
       await expect(panel.getByLabel("新事实")).toHaveValue("");
       await expect(panel).not.toContainText("AWAY_PRIVATE_BODY");
     } finally { await server.close(); }
@@ -1674,7 +1789,7 @@ test("G2 v2: an older blocked Session remains reachable and skippable", async ({
     const first = (await other.get("/api/memory/consolidation?limit=50&offset=0")).body;
     expect(first.sessions.some(s => s.session_id === "s")).toBe(false);
     expect(first.sessions_has_more).toBe(true);
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const queue = page.getByRole("region", {name: "提炼队列"});
     await queue.getByRole("button", {name: "下一页", exact: true}).click();
     await expect(queue).toContainText("来源超限：Run huge");
@@ -1731,7 +1846,7 @@ for (const [action, readRace] of [["approve",false], ["reject",false], ["retry",
     try {
       const other = await api(page.request, server.origin);
       const old = (await other.get("/api/memory/consolidation?session_id=batch-session-" + (action === "retry" ? 1 : 0))).body.batches[0];
-      await page.goto(server.origin + "/memory");
+      await openMemory(page, server.origin + "/memory");
       const queue = page.getByRole("region", {name: "提炼队列"});
       await expect(queue.locator(`[data-batch="${old.batch_id}"]`)).toHaveCount(0);
       await queue.getByRole("button", {name: "下一页", exact: true}).click();
@@ -1770,7 +1885,7 @@ test("G2 v2: queue page and filter changes reject late candidate reads", async (
   const {execFileSync} = await import("node:child_process");
   const server = await memoryServer({threshold: 2, prepare: directory => execFileSync(".venv/bin/python", ["-B", "-c", SEED_OLD_BATCHES, directory])});
   try {
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const queue = page.getByRole("region", {name: "提炼队列"});
     await queue.getByRole("button", {name: "下一页", exact: true}).click();
     const row = queue.locator("article", {hasText: "待批准（覆盖人工保护记忆）"});
@@ -1815,7 +1930,7 @@ test("G2 v2: an uncommitted update loses its reusable body when its record is fo
   try {
     const other = await api(page.request, server.origin);
     const saved = await other.command({operation_id: "absent-update-seed", kind: "semantic", action: "save", payload: {subject: "away", fact: "before"}});
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const panel = page.getByRole("tabpanel", {name: "语义记忆"});
     await panel.getByRole("button", {name: "查看详情", exact: true}).click();
     await panel.getByRole("button", {name: "编辑", exact: true}).click();
@@ -1824,6 +1939,8 @@ test("G2 v2: an uncommitted update loses its reusable body when its record is fo
     await panel.getByRole("button", {name: "保存修改", exact: true}).click();
     await expect(page.getByRole("region", {name: "记忆操作回执"})).toContainText("尚未找到提交记录");
     await page.locator('nav a[href="/runs"]').click();
+    await expect(page).toHaveURL(server.origin + "/runs");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
     const deletion = await other.command({operation_id: "absent-update-delete", kind: "semantic", action: "delete", payload: {id: saved.body.result.memory_id}, expected_version: 1});
     expect(deletion.body.forgetting.state).toBe("complete");
     await expect.poll(() => page.evaluate(() => (sessionStorage.getItem("alfred.memory.operations") || "").includes("UNCOMMITTED_PRIVATE_BODY"))).toBe(false);
@@ -1831,6 +1948,7 @@ test("G2 v2: an uncommitted update loses its reusable body when its record is fo
     expect(entries[0].state).toBe("pending");
     expect(entries[0].request).toBeUndefined();
     await page.getByRole("link", {name: "记忆", exact: true}).click();
+    await expandMemory(page);
     await expect(page.getByRole("region", {name: "记忆操作回执"}).getByText("该记录已删除：可复用正文已清除，仅保留同 ID 查询。")).toBeVisible();
   } finally { await server.close(); }
 });
@@ -1844,7 +1962,7 @@ conn.close()
 `);
   const server = await memoryServer({threshold: 2, prepare: directory => execFileSync(".venv/bin/python", ["-B", "-c", seed, directory])});
   try {
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const queue = page.getByRole("region", {name: "提炼队列"});
     await expect(queue.locator("article > strong")).toHaveCount(3);
     for (const id of [" s ", "s", " ", ""]) {
@@ -1900,7 +2018,7 @@ test("G2 v5: receipt refresh preserves the selected exact legacy scope", async (
     prepare: directory => execFileSync(".venv/bin/python", ["-B", "-c", SEED_LEGACY, directory]),
   });
   try {
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const panel = page.getByRole("tabpanel", {name: "语义记忆"});
     await panel.getByLabel("新主题").fill("饮食");
     await panel.getByLabel("新事实").fill("legacy scoped fact");
@@ -1937,7 +2055,7 @@ test("G2 v5: late pre-confirmation receipt cannot restore needs-scope progress",
     prepare: directory => execFileSync(".venv/bin/python", ["-B", "-c", SEED_LEGACY, directory]),
   });
   try {
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const panel = page.getByRole("tabpanel", {name: "语义记忆"});
     await panel.getByLabel("新主题").fill("饮食");
     await panel.getByLabel("新事实").fill("legacy scoped fact");
@@ -1987,7 +2105,7 @@ test("G2 v5: a revised scope requires a new explicit selection", async ({page}) 
     prepare: directory => execFileSync(".venv/bin/python", ["-B", "-c", SEED_LEGACY, directory]),
   });
   try {
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const panel = page.getByRole("tabpanel", {name: "语义记忆"});
     await panel.getByLabel("新主题").fill("饮食");
     await panel.getByLabel("新事实").fill("legacy scoped fact");
@@ -2035,7 +2153,7 @@ test("G2 v6: late abort is ignored and the coalesced query runs", async ({page})
     prepare: directory => execFileSync(".venv/bin/python", ["-B", "-c", SEED_LEGACY, directory]),
   });
   try {
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const panel = page.getByRole("tabpanel", {name: "语义记忆"});
     await panel.getByLabel("新主题").fill("饮食");
     await panel.getByLabel("新事实").fill("legacy scoped fact");
@@ -2089,7 +2207,7 @@ test("G2 v6: late truncated-json is ignored and the coalesced query runs", async
     prepare: directory => execFileSync(".venv/bin/python", ["-B", "-c", SEED_LEGACY, directory]),
   });
   try {
-    await page.goto(server.origin + "/memory");
+    await openMemory(page, server.origin + "/memory");
     const panel = page.getByRole("tabpanel", {name: "语义记忆"});
     await panel.getByLabel("新主题").fill("饮食");
     await panel.getByLabel("新事实").fill("legacy scoped fact");
@@ -2145,6 +2263,7 @@ test("G2 v6: retained complete deletion rechecks on invalidation and reconnect w
     await other.command({operation_id:"reopen-seed",kind:"semantic",action:"save",payload:{subject:"cleanup",fact:"fact"}});
     await page.goto(server.origin + "/memory");
     await stream.connect();
+    await expandMemory(page);
     const panel = page.getByRole("tabpanel", {name:"语义记忆"});
     await panel.getByRole("button", {name:"查看详情",exact:true}).click();
     await panel.getByRole("button", {name:"删除",exact:true}).click();

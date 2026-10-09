@@ -1,0 +1,449 @@
+{
+  "scope": "Independent S06 complete Spec review: static identity and applicability checks only",
+  "base": "6c152d62c2aec40a14d8164bad9e902141e31724",
+  "head": "48cf21162bd59d066669fe9a82cc795e1b3d3eb4",
+  "tree": "f495edbe74a00484c177953417c5def8bd297ecf",
+  "clean": true,
+  "files": [
+    "src/agent_alfred/gateway/web/assets.py",
+    "src/agent_alfred/ops/static/aggregation.js",
+    "src/agent_alfred/ops/static/behaviour.css",
+    "src/agent_alfred/ops/static/behaviour.js",
+    "src/agent_alfred/ops/static/index.html",
+    "src/agent_alfred/ops/static/pages.js",
+    "src/agent_alfred/ops/static/routing-statistics.js",
+    "src/agent_alfred/ops/static/topology.js",
+    "tests/browser/aggregation.spec.js",
+    "tests/browser/behaviour.spec.js",
+    "tests/browser/routing-statistics.spec.js",
+    "tests/browser/routing.spec.js",
+    "tests/browser/topology.spec.js"
+  ],
+  "diff_sha256": "7c9908127aee9c9ea6062daa643880b5b1f5aebe6316086fec21d91a8815597e",
+  "sources": [
+    {
+      "source_id": "issue-87:P02",
+      "sha256": "2fa2d73fb9537efee68da6a558d617946d84ec1e887e91c80c0219fa5048e1d4",
+      "owners": [
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "S09",
+        "S10"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-87:CE-03",
+      "sha256": "d0c469c7fbfa51090b8bf8aeb87f1a51a2e3aa1ffc339f253d60579defcb5aa1",
+      "owners": [
+        "S02",
+        "S06"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-87:CE-24",
+      "sha256": "28e18b26defdd1353d420875e1a18eacd7ea6426ae8c4bca2296ce4b7347a0be",
+      "owners": [
+        "S02",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "S10"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-87:section-12",
+      "sha256": "08f813b4b1416914ba886b5fac53f12fbee68844a98ce31a4f75c7190ddd781c",
+      "owners": [
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "S09",
+        "S10",
+        "S11"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-87:section-13",
+      "sha256": "39e56e543398d16c123d944df816bbe99a75da1944e5ab6e832c3c057bcbb386",
+      "owners": [
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "S10",
+        "S11"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-89:M15",
+      "sha256": "8416e142ee3b9ea1b3f04f263c3eaaf8ba31fd6dc143ff7906149a0cd996f4b7",
+      "owners": [
+        "S03",
+        "S06"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-89:M16",
+      "sha256": "ebcbc40311aeab80e56249ff2c4640db5af124e65d039485fae3653d8e9caffe",
+      "owners": [
+        "S01",
+        "S02",
+        "S03",
+        "S06"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-89:D13",
+      "sha256": "eb711a40bb05d210ace6126149734cc6633a3c6665d6989bee68a0275ca30a3d",
+      "owners": [
+        "S01",
+        "S02",
+        "S03",
+        "S05",
+        "S06",
+        "S09"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:section-01",
+      "sha256": "4647870bf9ab837405e22e4d13858f4cd03f052d9fb078e3127729f8be4f048f",
+      "owners": [
+        "S05",
+        "S06",
+        "S07",
+        "S11"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:section-02",
+      "sha256": "22bae433842143a06f01c6ab0f170ea034b471dd9ccc34262087520f4bc7e108",
+      "owners": [
+        "S05",
+        "S06",
+        "S07",
+        "S11"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:R01",
+      "sha256": "ebbc55dc3a8523729e54c316e0517c1c5c3bd6814e8aa835bdf1ac182c7b2460",
+      "owners": [
+        "S05",
+        "S06",
+        "S07"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:R02",
+      "sha256": "3b72fceec695b53f15a177fe957f16000f241b84396dfa837729ffe74c42437d",
+      "owners": [
+        "S05",
+        "S06",
+        "S07"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:R03",
+      "sha256": "042bc3dee89e84238a1197ff7848a27dfc413322d5d5cf1095055b1938d41c8a",
+      "owners": [
+        "S05",
+        "S06",
+        "S07"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:R06",
+      "sha256": "bc47cc6437318f5ece227d410109e1cae5b4abbd62987a1d0e9ca24b6c112551",
+      "owners": [
+        "S06"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:R07",
+      "sha256": "de1b4f1442e9eab818538b387c5a81370506fa5806cf266e342053980d3085f3",
+      "owners": [
+        "S06"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:R09",
+      "sha256": "ba12300608a2e294a760b865425db20bee294ce6b7e459a23b97cdd5bbd169ff",
+      "owners": [
+        "S05",
+        "S06",
+        "S07"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:section-12",
+      "sha256": "e4256c82b39e166283717d538a80625748ed1751c59f9aa1fe226aa649e99af4",
+      "owners": [
+        "S05",
+        "S06",
+        "S07",
+        "S11"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:P06",
+      "sha256": "ce3d84d5097e43d58946a423645a862def3a37191ee53cc852744ab48ef25c57",
+      "owners": [
+        "S05",
+        "S03",
+        "S06",
+        "S10"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:P10",
+      "sha256": "b7e55ce65fab4443bc31483b256b85e4a5db4927815323aef63c67b933cd5a85",
+      "owners": [
+        "S06",
+        "S03"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:P11",
+      "sha256": "a40cae6206506dde0cab43ff7413e222e11692f2668a552d6bb11b5fff0d7137",
+      "owners": [
+        "S06"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:P12",
+      "sha256": "135e917a926b757a09bdbd783ebedf1e7bfc64234293cb2e52438d735ef80b9c",
+      "owners": [
+        "S06"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:P13",
+      "sha256": "a6557e4340f968fc58a9962ef56f73c563544f258473b00132bc5b08c5a5e826",
+      "owners": [
+        "S06",
+        "S02",
+        "S03",
+        "S05"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:P17",
+      "sha256": "6025a0de9235d9ff196697dde490e3d8c7f1e7f0128faf8e9d772ec62d65211c",
+      "owners": [
+        "S02",
+        "S05",
+        "S06",
+        "S07"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:P18",
+      "sha256": "a095f58329aa5013fc29ff42a4161f878440fe080706201581f9dac64cd81625",
+      "owners": [
+        "S02",
+        "S05",
+        "S06",
+        "S07"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:CE-13",
+      "sha256": "64840dd93af04d6c87ac28521228913ee435c131d8dce88dae2825899ef6a1da",
+      "owners": [
+        "S06"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:CE-14",
+      "sha256": "18c26f298eb132822470765e4ee994b1075888f3ef8f1e6e5d774448e39139a2",
+      "owners": [
+        "S06"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:CE-15",
+      "sha256": "1d85d1493155520a5d6cbf439a5edb8243de40cf17fe8b012b79f7a8241d53ee",
+      "owners": [
+        "S06"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:CE-16",
+      "sha256": "9149f800e89db7fe7f3d31703dade7d0a6fde33adbd80ceeb1f88248bfa6004f",
+      "owners": [
+        "S06"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:CE-17",
+      "sha256": "af51c71dcc54d05c2512d6c171a15bc07d51b4d6fccd285c1c937d706d101fc5",
+      "owners": [
+        "S06"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:CE-18",
+      "sha256": "c12c84f02f03303225b31295e7a55c7f08ace6b6adf53c00b1d5cb0180e30b7b",
+      "owners": [
+        "S06",
+        "S02",
+        "S03"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:CE-19",
+      "sha256": "3c2fee069822460b8c2f19a3f038fd317737c1a3e1345bd7a1baa07f296a334c",
+      "owners": [
+        "S06",
+        "S02",
+        "S03"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:CE-20",
+      "sha256": "e31d5331bc1f10f5260959a5949f8b4a114cefa9775d553759264e6b0c0b7292",
+      "owners": [
+        "S06",
+        "S05"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:CE-26",
+      "sha256": "fcfd30e614f391e70582b726536b03931d5cc1d0c5065c5346b2d1e9d6a73aa4",
+      "owners": [
+        "S05",
+        "S06",
+        "S07"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:CE-27",
+      "sha256": "30723c45362a32a61488e318ae688a0251526ec6d3980e6b0d95ce84b005cd9e",
+      "owners": [
+        "S02",
+        "S05",
+        "S06",
+        "S07"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:CE-28",
+      "sha256": "aa953f62205e86c5c192e44d8962c53085118e0f1b9acb2e0aeb68dd4bf30486",
+      "owners": [
+        "S02",
+        "S05",
+        "S06",
+        "S07"
+      ],
+      "result": "matched"
+    },
+    {
+      "source_id": "issue-90:CE-29",
+      "sha256": "eb5adcc01b391939ca7abe2495d2fd5a2d5167b690d11c6d7aa912e727e3c94a",
+      "owners": [
+        "S06",
+        "S05"
+      ],
+      "result": "matched"
+    }
+  ],
+  "acceptance_ids": [
+    "AC01",
+    "AC02",
+    "AC03",
+    "AC04",
+    "AC05",
+    "AC06",
+    "AC07",
+    "AC08",
+    "AC09",
+    "AC10",
+    "AC13",
+    "AC14",
+    "AC16",
+    "AC17",
+    "AC18",
+    "AC19",
+    "AC21",
+    "AC22",
+    "AC23",
+    "AC25",
+    "AC26"
+  ],
+  "evidence": [
+    {
+      "round": "r1",
+      "files": 212,
+      "manifest_sha256": "d8381ea075522c6824d52e5f6d3a7ed20a01579aab7eaca9ee503d4baf2e7b30",
+      "mismatches": []
+    },
+    {
+      "round": "r2",
+      "files": 78,
+      "manifest_sha256": "6bd3578c8907bd5a50cc0b81bddcdec3eaf63165b651b7424fd08e1cc449bffd",
+      "mismatches": []
+    }
+  ],
+  "accepted_seams_match": true,
+  "resources": 31,
+  "packages": [
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S06/r2/dist-candidate/agent_alfred-0.1.0-py3-none-any.whl",
+      "sha256": "2d21ffc391fff9378fbe0f7ced7dbcf38d5de0ac6971958be0f15e3b2ded654c"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S06/r2/dist-candidate/agent_alfred-0.1.0.tar.gz",
+      "sha256": "46afad08d31f2927c528983df64b151b07f6b6b78601e265a7ef86add78ee3f5"
+    }
+  ],
+  "product_tests_rerun": false,
+  "errors": [],
+  "result": "PASS"
+}

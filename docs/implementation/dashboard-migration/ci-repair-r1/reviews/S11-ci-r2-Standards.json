@@ -1,0 +1,426 @@
+{
+  "created_at": "2026-10-09T06:30:03.606393+00:00",
+  "candidate": "4da39e52194e62f0f23637a83c8556069eb6a07d",
+  "tree": "4ce90f7a91c21a9a5c14834e352500b5088cb405",
+  "src_tree": "598ca385e9c873a2f67815e0f5c638b6b4b85ffe",
+  "package_source_tree": "8496b4a454f9a84b9a1f0b6c8c507e0e0387e1b4",
+  "base": "37cd0180fd5222d0753a0f3203ae56b1df6e0f0a",
+  "supersedes": "b21451fb4674ce693cec2d53d16bc94647fa4965",
+  "review_mode": "read-only fixed Git objects; no reviewer product test execution",
+  "worktree_status_observed": "?? tmp/\n",
+  "file_hashes": {
+    "src/agent_alfred/ops/static/app.js": "eef37f4b0a7f18deb007fcebe230b1a8cb50a7959a6574f8695a4ff4e2ce0e00",
+    "src/agent_alfred/ops/static/shell.js": "d21a55537fdc484701bf4d0fb0614993ea09bf0258b07b03f54c5630f39e2665",
+    "tests/browser/inbox-run-navigation.spec.js": "a78c84b8dbee0a41fc6039a357aee6ca18f980c5a35e0d2aefaee67ec8a08bbd",
+    "tests/browser/mainbar-empty-identity.spec.js": "8904b15637462cfd53db5566a645bce2a70f1587ff6c3f9f5158f01a82b6f409",
+    "tests/browser/mainbar-location.spec.js": "0e679a5f33b26511a532acc56234ae8910ac05a75416191a3b66d22d5cb09ca0",
+    "tests/browser/session-create-race.spec.js": "da7922d8d3f115a076dc85695462ccba70bfa7825c920085ec68be5ccbbea6f9"
+  },
+  "evidence": {
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/creation-red.log": {
+      "sha256": "5f7ea828e4d6820b6775b74c181dc19359be8ef3be042fa392d1cb9dd4a788d8",
+      "bytes": 6721
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/empty-identity-red.log": {
+      "sha256": "2eb2628ac754ca130a40a0b0dbcdb6f7ee702d57810d3c775f6d1da4043e9671",
+      "bytes": 3564
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/opener-focus-red.log": {
+      "sha256": "005a5ce520a13345a52516b0367b9ba531e6be4beb1afa57440ef5f9b5b8d0aa",
+      "bytes": 3932
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/affected-green-01.log": {
+      "sha256": "82ea513bba43951ad3a4bda13a9794b191759729454d063a2a372b3883aef402",
+      "bytes": 3826
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/affected-green-02.log": {
+      "sha256": "6c12e639ff06b807ae98f2fc391182dfba80026f8998e4d5c549eacbfa7ddd76",
+      "bytes": 7601
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/affected-green-03.log": {
+      "sha256": "c5d226603228b6c0fdb0664273932e4bce66fa54c0965f90017c98a73027b122",
+      "bytes": 4271
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/typecheck-02.log": {
+      "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f",
+      "bytes": 29
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/python-assets-protocol-01.log": {
+      "sha256": "a49716bea29ccd882382b19c1580803815ade1a884221197a789e757764c6928",
+      "bytes": 603
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/trace-order.json": {
+      "sha256": "4864c96e3a7ce3687d7fcca2c4908c530637730a20c5423a5940e02058687ed2",
+      "bytes": 27175
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/empty-identity-trace-order.json": {
+      "sha256": "d8ca74a8774bea2eae0903597c4f74af794f234c5e3afd6b7712630dff5ca705",
+      "bytes": 3980
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/controlled-red-tests.patch": {
+      "sha256": "b995e560be117022d5f0925b16167d4aa57f92f9131f7e53b3df61c088417f14",
+      "bytes": 4172
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/touch-probe-01.log": {
+      "sha256": "f3cdbf1d0d9abc9025f0e6a224b3f196e575ac784be486202c6f3545a7ca73e7",
+      "bytes": 3344
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/affected-green-04.log": {
+      "sha256": "e564aa86ef911ea4deb1c8412606f8af91c6e9b73197dc98251f5abb4d3360b4",
+      "bytes": 4678
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/typecheck-03.log": {
+      "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f",
+      "bytes": 29
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/python-assets-protocol-02.log": {
+      "sha256": "0a2a4c862daf524885b11e7e77d27c542ecaabc1d92cc5e7342359974caec777",
+      "bytes": 603
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/browser-full-01-result.json": {
+      "sha256": "897fb9c9b77111f4b197737f94dbc93d02a8129d6b218253432053d9d16bc269",
+      "bytes": 515
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/browser-full-01-interruption.json": {
+      "sha256": "a236a35f45f5e53bd19ab767f020bff131946007c5c9259a04eb8642968fd7cb",
+      "bytes": 655
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/stability-01.log": {
+      "sha256": "d802456168a4ae541f8fea06dfe7ca684f9ee9d44c262feb6271af0d536ed859",
+      "bytes": 7625
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/stability-01-result.json": {
+      "sha256": "f9e38f66dd110243c97e562ebddb4817a1316eba37ed9f5472a3e056d217bb50",
+      "bytes": 390
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/touch-probe.spec.mjs": {
+      "sha256": "0ea08e69e0e0f273983fcdba936a1d969f51ebe92df469310f8fda7211bf914b",
+      "bytes": 1350
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/touch-probe.config.mjs": {
+      "sha256": "808470b24f2515f5cf49e052929639740f4e4c472889b131201901cd2d66c9ba",
+      "bytes": 826
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S11-ci-r1-Standards.md": {
+      "sha256": "7254422436409a6999dc5fb90f665283bad71f471a039ea3542383c69570c5f1",
+      "bytes": 1106
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S11-ci-r1-Standards-details.md": {
+      "sha256": "fc8613eba310403100c7f07c3e5901d1bd250106c39ad1688548eae0a4d7cf38",
+      "bytes": 2964
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S11-ci-r1-Standards.json": {
+      "sha256": "6f4c88a9d3c9c7beaf54e882d95d59cb5cbc83a5ab8ee97398bd3df3e7d5739d",
+      "bytes": 3538
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/REPAIR-HANDOFF.json": {
+      "sha256": "c210c5e87ec2475ea30c5b3cb26980f0dc293fc1be9854c1ff0a9431bef411c1",
+      "bytes": 6843
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/REPAIR-HANDOFF.md": {
+      "sha256": "261371727d87c0360f8c93ff99f904df112ea3f310b372fd11944b0389880776",
+      "bytes": 4993
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/REPAIR-HANDOFF-b214.md": {
+      "sha256": "e9bdc5f37e800a102da9559ddfda5c82868889d5b42cfb6a7692e0c694ef05d8",
+      "bytes": 3620
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/REPAIR-HANDOFF-b214.json": {
+      "sha256": "3c4254673e741a67e736302aaaef8cf5aab480e8dfebb20a368981523ff59694",
+      "bytes": 4677
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/startup-navigation-probe-01.log": {
+      "sha256": "bf7ea513ef903a19a205e4dab409950eac2ebc0e164e5d22151db83b88f1ca9c",
+      "bytes": 3693
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/startup-navigation-probe-artifacts/.last-run.json": {
+      "sha256": "19d0dea1c40f09c6e1cf290284eeeac7830dd7a21656e03432c6cddbb69b85b5",
+      "bytes": 96
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/startup-navigation-probe-artifacts/startup-navigation-probe-r-92179-ut-a-stranded-loading-state/error-context.md": {
+      "sha256": "3c2a705d96385c9ae03db654d73716bbb9124be6ec0f9466d83b24db1a32fa61",
+      "bytes": 3426
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/startup-navigation-probe-artifacts/startup-navigation-probe-r-92179-ut-a-stranded-loading-state/test-failed-1.png": {
+      "sha256": "6db37649ef32d4f293c3145dba8facb3b9a4f7f91e0d95aaccc7b04d07e5fbfb",
+      "bytes": 130311
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/startup-navigation-probe-artifacts/startup-navigation-probe-r-92179-ut-a-stranded-loading-state/trace.zip": {
+      "sha256": "21cdd00d475d20b556feff5e83b5a495a6002e7c173bd3a1576973fd69c24faa",
+      "bytes": 909132
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/startup-navigation-probe.config.mjs": {
+      "sha256": "bddfa6887436d668da27e3ff2e7baffdd9de8a461eec41df3470289cbe36ef2f",
+      "bytes": 852
+    },
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/startup-navigation-probe.spec.mjs": {
+      "sha256": "8a84f3ce4d3221ff4720519199b2aa1b2ec90653e1c684dafd3e8ecb1c57c4f9",
+      "bytes": 2150
+    }
+  },
+  "checks": [
+    {
+      "name": "candidate tree",
+      "passed": true
+    },
+    {
+      "name": "src tree",
+      "passed": true
+    },
+    {
+      "name": "package source tree",
+      "passed": true
+    },
+    {
+      "name": "direct parent",
+      "passed": true
+    },
+    {
+      "name": "base parent",
+      "passed": true
+    },
+    {
+      "name": "fixed diff check",
+      "passed": true
+    },
+    {
+      "name": "six-file total scope",
+      "passed": true,
+      "files": [
+        "src/agent_alfred/ops/static/app.js",
+        "src/agent_alfred/ops/static/shell.js",
+        "tests/browser/inbox-run-navigation.spec.js",
+        "tests/browser/mainbar-empty-identity.spec.js",
+        "tests/browser/mainbar-location.spec.js",
+        "tests/browser/session-create-race.spec.js"
+      ]
+    },
+    {
+      "name": "two-file successor scope",
+      "passed": true,
+      "files": [
+        "src/agent_alfred/ops/static/app.js",
+        "tests/browser/session-create-race.spec.js"
+      ]
+    },
+    {
+      "name": "previously reviewed unchanged src/agent_alfred/ops/static/shell.js",
+      "passed": true
+    },
+    {
+      "name": "previously reviewed unchanged tests/browser/inbox-run-navigation.spec.js",
+      "passed": true
+    },
+    {
+      "name": "previously reviewed unchanged tests/browser/mainbar-empty-identity.spec.js",
+      "passed": true
+    },
+    {
+      "name": "previously reviewed unchanged tests/browser/mainbar-location.spec.js",
+      "passed": true
+    },
+    {
+      "name": "handoff candidate identity",
+      "passed": true
+    },
+    {
+      "name": "handoff evidence creation-red.log",
+      "passed": true
+    },
+    {
+      "name": "handoff evidence empty-identity-red.log",
+      "passed": true
+    },
+    {
+      "name": "handoff evidence opener-focus-red.log",
+      "passed": true
+    },
+    {
+      "name": "handoff evidence affected-green-01.log",
+      "passed": true
+    },
+    {
+      "name": "handoff evidence affected-green-02.log",
+      "passed": true
+    },
+    {
+      "name": "handoff evidence affected-green-03.log",
+      "passed": true
+    },
+    {
+      "name": "handoff evidence typecheck-02.log",
+      "passed": true
+    },
+    {
+      "name": "handoff evidence python-assets-protocol-01.log",
+      "passed": true
+    },
+    {
+      "name": "handoff evidence trace-order.json",
+      "passed": true
+    },
+    {
+      "name": "handoff evidence empty-identity-trace-order.json",
+      "passed": true
+    },
+    {
+      "name": "handoff evidence controlled-red-tests.patch",
+      "passed": true
+    },
+    {
+      "name": "handoff evidence touch-probe-01.log",
+      "passed": true
+    },
+    {
+      "name": "handoff evidence affected-green-04.log",
+      "passed": true
+    },
+    {
+      "name": "handoff evidence typecheck-03.log",
+      "passed": true
+    },
+    {
+      "name": "handoff evidence python-assets-protocol-02.log",
+      "passed": true
+    },
+    {
+      "name": "handoff evidence browser-full-01-result.json",
+      "passed": true
+    },
+    {
+      "name": "handoff evidence browser-full-01-interruption.json",
+      "passed": true
+    },
+    {
+      "name": "first review evidence preserved creation-red.log",
+      "passed": true
+    },
+    {
+      "name": "first review evidence preserved empty-identity-red.log",
+      "passed": true
+    },
+    {
+      "name": "first review evidence preserved opener-focus-red.log",
+      "passed": true
+    },
+    {
+      "name": "first review evidence preserved affected-green-01.log",
+      "passed": true
+    },
+    {
+      "name": "first review evidence preserved affected-green-02.log",
+      "passed": true
+    },
+    {
+      "name": "first review evidence preserved affected-green-03.log",
+      "passed": true
+    },
+    {
+      "name": "first review evidence preserved typecheck-02.log",
+      "passed": true
+    },
+    {
+      "name": "first review evidence preserved python-assets-protocol-01.log",
+      "passed": true
+    },
+    {
+      "name": "first review evidence preserved trace-order.json",
+      "passed": true
+    },
+    {
+      "name": "first review evidence preserved empty-identity-trace-order.json",
+      "passed": true
+    },
+    {
+      "name": "first review evidence preserved controlled-red-tests.patch",
+      "passed": true
+    },
+    {
+      "name": "first review evidence preserved stability-01.log",
+      "passed": true
+    },
+    {
+      "name": "first review evidence preserved stability-01-result.json",
+      "passed": true
+    },
+    {
+      "name": "first review evidence preserved touch-probe-01.log",
+      "passed": true
+    },
+    {
+      "name": "first review evidence preserved touch-probe.spec.mjs",
+      "passed": true
+    },
+    {
+      "name": "first review evidence preserved touch-probe.config.mjs",
+      "passed": true
+    },
+    {
+      "name": "first FAIL report preserved S11-ci-r1-Standards.md",
+      "passed": true
+    },
+    {
+      "name": "first FAIL report preserved S11-ci-r1-Standards-details.md",
+      "passed": true
+    },
+    {
+      "name": "first FAIL report preserved S11-ci-r1-Standards.json",
+      "passed": true
+    },
+    {
+      "name": "preserved handoff b214 binding",
+      "passed": true
+    },
+    {
+      "name": "interrupted browser stays historical incomplete",
+      "passed": true
+    },
+    {
+      "name": "24 final cases log",
+      "passed": true
+    },
+    {
+      "name": "29 assets protocol log",
+      "passed": true
+    },
+    {
+      "name": "tracked worktree unchanged",
+      "passed": true
+    }
+  ],
+  "audit_counts": {
+    "passed": 54,
+    "failed": 0
+  },
+  "result": "FAIL",
+  "hard_findings": [
+    {
+      "id": "S11-CI-STD-02",
+      "priority": "P2",
+      "file": "src/agent_alfred/ops/static/app.js",
+      "line": 316,
+      "title": "Actual navigation before the first page mount leaves the previous locate operation loading",
+      "cause": "shell.mount increments navigationGeneration before the !started return; no page controller exists to call retireLocation. The late-result owner guard returns retired without removing locationTarget.loading.",
+      "evidence": "S11/ci-r1/startup-navigation-probe-01.log: one real-browser failure with reading-status still 正在定位指定记录… after navigation to Database",
+      "required_behavior": "Confirmed actual page navigation immediately aborts/retires obsolete location state; same target/cancelled leave/first automatic mount retain current intent, and old completion cannot clear a newer location."
+    }
+  ],
+  "optional_smells": [],
+  "resolved_findings": [
+    {
+      "id": "S11-CI-STD-01",
+      "prior_result": "FAIL",
+      "current_result": "RESOLVED",
+      "original_evidence_preserved": true
+    }
+  ],
+  "acceptance_scope": "code Standards only; successor native200/artifact installation/G08/full browser/CI not adjudicated; genuine native IME remains BLOCKED",
+  "product_tests_run_by_reviewer": false,
+  "provisional_reason": "Provisional metadata-only PASS withheld before final report; independently read real startup-navigation RED and fixed code.",
+  "finalized_at": "2026-10-09T06:34:54.926440+00:00",
+  "preserved_provisional": {
+    "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S11-ci-r2-Standards-provisional.json",
+    "sha256": "71bb3cafa8020c129b34d50ff1056e2a62e67835552313952d1921cb6ede6cb4"
+  },
+  "probe_trace_limit": "Original trace includes a swallowed route.fulfill Route is already handled error on release. Actual route.fetch status 200 and the persistent visible loading failure are verified. This review does not claim controlled old-200 delivery succeeded or infer the new-location isolation result from that trace."
+}

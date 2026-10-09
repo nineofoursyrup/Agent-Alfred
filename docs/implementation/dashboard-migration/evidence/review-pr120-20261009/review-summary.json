@@ -1,0 +1,20 @@
+{
+  "pull_request": "https://github.com/nineofoursyrup/Agent-Alfred/pull/120",
+  "base": "22c8720e1ec874fd012cc79b086cd8aace4c79b6",
+  "head": "11dcc66f18ceb264ade1c1bcc1b48287dc4f1516",
+  "tree": "41adbb9ad2479d16228c68f8c228882c6cd6ae91",
+  "review_result": "CHANGES_REQUIRED",
+  "standards": {"findings": 2, "worst_priority": "P2", "report": "standards/REPORT.md"},
+  "spec": {"findings": 2, "worst_priority": "P2", "report": "spec/REPORT.md"},
+  "findings": [
+    {"id": "STD-120-01", "priority": "P2", "file": "src/agent_alfred/ops/static/models.js", "line": 223, "summary": "Unpin receipt lost across disconnect leaves model editors disabled after a verified read."},
+    {"id": "STD-120-02", "priority": "P2", "file": "src/agent_alfred/ops/static/run-fields.js", "line": 40, "related_file": "src/agent_alfred/ops/static/overview.js", "summary": "Purpose maps use probe instead of inference_probe and mislabel known inference runs as unknown."},
+    {"id": "SP-120-01", "priority": "P2", "file": "src/agent_alfred/ops/static/app.js", "line": 316, "summary": "An exact-location response can still apply after disconnect retires connection qualification."},
+    {"id": "SP-120-02", "priority": "P2", "file": "src/agent_alfred/ops/static/app.js", "line": 353, "summary": "Multiple exact locations leave an earlier target in ordinary history after return to latest, without a gap notice."}
+  ],
+  "existing_acceptance_blocker": "Native Chinese IME evidence remains BLOCKED (AC03).",
+  "verification": "Targeted offline browser reproductions; existing deterministic suite results reused. No full-suite rerun. Real Host/SQLite/HTTP for MainBar; offline event injection and response gating explicitly controlled.",
+  "plugin": "Code Review CI diagnostics unavailable: Connect your GitHub account to continue. Independent local Standards/Spec reviews completed; no diagnostic CLI fallback.",
+  "final_state": {"pr": "OPEN", "draft": true, "issues_109_to_119": "OPEN", "worktree": "clean", "source_changes": false, "github_mutations": false},
+  "cleanup": "Owned temporary browsers and fixture services closed; no real provider or user business state accessed."
+}

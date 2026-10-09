@@ -1,0 +1,21 @@
+{
+  "reviewed_at": "2026-10-09T10:51:15.814303+00:00",
+  "head": "11dcc66f18ceb264ade1c1bcc1b48287dc4f1516",
+  "manifest_sha256": "274775393b6f209350e45f2920b8abb5daa814f31160246421fbe84d1c822984",
+  "no_drift": true,
+  "scope": "7 uncommitted files; four original P2 fixes and direct regressions",
+  "standards": {
+    "findings": 0,
+    "report": "standards/REPORT.md"
+  },
+  "spec": {
+    "findings": 0,
+    "report": "spec/SPEC-RECHECK.md"
+  },
+  "raw_log_passes_verified": 114,
+  "claims_without_raw_pass": 0,
+  "full_suite_rerun": false,
+  "existing_acceptance_blocker": "Native Chinese IME BLOCKED",
+  "remote_pr_state": "OPEN/Draft; head unchanged 11dcc66f18ceb264ade1c1bcc1b48287dc4f1516",
+  "repository_or_github_mutations": false
+}

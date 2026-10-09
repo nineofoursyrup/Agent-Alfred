@@ -1,0 +1,6 @@
+{
+  "chrome": "155.0.8059.39",
+  "macOS": "27.2",
+  "input_source_probe": "com.bytedance.inputmethod.doubaoime.pinyin\n豆包输入法\n",
+  "operator_input_source": "User reports 已切换到拼音－简体; system TIS query from helper process reports 豆包输入法. Exact source discrepancy retained; native Chinese composition observed."
+}

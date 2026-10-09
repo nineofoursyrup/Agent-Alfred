@@ -1,0 +1,18 @@
+{
+  "head": "93c87bc5bf2a38cf92e2df27c743f50f59df7620",
+  "input_anchor_id": 9223372036854775808,
+  "expected": {
+    "http": 400,
+    "code": "invalid_anchor"
+  },
+  "method": "real isolated Dashboard HTTP with canonical anchor",
+  "first_fixture_failure": "S01-r2-anchor-repro-first.json (Redactor constructed without required secrets; no product code reached)",
+  "actual": {
+    "http": 500,
+    "body": {
+      "code": "internal_error"
+    }
+  },
+  "model_requests": 0,
+  "dashboard_closed": true
+}

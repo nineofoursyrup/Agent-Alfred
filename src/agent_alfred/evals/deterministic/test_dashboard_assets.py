@@ -12,7 +12,9 @@ from agent_alfred.gateway.web.handler import DashboardHandler, HandlerContext
 
 
 @pytest.mark.parametrize("method", ["GET", "HEAD"])
-@pytest.mark.parametrize("path", ["/", "/assets/app.js"])
+@pytest.mark.parametrize("path", [
+    "/", "/overview", "/assets/app.js", "/assets/overview.js", "/assets/overview.css",
+])
 @pytest.mark.parametrize("pending", [False, True])
 def test_static_response_preserves_headers_and_finishes_pending_body(
     method, path, pending,
@@ -43,7 +45,8 @@ def test_static_response_preserves_headers_and_finishes_pending_body(
     assert headers["Cache-Control"] == "no-store"
     assert headers["X-Content-Type-Options"] == "nosniff"
     assert headers["Content-Type"] == (
-        "text/html; charset=utf-8" if path == "/"
+        "text/html; charset=utf-8" if path in {"/", "/overview"}
+        else "text/css; charset=utf-8" if path.endswith(".css")
         else "text/javascript; charset=utf-8"
     )
     assert int(headers["Content-Length"]) > 0

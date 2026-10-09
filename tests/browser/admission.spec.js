@@ -29,7 +29,7 @@ conn.close()
     const migrated = (await response.json()).runs;
     expect(migrated.find(run => run.run_id === "uncertain-old").admission_state).toBe("unconfirmed");
     expect(migrated.find(run => run.run_id === "started-old").admission_state).toBe("admitted");
-    const rows = page.getByRole("region", {name:"运行列表"}).locator("article");
+    const rows = page.getByRole("region", {name:"运行列表"}).locator("[data-source-id]");
     const uncertain = rows.filter({has:page.locator('a[href*="uncertain-old"]')});
     const started = rows.filter({has:page.locator('a[href*="started-old"]')});
     await expect(uncertain).toContainText("准入未确认");
@@ -37,7 +37,7 @@ conn.close()
     await expect(started).not.toContainText("准入未确认");
     await expect(started).toContainText("运行终态无法确认");
     await uncertain.getByRole("link", {name:"查看运行"}).click();
-    await expect(page.getByRole("region", {name:"运行列表"})).toContainText("准入未确认");
+    await expect(page.getByRole("region", {name:"运行摘要"})).toContainText("准入未确认");
   } finally {
     await server.close();
   }

@@ -1,0 +1,163 @@
+
+> test:browser
+> playwright test tests/browser/mainbar-location.spec.js --grep successive exact|exact location retires --output /Users/nineofour/.codex/dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/red-browser
+
+
+Running 3 tests using 1 worker
+
+(node:56976) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/browser/mainbar-location.spec.js:30:1 › successive exact locations stay separate until ordinary history or SSE owns the same records (4.5s)
+(node:57009) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 tests/browser/mainbar-location.spec.js:67:51 › exact location retires on offline and cannot overwrite a new location after reconnect (4.4s)
+(node:57046) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  3 tests/browser/mainbar-location.spec.js:67:51 › exact location retires on sse-error and cannot overwrite a new location after reconnect (4.4s)
+
+
+  1) tests/browser/mainbar-location.spec.js:30:1 › successive exact locations stay separate until ordinary history or SSE owns the same records 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('#messages [data-run-id="a"]')
+    Expected: 0
+    Received: 1
+    Timeout:  4000ms
+
+    Call log:
+      - Expect "toHaveCount" locator('#messages [data-run-id="a"]') with timeout 4000ms
+      - waiting for locator('#messages [data-run-id="a"]')
+        12 × locator resolved to 1 element
+           - unexpected value "1"
+
+
+      44 |   });
+      45 |   await locate(page,session,'a');await locate(page,session,'b');
+    > 46 |   await expect(page.locator('#messages [data-run-id="a"]')).toHaveCount(0);
+         |                                                             ^
+      47 |   await expect(page.locator('#reading-status')).toContainText('相邻历史尚未读取');
+      48 |   await page.getByRole('button',{name:'回到最新',exact:true}).click();
+      49 |   await expect(page.locator('#messages [data-run-id]')).toHaveCount(25);
+        at /Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/tests/browser/mainbar-location.spec.js:46:61
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/red-browser/mainbar-location-successiv-f87e7-r-SSE-owns-the-same-records/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/red-browser/mainbar-location-successiv-f87e7-r-SSE-owns-the-same-records/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/red-browser/mainbar-location-successiv-f87e7-r-SSE-owns-the-same-records/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/red-browser/mainbar-location-successiv-f87e7-r-SSE-owns-the-same-records/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) tests/browser/mainbar-location.spec.js:67:51 › exact location retires on offline and cannot overwrite a new location after reconnect 
+
+    Error: expect(locator).not.toContainText(expected) failed
+
+    Locator: locator('#reading-status')
+    Expected substring: not "正在定位"
+    Received string: "正在定位指定记录…"
+    Timeout: 4000ms
+
+    Call log:
+      - Expect "not toContainText" locator('#reading-status') with timeout 4000ms
+      - waiting for locator('#reading-status')
+        12 × locator resolved to <p role="status" id="reading-status">正在定位指定记录…</p>
+           - unexpected value "正在定位指定记录…"
+
+
+      77 |   else await emit(page,'error',{});
+      78 |   await expect.poll(()=>page.evaluate(async()=>(await import('/assets/app.js')).dashboard.runtime().connected)).toBe(false);
+    > 79 |   await expect(page.locator('#reading-status')).not.toContainText('正在定位');
+         |                                                     ^
+      80 |   expect((await locate(page,session,'while-offline')).status).toBe('blocked');
+      81 |   expect(reads).toBe(1);
+      82 |   await page.evaluate(()=>window.dispatchEvent(new Event('online')));
+        at /Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/tests/browser/mainbar-location.spec.js:79:53
+
+    Error: page.evaluate: Test ended.
+
+       5 | // controlled boundaries; the composed real read model is verified by S01/S03.
+       6 | async function locate(page, session, run='early') {
+    >  7 |   return page.evaluate(async ({session,run}) => {
+         |               ^
+       8 |     const {dashboard}=await import('/assets/app.js');
+       9 |     return dashboard.locateReply({process_instance_id:'test-process',session_id:session,run_id:run,action_id:'explicit-'+run});
+      10 |   },{session,run});
+        at locate (/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/tests/browser/mainbar-location.spec.js:7:15)
+        at /Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/tests/browser/mainbar-location.spec.js:75:17
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/red-browser/mainbar-location-exact-loc-aebf6-ew-location-after-reconnect/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/red-browser/mainbar-location-exact-loc-aebf6-ew-location-after-reconnect/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/red-browser/mainbar-location-exact-loc-aebf6-ew-location-after-reconnect/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/red-browser/mainbar-location-exact-loc-aebf6-ew-location-after-reconnect/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) tests/browser/mainbar-location.spec.js:67:51 › exact location retires on sse-error and cannot overwrite a new location after reconnect 
+
+    Error: expect(locator).not.toContainText(expected) failed
+
+    Locator: locator('#reading-status')
+    Expected substring: not "正在定位"
+    Received string: "正在定位指定记录…"
+    Timeout: 4000ms
+
+    Call log:
+      - Expect "not toContainText" locator('#reading-status') with timeout 4000ms
+      - waiting for locator('#reading-status')
+        12 × locator resolved to <p role="status" id="reading-status">正在定位指定记录…</p>
+           - unexpected value "正在定位指定记录…"
+
+
+      77 |   else await emit(page,'error',{});
+      78 |   await expect.poll(()=>page.evaluate(async()=>(await import('/assets/app.js')).dashboard.runtime().connected)).toBe(false);
+    > 79 |   await expect(page.locator('#reading-status')).not.toContainText('正在定位');
+         |                                                     ^
+      80 |   expect((await locate(page,session,'while-offline')).status).toBe('blocked');
+      81 |   expect(reads).toBe(1);
+      82 |   await page.evaluate(()=>window.dispatchEvent(new Event('online')));
+        at /Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/tests/browser/mainbar-location.spec.js:79:53
+
+    Error: page.evaluate: Test ended.
+
+       5 | // controlled boundaries; the composed real read model is verified by S01/S03.
+       6 | async function locate(page, session, run='early') {
+    >  7 |   return page.evaluate(async ({session,run}) => {
+         |               ^
+       8 |     const {dashboard}=await import('/assets/app.js');
+       9 |     return dashboard.locateReply({process_instance_id:'test-process',session_id:session,run_id:run,action_id:'explicit-'+run});
+      10 |   },{session,run});
+        at locate (/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/tests/browser/mainbar-location.spec.js:7:15)
+        at /Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/tests/browser/mainbar-location.spec.js:75:17
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/red-browser/mainbar-location-exact-loc-d6fed-ew-location-after-reconnect/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/red-browser/mainbar-location-exact-loc-d6fed-ew-location-after-reconnect/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/red-browser/mainbar-location-exact-loc-d6fed-ew-location-after-reconnect/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/red-browser/mainbar-location-exact-loc-d6fed-ew-location-after-reconnect/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3 failed
+    tests/browser/mainbar-location.spec.js:30:1 › successive exact locations stay separate until ordinary history or SSE owns the same records 
+    tests/browser/mainbar-location.spec.js:67:51 › exact location retires on offline and cannot overwrite a new location after reconnect 
+    tests/browser/mainbar-location.spec.js:67:51 › exact location retires on sse-error and cannot overwrite a new location after reconnect 

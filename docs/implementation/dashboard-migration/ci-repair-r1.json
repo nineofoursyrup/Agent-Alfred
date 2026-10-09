@@ -1,0 +1,669 @@
+{
+  "schema_version": 1,
+  "snapshot_kind": "S11 CI repair addendum; current acceptance FAIL, fixed code reviewed, successor gates partially complete",
+  "observed_at": "2026-10-09T06:53:08.553597+00:00",
+  "overall_result": "FAIL",
+  "completion": false,
+  "candidate": {
+    "code_head": "06588168d5049040abf0a4560091d659d244ddcf",
+    "tree": "ae04fad8eff5f0eed6afb06050e4afeb6707506c",
+    "source_path": "src",
+    "source_tree": "0eaae1fbd39ec02656f4a61982ec73a06c46fe2f",
+    "package_source_path": "src/agent_alfred",
+    "package_source_tree": "91f1c1abcc26ea92be40fb5acee5fb93fbd62a0c",
+    "base": "37cd0180fd5222d0753a0f3203ae56b1df6e0f0a",
+    "commits": [
+      "b21451fb4674ce693cec2d53d16bc94647fa4965",
+      "4da39e52194e62f0f23637a83c8556069eb6a07d",
+      "06588168d5049040abf0a4560091d659d244ddcf"
+    ]
+  },
+  "original_proposal": {
+    "path": "docs/implementation/dashboard-migration/acceptance-proposal.json",
+    "sha256": "90bbc73416b33ac8428fb3f7122bea7c21c81e2eb8002b60cb5599773d174544",
+    "policy": "Immutable historical proposal; no original PASS/FAIL/UNKNOWN observation is rewritten."
+  },
+  "original_ci": [
+    {
+      "run": 37886281186,
+      "event": "pull_request",
+      "head": "37cd0180fd5222d0753a0f3203ae56b1df6e0f0a",
+      "browser_pass": 522,
+      "browser_fail": 5,
+      "result": "FAIL",
+      "url": "https://github.com/nineofoursyrup/Agent-Alfred/actions/runs/37886281186"
+    },
+    {
+      "run": 37886278313,
+      "event": "push",
+      "head": "37cd0180fd5222d0753a0f3203ae56b1df6e0f0a",
+      "browser_pass": 525,
+      "browser_fail": 2,
+      "result": "FAIL",
+      "url": "https://github.com/nineofoursyrup/Agent-Alfred/actions/runs/37886278313"
+    }
+  ],
+  "fixed_product_responsibilities": [
+    {
+      "id": "create-open-intent",
+      "files": [
+        "src/agent_alfred/ops/static/app.js",
+        "src/agent_alfred/ops/static/shell.js"
+      ],
+      "proof": "real held201, click/tap, prior Session present/absent; independent focus, editing, close, navigation, external Run and process guards retained"
+    },
+    {
+      "id": "first-automatic-mount-location",
+      "files": [
+        "src/agent_alfred/ops/static/app.js"
+      ],
+      "proof": "real present-empty IDs, held first SSE and exact-location200; automatic mount no longer retires same-page request"
+    },
+    {
+      "id": "pre-mount-navigation-retirement",
+      "files": [
+        "src/agent_alfred/ops/static/app.js",
+        "src/agent_alfred/ops/static/shell.js"
+      ],
+      "proof": "navigation commits retire immediately before old HTTP/SSE release, abort witnessed, old handler cannot clear newer location, draft/focus/noPOST preserved"
+    }
+  ],
+  "test_boundary_repairs": [
+    {
+      "test": "tests/browser/inbox-run-navigation.spec.js",
+      "reason": "Select A was explicitly refused while B Stream disconnected; now await accepted readiness and assert select true/selected A. No proven draft deletion."
+    },
+    {
+      "test": "tests/browser/mainbar-location.spec.js",
+      "reason": "Old setup/run.finished history read overlapped reconnect-only counter; drain decoded reply/history readiness first. Still exactly1 reconnect read; unrelated Run never proves saved."
+    }
+  ],
+  "current_checks": {
+    "startup_retirement_related": {
+      "result": "PASS",
+      "passed": 16,
+      "seconds": 16.5,
+      "code_head": "06588168d5049040abf0a4560091d659d244ddcf",
+      "evidence": "startup-retirement-green-01.log"
+    },
+    "typecheck": {
+      "result": "PASS",
+      "code_head": "06588168d5049040abf0a4560091d659d244ddcf",
+      "evidence": "typecheck-04.log"
+    },
+    "python_assets_protocol": {
+      "result": "PASS",
+      "passed": 29,
+      "code_head": "06588168d5049040abf0a4560091d659d244ddcf",
+      "evidence": "python-assets-protocol-03.log"
+    },
+    "full_python": {
+      "result": "PASS",
+      "basis": "Python, Python tests, dependencies and runtime unchanged; root local full 6445 PASS and prior CI6423 PASS/22 platform skips. Asset-dependent checks refreshed.",
+      "qualification": "inherited: Python, tests, dependencies and runtime remain unchanged; existing full checks are reused."
+    },
+    "startup_bounded_repeat": {
+      "result": "PASS",
+      "cases": 2,
+      "repeat_each": 5,
+      "passed": 10,
+      "failed": 0,
+      "seconds": 16.3,
+      "code_head": "06588168d5049040abf0a4560091d659d244ddcf",
+      "evidence": "ci-repair-r1/final-gates/startup-retirement-stability-result.json"
+    },
+    "build": {
+      "result": "PASS",
+      "build_head": "c96c26d1446ba97bdb7b219d79cef0b5fd001b53",
+      "code_head": "06588168d5049040abf0a4560091d659d244ddcf",
+      "evidence": "ci-repair-r1/final-gates/build-03-result.json"
+    },
+    "installed_http": {
+      "result": "PASS",
+      "build_head": "c96c26d1446ba97bdb7b219d79cef0b5fd001b53",
+      "code_head": "06588168d5049040abf0a4560091d659d244ddcf",
+      "variants": 4,
+      "http_assertions_per_variant": 100,
+      "closure_assets_per_variant": 34,
+      "routes_per_variant": 16,
+      "source_contamination": false,
+      "evidence": "ci-repair-r1/final-gates/installations-03.json",
+      "summary": "ci-repair-r1/final-gates/installations-03-result.json"
+    },
+    "G08": {
+      "result": "PASS",
+      "code_head": "06588168d5049040abf0a4560091d659d244ddcf",
+      "support_head": "8d4adbc97cf1f5d55e3d36b65da7dbf2a1a1be2a",
+      "seconds": 5.01,
+      "normal_close_exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "evidence": "ci-repair-r1/final-gates/lifecycle-01-portable.json",
+      "summary": "ci-repair-r1/final-gates/lifecycle-01-summary.json",
+      "scope": "One continuously retained new isolated state and browser tab across old/current/supported independently installed packages. No restoration or lock deletion; raw ephemeral fixture CSRF tokens omitted with explicit redaction provenance."
+    },
+    "full_browser": {
+      "result": "NOT RUN",
+      "expected_cases": 535,
+      "code_head": "06588168d5049040abf0a4560091d659d244ddcf",
+      "started_on_head": "c96c26d1446ba97bdb7b219d79cef0b5fd001b53",
+      "scope": "No full-success claim until actual terminal result; no product/test changes during this documentation successor.",
+      "execution": "RUNNING at the preserved e27 observation time; no terminal result was available in this snapshot."
+    }
+  },
+  "historical_checks": {
+    "b214_bounded": {
+      "passed": 40,
+      "candidate": "b21451fb4674ce693cec2d53d16bc94647fa4965"
+    },
+    "4da_bounded": {
+      "passed": 50,
+      "candidate": "4da39e52194e62f0f23637a83c8556069eb6a07d"
+    },
+    "4da_four_installations": {
+      "passed": 4,
+      "http_assertions_each": 100,
+      "result_file": "installations-02-result.json"
+    },
+    "b214_and_4da_full_browser": {
+      "result": "NOT RUN",
+      "exit": 130,
+      "reason": "Stopped with SIGINT before editing successors after real adjacent RED; terminal records preserved.",
+      "execution": "INCOMPLETE_SUPERSEDED; original exit130 and interruption observations remain preserved in archived outputs."
+    }
+  },
+  "native200": {
+    "result": "PASS",
+    "tested_head": "4da39e52194e62f0f23637a83c8556069eb6a07d",
+    "successor_head": "06588168d5049040abf0a4560091d659d244ddcf",
+    "assessment": "ci-repair-r1/native/successor-065-applicability.json",
+    "installed_asset_binding": "ci-repair-r1/final-gates/native-installed-binding-03.json",
+    "scope": "Reviewed unchanged native geometry/input/send/open-close/scroll applicability, now supported by final installed HTTP bytes for all34 assets and HTML across four variants. This is not a new native replay or new IME evidence. Full browser and remote CI remain separate gates.",
+    "qualification": "qualified inheritance of reviewed4da native200 observations, with final065 installed HTTP byte binding; not a new native execution."
+  },
+  "native_IME": {
+    "result": "BLOCKED",
+    "scope": "Original seven source subresponsibilities remain unverified; no new native composition evidence."
+  },
+  "independent_code_review": {
+    "Spec": "PASS 0 findings",
+    "Standards": "PASS 0 findings",
+    "head": "06588168d5049040abf0a4560091d659d244ddcf",
+    "reports": [
+      "ci-repair-r1/reviews/S11-ci-r3-Spec.md",
+      "ci-repair-r1/reviews/S11-ci-r3-Standards.md"
+    ]
+  },
+  "pending": [
+    "Revised portable addendum review",
+    "Final535 browser suite terminal result on fixed code",
+    "Final remote CI and canonical acceptance adjudication"
+  ],
+  "acceptance_boundary": {
+    "AC25": "Original37cd CI FAIL retained;065 code review PASS; final successor remote CI NOT RUN.",
+    "AC23_G01": "Original37cd final-combination FAIL retained;065 focused successors PASS and full535 RUNNING. Overall current acceptance remains FAIL pending qualified completion/adjudication.",
+    "AC03": "BLOCKED native IME",
+    "R07": "Do not restore whole PASS while IME subresponsibility unresolved",
+    "G08": "New installed same-state old22c→current065(buildc96)→supported8d4adbc PASS; earlier chain remains historical to its own artifacts."
+  },
+  "source_mapping": [
+    {
+      "source_id": "issue-87:R03",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 52,
+      "source_end_line": 68,
+      "source_text_sha256": "7a1ae851cc62b1bca3ab0764259694fb28ab0e01806de142a317621d8558346e",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC05"
+      ]
+    },
+    {
+      "source_id": "issue-87:R05",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 87,
+      "source_end_line": 104,
+      "source_text_sha256": "16e62dbee3ce47cbf43afb11c91a0dd3dc87be5c380d32be83418f127d697a9c",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC05"
+      ]
+    },
+    {
+      "source_id": "issue-87:R07",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 116,
+      "source_end_line": 127,
+      "source_text_sha256": "fab997274e5744b259e1293a3fcf67074c5437135bd178b2c810c8e84103afeb",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06"
+      ]
+    },
+    {
+      "source_id": "issue-87:R08",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 128,
+      "source_end_line": 144,
+      "source_text_sha256": "0b8f076536aaf70b7b900d10863a668376547eb4d96556bb4f6d4230769533c3",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC06",
+        "AC07"
+      ]
+    },
+    {
+      "source_id": "issue-87:R09",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 145,
+      "source_end_line": 164,
+      "source_text_sha256": "57e9bce3b9f4fbc563d27fc96dabd33bf27bc81068d03c68d81ef4aa352e9ef7",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06",
+        "AC07"
+      ]
+    },
+    {
+      "source_id": "issue-87:section-14",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 238,
+      "source_end_line": 246,
+      "source_text_sha256": "7691923e4a38126457058671da66fb68332752a961c3d4ff01e966d01af158a5",
+      "owners": [
+        "S02",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC23",
+        "AC25",
+        "AC26"
+      ]
+    },
+    {
+      "source_id": "issue-89:D03",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 37,
+      "source_end_line": 60,
+      "source_text_sha256": "6e937e89f525135a6f8f3ef69dc49183d5f9b3c219aa2be6b2ea7145023173ef",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC01",
+        "AC05",
+        "AC07",
+        "AC21"
+      ]
+    },
+    {
+      "source_id": "issue-89:D04",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 61,
+      "source_end_line": 74,
+      "source_text_sha256": "65d945f2d651b565c2005f77ef30d9f98c20e83d83ec7b7052a66798c63aee40",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC07"
+      ]
+    },
+    {
+      "source_id": "issue-89:D08",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 140,
+      "source_end_line": 164,
+      "source_text_sha256": "aacd04f373e2cc3e94b40969e31280759e1a1b7265fed18631484c68e547c99b",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06",
+        "AC07"
+      ]
+    },
+    {
+      "source_id": "issue-89:D09",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 165,
+      "source_end_line": 190,
+      "source_text_sha256": "fb55d75259db33a3a4cfd949ff0785690b5881d9cc417f5932164155dce7c497",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC06",
+        "AC07",
+        "AC21"
+      ]
+    },
+    {
+      "source_id": "issue-89:D15",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 295,
+      "source_end_line": 336,
+      "source_text_sha256": "1e5279de883893fad81a97f92bad461058a9608a487a15d70f498d4f58ac131c",
+      "owners": [
+        "S01",
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S09"
+      ],
+      "acceptance_ids": [
+        "AC01",
+        "AC03",
+        "AC04",
+        "AC05",
+        "AC06",
+        "AC07",
+        "AC08",
+        "AC09",
+        "AC10",
+        "AC14",
+        "AC21",
+        "AC23",
+        "AC25",
+        "AC26"
+      ]
+    }
+  ],
+  "source_mapping_qualification": {
+    "issue-89:D09": "related_only; no new FAIL based on this batch",
+    "issue-89:D04/D08": "S03 combination evidence affected, not proven S03 implementation defect",
+    "issue-87:R07": "Preserve native IME subresponsibility after browser repair"
+  },
+  "rollback": {
+    "prior_target": "989662c1229d347d0a66a8b4e06e2ba894b9ca6e",
+    "successor_target": "8d4adbc97cf1f5d55e3d36b65da7dbf2a1a1be2a",
+    "required_commits": [
+      "b21451fb4674ce693cec2d53d16bc94647fa4965",
+      "4da39e52194e62f0f23637a83c8556069eb6a07d",
+      "06588168d5049040abf0a4560091d659d244ddcf"
+    ],
+    "policy": "Retain supported Inbox default; old22c8720 is upgrade input, not supported rollback. Use new absent state directory and installed artifacts; no DB restore or lock deletion.",
+    "successor_tree": "745dfb01c1d2061e9124e40fdbc3c191aa0e0f41",
+    "successor_src_tree": "ae90fae5e3c1954768af906597ed9fc8f3c0e17e",
+    "successor_package_source_tree": "3a76462bcaf179d84f38c4e66fcf0a3904c3aee0",
+    "lifecycle_result": "PASS",
+    "lifecycle_evidence": "ci-repair-r1/final-gates/lifecycle-01-portable.json"
+  },
+  "evidence": {
+    "outputs": "ci-repair-r1/recorded-outputs.json",
+    "sha256": "b349bcc7af8943c2c41a64ea30a1b2864f9815102cb3048e8095fdf7f6d16f3a",
+    "copies": [
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-diagnosis.md",
+        "sha256": "8a4369c69fffa545d5877aaf5087ec05d1975019853924e1e0a54410744e0198",
+        "source": "reviews/S11-ci-r1-Spec-diagnosis.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-diagnosis-details.md",
+        "sha256": "d857bce6bcf813447f7a5842973ef70c1757261dbeeb031aa1eb43a0ca78b03f",
+        "source": "reviews/S11-ci-r1-Spec-diagnosis-details.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-diagnosis.json",
+        "sha256": "2d0cf590ffb12dbc373eb81ff6d79aa5bbbbaef66ae5c0f401b36bfd02dfbaf7",
+        "source": "reviews/S11-ci-r1-Spec-diagnosis.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-diagnosis-mapping-addendum.json",
+        "sha256": "48bad71f51aa7ac2b55bad2d6f28c5a15d0e63ba45e5ecb1d9aac4cb412ede64",
+        "source": "reviews/S11-ci-r1-Spec-diagnosis-mapping-addendum.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec.md",
+        "sha256": "38152d0a7fdc7cb6c8349e865d10885d103064216eceb440f4c8e2f2791da292",
+        "source": "reviews/S11-ci-r1-Spec.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-details.md",
+        "sha256": "032b3a57e575c9b6c2b88601d7b2fd9c725d9b3f090085b7b6a179fc3bb58a68",
+        "source": "reviews/S11-ci-r1-Spec-details.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-verification.json",
+        "sha256": "96e87b256d9c2778bce3d20805339a85a2d7a076c6467d86f7bf0b0a6cb61b6b",
+        "source": "reviews/S11-ci-r1-Spec-verification.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Standards.md",
+        "sha256": "7254422436409a6999dc5fb90f665283bad71f471a039ea3542383c69570c5f1",
+        "source": "reviews/S11-ci-r1-Standards.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Standards-details.md",
+        "sha256": "fc8613eba310403100c7f07c3e5901d1bd250106c39ad1688548eae0a4d7cf38",
+        "source": "reviews/S11-ci-r1-Standards-details.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Standards.json",
+        "sha256": "6f4c88a9d3c9c7beaf54e882d95d59cb5cbc83a5ab8ee97398bd3df3e7d5739d",
+        "source": "reviews/S11-ci-r1-Standards.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Spec.md",
+        "sha256": "d2cdea558b6dca6d86e2b6cd619a0f64b128fc2d6decbab6142e98114095a040",
+        "source": "reviews/S11-ci-r2-Spec.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Spec-details.md",
+        "sha256": "d4906bd9bb0718c68de7d214eec56c65fe9b7c40a7796e0131d06cfaeb457bfd",
+        "source": "reviews/S11-ci-r2-Spec-details.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Spec-verification.json",
+        "sha256": "412a46839adbe0f2bf81d454f224be3df68d5c7ca69749374116a6ad3145136f",
+        "source": "reviews/S11-ci-r2-Spec-verification.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Standards.md",
+        "sha256": "70983b2f31a4cdc3f92302e7573935549cabd5dd592e76e57c0e6a2c92a9abe2",
+        "source": "reviews/S11-ci-r2-Standards.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Standards-details.md",
+        "sha256": "7b72d61ca1a43195941caca4a2a3e6f1ab35551c66f9f1aef2e7684c4aefb800",
+        "source": "reviews/S11-ci-r2-Standards-details.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Standards.json",
+        "sha256": "0dcd1338ecb882d91727c33c0622852de1e4e666f8659da2c84f6b5d33652c52",
+        "source": "reviews/S11-ci-r2-Standards.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Spec.md",
+        "sha256": "363d7d94dc8b9e9f1a90c147b96804a7ad1cf9c265e8a763bbc9e918a964f6af",
+        "source": "reviews/S11-ci-r3-Spec.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Spec-details.md",
+        "sha256": "38b43e8e03021a0cf57044c8756d5d46700be6654212865827bb83ef70d111bb",
+        "source": "reviews/S11-ci-r3-Spec-details.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Spec-verification.json",
+        "sha256": "553824a6a925991e1da74e49487a018738de0996e752c36bbd8cf06af85184e3",
+        "source": "reviews/S11-ci-r3-Spec-verification.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Standards.md",
+        "sha256": "36b87d159f30b9ff08a3084a2048fc824c56f21a6aa480f87d031b59e2d2577c",
+        "source": "reviews/S11-ci-r3-Standards.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Standards-details.md",
+        "sha256": "e72aeab0b3bf4065ebeb0a69705f20ec8941410d7a7976b9d4a3639dd781877c",
+        "source": "reviews/S11-ci-r3-Standards-details.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Standards.json",
+        "sha256": "e4b1d08c716f7f5345e424551655c41b8992e6f0a5137dfc6628b43db0150aed",
+        "source": "reviews/S11-ci-r3-Standards.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/native/result.json",
+        "sha256": "d048dbea18414b4ec80f80378f3d0c6cc4dafcf20f3a5dd7f08cdc1e11624b7e",
+        "source": "native-ci-r2/result.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/native/successor-065-applicability.json",
+        "sha256": "e90de33322bbe1a46a1e46c497d99612fa70a0d76ea1990ea6c8b29e7380055b",
+        "source": "native-ci-r2/successor-065-applicability.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/final-gates/build-03-result.json",
+        "sha256": "b953ae7574d82fbd90bc3523d8a9ae27a1181725c655868ad5eea4cb82224396",
+        "source": "S11/ci-r1/build-03-result.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/final-gates/installations-03.json",
+        "sha256": "8a295bdd3c31a74e95503af5a288251979b7cadd80c6b0cf35edacd50a363c7d",
+        "source": "S11/ci-r1/installations-03.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/final-gates/installations-03-result.json",
+        "sha256": "1a59810045501a33274e53812e1f7101fdb7f1870fa4d6681a600cad3b3cdebe",
+        "source": "S11/ci-r1/installations-03-result.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/final-gates/startup-retirement-stability-result.json",
+        "sha256": "29f471cf5a35afa39d92ceda46acf7c8ac5b5972a2da06158f658bb5c11f5446",
+        "source": "S11/ci-r1/startup-retirement-stability-result.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/final-gates/native-installed-binding-03.json",
+        "sha256": "e6abd33105ecfb9def8d86fd3ff087117d2ae7047a0a6d53755f6a7b912f7629",
+        "source": "S11/ci-r1/native-installed-binding-03.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/final-gates/lifecycle-manifest-01.json",
+        "sha256": "f646ce9befaf0f8921306c0422c58089895e776a722f8f8028acf643daf88dea",
+        "source": "S11/ci-r1/lifecycle-manifest-01.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/final-gates/lifecycle-setup-01-result.json",
+        "sha256": "9f534b5aaa30d802ae969a112d3e8a0886f537a8f6d616ee3ddb822a8d5c7c3f",
+        "source": "S11/ci-r1/lifecycle-setup-01-result.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/final-gates/lifecycle-01-summary.json",
+        "sha256": "e6ea96c09acb686359473a0fee840eafb0f6984d511e74b8d4dde90f2543886d",
+        "source": "S11/ci-r1/lifecycle-01-summary.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/final-gates/lifecycle-01-portable.json",
+        "sha256": "f5a96b000e042e508d7b810cb26774c25a4ad500493233e53f8182d69b77d705",
+        "source": "S11/ci-r1/lifecycle-01-portable.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-docs-r1-Standards.md",
+        "sha256": "2d41e280e1a394b874bb345e5661adecad12cdf7cb33d47f6135c9e84551ed02",
+        "source": "reviews/S11-ci-docs-r1-Standards.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-docs-r1-Standards-details.md",
+        "sha256": "b698254815d903e96191e4f55cc00e41942a4616af99ecf728f7afc411f4bda9",
+        "source": "reviews/S11-ci-docs-r1-Standards-details.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-docs-r1-Standards.json",
+        "sha256": "8ed101f5e84ea4ebe1488dc99e7fc5cb63a601f361d5c6291d9afa665c068748",
+        "source": "reviews/S11-ci-docs-r1-Standards.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-docs-r1-Spec.md",
+        "sha256": "347dd0b38e2ce0816a551df83e6a93bea987fa540155b126a95ad29de1415af3",
+        "source": "reviews/S11-ci-docs-r1-Spec.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-docs-r1-Spec-details.md",
+        "sha256": "b6928d3ae63cd2b3b31ee058c517440431d56aaea76e37b9daa7ad9697d09b57",
+        "source": "reviews/S11-ci-docs-r1-Spec-details.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-docs-r1-Spec-audit.json",
+        "sha256": "53bc35e4100aed3f52c400dd620f80f4c4443f42942c510e1d0fcb48d954b8c8",
+        "source": "reviews/S11-ci-docs-r1-Spec-audit.json"
+      }
+    ],
+    "final_gate_outputs": {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/final-gates/recorded-outputs.json",
+      "sha256": "1f0175cb39322437840535b83dd1448cdded84eeb7f937ffd17953baeaaec98e"
+    }
+  },
+  "scope_limit": "This addendum does not mutate the frozen309/26AC/12MCE/8G proposal or canonical ledger and is not final S11 completion.",
+  "overall_result_scope": "Current acceptance remains FAIL from the original37cd required CI/combination observations; the065 successor has not completed full-browser, document review and final CI gates. This is not a new product failure observed on065.",
+  "status_scopes": {
+    "current_acceptance": {
+      "result": "FAIL",
+      "observed_candidate": "37cd0180fd5222d0753a0f3203ae56b1df6e0f0a",
+      "basis": "Original required CI and final-combination failures retained until qualified successor gates and coordinator adjudication close them."
+    },
+    "repair_code_review": {
+      "result": "PASS",
+      "candidate": "06588168d5049040abf0a4560091d659d244ddcf",
+      "axes": [
+        "Standards",
+        "Spec"
+      ],
+      "findings": 0
+    },
+    "successor_remaining_gates": {
+      "result": "NOT RUN",
+      "items": [
+        "Full535 source-browser run",
+        "Revised portable document review",
+        "Final remote CI and canonical acceptance adjudication"
+      ],
+      "execution": "PENDING at the preserved e27 observation time."
+    },
+    "native_IME": {
+      "result": "BLOCKED",
+      "reason": "No verified real Chinese composition/confirm-Enter evidence."
+    }
+  },
+  "touch_evidence_scope": "Chromium hasTouch:true with locator.tap() verifies browser compatibility mouse/focus ordering. This is touch simulation, not a physical touchscreen/iPhone/iOS Safari/soft keyboard test; those remain NOT RUN and out of scope. Historical archived outputs remain byte-for-byte unchanged.",
+  "document_review_repair": {
+    "prior_candidate": "c96c26d1446ba97bdb7b219d79cef0b5fd001b53",
+    "prior_result": "FAIL",
+    "fixed_findings": [
+      "S11-CI-DOC-STD-01 / Spec F1 P2 candidate and status scope",
+      "Spec F2 P3 Chromium simulated touch scope"
+    ],
+    "prior_reports_preserved": true,
+    "successor_document_review": "NOT RUN",
+    "successor_document_review_execution": "PENDING at the preserved e27 observation time."
+  }
+}

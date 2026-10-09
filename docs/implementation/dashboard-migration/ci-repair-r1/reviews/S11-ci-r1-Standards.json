@@ -1,0 +1,92 @@
+{
+  "candidate": "b21451fb4674ce693cec2d53d16bc94647fa4965",
+  "tree": "0b0bef55e1de4f33891abc08ae33f3f03128985f",
+  "base": "37cd0180fd5222d0753a0f3203ae56b1df6e0f0a",
+  "initial_worktree_clean": true,
+  "file_hashes": {
+    "src/agent_alfred/ops/static/app.js": "a7ab4a15d917a717bb2266d34a714298dd54199e4fb2c234948887c48728f723",
+    "src/agent_alfred/ops/static/shell.js": "d21a55537fdc484701bf4d0fb0614993ea09bf0258b07b03f54c5630f39e2665",
+    "tests/browser/inbox-run-navigation.spec.js": "a78c84b8dbee0a41fc6039a357aee6ca18f980c5a35e0d2aefaee67ec8a08bbd",
+    "tests/browser/mainbar-empty-identity.spec.js": "8904b15637462cfd53db5566a645bce2a70f1587ff6c3f9f5158f01a82b6f409",
+    "tests/browser/mainbar-location.spec.js": "0e679a5f33b26511a532acc56234ae8910ac05a75416191a3b66d22d5cb09ca0",
+    "tests/browser/session-create-race.spec.js": "473ba7096a61ab834bb391dc621f67d6e12b6cb7d66e9b43dc0c6ca907c7f7ce"
+  },
+  "evidence": {
+    "creation-red.log": {
+      "sha256": "5f7ea828e4d6820b6775b74c181dc19359be8ef3be042fa392d1cb9dd4a788d8",
+      "bytes": 6721
+    },
+    "empty-identity-red.log": {
+      "sha256": "2eb2628ac754ca130a40a0b0dbcdb6f7ee702d57810d3c775f6d1da4043e9671",
+      "bytes": 3564
+    },
+    "opener-focus-red.log": {
+      "sha256": "005a5ce520a13345a52516b0367b9ba531e6be4beb1afa57440ef5f9b5b8d0aa",
+      "bytes": 3932
+    },
+    "affected-green-01.log": {
+      "sha256": "82ea513bba43951ad3a4bda13a9794b191759729454d063a2a372b3883aef402",
+      "bytes": 3826
+    },
+    "affected-green-02.log": {
+      "sha256": "6c12e639ff06b807ae98f2fc391182dfba80026f8998e4d5c549eacbfa7ddd76",
+      "bytes": 7601
+    },
+    "affected-green-03.log": {
+      "sha256": "c5d226603228b6c0fdb0664273932e4bce66fa54c0965f90017c98a73027b122",
+      "bytes": 4271
+    },
+    "typecheck-02.log": {
+      "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f",
+      "bytes": 29
+    },
+    "python-assets-protocol-01.log": {
+      "sha256": "a49716bea29ccd882382b19c1580803815ade1a884221197a789e757764c6928",
+      "bytes": 603
+    },
+    "trace-order.json": {
+      "sha256": "4864c96e3a7ce3687d7fcca2c4908c530637730a20c5423a5940e02058687ed2",
+      "bytes": 27175
+    },
+    "empty-identity-trace-order.json": {
+      "sha256": "d8ca74a8774bea2eae0903597c4f74af794f234c5e3afd6b7712630dff5ca705",
+      "bytes": 3980
+    },
+    "controlled-red-tests.patch": {
+      "sha256": "b995e560be117022d5f0925b16167d4aa57f92f9131f7e53b3df61c088417f14",
+      "bytes": 4172
+    },
+    "stability-01.log": {
+      "sha256": "d802456168a4ae541f8fea06dfe7ca684f9ee9d44c262feb6271af0d536ed859",
+      "bytes": 7625
+    },
+    "stability-01-result.json": {
+      "sha256": "f9e38f66dd110243c97e562ebddb4817a1316eba37ed9f5472a3e056d217bb50",
+      "bytes": 390
+    },
+    "touch-probe-01.log": {
+      "sha256": "f3cdbf1d0d9abc9025f0e6a224b3f196e575ac784be486202c6f3545a7ca73e7",
+      "bytes": 3344
+    },
+    "touch-probe.spec.mjs": {
+      "sha256": "0ea08e69e0e0f273983fcdba936a1d969f51ebe92df469310f8fda7211bf914b",
+      "bytes": 1350
+    },
+    "touch-probe.config.mjs": {
+      "sha256": "808470b24f2515f5cf49e052929639740f4e4c472889b131201901cd2d66c9ba",
+      "bytes": 826
+    }
+  },
+  "result": "FAIL",
+  "hard_findings": [
+    {
+      "id": "S11-CI-STD-01",
+      "priority": "P2",
+      "file": "src/agent_alfred/ops/static/app.js",
+      "line": 204,
+      "title": "Touch-compatible focus retires the same MainBar opening intent"
+    }
+  ],
+  "optional_smells": [],
+  "product_tests_run_by_reviewer": false
+}

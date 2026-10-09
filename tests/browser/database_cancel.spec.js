@@ -77,7 +77,8 @@ for (const delivery of ['before-B', 'after-B', 'new-page']) {
       await ready.promise;
       if (delivery === 'new-page') {
         await page.getByRole('link', {name: '收件箱', exact: true}).click();
-        await page.getByRole('link', {name: 'Database', exact: true}).click();
+        await page.getByRole('button', {name: '放弃并离开', exact: true}).click();
+        await page.getByRole('link', {name: '数据库', exact: true}).click();
         await expect(page.getByText('可执行', {exact: true})).toBeVisible();
         await expect(page.getByRole('textbox', {name: 'SQL', exact: true})).toHaveValue('');
       }
@@ -91,6 +92,13 @@ for (const delivery of ['before-B', 'after-B', 'new-page']) {
         if (delivery === 'before-B') await bRelease.promise;
         await route.fulfill({response});
       });
+      // The original cancel reply is withheld, so explicitly verify actual
+      // release before admitting B. Issuance and cleanup remain separate.
+      if (delivery !== 'new-page') {
+        await expect(run(page)).toBeDisabled();
+        await page.getByRole('button', {name:'核验查询与可用性',exact:true}).click();
+        await expect(run(page)).toBeEnabled();
+      }
       await execute(page, 'SELECT 2 AS B');
       await bReady.promise;
       if (delivery !== 'before-B') await expect(result(page).locator('th')).toHaveText('B');
@@ -135,10 +143,13 @@ test('STD-05: late status probe for A cannot replace B', async ({page}) => {
     ready.resolve();
     await release.promise;
     await route.fulfill({response});
-  });
+  }, {times:1});
   try {
     await execute(page, 'SELECT 1 AS A');
     await ready.promise;
+    await expect(run(page)).toBeDisabled();
+    await page.getByRole('button', {name:'核验查询与可用性',exact:true}).click();
+    await expect(run(page)).toBeEnabled();
     await execute(page, 'SELECT 2 AS B');
     await expect(result(page).locator('th')).toHaveText('B');
     const receipt = page.waitForResponse(r => r.url().endsWith(`/${a}`));

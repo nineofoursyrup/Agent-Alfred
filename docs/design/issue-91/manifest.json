@@ -1,0 +1,50 @@
+{
+  "design_id": "MODELS-CONNECTIONS-OPS-DATABASE-DESIGN-r1",
+  "date": "2026-10-08",
+  "timezone": "Asia/Shanghai",
+  "state": "design_confirmed_product_not_implemented",
+  "publication": "authorized_pending_execution",
+  "branch": "codex/issue-91-settings-diagnostics-design",
+  "source_commits": {
+    "product": "22c8720e1ec874fd012cc79b086cd8aace4c79b6",
+    "design_parent": "7d175d6a65a93aec725cf86e6be3df167d3ca74c"
+  },
+  "approval_record": "docs/design/issue-91/APPROVAL.md",
+  "integrity_scope": "Listed local files; manifest excludes itself. This does not prove remote publication or product acceptance.",
+  "files": [
+    {
+      "path": "CONTEXT.md",
+      "sha256": "404d93e1a099bcece2a596a59ed9b572dcdf7e04b6fb407a71ba27b3fb3f152a"
+    },
+    {
+      "path": "docs/design/issue-91/ACCEPTANCE.md",
+      "sha256": "1e4198bd5c678045c3447fdd958b358cabb0dc2dabbc07cdabdc9119d48fc2e0"
+    },
+    {
+      "path": "docs/design/issue-91/APPROVAL.md",
+      "sha256": "86d29c6d5dc930604b523d70f8d9600ade2a41114806c890f4f4b682f2983a35"
+    },
+    {
+      "path": "docs/design/issue-91/DECISIONS.md",
+      "sha256": "2734eccb88750026838fb8e9df94a704c6d868dc8f0cbaa0f54377681eef55c6"
+    },
+    {
+      "path": "docs/design/issue-91/DESIGN.md",
+      "sha256": "7281673419190f5ec2e2296eae566df3d5bdefed4be125b7e48832dc947c94a1"
+    },
+    {
+      "path": "docs/design/issue-91/FACTS.md",
+      "sha256": "e4a5027fd2dbf69995fa3da8848339dee24be35ecead26d7ba47b5bcf054a662"
+    },
+    {
+      "path": "docs/design/issue-91/RESOLUTION-DRAFT.md",
+      "sha256": "c29617a55059deed068d56d2269aac78ea4c603e25194f5e5aaf59a2f99ae4f9"
+    },
+    {
+      "path": "docs/design/issue-91/VALIDATION.md",
+      "sha256": "1ad145b9513585528e985d6ab4df812668e1974763ec41ee813cc526887c5b94"
+    }
+  ],
+  "delivery_authorized_at": "2026-10-08T23:59:23+08:00",
+  "reviewed_candidate_manifest_sha256": "d107562f5fe942eaff03918f0f9d3bf895d112a0a3c795e0023dc631698ea0a9"
+}

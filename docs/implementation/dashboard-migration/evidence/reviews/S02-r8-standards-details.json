@@ -1,0 +1,153 @@
+{
+  "axis": "Independent Standards",
+  "base": "bba439d7faeedde71970a74cea146a5e896e5345",
+  "head": "552ab48fc1d757ea881107827e583d592a5403b1",
+  "tree": "e4fa378f6e161834d528769865ab97ee1bc4517f",
+  "result": "PASS",
+  "hard_violations": [],
+  "optional_heuristics": [],
+  "files": [
+    {
+      "path": "tests/browser/shell-startup.spec.js",
+      "sha256": "031ebefa33af4bd9fc4fa4a6d32fdbb4e7adbddc96dad33617454f9e48e30445",
+      "added_lines": 30,
+      "removed_lines": 0,
+      "hunks": [
+        {
+          "lines": "9-13",
+          "assessment": "One new named behavior, Promise gate around real /api/events requests, including native replacement caused by explicit Session creation. No route.fulfill, model rewrite, EventSource substitute or focus injection.",
+          "standard": "docs/design/dashboard-implementation/VALIDATION.md:7"
+        },
+        {
+          "lines": "14-15",
+          "assessment": "Read-only observations capture activeElement, visibility/layout, page mount and selection. Diagnostics do not decide or fabricate product state. DOM references agree with existing shell contract.",
+          "standard": "docs/design/dashboard-implementation/VALIDATION.md:31"
+        },
+        {
+          "lines": "16-36",
+          "assessment": "Drive original UI creation, fill and selection; assert pre-mount editing, release actual state, wait visible Inbox and real narrow layout, verify operability/focus/selection/value and return-wide preference. Assertions preserve existing user invariants and add a deterministic timing boundary for the independently observed regression. Original shell.spec.js remains byte-identical.",
+          "standard": "docs/design/issue-87/SPEC.md:183; docs/design/dashboard-implementation/VALIDATION.md:27"
+        },
+        {
+          "lines": "37-38",
+          "assessment": "Finally releases all pending routes on success/failure. Playwright owns fresh page and context lifetime; test registers no process or shared state.",
+          "standard": "docs/design/dashboard-implementation/VALIDATION.md:7"
+        }
+      ]
+    }
+  ],
+  "standards_read_or_reused": {
+    "reread": [
+      "/Users/nineofour/AGENTS.md",
+      "/Users/nineofour/.codex/AGENTS.md",
+      "CLAUDE.md",
+      "docs/agents/issue-tracker.md",
+      "docs/agents/domain.md",
+      "docs/design/dashboard-implementation/VALIDATION.md:1-35",
+      "docs/design/dashboard-implementation/INTERFACES.md:131-145",
+      "docs/design/issue-87/SPEC.md:R02/R10"
+    ],
+    "verified_byte_equal_to_prior_independent_r7_review": [
+      "CLAUDE.md",
+      "docs/agents/issue-tracker.md",
+      "docs/agents/domain.md",
+      "CONTEXT.md",
+      "docs/design/dashboard-implementation/SPEC.md",
+      "docs/design/dashboard-implementation/INTERFACES.md",
+      "docs/design/dashboard-implementation/VALIDATION.md",
+      "docs/design/issue-87/SPEC.md",
+      "docs/adr/0046-panel-visibility-preserves-page-lifecycle.md"
+    ],
+    "current_other_axis_conclusions_read": false
+  },
+  "checks": [
+    {
+      "name": "actual old CI source regression",
+      "observed": "1 FAIL",
+      "reason": "first native snapshot after editing changes activeElement message to H1; native narrow layout hides MainBar",
+      "evidence": "ci-source-first-fail.log"
+    },
+    {
+      "name": "isolated same-base single-variable control",
+      "observed": "1 FAIL",
+      "reason": "Only initial-mount MainBar focus protection removed; same message-to-H1-to-hidden chain",
+      "evidence": "focus-control.log + focus-control.diff"
+    },
+    {
+      "name": "unchanged integrated r7 source",
+      "observed": "1 PASS",
+      "reason": "active message survives actual first mount and native narrow transition; selection/content/preference assertions pass",
+      "evidence": "current-successor.log"
+    },
+    {
+      "name": "final candidate related regression",
+      "observed": "18 PASS",
+      "reason": "startup5 and shell13 including unchanged original CI test; counts overlap with scoped1PASS and are not summed",
+      "evidence": "final.log"
+    },
+    {
+      "name": "fixed candidate diff and evidence identity",
+      "observed": "PASS",
+      "reason": "one +30-line test-only file; 3 trace test-source/attachment matches, 1210 exact exports and single modified focus-control file, 17 immutable original CI artifacts and30 preservation copies",
+      "evidence": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S02-r8-standards-verification.json"
+    }
+  ],
+  "heuristics_considered": {
+    "Mysterious Name": "No actionable additional smell in the single scoped behavior test; documented repository rules override heuristics and tooling-enforced items are excluded.",
+    "Duplicated Code": "No actionable additional smell in the single scoped behavior test; documented repository rules override heuristics and tooling-enforced items are excluded.",
+    "Feature Envy": "No actionable additional smell in the single scoped behavior test; documented repository rules override heuristics and tooling-enforced items are excluded.",
+    "Data Clumps": "No actionable additional smell in the single scoped behavior test; documented repository rules override heuristics and tooling-enforced items are excluded.",
+    "Primitive Obsession": "No actionable additional smell in the single scoped behavior test; documented repository rules override heuristics and tooling-enforced items are excluded.",
+    "Repeated Switches": "No actionable additional smell in the single scoped behavior test; documented repository rules override heuristics and tooling-enforced items are excluded.",
+    "Shotgun Surgery": "No actionable additional smell in the single scoped behavior test; documented repository rules override heuristics and tooling-enforced items are excluded.",
+    "Divergent Change": "No actionable additional smell in the single scoped behavior test; documented repository rules override heuristics and tooling-enforced items are excluded.",
+    "Speculative Generality": "No actionable additional smell in the single scoped behavior test; documented repository rules override heuristics and tooling-enforced items are excluded.",
+    "Message Chains": "No actionable additional smell in the single scoped behavior test; documented repository rules override heuristics and tooling-enforced items are excluded.",
+    "Middle Man": "No actionable additional smell in the single scoped behavior test; documented repository rules override heuristics and tooling-enforced items are excluded.",
+    "Refused Bequest": "No actionable additional smell in the single scoped behavior test; documented repository rules override heuristics and tooling-enforced items are excluded."
+  },
+  "heuristic_specific_judgment": {
+    "Duplicated Code": "Some original breakpoint setup is intentionally repeated to preserve an independent controlled startup regression; extracting a generic interaction harness would hide the timing boundary without demonstrated maintenance harm.",
+    "Message Chains": "Playwright locator chains and read-only DOM inspection are intentional test observation boundaries, not new product dependencies.",
+    "Speculative Generality": "No generic hooks or production abstractions added; one demonstrated failure mode has one regression test."
+  },
+  "evidence_limits": [
+    "Original cloud failure had no activeElement instrumentation; attribution is supported by separately labeled local controlled reproductions, not direct cloud causal observation.",
+    "Trace does not contain served JavaScript response bodies. Exact Git exports, fixture sys.path, selected server configs and network URLs bind the tested service sources; no claim of independently hashed served JS body.",
+    "No new reviewer browser tests or broad source/AC verification; applicable existing owner runs and independent r7 review reused.",
+    "Entire164source/25AC/G remain NOT RUN; onlyR02/R10 get this bounded fragment.",
+    "Cloud CI rerun, all possible media timing races, statistical stability, native200percent, realIME, actualBFCache and final installed artifact matrix are not certified by this change."
+  ],
+  "independence": {
+    "other_axis_report_read": false,
+    "product_edit": false,
+    "runtime_probe": false,
+    "broad_tests_repeated": false,
+    "subagents": false,
+    "GitHub_write": false
+  },
+  "tooling_notes": [
+    "A read-only lookup tried non-existing tests/browser/fixtures.js; the test imports Playwright directly and uses actual tests/browser/server.py. No product or evidence mutation resulted."
+  ],
+  "runtime_resources_opened_by_reviewer": false,
+  "preservation": {
+    "copied_files_checked": 30,
+    "immutable_original_CI_artifacts_checked": 17,
+    "current_external_metadata_drift": [
+      "/Users/nineofour/.codex/dashboard-migration-20261009/ci/after-s04/terminal-identities.json"
+    ],
+    "original_and_current_metadata_snapshots_preserved": true
+  },
+  "source_and_resource_scope": {
+    "production_unchanged": true,
+    "resources": 20,
+    "edges": 42,
+    "new_scoped_source_fragments": [
+      "issue-87:R02",
+      "issue-87:R10"
+    ],
+    "inherited_sources": 164,
+    "inherited_AC": 25,
+    "whole_result": "NOT RUN"
+  }
+}

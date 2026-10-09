@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test("Models and Connections navigation keeps MainBar", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: "模型", exact: true }).click();
+  await page.getByRole("navigation", { name: "主导航" }).getByRole("link", { name: "模型", exact: true }).click();
   await expect(page.getByRole("heading", { name: "模型", exact: true })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "主导航" })).toBeVisible();
   await page.getByRole("link", { name: "连接", exact: true }).click();
@@ -17,9 +17,10 @@ test("unsupported grok rows do not show 支持", async ({ page }) => {
   const grok = page.locator("[data-model$=':grok-4.6']");
   await expect.poll(async () => grok.count()).toBeGreaterThan(0);
   for (const row of await grok.all()) {
-    await expect(row.locator("[data-dimension=support]")).not.toContainText("支持");
+    await expect(row.locator("[data-dimension=support]")).toContainText("unsupported_wire_style");
   }
   const assigned = page.locator("[data-model='opencode-go:deepseek-v4-flash']");
+  await assigned.getByText("模型详情", {exact:true}).click();
   await expect(assigned.getByRole("button", { name: "取消钉选" })).toBeDisabled();
   await expect(assigned.getByRole("combobox", { name: "线路形状" })).toBeVisible();
   await expect(assigned.getByRole("textbox", { name: "显示名" })).toBeVisible();
@@ -76,7 +77,7 @@ for (const refreshDuringProbe of [false, true]) {
         const refreshed = page.waitForResponse(response => new URL(response.url()).pathname === "/api/connections");
         await page.evaluate(() => window.dispatchEvent(new Event("focus")));
         await refreshed;
-        await expect(page.getByRole("button", {name:"验证凭据"})).toBeEnabled();
+        await expect(page.getByRole("button", {name:"验证凭据"})).toBeDisabled();
       }
       await route.fulfill({
         status: 200,
@@ -129,7 +130,7 @@ for (const refreshDuringProbe of [false, true]) {
     await expect.poll(() => posts.length).toBe(1);
     expect(posts[0]).toEqual({ endpoint_id: "openai" });
     await expect(page.getByText("已连接")).toBeVisible();
-    await expect(page.getByText("auth_probe")).toBeVisible();
+    await expect(page.locator("[data-dimension=connection]")).toContainText("auth_probe");
     await expect(page.getByRole("button", { name: "验证凭据" })).toBeEnabled();
   });
 
@@ -142,7 +143,7 @@ for (const refreshDuringProbe of [false, true]) {
         const refreshed = page.waitForResponse(response => new URL(response.url()).pathname === "/api/connections");
         await page.evaluate(() => window.dispatchEvent(new Event("focus")));
         await refreshed;
-        await expect(page.getByRole("button", {name:"验证凭据"})).toBeEnabled();
+        await expect(page.getByRole("button", {name:"验证凭据"})).toBeDisabled();
       }
       await route.fulfill({
         status: 409,
@@ -214,9 +215,10 @@ test("assigned inference probe names the row and catalog refresh exists", async 
   });
   await page.goto("/models");
   const assigned = page.locator("[data-model='opencode-go:deepseek-v4-flash']");
-  const probe = assigned.getByRole("button", { name: "测试真实调用" });
+  await assigned.getByText("模型详情", {exact:true}).click();
+  const probe = assigned.getByRole("button", { name: "测试真实调用（可能计费）" });
   await expect(probe).toBeVisible();
-  await expect(assigned.getByText("可能产生费用")).toBeVisible();
+  await expect(assigned.getByText(/可能产生费用/)).toBeVisible();
   await expect(page.getByRole("button", { name: "刷新目录" }).first()).toBeVisible();
   await expect(
     page.locator("[data-endpoint=opencode-go] [data-dimension=catalog]"),
@@ -232,4 +234,41 @@ test("assigned inference probe names the row and catalog refresh exists", async 
   } else {
     await expect(probe).toBeDisabled();
   }
+});
+
+test('S08 fields save explicitly and a delayed receipt keeps newer drafts', async ({page}) => {
+  await page.goto('/models');
+  const row = page.locator("[data-model='opencode-go:deepseek-v4-flash']");
+  await row.getByText('模型详情', {exact:true}).click();
+  let posts = 0, release, captured;
+  const held = new Promise(resolve => {release = resolve;});
+  const received = new Promise(resolve => {captured = resolve;});
+  await page.route('**/api/settings', async route => {
+    posts++;
+    const response = await route.fetch();
+    captured();
+    await held;
+    await route.fulfill({response});
+  });
+  const price = row.getByRole('textbox', {name:'output', exact:true});
+  await price.fill('0');
+  await price.blur();
+  await row.getByRole('combobox', {name:'线路形状', exact:true}).selectOption('anthropic');
+  expect(posts).toBe(0);
+  const display = row.getByRole('textbox', {name:'显示名', exact:true});
+  await display.fill('S08 已提交名称');
+  await row.getByRole('button', {name:'保存显示名', exact:true}).click();
+  await received;
+  await display.fill('S08 后续草稿');
+  await price.fill('8');
+  release();
+  await expect(row.getByText('已确认保存；还有新编辑', {exact:true})).toBeVisible();
+  await expect(display).toHaveValue('S08 后续草稿');
+  await expect(price).toHaveValue('8');
+  await expect(row.getByRole('combobox', {name:'线路形状', exact:true})).toHaveValue('anthropic');
+  await row.getByText('模型详情', {exact:true}).click();
+  await expect(row.getByText(/未保存/).first()).toBeVisible();
+  await row.getByText('模型详情', {exact:true}).click();
+  await expect(display).toHaveValue('S08 后续草稿');
+  expect(posts).toBe(1);
 });

@@ -1,0 +1,113 @@
+{
+  "axis": "Independent Standards",
+  "base": "ddefb65905e4792559e8ff4d130dd427b34cd137",
+  "repair_parent": "fd1c62513eaf8da2111edcfc5974798d1d7bca05",
+  "head": "0af962fbc4fc799806ba2a27593102c3df8c9e48",
+  "tree": "745d8609cc61d3b171da96aa250c26303fa2227e",
+  "result": "PASS identity/scope/evidence checks",
+  "files": [
+    {
+      "file": "src/agent_alfred/ops/static/app.js",
+      "bytes": 41675,
+      "sha256": "1208f8d65373a83c54450dd9eb5ac256e30ab37181e4639a62080d4ca3f5c68a"
+    },
+    {
+      "file": "src/agent_alfred/ops/static/shell.js",
+      "bytes": 18098,
+      "sha256": "cbaa8acc0de5a918aeeade090d46e43c9529ec584db3b05f7a2755253f14ddf2"
+    },
+    {
+      "file": "tests/browser/shell-startup.spec.js",
+      "bytes": 11049,
+      "sha256": "049309a80dd8f02d989f54756d6c096159b8b7b41e74bacc2346ff910fa2c620"
+    }
+  ],
+  "diffs": {
+    "repair": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S02/startup-r7/repair.diff",
+      "bytes": 8115,
+      "sha256": "33f72e8ea64fcb3ebb22a2c166b2a40987d7e08a1bb9d895ffeedd150c5b943e"
+    },
+    "candidate": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S02/startup-r7/candidate.diff",
+      "bytes": 15458,
+      "sha256": "8edb2a70cc7c292f9c3112d901993660b6a72fd06577d9694fad43d3302efe89"
+    }
+  },
+  "resources": {
+    "count": 20,
+    "edges": 42,
+    "original_r6_independent_traversal_reused": true,
+    "all_resource_current_hashes_verified": true,
+    "same_reference_graph_and_registry": true
+  },
+  "source": {
+    "count": 164,
+    "AC": 25,
+    "canonical_metadata_hash_owners_retained": true,
+    "r6_ID_sets_unchanged": true,
+    "whole_source_AC": "NOT RUN",
+    "applicable_standards_byte_equal": [
+      "CLAUDE.md",
+      "CONTEXT.md",
+      "docs/agents/issue-tracker.md",
+      "docs/agents/domain.md",
+      "docs/agents/triage-labels.md",
+      "docs/design/issue-87/SPEC.md",
+      "docs/design/issue-86/DECISIONS.md",
+      "docs/design/dashboard-implementation/INTERFACES.md",
+      "docs/design/dashboard-implementation/VALIDATION.md"
+    ]
+  },
+  "failure_identity": {
+    "original_product": "fd1c62513eaf8da2111edcfc5974798d1d7bca05",
+    "original_test_matches_current": true,
+    "preserved_r6_source_and_own_evidence": [
+      "src/agent_alfred/ops/static/app.js",
+      "src/agent_alfred/ops/static/shell.js",
+      "tests/browser/shell-startup.spec.js",
+      "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S02-r6-Standards.md",
+      "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S02-r6-startup-reconnect-probe.json"
+    ],
+    "intermediate_product": "r6 plus reconstructed app-only equality patch without revision>=0; shell exactly r6",
+    "intermediate_test_trace_bytes_match": true,
+    "final_test_bytes_match": true,
+    "limitation": "No intermediate served JavaScript trace-body hash; reconstruction tied to owner-recorded actual patch, preserved r6 source, failing test capture and behavior log. No claim of independent trace product body capture.",
+    "first_failure_artifacts_checked": 6,
+    "log_hashes": {
+      "first-fail.log": "565e03871a4d75735ea6c461b832664227308694e0d663c51cdabce5ca8afd15",
+      "reconnect-successor.log": "062c593f08afe7b706f894c96b2879f9172cc96e0fd995cada2e777780247812",
+      "final.log": "119f3aefde71d7ae2c015575bc2bcaf10e3082d86e678e7e447306fc100f73ff",
+      "typecheck.log": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f",
+      "diff-check.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "independence": {
+    "other_axis_report_or_probe_read": false,
+    "product_changed": false,
+    "new_runtime_probe_required": false,
+    "checks_rerun": false
+  },
+  "evidence": {
+    "typecheck": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S02/startup-r7/typecheck.log",
+      "bytes": 29,
+      "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f"
+    },
+    "final_18": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S02/startup-r7/final.log",
+      "bytes": 3389,
+      "sha256": "119f3aefde71d7ae2c015575bc2bcaf10e3082d86e678e7e447306fc100f73ff"
+    },
+    "first_fail": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S02/startup-r7/first-fail.log",
+      "bytes": 3606,
+      "sha256": "565e03871a4d75735ea6c461b832664227308694e0d663c51cdabce5ca8afd15"
+    },
+    "intermediate_focus_fail": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S02/startup-r7/reconnect-successor.log",
+      "bytes": 3709,
+      "sha256": "062c593f08afe7b706f894c96b2879f9172cc96e0fd995cada2e777780247812"
+    }
+  }
+}

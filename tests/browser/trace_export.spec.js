@@ -6,7 +6,7 @@ import {join} from 'node:path';
 test('real Run exports an inert share ZIP through native browser download', async ({page}) => {
   await page.goto('/');
   await page.getByRole('button', {name:'新建会话',exact:true}).click();
-  await page.getByRole('button', {name:'展开对话',exact:true}).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   await page.getByRole('textbox', {name:'消息'}).fill('export private prompt');
   const accepted = page.waitForResponse(r => r.url().endsWith('/api/runs') && r.status() === 202);
   await page.getByRole('button', {name:'发送',exact:true}).click();
@@ -41,7 +41,7 @@ with zipfile.ZipFile(sys.argv[1]) as z:
 async function createRun(page) {
   await page.goto('/');
   await page.getByRole('button',{name:'新建会话',exact:true}).click();
-  await page.getByRole('button',{name:'展开对话',exact:true}).click();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
   await page.getByRole('textbox',{name:'消息'}).fill('export lifecycle');
   const accepted=page.waitForResponse(r=>r.url().endsWith('/api/runs')&&r.status()===202);
   await page.getByRole('button',{name:'发送',exact:true}).click();
@@ -54,6 +54,16 @@ async function createRun(page) {
 test('AC18 AC24: another tab sees busy, leaving ready releases ownership',async({page,context})=>{
   const id=await createRun(page);
   await page.getByRole('button',{name:'生成追踪导出',exact:true}).click();
+  await expect(page.getByRole('button',{name:'下载 ZIP',exact:true})).toBeVisible();
+  const prematureCancels=[];
+  page.on('request',request=>{if(request.url().endsWith('/cancel'))prematureCancels.push(request.url());});
+  await page.getByText('追踪导出操作',{exact:true}).click();
+  await expect(page.getByRole('region',{name:'追踪导出'})).toContainText('文件已生成');
+  await expect(page.getByRole('button',{name:'下载 ZIP',exact:true})).toBeHidden();
+  await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
+  await page.getByRole('button',{name:'收起主对话',exact:true}).click();
+  expect(prematureCancels).toEqual([]);
+  await page.getByRole('link',{name:'查看追踪导出',exact:true}).click();
   await expect(page.getByRole('button',{name:'下载 ZIP',exact:true})).toBeVisible();
   const other=await context.newPage();
   await other.goto(`/runs/${id}`);
@@ -129,7 +139,7 @@ test('AC02 AC09 AC10 AC12: multistep Attempts, inline and external tool bodies d
   try {
     await page.goto(server.origin+'/');
     await page.getByRole('button',{name:'新建会话',exact:true}).click();
-    await page.getByRole('button',{name:'展开对话',exact:true}).click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     await page.getByRole('textbox',{name:'消息'}).fill('导出工具验收');
     const accepted=page.waitForResponse(r=>r.url().endsWith('/api/runs')&&r.status()===202);
     await page.getByRole('button',{name:'发送',exact:true}).click();
@@ -175,7 +185,7 @@ with zipfile.ZipFile(sys.argv[1]) as z:
 async function fixtureRun(page,server,message='导出工具验收',saved=true) {
   await page.goto(server.origin+'/');
   await page.getByRole('button',{name:'新建会话',exact:true}).click();
-  const expand=page.getByRole('button',{name:'展开对话',exact:true});
+  const expand=page.locator('#shell-toolbar [data-open-panel="mainbar"]');
   if (await expand.isVisible()) await expand.click();
   await page.getByRole('textbox',{name:'消息'}).fill(message);
   const accepted=page.waitForResponse(r=>r.url().endsWith('/api/runs')&&r.status()===202);
@@ -293,13 +303,22 @@ test('SPEC03 CE02: actual recording pending and failed then historical unknown r
   const server=await memoryServer({script:'tests/browser/trace_export_server.py'});
   try {
     await server.send('recording-hold-fail');
-    await fixtureRun(page,server,'recording result',false);
+    const runId=await fixtureRun(page,server,'recording result',false);
     await server.send('await-recording');
+    const pending=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/mainbar/locate');
+    await page.getByRole('button',{name:'在主对话中查看',exact:true}).click();
+    expect(await (await pending).json()).toMatchObject({run_id:runId,source:'unrecorded_projection',recording_state:'pending'});
+    await expect(page.locator(`#messages [data-run-id="${runId}"]`)).toContainText('正在保存');
     const refused=page.waitForResponse(r=>r.url().endsWith('/api/trace-exports'));
     await page.getByRole('button',{name:'生成追踪导出',exact:true}).click();
     expect((await (await refused).json()).code).toBe('not_stopped');
     await server.send('release-recording');
     await expect(page.getByText('保存失败',{exact:true}).first()).toBeVisible();
+    const failed=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/mainbar/locate');
+    await page.getByRole('button',{name:'在主对话中查看',exact:true}).click();
+    expect(await (await failed).json()).toMatchObject({run_id:runId,source:'unrecorded_projection',recording_state:'failed'});
+    await expect(page.locator(`#messages [data-run-id="${runId}"]`)).toContainText('未保存');
+    await expect(page.getByRole('region',{name:'运行摘要'})).toContainText('未保存');
     await page.getByRole('button',{name:'生成追踪导出',exact:true}).click();
     await expect(page.getByRole('region',{name:'追踪导出'})).toContainText('known_incomplete');
     zipManifest(await (await nativeZip(page)).path(),'known_incomplete');

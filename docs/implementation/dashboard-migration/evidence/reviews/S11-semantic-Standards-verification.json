@@ -1,0 +1,425 @@
+{
+  "scope": "bounded S11 semantic repair only; not final S11 acceptance or G08",
+  "created_at": "2026-10-09T04:23:43.697269+00:00",
+  "result": "PASS",
+  "identities": {
+    "8f579a4712075721728b2043d9f626689ff377a8": {
+      "tree": "58f3e91e5f08bf755bc62c64d5da2eb4e2e98d81",
+      "parents": [
+        "a5a13bd54e5cdc25fa80540c040f7fb8671e4c6b",
+        "7b1a31a6f4690b90b224c84787efd40dde0766a4"
+      ]
+    },
+    "c8397368074dacfc9837599b195e0b0dfc686b7a": {
+      "tree": "5eb14d976843ce916d5e319e38679ab1ae98703b",
+      "parents": [
+        "8f579a4712075721728b2043d9f626689ff377a8"
+      ]
+    },
+    "593564fc4b6ed08bc332bbfcf76dcf67107929c0": {
+      "tree": "dc0b879a7d34fb81f10b68bbd466984969be7383",
+      "parents": [
+        "c8397368074dacfc9837599b195e0b0dfc686b7a"
+      ]
+    },
+    "0758e468c009524d2c14f9545786fe9b93b768bf": {
+      "tree": "f0046246f133c2f26dab97e615783b87cab42188",
+      "parents": [
+        "593564fc4b6ed08bc332bbfcf76dcf67107929c0"
+      ]
+    }
+  },
+  "reviewed_ranges": [
+    "8f579a4712075721728b2043d9f626689ff377a8..c8397368074dacfc9837599b195e0b0dfc686b7a",
+    "593564fc4b6ed08bc332bbfcf76dcf67107929c0..0758e468c009524d2c14f9545786fe9b93b768bf"
+  ],
+  "excluded_entry_commit": "593564fc4b6ed08bc332bbfcf76dcf67107929c0",
+  "excluded_entry_paths": [
+    "src/agent_alfred/ops/static/index.html",
+    "src/agent_alfred/ops/static/shell.js",
+    "tests/browser/shell.spec.js"
+  ],
+  "checks": [
+    {
+      "name": "repair_parent",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "repair_tree",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "entry_parent",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "test_parent",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "test_tree",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "four_file_repair_scope",
+      "result": "PASS",
+      "detail": [
+        "src/agent_alfred/ops/static/memory.js",
+        "src/agent_alfred/ops/static/models.js",
+        "tests/browser/memory-migration.spec.js",
+        "tests/browser/models-migration.spec.js"
+      ]
+    },
+    {
+      "name": "one_file_test_successor",
+      "result": "PASS",
+      "detail": [
+        "tests/browser/models-migration.spec.js"
+      ]
+    },
+    {
+      "name": "unchanged_in_successor:src/agent_alfred/ops/static/memory.js",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_in_successor:src/agent_alfred/ops/static/models.js",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_in_successor:tests/browser/memory-migration.spec.js",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "successor_only_adds_new_input",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "diff_check:c839736",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "diff_check:0758e46",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "unchanged_dependency:tests/browser/settings_server.py",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_dependency:tests/browser/memory-server.js",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_dependency:tests/browser/memory_server.py",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_dependency:src/agent_alfred/ops/static/settings-focus.js",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_dependency:package.json",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_dependency:package-lock.json",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_dependency:playwright.config.js",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_dependency:pyproject.toml",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_dependency:uv.lock",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_contract:CLAUDE.md",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_contract:docs/agents/domain.md",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_contract:CONTEXT.md",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_contract:docs/adr/0009-caller-owns-the-local-transaction.md",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_contract:docs/adr/0022-dual-conflict-check-for-settings-writes.md",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_contract:docs/adr/0046-panel-visibility-preserves-page-lifecycle.md",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_contract:docs/design/dashboard-implementation/SPEC.md",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_contract:docs/design/dashboard-implementation/INTERFACES.md",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_contract:docs/design/dashboard-implementation/VALIDATION.md",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_contract:docs/design/issue-90/DESIGN.md",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unchanged_contract:docs/design/issue-91/DESIGN.md",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "sealed_log_hash:submitted-red.log",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "sealed_log_hash:submitted-green.log",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "sealed_log_hash:submitted-green-02.log",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "sealed_log_hash:typecheck-01.log",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "original_red_retained",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "original_green_failure_retained",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "targeted_successor_record",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "name": "STD02_trace_waiting_on_discard",
+      "result": "PASS",
+      "detail": null
+    }
+  ],
+  "files": [
+    {
+      "path": "src/agent_alfred/ops/static/memory.js",
+      "repair_blob": "c9d93e343a7db8d1f3845d637721ab3bc7c48f15",
+      "repair_sha256": "9129f17ae69d5e854bc2084e2d18be1afcc4ca53a1484a4ea8e247d2523bc9a0",
+      "repair_bytes": 102365,
+      "test_successor_blob": "c9d93e343a7db8d1f3845d637721ab3bc7c48f15",
+      "test_successor_sha256": "9129f17ae69d5e854bc2084e2d18be1afcc4ca53a1484a4ea8e247d2523bc9a0",
+      "test_successor_bytes": 102365
+    },
+    {
+      "path": "src/agent_alfred/ops/static/models.js",
+      "repair_blob": "a99ca72a3a65c51353c601d1ec4227a2fc6ecfa1",
+      "repair_sha256": "3d73a3643bab0ae7e75d12e6757ec957686ce90cbe2a04d4e362215bebfdcaad",
+      "repair_bytes": 28184,
+      "test_successor_blob": "a99ca72a3a65c51353c601d1ec4227a2fc6ecfa1",
+      "test_successor_sha256": "3d73a3643bab0ae7e75d12e6757ec957686ce90cbe2a04d4e362215bebfdcaad",
+      "test_successor_bytes": 28184
+    },
+    {
+      "path": "tests/browser/memory-migration.spec.js",
+      "repair_blob": "3a4e580394a1c5248be356432d0b8329fa57b4cd",
+      "repair_sha256": "52d9a22b3b13284a4816da04abd44456de3f105181073f62b361f7df285146fd",
+      "repair_bytes": 26756,
+      "test_successor_blob": "3a4e580394a1c5248be356432d0b8329fa57b4cd",
+      "test_successor_sha256": "52d9a22b3b13284a4816da04abd44456de3f105181073f62b361f7df285146fd",
+      "test_successor_bytes": 26756
+    },
+    {
+      "path": "tests/browser/models-migration.spec.js",
+      "repair_blob": "c1c39aa005ef27235c401158a44ec1bcd310b379",
+      "repair_sha256": "4eb386a6542bc6bdb0d5b6eb8bb934b2c7fd1e5f7b4d7cfbc7ad3948de8a0a56",
+      "repair_bytes": 28464,
+      "test_successor_blob": "fa5913ff68b3a9c22962025979ed49c0a8ce6534",
+      "test_successor_sha256": "96fc9d67779c38f3372d37627533b299674471da570ab1f36f3314dad0ab6db2",
+      "test_successor_bytes": 28525
+    }
+  ],
+  "contracts": [
+    {
+      "path": "CLAUDE.md",
+      "sha256": "d4691a7dc182b2ef4a29f1bc2f453b8e48255184c6b931b31959cf1f35b595c3"
+    },
+    {
+      "path": "docs/agents/domain.md",
+      "sha256": "edc6d6131fdffc4b7135704f5262124fc43355c95f61b7399dc5a4db643e28ca"
+    },
+    {
+      "path": "CONTEXT.md",
+      "sha256": "6aace8bf9dae8cc5566db509d49bc531c3770512fabaf49f5f34dea17c04633e"
+    },
+    {
+      "path": "docs/adr/0009-caller-owns-the-local-transaction.md",
+      "sha256": "998d425790ff56db4749715edee86a2a3153d69a4f848c9ebcf632c9c76eb23f"
+    },
+    {
+      "path": "docs/adr/0022-dual-conflict-check-for-settings-writes.md",
+      "sha256": "f6f67cdbb30452634a1f8f45409061579ea0d4d4860ea5927d2152ddc5063bfd"
+    },
+    {
+      "path": "docs/adr/0046-panel-visibility-preserves-page-lifecycle.md",
+      "sha256": "3a2b06fcb5688e6e6d6dc9f8a2d2ec7af4b5bfa944fe0556ba44ebca20546e04"
+    },
+    {
+      "path": "docs/design/dashboard-implementation/SPEC.md",
+      "sha256": "c8b09357e661fed623ab9a920536aa5b1cd583b28c2efaa7de40d6ef327ee7af"
+    },
+    {
+      "path": "docs/design/dashboard-implementation/INTERFACES.md",
+      "sha256": "9526b8287325f2a29b150ebfeae95ba4284ce8199e1c3540f877f3b0dac1bb2c"
+    },
+    {
+      "path": "docs/design/dashboard-implementation/VALIDATION.md",
+      "sha256": "85f3ab9b9a28f55cb312d8d5ec70097f6216665e010f6abde41a518bf182dfb2"
+    },
+    {
+      "path": "docs/design/issue-90/DESIGN.md",
+      "sha256": "9788e488c7b32dfbe15876193c2fc4958f44b82961ae7f091b8284b073863697"
+    },
+    {
+      "path": "docs/design/issue-91/DESIGN.md",
+      "sha256": "7281673419190f5ec2e2296eae566df3d5bdefed4be125b7e48832dc947c94a1"
+    }
+  ],
+  "input_bindings": [
+    {
+      "path": "S11/SEMANTIC-REPAIR-REVIEW-BRIEF.md",
+      "sha256": "2db83940adf65de61bb130aacb3919ae3c615d7d700f03504fec4d765f00a2bd",
+      "bytes": 3946
+    },
+    {
+      "path": "S11/SEMANTIC-REPAIR-HANDOFF.md",
+      "sha256": "c1fe4d5ab25615517cae6b1f031e41052385ef8a855e4f8f83513344c1d3cab3",
+      "bytes": 3197
+    },
+    {
+      "path": "S11/semantic-repair-evidence.json",
+      "sha256": "8ec89d419c3d22d753b20463217ab74954487bc5caaaf4aab4a6615be0d8a103",
+      "bytes": 373
+    }
+  ],
+  "logs": [
+    {
+      "path": "S11/submitted-red.log",
+      "bytes": 10350,
+      "sha256": "41f60d7f2b931d04e264eb066a909284e03b1dd75b5e2c4b469bdc1dcc400dbc"
+    },
+    {
+      "path": "S11/submitted-green.log",
+      "bytes": 16880,
+      "sha256": "be82f97f49f3820f7dd53e09d9ea57815eda7411232e69360394abe5c41edf0b"
+    },
+    {
+      "path": "S11/submitted-green-02.log",
+      "bytes": 838,
+      "sha256": "a5afae07e64f50ee76ba6ac12dcab09b712b71d3b886783905ade42f0d5ce039"
+    },
+    {
+      "path": "S11/typecheck-01.log",
+      "bytes": 29,
+      "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f"
+    }
+  ],
+  "STD02_trace": {
+    "path": "S11/submitted-green-artifacts/models-migration-S08-STD02-f6b8e-thout-stealing-a-new-intent/trace.zip",
+    "sha256": "64c671db1cc84172df209533ffec6576f7ab203539041f2ef194e07321c74fd0",
+    "evidence": [
+      {
+        "entry": "test.trace",
+        "event": {
+          "type": "before",
+          "callId": "pw:api@79",
+          "stepId": "pw:api@79",
+          "startTime": 33643.204,
+          "class": "Test",
+          "method": "pw:api",
+          "title": "Click",
+          "subtitle": "getByRole('button', { name: '放弃并离开', exact: true })",
+          "params": {
+            "locator": "getByRole('button', { name: '放弃并离开', exact: true })"
+          },
+          "stack": [
+            {
+              "file": "/Users/nineofour/.codex/worktrees/dashboard-s11/Agent-Alfred/tests/browser/models-migration.spec.js",
+              "line": 359,
+              "column": 119
+            }
+          ]
+        }
+      },
+      {
+        "entry": "1-trace.trace",
+        "event": {
+          "type": "before",
+          "callId": "call@1961",
+          "startTime": 33643.369,
+          "class": "Frame",
+          "method": "click",
+          "params": {
+            "selector": "internal:role=button[name=\"放弃并离开\"s]",
+            "strict": true
+          },
+          "stepId": "pw:api@79"
+        }
+      }
+    ]
+  },
+  "products_executed_by_reviewer": false,
+  "log_applicability": "The sealed handoff binds execution to the fixed repair, with excluded entry changes present. No entry action is exercised by these Models/Memory explicit-route scenarios. The successor changes only the STD02 input; unchanged 24 successful checks remain applicable. Logs are not a four-install or native acceptance proof."
+}

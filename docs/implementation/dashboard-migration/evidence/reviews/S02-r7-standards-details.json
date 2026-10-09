@@ -1,0 +1,2988 @@
+{
+  "axis": "Independent Standards",
+  "base": "ddefb65905e4792559e8ff4d130dd427b34cd137",
+  "repair_parent": "fd1c62513eaf8da2111edcfc5974798d1d7bca05",
+  "head": "0af962fbc4fc799806ba2a27593102c3df8c9e48",
+  "tree": "745d8609cc61d3b171da96aa250c26303fa2227e",
+  "result": "PASS for affected incremental review",
+  "documented_violations": [],
+  "optional_heuristic_smells": [],
+  "closed_findings": [
+    {
+      "id": "S02-r6-STD-01",
+      "code": "src/agent_alfred/ops/static/app.js:450-454",
+      "basis": "Current process guard precedes branch; first, revision>=0, strict equality and current matching csrf retry idempotent start. No state body reapplication; original accepted revision/projection remain untouched. Final actual restart/offline-entry/same-revision case reproduces the original trigger and passes."
+    }
+  ],
+  "file_assessment": [
+    {
+      "file": "src/agent_alfred/ops/static/app.js",
+      "hunk": "450-454",
+      "result": "PASS",
+      "rules": [
+        "issue-87/SPEC.md:31",
+        "dashboard-implementation/INTERFACES.md:137,145"
+      ],
+      "details": "Existing start boundary reused; stale less-than revision and different process do not qualify. Non-first equal patches do not acquire readiness through this path. Existing refreshEntry instance check still protects csrf. Original restoreRunPage owner/generation and S04 projection/gap producer untouched."
+    },
+    {
+      "file": "src/agent_alfred/ops/static/shell.js",
+      "hunk": "170-178",
+      "result": "PASS",
+      "rules": [
+        "issue-87/SPEC.md:171,180"
+      ],
+      "details": "Only unmounted document and focus within MainBar suppress titleFocus. Page creation, present, source restoration, generation and dispose ordering otherwise unchanged; later navigation still focuses its title. !started and !navigating guards retained."
+    },
+    {
+      "file": "tests/browser/shell-startup.spec.js",
+      "hunk": "1-10,82-145",
+      "result": "PASS",
+      "rules": [
+        "dashboard-implementation/VALIDATION.md:7,17,31-35"
+      ],
+      "details": "Uses own isolated real server/SQLite, actual process restart and native EventSource, both actual entry responses held. Fixture setup creates Session before browser request counters. Test observes repeated process/revision and liveness, exact one Models read, no browser-phase POST, single active connection, MainBar draft/focus; cleanup verifies both child exits 0."
+    }
+  ],
+  "evidence_qualification": {
+    "first_fail_product": "fd1c62513eaf8da2111edcfc5974798d1d7bca05",
+    "first_fail_observation": "same B revision 0 twice; connected true; 0 pages/reads/posts; both children exit0",
+    "intermediate_focus_failure": "r6 plus app-only readiness patch without final revision>=0 check; shell matches r6, page/read exists and focus is lost",
+    "intermediate_source_provenance": {
+      "original_product": "fd1c62513eaf8da2111edcfc5974798d1d7bca05",
+      "original_test_matches_current": true,
+      "preserved_r6_source_and_own_evidence": [
+        "src/agent_alfred/ops/static/app.js",
+        "src/agent_alfred/ops/static/shell.js",
+        "tests/browser/shell-startup.spec.js",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S02-r6-Standards.md",
+        "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S02-r6-startup-reconnect-probe.json"
+      ],
+      "intermediate_product": "r6 plus reconstructed app-only equality patch without revision>=0; shell exactly r6",
+      "intermediate_test_trace_bytes_match": true,
+      "final_test_bytes_match": true,
+      "limitation": "No intermediate served JavaScript trace-body hash; reconstruction tied to owner-recorded actual patch, preserved r6 source, failing test capture and behavior log. No claim of independent trace product body capture.",
+      "first_failure_artifacts_checked": 6,
+      "log_hashes": {
+        "first-fail.log": "565e03871a4d75735ea6c461b832664227308694e0d663c51cdabce5ca8afd15",
+        "reconnect-successor.log": "062c593f08afe7b706f894c96b2879f9172cc96e0fd995cada2e777780247812",
+        "final.log": "119f3aefde71d7ae2c015575bc2bcaf10e3082d86e678e7e447306fc100f73ff",
+        "typecheck.log": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f",
+        "diff-check.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "final_tests": "18 PASS: startup4 + shell13 + restart1; all final product code",
+    "new_narrow_probe": "not run: final owner regression exactly exercises independently reproduced original trigger and new focus seam; no unresolved factual uncertainty required duplicate execution"
+  },
+  "check_reuse": {
+    "retained_prior_review": [
+      "S02 r5 complete review for unchanged scope",
+      "S02 r6 complete incremental context plus prior S04 r4 integrated tree review"
+    ],
+    "r6_20_HTTP": "Resource names/import graph/registry/MIME/security routes unchanged; current bytes independently hashed. Original r6 HTTP source contract retained as prior evidence, not relabelled new request output; installed packages remain pending.",
+    "r6_64_browser": "Retained only unaffected paths; startup/shell/restart changed paths superseded by final18; no additive pass total.",
+    "ruff_and_dependencies": "Python and dependency/config inputs unchanged; r6 Ruff applicable. New JavaScript typecheck and fixed diff check PASS.",
+    "no_broad_rerun": true
+  },
+  "source_responsibilities": [
+    {
+      "source_id": "issue-86:section-01",
+      "source_document": "docs/design/issue-86/DECISIONS.md",
+      "source_line": 8,
+      "source_text_sha256": "989ddbc70d0b6d0d8f60d5f7b15ae9aefabd00d2a0c9ed871165b5ba15172f00",
+      "owners": [
+        "S02",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC03",
+        "AC25",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-86:section-02",
+      "source_document": "docs/design/issue-86/DECISIONS.md",
+      "source_line": 14,
+      "source_text_sha256": "bd6aa2a5110a07511ae966629cb8f466fb09e5ac8d96b1b5a3f696083bfe24e8",
+      "owners": [
+        "S02",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC03",
+        "AC25",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-86:section-03",
+      "source_document": "docs/design/issue-86/DECISIONS.md",
+      "source_line": 24,
+      "source_text_sha256": "7d755dda408454a905de85ae2b8bd8a071d2117fc7113f77a1eaac766d00ca63",
+      "owners": [
+        "S02",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC03",
+        "AC25",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-86:section-04",
+      "source_document": "docs/design/issue-86/DECISIONS.md",
+      "source_line": 34,
+      "source_text_sha256": "310e97e0d62b54faf90f6c55323a0967535e66013c92e881c33b9d3a3311d471",
+      "owners": [
+        "S02",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC03",
+        "AC25",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-86:section-05",
+      "source_document": "docs/design/issue-86/DECISIONS.md",
+      "source_line": 52,
+      "source_text_sha256": "efb306eef9816c71d94f346217bab2eb67f653b190f90cd36060ed739fcbcc9c",
+      "owners": [
+        "S02",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC03",
+        "AC25",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-86:section-06",
+      "source_document": "docs/design/issue-86/DECISIONS.md",
+      "source_line": 69,
+      "source_text_sha256": "68a30e7eabc670adea566b972895f838840501683b9d4f8bf1096120027f49ac",
+      "owners": [
+        "S02",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC03",
+        "AC25",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-86:section-07",
+      "source_document": "docs/design/issue-86/DECISIONS.md",
+      "source_line": 78,
+      "source_text_sha256": "e9e9d4e31c6fc3d909439c46118a37987b2ddaa74a78e1b5d0472a465d796f27",
+      "owners": [
+        "S02",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC03",
+        "AC25",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-86:section-08",
+      "source_document": "docs/design/issue-86/DECISIONS.md",
+      "source_line": 93,
+      "source_text_sha256": "a9faac6ed78907c3fbf987a49e4ccdf58dd685f455362c54dbe2ee302c40b4fd",
+      "owners": [
+        "S02",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC03",
+        "AC25",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-86:section-09",
+      "source_document": "docs/design/issue-86/DECISIONS.md",
+      "source_line": 102,
+      "source_text_sha256": "893b776195d9b36dfe2de74389eb0afeb8fe600fdecd18962ee8154528910184",
+      "owners": [
+        "S02",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC03",
+        "AC25",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-86:section-10",
+      "source_document": "docs/design/issue-86/DECISIONS.md",
+      "source_line": 112,
+      "source_text_sha256": "6971419a350785ca3e9c5264e01e8a9d3fc6ffc80bbe027e8ef7907f3c754f24",
+      "owners": [
+        "S02",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC03",
+        "AC25",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-86:section-11",
+      "source_document": "docs/design/issue-86/DECISIONS.md",
+      "source_line": 118,
+      "source_text_sha256": "34d3ebb00c9883f68ae3fb168a52bdfa19c903956644782d5b3106fc9d411840",
+      "owners": [
+        "S02",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC03",
+        "AC25",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:P01",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 191,
+      "source_text_sha256": "ac9ce506e8c1796bb750da7eeb5c76ed3f8b81ea3780575023f70eac869dd191",
+      "owners": [
+        "S02",
+        "S04"
+      ],
+      "acceptance_ids": [
+        "AC01",
+        "AC04"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:P02",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 192,
+      "source_text_sha256": "2fa2d73fb9537efee68da6a558d617946d84ec1e887e91c80c0219fa5048e1d4",
+      "owners": [
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "S09",
+        "S10"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06",
+        "AC23"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:P03",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 193,
+      "source_text_sha256": "16681ceef0294583600c7ca06b10d37c17d8dd7c5423cbbd5543355f6960c54f",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:P04",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 194,
+      "source_text_sha256": "c9bace8593c87f5643a190ba21e3e79baf0fa688540b7bba3096cf610bb097bb",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC01",
+        "AC04"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:P05",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 195,
+      "source_text_sha256": "653f0318a21d31d14166d5cfcdc6f7ff0c100a260123c303554fdce59786e9db",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC03",
+        "AC04",
+        "AC06"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:P06",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 196,
+      "source_text_sha256": "097bdda5578430e9eeff8e2d3f4739c16e6a49686ac9a4301f02f816ad6391a0",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:P07",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 197,
+      "source_text_sha256": "fca0018ded38af4dfca1cf6a174a736cccfa0c8f08df96939bfdf2a5ca5c343d",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:P08",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 198,
+      "source_text_sha256": "573422d879ca36e223b69d2749387406028f536a05341acae799d84635b27dca",
+      "owners": [
+        "S02",
+        "S10"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC22"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:P09",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 199,
+      "source_text_sha256": "cc607f1bcecfd2cc9a67682a615fcb8331764d4066024b746927d14b30132ab0",
+      "owners": [
+        "S02",
+        "S05"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC14"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:P10",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 200,
+      "source_text_sha256": "e6a079472a490fbbcaafc1f12b0c1a2855cec050f92c677d54fce23979b4841c",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:P11",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 201,
+      "source_text_sha256": "2684f506a1e6ec10718bdb158a983373d1788786b809cb4d9946a4841899e059",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:P12",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 202,
+      "source_text_sha256": "e598d7fab3fab91cfdaeb2809f60643f3f461e130d974ab5b2b7fd9740facc49",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC06",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:P13",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 203,
+      "source_text_sha256": "625095815ff235e7081f99287d171e4f5170de40df3348e40d387268322488ea",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC03",
+        "AC04",
+        "AC06"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:P14",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 204,
+      "source_text_sha256": "5a7b40ddcf3023e4cc9ed28fa8d8c2b46cd4a35915c2be83340764fb82675935",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC03",
+        "AC04",
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:P15",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 205,
+      "source_text_sha256": "7ee21513b1e6ac8e578198a3afa5c6b508b8d884f642005c12780218a4ea6eab",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-01",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 213,
+      "source_text_sha256": "897e82fbf2758aeef2ab2f2aff8108d21cc28b530d32d8534af9cbbdeacbdae6",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-02",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 214,
+      "source_text_sha256": "88561b9765bc741554c384dff283fb2bffc043186bf4cd089aa4f78eb753a330",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-03",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 215,
+      "source_text_sha256": "d0c469c7fbfa51090b8bf8aeb87f1a51a2e3aa1ffc339f253d60579defcb5aa1",
+      "owners": [
+        "S02",
+        "S06"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC16"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-04",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 216,
+      "source_text_sha256": "e485cb9a5263b9a16a1670849386e9a279e756cb04ded9ef182c47d791198d3c",
+      "owners": [
+        "S02",
+        "S10"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC22"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-05",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 217,
+      "source_text_sha256": "247d9326fc5b31dbf666c637ef46c49a93a473948f4c673b5df01acc09ce7a84",
+      "owners": [
+        "S02",
+        "S05"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC14"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-06",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 218,
+      "source_text_sha256": "54fa0024505b99eff444ce768c612df48c72cdadefe7831875dc53ab83e24e09",
+      "owners": [
+        "S02",
+        "S03",
+        "S04"
+      ],
+      "acceptance_ids": [
+        "AC01"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-07",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 219,
+      "source_text_sha256": "12d16a360f13e0b3d64cd2f53a03e8289a3ef63aed42157bf5ed14bb790db9f8",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-08",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 220,
+      "source_text_sha256": "72331b57316332def7d2aa8486232056f2bbe3e57733f7b6d1cd42873e6eb36d",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-09",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 221,
+      "source_text_sha256": "9db73b5794aa661d99acef70a36e0093e2a1cc21bfb8694c291121604047909d",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-10",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 222,
+      "source_text_sha256": "6ca9470f394d120c5e046a41d6d8c47fd0d339a416d7e8069dfc533060fde1af",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC03",
+        "AC04",
+        "AC05",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-11",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 223,
+      "source_text_sha256": "d0739cf6196f4923bc1d1b4894507ae9026c655a236e47ca8e45327b3e93548b",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC05",
+        "AC06"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-12",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 224,
+      "source_text_sha256": "a4c60b5338fb2eaebd3b209626e087e42e536553cee587cdf8e4bc73a78564e4",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-13",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 225,
+      "source_text_sha256": "da2379afb78615219561cbf2e2e0a8c140b54046c8bb9a050624589b2d392a2a",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-14",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 226,
+      "source_text_sha256": "c7b04b066cd41208a9d665c2f272f7d689fd3e8950721f7bfa8d49803b286518",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC03",
+        "AC04"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-15",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 227,
+      "source_text_sha256": "c37dc056fe43edd351e6e9c2cac2a9767accf672c621bb2157dc66ddb4ed5d04",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-16",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 228,
+      "source_text_sha256": "4023a481c31ed59e446a2d38cd94fe3b4ed4ae936da7994e81ec9d8d4cc4bd51",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-17",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 229,
+      "source_text_sha256": "d7f47bb41e2ceab614c18d54b2b1a1e9d5b44df107a4ebe22c5f599e8589206f",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-18",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 230,
+      "source_text_sha256": "a7bb98fd756bd0f1beae052459e2715775c419584d6ad8650d18611ed6859c1b",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-19",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 231,
+      "source_text_sha256": "c014475198f6bef4bf031cc0a8d5bd53d7c5a5f065f0c1f88f09c7560b61ec33",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC06",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-20",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 232,
+      "source_text_sha256": "a367b868d11f75d0845d055bc6566782df517d144cb3b4c06d0034e24c94334f",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-21",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 233,
+      "source_text_sha256": "4876534bfd2223e9b51cf0cbe288466c37ffe790218c0d940da32c584fc3588b",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-22",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 234,
+      "source_text_sha256": "3494c898019e76b1b3f39915a211c0934ebd5d7490b574fab45116c02fb764a3",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC03"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-23",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 235,
+      "source_text_sha256": "bc9962daecf8c7faaf058a4f88f4577127460307dae058054de008fb87c1d9c1",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:CE-24",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 236,
+      "source_text_sha256": "28e18b26defdd1353d420875e1a18eacd7ea6426ae8c4bca2296ce4b7347a0be",
+      "owners": [
+        "S02",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "S10"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC13",
+        "AC17",
+        "AC19",
+        "AC22"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:section-01",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 7,
+      "source_text_sha256": "f4a7dab477efa605006e230dd6a6042d2898aab67e95132b9acef51d18a2ab2d",
+      "owners": [
+        "S02",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC23",
+        "AC25",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:R01",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 14,
+      "source_text_sha256": "6b2cdce54e36f67954121fd940533322d97244be1d18a72451d5a826144f4645",
+      "owners": [
+        "S02",
+        "S04"
+      ],
+      "acceptance_ids": [
+        "AC01",
+        "AC04"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:R02",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 37,
+      "source_text_sha256": "10d7cb64f08d8ae2528b369484c194db9c15cff071a961629b6c8281d405ac40",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC03"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:R03",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 52,
+      "source_text_sha256": "7a1ae851cc62b1bca3ab0764259694fb28ab0e01806de142a317621d8558346e",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:R04",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 69,
+      "source_text_sha256": "b2e50b398ffa28f6d83e6ae28241beda3bf84dd65deae2c48dc35b0bdccd4483",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:R05",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 87,
+      "source_text_sha256": "16e62dbee3ce47cbf43afb11c91a0dd3dc87be5c380d32be83418f127d697a9c",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:R06",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 105,
+      "source_text_sha256": "5a0762523aabfda06ca2df129fadb311f2b83af949908443815faa81928b90c6",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:R07",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 116,
+      "source_text_sha256": "fab997274e5744b259e1293a3fcf67074c5437135bd178b2c810c8e84103afeb",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:R08",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 128,
+      "source_text_sha256": "0b8f076536aaf70b7b900d10863a668376547eb4d96556bb4f6d4230769533c3",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC06",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:R09",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 145,
+      "source_text_sha256": "57e9bce3b9f4fbc563d27fc96dabd33bf27bc81068d03c68d81ef4aa352e9ef7",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:R10",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 165,
+      "source_text_sha256": "a79fe43f8b6b5f1ff9112fcb1b1a0fae20d53f1222958ec5adb0c7e129c07d6a",
+      "owners": [
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC03",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:section-12",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 185,
+      "source_text_sha256": "08f813b4b1416914ba886b5fac53f12fbee68844a98ce31a4f75c7190ddd781c",
+      "owners": [
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "S09",
+        "S10",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC01",
+        "AC02",
+        "AC03",
+        "AC04",
+        "AC05",
+        "AC06",
+        "AC07",
+        "AC14",
+        "AC22",
+        "AC23",
+        "AC25",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:section-13",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 207,
+      "source_text_sha256": "39e56e543398d16c123d944df816bbe99a75da1944e5ab6e832c3c057bcbb386",
+      "owners": [
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S06",
+        "S07",
+        "S08",
+        "S10",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC01",
+        "AC02",
+        "AC03",
+        "AC04",
+        "AC05",
+        "AC06",
+        "AC07",
+        "AC13",
+        "AC14",
+        "AC16",
+        "AC17",
+        "AC19",
+        "AC22",
+        "AC23",
+        "AC25",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:section-14",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 238,
+      "source_text_sha256": "7691923e4a38126457058671da66fb68332752a961c3d4ff01e966d01af158a5",
+      "owners": [
+        "S02",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC23",
+        "AC25",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-87:section-15",
+      "source_document": "docs/design/issue-87/SPEC.md",
+      "source_line": 247,
+      "source_text_sha256": "ea0a8e347d51b4f230b5b7b8b101381b7a1a6f81e953aa7d8976b80d6037a736",
+      "owners": [
+        "S02",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC23",
+        "AC25",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-88:CE-08",
+      "source_document": "docs/design/issue-88/DESIGN.md",
+      "source_line": 211,
+      "source_text_sha256": "b9718aa1d50b46e51c9701cfdb4ee93707de7cad28466de4a2cf1560cbcc4102",
+      "owners": [
+        "S01",
+        "S02",
+        "S04"
+      ],
+      "acceptance_ids": [
+        "AC06",
+        "AC11"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-88:CE-09",
+      "source_document": "docs/design/issue-88/DESIGN.md",
+      "source_line": 212,
+      "source_text_sha256": "6d8f82e3f1842318f327f6bb96ddb65c70f5409158b49c613863263428877cf1",
+      "owners": [
+        "S01",
+        "S02",
+        "S04"
+      ],
+      "acceptance_ids": [
+        "AC06",
+        "AC11"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-88:CE-11",
+      "source_document": "docs/design/issue-88/DESIGN.md",
+      "source_line": 214,
+      "source_text_sha256": "9ffd9bfc76b587c511596ca61c457694614cc25569bbc53ff1be34f8a710f7a8",
+      "owners": [
+        "S01",
+        "S02",
+        "S04"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC12"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-88:CE-12",
+      "source_document": "docs/design/issue-88/DESIGN.md",
+      "source_line": 215,
+      "source_text_sha256": "430e3969e268f08f47a391c1e1bf8ffe5a1c4ee9d79cec4de8be9b76c3656da9",
+      "owners": [
+        "S01",
+        "S02",
+        "S04"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC12"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-88:CE-15",
+      "source_document": "docs/design/issue-88/DESIGN.md",
+      "source_line": 218,
+      "source_text_sha256": "0a8e6535561674d534ab5bb745a307f96ce433ed7f7eb2d321441026744b5495",
+      "owners": [
+        "S02",
+        "S03",
+        "S04"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC23"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-88:section-11",
+      "source_document": "docs/design/issue-88/DESIGN.md",
+      "source_line": 198,
+      "source_text_sha256": "2f705a23bbd8b60fe58be58235c28b97ce492980b7e764befc8bd81342d02958",
+      "owners": [
+        "S01",
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S09",
+        "S11"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC04",
+        "AC05",
+        "AC06",
+        "AC11",
+        "AC12",
+        "AC14",
+        "AC21",
+        "AC23",
+        "AC25",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:I03",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 234,
+      "source_text_sha256": "bfa83264f6e4ab48411ebaf2a1e1a1c5e9f23f995f1e87559f7634077caff538",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:I04",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 235,
+      "source_text_sha256": "f64add6cc9f296128324b3267fbc955ebd8d82d18c477124328fdd6b44264fad",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:I05",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 236,
+      "source_text_sha256": "4e610ee038b6f10ae69138dae45daa36c0a8d1050ad184b8853ea9a18fc558f8",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC06",
+        "AC09",
+        "AC10"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:M02",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 248,
+      "source_text_sha256": "f42d7fe1d2460811e7b9335319d3bd0e2e91ce7abaaa0018e77b3f68f075cc08",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:M04",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 250,
+      "source_text_sha256": "58f1bb64cf5418afe9cd1a07138fad88301f64e53a5ec9dacd10c21dd0b47df6",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC04"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:M05",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 251,
+      "source_text_sha256": "a0c634ba10f4f018e16c72e9a10299807df8816dbb586005f5d33fe78a720d3e",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC06",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:M07",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 253,
+      "source_text_sha256": "38294dfa568bfe706a8e79f001cf00357aff75e1fc250645031de39de274267d",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:M08",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 254,
+      "source_text_sha256": "e09348230802add0d5e878003349ef9cee492f151a2af234fe887ac167615485",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC06",
+        "AC08"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:M13",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 259,
+      "source_text_sha256": "5a263c95cb50a7cef852a22a29470b532f376adc34960cc558532c81cf8997dc",
+      "owners": [
+        "S02",
+        "S03",
+        "S09"
+      ],
+      "acceptance_ids": [
+        "AC09",
+        "AC21",
+        "AC23"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:M14",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 260,
+      "source_text_sha256": "277e77502efa8f8420b7b0450cb0e869e32efdeb459586310f6e7cb46a9b8bcb",
+      "owners": [
+        "S02",
+        "S03",
+        "S05"
+      ],
+      "acceptance_ids": [
+        "AC09",
+        "AC14"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:M16",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 262,
+      "source_text_sha256": "ebcbc40311aeab80e56249ff2c4640db5af124e65d039485fae3653d8e9caffe",
+      "owners": [
+        "S01",
+        "S02",
+        "S03",
+        "S06"
+      ],
+      "acceptance_ids": [
+        "AC08",
+        "AC09",
+        "AC17"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:M19",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 265,
+      "source_text_sha256": "dd5a50ece0bd83b1f1751a64e6377142bf028a8f17598dbb804203fc4e6a04f0",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC10"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:M20",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 266,
+      "source_text_sha256": "a1cfe4768daf6e3d6423e202b762f9f898091ce0f88b0d8f6790d60a5328bbd2",
+      "owners": [
+        "S02",
+        "S03",
+        "S09"
+      ],
+      "acceptance_ids": [
+        "AC21",
+        "AC23"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:M22",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 268,
+      "source_text_sha256": "7c33e1f28ed49416f4d38db0141ffaff3db505d5776fbc82adb3c648bc7be34b",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC01",
+        "AC03",
+        "AC04",
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:P01",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 278,
+      "source_text_sha256": "d59c02f4c8875a2b40e3bd2da50b112ae82031babeb388f02b0a52f53f67d2fd",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:P02",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 279,
+      "source_text_sha256": "5f487d5c5a397dd6c135af49cd49102b7283e34dc7fd5103d7404db530cf1e38",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:P03",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 280,
+      "source_text_sha256": "b61cb1ad7e4603c78badcde991754e6a7a0252bffc8ccde3c2dc3e8bae310c8f",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:P04",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 281,
+      "source_text_sha256": "0e2612ce95f0faa736d6534569cf82dd0a0ace3a8b2f8fb37b5cd22164cf8f4c",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC06",
+        "AC07",
+        "AC08"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:P05",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 282,
+      "source_text_sha256": "b19166668e9d9881bf3299bf156baf49023b117b2fc944fc0f7f19466deccc1a",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC06",
+        "AC07",
+        "AC08"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:P06",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 283,
+      "source_text_sha256": "b41b0b7106c476599ac0d2c9ee1d5827af1cca94000aad07c62848ce94661561",
+      "owners": [
+        "S02",
+        "S03",
+        "S04"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC11",
+        "AC23"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:P07",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 284,
+      "source_text_sha256": "bbb0c1552ee910408bae9b1849b91d8027f7ef00cf26f7cadb0a863807469076",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC01",
+        "AC08"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:P08",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 285,
+      "source_text_sha256": "62d5d192ab19a29d1802dce21fb8b8e752b34faca864e13eb51bbeab38a65162",
+      "owners": [
+        "S02",
+        "S03",
+        "S09"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC21",
+        "AC23"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:P09",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 286,
+      "source_text_sha256": "fb8f937b7d59520ba73ccd616e7f7efe9ff846e91937718e80688d42217206c2",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:P10",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 287,
+      "source_text_sha256": "93c979893dac3d950963799dd358533d38db8e26615428a0040128ba4141d203",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:P11",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 288,
+      "source_text_sha256": "8ae1c11b3495c8cdd6bd179bdf3746f7048381118403f1d991c8455df301b5ce",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:P13",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 290,
+      "source_text_sha256": "f30283cd8a2f9a5ea7f812ff0dd0817a30bdadf17c3a0cdd0f442ffa1f62b65b",
+      "owners": [
+        "S02",
+        "S03",
+        "S05"
+      ],
+      "acceptance_ids": [
+        "AC09",
+        "AC14",
+        "AC23"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:P15",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 292,
+      "source_text_sha256": "b16094d91efcd729b92f3c5c6f132ba5e785654e210b8584af5e97a4ce8386ea",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC10"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:P16",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 293,
+      "source_text_sha256": "ca973bcbadd8027a9c5537a82efa5acfe3c03a25ea0129bff3dca5530a4822cb",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC03",
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:CE-01",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 301,
+      "source_text_sha256": "bee58032e854ff7005e1ff8e180effa3d718926c50f220dfa5590dd833d75905",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:CE-02",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 302,
+      "source_text_sha256": "cd6d4f072b1f1f23af8cf5fbe8fbcf9494588e979a581170e5b017b76416d5db",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:CE-04",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 304,
+      "source_text_sha256": "31507c11616465eb7bc787dfdd52925e9fddae516d55572e5bf91fda4cb21e61",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:CE-08",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 308,
+      "source_text_sha256": "49d35bfb1b16574396be0a5130ea011ff8d350a8bd2f82d21a5e80923eefdd3e",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC06"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:CE-09",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 309,
+      "source_text_sha256": "feb3b0a422cdf344b4f68893f94e24540cd7c25938e20e16aa9fb285376f0bb2",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC06"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:CE-10",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 310,
+      "source_text_sha256": "dc8d286998e148b4348f0600cdbf6dc0baabb640ceecc0e95b9e2bbc7529ad4f",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC06",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:CE-11",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 311,
+      "source_text_sha256": "a1337597e278efbe4286dd8cb5e5fc3cd1f153ef41e6df232b5b9b877ce32d42",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC06",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:CE-12",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 312,
+      "source_text_sha256": "a957720ae4c8e3fcc09f1882437c554a4b3300242cc99b4d152e4e63a462c19a",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC06",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:CE-13",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 313,
+      "source_text_sha256": "9b5ab73cd3af480d85fedb23cc201ee1934a58bc5c744fe7a1a61b0ac9fcb51f",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC06",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:CE-16",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 316,
+      "source_text_sha256": "c3a8faf783d2fd85b299fc220cb2f589e37dbfb524938a6c256938b702422c71",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC06",
+        "AC09"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:CE-19",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 319,
+      "source_text_sha256": "ae26927cbd2dbcde55dfba04c1d0136eebad110de11e40e3a91c59a70c63cf52",
+      "owners": [
+        "S02",
+        "S03",
+        "S05"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC09",
+        "AC14"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:CE-20",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 320,
+      "source_text_sha256": "951f225f7acd4aefe603a14b90b2955910fc7e78bf36de4c2e1e57bab4a9bfa6",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC10"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:CE-21",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 321,
+      "source_text_sha256": "73eefeb0388fc4ffcbcea572fca2c6475d105ed057f51683f1caa3d19bde6ce8",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC10"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:CE-22",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 322,
+      "source_text_sha256": "c0f20700b78d89d8a74772e2b67b9af8200558657195c3470ac132b73897f695",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC06",
+        "AC07",
+        "AC09"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:CE-23",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 323,
+      "source_text_sha256": "132ea46b3a335b8925ce2f580a3b250104dc82d09ef14f682628398aad838ed6",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC06",
+        "AC07",
+        "AC09"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:CE-24",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 324,
+      "source_text_sha256": "597976d4ce6ab7de837857bbb9d5f36b43799e6f5a24dcfe972d12ce876e6505",
+      "owners": [
+        "S01",
+        "S02",
+        "S03",
+        "S04",
+        "S09"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC07",
+        "AC21",
+        "AC23"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:CE-25",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 325,
+      "source_text_sha256": "ec60155b0667b5f718d69839b032fe91d9755ff4ac2e68654fb1ce1ed269c4fe",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC03",
+        "AC04",
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:CE-26",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 326,
+      "source_text_sha256": "041e45f1a053e2ffbdb30daeaffaf5c1f4b0f3e489bf74b4953979ace73bdbf6",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC03",
+        "AC04",
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:D01",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 7,
+      "source_text_sha256": "e5cba072914557a46777c7d1c880f2ea1d23db4b6b6d8c0f60f08a645bb39ea6",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC01",
+        "AC25",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:D02",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 18,
+      "source_text_sha256": "6b49b5cb274b9d1ff31939916462c1faad3fe06b7de81d28985204965974ad72",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC04",
+        "AC08"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:D03",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 37,
+      "source_text_sha256": "6e937e89f525135a6f8f3ef69dc49183d5f9b3c219aa2be6b2ea7145023173ef",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC01",
+        "AC05",
+        "AC07",
+        "AC21"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:D04",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 61,
+      "source_text_sha256": "65d945f2d651b565c2005f77ef30d9f98c20e83d83ec7b7052a66798c63aee40",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:D05",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 75,
+      "source_text_sha256": "d80a72a311a53037f4cc01a0cefdeead0de9487d3687cf960aef42b43d8646d1",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC06",
+        "AC08"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:D06",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 104,
+      "source_text_sha256": "b04dfc12a22b905202f1a935268cdc7b36d6191a1317db1eec9e0d65da8c3bae",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC06",
+        "AC08"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:D07",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 123,
+      "source_text_sha256": "155c3b85664eeb961cb0adf85dfa186bbd3aee0d0e61ce0c8dd15b73b1281717",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC09"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:D08",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 140,
+      "source_text_sha256": "aacd04f373e2cc3e94b40969e31280759e1a1b7265fed18631484c68e547c99b",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC06",
+        "AC07"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:D09",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 165,
+      "source_text_sha256": "fb55d75259db33a3a4cfd949ff0785690b5881d9cc417f5932164155dce7c497",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC06",
+        "AC07",
+        "AC21"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:D10",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 191,
+      "source_text_sha256": "cb7c4eed36e9b9c324e9dd0b3377539fcb451c2a677856069ef1f9aff0288a92",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC09",
+        "AC10"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:D11",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 215,
+      "source_text_sha256": "2bf94e0e4cd7d6b823f0e550d0669d239bbd1e07f21174000f0cac9de679d1b1",
+      "owners": [
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC03",
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:D12",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 226,
+      "source_text_sha256": "fbf2768cb6cb6232d435c584fdb22b2397299fc0e2ace32ce55b1a01e5791d5e",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC05",
+        "AC06",
+        "AC07",
+        "AC08",
+        "AC09",
+        "AC10"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:D13",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 241,
+      "source_text_sha256": "eb711a40bb05d210ace6126149734cc6633a3c6665d6989bee68a0275ca30a3d",
+      "owners": [
+        "S01",
+        "S02",
+        "S03",
+        "S05",
+        "S06",
+        "S09"
+      ],
+      "acceptance_ids": [
+        "AC01",
+        "AC03",
+        "AC04",
+        "AC05",
+        "AC06",
+        "AC07",
+        "AC08",
+        "AC09",
+        "AC10",
+        "AC14",
+        "AC16",
+        "AC17",
+        "AC21",
+        "AC23"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:D14",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 272,
+      "source_text_sha256": "8d2ac2da00fb62c7d04281c67e9241e7502e0179271c0fb4419a97e2e83f0d45",
+      "owners": [
+        "S01",
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S09"
+      ],
+      "acceptance_ids": [
+        "AC01",
+        "AC03",
+        "AC04",
+        "AC05",
+        "AC06",
+        "AC07",
+        "AC08",
+        "AC09",
+        "AC10",
+        "AC11",
+        "AC14",
+        "AC21",
+        "AC23"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:D15",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 295,
+      "source_text_sha256": "1e5279de883893fad81a97f92bad461058a9608a487a15d70f498d4f58ac131c",
+      "owners": [
+        "S01",
+        "S02",
+        "S03",
+        "S04",
+        "S05",
+        "S09"
+      ],
+      "acceptance_ids": [
+        "AC01",
+        "AC03",
+        "AC04",
+        "AC05",
+        "AC06",
+        "AC07",
+        "AC08",
+        "AC09",
+        "AC10",
+        "AC14",
+        "AC21",
+        "AC23",
+        "AC25",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-89:D16",
+      "source_document": "docs/design/issue-89/DESIGN.md",
+      "source_line": 337,
+      "source_text_sha256": "b8ad07d346a7a89bb72d58a67299738f0d4f9c06479e05935ac02774dd78f309",
+      "owners": [
+        "S01",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC25",
+        "AC26"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-90:R05",
+      "source_document": "docs/design/issue-90/DESIGN.md",
+      "source_line": 86,
+      "source_text_sha256": "9678a6bd3debef957ce418c88266afe0840dca62358944405414f93d9881fb3f",
+      "owners": [
+        "S02",
+        "S03",
+        "S05",
+        "S07"
+      ],
+      "acceptance_ids": [
+        "AC14",
+        "AC15"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-90:R08",
+      "source_document": "docs/design/issue-90/DESIGN.md",
+      "source_line": 128,
+      "source_text_sha256": "eda78b57b571ca0ce8ce35f4277569fc9d7ab4ff692c1a52b735c4219dfdd69d",
+      "owners": [
+        "S02",
+        "S03",
+        "S07",
+        "S08",
+        "S09"
+      ],
+      "acceptance_ids": [
+        "AC18",
+        "AC20",
+        "AC21",
+        "AC23"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-90:P05",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 15,
+      "source_text_sha256": "69c4f32cfa33d8837597f71e7d819584c9d01f40db59cdee8357529a0e041aa4",
+      "owners": [
+        "S05",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC13"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-90:P09",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 19,
+      "source_text_sha256": "a66795387786cc0360ab67e3bcd8bb47e8af4863000863b0d77129be5314e6ee",
+      "owners": [
+        "S05",
+        "S07",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC15",
+        "AC23"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-90:P13",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 23,
+      "source_text_sha256": "a6557e4340f968fc58a9962ef56f73c563544f258473b00132bc5b08c5a5e826",
+      "owners": [
+        "S06",
+        "S02",
+        "S03",
+        "S05"
+      ],
+      "acceptance_ids": [
+        "AC17",
+        "AC23"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-90:P16",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 26,
+      "source_text_sha256": "b00f6400d1c75f77399a29990c6076f6e4d0c12cceb200b7c4bc23fce4dfd863",
+      "owners": [
+        "S07",
+        "S09",
+        "S03",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC18",
+        "AC21",
+        "AC23"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-90:P17",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 27,
+      "source_text_sha256": "6025a0de9235d9ff196697dde490e3d8c7f1e7f0128faf8e9d772ec62d65211c",
+      "owners": [
+        "S02",
+        "S05",
+        "S06",
+        "S07"
+      ],
+      "acceptance_ids": [
+        "AC04",
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-90:P18",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 28,
+      "source_text_sha256": "a095f58329aa5013fc29ff42a4161f878440fe080706201581f9dac64cd81625",
+      "owners": [
+        "S02",
+        "S05",
+        "S06",
+        "S07"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC03"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-90:CE-05",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 40,
+      "source_text_sha256": "6d38929eafc2727c45cf70e6a25b86c2ca2953e2c4c9a38f017e5a5f8f7b340d",
+      "owners": [
+        "S05",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC13"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-90:CE-06",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 41,
+      "source_text_sha256": "551c6b6e21c2da9548f0ebd609a487ebf8971d00cce6ab0c270217b1573436e0",
+      "owners": [
+        "S05",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC14"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-90:CE-07",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 42,
+      "source_text_sha256": "280d9c7f3cc29fd76cfda5cd0dd7cfa94c2c1ebc012bb00cb3b8c5d61826c96a",
+      "owners": [
+        "S05",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC14"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-90:CE-12",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 47,
+      "source_text_sha256": "b64b96cc58288921e770a3be55512dd62f531061b51e17f2cafdbc684af719b4",
+      "owners": [
+        "S05",
+        "S07",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC15"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-90:CE-18",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 53,
+      "source_text_sha256": "c12c84f02f03303225b31295e7a55c7f08ace6b6adf53c00b1d5cb0180e30b7b",
+      "owners": [
+        "S06",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC17"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-90:CE-19",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 54,
+      "source_text_sha256": "3c2fee069822460b8c2f19a3f038fd317737c1a3e1345bd7a1baa07f296a334c",
+      "owners": [
+        "S06",
+        "S02",
+        "S03"
+      ],
+      "acceptance_ids": [
+        "AC17"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-90:CE-25",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 60,
+      "source_text_sha256": "67224a89d0edf61ceb700dabe0d95b4d7d10776d6e260f6cc4c38e2059410460",
+      "owners": [
+        "S07",
+        "S09",
+        "S03",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC18",
+        "AC21",
+        "AC23"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-90:CE-27",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 62,
+      "source_text_sha256": "30723c45362a32a61488e318ae688a0251526ec6d3980e6b0d95ce84b005cd9e",
+      "owners": [
+        "S02",
+        "S05",
+        "S06",
+        "S07"
+      ],
+      "acceptance_ids": [
+        "AC05"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-90:CE-28",
+      "source_document": "docs/design/issue-90/ACCEPTANCE.md",
+      "source_line": 63,
+      "source_text_sha256": "aa953f62205e86c5c192e44d8962c53085118e0f1b9acb2e0aeb68dd4bf30486",
+      "owners": [
+        "S02",
+        "S05",
+        "S06",
+        "S07"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC03"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-91:R09",
+      "source_document": "docs/design/issue-91/DESIGN.md",
+      "source_line": 142,
+      "source_text_sha256": "2f0f395ea87cf6488faeb481385909d274bccc55c42f76c53fd7ae2c010385ea",
+      "owners": [
+        "S02",
+        "S10"
+      ],
+      "acceptance_ids": [
+        "AC22"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-91:R10",
+      "source_document": "docs/design/issue-91/DESIGN.md",
+      "source_line": 155,
+      "source_text_sha256": "a30b83c45c56a10ef8167486baf0332a1b4ff24f43cc9599a132ba514ed1d7ab",
+      "owners": [
+        "S02",
+        "S10"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC22"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-91:P04",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 14,
+      "source_text_sha256": "9707c4909bc1f327afe3caeb0ed0be782595128bcae9bd05953e55f756840e1b",
+      "owners": [
+        "S08",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC19"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-91:P05",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 15,
+      "source_text_sha256": "b2dfc36e4fe779c6517bada8c85e20028c3b67a73f2e000ff4450a492b2c997c",
+      "owners": [
+        "S08",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC19"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-91:P15",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 25,
+      "source_text_sha256": "58e01330a12c68575269502246b01b519712e10a3e2cdc4e3637df092eebc4ed",
+      "owners": [
+        "S09",
+        "S03",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC21",
+        "AC23"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-91:P16",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 26,
+      "source_text_sha256": "61e1384bf665a0238ba044cfb61ef4e30fa23f74d2cb58b72d88714301dabcd9",
+      "owners": [
+        "S09",
+        "S03",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC21",
+        "AC23"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-91:P17",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 27,
+      "source_text_sha256": "ed00a8fcea1ca48bd871a79f9502630747ab38a05fb13464c5920c57022ff754",
+      "owners": [
+        "S10",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC22"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-91:P22",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 32,
+      "source_text_sha256": "deae29d6e51c40bc2e9ff2afd4450d48b3008eb424f4dab5c4166f2b3e4540c7",
+      "owners": [
+        "S10",
+        "S05",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC14",
+        "AC22",
+        "AC23"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-91:P23",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 33,
+      "source_text_sha256": "f601db7a3cd3a2baadac78881a96f90c2b8ec8a2d6d1b552b28343f577c29b45",
+      "owners": [
+        "S08",
+        "S09",
+        "S10",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC03"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-91:N08",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 46,
+      "source_text_sha256": "70e4d524f81f81c5478b34d810b25a2c765c85f8da9792b9d8190a1e959af130",
+      "owners": [
+        "S08",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC19"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-91:N09",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 47,
+      "source_text_sha256": "c0c1da7a581bedb5b5fe3dc179e0805336fe199cdbf3c2a13986e39bc193858e",
+      "owners": [
+        "S08",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC19"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-91:N23",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 61,
+      "source_text_sha256": "3084eb9ba0d0f7f2c4dd917a6f791d0a075ec282702f983329e2404e23f4fc91",
+      "owners": [
+        "S10",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC22"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-91:N30",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 68,
+      "source_text_sha256": "1c0912f7c91844c5380f6457a563196b660da9f6929f6bee3f66a114cc1737f0",
+      "owners": [
+        "S10",
+        "S05",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC05",
+        "AC14",
+        "AC22"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    },
+    {
+      "source_id": "issue-91:N31",
+      "source_document": "docs/design/issue-91/ACCEPTANCE.md",
+      "source_line": 69,
+      "source_text_sha256": "58b432bb3d9da417a5c1e41edc2fc666122eb19b80ed298c356a806c2c6ea032",
+      "owners": [
+        "S08",
+        "S09",
+        "S10",
+        "S02"
+      ],
+      "acceptance_ids": [
+        "AC02",
+        "AC03"
+      ],
+      "review_basis": "complete prior S02 reviews retained under verified identity/dependency scope, plus current 3-file startup and focus delta",
+      "aggregate_result": "NOT RUN"
+    }
+  ],
+  "acceptance_ids": [
+    "AC01",
+    "AC02",
+    "AC03",
+    "AC04",
+    "AC05",
+    "AC06",
+    "AC07",
+    "AC08",
+    "AC09",
+    "AC10",
+    "AC11",
+    "AC12",
+    "AC13",
+    "AC14",
+    "AC15",
+    "AC16",
+    "AC17",
+    "AC18",
+    "AC19",
+    "AC20",
+    "AC21",
+    "AC22",
+    "AC23",
+    "AC25",
+    "AC26"
+  ],
+  "baseline_smells_considered": [
+    "Mysterious Name",
+    "Duplicated Code",
+    "Feature Envy",
+    "Data Clumps",
+    "Primitive Obsession",
+    "Repeated Switches",
+    "Shotgun Surgery",
+    "Divergent Change",
+    "Speculative Generality",
+    "Message Chains",
+    "Middle Man",
+    "Refused Bequest"
+  ],
+  "smell_rule": "Judgement heuristics only; no actionable new smell found across complete changed scope; project standards override and tool-enforced matters omitted.",
+  "limits": [
+    "Whole source/AC/G NOT RUN",
+    "Final migrated-page and S11 entry/brand composition pending",
+    "Four installed package variants pending",
+    "Native desktop 200% and real Chinese IME NOT RUN",
+    "Actual BFCache BLOCKED; synthetic owner check does not upgrade it",
+    "Mobile remains limited to Chromium simulation"
+  ],
+  "independence": {
+    "product_edits": false,
+    "other_axis_report_read": false,
+    "subagents_spawned": false,
+    "GitHub_writes": false
+  },
+  "candidate_proof": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S02-r7-candidate-check.json"
+}

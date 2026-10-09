@@ -1,0 +1,208 @@
+{
+  "axis": "Standards",
+  "result": "PASS",
+  "head": "51159d3854db388a6c178f8fea0b560fcda0bd13",
+  "tree": "a7779e06b2592939767764828fd7c80b5d13a904",
+  "base": "87aab611e4a040ad0edc9956a43f6dff5d4944f3",
+  "previous_own_review": "2951bf6892d9c5a7b43dedcb412ee54c938b2977",
+  "documented_violations": [],
+  "optional_heuristic_smells": [],
+  "own_r3_report_and_tables": [
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S08-r3-Standards.md",
+      "bytes": 2013,
+      "sha256": "88d27c62044bf09b283450931a8f4d41c257bb969e71936c54c7685c89fe6a5a"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S08-r3-Standards-details.json",
+      "bytes": 240799,
+      "sha256": "95cd3c69ac295e50f0bfd47f87d98a9d37bf6a58820a493e3bf16a375047c45b"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S08-r3-standards-verification.json",
+      "bytes": 233338,
+      "sha256": "48bf0f06a68320bbd19861b8fe2c53c6ed2e3a562edb09817d378ca725b6b2c4"
+    }
+  ],
+  "increment": {
+    "files": [
+      "tests/browser/shell-startup.spec.js"
+    ],
+    "insertions": 30,
+    "deletions": 0,
+    "entire_added_block_equals_accepted_base": true,
+    "remaining_file_equals_own_r3": true,
+    "three_collapsed_model_locator_adaptations_preserved": true,
+    "manual_review": "Real SSE route.continue after gate; no forged snapshot or synthetic media event; 1100 to 1099 to 1100 asserts focus/selection/value and original wide preference; finally releases held requests."
+  },
+  "full_candidate": {
+    "files": 21,
+    "all_hashes_verified": true,
+    "twenty_other_files_equal_own_r3": true,
+    "manifest": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r4/candidate-files.json",
+      "bytes": 4571,
+      "sha256": "5f6dcb24d10da672e410d863f6d0af24e66a1a1202f62bbf5e46328f3d5d8d57"
+    },
+    "full_diff": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r4/candidate.diff",
+      "bytes": 147051,
+      "sha256": "be023ef61b8704f893545bbc7283a7564cdabe445006696bad6df326ecb5e58c"
+    },
+    "increment_diff": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r4/r3-to-r4.diff",
+      "bytes": 3278,
+      "sha256": "3ff097aa4ed37a949eab57d56a2ff502a715122eef38cf1788236f4276402c13"
+    },
+    "both_diff_checks": "PASS",
+    "production_dependency_configuration_tree_unchanged": true
+  },
+  "standards": {
+    "unchanged_byte_bound_count": 26,
+    "definitions_and_original_assessments": "S08-r3-Standards-details.json / standards and baseline_smells; same fixed files. 12 possible smells reviewed for added test; no actionable new smell. No tool-enforced finding duplicated."
+  },
+  "source_reuse": {
+    "source_items": 55,
+    "acceptance_items": 19,
+    "metadata_matches_own_r3_proof": true,
+    "full_graph_artifact": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/source-coverage.json",
+      "bytes": 323807,
+      "sha256": "e76b018aad5ddaf406f11bb9082d98d2e582617ad79b1343e076c0d444e9164f"
+    },
+    "raw_referenced_documents_verified": 8,
+    "acceptance_map_sha256": "6689fa44948bdf01bc4e4fe2fc63d6532a0d3067df9c5b2b0f32ab166a1e30e7",
+    "full_source_AC_G_result": "NOT RUN",
+    "copied_full_tables": false
+  },
+  "resource_reuse": {
+    "resources": 24,
+    "runtime_edges": 52,
+    "all_current_blobs_match_own_r3_proof_and_inventory": true,
+    "registry_and_graph_bytes_unchanged": true,
+    "inventory": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/resource-inventory.json",
+      "bytes": 13850,
+      "sha256": "d4d771d493470ac7552ac1b968da6b04546a93bcaa820fece4d7cd474a936c40"
+    },
+    "actual_HTTP_evidence": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r3/resource-http-identity.json",
+      "bytes": 7524,
+      "sha256": "9a1fb9f6890ca087ea9b02d73d0abc7fa6961f0fa01572a09f59f150d70aa119"
+    },
+    "HTTP_rerun": false
+  },
+  "must_retain": {
+    "commit": "c34d8462ae6cdf3eb332784972db9521ebf8c070",
+    "ancestor": true,
+    "original_two_file_commit_preserved": true,
+    "production_blob_unchanged": true,
+    "parent_matches_old_product": true,
+    "rollback_execution": "NOT RUN"
+  },
+  "archive": {
+    "manifest": {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r4/r3-candidate/ARCHIVE-MANIFEST.json",
+      "bytes": 25048,
+      "sha256": "e8aeca84ab1aa9e49fd67b6bfaca0bbdaada6e6529582f92ffaf1c2bf51c8f98"
+    },
+    "records": 128,
+    "opaque_byte_hashes_verified": 128,
+    "fixed_candidate_files_match_own_r3_git": 21,
+    "other_axis_content_decoded_or_interpreted": false,
+    "all_prior_first_failures_retained": true
+  },
+  "observed_checks": {
+    "logs": [
+      {
+        "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r4/logs/01-integration-merge.log",
+        "bytes": 190,
+        "sha256": "56993067addd68a23f3d83fc63b1bf74838ba1b14b3db8386e2529a2bf8e9826"
+      },
+      {
+        "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r4/logs/02-startup-composition.log",
+        "bytes": 1453,
+        "sha256": "3c3f6ef64de76e3a09dcb62b5b385bce06608ca35677ca5d4dcf21742123d041"
+      },
+      {
+        "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r4/logs/03-candidate-diff-check.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r4/logs/04-increment-diff-check.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "startup_passed": 5,
+    "fixture_exits": [
+      0,
+      0
+    ],
+    "real_restart_reads": [
+      "/api/models"
+    ],
+    "real_restart_posts": [],
+    "real_restart_pages": 1,
+    "no_new_failure": true,
+    "ports_available": [
+      17920,
+      17921,
+      17922,
+      17923,
+      17924,
+      17925,
+      17926,
+      17927,
+      17928,
+      17929
+    ],
+    "reuse": "r3 25/10, typecheck/Ruff, backend/clear/pricing/MCP, and 24 actual HTTP checks reused by exact bytes; counts overlap, no sum and no full-suite claim. Startup 5 replaces prior affected 4."
+  },
+  "limits": [
+    "Full source/AC/G NOT RUN",
+    "Future S03/S05/S06 composition NOT RUN",
+    "Final S11 gates/install matrix/native 200 percent and real Chinese IME NOT RUN",
+    "Actual BFCache BLOCKED retained",
+    "No rollback execution claimed"
+  ],
+  "independence": {
+    "current_Spec_report_read": false,
+    "other_axis_report_conclusions_used": false,
+    "product_edited": false,
+    "git_or_tracker_written": false,
+    "broad_tests_or_new_runtime_probe": false,
+    "working_tree_clean": true
+  },
+  "current_artifact_seals": [
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r4/HANDOFF.md",
+      "bytes": 3575,
+      "sha256": "b09d6c6b96b197c2761b4fbc6aa9c0c8bc567fb349df28a8d8b8ea6f73de5108"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r4/scope-delta.json",
+      "bytes": 4949,
+      "sha256": "b3036edff777f8d080d615789383235462a10bc597b238decaa146f73728cf54"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r4/applicability.json",
+      "bytes": 3120,
+      "sha256": "b40332fd608883c1e999fbf74bc8d9653a5fd3b0cc1dd1099a7bfc3c60f1e95e"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r4/commits.json",
+      "bytes": 1231,
+      "sha256": "3d167900291e336013538738db12fc09a0601c0c3710fa190e67cfd7486d2ac0"
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S08/r4/evidence-validation.json",
+      "bytes": 784,
+      "sha256": "5278a2cf769a2f204675b98319d375639bd96bbb082f95ab80f5a209e2692244"
+    }
+  ],
+  "reviewer_tooling_notes": [
+    "First inline verifier stopped before any writes because it expected exact result PASS; prior report actually says PASS for fixed S08 r3 core scope. Corrected prefix assertion. Next verifier stopped because section sources have no source_cells; compare optional metadata with get on both sides. These are reviewer script assumptions, not product or test failures."
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "metadata_result": "PASS",
+  "head": "1379bcf45c32319ada4473bcc1c211cf10516c46",
+  "tree": "bcb8daef29e256e0c4743f9f2400f3e069ab0e2c",
+  "base": "18d2ac94743af0df50c5893862cdd8d8d054a142",
+  "review_start": "342e77b28f967fc7291229805778d679cdb1b85d",
+  "manifests": {
+    "full-candidate-files": {
+      "files": 30,
+      "diff_sha256": "fb83c234c45ae41c74b1f63fd7bd1ebe61a6fb045986c078a9f51ee104f62dcf"
+    },
+    "delta-candidate-files": {
+      "files": 23,
+      "diff_sha256": "eeed56d6930d750f048759612faae9423619971e89ae9d73c5b4f3fc4b1ffb3e"
+    },
+    "accepted-S08-merge-files": {
+      "files": 21,
+      "diff_sha256": "21c749bc777f5ae3553d7bec608b3511005075aef88c1ae90d23ab1552a9d114"
+    }
+  },
+  "authority_guidance_bytes_unchanged": 31,
+  "source_count": 118,
+  "AC_count": 25,
+  "original_source_graph_sha256": "6de34ca1b9ca803f8949c6899cac2eee7c32d6183455f1b61392fc700171c7c6",
+  "source_review_reuse": "Prior complete source/owner/raw-text assessment applies: original graph and all authority bytes unchanged; no full source traversal repeated.",
+  "archives": {
+    "r8_copies": 38,
+    "retained_r8": 29,
+    "prior_manifests": 7,
+    "original_and_copy_bindings": 12,
+    "new_first_failure_files": 17
+  },
+  "accepted_S08_tree": "a7779e06b2592939767764828fd7c80b5d13a904",
+  "resolved_merge_conflicts": 3,
+  "clear_commit_retained": "c34d8462ae6cdf3eb332784972db9521ebf8c070",
+  "resources": 29,
+  "edges": 63,
+  "HTTP_records": 15,
+  "HTTP_scope": "6 asset GET/HEAD status/MIME/security/content; 3 HTML GET status/content only, no unrecorded headers inferred.",
+  "final_images_visually_reviewed": 6,
+  "all_visual_hashes": 12,
+  "logs": {
+    "01-receipt-height-red.log": "076dcefad5c11a4d884e6a7b30a9cc381c9b131b6460fa7a576a5d0836063e6c",
+    "02-receipt-height-green.log": "8dfc50d0fa0d20cbd3b042941581d675d7c6dccb4f0682263995d020e476fea2",
+    "09-integrated-shell-layout.log": "0a49c9ed8947e2cb8ee3ff4890f210ec50d1c245bccf75ec1145c31175d131e2",
+    "10-integrated-page-consumers.log": "3d8bdfa047594919079d90448db030904887a3d28a8213aefcc0134fb80b3c87",
+    "08-integrated-typecheck.log": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f"
+  },
+  "product_checks": "Read actual 15 integrated layout/startup and 2 consumer PASS. Prior passing deterministic checks reused only under byte/caller applicability; no new product execution or browser probe.",
+  "whole_source_AC_G": "NOT RUN; final CI/install/native200/IME/mobile keyboard/touch NOT RUN; historical BFCache BLOCKED",
+  "errors": []
+}

@@ -140,7 +140,7 @@ try {
     res.writeHead(200, {'Content-Type': 'text/html', 'Cache-Control': 'public, max-age=60'});
     res.end(`<html><body><h1>Cacheable control ${req.url}</h1></body></html>`);
   });
-  control.listen(0, '127.0.0.1');await once(control, 'listening');
+  control.listen(Number(process.env.ALFRED_NATIVE_CONTROL_PORT || 0), '127.0.0.1');await once(control, 'listening');
   const controlOrigin = `http://127.0.0.1:${control.address().port}`;
   const controlPage = await context.newPage();
   await controlPage.goto(controlOrigin + '/a');

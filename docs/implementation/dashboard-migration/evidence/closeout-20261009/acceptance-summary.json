@@ -1,0 +1,214 @@
+{
+  "proposal_sha256": "b6ccba8ac14c7ecbb46caa3332ce3d944ae7b0afd864c4b6890647b28b392070",
+  "candidate": {
+    "head": null,
+    "base_head": "11dcc66f18ceb264ade1c1bcc1b48287dc4f1516",
+    "tree": "d5ae23a4c989b3624b853a5493f61af38a11c7aa",
+    "source_tree": "08582ef657e69669a3333606021918f9b0509e6f",
+    "package_tree": "f58442b625b51373f5389a3baa9bec0ba11cd0e9",
+    "manifest_sha256": "274775393b6f209350e45f2920b8abb5daa814f31160246421fbe84d1c822984",
+    "branch": "codex/dashboard-ten-page-integration",
+    "status": "frozen_uncommitted"
+  },
+  "sources": {
+    "PASS": 309
+  },
+  "fragments": {
+    "PASS": 674
+  },
+  "acceptance": {
+    "PASS": 25,
+    "BLOCKED": 1
+  },
+  "transitions": [
+    {
+      "source_id": "issue-87:P13",
+      "owner": "S02",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:CE-14",
+      "owner": "S02",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:R07",
+      "owner": "S02",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:R10",
+      "owner": "S02",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:section-12",
+      "owner": "S02",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:section-12",
+      "owner": "S03",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:section-12",
+      "owner": "S04",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:section-12",
+      "owner": "S05",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:section-12",
+      "owner": "S06",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:section-12",
+      "owner": "S07",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:section-12",
+      "owner": "S08",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:section-12",
+      "owner": "S09",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:section-12",
+      "owner": "S10",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:section-12",
+      "owner": "S11",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:section-13",
+      "owner": "S02",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:section-13",
+      "owner": "S03",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:section-13",
+      "owner": "S04",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:section-13",
+      "owner": "S05",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:section-13",
+      "owner": "S06",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:section-13",
+      "owner": "S07",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:section-13",
+      "owner": "S08",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:section-13",
+      "owner": "S10",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-87:section-13",
+      "owner": "S11",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-89:D11",
+      "owner": "S02",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    },
+    {
+      "source_id": "issue-89:D11",
+      "owner": "S03",
+      "from": "BLOCKED",
+      "to": "PASS",
+      "evidence": "closeout-20261009/native/result.json"
+    }
+  ],
+  "mce": {
+    "PASS": 12
+  },
+  "integration_chains": {
+    "PASS": 8
+  },
+  "overall_result": "INCOMPLETE",
+  "completion": false,
+  "remaining": [
+    "Independent current evidence applicability approval",
+    "Exact commit/push and current PR/push CI",
+    "Expected-head merge and actual merge-SHA CI",
+    "Per-issue acceptance writeback and CLOSED/COMPLETED readback"
+  ]
+}

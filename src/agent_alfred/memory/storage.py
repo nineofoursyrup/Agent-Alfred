@@ -86,6 +86,10 @@ class SQLiteStore:
             "SELECT revision FROM memory_revision WHERE singleton=1"
         ).fetchone()[0]
 
+    def count(self) -> int:
+        """Current inventory only; no bodies, versions or mirror copies."""
+        return self._conn.execute(f"SELECT COUNT(*) FROM {self.table}").fetchone()[0]
+
     def _writing(self) -> None:
         if not self._conn.in_transaction:
             raise RuntimeError("memory writes require a caller-owned transaction")

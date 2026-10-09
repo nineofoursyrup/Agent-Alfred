@@ -1,0 +1,27 @@
+
+> test:browser
+> playwright test tests/browser/mainbar-location.spec.js tests/browser/mainbar-empty-identity.spec.js tests/browser/mainbar-integration.spec.js --output /Users/nineofour/.codex/dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/green-location-final
+
+
+Running 16 tests using 1 worker
+
+(node:60354) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/browser/mainbar-empty-identity.spec.js:4:53 › restored unread for real empty Session and Run IDs uses one guarded read and preserves its draft: same-page (1.2s)
+  ✓   2 tests/browser/mainbar-empty-identity.spec.js:4:53 › restored unread for real empty Session and Run IDs uses one guarded read and preserves its draft: navigate (1.2s)
+  ✓   3 tests/browser/mainbar-integration.spec.js:3:1 › real S01 records compose with S02 exact location, identity merge and cross-Session drafts (568ms)
+  ✓   4 tests/browser/mainbar-location.spec.js:16:1 › exact MainBar location is one bounded read with a marked preview and separate history cursor (357ms)
+  ✓   5 tests/browser/mainbar-location.spec.js:30:1 › successive exact locations stay separate until ordinary history or SSE owns the same records (602ms)
+  ✓   6 tests/browser/mainbar-location.spec.js:67:51 › exact location retires on offline and cannot overwrite a new location after reconnect (359ms)
+  ✓   7 tests/browser/mainbar-location.spec.js:67:51 › exact location retires on sse-error and cannot overwrite a new location after reconnect (353ms)
+  ✓   8 tests/browser/mainbar-location.spec.js:92:1 › an explicit cross-Session location can finish before the new Stream snapshot (335ms)
+  ✓   9 tests/browser/mainbar-location.spec.js:107:1 › process-gap navigation distinguishes a legal empty Run ID from an absent target (338ms)
+  ✓  10 tests/browser/mainbar-location.spec.js:116:1 › retired location cannot leave a loading state or late content after page navigation (370ms)
+  ✓  11 tests/browser/mainbar-location.spec.js:129:1 › failed exact location has an explicit read-only retry and does not create a Run (451ms)
+  ✓  12 tests/browser/mainbar-location.spec.js:142:1 › a later unavailable request cannot erase a retained preview marker (335ms)
+  ✓  13 tests/browser/mainbar-location.spec.js:151:1 › hidden no-reply failure retains outcome attention without inventing a new reply (370ms)
+  ✓  14 tests/browser/mainbar-location.spec.js:161:1 › restored unread identity remains unconfirmed when another history item is visible (381ms)
+  ✓  15 tests/browser/mainbar-location.spec.js:171:1 › a later preview cannot downgrade the same target full request or recorded state (334ms)
+  ✓  16 tests/browser/mainbar-location.spec.js:181:1 › idle reconnect verifies the same Run and does not infer saving from an unrelated persisted pair (385ms)
+
+  16 passed (8.9s)

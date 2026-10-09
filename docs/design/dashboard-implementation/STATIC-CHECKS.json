@@ -1,0 +1,111 @@
+{
+  "specification": "DASHBOARD-IMPLEMENTATION-SPEC-r1",
+  "scope": "documentation static checks only; no product execution or independent product review",
+  "observed_utc": "2026-10-08T18:34:23.798206+00:00",
+  "archive_commit": "9716e0c395c603ccc262284de577cfb8df3f8d48",
+  "product_baseline": "22c8720e1ec874fd012cc79b086cd8aace4c79b6",
+  "checkout_head": "9716e0c395c603ccc262284de577cfb8df3f8d48",
+  "result": "PASS",
+  "counts": {
+    "fixed_source_files": 31,
+    "archive_manifest_files": 37,
+    "source_items": 309,
+    "source_kinds": {
+      "normative_section": 81,
+      "user_path": 72,
+      "counterexample": 128,
+      "interface_gap": 6,
+      "migration_capability": 22
+    },
+    "acceptance_criteria": 26,
+    "migration_counterexamples": 12,
+    "integration_chains": 8,
+    "slices": 11,
+    "direct_source_ownerships": {
+      "S01": 72,
+      "S02": 164,
+      "S03": 118,
+      "S04": 39,
+      "S05": 54,
+      "S06": 36,
+      "S07": 39,
+      "S08": 55,
+      "S09": 41,
+      "S10": 31,
+      "S11": 25
+    },
+    "local_links": 122
+  },
+  "dag": "acyclic",
+  "protected_files_changed": [],
+  "product_files_changed": [],
+  "untracked_outside_specification": [],
+  "whitespace_errors": [],
+  "all_product_verification": "NOT RUN",
+  "independent_product_reviews": "NOT RUN",
+  "specification_files": [
+    {
+      "path": "docs/design/dashboard-implementation/INTERFACES.md",
+      "bytes": 26775,
+      "sha256": "9526b8287325f2a29b150ebfeae95ba4284ce8199e1c3540f877f3b0dac1bb2c"
+    },
+    {
+      "path": "docs/design/dashboard-implementation/SLICES.md",
+      "bytes": 16751,
+      "sha256": "46c7cd3e30b9890f036a392bfa2c28403a79d8b294a3cc421611167d9a9276b6"
+    },
+    {
+      "path": "docs/design/dashboard-implementation/SOURCE-AUDIT.md",
+      "bytes": 13028,
+      "sha256": "9ac2ad1bdeaca2a05068de9e420f271e4f28efabe9375e815b15f0b7501a88e8"
+    },
+    {
+      "path": "docs/design/dashboard-implementation/SPEC.md",
+      "bytes": 16644,
+      "sha256": "c8b09357e661fed623ab9a920536aa5b1cd583b28c2efaa7de40d6ef327ee7af"
+    },
+    {
+      "path": "docs/design/dashboard-implementation/STATIC-CHECK-HISTORY.json",
+      "bytes": 1813,
+      "sha256": "7e86050cdfa1ad2093ff3317fe50529ccd710b16e7a335b88a41d8e2f86efad0"
+    },
+    {
+      "path": "docs/design/dashboard-implementation/VALIDATION.md",
+      "bytes": 14930,
+      "sha256": "85f3ab9b9a28f55cb312d8d5ec70097f6216665e010f6abde41a518bf182dfb2"
+    },
+    {
+      "path": "docs/design/dashboard-implementation/remote-readback.json",
+      "bytes": 5562,
+      "sha256": "d63381dc8e377c4437ac001148c8e6a541eb6f004afeaf770c8ba6d13fde6a26"
+    },
+    {
+      "path": "docs/design/dashboard-implementation/traceability.json",
+      "bytes": 37726,
+      "sha256": "1902d093daff3fc9fddb25ebf55fb3e86ca82139b65c6c24e6f209294506a720"
+    },
+    {
+      "path": "docs/design/dashboard-implementation/verify_spec.py",
+      "bytes": 12739,
+      "sha256": "999da4aa91d205d4a297730a8c20c14cccd799f9c1318433e041b556862d66ed"
+    }
+  ],
+  "self_hash_excluded": "STATIC-CHECKS.json",
+  "failures": [],
+  "additional_observed_checks": [
+    {
+      "command": "/Users/nineofour/Agent-Alfred/.venv/bin/ruff check --no-cache docs/design/dashboard-implementation/verify_spec.py",
+      "result": "PASS",
+      "scope": "new documentation checker only"
+    },
+    {
+      "command": "git diff --check",
+      "result": "PASS",
+      "note": "Untracked specification whitespace is also checked by verify_spec.py."
+    },
+    {
+      "check": "Task-created empty .venv removed after content inspection",
+      "result": "PASS"
+    }
+  ]
+}

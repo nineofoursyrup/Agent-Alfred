@@ -1,0 +1,1742 @@
+{
+  "candidate": "3e87a076b7dc645c576121282f7c9a4af6873d89",
+  "tree": "f9774fff7d404d02453eadb046ea9e1082ed8d9a",
+  "base": "a87ed6783df7af736ce0769b7037dd7a5d04df63",
+  "port": 18064,
+  "scope": "Fixed git archive; actual isolated Host/SQLite/native SSE; real Chromium offline/online; delay only real successful issuance HTTP response",
+  "requests": [
+    {
+      "method": "POST",
+      "path": "/api/database/queries"
+    },
+    {
+      "method": "GET",
+      "path": "/api/database"
+    },
+    {
+      "method": "GET",
+      "path": "/api/database"
+    },
+    {
+      "method": "GET",
+      "path": "/api/database"
+    },
+    {
+      "method": "POST",
+      "path": "/api/database/queries/xTOEVH4ka-0DX-yT1dWX31xL/cancel"
+    },
+    {
+      "method": "GET",
+      "path": "/api/database/queries/xTOEVH4ka-0DX-yT1dWX31xL"
+    }
+  ],
+  "observations": [
+    {
+      "at": "offline",
+      "runDisabled": true,
+      "sql": "SELECT 123 AS retained_sql"
+    },
+    {
+      "at": "same-instance-recovered-and-explicitly-rechecked",
+      "runDisabled": false,
+      "sql": "SELECT 123 AS retained_sql",
+      "status": "可执行",
+      "facts": "执行可执行正文尚未收到查询正文清理清理尚未确认",
+      "pageText": "数据库\n\n查询受保护的临时数据。SQL 的 WHERE／LIMIT 不缩小准备范围。结果有上限，不是数据库总量。\n\n当前实例固定。记忆修订 11 · 保护规则版本 5\n\n可用性：已核验可用\n\n执行预算 5 秒 · 最多 1000 行／64 列／2 MiB JSON\n\n对象目录\n完整限制与寿命\nSQL 草稿\n\nEnter 换行。仅点击执行才提交；查询中可编辑下一份草稿。\n\n执行\n取消\n核验查询与可用性\n复制 SQL\n\n记忆或保护版本变化：已清除结果及提交关联；草稿保留，核验后仍需显式执行。\n\n执行\n\n可执行\n\n正文\n\n尚未收到查询正文\n\n清理\n\n清理尚未确认\n\n复制本页结果\n\n尚无有效结果可复制。"
+    }
+  ],
+  "servedDatabaseSha256": "10feb91aa4d9527cac87571fa5750a82e34ed0ff51d69e1aa4c027b4c870d6a6",
+  "initialCatalog": {
+    "instance_id": "3222cb13720649af92463f114cb07856",
+    "available": true
+  },
+  "issued": {
+    "http": 200,
+    "body": {
+      "query_id": "xTOEVH4ka-0DX-yT1dWX31xL",
+      "instance_id": "3222cb13720649af92463f114cb07856",
+      "expires_in_s": 30
+    }
+  },
+  "recoveredCatalog": {
+    "http": 200,
+    "body": {
+      "instance_id": "3222cb13720649af92463f114cb07856",
+      "available": true,
+      "reason": null,
+      "schema": {
+        "compatible": true,
+        "migrations": [
+          {
+            "version": 1,
+            "applied_at": "2026-10-09T02:42:02Z"
+          },
+          {
+            "version": 2,
+            "applied_at": "2026-10-09T02:42:02Z"
+          },
+          {
+            "version": 3,
+            "applied_at": "2026-10-09T02:42:02Z"
+          },
+          {
+            "version": 4,
+            "applied_at": "2026-10-09T02:42:02Z"
+          },
+          {
+            "version": 5,
+            "applied_at": "2026-10-09T02:42:02Z"
+          },
+          {
+            "version": 6,
+            "applied_at": "2026-10-09T02:42:02Z"
+          },
+          {
+            "version": 7,
+            "applied_at": "2026-10-09T02:42:02Z"
+          },
+          {
+            "version": 8,
+            "applied_at": "2026-10-09T02:42:02Z"
+          },
+          {
+            "version": 9,
+            "applied_at": "2026-10-09T02:42:02Z"
+          },
+          {
+            "version": 10,
+            "applied_at": "2026-10-09T02:42:02Z"
+          },
+          {
+            "version": 11,
+            "applied_at": "2026-10-09T02:42:02Z"
+          },
+          {
+            "version": 12,
+            "applied_at": "2026-10-09T02:42:02Z"
+          },
+          {
+            "version": 13,
+            "applied_at": "2026-10-09T02:42:02Z"
+          },
+          {
+            "version": 14,
+            "applied_at": "2026-10-09T02:42:02Z"
+          },
+          {
+            "version": 15,
+            "applied_at": "2026-10-09T02:42:02Z"
+          },
+          {
+            "version": 16,
+            "applied_at": "2026-10-09T02:42:02Z"
+          },
+          {
+            "version": 17,
+            "applied_at": "2026-10-09T02:42:02Z"
+          },
+          {
+            "version": 18,
+            "applied_at": "2026-10-09T02:42:02Z"
+          },
+          {
+            "version": 19,
+            "applied_at": "2026-10-09T02:42:02Z"
+          }
+        ]
+      },
+      "memory_revision": "11",
+      "protection_version": "5",
+      "objects": [
+        {
+          "name": "diag_sessions",
+          "source": "sessions",
+          "notes": "无虚构 title",
+          "columns": [
+            {
+              "name": "session_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "sessions.session_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "created_at",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "sessions.created_at",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "activity_revision",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": true,
+              "origin": "sessions.activity_revision",
+              "protection": "主键或引用身份，保护改变时失败"
+            }
+          ],
+          "example": "SELECT session_id, created_at, activity_revision FROM diag_sessions LIMIT 20"
+        },
+        {
+          "name": "diag_runs",
+          "source": "runs",
+          "notes": "不输出 prompt_preview 或 telemetry",
+          "columns": [
+            {
+              "name": "run_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "runs.run_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "purpose",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "runs.purpose",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "session_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": true,
+              "origin": "runs.session_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "gateway",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "runs.gateway",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "entry_surface_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": true,
+              "origin": "runs.entry_surface_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "phase",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "runs.phase",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "outcome",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "runs.outcome",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "accepted_at",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "runs.accepted_at",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "started_at",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "runs.started_at",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "finished_at",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "runs.finished_at",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "activity_revision",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": true,
+              "origin": "runs.activity_revision",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "admission_state",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "runs.admission_state",
+              "protection": "原物理类型保留"
+            }
+          ],
+          "example": "SELECT run_id, purpose, session_id, gateway, entry_surface_id, phase, outcome, accepted_at, started_at, finished_at, activity_revision, admission_state FROM diag_runs LIMIT 20"
+        },
+        {
+          "name": "diag_messages",
+          "source": "agent_log",
+          "notes": "仅 user/assistant；text 为保护后 TextBlock 按原顺序拼接",
+          "columns": [
+            {
+              "name": "message_id",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": true,
+              "origin": "agent_log.id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "session_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "agent_log.session_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "run_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": true,
+              "origin": "agent_log.run_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "role",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "agent_log.role",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "source",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "agent_log.source",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "created_at",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "agent_log.created_at",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "consolidated",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": false,
+              "origin": "agent_log.consolidated",
+              "protection": "INTEGER 0/1"
+            },
+            {
+              "name": "text",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "agent_log.content TextBlock",
+              "protection": "开放字符串，保护后可见"
+            }
+          ],
+          "example": "SELECT message_id, session_id, run_id, role, source, created_at, consolidated, text FROM diag_messages LIMIT 20"
+        },
+        {
+          "name": "diag_attempts",
+          "source": "runs.telemetry.attempts",
+          "notes": "仅已知字段；损坏 fail-closed",
+          "columns": [
+            {
+              "name": "run_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "runs.run_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "attempt_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "runs.telemetry.attempts.attempt_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "outcome",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "attempts.outcome",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "endpoint_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "attempts.model.endpoint_id",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "model_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "attempts.model.model_id",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "total_input_tokens",
+              "type": "INTEGER",
+              "nullable": true,
+              "identity": false,
+              "origin": "usage.total_input_tokens",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "uncached_input_tokens",
+              "type": "INTEGER",
+              "nullable": true,
+              "identity": false,
+              "origin": "usage.uncached_input_tokens",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "cache_read_tokens",
+              "type": "INTEGER",
+              "nullable": true,
+              "identity": false,
+              "origin": "usage.cache_read_tokens",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "cache_write_tokens",
+              "type": "INTEGER",
+              "nullable": true,
+              "identity": false,
+              "origin": "usage.cache_write_tokens",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "output_tokens",
+              "type": "INTEGER",
+              "nullable": true,
+              "identity": false,
+              "origin": "usage.output_tokens",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "reasoning_tokens",
+              "type": "INTEGER",
+              "nullable": true,
+              "identity": false,
+              "origin": "usage.reasoning_tokens",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "endpoint_reported_cost_usd",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "usage.endpoint_reported_cost_usd",
+              "protection": "合法缺失为 NULL"
+            }
+          ],
+          "example": "SELECT run_id, attempt_id, outcome, endpoint_id, model_id, total_input_tokens, uncached_input_tokens, cache_read_tokens, cache_write_tokens, output_tokens, reasoning_tokens, endpoint_reported_cost_usd FROM diag_attempts LIMIT 20"
+        },
+        {
+          "name": "diag_attempt_coverage",
+          "source": "runs",
+          "notes": "每个 Run 一行：recorded / recorded_empty / unrecorded",
+          "columns": [
+            {
+              "name": "run_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "runs.run_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "state",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "telemetry 覆盖规则",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "recorded_count",
+              "type": "INTEGER",
+              "nullable": true,
+              "identity": false,
+              "origin": "attempts 列表长度",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "run_finished",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": false,
+              "origin": "phase=finished",
+              "protection": "INTEGER 0/1"
+            }
+          ],
+          "example": "SELECT run_id, state, recorded_count, run_finished FROM diag_attempt_coverage LIMIT 20"
+        },
+        {
+          "name": "diag_facts",
+          "source": "facts + memory_provenance",
+          "notes": "后五列派生；不恢复已删除事实",
+          "columns": [
+            {
+              "name": "id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "facts.id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "record_version",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": true,
+              "origin": "facts.record_version",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "subject",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "facts.subject",
+              "protection": "开放字符串，保护后可见"
+            },
+            {
+              "name": "fact",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "facts.fact",
+              "protection": "开放字符串，保护后可见"
+            },
+            {
+              "name": "origin_kind",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "facts.origin_kind",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "origin_batch_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": true,
+              "origin": "facts.origin_batch_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "origin_source",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "facts.origin_source",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "origin_call_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": true,
+              "origin": "facts.origin_call_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "created_at",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "facts.created_at",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "modified_at",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "facts.modified_at",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "human_protected",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": false,
+              "origin": "facts.human_protected",
+              "protection": "INTEGER 0/1"
+            },
+            {
+              "name": "last_change_origin_type",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "facts.last_change_origin",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "last_change_origin_source",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "facts.last_change_origin",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "last_change_origin_call_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": true,
+              "origin": "facts.last_change_origin",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "last_change_origin_batch_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": true,
+              "origin": "facts.last_change_origin",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "provenance_state",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "memory_provenance.state",
+              "protection": "原物理类型保留"
+            }
+          ],
+          "example": "SELECT id, record_version, subject, fact, origin_kind, origin_batch_id, origin_source, origin_call_id, created_at, modified_at, human_protected, last_change_origin_type, last_change_origin_source, last_change_origin_call_id, last_change_origin_batch_id, provenance_state FROM diag_facts LIMIT 20"
+        },
+        {
+          "name": "diag_episodes",
+          "source": "episodes + memory_provenance",
+          "notes": "派生规则同 facts",
+          "columns": [
+            {
+              "name": "id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "episodes.id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "record_version",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": true,
+              "origin": "episodes.record_version",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "summary",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "episodes.summary",
+              "protection": "开放字符串，保护后可见"
+            },
+            {
+              "name": "occurred_at",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "episodes.occurred_at",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "occurred_until",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "episodes.occurred_until",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "origin_kind",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "episodes.origin_kind",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "origin_batch_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": true,
+              "origin": "episodes.origin_batch_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "origin_source",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "episodes.origin_source",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "origin_call_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": true,
+              "origin": "episodes.origin_call_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "created_at",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "episodes.created_at",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "modified_at",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "episodes.modified_at",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "human_protected",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": false,
+              "origin": "episodes.human_protected",
+              "protection": "INTEGER 0/1"
+            },
+            {
+              "name": "last_change_origin_type",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "episodes.last_change_origin",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "last_change_origin_source",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "episodes.last_change_origin",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "last_change_origin_call_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": true,
+              "origin": "episodes.last_change_origin",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "last_change_origin_batch_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": true,
+              "origin": "episodes.last_change_origin",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "provenance_state",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "memory_provenance.state",
+              "protection": "原物理类型保留"
+            }
+          ],
+          "example": "SELECT id, record_version, summary, occurred_at, occurred_until, origin_kind, origin_batch_id, origin_source, origin_call_id, created_at, modified_at, human_protected, last_change_origin_type, last_change_origin_source, last_change_origin_call_id, last_change_origin_batch_id, provenance_state FROM diag_episodes LIMIT 20"
+        },
+        {
+          "name": "diag_memory_sources",
+          "source": "memory_sources",
+          "notes": "版本化来源关系",
+          "columns": [
+            {
+              "name": "kind",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "memory_sources.kind",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "memory_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "memory_sources.memory_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "record_version",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": true,
+              "origin": "memory_sources.record_version",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "source_group_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "memory_sources.source_group_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            }
+          ],
+          "example": "SELECT kind, memory_id, record_version, source_group_id FROM diag_memory_sources LIMIT 20"
+        },
+        {
+          "name": "diag_history_groups",
+          "source": "history_groups LEFT JOIN history_group_times",
+          "notes": "不开放 evidence_id；时间缺失为 NULL",
+          "columns": [
+            {
+              "name": "group_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "history_groups.group_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "kind",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "history_groups.kind",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "container_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": true,
+              "origin": "history_groups.container_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "evidence",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "history_groups.evidence",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "occurred_at",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "history_group_times.occurred_at",
+              "protection": "合法缺失为 NULL"
+            }
+          ],
+          "example": "SELECT group_id, kind, container_id, evidence, occurred_at FROM diag_history_groups LIMIT 20"
+        },
+        {
+          "name": "diag_memory_uses",
+          "source": "memory_uses",
+          "notes": "不把 consumer 伪称 run_id",
+          "columns": [
+            {
+              "name": "kind",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "memory_uses.kind",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "memory_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "memory_uses.memory_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "record_version",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": true,
+              "origin": "memory_uses.record_version",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "consumer",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "memory_uses.consumer",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "attempt_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "memory_uses.attempt_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "purpose",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "memory_uses.purpose",
+              "protection": "原物理类型保留"
+            }
+          ],
+          "example": "SELECT kind, memory_id, record_version, consumer, attempt_id, purpose FROM diag_memory_uses LIMIT 20"
+        },
+        {
+          "name": "diag_history_reads",
+          "source": "history_reads",
+          "notes": "组到组的实际读取关系",
+          "columns": [
+            {
+              "name": "source",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "history_reads.source",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "consumer",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "history_reads.consumer",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "attempt_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "history_reads.attempt_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "purpose",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "history_reads.purpose",
+              "protection": "原物理类型保留"
+            }
+          ],
+          "example": "SELECT source, consumer, attempt_id, purpose FROM diag_history_reads LIMIT 20"
+        },
+        {
+          "name": "diag_tool_metering",
+          "source": "tool_metering",
+          "notes": "reason_code 与 cost_* 为安全派生，不开放 cost 原 JSON",
+          "columns": [
+            {
+              "name": "run_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "tool_metering.run_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "step_index",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": true,
+              "origin": "tool_metering.step_index",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "call_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "tool_metering.call_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "ordinal",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": false,
+              "origin": "tool_metering.ordinal",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "tool_name",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "tool_metering.tool_name",
+              "protection": "开放字符串，保护后可见"
+            },
+            {
+              "name": "source_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "tool_metering.source_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "capability_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "tool_metering.capability_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "effect",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "tool_metering.effect",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "requested_at",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "tool_metering.requested_at",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "start_confirmation",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "tool_metering.start_confirmation",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "result",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "tool_metering.result",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "reason_code",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "tool_metering.reason 安全映射",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "finished_at",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "tool_metering.finished_at",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "operation_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": true,
+              "origin": "tool_metering.operation_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "model_delivery",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "tool_metering.model_delivery",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "cost_kind",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "tool_metering.cost.kind",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "cost_units",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "tool_metering.cost.units",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "cost_unit",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "tool_metering.cost.unit",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "cost_source",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "tool_metering.cost.source",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "cost_service",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "tool_metering.cost.service",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "cost_reason",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "tool_metering.cost.reason 安全映射",
+              "protection": "原物理类型保留"
+            }
+          ],
+          "example": "SELECT run_id, step_index, call_id, ordinal, tool_name, source_id, capability_id, effect, requested_at, start_confirmation, result, reason_code, finished_at, operation_id, model_delivery, cost_kind, cost_units, cost_unit, cost_source, cost_service, cost_reason FROM diag_tool_metering LIMIT 20"
+        },
+        {
+          "name": "diag_tool_ledger",
+          "source": "tool_ledger",
+          "notes": "不开放 summary／fingerprint，不虚构 step_index",
+          "columns": [
+            {
+              "name": "id",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": true,
+              "origin": "tool_ledger.id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "tool_name",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "tool_ledger.tool_name",
+              "protection": "开放字符串，保护后可见"
+            },
+            {
+              "name": "effect",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "tool_ledger.effect",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "status",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "tool_ledger.status",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "call_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": true,
+              "origin": "tool_ledger.call_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "run_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": true,
+              "origin": "tool_ledger.run_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "session_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": true,
+              "origin": "tool_ledger.session_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "created_at",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "tool_ledger.created_at",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "updated_at",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "tool_ledger.updated_at",
+              "protection": "合法缺失为 NULL"
+            }
+          ],
+          "example": "SELECT id, tool_name, effect, status, call_id, run_id, session_id, created_at, updated_at FROM diag_tool_ledger LIMIT 20"
+        },
+        {
+          "name": "diag_tool_operation_links",
+          "source": "external_tool_operations",
+          "notes": "已持久关联，不开放 receipt／fingerprint",
+          "columns": [
+            {
+              "name": "run_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "external_tool_operations.run_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "step_index",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": true,
+              "origin": "external_tool_operations.step_index",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "call_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "external_tool_operations.call_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "ledger_id",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": true,
+              "origin": "external_tool_operations.ledger_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            }
+          ],
+          "example": "SELECT run_id, step_index, call_id, ledger_id FROM diag_tool_operation_links LIMIT 20"
+        },
+        {
+          "name": "diag_calendar_entries",
+          "source": "calendar_entries",
+          "notes": "正文经保护",
+          "columns": [
+            {
+              "name": "id",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": true,
+              "origin": "calendar_entries.id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "title",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "calendar_entries.title",
+              "protection": "开放字符串，保护后可见"
+            },
+            {
+              "name": "starts_at",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "calendar_entries.starts_at",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "ends_at",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "calendar_entries.ends_at",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "iana_time_zone",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "calendar_entries.iana_time_zone",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "participants",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "calendar_entries.participants",
+              "protection": "开放字符串，保护后可见"
+            },
+            {
+              "name": "notes",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "calendar_entries.notes",
+              "protection": "开放字符串，保护后可见"
+            },
+            {
+              "name": "created_at",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "calendar_entries.created_at",
+              "protection": "原物理类型保留"
+            }
+          ],
+          "example": "SELECT id, title, starts_at, ends_at, iana_time_zone, participants, notes, created_at FROM diag_calendar_entries LIMIT 20"
+        },
+        {
+          "name": "diag_forget_operations",
+          "source": "forget_operations",
+          "notes": "current_state 为纯读推导，不记录观察",
+          "columns": [
+            {
+              "name": "operation_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "forget_operations.operation_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "kind",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "forget_operations.kind",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "memory_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "forget_operations.memory_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "completeness",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "forget_operations.completeness",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "created_at",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "forget_operations.created_at",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "current_state",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "operation_state() 纯读",
+              "protection": "原物理类型保留"
+            }
+          ],
+          "example": "SELECT operation_id, kind, memory_id, completeness, created_at, current_state FROM diag_forget_operations LIMIT 20"
+        },
+        {
+          "name": "diag_forget_limits",
+          "source": "forget_limits",
+          "notes": "",
+          "columns": [
+            {
+              "name": "operation_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "forget_limits.operation_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "group_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "forget_limits.group_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "mode",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "forget_limits.mode",
+              "protection": "原物理类型保留"
+            }
+          ],
+          "example": "SELECT operation_id, group_id, mode FROM diag_forget_limits LIMIT 20"
+        },
+        {
+          "name": "diag_forget_cleanup",
+          "source": "forget_cleanup",
+          "notes": "error_code 从实际 error 映射安全标记",
+          "columns": [
+            {
+              "name": "operation_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "forget_cleanup.operation_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "target_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "forget_cleanup.target_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "revision",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": false,
+              "origin": "forget_cleanup.revision",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "state",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "forget_cleanup.state",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "error_code",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "forget_cleanup.error 安全映射",
+              "protection": "原物理类型保留"
+            }
+          ],
+          "example": "SELECT operation_id, target_id, revision, state, error_code FROM diag_forget_cleanup LIMIT 20"
+        },
+        {
+          "name": "diag_consolidation_batches",
+          "source": "memory_consolidation_batches",
+          "notes": "不使用同名近似旧表，不输出 receipt",
+          "columns": [
+            {
+              "name": "batch_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "memory_consolidation_batches.batch_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "session_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "memory_consolidation_batches.session_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "revision",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": true,
+              "origin": "memory_consolidation_batches.revision",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "status",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "memory_consolidation_batches.status",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "created_at",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "memory_consolidation_batches.created_at",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "updated_at",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "memory_consolidation_batches.updated_at",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "finished_at",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "memory_consolidation_batches.finished_at",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "error_code",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "error_code 安全映射",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "generation_run_id",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": true,
+              "origin": "memory_consolidation_batches.generation_run_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            }
+          ],
+          "example": "SELECT batch_id, session_id, revision, status, created_at, updated_at, finished_at, error_code, generation_run_id FROM diag_consolidation_batches LIMIT 20"
+        },
+        {
+          "name": "diag_consolidation_sources",
+          "source": "memory_consolidation_sources",
+          "notes": "按 batch_id+revision 关联",
+          "columns": [
+            {
+              "name": "batch_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "memory_consolidation_sources.batch_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "revision",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": true,
+              "origin": "memory_consolidation_sources.revision",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "run_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "memory_consolidation_sources.run_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "session_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "memory_consolidation_sources.session_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "ordinal",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": false,
+              "origin": "memory_consolidation_sources.ordinal",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "accepted_at",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "memory_consolidation_sources.accepted_at",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "finished_at",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": false,
+              "origin": "memory_consolidation_sources.finished_at",
+              "protection": "原物理类型保留"
+            }
+          ],
+          "example": "SELECT batch_id, revision, run_id, session_id, ordinal, accepted_at, finished_at FROM diag_consolidation_sources LIMIT 20"
+        },
+        {
+          "name": "diag_memory_mirrors",
+          "source": "memory_mirrors",
+          "notes": "仅持久观测，不开放路径／intent／fingerprint，不提供 ready",
+          "columns": [
+            {
+              "name": "target_id",
+              "type": "TEXT",
+              "nullable": false,
+              "identity": true,
+              "origin": "memory_mirrors.target_id",
+              "protection": "主键或引用身份，保护改变时失败"
+            },
+            {
+              "name": "required_generation",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": false,
+              "origin": "memory_mirrors.required_generation",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "generated_generation",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": false,
+              "origin": "memory_mirrors.generated_generation",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "verified_generation",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": false,
+              "origin": "memory_mirrors.verified_generation",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "covered_cleanup_generation",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": false,
+              "origin": "memory_mirrors.covered_cleanup_generation",
+              "protection": "原物理类型保留"
+            },
+            {
+              "name": "generated_at",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "memory_mirrors.generated_at",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "verified_at",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "memory_mirrors.verified_at",
+              "protection": "合法缺失为 NULL"
+            },
+            {
+              "name": "conflict",
+              "type": "INTEGER",
+              "nullable": false,
+              "identity": false,
+              "origin": "memory_mirrors.conflict",
+              "protection": "INTEGER 0/1"
+            },
+            {
+              "name": "error_code",
+              "type": "TEXT",
+              "nullable": true,
+              "identity": false,
+              "origin": "memory_mirrors.error 安全映射",
+              "protection": "原物理类型保留"
+            }
+          ],
+          "example": "SELECT target_id, required_generation, generated_generation, verified_generation, covered_cleanup_generation, generated_at, verified_at, conflict, error_code FROM diag_memory_mirrors LIMIT 20"
+        }
+      ],
+      "limits": {
+        "sql_utf8_bytes": 65536,
+        "source_value_bytes": 2097152,
+        "source_row_bytes": 2097152,
+        "protected_input_bytes": 67108864,
+        "sqlite_heap_bytes": 134217728,
+        "result_utf8_bytes": 2097152,
+        "result_rows": 1000,
+        "result_columns": 64,
+        "page_rows": 100,
+        "handle_ttl_seconds": 30,
+        "terminal_ttl_seconds": 60,
+        "handle_capacity": 64,
+        "execute_budget_ms": 5000
+      }
+    }
+  },
+  "lateIssuanceDelivered": true,
+  "cancel": {
+    "http": 200,
+    "body": {
+      "query_id": "xTOEVH4ka-0DX-yT1dWX31xL",
+      "status": "cancelled",
+      "cleanup": "released"
+    }
+  },
+  "actual": {
+    "query_id": "xTOEVH4ka-0DX-yT1dWX31xL",
+    "instance_id": "3222cb13720649af92463f114cb07856",
+    "status": "cancelled",
+    "cleanup": "released"
+  },
+  "explicitRecheck": {
+    "path": "/api/database/queries/xTOEVH4ka-0DX-yT1dWX31xL",
+    "http": 200,
+    "body": {
+      "query_id": "xTOEVH4ka-0DX-yT1dWX31xL",
+      "instance_id": "3222cb13720649af92463f114cb07856",
+      "status": "cancelled",
+      "cleanup": "released"
+    }
+  },
+  "executes": 0,
+  "result": "NOT_REPRODUCED",
+  "normalClose": true,
+  "portReleased": true
+}

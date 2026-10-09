@@ -9,13 +9,29 @@ PAGE_POLICY = (
 )
 
 ASSETS = {
+    "/assets/behaviour.js": ("behaviour.js", "text/javascript"),
+    "/assets/behaviour.css": ("behaviour.css", "text/css"),
+    "/assets/inbox.js": ("inbox.js", "text/javascript"),
+    "/assets/source.js": ("source.js", "text/javascript"),
+    "/assets/run-fields.js": ("run-fields.js", "text/javascript"),
+    "/assets/run-evidence.js": ("run-evidence.js", "text/javascript"),
+    "/assets/inbox-runs.css": ("inbox-runs.css", "text/css"),
+    "/assets/settings-focus.js": ("settings-focus.js", "text/javascript"),
+    "/assets/models.js": ("models.js", "text/javascript"),
+    "/assets/connections.js": ("connections.js", "text/javascript"),
+    "/assets/settings.css": ("settings.css", "text/css"),
+    "/assets/overview.js": ("overview.js", "text/javascript"),
+    "/assets/overview.css": ("overview.css", "text/css"),
+    "/assets/shell.js": ("shell.js", "text/javascript"),
     "/assets/routing-statistics.js": ("routing-statistics.js", "text/javascript"),
 
     "/assets/trace_export.js": ("trace_export.js", "text/javascript"),
     "/assets/topology.js": ("topology.js", "text/javascript"),
     "/assets/aggregation.js": ("aggregation.js", "text/javascript"),
     "/assets/tools.js": ("tools.js", "text/javascript"),
+    "/assets/tools.css": ("tools.css", "text/css"),
     "/assets/accounting.js": ("accounting.js", "text/javascript"),
+    "/assets/accounting.css": ("accounting.css", "text/css"),
     "/assets/app.js": ("app.js", "text/javascript"),
     "/assets/app.css": ("app.css", "text/css"),
     "/assets/stream.js": ("stream.js", "text/javascript"),
@@ -25,13 +41,16 @@ ASSETS = {
     "/assets/pages.js": ("pages.js", "text/javascript"),
     "/assets/runs.js": ("runs.js", "text/javascript"),
     "/assets/memory.js": ("memory.js", "text/javascript"),
+    "/assets/memory.css": ("memory.css", "text/css"),
     "/assets/database.js": ("database.js", "text/javascript"),
+    "/assets/database.css": ("database.css", "text/css"),
 }
 
 
 def page_asset(path: str) -> tuple[bytes, str] | None:
     if path in {
         "/",
+        "/overview",
         "/inbox",
         "/runs",
         "/memory",
