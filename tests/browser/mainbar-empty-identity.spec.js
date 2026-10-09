@@ -16,11 +16,25 @@ test('restored unread for real empty Session and Run IDs uses one guarded read a
   await page.route('**/api/mainbar?*',route=>route.abort('failed'),{times:1});
   const reads=[],posts=[];
   page.on('request',request=>{if(new URL(request.url()).pathname==='/api/mainbar/locate')reads.push(request.url());if(request.method()==='POST')posts.push(request.url());});
+  let releaseEvents, releaseLocation, receivedLocation;
+  const eventsGate=new Promise(resolve=>releaseEvents=resolve);
+  const locationGate=new Promise(resolve=>releaseLocation=resolve);
+  const locationReady=new Promise(resolve=>receivedLocation=resolve);
+  await page.route(/\/api\/events(?:\?.*)?$/, async route=>{await eventsGate;await route.continue().catch(()=>{});},{times:1});
+  await page.route('**/api/mainbar/locate?*',async route=>{
+    const response=await route.fetch();expect(response.status()).toBe(200);
+    receivedLocation();await locationGate;await route.fulfill({response}).catch(()=>{});
+  },{times:1});
   await page.reload();
   const verify=page.getByRole('button',{name:'核对未读结果',exact:true});
   await expect(verify).toBeVisible();
   await expect(page.getByRole('textbox',{name:'消息',exact:true})).toHaveValue('空ID会话草稿');
-  await verify.click();
+  await verify.click();await locationReady;
+  // First automatic page mount is presentation readiness, not a new MainBar
+  // location intent. Finish it while the real exact-location response waits.
+  releaseEvents();
+  await expect(page.getByRole('heading',{name:'收件箱',exact:true})).toBeVisible();
+  releaseLocation();
   await expect.poll(()=>reads.length).toBe(1);
   const query=new URL(reads[0]).searchParams;
   expect(query.has('session_id')).toBe(true);expect(query.get('session_id')).toBe('');

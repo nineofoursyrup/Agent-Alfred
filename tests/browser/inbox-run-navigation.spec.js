@@ -103,10 +103,16 @@ test("real Inbox preview, Run source return and explicit MainBar location preser
     reads.filter((url) => new URL(url).pathname === "/api/mainbar/locate"),
   ).toHaveLength(1);
   expect(writes.length).toBe(before);
-  await page.evaluate(async (session) => {
+  // Exact reply location can finish before the selected Session's Stream has
+  // accepted its first snapshot. Switching remains an explicit guarded action.
+  await expect.poll(()=>page.evaluate(async()=>{
+    const {dashboard}=await import('/assets/app.js');return dashboard.runtime().connected;
+  })).toBe(true);
+  expect(await page.evaluate(async (session) => {
     const { dashboard } = await import("/assets/app.js");
-    await dashboard.selectSession(session);
-  }, a);
+    return dashboard.selectSession(session);
+  }, a)).toBe(true);
+  expect(await page.evaluate(()=>sessionStorage.getItem('alfred.session'))).toBe(a);
   await expect(
     page.getByRole("textbox", { name: "消息", exact: true }),
   ).toHaveValue("A 的未提交草稿");
