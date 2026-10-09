@@ -13,7 +13,7 @@ async function holdPages(page) {
   return pending;
 }
 
-test('S09 refresh retires old paging ownership without releasing a newer page request',async({page})=>{
+test('S09 refresh retires old paging ownership without releasing a newer page request',async({page},testInfo)=>{
   const server=await memoryServer({script:'tests/browser/ops_server.py'});
   const pending=await holdPages(page);
   try{
@@ -37,10 +37,11 @@ test('S09 refresh retires old paging ownership without releasing a newer page re
     pending[1].release();await expect(rows).toHaveCount(55);
     await expect(next).toBeHidden();
     await expect(page.getByRole('region',{name:'当前账目快照'})).toContainText(snapshot.snapshot_id);
+    await testInfo.attach('paging-ownership.json',{body:JSON.stringify({original,newSnapshot:snapshot.snapshot_id,runCount:snapshot.summary.run_count,nextOffset:snapshot.next_offset,requests:pending.map(item=>item.url.href),rows:await rows.count(),oldResponseRetiredWhileNewPageHeld:true},null,2),contentType:'application/json'});
   }finally{for(const item of pending)item.release();await page.unrouteAll({behavior:'wait'});await server.close();}
 });
 
-test('S09 failed refresh retires old paging and allows original-page and refresh retries',async({page})=>{
+test('S09 failed refresh retires old paging and allows original-page and refresh retries',async({page},testInfo)=>{
   const server=await memoryServer({script:'tests/browser/ops_server.py'});
   const pending=await holdPages(page);
   try{
@@ -68,6 +69,7 @@ test('S09 failed refresh retires old paging and allows original-page and refresh
     await page.getByLabel('IANA 时区',{exact:true}).fill('UTC');
     await refresh.click();await expect(rows).toHaveCount(50);await expect(next).toBeEnabled();
     await expect(scope).not.toHaveText(fixed);expect(posts).toBe(2);
+    await testInfo.attach('failed-refresh-retries.json',{body:JSON.stringify({fixed,requests:pending.map(item=>item.url.href),explicitRefreshRequests:posts,oldResponseRetiredWhileRetryHeld:true,pageRetryReached55:true,refreshRetryReached50:true},null,2),contentType:'application/json'});
   }finally{for(const item of pending)item.release();await page.unrouteAll({behavior:'wait'});await server.close();}
 });
 
@@ -221,6 +223,53 @@ test('S09 native return reuses the source snapshot and one bounded page, expiry 
     expect(posts).toBe(1);
     await expect(page.getByRole('region',{name:'当前账目快照'})).not.toContainText(snapshot);
   } finally {await server.close();}
+});
+
+test('S09 migrated Run explicit return keeps page 50 source and honors a newer focus intent',async({page},testInfo)=>{
+  const server=await memoryServer({script:'tests/browser/ops_server.py'});
+  let pending=[];
+  try{
+    await server.send('bulk');
+    const created=page.waitForResponse(response=>response.url().endsWith('/api/ops/snapshots'));
+    await page.goto(server.origin+'/ops?range=7d&timezone=Asia%2FShanghai&purpose=chat');
+    const snapshot=await(await created).json(),rows=page.getByRole('button',{name:/查看账目 /});
+    await expect(rows).toHaveCount(50);
+    await page.getByRole('button',{name:'下一页',exact:true}).click();await expect(rows).toHaveCount(55);
+    await rows.last().click();
+    const entry=page.getByRole('link',{name:'进入运行过程（保留账目快照）',exact:true});
+    const href=await entry.getAttribute('href'),runId=decodeURIComponent(new URL(href,server.origin).pathname.slice(6));
+    let posts=0;const reads=[],origins=[];
+    page.on('request',request=>{const url=new URL(request.url());if(url.pathname==='/api/ops')reads.push(url.href);if(url.pathname==='/api/ops/snapshots')posts++;});
+    for(const moveFocus of [false,true]){
+      await entry.click();await expect(page).toHaveURL(server.origin+href);
+      await expect(page.getByRole('region',{name:'运行摘要',exact:true})).toContainText(runId);
+      const origin=await page.evaluate(()=>history.state.alfredShell.source.returnSource);origins.push(origin);
+      expect(origin).toMatchObject({kind:'ops',snapshot_id:snapshot.snapshot_id,process_instance_id:snapshot.process_instance_id,filters:snapshot.filters,offset:50,run_id:runId,trigger:{kind:'detail-link',run_id:runId,href}});
+      const back=page.getByRole('link',{name:'返回来源',exact:true});await expect(back).toHaveAttribute('href',origin.route);
+      const before=reads.length;
+      if(moveFocus)pending=await holdPages(page);
+      await back.click();
+      if(moveFocus){
+        await expect.poll(()=>pending.length).toBe(1);
+        await page.getByLabel('Run ID',{exact:true}).fill('未提交的焦点草稿');
+        pending[0].release();
+      }
+      await expect(rows).toHaveCount(5);
+      await expect(page.getByRole('region',{name:'当前账目快照'})).toContainText(snapshot.snapshot_id);
+      await expect(page.getByRole('region',{name:'运行账目明细'})).toContainText(runId);
+      expect(reads.slice(before)).toHaveLength(1);
+      const read=new URL(reads[before]);expect(read.searchParams.get('snapshot_id')).toBe(snapshot.snapshot_id);expect(read.searchParams.get('offset')).toBe('50');
+      expect(await page.evaluate(()=>history.state.alfredShell.source)).toEqual(origin);
+      await expect(page.getByLabel('IANA 时区',{exact:true})).toHaveValue('Asia/Shanghai');
+      await expect(page.getByLabel('运行用途',{exact:true})).toHaveValue('chat');
+      await expect(page.getByLabel('时间范围',{exact:true})).toHaveValue('custom');
+      if(moveFocus){await expect(page.getByLabel('Run ID',{exact:true})).toBeFocused();await expect(page.getByLabel('Run ID',{exact:true})).toHaveValue('未提交的焦点草稿');}
+      else await expect(entry).toBeFocused();
+      expect(posts).toBe(0);
+    }
+    expect(origins[1]).toEqual(origins[0]);
+    await testInfo.attach('migrated-source-roundtrip.json',{body:JSON.stringify({snapshot:snapshot.snapshot_id,filters:snapshot.filters,origins,reads,posts,newerFocusPreserved:true},null,2),contentType:'application/json'});
+  }finally{for(const item of pending)item.release();await page.unrouteAll({behavior:'wait'});await server.close();}
 });
 
 test('S09 direct source reload and read retry never create a replacement snapshot', async ({page,context}) => {
