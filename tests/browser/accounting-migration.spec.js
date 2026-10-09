@@ -1,4 +1,5 @@
 import {test, expect} from '@playwright/test';
+import {writeFile} from 'node:fs/promises';
 import {memoryServer} from './memory-server.js';
 
 async function holdPages(page) {
@@ -37,7 +38,7 @@ test('S09 refresh retires old paging ownership without releasing a newer page re
     pending[1].release();await expect(rows).toHaveCount(55);
     await expect(next).toBeHidden();
     await expect(page.getByRole('region',{name:'当前账目快照'})).toContainText(snapshot.snapshot_id);
-    await testInfo.attach('paging-ownership.json',{body:JSON.stringify({original,newSnapshot:snapshot.snapshot_id,runCount:snapshot.summary.run_count,nextOffset:snapshot.next_offset,requests:pending.map(item=>item.url.href),rows:await rows.count(),oldResponseRetiredWhileNewPageHeld:true},null,2),contentType:'application/json'});
+    await writeFile(testInfo.outputPath('paging-ownership.json'),JSON.stringify({original,newSnapshot:snapshot.snapshot_id,runCount:snapshot.summary.run_count,nextOffset:snapshot.next_offset,requests:pending.map(item=>item.url.href),rows:await rows.count(),oldResponseRetiredWhileNewPageHeld:true},null,2));
   }finally{for(const item of pending)item.release();await page.unrouteAll({behavior:'wait'});await server.close();}
 });
 
@@ -69,7 +70,7 @@ test('S09 failed refresh retires old paging and allows original-page and refresh
     await page.getByLabel('IANA 时区',{exact:true}).fill('UTC');
     await refresh.click();await expect(rows).toHaveCount(50);await expect(next).toBeEnabled();
     await expect(scope).not.toHaveText(fixed);expect(posts).toBe(2);
-    await testInfo.attach('failed-refresh-retries.json',{body:JSON.stringify({fixed,requests:pending.map(item=>item.url.href),explicitRefreshRequests:posts,oldResponseRetiredWhileRetryHeld:true,pageRetryReached55:true,refreshRetryReached50:true},null,2),contentType:'application/json'});
+    await writeFile(testInfo.outputPath('failed-refresh-retries.json'),JSON.stringify({fixed,requests:pending.map(item=>item.url.href),explicitRefreshRequests:posts,oldResponseRetiredWhileRetryHeld:true,pageRetryReached55:true,refreshRetryReached50:true},null,2));
   }finally{for(const item of pending)item.release();await page.unrouteAll({behavior:'wait'});await server.close();}
 });
 
@@ -268,7 +269,7 @@ test('S09 migrated Run explicit return keeps page 50 source and honors a newer f
       expect(posts).toBe(0);
     }
     expect(origins[1]).toEqual(origins[0]);
-    await testInfo.attach('migrated-source-roundtrip.json',{body:JSON.stringify({snapshot:snapshot.snapshot_id,filters:snapshot.filters,origins,reads,posts,newerFocusPreserved:true},null,2),contentType:'application/json'});
+    await writeFile(testInfo.outputPath('migrated-source-roundtrip.json'),JSON.stringify({snapshot:snapshot.snapshot_id,filters:snapshot.filters,origins,reads,posts,newerFocusPreserved:true},null,2));
   }finally{for(const item of pending)item.release();await page.unrouteAll({behavior:'wait'});await server.close();}
 });
 
