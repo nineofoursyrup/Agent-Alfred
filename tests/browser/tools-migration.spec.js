@@ -2,7 +2,7 @@ import {test, expect} from '@playwright/test';
 import {memoryServer} from './memory-server.js';
 import {mcpServer, control} from './mcp-server.js';
 import {createChatSession, sendChat} from './chat-fixture.js';
-import {writeFile, readFile} from 'node:fs/promises';
+import {writeFile, readFile, chmod} from 'node:fs/promises';
 import {join} from 'node:path';
 
 const external = page => page.locator('article').filter({has:page.getByRole('heading',{name:'external_fixture',exact:true})});
@@ -242,6 +242,33 @@ test('S07 Spec F1 discarding only a successor draft retains the unknown submitte
     await card.getByRole('link',{name:'连接维护',exact:true}).click();
     await expect(page).toHaveURL(server.origin+'/connections');expect(posts).toBe(1);
   } finally {await server.close();}
+});
+
+test('S07 Spec F1 an actual unconfirmed authorization write is not a definite refusal', async ({page}) => {
+  const server=await memoryServer({script:'tests/browser/ops_server.py'});
+  try {
+    await page.goto(server.origin+'/tools');
+    const card=external(page),select=card.getByRole('combobox'),save=card.getByRole('button',{name:'保存授权',exact:true});
+    await card.getByRole('button',{name:'展开详情',exact:true}).click();
+    const posts=[];
+    await page.route('**/api/tools/authorization',async route=>{
+      const response=await route.fetch();posts.push({status:response.status(),body:await response.json()});
+      await route.fulfill({response});
+    });
+    // The real atomic write fails; the production service decides its outcome.
+    await chmod(server.directory,0o500);
+    await select.selectOption('allowed');await save.click();
+    await expect(save).toBeEnabled();
+    await expect(card).toContainText('authorization_write_unconfirmed');
+    expect(posts).toHaveLength(1);expect(posts[0].status).toBe(503);
+    expect(posts[0].body.error.code).toBe('authorization_write_unconfirmed');
+    await chmod(server.directory,0o700);
+    await page.getByRole('button',{name:'核对当前授权',exact:true}).click();
+    await expect(select).toHaveValue('allowed');
+    await expect(card).toContainText('authorization_write_unconfirmed');
+    await card.getByRole('link',{name:'连接维护',exact:true}).click();
+    await expect(page).toHaveURL(server.origin+'/connections');expect(posts).toHaveLength(1);
+  } finally {await chmod(server.directory,0o700);await server.close();}
 });
 
 for(const receipt of ['success','missing','rejected']) test(`S07 F1 an in-flight edit back to the saved baseline remains a new draft (${receipt})`, async ({page}) => {

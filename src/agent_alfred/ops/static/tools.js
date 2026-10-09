@@ -222,8 +222,9 @@ export function toolsPage(root, csrf) {
       if(result.ok&&Array.isArray(result.value.tools)&&!result.value.error&&(!body.identity||result.value.saved===true)){
         receipt=result.value;notice=`服务端收到版本 ${result.value.revision} 操作回执；当前状态以回读为准。`;
       }else if(result.value.error||result.value.code){
-        if(submittedDrafts.get(body.identity)===submitted)submittedDrafts.delete(body.identity);
-        notice=`保存未完成：${result.value.error?.code||result.value.code}。草稿保留，请比较当前值。`;
+        const code=result.value.error?.code||result.value.code;
+        if(code!=='authorization_write_unconfirmed'&&submittedDrafts.get(body.identity)===submitted)submittedDrafts.delete(body.identity);
+        notice=`保存未完成：${code}。草稿保留，请比较当前值。`;
       }
     }catch{/* A missing receipt is never permission to repeat a command. */}
     finally{
