@@ -1,0 +1,59 @@
+{
+  "candidate": "675cb695fed3d14059dd17071aef160971b3f303",
+  "src_tree": "5e5affdf0c481f4b5ad38f02cf47d7fc2d5c483a",
+  "python": {
+    "command": "uv run --extra mcp pytest",
+    "started_at": "2026-10-09T04:11:51Z",
+    "started_product_head": "8f579a4712075721728b2043d9f626689ff377a8",
+    "startup_working_tree_note": "Only tests/browser/shell.spec.js had uncommitted entry regression changes; product assets still matched base. No contemporaneous whole-tree manifest was captured; this is bounded reconstruction from preserved action order and unchanged-file proof.",
+    "source_changed_during_run": [
+      "src/agent_alfred/ops/static/index.html",
+      "src/agent_alfred/ops/static/shell.js",
+      "src/agent_alfred/ops/static/models.js",
+      "src/agent_alfred/ops/static/memory.js"
+    ],
+    "all_python_and_project_inputs_unchanged": true,
+    "unchanged_python_file_count": 570,
+    "resource_applicability": {
+      "test_dashboard_assets.py": "Ran after controlled_* at 23 percent; controlled suite still running after04:31Z, while last product edit committed04:16:22Z. Each handler request calls page_asset which reads resource bytes per request; no cached HTML body at collection.",
+      "test_tool_protocol.py": "Scans ops/static JS inside the test function; later alphabetical test not yet run as of this snapshot, all final JS already fixed.",
+      "test_web_listener_burst.py": "Reads app.js at execution; app.js unchanged since base.",
+      "test_web_http.py": "HTTP later alphabetical checks run after final assets fixed; page_asset per-request bytes.",
+      "final_installation_matrix": "Separately proves final package bytes/headers/complete closure after final entry; does not substitute Python behavior tests."
+    },
+    "result": "NOT RUN",
+    "execution": "RUNNING"
+  },
+  "browser": {
+    "command": "ALFRED_BROWSER_TEST_PORT=17900 npm run test:browser -- --output=<browser-full-02-artifacts>",
+    "started_test_head": "ef96f409526697e9f817ae272398c5a3dad5bbd3",
+    "product_identity": "593564fc4b6ed08bc332bbfcf76dcf67107929c0",
+    "subsequent_changes": "675cb69 changes only lifecycle harness; documentation has no effect on browser production/tests/config/lock.",
+    "result": "NOT RUN",
+    "execution": "RUNNING"
+  },
+  "configuration": {
+    "pyproject.toml": {
+      "sha256": "0b3ebe230f399935af91723dd9b9d02a2064edd526a822dfd3b502d4373a2afb",
+      "git_blob": "c56154ee889671042d8895a28db37bcd635fd560"
+    },
+    "uv.lock": {
+      "sha256": "b0445c57d4cdb22a7c816fe27fa8a0c7ddd39962aea69df367e3b1c27a275bb9",
+      "git_blob": "b3488a713f6bada823a1fce43cea8c7d2e17214c"
+    },
+    "package-lock.json": {
+      "sha256": "d964ea8313a3dfb83a72e230ee61f0b166c524548fa80514319e081d30d7e896",
+      "git_blob": "f0461b899e1cf9ad4e7ab582fc5c4c62b5011e03"
+    },
+    "package.json": {
+      "sha256": "f3e4bb5814ef3913c90d8152433d4b116c7dd33359bc88544dc412287f7c05f3",
+      "git_blob": "5611db2ff3c5bea5d63f1555656d89268193e46d"
+    },
+    "playwright.config.js": {
+      "sha256": "ee0d64ce222e3c6f5f8cf90b9be9e7ceb160fddefc375b17d9e8ccb92fabf4e5",
+      "git_blob": "c59a817396494b3c1cc9d4aa274921ebd541ecbd"
+    }
+  },
+  "native": "Native593564f and current src tree identical; full native report retained.",
+  "no_mechanical_rerun": "No known changed Python input was observed before final state. Long required suite remains running; any actual failure or identified affected early check triggers targeted successor."
+}

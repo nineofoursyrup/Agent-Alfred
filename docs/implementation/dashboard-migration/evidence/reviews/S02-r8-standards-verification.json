@@ -1,0 +1,277 @@
+{
+  "axis": "Independent Standards",
+  "head": "552ab48fc1d757ea881107827e583d592a5403b1",
+  "tree": "e4fa378f6e161834d528769865ab97ee1bc4517f",
+  "base": "bba439d7faeedde71970a74cea146a5e896e5345",
+  "result": "PASS narrow candidate and evidence verification",
+  "changed_file": "tests/browser/shell-startup.spec.js",
+  "changed_file_sha256": "031ebefa33af4bd9fc4fa4a6d32fdbb4e7adbddc96dad33617454f9e48e30445",
+  "diff": {
+    "file": "/Users/nineofour/.codex/dashboard-migration-20261009/S02/ci-breakpoint-r8/candidate.diff",
+    "bytes": 3278,
+    "sha256": "ca08f1b12be2643e737f5bb53f0b1a822820c57d55acc4ba9587f2f16d63b5f1"
+  },
+  "production_change": false,
+  "prior_r7_tree_equals_base": true,
+  "CI_actual_checkout_tree_equals_ddef": true,
+  "unchanged_rules": [
+    "CLAUDE.md",
+    "docs/agents/issue-tracker.md",
+    "docs/agents/domain.md",
+    "CONTEXT.md",
+    "docs/design/dashboard-implementation/SPEC.md",
+    "docs/design/dashboard-implementation/INTERFACES.md",
+    "docs/design/dashboard-implementation/VALIDATION.md",
+    "docs/design/issue-87/SPEC.md",
+    "docs/adr/0046-panel-visibility-preserves-page-lifecycle.md"
+  ],
+  "preservation": {
+    "copied_files_checked": 30,
+    "immutable_original_CI_artifacts_checked": 17,
+    "current_external_metadata_drift": [
+      "/Users/nineofour/.codex/dashboard-migration-20261009/ci/after-s04/terminal-identities.json"
+    ],
+    "original_and_current_metadata_snapshots_preserved": true
+  },
+  "source_exports": {
+    "files_checked": 1210,
+    "sets_complete": true,
+    "counts": {
+      "ci-source": 605,
+      "focus-control-source": 605
+    },
+    "only_control_change": [
+      [
+        "focus-control-source",
+        "src/agent_alfred/ops/static/shell.js"
+      ]
+    ],
+    "focus_diff": {
+      "file": "/Users/nineofour/.codex/dashboard-migration-20261009/S02/ci-breakpoint-r8/focus-control.diff",
+      "bytes": 776,
+      "sha256": "f9679a7fd97e91f88532a766d79c612cf30f33636c1c479b827d03f453b78b3b"
+    }
+  },
+  "trace_verification": [
+    {
+      "trace": {
+        "file": "/Users/nineofour/.codex/dashboard-migration-20261009/S02/ci-breakpoint-r8/ci-source-first-fail-artifacts/shell-startup-a-first-nati-33fd7-ction-across-the-breakpoint/trace.zip",
+        "bytes": 134597,
+        "sha256": "781eadaf8e51715e8fc103b2a2840aa4d696999b9360d00c3370a5833807b54a"
+      },
+      "test_source_byte_equal": true,
+      "attachment_byte_equal": true,
+      "observations": [
+        {
+          "label": "editing-before-first-snapshot",
+          "active": "message",
+          "panel": "",
+          "layout": "wide",
+          "mainbarHidden": false,
+          "pages": 0,
+          "selection": [
+            2,
+            5
+          ]
+        },
+        {
+          "label": "first-page-mounted-before-resize",
+          "active": "H1",
+          "panel": "",
+          "layout": "wide",
+          "mainbarHidden": false,
+          "pages": 1,
+          "selection": [
+            2,
+            5
+          ]
+        },
+        {
+          "label": "narrow-after-media-change",
+          "active": "H1",
+          "panel": "",
+          "layout": "narrow",
+          "mainbarHidden": true,
+          "pages": 1,
+          "selection": [
+            2,
+            5
+          ]
+        }
+      ],
+      "real_session_post_count": 1,
+      "served_JS_body_hash": "NOT AVAILABLE in trace; config/source export identity and actual network URLs verified"
+    },
+    {
+      "trace": {
+        "file": "/Users/nineofour/.codex/dashboard-migration-20261009/S02/ci-breakpoint-r8/focus-control-artifacts/shell-startup-a-first-nati-33fd7-ction-across-the-breakpoint/trace.zip",
+        "bytes": 144232,
+        "sha256": "344c1f38b09ecf9d1b3108611326516a261c69c5c4b4d62151f1e7efa9a3a652"
+      },
+      "test_source_byte_equal": true,
+      "attachment_byte_equal": true,
+      "observations": [
+        {
+          "label": "editing-before-first-snapshot",
+          "active": "message",
+          "panel": "",
+          "layout": "wide",
+          "mainbarHidden": false,
+          "pages": 0,
+          "selection": [
+            2,
+            5
+          ]
+        },
+        {
+          "label": "first-page-mounted-before-resize",
+          "active": "H1",
+          "panel": "",
+          "layout": "wide",
+          "mainbarHidden": false,
+          "pages": 1,
+          "selection": [
+            2,
+            5
+          ]
+        },
+        {
+          "label": "narrow-after-media-change",
+          "active": "H1",
+          "panel": "",
+          "layout": "narrow",
+          "mainbarHidden": true,
+          "pages": 1,
+          "selection": [
+            2,
+            5
+          ]
+        }
+      ],
+      "real_session_post_count": 1,
+      "served_JS_body_hash": "NOT AVAILABLE in trace; config/source export identity and actual network URLs verified"
+    },
+    {
+      "trace": {
+        "file": "/Users/nineofour/.codex/dashboard-migration-20261009/S02/ci-breakpoint-r8/current-successor-artifacts/shell-startup-a-first-nati-33fd7-ction-across-the-breakpoint/trace.zip",
+        "bytes": 106473,
+        "sha256": "b118b3d58a2c020435c0eb573c901bb991097428bb5cb6ec94006ec98aca9667"
+      },
+      "test_source_byte_equal": true,
+      "attachment_byte_equal": true,
+      "observations": [
+        {
+          "label": "editing-before-first-snapshot",
+          "active": "message",
+          "panel": "",
+          "layout": "wide",
+          "mainbarHidden": false,
+          "pages": 0,
+          "selection": [
+            2,
+            5
+          ]
+        },
+        {
+          "label": "first-page-mounted-before-resize",
+          "active": "message",
+          "panel": "",
+          "layout": "wide",
+          "mainbarHidden": false,
+          "pages": 1,
+          "selection": [
+            2,
+            5
+          ]
+        },
+        {
+          "label": "narrow-after-media-change",
+          "active": "message",
+          "panel": "mainbar",
+          "layout": "narrow",
+          "mainbarHidden": false,
+          "pages": 1,
+          "selection": [
+            2,
+            5
+          ]
+        }
+      ],
+      "real_session_post_count": 1,
+      "served_JS_body_hash": "NOT AVAILABLE in trace; config/source export identity and actual network URLs verified"
+    }
+  ],
+  "resource_reuse": {
+    "count": 20,
+    "edges": 42,
+    "all_bytes_equal_r7": true
+  },
+  "scope": {
+    "inherited_complete_source_count": 164,
+    "inherited_complete_AC_count": 25,
+    "new_source_fragments": [
+      "issue-87:R02",
+      "issue-87:R10"
+    ],
+    "whole_source_AC_G": "NOT RUN",
+    "no_repeated_full_scope_review": true
+  },
+  "validated_owner_artifacts": [
+    "HANDOFF.md",
+    "candidate.diff",
+    "causal-chain.json",
+    "source-scope-delta.json",
+    "resource-identity.json",
+    "differential-candidates.json",
+    "source-export-manifest.json",
+    "external-metadata-drift.json"
+  ],
+  "logs": [
+    {
+      "file": "/Users/nineofour/.codex/dashboard-migration-20261009/S02/ci-breakpoint-r8/ci-source-first-fail.log",
+      "bytes": 3851,
+      "sha256": "101c7f2cb6ec8462824961f711d82d38662335a6507e1060865f8cd982bfdaf9"
+    },
+    {
+      "file": "/Users/nineofour/.codex/dashboard-migration-20261009/S02/ci-breakpoint-r8/focus-control.log",
+      "bytes": 3820,
+      "sha256": "414ae16f0e9bf7a43e38e0373dc393a421acbbb6350daff53f335a743241c6a8"
+    },
+    {
+      "file": "/Users/nineofour/.codex/dashboard-migration-20261009/S02/ci-breakpoint-r8/current-successor.log",
+      "bytes": 605,
+      "sha256": "7d5ab0ecbecdbded451128ad75784e5ee0ad4557eb16bab5c3ea3088829a4c8a"
+    },
+    {
+      "file": "/Users/nineofour/.codex/dashboard-migration-20261009/S02/ci-breakpoint-r8/final.log",
+      "bytes": 3405,
+      "sha256": "1698596bb2e0a41f9869db584f0f89fdd2b48f21023bac54123687f6781ff597"
+    },
+    {
+      "file": "/Users/nineofour/.codex/dashboard-migration-20261009/S02/ci-breakpoint-r8/diff-check.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "/Users/nineofour/.codex/dashboard-migration-20261009/S02/ci-breakpoint-r8/ci-source-tooling-setup.log",
+      "bytes": 1246,
+      "sha256": "350de05eeec0117f5483b47aca4e4582e5e39a5e547eaa9c689ca26196b2d5e8"
+    },
+    {
+      "file": "/Users/nineofour/.codex/dashboard-migration-20261009/S02/ci-breakpoint-r8/ci-source-tooling-note.txt",
+      "bytes": 221,
+      "sha256": "81d32229448d8e163b84d81856652626d94e68e334fec6a44c276d9bb7e6a91e"
+    }
+  ],
+  "reviewer_tooling_notes": [
+    "A read-only lookup tried non-existing tests/browser/fixtures.js; the test imports Playwright directly and uses actual tests/browser/server.py. No product or evidence mutation resulted."
+  ],
+  "independence": {
+    "other_axis_report_read": false,
+    "product_edit": false,
+    "runtime_probe": false,
+    "broad_tests_repeated": false,
+    "subagents": false,
+    "GitHub_write": false
+  }
+}

@@ -1,0 +1,51 @@
+
+> test:browser
+> playwright test tests/browser/shell.spec.js --grep default Overview --output=/Users/nineofour/.codex/dashboard-migration-20261009/S11/entry-red-artifacts
+
+
+Running 1 test using 1 worker
+
+(node:85623) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/browser/shell.spec.js:127:1 › default Overview replaces the root history entry and brand navigation respects unsaved input (4.3s)
+
+
+  1) tests/browser/shell.spec.js:127:1 › default Overview replaces the root history entry and brand navigation respects unsaved input 
+
+    Error: expect(page).toHaveURL(expected) failed
+
+    Expected pattern: /\/overview\?range=today$/
+    Received string:  "http://127.0.0.1:17900/?range=today"
+    Timeout: 4000ms
+
+    Call log:
+      - Expect "toHaveURL" with timeout 4000ms
+        12 × locator resolved to <html lang="zh-CN">…</html>
+           - unexpected value "http://127.0.0.1:17900/?range=today"
+
+
+      130 |   await expect(page.locator('nav a[href="/inbox"]')).toHaveAttribute('aria-current','page');
+      131 |   await page.goto('/?range=today');
+    > 132 |   await expect(page).toHaveURL(/\/overview\?range=today$/);
+          |                      ^
+      133 |   await expect(page.locator('#page h1')).toHaveText('总览');
+      134 |   await expect(page.locator('nav [aria-current="page"]')).toHaveCount(1);
+      135 |   await page.goBack();
+        at /Users/nineofour/.codex/worktrees/dashboard-s11/Agent-Alfred/tests/browser/shell.spec.js:132:22
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/entry-red-artifacts/shell-default-Overview-rep-19fd1-tion-respects-unsaved-input/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/S11/entry-red-artifacts/shell-default-Overview-rep-19fd1-tion-respects-unsaved-input/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/entry-red-artifacts/shell-default-Overview-rep-19fd1-tion-respects-unsaved-input/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/S11/entry-red-artifacts/shell-default-Overview-rep-19fd1-tion-respects-unsaved-input/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    tests/browser/shell.spec.js:127:1 › default Overview replaces the root history entry and brand navigation respects unsaved input 

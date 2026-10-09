@@ -1,0 +1,51 @@
+{
+  "metadata_result": "PASS",
+  "head": "51159d3854db388a6c178f8fea0b560fcda0bd13",
+  "tree": "a7779e06b2592939767764828fd7c80b5d13a904",
+  "base": "87aab611e4a040ad0edc9956a43f6dff5d4944f3",
+  "previous_head": "2951bf6892d9c5a7b43dedcb412ee54c938b2977",
+  "full_files": 21,
+  "delta": "one startup test file, +30/-0",
+  "increment_sha256": "3ff097aa4ed37a949eab57d56a2ff502a715122eef38cf1788236f4276402c13",
+  "full_diff_sha256": "be023ef61b8704f893545bbc7283a7564cdabe445006696bad6df326ecb5e58c",
+  "startup_test_sha256": "6f1b3f2fd0b26a009c2ce899aba7b2be648c4a3965e199f2ef15e1747303a9e7",
+  "startup_log_sha256": "3c3f6ef64de76e3a09dcb62b5b385bce06608ca35677ca5d4dcf21742123d041",
+  "startup_result": "5 PASS; original r3 four cases plus exact accepted first-snapshot/breakpoint regression",
+  "actual_reconnect": {
+    "runtime": {
+      "instance": "77392c400ac041c4ad7fc15559db907e",
+      "connected": true,
+      "session": "2766062d73e7416793dd403d3ecba46c",
+      "active": null,
+      "revision": 0,
+      "unavailable": false
+    },
+    "snapshots": [
+      {
+        "instance": "77392c400ac041c4ad7fc15559db907e",
+        "revision": 0
+      },
+      {
+        "instance": "77392c400ac041c4ad7fc15559db907e",
+        "revision": 0
+      }
+    ],
+    "reads": [
+      "/api/models"
+    ],
+    "posts": [],
+    "pages": 1
+  },
+  "inherited_artifacts": 8,
+  "raw_documents": 8,
+  "source_graph_sha256": "e76b018aad5ddaf406f11bb9082d98d2e582617ad79b1343e076c0d444e9164f",
+  "source_count": 55,
+  "AC_count": 19,
+  "resources": 24,
+  "edges": 52,
+  "archive_entries": 128,
+  "must_retain": "c34d8462ae6cdf3eb332784972db9521ebf8c070",
+  "product_runs_by_reviewer": 0,
+  "boundaries": "Only r4 affected Spec binding. Future S03/S11 combination, overall source/AC/G, final CI/install/native200/IME NOT RUN; historical BFCache BLOCKED. No product/Git/ledger/tracker writes.",
+  "errors": []
+}

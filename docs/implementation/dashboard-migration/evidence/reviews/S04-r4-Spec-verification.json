@@ -1,0 +1,42 @@
+{
+  "base": "77a51d08917dd37de9c98ae677aa7196b043d4e0",
+  "head": "267a17ea73e353c6425e004c47e06fb319f49c83",
+  "tree": "0de2736d42da93209172cb3d05b3796088ca1072",
+  "metadata_result": "PASS",
+  "errors": [],
+  "review_result": "PASS: S04 current Spec fragment only; original F1/F2 and r3 N1 closed",
+  "finding_count": 0,
+  "worst": null,
+  "increment_files": [
+    "src/agent_alfred/ops/static/overview.js",
+    "tests/browser/overview.spec.js",
+    "tests/browser/overview_server.py"
+  ],
+  "manifest_files": 9,
+  "unchanged_from_r3": 6,
+  "source_definitions_and_hashes": 39,
+  "acceptance_ids": 22,
+  "whole_source_ac_g_result": "NOT RUN retained",
+  "resource_nodes": 20,
+  "resource_graph_unchanged_from_independently_verified_r1": true,
+  "checks": {
+    "new_product_tests_run_by_reviewer": false,
+    "reason": "existing exact regression red/green and strengthened stable-current-peer case cover changed behavior; no concrete unresolved uncertainty",
+    "owner_logs_read": [
+      "r4-red-visible-id-collision.log",
+      "r4-green-visible-id-collision.log",
+      "r4-affected-browser.log",
+      "r4-stable-current-peer-refresh.log",
+      "r4-typecheck.log",
+      "r4-ruff.log"
+    ],
+    "reuse": "4 affected cases resolved as 3 unchanged inputs plus strengthened recorded-overlap 1 PASS; relevant remaining 10 Overview cases and unchanged shared/Python/assets evidence reused; no full-suite aggregate claim"
+  },
+  "boundaries": [
+    "S03/S05/S09 final consumers",
+    "whole G01/G02/G04/G05/G07",
+    "S11 full CI and installations",
+    "native desktop 200% and Chinese IME",
+    "historical BFCache BLOCKED retained"
+  ]
+}

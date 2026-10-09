@@ -1,0 +1,360 @@
+{
+  "review": "S11 bounded semantic Spec",
+  "result": "PASS",
+  "blocking_findings": [],
+  "scope": "git diff accepted base..production repair PLUS test-only successor diff; entry commit and mutable harness excluded",
+  "identities": {
+    "8f579a4712075721728b2043d9f626689ff377a8": {
+      "tree": "58f3e91e5f08bf755bc62c64d5da2eb4e2e98d81",
+      "parents": "a5a13bd54e5cdc25fa80540c040f7fb8671e4c6b 7b1a31a6f4690b90b224c84787efd40dde0766a4"
+    },
+    "c8397368074dacfc9837599b195e0b0dfc686b7a": {
+      "tree": "5eb14d976843ce916d5e319e38679ab1ae98703b",
+      "parents": "8f579a4712075721728b2043d9f626689ff377a8"
+    },
+    "593564fc4b6ed08bc332bbfcf76dcf67107929c0": {
+      "tree": "dc0b879a7d34fb81f10b68bbd466984969be7383",
+      "parents": "c8397368074dacfc9837599b195e0b0dfc686b7a"
+    },
+    "0758e468c009524d2c14f9545786fe9b93b768bf": {
+      "tree": "f0046246f133c2f26dab97e615783b87cab42188",
+      "parents": "593564fc4b6ed08bc332bbfcf76dcf67107929c0"
+    }
+  },
+  "changed_files": [
+    {
+      "path": "src/agent_alfred/ops/static/memory.js",
+      "base_sha256": "fd3640b88d84cbb87d62a1e9ff684ec13fd1b3d289b0f4ec370118509d850d97",
+      "repair_sha256": "9129f17ae69d5e854bc2084e2d18be1afcc4ca53a1484a4ea8e247d2523bc9a0",
+      "successor_sha256": "9129f17ae69d5e854bc2084e2d18be1afcc4ca53a1484a4ea8e247d2523bc9a0"
+    },
+    {
+      "path": "src/agent_alfred/ops/static/models.js",
+      "base_sha256": "df2c3d3026539e4a251f3f4d4a227c1a4a022e37a037608389888385a8c9d3e5",
+      "repair_sha256": "3d73a3643bab0ae7e75d12e6757ec957686ce90cbe2a04d4e362215bebfdcaad",
+      "successor_sha256": "3d73a3643bab0ae7e75d12e6757ec957686ce90cbe2a04d4e362215bebfdcaad"
+    },
+    {
+      "path": "tests/browser/memory-migration.spec.js",
+      "base_sha256": "5b303094039defbf95901151f344132c42f3ff10a813d3e8ca640d852d96779e",
+      "repair_sha256": "52d9a22b3b13284a4816da04abd44456de3f105181073f62b361f7df285146fd",
+      "successor_sha256": "52d9a22b3b13284a4816da04abd44456de3f105181073f62b361f7df285146fd"
+    },
+    {
+      "path": "tests/browser/models-migration.spec.js",
+      "base_sha256": "04174bb2ef283bc41a5f55757362bc4ab8bab7ec3010507871244d37d25f2641",
+      "repair_sha256": "4eb386a6542bc6bdb0d5b6eb8bb934b2c7fd1e5f7b4d7cfbc7ad3948de8a0a56",
+      "successor_sha256": "96fc9d67779c38f3372d37627533b299674471da570ab1f36f3314dad0ab6db2"
+    }
+  ],
+  "successor_files": [
+    "tests/browser/models-migration.spec.js"
+  ],
+  "diff_sha256": {
+    "repair": "5a805c8d6492cf9314cc095c127be52895507bccbd4240695b57abdd24d540ff",
+    "test_successor": "78cc71954ec5161fb18eeda2ac8d57e94b5616bf66319e5c7404e3e229a4a963"
+  },
+  "unchanged_applicability_inputs": [
+    {
+      "path": "docs/design/dashboard-implementation/SPEC.md",
+      "sha256": "c8b09357e661fed623ab9a920536aa5b1cd583b28c2efaa7de40d6ef327ee7af"
+    },
+    {
+      "path": "docs/design/dashboard-implementation/INTERFACES.md",
+      "sha256": "9526b8287325f2a29b150ebfeae95ba4284ce8199e1c3540f877f3b0dac1bb2c"
+    },
+    {
+      "path": "docs/design/dashboard-implementation/VALIDATION.md",
+      "sha256": "85f3ab9b9a28f55cb312d8d5ec70097f6216665e010f6abde41a518bf182dfb2"
+    },
+    {
+      "path": "docs/design/issue-87/SPEC.md",
+      "sha256": "60a5342a1c2bdd3d6b7f7891c7268aa922898bf09203c81ffa1a26917c804f71"
+    },
+    {
+      "path": "docs/design/issue-90/DESIGN.md",
+      "sha256": "9788e488c7b32dfbe15876193c2fc4958f44b82961ae7f091b8284b073863697"
+    },
+    {
+      "path": "docs/design/issue-91/DESIGN.md",
+      "sha256": "7281673419190f5ec2e2296eae566df3d5bdefed4be125b7e48832dc947c94a1"
+    },
+    {
+      "path": "tests/browser/settings_server.py",
+      "sha256": "e0d48730421c9cebe623901eb8a94df453bd3907a7ba7bc0ff15b448feb8b010"
+    },
+    {
+      "path": "tests/browser/memory-server.js",
+      "sha256": "96a5ec3fca63047cdb8490f1fd132488602033564626f2b10693b943da374be8"
+    },
+    {
+      "path": "tests/browser/memory_server.py",
+      "sha256": "3b0bc5ed426aec684905a669c8ce95c16c43039cf0b84ecafa9dc8065daa21cd"
+    },
+    {
+      "path": "playwright.config.js",
+      "sha256": "ee0d64ce222e3c6f5f8cf90b9be9e7ceb160fddefc375b17d9e8ccb92fabf4e5"
+    },
+    {
+      "path": "package.json",
+      "sha256": "f3e4bb5814ef3913c90d8152433d4b116c7dd33359bc88544dc412287f7c05f3"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "d964ea8313a3dfb83a72e230ee61f0b166c524548fa80514319e081d30d7e896"
+    },
+    {
+      "path": "pyproject.toml",
+      "sha256": "0b3ebe230f399935af91723dd9b9d02a2064edd526a822dfd3b502d4373a2afb"
+    },
+    {
+      "path": "uv.lock",
+      "sha256": "b0445c57d4cdb22a7c816fe27fa8a0c7ddd39962aea69df367e3b1c27a275bb9"
+    },
+    {
+      "path": "src/agent_alfred/ops/static/settings-focus.js",
+      "sha256": "07229e0d2f90554cbd3a26d7a1e079b4843cebef587945381a60a65b328e2915"
+    }
+  ],
+  "entry_dependency": {
+    "path": "src/agent_alfred/ops/static/shell.js",
+    "base_equals_repair": true,
+    "repair_sha256": "42e6d2dd36e1f9bd497db49f1c4d145095bb5601b31f3a1a7b5c69f1b8090759",
+    "test_context_sha256": "f3e79b6721dcf2a9e66b5bb417a7e9147ba04178549ec07cb443243d882cc0c6",
+    "root_only_diff": "diff --git a/src/agent_alfred/ops/static/shell.js b/src/agent_alfred/ops/static/shell.js\nindex b37818e..eccccb8 100644\n--- a/src/agent_alfred/ops/static/shell.js\n+++ b/src/agent_alfred/ops/static/shell.js\n@@ -18,5 +18,5 @@ export const PAGES = [\n /** @param {URL} url */\n export function pageDefinition(url) {\n-  return PAGES.find(page => page.path === url.pathname || (page.path === '/runs' && url.pathname.startsWith('/runs/')) || (page.path === '/inbox' && url.pathname === '/'));\n+  return PAGES.find(page => page.path === url.pathname || (page.path === '/runs' && url.pathname.startsWith('/runs/')) || (page.path === '/overview' && url.pathname === '/'));\n }\n \n@@ -82,4 +82,5 @@ export function createShell(options) {\n   /** @type {PageController|null} */ let controller=null;\n   let currentUrl=new URL(location.href);\n+  if(currentUrl.pathname==='/')currentUrl.pathname='/overview';\n   let current={version:1,documentId,index:0,epoch,panel:/** @type {string|null} */(null),url:currentUrl.href,source:/** @type {any} */(null)};\n   /** @type {null|(()=>void)} */ let restoreHistory=null;\n@@ -190,4 +191,5 @@ export function createShell(options) {\n     let url;try{url=new URL(target,location.href);}catch{return 'unavailable';}\n     if(url.origin!==location.origin || !pageDefinition(url))return 'unavailable';\n+    if(url.pathname==='/')url.pathname='/overview';\n     if(url.href===currentUrl.href){if(panel)closePanel();return 'unchanged';}\n     if(navigating)return 'unavailable';navigating=true;\n@@ -209,4 +211,5 @@ export function createShell(options) {\n       const url=new URL(location.href);\n       if(!pageDefinition(url))return;\n+      if(url.pathname==='/')url.pathname='/overview';\n       if(navigating)return;navigating=true;\n       const old=current;const delta=next?next.index-current.index:-1;\n",
+    "adjudication": "Kept shell equality A/H; explicitly classified root-only conditional changes at pageDefinition/createShell/navigate/popstate. Tests use /models,/memory,/overview,/connections,/inbox, never root; entry reviewed only for applicability, not approved."
+  },
+  "logs": [
+    {
+      "path": "S11/submitted-red.log",
+      "bytes": 10350,
+      "sha256": "41f60d7f2b931d04e264eb066a909284e03b1dd75b5e2c4b469bdc1dcc400dbc"
+    },
+    {
+      "path": "S11/submitted-green.log",
+      "bytes": 16880,
+      "sha256": "be82f97f49f3820f7dd53e09d9ea57815eda7411232e69360394abe5c41edf0b"
+    },
+    {
+      "path": "S11/submitted-green-02.log",
+      "bytes": 838,
+      "sha256": "a5afae07e64f50ee76ba6ac12dcab09b712b71d3b886783905ade42f0d5ce039"
+    },
+    {
+      "path": "S11/typecheck-01.log",
+      "bytes": 29,
+      "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f"
+    }
+  ],
+  "preserved_failure_traces": [
+    {
+      "path": "S11/submitted-red-artifacts/memory-migration-S05-editi-3dcfc-dependently-filtered-detail/trace.zip",
+      "sha256": "55cb1e1497c1cce45937686713a9f9a5a1c21aa85842da7469b6a2fdce57fbc9",
+      "source_bindings": [
+        {
+          "member": "src/c6254fe7f6c749b9331919e8364c0e1d3089f069.js",
+          "sha256": "96a5ec3fca63047cdb8490f1fd132488602033564626f2b10693b943da374be8",
+          "matches_repair_file": [
+            "tests/browser/memory-server.js"
+          ]
+        },
+        {
+          "member": "src/d4a1508056c610471be22bec0367d0f3f40106b5.js",
+          "sha256": "8621947cec6b23aec06613aec5372ccce6a30b99830f971255c245bc0ebb0e29",
+          "matches_repair_file": [],
+          "repair_file": "tests/browser/memory-migration.spec.js",
+          "delta": "--- original-red\n+++ fixed-repair\n@@ -125,9 +125,11 @@\n     await expect(page.getByRole('button',{name:'留在此页',exact:true})).toBeFocused();\n     await page.keyboard.press('Escape');\n     await expect(draft).toHaveValue(\"版本一\");\n+    await draft.focus();\n     release();\n     await expect(detail.getByText(\"此前修改已确认保存；提交后新增的编辑尚未保存。\",{exact:true})).toBeVisible();\n     await expect(draft).toHaveValue(\"版本一\");\n+    await expect(draft).toBeFocused();\n     expect((await other.get(`/api/memory/record?kind=semantic&id=${id}`)).body.record.fact).toBe(\"已经提交的修改\");\n     await panel.getByLabel(\"文本\",{exact:true}).fill(\"此查询没有结果\");\n     await panel.getByRole(\"button\",{name:\"搜索\",exact:true}).click();\n",
+          "adjudication": "Two focus-assertion strengthening lines after unchanged original missing-guard failure; no pre-failure input/oracle weakening."
+        }
+      ],
+      "last_actions": [
+        {
+          "call": "pw:api@52",
+          "title": "Click",
+          "params": {
+            "locator": "locator('nav a[href=\"/overview\"]')"
+          }
+        },
+        {
+          "call": "expect@53",
+          "title": "Expect \"toBeFocused\"",
+          "params": {
+            "locator": "getByRole('button', { name: '留在此页', exact: true })"
+          }
+        },
+        {
+          "call": "pw:api@54",
+          "title": "Fulfill request",
+          "params": {}
+        },
+        {
+          "call": "pw:api@58",
+          "title": "Close context",
+          "params": {}
+        },
+        {
+          "call": "attach@b578d034371a3ddcde7b2dcd62eb65be",
+          "title": "Attach \"error-context\"",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "path": "S11/submitted-red-artifacts/models-migration-S11-model-a29a4-qual-to-its-old-saved-value/trace.zip",
+      "sha256": "e9cf761f99b5d045e7a3bd8acbbcc7c25ed1b0da05663cec10dc0ca6077510c7",
+      "source_bindings": [
+        {
+          "member": "src/2f5a2093390b8787a1e1e008b00e1e1225730bfc.js",
+          "sha256": "4eb386a6542bc6bdb0d5b6eb8bb934b2c7fd1e5f7b4d7cfbc7ad3948de8a0a56",
+          "matches_repair_file": [
+            "tests/browser/models-migration.spec.js"
+          ]
+        }
+      ],
+      "last_actions": [
+        {
+          "call": "pw:api@50",
+          "title": "Click",
+          "params": {
+            "locator": "locator('nav a[href=\"/overview\"]')"
+          }
+        },
+        {
+          "call": "expect@51",
+          "title": "Expect \"toBeFocused\"",
+          "params": {
+            "locator": "getByRole('button', { name: '留在此页', exact: true })"
+          }
+        },
+        {
+          "call": "pw:api@52",
+          "title": "Close context",
+          "params": {}
+        },
+        {
+          "call": "attach@beb9ed9800bcc9c68655a6008bee8ed0",
+          "title": "Attach \"screenshot\"",
+          "params": {}
+        },
+        {
+          "call": "attach@6d0952b2a8585ef536b12e910186c4cc",
+          "title": "Attach \"error-context\"",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "path": "S11/submitted-red-artifacts/models-migration-S11-model-da593-qual-to-its-old-saved-value/trace.zip",
+      "sha256": "48e81adf4fe886b5b3b232e701e334483aecce145b5176ec21d9bb64ce530b5a",
+      "source_bindings": [
+        {
+          "member": "src/2f5a2093390b8787a1e1e008b00e1e1225730bfc.js",
+          "sha256": "4eb386a6542bc6bdb0d5b6eb8bb934b2c7fd1e5f7b4d7cfbc7ad3948de8a0a56",
+          "matches_repair_file": [
+            "tests/browser/models-migration.spec.js"
+          ]
+        }
+      ],
+      "last_actions": [
+        {
+          "call": "expect@49",
+          "title": "Expect \"toBeFocused\"",
+          "params": {
+            "locator": "getByRole('button', { name: '留在此页', exact: true })"
+          }
+        },
+        {
+          "call": "pw:api@50",
+          "title": "Fulfill request",
+          "params": {}
+        },
+        {
+          "call": "pw:api@51",
+          "title": "Close context",
+          "params": {}
+        },
+        {
+          "call": "attach@3357f1d2e674f179cc1de6f728f500c1",
+          "title": "Attach \"screenshot\"",
+          "params": {}
+        },
+        {
+          "call": "attach@ddc90fe4ffbbb65a31de2cb8e6826443",
+          "title": "Attach \"error-context\"",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "path": "S11/submitted-green-artifacts/models-migration-S08-STD02-f6b8e-thout-stealing-a-new-intent/trace.zip",
+      "sha256": "64c671db1cc84172df209533ffec6576f7ab203539041f2ef194e07321c74fd0",
+      "source_bindings": [
+        {
+          "member": "src/2f5a2093390b8787a1e1e008b00e1e1225730bfc.js",
+          "sha256": "4eb386a6542bc6bdb0d5b6eb8bb934b2c7fd1e5f7b4d7cfbc7ad3948de8a0a56",
+          "matches_repair_file": [
+            "tests/browser/models-migration.spec.js"
+          ]
+        }
+      ],
+      "last_actions": [
+        {
+          "call": "pw:api@76",
+          "title": "Click",
+          "params": {
+            "locator": "locator('[data-model=\\'opencode-go:deepseek-v4-flash\\']').getByRole('button', { name: '保存显示名', exact: true })"
+          }
+        },
+        {
+          "call": "pw:api@77",
+          "title": "POST",
+          "params": {
+            "url": "http://127.0.0.1:17908/api/settings",
+            "method": "POST"
+          }
+        },
+        {
+          "call": "pw:api@78",
+          "title": "Click",
+          "params": {
+            "locator": "locator('nav a[href=\"/connections\"]')"
+          }
+        },
+        {
+          "call": "pw:api@79",
+          "title": "Click",
+          "params": {
+            "locator": "getByRole('button', { name: '放弃并离开', exact: true })"
+          }
+        },
+        {
+          "call": "attach@7f11f8c8d13ecd45b13e61ebd6889c14",
+          "title": "Attach \"error-context\"",
+          "params": {}
+        }
+      ]
+    }
+  ],
+  "evidence_adjudication": {
+    "submitted_red": "3 FAIL, preserved; expected missing actual leave guard",
+    "submitted_green": "24 PASS and 1 STD02 FAIL, preserved; not relabeled full green",
+    "submitted_green_02": "3 PASS: two new Models regressions plus corrected STD02; only one successor input line changed",
+    "typecheck": "PASS recorded; same production module bytes across green runs and fixed repair/successor",
+    "pass_trace_limitation": "Successful test traces not retained. Log/test/source/unchanged-input applicability assessed. JS response bodies absent in failure traces; no runtime byte-hash claim.",
+    "fixture_scope": "real local Host, HTTP, guarded Settings/Memory services and stores; external catalog/model offline. No live provider claim.",
+    "rerun": "No product tests/probes started by reviewer; no concrete unresolved defect requiring rerun."
+  },
+  "requirements": {
+    "issue87_R06": "109-114 actual unsaved input and submitted request distinction; default-stay/Escape; no late focus theft",
+    "issue90_R02_R04": "45-54 frozen request/target/versions; 80-84 current record/CAS/persistence/forget boundary",
+    "issue91_R03": "64-72 per-field explicit mutation, fixed request revision/value, actual persisted value, explicit current-baseline adoption",
+    "interfaces_I06_I08": "139,167,171,174 owner dirty and protected operation/receipt identity"
+  },
+  "boundaries": [
+    "No final S11 PASS",
+    "No whole 309 source/26 AC/12 MCE/G01-G08 promotion",
+    "Native zoom/IME, four installed variants, upgrade/supported rollback and final gates separate",
+    "BFCache prior BLOCKED retained",
+    "No product, Git, canonical ledger, frozen source or GitHub writes"
+  ]
+}

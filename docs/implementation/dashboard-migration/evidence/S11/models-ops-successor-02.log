@@ -1,0 +1,12 @@
+
+> test:browser
+> playwright test tests/browser/models-migration.spec.js --grep S11 clear|lost probe --output=/Users/nineofour/.codex/dashboard-migration-20261009/S11/models-ops-successor-02-artifacts
+
+
+Running 1 test using 1 worker
+
+(node:92290) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/browser/models-migration.spec.js:375:1 › S11 clear final price changes the next probe and Ops while the old snapshot stays fixed (1.8s)
+
+  1 passed (3.0s)

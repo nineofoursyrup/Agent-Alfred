@@ -1,0 +1,62 @@
+
+> test:browser
+> playwright test --grep S11|one real UI flow|real CLI entry|real v2 upgrade|inbox Run outcomes|CE-04 CE-05 over|MainBar keeps|Session, chat Run|real pending reconnect|Models and Connections|tools registers|real upgraded Session --output=/Users/nineofour/.codex/dashboard-migration-20261009/S11/composition-successor-01-artifacts
+
+
+Running 16 tests using 1 worker
+
+(node:91515) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/browser/aggregation.spec.js:725:1 › S11 one real forgetting event retires hidden Run, aggregation, Overview and Database owners (3.9s)
+  ✓   2 tests/browser/cli-flow.spec.js:57:1 › the real CLI entry holds admission while a Web UI send preserves its draft (1.2s)
+  ✓   3 tests/browser/inbox.spec.js:111:1 › a real v2 upgrade shows all historic messages and creates no synthetic Run (446ms)
+  ✓   4 tests/browser/inbox.spec.js:208:1 › inbox Run outcomes reuse distinct terminal wording independent of recording state (318ms)
+  ✓   5 tests/browser/integrations.spec.js:179:1 › CE-04 CE-05 over-limit reported numbers keep results, missing balance and readable Ops (1.5s)
+  ✓   6 tests/browser/mainbar.spec.js:3:1 › MainBar keeps its draft and drawer across pages and a refresh (433ms)
+  ✓   7 tests/browser/models-migration.spec.js:23:1 › S11 model pending save protects a successor equal to its old saved value (1.2s)
+  ✓   8 tests/browser/models-migration.spec.js:23:1 › S11 model unknown save protects a successor equal to its old saved value (1.2s)
+  ✘   9 tests/browser/models-migration.spec.js:375:1 › S11 clear final price changes the next probe and Ops while the old snapshot stays fixed (1.1s)
+(node:91545) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  10 tests/browser/pagination.spec.js:3:1 › Session, chat Run and all Run pages keep independent opaque cursors (689ms)
+  ✓  11 tests/browser/recording.spec.js:7:3 › real pending reconnect and second-tab draft survive recorded settlement (1.5s)
+  ✓  12 tests/browser/recording.spec.js:7:3 › real pending reconnect and second-tab draft survive failed settlement (1.5s)
+  ✓  13 tests/browser/send-flow.spec.js:6:1 › one real UI flow reaches 202, Step, Attempt, deltas and one reply across pages and reload (2.1s)
+  ✓  14 tests/browser/settings.spec.js:3:1 › Models and Connections navigation keeps MainBar (301ms)
+  ✓  15 tests/browser/shell-controls.spec.js:3:50 › tools registers real unsaved input across panel visibility and confirmed navigation (447ms)
+  ✓  16 tests/browser/upgrade-flow.spec.js:4:1 › a real upgraded Session combines a new UI Run with every historic message in order (1.4s)
+
+
+  1) tests/browser/models-migration.spec.js:375:1 › S11 clear final price changes the next probe and Ops while the old snapshot stays fixed 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "0.00014"
+    Received: "0.00022"
+
+      392 |     const frozen=await(await page.request.get(detailPath)).json();
+      393 |     expect(frozen.run.attempts[0].cost.state).toBe('estimated');
+    > 394 |     expect(frozen.run.attempts[0].cost.amount).toBe('0.00014');
+          |                                                ^
+      395 |     expect(frozen.run.attempts[0].cost.price_components.find(part=>part.dimension==='output').unit_price).toBe('0');
+      396 |     await price.fill('');await save.click();await expect.poll(async()=>(await saved(page)).price_override).toBeNull();
+      397 |     const second=await probe();expect(second).not.toBe(first);
+        at /Users/nineofour/.codex/worktrees/dashboard-s11/Agent-Alfred/tests/browser/models-migration.spec.js:394:48
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/composition-successor-01-artifacts/models-migration-S11-clear-459a3-he-old-snapshot-stays-fixed/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/S11/composition-successor-01-artifacts/models-migration-S11-clear-459a3-he-old-snapshot-stays-fixed/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/S11/composition-successor-01-artifacts/models-migration-S11-clear-459a3-he-old-snapshot-stays-fixed/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/S11/composition-successor-01-artifacts/models-migration-S11-clear-459a3-he-old-snapshot-stays-fixed/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    tests/browser/models-migration.spec.js:375:1 › S11 clear final price changes the next probe and Ops while the old snapshot stays fixed 
+  15 passed (21.4s)

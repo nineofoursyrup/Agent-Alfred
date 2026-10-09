@@ -1,0 +1,171 @@
+{
+  "axis": "Standards",
+  "reviewer": "/root",
+  "result": "PASS",
+  "hard_findings": 0,
+  "optional_smells": 0,
+  "candidate": {
+    "slice": "S06",
+    "round": "r2",
+    "head": "48cf21162bd59d066669fe9a82cc795e1b3d3eb4",
+    "tree": "f495edbe74a00484c177953417c5def8bd297ecf",
+    "base": "6c152d62c2aec40a14d8164bad9e902141e31724",
+    "base_tree": "bcb8daef29e256e0c4743f9f2400f3e069ab0e2c",
+    "previous_candidate": "8b55bcd11b20f6f948853ae458a67da18dc3a190",
+    "previous_tree": "d302114316a86a10c2811d141137f0f38c006c37",
+    "repair_before_sync": "23a0ad7554e927c5e4718688ab5cf44f769c8d9a",
+    "sync_commit": "a4044886ecece54cca9d2f7e5642f791ae952eb6",
+    "worktree": "/Users/nineofour/.codex/worktrees/dashboard-s06/Agent-Alfred",
+    "branch": "codex/dashboard-s06",
+    "status": "",
+    "observed_at": "2026-10-09T02:12:17.793352+00:00",
+    "changed_files": [
+      {
+        "path": "src/agent_alfred/gateway/web/assets.py",
+        "sha256": "5ec6357b739f5829bc76082acc0b9b69c73dbe6b6567c400d073d15d127b9275"
+      },
+      {
+        "path": "src/agent_alfred/ops/static/aggregation.js",
+        "sha256": "2ed4534a18114be56b0df33850040828305d316e794b52ec62e49103384e5ebb"
+      },
+      {
+        "path": "src/agent_alfred/ops/static/behaviour.css",
+        "sha256": "3e964537993aa60787759c526444ddb52a29d6d10884012f1b2a0e79af45e1df"
+      },
+      {
+        "path": "src/agent_alfred/ops/static/behaviour.js",
+        "sha256": "265c1513fbfafab108ae3248391487a7c835b4dc04ae2bd45a1782c40b382345"
+      },
+      {
+        "path": "src/agent_alfred/ops/static/index.html",
+        "sha256": "f4fd467ffa703d1ba9806b047148e52ddc445ce44e0e3c6fa9a7d25d7a48d100"
+      },
+      {
+        "path": "src/agent_alfred/ops/static/pages.js",
+        "sha256": "3c1782eb300215494e3c349436706de84e083c08051f18244151bc0bab4b20a4"
+      },
+      {
+        "path": "src/agent_alfred/ops/static/routing-statistics.js",
+        "sha256": "88bc39a98ce302a61dee408582611d89032e9f686b903577936aae1881bbe69d"
+      },
+      {
+        "path": "src/agent_alfred/ops/static/topology.js",
+        "sha256": "84fc00033a190fd932164a86c7b770f5ae0773aee08801a68b5094ab2bb2a8f5"
+      },
+      {
+        "path": "tests/browser/aggregation.spec.js",
+        "sha256": "7d6b91aaff4ce30467d6d58dc3cdb114871d49a7b2e970b78efae3076474d8ee"
+      },
+      {
+        "path": "tests/browser/behaviour.spec.js",
+        "sha256": "ea8c604dc7c3d3c51e803c719b88821badf00635e47fe58ac90390907c062761"
+      },
+      {
+        "path": "tests/browser/routing-statistics.spec.js",
+        "sha256": "12ddbe43564388b2d8f49ae1067821dae0b9710790f90e4d5a1bb270b59bd882"
+      },
+      {
+        "path": "tests/browser/routing.spec.js",
+        "sha256": "a2bf7cc8a2792796fb3d2a412f086a5407c7d50b42a3ea85fcbb81dea6062f25"
+      },
+      {
+        "path": "tests/browser/topology.spec.js",
+        "sha256": "efabc7c24d139ce65078d11195eff40283dbc01265e47180f197588a1bfff37d"
+      }
+    ],
+    "product_content": {
+      "shell.js": "42e6d2dd36e1f9bd497db49f1c4d145095bb5601b31f3a1a7b5c69f1b8090759",
+      "connections.js": "e057f5fe1d80ec8f52534b2f45df2d05f96a60fac4335f2ebda08f429f7ab891",
+      "database.js": "967b3bc428e060add208bfaadfe4435331e21aa8c2c9ce4093772c6caf7083c4",
+      "tools.js": "3bb0ba23b994b9d7cd6f8e96e77c3bb406ed4dd72459c59466cd849650e99812",
+      "routing-statistics.js": "88bc39a98ce302a61dee408582611d89032e9f686b903577936aae1881bbe69d",
+      "overview.css": "90e1ccd20bb9949e5e69c23acc812f959d48c242277ca8ab444500a6178a6205",
+      "behaviour.css": "3e964537993aa60787759c526444ddb52a29d6d10884012f1b2a0e79af45e1df",
+      "index.html": "f4fd467ffa703d1ba9806b047148e52ddc445ce44e0e3c6fa9a7d25d7a48d100",
+      "stream.js": "c81a6ce6a75a2a7c6ba060a1a014fa794ff386e95aa64869f926850ee36267a1",
+      "trace_export.js": "6911c7060ce8ecfaaaa1c8ada0f0bd47f06b98dc0807e60fb17291e2592a133b",
+      "inbox-runs.css": "e499e15bbc4f7cdb534395f0069892be9615e6a65d81610eade5b5478aa44bf0",
+      ".gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "memory.js": "7e6af3e4c1a729245ff1054c4a2844f0d9d2e57acc4b0e834835df6c383767b0",
+      "run-evidence.js": "2a5b60679d22b1be9721d2cdd516430a602cdc246a845a84f8a718494258ef5f",
+      "app.css": "49e473753f1649223a75171147daf99291fcc369bbab4ac6370e8c61431ed048",
+      "settings.css": "18b9b3df8c5d8c12b3d4504a976d126d51126ffa06c30b8a7ec71814d1620b5c",
+      "models.js": "df2c3d3026539e4a251f3f4d4a227c1a4a022e37a037608389888385a8c9d3e5",
+      "settings-focus.js": "07229e0d2f90554cbd3a26d7a1e079b4843cebef587945381a60a65b328e2915",
+      "accounting.js": "1abe882be2ff6011b52fdd7f6c9d3e093d5f501b78883786fde2dbf64d94253d",
+      "aggregation.js": "2ed4534a18114be56b0df33850040828305d316e794b52ec62e49103384e5ebb",
+      "runs.js": "43f767c50980c1ac173638567e0bbc7f3aafc005f1090a73c6583bf1c9b32c66",
+      "progress.js": "45820eddec8a0313c0e4ee7181b4e9fffe1d36fe4591dece3c184cd504e2a7a4",
+      "dom.js": "9c1509ed4ace2139e6319e73bd2b4675edf8ea901720d98c51d1bbec765e474a",
+      "run-fields.js": "09044f7eda7142e5fd1f94b5365706bc8d6bb4163d57ff361812203c85533919",
+      "source.js": "9fb3c5c2c1892ac576dd7905d35988126458c6f884ad5c5f7db7fe375865e368",
+      "pages.js": "3c1782eb300215494e3c349436706de84e083c08051f18244151bc0bab4b20a4",
+      "behaviour.js": "265c1513fbfafab108ae3248391487a7c835b4dc04ae2bd45a1782c40b382345",
+      "overview.js": "a5e8a66afa53aac280a3037318ebc49c2fba7a177d8e847fd471c1d482d96568",
+      "notices.js": "a49cc5ae76c240990f4a1439e60abf1999c2c23391305c952a08ab7fe59c8998",
+      "inbox.js": "44f4e9d41c6b0d0c772b158a2eaaca547a3adba48475da2ea5a637b25e1100c4",
+      "topology.js": "84fc00033a190fd932164a86c7b770f5ae0773aee08801a68b5094ab2bb2a8f5",
+      "app.js": "1f9bde937e74076035cd7e3d8939426428bcc78ec7a7a6e87ba53c227e36e5b8"
+    },
+    "diff_sha256": "7c9908127aee9c9ea6062daa643880b5b1f5aebe6316086fec21d91a8815597e",
+    "review": {
+      "standards": "PENDING independent incremental review of accepted first finding S06-r1-Standards-F1 / S06-ST-01",
+      "spec": "NOT RUN; coordinator assigns first complete independent Spec review"
+    }
+  },
+  "scope": "Independent incremental reassessment of r1 full Standards plus accepted S03/S08 changes; coordinator authored no S06 implementation; Spec has not run.",
+  "prior_full_review": "reviews/S06-r1-Standards.md",
+  "prior_full_details": "reviews/S06-r1-Standards-details.md",
+  "prior_full_reviewer": "/root/standards_leaf",
+  "repair_files": [
+    "src/agent_alfred/ops/static/aggregation.js",
+    "src/agent_alfred/ops/static/behaviour.js",
+    "tests/browser/aggregation.spec.js",
+    "tests/browser/routing.spec.js"
+  ],
+  "own_files_identical_to_r1": [
+    "src/agent_alfred/ops/static/behaviour.css",
+    "src/agent_alfred/ops/static/routing-statistics.js",
+    "src/agent_alfred/ops/static/topology.js",
+    "tests/browser/behaviour.spec.js",
+    "tests/browser/routing-statistics.spec.js",
+    "tests/browser/topology.spec.js"
+  ],
+  "full_current_files": [
+    "src/agent_alfred/gateway/web/assets.py",
+    "src/agent_alfred/ops/static/aggregation.js",
+    "src/agent_alfred/ops/static/behaviour.css",
+    "src/agent_alfred/ops/static/behaviour.js",
+    "src/agent_alfred/ops/static/index.html",
+    "src/agent_alfred/ops/static/pages.js",
+    "src/agent_alfred/ops/static/routing-statistics.js",
+    "src/agent_alfred/ops/static/topology.js",
+    "tests/browser/aggregation.spec.js",
+    "tests/browser/behaviour.spec.js",
+    "tests/browser/routing-statistics.spec.js",
+    "tests/browser/routing.spec.js",
+    "tests/browser/topology.spec.js"
+  ],
+  "source_hashes_verified": 36,
+  "AC_fragments_retained": 21,
+  "r1_evidence_hashes_verified": 212,
+  "r2_evidence_hashes_verified": 78,
+  "resource_source_HTTP_wheel_sdist_bytes_verified": 31,
+  "actual_combination": 27,
+  "first_failure_resolution": {
+    "id": "S06-r1-Standards-F1",
+    "result": "PASS",
+    "original": "FAIL preserved",
+    "qualified": "Verified repair pending independent Spec and integration"
+  },
+  "fresh_probe": "NOT RUN; actual27 affected real combinations and deterministic prior inputs suffice; no uncovered concern remains",
+  "source_shared_seams": "S06/r2/shared-seams.json",
+  "first_conflicts": "S06/r2/merge-first-conflicts/manifest.json",
+  "limits": [
+    "Whole36source/21AC/G NOT RUN",
+    "Spec first full NOT RUN",
+    "No new full176backend/60/22/19 or70runclaim",
+    "FinalCI/4installed/nativezoom/IME NOT RUN",
+    "HistoricalBFCache BLOCKED and mobileexclusions unchanged"
+  ]
+}
