@@ -67,6 +67,10 @@ export function modelsPage(root, csrf) {
   function requireComparison(draft) {
     draft.comparison={generation,instance,request:draft.request,afterRead:readSequence,revision:null};
   }
+  /** An unknown unpin keeps its receipt, but a later current read can release its edit lock. @param {Wire} receipt */
+  function requireUnpinComparison(receipt) {
+    if(receipt.kind==='unpin')receipt.comparison={generation,instance,afterRead:readSequence};
+  }
   /** @param {Draft} draft */
   function canAdopt(draft) {
     const comparison=draft.comparison;
@@ -113,6 +117,7 @@ export function modelsPage(root, csrf) {
     const request = ++readSequence, epoch=generation;
     // Capture the failure owner when the read starts, not when it returns.
     const comparisons=new Map([...drafts].map(([key,draft])=>[key,draft.comparison]));
+    const unpinComparisons=new Map([...receipts].map(([key,receipt])=>[key,receipt.comparison]));
     for(const comparison of comparisons.values())if(comparison)comparison.revision=null;
     const params = new URLSearchParams();
     if (endpoint) params.set('expand',endpoint);
@@ -129,6 +134,11 @@ export function modelsPage(root, csrf) {
           const draft=drafts.get(key), comparison=comparisons.get(key);
           if(comparison && draft?.comparison===comparison && comparison.generation===generation && comparison.instance===instance
               && request>comparison.afterRead && (!draft.request || draft.request===comparison.request))comparison.revision=body.revision;
+        }
+        if(connected && body.status==='ok')for(const group of body.endpoints || [])for(const model of group.models || []) {
+          const key=modelKey(model),receipt=receipts.get(key),comparison=unpinComparisons.get(key);
+          if(model.pinned && comparison && receipt && receipt.comparison===comparison && !receipt.pending
+              && comparison.generation===generation && comparison.instance===instance && request>comparison.afterRead)receipt.comparison=null;
         }
         pageNotice.textContent=settingsConflict || (!connected ? '连接尚未同步；设置为当前 HTTP 观察，草稿可编辑，写入暂停。' : body.status==='ok' ? `设置 revision ${body.revision}；单项保存，各项互不代存。` : `设置不可用：${body.status}；读取失败不表示无指派。`);
       }
@@ -184,7 +194,7 @@ export function modelsPage(root, csrf) {
     } catch {
       if (!ownsRequest()) return;
       if (draft) {draft.status='unknown';draft.message='保存结果未确认。先核对当前值；不会自动重送。';requireComparison(draft);}
-      else receipts.set(key,{attempt,message:'设置结果未确认；请核对，不会自动重送。'});
+      else {const receipt={attempt,kind:op,message:'设置结果未确认；请核对，不会自动重送。'};requireUnpinComparison(receipt);receipts.set(key,receipt);}
     } finally {
       if (ownsRequest()) {
         if (draft) {draft.pending=false;draft.request=0;}
@@ -220,7 +230,8 @@ export function modelsPage(root, csrf) {
     const save=node('button',field==='display'?'保存显示名':field==='style'?'保存线路':`保存 ${field}`);
     save.dataset.focusKey=JSON.stringify([model.endpoint_id,model.model_id,'save',field]);
     const update=()=>{
-      control.disabled=receipts.get(modelKey(model))?.kind==='unpin';
+      const receipt=receipts.get(modelKey(model));
+      control.disabled=receipt?.kind==='unpin' && Boolean(receipt.pending || receipt.comparison);
       save.disabled=control.disabled || !connected || current?.status!=='ok' || draft.pending || draft.conflict || draft.status==='unknown' || (field==='style' && !draft.value);
       feedback.textContent=draft.message || (unsubmitted(draft)?'未保存':'');
       summary.textContent=rowState(model);
@@ -338,7 +349,14 @@ export function modelsPage(root, csrf) {
     const resumed=state.connected && !connected;
     const connectivityChanged=Boolean(state.connected)!==connected;
     connected=Boolean(state.connected);
-    if(changed){instance=state.instance;generation++;readSequence++;current=null;for(const draft of drafts.values()){draft.pending=false;draft.conflict=true;draft.status='unknown';draft.message='运行实例已变更；保留原草稿，先核对当前版本。';requireComparison(draft);}pageNotice.textContent='实例已变更，正在核对当前设置。';}
+    if(changed){
+      instance=state.instance;generation++;readSequence++;current=null;
+      for(const draft of drafts.values()){draft.pending=false;draft.conflict=true;draft.status='unknown';draft.message='运行实例已变更；保留原草稿，先核对当前版本。';requireComparison(draft);}
+      for(const receipt of receipts.values())if(receipt.kind==='unpin' && (receipt.pending || receipt.comparison)){
+        receipt.pending=false;receipt.message='运行实例已变更，原操作结果未确认；请核对当前设置，不会自动重送。';requireUnpinComparison(receipt);
+      }
+      pageNotice.textContent='实例已变更，正在核对当前设置。';
+    }
     if(changed || resumed)void read();
     if(!connected && connectivityChanged){
       generation++;readSequence++;
@@ -346,7 +364,10 @@ export function modelsPage(root, csrf) {
         if(draft.pending){draft.pending=false;draft.status='unknown';draft.message='连接中断，保存结果未确认；不会自动重送。';}
         if(draft.conflict || draft.status==='unknown')requireComparison(draft);
       }
-      for(const receipt of receipts.values())if(receipt.pending){receipt.pending=false;receipt.message='连接中断，原操作结果未确认；请核对运行或设置，不会自动重送。';}
+      for(const receipt of receipts.values()){
+        if(receipt.pending){receipt.pending=false;receipt.message='连接中断，原操作结果未确认；请核对运行或设置，不会自动重送。';requireUnpinComparison(receipt);}
+        else if(receipt.comparison)requireUnpinComparison(receipt);
+      }
       pageNotice.textContent='连接中断；设置仅为旧观察，草稿保留，操作暂停。';
     }
     if(changed || connectivityChanged)render();

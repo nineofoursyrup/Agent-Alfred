@@ -27,6 +27,83 @@ test('exact MainBar location is one bounded read with a marked preview and separ
   expect(reads).toBe(1);
 });
 
+test('successive exact locations stay separate until ordinary history or SSE owns the same records',async({page})=>{
+  const session=await controlledTransport(page);
+  const pair=(id,revision)=>({type:'run_pair',run_id:id,activity_revision:revision,user:[{type:'text',text:'请求 '+id}],assistant:[{type:'text',text:'普通历史 '+id}]});
+  const recent=Array.from({length:25},(_,index)=>pair('recent-'+index,index+3)).reverse();
+  const cursors=[];
+  await page.route('**/api/mainbar?*',route=>{
+    const cursor=new URL(route.request().url()).searchParams.get('cursor');cursors.push(cursor);
+    return route.fulfill({json:{items:cursor?[pair('a',1)]:recent,next_cursor:cursor?null:'ordinary-older',runs_pending:false}});
+  });
+  await page.reload();await emit(page,'state_patch',state(session,1));
+  await expect(page.locator('#messages [data-run-id]')).toHaveCount(25);
+  await page.route('**/api/mainbar/locate?*',route=>{
+    const id=new URL(route.request().url()).searchParams.get('run_id');
+    return route.fulfill({json:record(session,{run_id:id,item_key:session+':'+id,reply_text:'定位正文 '+id})});
+  });
+  await locate(page,session,'a');await locate(page,session,'b');
+  await expect(page.locator('#messages [data-run-id="a"]')).toHaveCount(0);
+  await expect(page.locator('#reading-status')).toContainText('相邻历史尚未读取');
+  await page.getByRole('button',{name:'回到最新',exact:true}).click();
+  await expect(page.locator('#messages [data-run-id]')).toHaveCount(25);
+  await expect(page.locator('#messages [data-run-id="b"]')).toHaveCount(0);
+  await expect(page.locator('#reading-status')).toHaveText('');
+
+  await locate(page,session,'a');await locate(page,session,'b');
+  await page.getByRole('button',{name:'更早的消息',exact:true}).click();
+  await expect(page.locator('#messages [data-run-id="a"]')).toContainText('普通历史 a');
+  expect(cursors).toContain('ordinary-older');
+  await domain(page,1,session,{name:'run.finished',outcome:'completed',reply_disposition:'reply',reply:{blocks:[{type:'text',text:'SSE 确认正文 b'}]}},{runId:'b'});
+  await domain(page,2,session,{name:'run.finished',outcome:'completed',reply_disposition:'reply',reply:{blocks:[{type:'text',text:'最新回复'}]}});
+  await expect(page.locator('#messages [data-run-id="r1"]')).toContainText('最新回复');
+  await expect(page.locator('#reading-status')).toContainText('相邻历史尚未读取');
+  await page.getByRole('button',{name:'回到最新',exact:true}).click();
+  await expect(page.locator('#messages [data-run-id]')).toHaveCount(28);
+  await expect(page.locator('#messages [data-run-id="a"]')).toHaveCount(1);
+  await expect(page.locator('#messages [data-run-id="b"]')).toContainText('SSE 确认正文 b');
+});
+
+for(const interruption of ['offline','sse-error'])test(`exact location retires on ${interruption} and cannot overwrite a new location after reconnect`,async({page})=>{
+  const session=await controlledTransport(page);let release,entered,reads=0;
+  const gate=new Promise(resolve=>release=resolve),received=new Promise(resolve=>entered=resolve);
+  await page.route('**/api/mainbar/locate?*',async route=>{
+    reads++;const id=new URL(route.request().url()).searchParams.get('run_id');
+    if(id==='early'){entered();await gate;}
+    await route.fulfill({json:record(session,{run_id:id,item_key:session+':'+id,reply_text:'定位正文 '+id})}).catch(()=>{});
+  });
+  const pending=locate(page,session);await received;
+  if(interruption==='offline')await page.evaluate(()=>window.dispatchEvent(new Event('offline')));
+  else await emit(page,'error',{});
+  await expect.poll(()=>page.evaluate(async()=>(await import('/assets/app.js')).dashboard.runtime().connected)).toBe(false);
+  await expect(page.locator('#reading-status')).not.toContainText('正在定位');
+  expect((await pending).status).toBe('retired');
+  await expect(page.locator('#messages [data-run-id="early"]')).toHaveCount(0);
+  expect(reads).toBe(1);
+  await page.evaluate(()=>window.dispatchEvent(new Event('online')));
+  await emit(page,'state_patch',state(session,20));
+  await expect.poll(()=>page.evaluate(async()=>(await import('/assets/app.js')).dashboard.runtime().connected)).toBe(true);
+  expect((await locate(page,session,'new-target')).status).toBe('applied');
+  release();expect((await pending).status).toBe('retired');
+  await expect(page.locator('#messages [data-run-id="early"]')).toHaveCount(0);
+  await expect(page.locator('#messages [data-run-id="new-target"]')).toContainText('定位正文 new-target');
+});
+
+test('an explicit cross-Session location can finish before the new Stream snapshot',async({page})=>{
+  await controlledTransport(page);
+  const target='other-session';
+  await page.route('**/api/mainbar?*',route=>route.fulfill({json:{items:[],next_cursor:null,runs_pending:false}}));
+  await page.route('**/api/mainbar/locate?*',route=>route.fulfill({json:record(target)}));
+  expect((await locate(page,target)).status).toBe('applied');
+  // Switching the Stream is awaiting synchronization, not a disconnect event.
+  expect(await page.evaluate(async()=>(await import('/assets/app.js')).dashboard.runtime())).toMatchObject({session:target,connected:false});
+  await expect(page.locator('#messages [data-run-id="early"]')).toContainText('早期完整正文');
+  await emit(page,'state_patch',state(target,1));
+  await expect.poll(()=>page.evaluate(async()=>(await import('/assets/app.js')).dashboard.runtime().connected)).toBe(true);
+  await expect(page.locator('#reading-status')).toContainText('已定位历史回复');
+  await expect(page.locator('#messages [data-run-id="early"]')).toHaveCount(1);
+});
+
 test('process-gap navigation distinguishes a legal empty Run ID from an absent target',async({page})=>{
   const session=await controlledTransport(page);
   await emit(page,'transport_notice',{code:'deltas_dropped'});
