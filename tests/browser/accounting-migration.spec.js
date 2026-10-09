@@ -2,9 +2,9 @@ import {test, expect} from '@playwright/test';
 import {writeFile} from 'node:fs/promises';
 import {memoryServer} from './memory-server.js';
 
-async function holdPages(page) {
+async function holdPages(page, pattern='**/api/ops?**') {
   const pending=[];
-  await page.route('**/api/ops?**',async route=>{
+  await page.route(pattern,async route=>{
     const response=await route.fetch();
     let release;const gate=new Promise(resolve=>{release=resolve;});
     pending.push({url:new URL(route.request().url()),release});
@@ -226,10 +226,19 @@ test('S09 native return reuses the source snapshot and one bounded page, expiry 
   } finally {await server.close();}
 });
 
-test('S09 migrated Run explicit return keeps page 50 source and honors a newer focus intent',async({page},testInfo)=>{
+for(const viewport of [{width:1280,height:800},{width:390,height:844}])
+  test(`S09 migrated Run explicit return restores its visible source at ${viewport.width}px and honors newer intent`,async({page},testInfo)=>{
   const server=await memoryServer({script:'tests/browser/ops_server.py'});
   let pending=[];
+  const observations=[];
+  const position=()=>page.evaluate(()=>{
+    const panel=document.querySelector('#page'),link=document.querySelector('a[data-source-key="detail-link"]');
+    const p=panel.getBoundingClientRect(),r=link?.getBoundingClientRect();
+    return {scrollTop:panel.scrollTop,panel:{top:p.top,bottom:p.bottom,height:p.height},link:r?{top:r.top,bottom:r.bottom,height:r.height}:null,
+      anchorOffset:r?r.top-p.top:null,focused:document.activeElement===link,visibleInPanel:!!r&&r.top>=p.top&&r.bottom<=p.bottom};
+  });
   try{
+    await page.setViewportSize(viewport);
     await server.send('bulk');
     const created=page.waitForResponse(response=>response.url().endsWith('/api/ops/snapshots'));
     await page.goto(server.origin+'/ops?range=7d&timezone=Asia%2FShanghai&purpose=chat');
@@ -241,35 +250,59 @@ test('S09 migrated Run explicit return keeps page 50 source and honors a newer f
     const href=await entry.getAttribute('href'),runId=decodeURIComponent(new URL(href,server.origin).pathname.slice(6));
     let posts=0;const reads=[],origins=[];
     page.on('request',request=>{const url=new URL(request.url());if(url.pathname==='/api/ops')reads.push(url.href);if(url.pathname==='/api/ops/snapshots')posts++;});
-    for(const moveFocus of [false,true]){
+    for(const intent of ['none','focus','scroll']){
+      await entry.scrollIntoViewIfNeeded();await entry.focus();
+      const beforePosition=await position();expect(beforePosition.visibleInPanel).toBe(true);
       await entry.click();await expect(page).toHaveURL(server.origin+href);
       await expect(page.getByRole('region',{name:'运行摘要',exact:true})).toContainText(runId);
       const origin=await page.evaluate(()=>history.state.alfredShell.source.returnSource);origins.push(origin);
       expect(origin).toMatchObject({kind:'ops',snapshot_id:snapshot.snapshot_id,process_instance_id:snapshot.process_instance_id,filters:snapshot.filters,offset:50,run_id:runId,trigger:{kind:'detail-link',run_id:runId,href}});
       const back=page.getByRole('link',{name:'返回来源',exact:true});await expect(back).toHaveAttribute('href',origin.route);
       const before=reads.length;
-      if(moveFocus)pending=await holdPages(page);
+      if(intent!=='none')pending=await holdPages(page,intent==='scroll'?'**/api/ops/detail?**':'**/api/ops?**');
       await back.click();
-      if(moveFocus){
+      let intentPosition;
+      if(intent!=='none'){
         await expect.poll(()=>pending.length).toBe(1);
-        await page.getByLabel('Run ID',{exact:true}).fill('未提交的焦点草稿');
-        pending[0].release();
+        if(intent==='focus')await page.getByLabel('Run ID',{exact:true}).fill('未提交的焦点草稿');
+        else{
+          const panel=page.locator('#page'),rect=await panel.boundingBox();
+          const previous=await panel.evaluate(element=>element.scrollTop);
+          await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);
+          await page.mouse.wheel(0,240);
+          await expect.poll(()=>panel.evaluate(element=>element.scrollTop)).toBeGreaterThan(previous);
+        }
+        intentPosition=await position();pending[0].release();
       }
       await expect(rows).toHaveCount(5);
       await expect(page.getByRole('region',{name:'当前账目快照'})).toContainText(snapshot.snapshot_id);
+      await expect(entry).toHaveAttribute('href',href);
       await expect(page.getByRole('region',{name:'运行账目明细'})).toContainText(runId);
+      // Await rendering and browser scroll delivery before measuring the actual reading position.
+      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+      const afterPosition=await position();observations.push({intent,before:beforePosition,intentPosition,after:afterPosition});
+      await writeFile(testInfo.outputPath('source-position-observations.json'),JSON.stringify({viewport,observations},null,2));
+      await page.screenshot({path:testInfo.outputPath(`source-return-${intent}.png`)});
       expect(reads.slice(before)).toHaveLength(1);
       const read=new URL(reads[before]);expect(read.searchParams.get('snapshot_id')).toBe(snapshot.snapshot_id);expect(read.searchParams.get('offset')).toBe('50');
-      expect(await page.evaluate(()=>history.state.alfredShell.source)).toEqual(origin);
       await expect(page.getByLabel('IANA 时区',{exact:true})).toHaveValue('Asia/Shanghai');
       await expect(page.getByLabel('运行用途',{exact:true})).toHaveValue('chat');
       await expect(page.getByLabel('时间范围',{exact:true})).toHaveValue('custom');
-      if(moveFocus){await expect(page.getByLabel('Run ID',{exact:true})).toBeFocused();await expect(page.getByLabel('Run ID',{exact:true})).toHaveValue('未提交的焦点草稿');}
-      else await expect(entry).toBeFocused();
+      if(intent==='focus'){
+        await expect(page.getByLabel('Run ID',{exact:true})).toBeFocused();await expect(page.getByLabel('Run ID',{exact:true})).toHaveValue('未提交的焦点草稿');
+        expect(afterPosition.scrollTop).toBeCloseTo(intentPosition.scrollTop,0);
+      }else if(intent==='scroll'){
+        await expect(entry).not.toBeFocused();expect(afterPosition.scrollTop).toBeCloseTo(intentPosition.scrollTop,0);
+      }else{
+        await expect(entry).toBeFocused();expect(afterPosition.visibleInPanel).toBe(true);
+        expect(afterPosition.anchorOffset).toBeCloseTo(beforePosition.anchorOffset,0);
+      }
       expect(posts).toBe(0);
+      await page.unrouteAll({behavior:'wait'});pending=[];
     }
-    expect(origins[1]).toEqual(origins[0]);
-    await writeFile(testInfo.outputPath('migrated-source-roundtrip.json'),JSON.stringify({snapshot:snapshot.snapshot_id,filters:snapshot.filters,origins,reads,posts,newerFocusPreserved:true},null,2));
+    // Position is per visit; the fixed snapshot/filter/Run identity remains the same.
+    for(const origin of origins)expect(origin).toMatchObject({kind:origins[0].kind,route:origins[0].route,snapshot_id:origins[0].snapshot_id,process_instance_id:origins[0].process_instance_id,filters:origins[0].filters,offset:50,run_id:runId,trigger:origins[0].trigger});
+    await writeFile(testInfo.outputPath('migrated-source-roundtrip.json'),JSON.stringify({viewport,snapshot:snapshot.snapshot_id,filters:snapshot.filters,origins,reads,posts,observations},null,2));
   }finally{for(const item of pending)item.release();await page.unrouteAll({behavior:'wait'});await server.close();}
 });
 

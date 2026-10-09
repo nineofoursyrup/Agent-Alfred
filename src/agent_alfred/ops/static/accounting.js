@@ -113,6 +113,7 @@ export function accountingPage(root, csrf) {
   function describeDraft(){draftState.textContent=JSON.stringify(draft())===submitted?'筛选只在点击“刷新账目”时应用。':'筛选草稿已修改，尚未应用；当前账目仍使用原快照范围。';}
   filters.addEventListener('input',describeDraft);filters.addEventListener('change',describeDraft);describeDraft();
   const controllers = new Set();
+  const scroller=/** @type {HTMLElement|null} */(root.closest('#page'));
   /** @type {Wire|null} */ let historyQuery = null;
   /** @type {Wire|null} */ let segment = null;
   /** @type {HTMLElement|null} */ let preview = null;
@@ -123,12 +124,17 @@ export function accountingPage(root, csrf) {
     if(!snapshot||!fixedFilters)return {};
     const query=new URLSearchParams();for(const [key,value] of snapshotContext(fixedFilters))query.set(key.slice(4),value);
     query.set('snapshot_id',snapshot);
+    const target=sourceTarget({trigger,run_id:currentRun});
+    // A bounded return can contain fewer preceding rows. The anchor owns position,
+    // so opt out of the Shell's absolute scroll replay through its existing field.
+    const position=target&&scroller?{scrollTop:0,reading_position:{anchor_offset:target.getBoundingClientRect().top-scroller.getBoundingClientRect().top}}:{};
     return {kind:'ops',route:'/ops?'+query,snapshot_id:snapshot,process_instance_id:snapshotInstance,
-      filters:{...fixedFilters},offset:rowOffsets.get(currentRun)??pageOffset,run_id:currentRun,trigger:{...trigger}};
+      filters:{...fixedFilters},offset:rowOffsets.get(currentRun)??pageOffset,run_id:currentRun,trigger:{...trigger},...position};
   }
   const cancelRestore=()=>{pendingRestore=null;};
   const focusChanged=()=>{if(focusArmed)cancelRestore();};
   document.addEventListener('pointerdown',cancelRestore);document.addEventListener('keydown',cancelRestore);document.addEventListener('focusin',focusChanged);
+  document.addEventListener('wheel',cancelRestore,{passive:true});document.addEventListener('touchstart',cancelRestore,{passive:true});
   root.addEventListener('click',event=>{
     if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
     const link=event.target instanceof Element?event.target.closest('a'):null;
@@ -136,12 +142,25 @@ export function accountingPage(root, csrf) {
     trigger={kind:link.dataset.sourceKey||'link',run_id:currentRun,href:link.getAttribute('href')};
     event.preventDefault();void dashboard.navigate(link.href,{source:{returnSource:captureSource()}});
   });
-  function restoreFocus(){
-    const source=pendingRestore;if(!source)return;
-    const target=source.trigger?.kind==='detail-link'
+  /** @param {Wire} source */
+  function sourceTarget(source){
+    return source.trigger?.kind==='detail-link'
       ? detail.querySelector('a[data-source-key="detail-link"]')
       : [...rows.querySelectorAll('button')].find(button=>button.dataset.runId===source.run_id);
-    if(target instanceof HTMLElement){pendingRestore=null;target.focus({preventScroll:true});}
+  }
+  function restoreFocus(){
+    const source=pendingRestore;if(!source)return;
+    const target=sourceTarget(source);
+    if(target instanceof HTMLElement){
+      pendingRestore=null;
+      if(scroller){
+        const box=target.getBoundingClientRect(),offset=source.reading_position?.anchor_offset;
+        const desired=Number.isFinite(offset)?offset:scroller.clientHeight/2;
+        const visibleOffset=Math.max(8,Math.min(desired,scroller.clientHeight-box.height-8));
+        scroller.scrollTop+=box.top-scroller.getBoundingClientRect().top-visibleOffset;
+      }
+      target.focus({preventScroll:true});
+    }
   }
   /** @param {string} path @param {Wire|undefined} [body] */
   async function fetchData(path, body) {
@@ -352,6 +371,6 @@ export function accountingPage(root, csrf) {
   queueMicrotask(()=>{if(alive&&!begun&&!explicitRefresh&&csrf()&&online)void refreshView();});
   controls();
   return {sync,disconnect,captureSource,restoreSource,
-    close() {alive = false;pendingRestore=null;unsubscribe();document.removeEventListener('pointerdown',cancelRestore);document.removeEventListener('keydown',cancelRestore);document.removeEventListener('focusin',focusChanged);++generation;++detailGeneration;clearHistory();for(const c of controllers)c.abort();},
+    close() {alive = false;pendingRestore=null;unsubscribe();document.removeEventListener('pointerdown',cancelRestore);document.removeEventListener('keydown',cancelRestore);document.removeEventListener('focusin',focusChanged);document.removeEventListener('wheel',cancelRestore);document.removeEventListener('touchstart',cancelRestore);++generation;++detailGeneration;clearHistory();for(const c of controllers)c.abort();},
   };
 }
