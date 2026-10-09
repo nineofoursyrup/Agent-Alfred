@@ -8,6 +8,7 @@ import {join} from 'node:path';
 
 test('a first native snapshot arriving after MainBar editing preserves focus and selection across the breakpoint',async({page},testInfo)=>{
   let release;const gate=new Promise(resolve=>release=resolve);
+  const posts=[];page.on('request',request=>{if(request.method()==='POST')posts.push(new URL(request.url()).pathname);});
   // Hold actual SSE requests, including the replacement after explicit Session
   // creation. The real snapshot and shell/media-query handlers stay unchanged.
   await page.route(/\/api\/events(?:\?.*)?$/,async route=>{await gate;await route.continue();});
@@ -20,8 +21,14 @@ test('a first native snapshot arriving after MainBar editing preserves focus and
     await input.evaluate(input=>input.setSelectionRange(2,5));
     await expect(page.locator('#page .page-body')).toHaveCount(0);await expect(input).toBeFocused();
     const preference=await page.evaluate(()=>sessionStorage.getItem('alfred.shell.wideOpen'));
+    await expect(page.getByRole('button',{name:'发送',exact:true})).toBeDisabled();
+    expect(await page.evaluate(async()=>(await import('/assets/app.js')).dashboard.runtime().connected)).toBe(false);
+    await input.press('Enter');await page.evaluate(()=>new Promise(requestAnimationFrame));
+    expect(posts).toEqual(['/api/sessions']);await expect(input).toHaveValue('保留选区和当前输入');
+    expect(await input.evaluate(input=>[input.selectionStart,input.selectionEnd])).toEqual([2,5]);
     await observe('editing-before-first-snapshot');release();
     await expect(page.getByRole('heading',{name:'收件箱',exact:true})).toBeVisible();
+    await expect(page.getByRole('button',{name:'发送',exact:true})).toBeEnabled();expect(posts).toEqual(['/api/sessions']);
     await observe('first-page-mounted-before-resize');
     await page.setViewportSize({width:1099,height:800});
     await expect(page.locator('body')).toHaveAttribute('data-layout','narrow');
