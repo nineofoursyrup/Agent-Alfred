@@ -1,0 +1,46 @@
+{
+  "directory": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-result",
+  "port": 51270,
+  "port_preflight": "Bound isolated localhost socket port0 then released before fixture setup",
+  "at": "2026-10-09T14:28:52.728203+00:00",
+  "old": {
+    "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-old-env/bin/python",
+    "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/lifecycle-old-dist/agent_alfred-0.1.0-py3-none-any.whl",
+    "sha256": "d688a7aebdcc9451003e12f316be9930fd9fb7ffff8b5c12557fdb513fec4a46",
+    "head": "22c8720e1ec874fd012cc79b086cd8aace4c79b6",
+    "source_tree": "92c61b048894a24f040ab99bfbd913f8abb94812",
+    "source_path": "src/agent_alfred",
+    "src_tree": "5e2ea4ebaf3684938ca09012f8219ac2e0021e49"
+  },
+  "current": {
+    "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-current-env/bin/python",
+    "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/dist/agent_alfred-0.1.0-py3-none-any.whl",
+    "sha256": "d06e3d61e6bf33ff98b775451f05285f69387ba0159b27b2bc63bc7c554c780d",
+    "base_head": "63fe1a6ac026084118cbc9585cedb30e7f03a0a2",
+    "tree": "123caa591cf8053a9cfbafa7fdbe2e9865e77686",
+    "src_tree": "209f93a5401dd4f00ea954dbd28eb5a820b36fba",
+    "package_tree": "a0658032643ea45d72d3fc4ac6c4ac83dcf7aa7e",
+    "manifest": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/candidate.json",
+    "manifest_sha256": "6150b3a441729251e24ce9834ca5d9017b88fdee3258f5acd7331f8bfbf8e07b",
+    "identity_state": "FROZEN_UNCOMMITTED_PRODUCT"
+  },
+  "supported": {
+    "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-supported-env/bin/python",
+    "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/support-dist/agent_alfred-0.1.0-py3-none-any.whl",
+    "sha256": "98eaaf1bd01c3f52889447c4f207ba503fa22618f2c57d18464b58ca389022be",
+    "base_head": "3f0588d3693d598cc1785c7eee82e3c52707dca0",
+    "tree": "19be93d8a59b0cb463f7fb2fbcbc2d0d371699b0",
+    "src_tree": "eefa1ae34847d8b9a91cc2cad7fc6e971786a15a",
+    "package_tree": "42a1a550d98e867a5f79aba80a6186a01e8dd0ab",
+    "manifest": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/support/candidate.json",
+    "manifest_sha256": "1aa30b80c99f9e44c55fd3b0216cb90a2fe57c144e969a4fb797191cb8b09192",
+    "identity_state": "FROZEN_UNCOMMITTED_PRODUCT"
+  },
+  "binding": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-source-binding.json",
+  "binding_sha256": "9bdd92263ae2a308e56ad10d960eb4db92b2aff6e722e4cb4850134dc48600db",
+  "runner": {
+    "path": "/Users/nineofour/.codex/worktrees/dashboard-run-evidence-fix/Agent-Alfred/scripts/check_dashboard_lifecycle.mjs",
+    "sha256": "25009de7efa91563297a08304690cd698244b998ab612fcf4a2e49cdd8dda9c7",
+    "server_sha256": "076efab69bfe060a27de4950b5ba8c037c5fde7aca2c97386183104140a997e4"
+  }
+}

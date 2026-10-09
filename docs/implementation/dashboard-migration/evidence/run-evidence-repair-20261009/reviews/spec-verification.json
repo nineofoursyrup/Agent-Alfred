@@ -1,0 +1,176 @@
+{
+  "request_id": "post120-independent-spec-r1",
+  "generation": 1,
+  "result": "PASS",
+  "checks": {
+    "candidate.json": {
+      "sha256": "6150b3a441729251e24ce9834ca5d9017b88fdee3258f5acd7331f8bfbf8e07b",
+      "tree": "123caa591cf8053a9cfbafa7fdbe2e9865e77686",
+      "tracked_files_verified": 1270,
+      "changed_files_verified": 3,
+      "full_diff_sha256": "28bd8f28f77cf96b2a1e57be0fdcb7756b6700ae42f2b32a961740da7179d64d"
+    },
+    "support/candidate.json": {
+      "sha256": "1aa30b80c99f9e44c55fd3b0216cb90a2fe57c144e969a4fb797191cb8b09192",
+      "tree": "19be93d8a59b0cb463f7fb2fbcbc2d0d371699b0",
+      "tracked_files_verified": 1036,
+      "changed_files_verified": 3,
+      "full_diff_sha256": "28bd8f28f77cf96b2a1e57be0fdcb7756b6700ae42f2b32a961740da7179d64d"
+    },
+    "support_comparison": {
+      "source_files": 620,
+      "only_differences": [
+        "src/agent_alfred/ops/static/index.html",
+        "src/agent_alfred/ops/static/shell.js"
+      ]
+    },
+    "checks_manifest": [
+      {
+        "name": "controlled-red",
+        "sha256": "a99903b70fb270bd6111efad8abde3f31467dc964399ffc5fe35b72d27b3cb39",
+        "exit_code": 1,
+        "applies_to_frozen_candidate": false
+      },
+      {
+        "name": "controlled-red-r2",
+        "sha256": "82669c5cd1130b2cc0621960fe8967fdc9341c07c0c095f3fb8087abab45f21b",
+        "exit_code": 1,
+        "applies_to_frozen_candidate": false
+      },
+      {
+        "name": "first-green",
+        "sha256": "5509a580e0e14534ec3ae2b2aa9c49ee51ef72df0d8670c8305f79e9b8fd556e",
+        "exit_code": 0,
+        "applies_to_frozen_candidate": false
+      },
+      {
+        "name": "final-lifecycle",
+        "sha256": "5bb433baa9a77421d35a5cae7de191915b0ebfe4a80684d4819604df8e79e7e3",
+        "exit_code": 0,
+        "applies_to_frozen_candidate": true
+      },
+      {
+        "name": "related-browser",
+        "sha256": "5ef95fccf18d92bea360adb0ca060b766e7ed9c2a45f6dadbdccfabe1ad4fa08",
+        "exit_code": 0,
+        "applies_to_frozen_candidate": true
+      },
+      {
+        "name": "typecheck",
+        "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f",
+        "exit_code": 0,
+        "applies_to_frozen_candidate": true
+      }
+    ],
+    "controlled_red_bindings": [
+      {
+        "source_sha256": "21fac09f8034d5937266e8f33a75b24389ef8b63375b9b51aca976500a840995",
+        "trace_sha256": "a2085d55f83871805e5a5919a9e438dfba51e5c0ea08e73c2bad54933be639b1",
+        "zipped_source_equal": true
+      },
+      {
+        "source_sha256": "65699b87e26904131292f5e83e0efc5664d47d317bd1ba7c5575ef8f23873a24",
+        "trace_sha256": "f0fadb2e4aa83aea2c16500a4a0f9e068c321b52ac18e0b08fcd24515204dd84",
+        "zipped_source_equal": true
+      }
+    ],
+    "original_trace_order": {
+      "requests": [
+        {
+          "endpoint": "run-path",
+          "start_ms": 610536.263,
+          "finish_ms": 610540.473,
+          "status": 200
+        },
+        {
+          "endpoint": "run-evidence",
+          "start_ms": 610580.563,
+          "finish_ms": 610630.298,
+          "status": 200
+        }
+      ],
+      "classify_focus_ms": 610618.641,
+      "classify_enter_ms": 610624.776,
+      "conclusion": "selection happens before evidence completes; old showNode-only target detection never reconciles"
+    },
+    "four_installations": {
+      "report_sha256": "4bfdb6211bfc5bf5c6c4a5cab3df0dbbc9532f127904adcdff3b768746f34376",
+      "verified": [
+        {
+          "kind": "wheel",
+          "mode": "base",
+          "artifact_sha256": "d06e3d61e6bf33ff98b775451f05285f69387ba0159b27b2bc63bc7c554c780d",
+          "package_files": 620,
+          "http": 100,
+          "closure": 34
+        },
+        {
+          "kind": "wheel",
+          "mode": "mcp",
+          "artifact_sha256": "d06e3d61e6bf33ff98b775451f05285f69387ba0159b27b2bc63bc7c554c780d",
+          "package_files": 620,
+          "http": 100,
+          "closure": 34
+        },
+        {
+          "kind": "sdist",
+          "mode": "base",
+          "artifact_sha256": "b6623acb4da0506dc28f456431a5b373877d41eed6e599ee18ad1eee1d527c95",
+          "package_files": 620,
+          "http": 100,
+          "closure": 34
+        },
+        {
+          "kind": "sdist",
+          "mode": "mcp",
+          "artifact_sha256": "b6623acb4da0506dc28f456431a5b373877d41eed6e599ee18ad1eee1d527c95",
+          "package_files": 620,
+          "http": 100,
+          "closure": 34
+        }
+      ],
+      "temporary_install_envs_removed_after_run": true,
+      "basis": "recorded actual installed HTTP; independently compared all recorded package/resource/body hashes against frozen source and artifacts"
+    },
+    "G08": {
+      "summary_sha256": "b4442037108fdfa42ad3a5f01d192bea7c40c757b69d2e2d9b2e08fc43a2525d",
+      "raw_sha256": "c3cf221bb4751d5d2e3995e2dd78d12d3efb9c477f75d976836bca1af69f5880",
+      "portable_sha256": "28651e89af434f03f6917f5856f86cde2f4bc0e97274da64c23c3a67fd96908c",
+      "only_three_csrf_redactions": true,
+      "source_wheel_installed_equality": [
+        {
+          "label": "old",
+          "files": 598,
+          "artifact_sha256": "d688a7aebdcc9451003e12f316be9930fd9fb7ffff8b5c12557fdb513fec4a46",
+          "normal_close": true
+        },
+        {
+          "label": "current",
+          "files": 620,
+          "artifact_sha256": "d06e3d61e6bf33ff98b775451f05285f69387ba0159b27b2bc63bc7c554c780d",
+          "normal_close": true
+        },
+        {
+          "label": "supported",
+          "files": 620,
+          "artifact_sha256": "98eaaf1bd01c3f52889447c4f207ba503fa22618f2c57d18464b58ca389022be",
+          "normal_close": true
+        }
+      ],
+      "same_state_messages_settings_memory_forgetting_accounting_draft": "PASS, retained original runner assertions plus raw values",
+      "zero_automatic_posts_on_both_refreshes": true
+    },
+    "end_manifest_check": "PASS",
+    "product_tests_rerun": false,
+    "independent_tool_diagnostic": "Initial inspection assumed installation-results was object; it is array4. No product check failed; corrected read-only parsing without rerunning checks.",
+    "applicability_sha256": "ac789882e0571f05699fcd43e6d4a4934b9bc4be33262e8c3030b2dfc925ff3c",
+    "prior_audit_sha256": "a95391f8b4761dc114f13b8ab639acb736a827c28cc3c1c2fb4ef9bf3c9e920a",
+    "delta_scope_rows": 12,
+    "independent_read_only_diagnostics": [
+      "Initial follow-up lookup used the outer evidence root for the old audit; corrected to closeout-20261009/issue-acceptance-audit.json without modifying it.",
+      "Initial follow-up G08 parser treated old artifact.source_tree as full tree, then as src tree. It is package subtree92c61b; old src_tree5e2ea4 and full head22c8720 were explicitly distinguished. Successful comparison used source-binding full identities for all source/wheel/installed bytes. No product test or lifecycle rerun."
+    ]
+  },
+  "refreshed_at": "2026-10-09T14:42:39.222386+00:00",
+  "scope_confirmation": "POST-120-01 only; no old r2 proposal adopted"
+}

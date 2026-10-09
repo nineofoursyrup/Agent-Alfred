@@ -1,0 +1,363 @@
+{
+  "schema_version": 1,
+  "request_id": "post120-independent-spec-r1",
+  "generation": 1,
+  "created_at": "2026-10-09T14:33:28.475565+00:00",
+  "prior_audit": {
+    "path": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/issue-acceptance-audit.json",
+    "sha256": "a95391f8b4761dc114f13b8ab639acb736a827c28cc3c1c2fb4ef9bf3c9e920a",
+    "rows": 81,
+    "preserved_unmodified": true
+  },
+  "finding": {
+    "id": "POST-120-01",
+    "first_ci_run": "37935569616",
+    "first_ci_result": "FAIL",
+    "repair_status": "verified_repair_pending_ci",
+    "first_failure_and_old_pass_preserved": true
+  },
+  "candidate": {
+    "request_id": "post120-run-evidence-repair-r1",
+    "generation": 1,
+    "finding_id": "POST-120-01",
+    "frozen_at": "2026-10-09T14:25:44.015980+00:00",
+    "worktree": "/Users/nineofour/.codex/worktrees/dashboard-run-evidence-fix/Agent-Alfred",
+    "branch": "codex/dashboard-run-evidence-fix",
+    "base_head": "63fe1a6ac026084118cbc9585cedb30e7f03a0a2",
+    "temporary_index": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/candidate.index",
+    "temporary_index_tree": "123caa591cf8053a9cfbafa7fdbe2e9865e77686",
+    "full_diff_sha256": "28bd8f28f77cf96b2a1e57be0fdcb7756b6700ae42f2b32a961740da7179d64d",
+    "files": [
+      {
+        "path": "src/agent_alfred/ops/static/runs.js",
+        "mode": "100644",
+        "git_blob": "51ab6e3862b8f1be179d573f24136cb478cc0991",
+        "sha256": "86bc882a38c32044b975b93f44b9ce5547847e15dd8187480579853c76d38e0f",
+        "bytes": 28838
+      },
+      {
+        "path": "src/agent_alfred/ops/static/topology.js",
+        "mode": "100644",
+        "git_blob": "d9971323fb9b1a2eeed1d1568c2884692c8d2b41",
+        "sha256": "da3c1dda2d0ab85dee05eaf1c19e4974c12c405fe65422601571d32363cd1c08",
+        "bytes": 27019
+      },
+      {
+        "path": "tests/browser/run-path.spec.js",
+        "mode": "100644",
+        "git_blob": "9ba802bad1e318a1b2066cf3a65083706d129535",
+        "sha256": "a1f997e0497d71f8036ff33cc55e579a9813637f835e5026adb6373cd86216a9",
+        "bytes": 51588
+      }
+    ]
+  },
+  "support_candidate": {
+    "request_id": "post120-run-evidence-repair-r1",
+    "generation": 1,
+    "finding_id": "POST-120-01",
+    "frozen_at": "2026-10-09T14:25:44.365286+00:00",
+    "worktree": "/Users/nineofour/.codex/worktrees/dashboard-rollback-closeout/Agent-Alfred",
+    "branch": "codex/dashboard-supported-rollback",
+    "base_head": "3f0588d3693d598cc1785c7eee82e3c52707dca0",
+    "temporary_index": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/support/candidate.index",
+    "temporary_index_tree": "19be93d8a59b0cb463f7fb2fbcbc2d0d371699b0",
+    "full_diff_sha256": "28bd8f28f77cf96b2a1e57be0fdcb7756b6700ae42f2b32a961740da7179d64d",
+    "files": [
+      {
+        "path": "src/agent_alfred/ops/static/runs.js",
+        "mode": "100644",
+        "git_blob": "51ab6e3862b8f1be179d573f24136cb478cc0991",
+        "sha256": "86bc882a38c32044b975b93f44b9ce5547847e15dd8187480579853c76d38e0f",
+        "bytes": 28838
+      },
+      {
+        "path": "src/agent_alfred/ops/static/topology.js",
+        "mode": "100644",
+        "git_blob": "d9971323fb9b1a2eeed1d1568c2884692c8d2b41",
+        "sha256": "da3c1dda2d0ab85dee05eaf1c19e4974c12c405fe65422601571d32363cd1c08",
+        "bytes": 27019
+      },
+      {
+        "path": "tests/browser/run-path.spec.js",
+        "mode": "100644",
+        "git_blob": "9ba802bad1e318a1b2066cf3a65083706d129535",
+        "sha256": "a1f997e0497d71f8036ff33cc55e579a9813637f835e5026adb6373cd86216a9",
+        "bytes": 51588
+      }
+    ]
+  },
+  "spec_result": "PASS",
+  "open_spec_findings": [],
+  "direct_source_responsibilities": [
+    "issue-89:M18",
+    "issue-89:P14",
+    "issue-89:CE-18",
+    "issue-89:D10"
+  ],
+  "shared_source_responsibilities": [
+    "issue-90:P11"
+  ],
+  "direct_dashboard_acceptance": [
+    "AC09"
+  ],
+  "shared_dashboard_acceptance": [
+    "AC16"
+  ],
+  "adjacent_unchanged_boundaries": [
+    "issue-89:M14",
+    "AC10"
+  ],
+  "affected_final_gates": [
+    "AC23",
+    "AC24",
+    "AC25"
+  ],
+  "current_new_evidence": {
+    "reference_lifecycle": "1 PASS",
+    "related_browser": "137 PASS; excludes unchanged lifecycle test",
+    "typecheck": "PASS",
+    "four_installations": "PASS; current artifact identities independently verified",
+    "G08": "PASS; new source/wheel/installed bindings independently verified",
+    "full_successor_ci": "NOT RUN",
+    "actual_successor_merge_ci": "NOT RUN"
+  },
+  "applicability_sha256": "ac789882e0571f05699fcd43e6d4a4934b9bc4be33262e8c3030b2dfc925ff3c",
+  "scope_rules": [
+    "本文追加后继适用性，不把原81条/原FAIL/旧PASS覆盖成新执行。",
+    "此前原生中文IME/200%及202单次发送证据只按相同MainBar/CSS/输入事件与不相交路径继承，不称本次重跑。",
+    "Graph现有手动path快照保持；只同步当前过程DOM引用，不自动获取或伪造Step/Attempt事实。",
+    "四安装临时环境已正常移除；实际运行记录hash与冻结源码/产物重核，G08保留安装环境进一步逐文件核对。",
+    "其他源片段沿原矩阵保留；不能仅由138局部PASS宣布309 sources/26AC整体完成。",
+    "修复分支以实际workflow的PR CI为合并前门禁；actual merge CI仍需观察，不沿用旧integration push要求。",
+    "按本轮明确范围仅保留#111 AC06、#114 AC02/AC06和#119九条的12行delta；没有采用旧r2 proposal作为本轮候选结论。"
+  ],
+  "criteria": [
+    {
+      "criterion_id": "111-AC-06",
+      "issue": 111,
+      "slice": "S03",
+      "prior_status": "ACCEPTABLE",
+      "prior_criterion_sha256": "91ac09523e5299de62630f41ce6f90f514364a75712be1624a22b0e784681e9b",
+      "successor_scope_status": "REPAIR_VERIFIED_PENDING_CI",
+      "reason": "POST-120-01直接责任：选点先于过程证据使Step/Attempt锚点停留不可用；1完整生命周期+137相关通过。M18/P14/CE-18/D10，Dashboard AC09。",
+      "final_issue_status": "OPEN",
+      "evidence_refs": [
+        "reviews/spec.md",
+        "reviews/spec-verification.json",
+        "APPLICABILITY.md",
+        "verification.json"
+      ]
+    },
+    {
+      "criterion_id": "114-AC-02",
+      "issue": 114,
+      "slice": "S06",
+      "prior_status": "ACCEPTABLE",
+      "prior_criterion_sha256": "01535c99c4655e97192312a58e9c62abc9124aca7e2dc61102c065c79fb3713f",
+      "successor_scope_status": "SHARED_COMPONENT_REGRESSION_PASS",
+      "reason": "共用topology；pathMode=false不维护Run引用，两张Behaviour图保持独立来源/viewport/selection；topology及Behaviour实际回归通过。",
+      "final_issue_status": "OPEN",
+      "evidence_refs": [
+        "reviews/spec.md",
+        "reviews/spec-verification.json",
+        "APPLICABILITY.md",
+        "verification.json"
+      ]
+    },
+    {
+      "criterion_id": "114-AC-06",
+      "issue": 114,
+      "slice": "S06",
+      "prior_status": "ACCEPTABLE",
+      "prior_criterion_sha256": "c9fea331a5eddd360bc17e61a984201e7e4a555511cdebc7f43bbbd3d8766f0b",
+      "successor_scope_status": "SHARED_COMPONENT_REGRESSION_PASS",
+      "reason": "Behaviour/Run来源与晚到阅读意图相关；137回归含reverse-response、离页、重启、焦点/viewport，未新增业务写入或图读取。",
+      "final_issue_status": "OPEN",
+      "evidence_refs": [
+        "reviews/spec.md",
+        "reviews/spec-verification.json",
+        "APPLICABILITY.md",
+        "verification.json"
+      ]
+    },
+    {
+      "criterion_id": "119-AC-01",
+      "issue": 119,
+      "slice": "S11",
+      "prior_status": "ACCEPTABLE",
+      "prior_criterion_sha256": "ff2c21797276ee6d8ee663342183e15ca6be41adc8f15623bc2363f41df955b6",
+      "successor_scope_status": "SCOPED_PRIOR_EVIDENCE_APPLICABLE",
+      "reason": "入口规范化/路由声明与壳层字节不变；本轮四安装16路由HTTP闭包及G08真实当前包/overview入口与Run深链接补绑定。原导航语义证据保留原身份，不称全十页浏览器重跑。",
+      "final_issue_status": "OPEN",
+      "evidence_refs": [
+        "reviews/spec.md",
+        "reviews/spec-verification.json",
+        "APPLICABILITY.md",
+        "verification.json"
+      ]
+    },
+    {
+      "criterion_id": "119-AC-02",
+      "issue": 119,
+      "slice": "S11",
+      "prior_status": "ACCEPTABLE",
+      "prior_criterion_sha256": "c58b48dc316114597080da145adb4f8f75ffcf4d1c8ee0dc97f2b6be2741b4b8",
+      "successor_scope_status": "SCOPED_PRIOR_EVIDENCE_APPLICABLE",
+      "reason": "G01–G07沿原矩阵仅作未变业务/协议范围的限定继承；受影响Run消费者、路径及Behaviour由138局部检查补足。G08采用本轮新同状态三代安装链；完整组合最终采用仍待当前CI。",
+      "final_issue_status": "OPEN",
+      "evidence_refs": [
+        "reviews/spec.md",
+        "reviews/spec-verification.json",
+        "APPLICABILITY.md",
+        "verification.json"
+      ]
+    },
+    {
+      "criterion_id": "119-AC-03",
+      "issue": 119,
+      "slice": "S11",
+      "prior_status": "WAIT_FINAL_CI_AND_MERGE",
+      "prior_criterion_sha256": "29bd9a353d1bf5b2420d7b828081ed93343dfd17eb2241ede08c92a0e84abe54",
+      "successor_scope_status": "WAIT_FINAL_CI_AND_ADOPTION",
+      "reason": "原309源项/26AC/12MCE矩阵保留历史；本delta只追加本轮3文件的直接/共享责任及S11适用性。局部修复、四安装、G08通过不能代替全部责任采用，AC25和最终采用等待当前CI。",
+      "final_issue_status": "OPEN",
+      "evidence_refs": [
+        "reviews/spec.md",
+        "reviews/spec-verification.json",
+        "APPLICABILITY.md",
+        "verification.json"
+      ]
+    },
+    {
+      "criterion_id": "119-AC-04",
+      "issue": 119,
+      "slice": "S11",
+      "prior_status": "ACCEPTABLE",
+      "prior_criterion_sha256": "d7acc9d5c37eb2052a4406821e144d6e2f50f3805e95ab1e21d61f3f8b361054",
+      "successor_scope_status": "SCOPED_PRIOR_EVIDENCE_APPLICABLE",
+      "reason": "MainBar、CSS、输入事件及几何布局字节不变，原四视口/200%/中文IME证据按不相交范围继承；本轮仅新增路径引用生命周期和原1280/390键盘回归，不声称重跑原生交互。",
+      "final_issue_status": "OPEN",
+      "evidence_refs": [
+        "reviews/spec.md",
+        "reviews/spec-verification.json",
+        "APPLICABILITY.md",
+        "verification.json"
+      ]
+    },
+    {
+      "criterion_id": "119-AC-05",
+      "issue": 119,
+      "slice": "S11",
+      "prior_status": "ACCEPTABLE",
+      "prior_criterion_sha256": "38d11622e45834a3c58d6972e058d4cb11666bb122ad05bafb9b1280a0832f26",
+      "successor_scope_status": "SCOPED_PRIOR_EVIDENCE_APPLICABLE",
+      "reason": "范围声明保持：移动仅Chromium模拟；iPhone/iOS Safari/真实移动键盘NOT RUN，历史BFCache BLOCKED与首次FAIL不改。新增本次main CI FAIL亦保留；不放宽no-store。",
+      "final_issue_status": "OPEN",
+      "evidence_refs": [
+        "reviews/spec.md",
+        "reviews/spec-verification.json",
+        "APPLICABILITY.md",
+        "verification.json"
+      ]
+    },
+    {
+      "criterion_id": "119-AC-06",
+      "issue": 119,
+      "slice": "S11",
+      "prior_status": "WAIT_FINAL_CI_AND_MERGE",
+      "prior_criterion_sha256": "63ba1531ee1005751e888c03d5f7b0a55c3a6566f89c3d25a12e8656e9df5bbe",
+      "successor_scope_status": "WAIT_PR_AND_ACTUAL_MERGE_CI",
+      "reason": "旧main CI37935569616 FAIL保留；修复分支适用PR CI，再绑定预期head合并和实际merge SHA CI。此分支无适用push触发，不额外造push门槛。",
+      "final_issue_status": "OPEN",
+      "evidence_refs": [
+        "reviews/spec.md",
+        "reviews/spec-verification.json",
+        "APPLICABILITY.md",
+        "verification.json"
+      ]
+    },
+    {
+      "criterion_id": "119-AC-07",
+      "issue": 119,
+      "slice": "S11",
+      "prior_status": "ACCEPTABLE",
+      "prior_criterion_sha256": "2c6236fa8cf9ed0d9ceacbf556df090cc61fad1692f3ce1fed324dd75f94152a",
+      "successor_scope_status": "SUCCESSOR_FOUR_INSTALLATIONS_PASS",
+      "reason": "新wheel/sdist×base/mcp四安装实际HTTP、包内620文件与34资源闭包独立绑定；原包SHA只作历史。",
+      "final_issue_status": "OPEN",
+      "evidence_refs": [
+        "reviews/spec.md",
+        "reviews/spec-verification.json",
+        "APPLICABILITY.md",
+        "verification.json",
+        "installation-results.json"
+      ]
+    },
+    {
+      "criterion_id": "119-AC-08",
+      "issue": 119,
+      "slice": "S11",
+      "prior_status": "ACCEPTABLE",
+      "prior_criterion_sha256": "1508fa22877221ece9bb5222d8200433b20af1ee6770915afa0dac692538380b",
+      "successor_scope_status": "SUCCESSOR_G08_PASS",
+      "reason": "新old22c→当前tree123caa→支持tree19be93，同状态三代正常close0、显式reload零POST和事实保留；支持仅保原Inbox默认差异。",
+      "final_issue_status": "OPEN",
+      "evidence_refs": [
+        "reviews/spec.md",
+        "reviews/spec-verification.json",
+        "APPLICABILITY.md",
+        "verification.json",
+        "lifecycle-summary.json",
+        "lifecycle-source-binding.json",
+        "lifecycle-portable.json"
+      ]
+    },
+    {
+      "criterion_id": "119-AC-09",
+      "issue": 119,
+      "slice": "S11",
+      "prior_status": "ACCEPTABLE",
+      "prior_criterion_sha256": "496795c48e933834953c4821dc26ef9c4a0e0668dee172dd3e02497535696f74",
+      "successor_scope_status": "CANDIDATE_REBOUND_FINAL_GATES_PENDING",
+      "reason": "本票原直接source/owner及独立评审保留；后继三文件与共享消费者采用本报告，候选/src/package/支持身份更新，整体关闭仍等新CI和最终写回。",
+      "final_issue_status": "OPEN",
+      "evidence_refs": [
+        "reviews/spec.md",
+        "reviews/spec-verification.json",
+        "APPLICABILITY.md",
+        "verification.json"
+      ]
+    }
+  ],
+  "remaining": [
+    "独立Standards同候选裁定由root汇总",
+    "修复PR的完整实际CI",
+    "预期head合并及实际merge SHA CI",
+    "最终全部责任证据采用、逐票验收评论与CLOSED/COMPLETED回读"
+  ],
+  "no_product_or_remote_mutation": true,
+  "refreshed_at": "2026-10-09T14:42:39.222386+00:00",
+  "candidate_manifest_sha256": "6150b3a441729251e24ce9834ca5d9017b88fdee3258f5acd7331f8bfbf8e07b",
+  "support_manifest_sha256": "1aa30b80c99f9e44c55fd3b0216cb90a2fe57c144e969a4fb797191cb8b09192",
+  "audit_scope": {
+    "mode": "successor_delta_only",
+    "criterion_ids": [
+      "111-AC-06",
+      "114-AC-02",
+      "114-AC-06",
+      "119-AC-01",
+      "119-AC-02",
+      "119-AC-03",
+      "119-AC-04",
+      "119-AC-05",
+      "119-AC-06",
+      "119-AC-07",
+      "119-AC-08",
+      "119-AC-09"
+    ],
+    "rows": 12,
+    "original_audit_rows": 81,
+    "outside_scope": "原81条矩阵保持原件；未列出的69条本轮不重新裁定，也不更新其历史状态。",
+    "archive": "reviews/issue-audit-delta-before-scope-confirmation.json"
+  }
+}

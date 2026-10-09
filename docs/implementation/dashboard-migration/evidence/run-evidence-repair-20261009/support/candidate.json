@@ -1,0 +1,35 @@
+{
+  "request_id": "post120-run-evidence-repair-r1",
+  "generation": 1,
+  "finding_id": "POST-120-01",
+  "frozen_at": "2026-10-09T14:25:44.365286+00:00",
+  "worktree": "/Users/nineofour/.codex/worktrees/dashboard-rollback-closeout/Agent-Alfred",
+  "branch": "codex/dashboard-supported-rollback",
+  "base_head": "3f0588d3693d598cc1785c7eee82e3c52707dca0",
+  "temporary_index": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/support/candidate.index",
+  "temporary_index_tree": "19be93d8a59b0cb463f7fb2fbcbc2d0d371699b0",
+  "full_diff_sha256": "28bd8f28f77cf96b2a1e57be0fdcb7756b6700ae42f2b32a961740da7179d64d",
+  "files": [
+    {
+      "path": "src/agent_alfred/ops/static/runs.js",
+      "mode": "100644",
+      "git_blob": "51ab6e3862b8f1be179d573f24136cb478cc0991",
+      "sha256": "86bc882a38c32044b975b93f44b9ce5547847e15dd8187480579853c76d38e0f",
+      "bytes": 28838
+    },
+    {
+      "path": "src/agent_alfred/ops/static/topology.js",
+      "mode": "100644",
+      "git_blob": "d9971323fb9b1a2eeed1d1568c2884692c8d2b41",
+      "sha256": "da3c1dda2d0ab85dee05eaf1c19e4974c12c405fe65422601571d32363cd1c08",
+      "bytes": 27019
+    },
+    {
+      "path": "tests/browser/run-path.spec.js",
+      "mode": "100644",
+      "git_blob": "9ba802bad1e318a1b2066cf3a65083706d129535",
+      "sha256": "a1f997e0497d71f8036ff33cc55e579a9813637f835e5026adb6373cd86216a9",
+      "bytes": 51588
+    }
+  ]
+}

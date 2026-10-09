@@ -1,0 +1,26 @@
+{
+  "product": {
+    "head": "e4b61cff8e9e482b168f7508bcd1fa8c56b1f308",
+    "tree": "123caa591cf8053a9cfbafa7fdbe2e9865e77686",
+    "parent": "63fe1a6ac026084118cbc9585cedb30e7f03a0a2",
+    "source_tree": "209f93a5401dd4f00ea954dbd28eb5a820b36fba",
+    "manifest_sha256": "6150b3a441729251e24ce9834ca5d9017b88fdee3258f5acd7331f8bfbf8e07b",
+    "paths": [
+      "src/agent_alfred/ops/static/runs.js",
+      "src/agent_alfred/ops/static/topology.js",
+      "tests/browser/run-path.spec.js"
+    ]
+  },
+  "support": {
+    "head": "faf587f00d6de01ae94180dd00fc5bdcb9a32d68",
+    "tree": "19be93d8a59b0cb463f7fb2fbcbc2d0d371699b0",
+    "parent": "3f0588d3693d598cc1785c7eee82e3c52707dca0",
+    "source_tree": "eefa1ae34847d8b9a91cc2cad7fc6e971786a15a",
+    "manifest_sha256": "1aa30b80c99f9e44c55fd3b0216cb90a2fe57c144e969a4fb797191cb8b09192",
+    "paths": [
+      "src/agent_alfred/ops/static/runs.js",
+      "src/agent_alfred/ops/static/topology.js",
+      "tests/browser/run-path.spec.js"
+    ]
+  }
+}

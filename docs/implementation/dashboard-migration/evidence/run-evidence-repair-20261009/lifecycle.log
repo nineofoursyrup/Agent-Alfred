@@ -1,0 +1,8 @@
+
+Running 1 test using 1 worker
+
+(node:90584) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/browser/run-path.spec.js:95:1 › selected path references follow late, missing and restored process evidence without rereading the path (1.7s)
+
+  1 passed (2.8s)

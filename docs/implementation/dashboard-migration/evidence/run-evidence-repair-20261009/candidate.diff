@@ -1,0 +1,194 @@
+diff --git a/src/agent_alfred/ops/static/runs.js b/src/agent_alfred/ops/static/runs.js
+index daf299bf32ddcd7b50b9b42c12e431c29182e6df..51ab6e3862b8f1be179d573f24136cb478cc0991 100644
+--- a/src/agent_alfred/ops/static/runs.js
++++ b/src/agent_alfred/ops/static/runs.js
+@@ -576,6 +576,7 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
+       const link = node("a", "返回账本核对筛选并刷新");
+       link.href = "/ops?" + filters;
+       detail.append(node("p", "账目快照已失效；尚未核验当前过程记录。"), link);
++      pathView?.syncReferences();
+       paintAction();
+       return;
+     }
+@@ -733,6 +734,7 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
+         button.focus({ preventScroll: true });
+     }
+     restoreReading();
++    pathView?.syncReferences();
+     paintAction();
+   }
+   function paintTimes() {
+diff --git a/src/agent_alfred/ops/static/topology.js b/src/agent_alfred/ops/static/topology.js
+index 272f9c311f3a9d2348ccd465de78533e53cfa55a..d9971323fb9b1a2eeed1d1568c2884692c8d2b41 100644
+--- a/src/agent_alfred/ops/static/topology.js
++++ b/src/agent_alfred/ops/static/topology.js
+@@ -120,6 +120,7 @@ export function topologyView(root, workflow, runtime, sync, runId=null) {
+   /** @type {SVGElement|null} */ let svg=null;
+   /** @type {AbortController|null} */ let pending=null;
+   /** @type {HTMLElement|null} */ let nodeDetail=null;
++  /** @type {{target:string,label:string,element:HTMLElement,available:boolean}[]} */ let references=[];
+   function invalidate() {sequence++; pending?.abort(); pending=null;}
+   function viewbox() {svg?.setAttribute('viewBox',`${viewport.x} ${viewport.y} ${viewport.width} ${viewport.height}`);}
+   function fit() {viewport={...full}; viewbox();}
+@@ -152,9 +153,37 @@ export function topologyView(root, workflow, runtime, sync, runId=null) {
+     status.textContent=prefix + pathNotice + (messages[phase] || '') + (changed ? '结构已更新，已适应全图并关闭旧节点详情。' : '');
+     refresh.textContent=(!snapshot && ['failed','incompatible'].includes(phase)) ? '重试读取' : '重新读取';
+   }
++  // Process evidence arrives independently of the manually read path. Update
++  // only changed references so the selected node's reading state stays intact.
++  function syncReferences() {
++    if (closed || !pathMode || !nodeDetail?.isConnected) return;
++    for (const ref of references) {
++      const available=Boolean(document.getElementById(ref.target));
++      if (available===ref.available) continue;
++      const previous=ref.element, focused=document.activeElement===previous;
++      if (available) {
++        const link=node('a',ref.label);link.href='#'+encodeURIComponent(ref.target);
++        link.addEventListener('click',event=>{
++          event.preventDefault();event.stopPropagation();
++          const evidence=document.getElementById(ref.target);
++          if (!evidence) {syncReferences();return;}
++          if(evidence instanceof HTMLDetailsElement) evidence.open=true;
++          evidence.tabIndex=-1;evidence.focus();evidence.scrollIntoView({block:'center'});
++        });
++        ref.element=link;
++      } else ref.element=node('p',ref.label+' · 关联证据不可用');
++      ref.available=available;
++      previous.replaceWith(ref.element);
++      if (focused) {
++        if (!available) ref.element.tabIndex=-1;
++        ref.element.focus({preventScroll:true});
++      }
++    }
++  }
+   function showNode() {
+     if (!nodeDetail || !snapshot) return;
+     nodeDetail.replaceChildren();
++    references=[];
+     const d=snapshot.description, n=d.topology.nodes.find((/** @type {Wire} */ n)=>n.node_id === selected);
+     if (!n) return;
+     const c=caption(d,n);
+@@ -167,18 +196,11 @@ export function topologyView(root, workflow, runtime, sync, runId=null) {
+       for (const ref of f?.references||[]) {
+         const target=ref.attempt_id ? `attempt-${ref.attempt_id}` : `step-${ref.step_index}`;
+         const label=ref.attempt_id?`Attempt ${ref.attempt_id}`:`Step ${ref.step_index}`;
+-        if (document.getElementById(target)) {
+-          const link=node('a',label); link.href='#'+encodeURIComponent(target);
+-          link.addEventListener('click',event=>{
+-            event.preventDefault(); event.stopPropagation();
+-            const evidence=document.getElementById(target);
+-            if (!evidence) {link.replaceWith(node('p',label+' · 关联证据不可用')); return;}
+-            if(evidence instanceof HTMLDetailsElement) evidence.open=true;
+-            evidence.tabIndex=-1; evidence.focus(); evidence.scrollIntoView({block:'center'});
+-          });
+-          nodeDetail.append(link);
+-        } else nodeDetail.append(node('p',label+' · 关联证据不可用'));
++        const element=node('p',label+' · 关联证据不可用');
++        references.push({target,label,element,available:false});
++        nodeDetail.append(element);
+       }
++      syncReferences();
+     }
+   }
+   /** @param {string} id */
+@@ -325,7 +347,7 @@ export function topologyView(root, workflow, runtime, sync, runId=null) {
+     online=current.connected;notices();
+   });
+   notices();
+-  return {close(){closed=true;invalidate();unwatch();}};
++  return {syncReferences,close(){closed=true;invalidate();unwatch();}};
+ }
+ 
+ /** @param {string} value */
+diff --git a/tests/browser/run-path.spec.js b/tests/browser/run-path.spec.js
+index 4be6b03890ff072b9843e2ba229c2c9889f43a42..9ba802bad1e318a1b2066cf3a65083706d129535 100644
+--- a/tests/browser/run-path.spec.js
++++ b/tests/browser/run-path.spec.js
+@@ -92,6 +92,87 @@ for(const viewport of [{width:1280,height:850},{width:390,height:844}]) test(`CE
+   }finally{await server.close();}
+ });
+ 
++test('selected path references follow late, missing and restored process evidence without rereading the path',async({page})=>{
++  const server=await memoryServer({script:'tests/browser/routing_server.py'});
++  let evidenceSeen=barrier(),releaseEvidence=barrier();
++  try{
++    const run=await routingRun(page,server);
++    await page.route('**/api/run-evidence?*',async route=>{
++      const seen=evidenceSeen,release=releaseEvidence;
++      const response=await route.fetch();
++      seen.resolve();
++      await release.promise;
++      await route.fulfill({response});
++    });
++    let pathReads=0;
++    page.on('request',request=>{if(request.url().includes('/api/run-path?'))pathReads++;});
++    await page.goto(server.origin+'/runs/'+run);
++    await evidenceSeen.promise;
++    await page.getByRole('button',{name:'本次执行路径',exact:true}).click();
++    const panel=region(page);
++    await expect(panel.locator('svg [data-node-id]')).toHaveCount(9);
++    const select=panel.getByRole('button',{name:/ · classify$/});
++    await select.focus();await page.keyboard.press('Enter');
++    const details=panel.locator('[aria-label="节点详情"]');
++    await expect(details).toContainText('Step 1 · 关联证据不可用');
++    await expect(page.locator('#step-1')).toHaveCount(0);
++    const zoom=panel.getByRole('button',{name:'放大',exact:true});
++    await zoom.focus();await page.keyboard.press('Enter');
++    const view=await panel.locator('svg').getAttribute('viewBox');
++    const definition=details.locator('details');
++    const definitionToggle=definition.locator('summary');
++    await definitionToggle.focus();await page.keyboard.press('Enter');
++    releaseEvidence.resolve();
++    await expect(page.locator('#step-1')).toHaveCount(1);
++    await expect(definition).toHaveJSProperty('open',true);
++    await expect(definitionToggle).toBeFocused();
++    const step=details.getByRole('link',{name:'Step 1',exact:true});
++    await expect(step).toBeVisible();
++    await expect(details.getByRole('link',{name:/^Attempt /})).toBeVisible();
++    await expect(details).not.toContainText('关联证据不可用');
++    expect(pathReads).toBe(1);
++    await expect(panel.locator('svg')).toHaveAttribute('viewBox',view);
++    evidenceSeen=barrier();releaseEvidence=barrier();
++    const refresh=page.getByRole('button',{name:'刷新过程证据',exact:true});
++    await refresh.click();await evidenceSeen.promise;
++    await step.focus();releaseEvidence.resolve();
++    await expect(refresh).toBeEnabled();
++    await expect(step).toBeFocused();
++    await expect(definition).toHaveJSProperty('open',true);
++    expect(pathReads).toBe(1);
++    await expect(panel.locator('svg')).toHaveAttribute('viewBox',view);
++    await step.focus();await page.keyboard.press('Enter');
++    await expect(page.locator('#step-1')).toBeFocused();
++    const {readdir,readFile,unlink,writeFile}=await import('node:fs/promises');
++    const {join}=await import('node:path');
++    const files=await readdir(join(server.directory,'traces'),{recursive:true});
++    const trace=join(server.directory,'traces',files.find(file=>file.endsWith('/trace.jsonl')));
++    const bytes=await readFile(trace);await unlink(trace);
++    evidenceSeen=barrier();releaseEvidence=barrier();
++    await refresh.click();await evidenceSeen.promise;
++    await step.focus();releaseEvidence.resolve();
++    await expect(page.locator('#step-1')).toHaveCount(0);
++    await expect(details.getByRole('link')).toHaveCount(0);
++    const missingStep=details.getByText('Step 1 · 关联证据不可用',{exact:true});
++    await expect(missingStep).toBeFocused();
++    await expect(definition).toHaveJSProperty('open',true);
++    await writeFile(trace,bytes);
++    evidenceSeen=barrier();releaseEvidence=barrier();
++    await refresh.click();await evidenceSeen.promise;
++    await missingStep.focus();releaseEvidence.resolve();
++    await expect(step).toBeFocused();
++    await expect(step).toHaveJSProperty('tabIndex',0);
++    await expect(details.getByRole('link',{name:/^Attempt /})).toBeVisible();
++    await expect(definition).toHaveJSProperty('open',true);
++    expect(pathReads).toBe(1);
++    await expect(panel.locator('svg')).toHaveAttribute('viewBox',view);
++  }finally{
++    releaseEvidence.resolve();
++    await page.unroute('**/api/run-evidence?*');
++    await server.close();
++  }
++});
++
+ test('CE-08 latest request wins across reverse responses, reopen and Run navigation',async({page})=>{
+   const server=await memoryServer({script:'tests/browser/routing_server.py'});
+   try{
