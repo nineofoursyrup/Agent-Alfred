@@ -201,7 +201,10 @@ let creationIntent=0;
 /** Pointer activation may focus its opener before the click opens MainBar.
  * Independent keyboard/programmatic focus is still a new reading intent.
  * @type {Element|null} */ let mainbarPointerOpener=null;
-for(const kind of ['pointerup','pointercancel'])document.addEventListener(kind,()=>{mainbarPointerOpener=null;},{passive:true});
+// Touch emits its compatibility mousedown/focus after pointerup; retain the
+// same activation boundary without exempting unrelated standalone focus.
+document.addEventListener('mousedown',event=>{mainbarPointerOpener=event.target instanceof Element?event.target.closest('[data-open-panel="mainbar"]'):null;},{passive:true});
+for(const kind of ['pointerup','pointercancel','mouseup'])document.addEventListener(kind,()=>{mainbarPointerOpener=null;},{passive:true});
 for(const kind of ['focusin','pointerdown','input','keydown','wheel','touchstart'])document.addEventListener(kind,event=>{
   readingIntent++;
   // Opening this MainBar is compatible with the explicit pending creation.

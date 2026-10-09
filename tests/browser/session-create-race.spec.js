@@ -199,7 +199,9 @@ for(const viewport of [{width:320,height:360},{width:320,height:800},{width:1440
   } finally {if(held)await held.release();await server.close();}
 });
 
-for (const existing of [false, true]) test(`opening the same MainBar during a real creation receipt keeps the selection intent (existing=${existing})`, async ({page}) => {
+for (const activation of ['click','tap']) test.describe(`MainBar ${activation}`,()=>{
+  test.use({hasTouch:activation==='tap'});
+  for (const existing of [false, true]) test(`opening the same MainBar during a real creation receipt keeps the selection intent (existing=${existing})`, async ({page}) => {
   const server = await memoryServer({script:'tests/browser/overview_server.py'}); let held;
   try {
     let original = null;
@@ -214,7 +216,7 @@ for (const existing of [false, true]) test(`opening the same MainBar during a re
     held=await holdCreate(page);
     await page.getByRole('button',{name:'新建会话',exact:true}).click(); await held.ready;
     const created=held.body.session_id;
-    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]')[activation]();
     await held.release();
     await expect.poll(()=>selected(page)).toBe(created);
     await expect(page.getByRole('textbox',{name:'消息',exact:true})).toBeEnabled();
@@ -223,4 +225,5 @@ for (const existing of [false, true]) test(`opening the same MainBar during a re
     if(existing) expect(await page.evaluate(id=>sessionStorage.getItem('alfred.draft:'+id),original)).toBe('原会话独立草稿');
     await oneStream(page); expect(posts).toEqual(['/api/sessions']);
   } finally {if(held)await held.release(); await server.close();}
+});
 });
