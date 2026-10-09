@@ -58,7 +58,7 @@ test("CE-02 CE-03 real double-tab probe, busy reread, stale success and key rota
     await expect(card(a)).toContainText("已配置未测试");
     await expect(card(a)).not.toContainText("已连接");
     expect((await control(s)).requests).toHaveLength(1);
-  } finally {await context.close(); await s.close();}
+  } finally {try {await context.close();} finally {await s.close();}}
 });
 
 test("CE-03 CE-08 CE-09 MainBar uses real search, safe text, Ops credits, newer error wins", async ({browser}) => {
@@ -70,6 +70,7 @@ test("CE-03 CE-08 CE-09 MainBar uses real search, safe text, Ops credits, newer 
     await a.locator('[data-integration="tavily"]').getByRole("button", {name:"测试连接"}).click();
     await expect(a.locator('[data-integration="tavily"]')).toContainText("已连接");
     await b.goto(origin + "/tools");
+    await b.locator("article").filter({has:b.getByRole("heading",{name:"web_search",exact:true})}).getByRole("button",{name:"展开详情",exact:true}).click();
     await b.getByRole("combobox", {name:"web_search 授权草稿"}).selectOption("allowed");
     await b.locator("article").filter({has: b.getByRole("heading", {name:"web_search", exact:true})}).getByRole("button", {name:"保存授权", exact:true}).click();
     await expect(b.locator("article").filter({has: b.getByRole("heading", {name:"web_search", exact:true})})).toContainText("模型暴露：real");
@@ -97,7 +98,7 @@ test("CE-03 CE-08 CE-09 MainBar uses real search, safe text, Ops credits, newer 
     deliver();
     await expect(a.locator('[data-integration="tavily"]')).not.toContainText("连接：已连接");
     expect((await control(s)).requests.filter(p=>p==="/search")).toHaveLength(2);
-  } finally {await context.close(); await s.close();}
+  } finally {try {await context.close();} finally {await s.close();}}
 });
 
 test("CE-03 Connections resets across real Host restart and rejects old process response", async ({browser}) => {
@@ -119,7 +120,7 @@ test("CE-03 Connections resets across real Host restart and rejects old process 
     deliver();
     await expect(card).not.toContainText("连接：已连接");
     expect((await control(s)).requests).toHaveLength(0);
-  } finally {deliver?.(); await context.close(); await s.close();}
+  } finally {deliver?.(); try {await context.close();} finally {await s.close();}}
 });
 
 test("CE-11 late cached success cannot erase a newer real dotenv failure", async ({browser}) => {
@@ -140,7 +141,7 @@ test("CE-11 late cached success cannot erase a newer real dotenv failure", async
     deliver();
     await expect(page.getByText("dotenv_reload_failed",{exact:true})).toBeVisible();
     expect((await control(s)).requests).toHaveLength(1);
-  } finally {deliver?.(); await context.close(); await s.close();}
+  } finally {deliver?.(); try {await context.close();} finally {await s.close();}}
 });
 
 test("CE-08 rotated old and new secrets are redacted before real SSE delivery", async ({browser}) => {
@@ -157,6 +158,7 @@ test("CE-08 rotated old and new secrets are redacted before real SSE delivery", 
     await page.getByRole("button", {name:"重新读取 .env"}).click();
     await expect(page.locator('[data-integration="tavily"]')).toContainText("末四位 ment");
     await page.getByRole("link", {name:"工具", exact:true}).click();
+    await page.locator("article").filter({has:page.getByRole("heading",{name:"web_search",exact:true})}).getByRole("button",{name:"展开详情",exact:true}).click();
     await page.getByRole("combobox", {name:"web_search 授权草稿"}).selectOption("allowed");
     const tool = page.locator("article").filter({has:page.getByRole("heading",{name:"web_search",exact:true})});
     await tool.getByRole("button", {name:"保存授权",exact:true}).click();
@@ -171,7 +173,7 @@ test("CE-08 rotated old and new secrets are redacted before real SSE delivery", 
     expect(events.join("")).not.toContain("browser-key-replacement");
     expect(await page.locator("body").innerText()).not.toContain("browser-key-original");
     expect(await page.locator("body").innerText()).not.toContain("browser-key-replacement");
-  } finally {await context.close(); await s.close();}
+  } finally {try {await context.close();} finally {await s.close();}}
 });
 
 test("CE-04 CE-05 over-limit reported numbers keep results, missing balance and readable Ops", async ({browser}) => {
@@ -187,6 +189,7 @@ test("CE-04 CE-05 over-limit reported numbers keep results, missing balance and 
     await expect(card).toContainText("key 套餐用量：未报告");
     await page.goto(origin + "/tools");
     const tool = page.locator("article").filter({has:page.getByRole("heading", {name:"web_search", exact:true})});
+    await tool.getByRole("button",{name:"展开详情",exact:true}).click();
     await tool.getByRole("combobox", {name:"web_search 授权草稿"}).selectOption("allowed");
     await tool.getByRole("button", {name:"保存授权", exact:true}).click();
     await expect(tool).toContainText("模型暴露：real");
@@ -200,7 +203,7 @@ test("CE-04 CE-05 over-limit reported numbers keep results, missing balance and 
     await expect(totals).toContainText('"unknown":1');
     await expect(totals).toContainText('"reported":0');
     expect((await control(s)).requests).toEqual(["/usage", "/search"]);
-  } finally {await context.close(); await s.close();}
+  } finally {try {await context.close();} finally {await s.close();}}
 });
 
 test("CI-01 real busy probe receipt survives a completed focus refresh", async ({browser}) => {
@@ -234,7 +237,7 @@ test("CI-01 real busy probe receipt survives a completed focus refresh", async (
     deliver();
     await expect(b.getByText("mutation_in_flight", {exact:true})).toBeVisible();
     expect((await control(s)).requests).toEqual(["/usage"]);
-  } finally {deliver?.(); await control(s, {release:true}); await context.close(); await s.close();}
+  } finally {deliver?.(); await control(s, {release:true}); try {await context.close();} finally {await s.close();}}
 });
 
 test("STD-V5-01 model probe success survives a later real reread refusal", async ({browser}) => {
@@ -265,7 +268,7 @@ test("STD-V5-01 model probe success survives a later real reread refusal", async
     await expect(card).toContainText("连接：已连接");
     await expect(page.getByText("mutation_in_flight", {exact:true})).toBeVisible();
     expect((await control(s)).requests).toEqual(["/auth-probe"]);
-  } finally {await control(s, {release:true}); await context.close(); await s.close();}
+  } finally {await control(s, {release:true}); try {await context.close();} finally {await s.close();}}
 });
 
 for (const restarted of [false, true]) {
@@ -342,7 +345,7 @@ for (const restarted of [false, true]) {
         await b.evaluate(() => window.dispatchEvent(new Event("focus")));
         await expect(pause).not.toBeVisible();
         await expect(card(b)).toContainText("已配置未测试");
-      } finally {deliver?.(); await control(s, {release:true}); await context.close(); await s.close();}
+      } finally {deliver?.(); await control(s, {release:true}); try {await context.close();} finally {await s.close();}}
     });
   }
 }

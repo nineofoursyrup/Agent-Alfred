@@ -1,17 +1,5 @@
 import {test, expect} from '@playwright/test';
-import {spawn} from 'node:child_process';
-import {createInterface} from 'node:readline';
-import {once} from 'node:events';
-
-async function server(args=[]) {
-  const child = spawn('.venv/bin/python', ['tests/browser/mcp_server.py',...args]);
-  const lines = createInterface({input:child.stdout});
-  let errors='';child.stderr.on('data',d=>errors+=d);
-  const value=await Promise.race([once(lines,'line').then(([l])=>JSON.parse(l)),
-    once(child,'exit').then(()=>{throw new Error(errors);})]);
-  return {...value, async close(){const done=once(child,'exit');child.kill('SIGTERM');await done;lines.close();if(child.exitCode!==0)throw new Error(errors);}};
-}
-const control=async(s,body)=> (await fetch(s.control, body?{method:'POST',body:JSON.stringify(body)}:{})).json();
+import {mcpServer as server, control} from './mcp-server.js';
 
 test('MCP CE-01 CE-05 CE-11 MainBar authorization, safe result and persistent cost',async({browser})=>{
   const s=await server();const context=await browser.newContext();
@@ -22,6 +10,7 @@ test('MCP CE-01 CE-05 CE-11 MainBar authorization, safe result and persistent co
     const tool=b.locator('article').filter({has:b.getByRole('heading',{name:'mcp_test_echo',exact:true})});
     await expect(tool).toContainText('模型暴露：hidden');
     expect((await control(s)).requests.filter(r=>r.method==='tools/call')).toHaveLength(0);
+    await tool.getByRole('button',{name:'展开详情',exact:true}).click();
     await tool.getByRole('combobox').selectOption('allowed');await tool.getByRole('button',{name:'保存授权',exact:true}).click();
     await expect(tool).toContainText('模型暴露：real');
     await b.getByRole('button',{name:'新建会话',exact:true}).click();
@@ -130,6 +119,7 @@ test('MCP CE-14 delayed Tools response cannot undo new environment isolation',as
     const a=await context.newPage(),b=await context.newPage();const origin=`http://127.0.0.1:${s.entry.port}`;
     await a.goto(origin+'/tools');await b.goto(origin+'/connections');
     const tool=a.locator('article').filter({has:a.getByRole('heading',{name:'mcp_test_echo',exact:true})});
+    await tool.getByRole('button',{name:'展开详情',exact:true}).click();
     await tool.getByRole('combobox').selectOption('allowed');await tool.getByRole('button',{name:'保存授权',exact:true}).click();
     await expect(tool).toContainText('模型暴露：real');
     let captured,delivered;const received=new Promise(r=>captured=r),finished=new Promise(r=>delivered=r);

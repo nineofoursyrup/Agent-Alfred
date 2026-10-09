@@ -18,6 +18,7 @@ ASSETS = {
     "/assets/topology.js": ("topology.js", "text/javascript"),
     "/assets/aggregation.js": ("aggregation.js", "text/javascript"),
     "/assets/tools.js": ("tools.js", "text/javascript"),
+    "/assets/tools.css": ("tools.css", "text/css"),
     "/assets/accounting.js": ("accounting.js", "text/javascript"),
     "/assets/app.js": ("app.js", "text/javascript"),
     "/assets/app.css": ("app.css", "text/css"),
