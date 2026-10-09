@@ -68,7 +68,9 @@ for(const boundary of ['entry','state'])test(`initial ${boundary} barrier preser
     await expect(page.locator('#message')).toHaveValue('首次同步期间保留的草稿');
     release();
     await expect(page.getByRole('heading',{name:'模型',exact:true})).toBeVisible();
-    await expect(page.getByRole('textbox',{name:'显示名',exact:true}).first()).toBeVisible();
+    await expect(page.locator("[data-model='opencode-go:deepseek-v4-flash']")).toBeVisible();
+    // Models fields are mounted inside the initially collapsed details section.
+    await expect(page.getByRole('textbox',{name:'显示名',exact:true,includeHidden:true}).first()).toBeAttached();
     expect(reads).toEqual(['/api/models']);expect(posts).toEqual([]);
     expect(await page.evaluate(()=>window.startupSources.length)).toBe(1);
     await expect(page.locator('#mainbar')).toHaveCount(1);
@@ -104,7 +106,9 @@ test('first readiness waits for a pending native panel-history transition before
     await expect(page.locator('#page .page-body')).toHaveCount(0);expect(reads).toEqual([]);
     await page.evaluate(()=>window.releaseStartupBack());
     await expect(page).toHaveURL(/\/models$/);
-    await expect(page.getByRole('textbox',{name:'显示名',exact:true}).first()).toBeVisible();
+    await expect(page.locator("[data-model='opencode-go:deepseek-v4-flash']")).toBeVisible();
+    // Models fields are mounted inside the initially collapsed details section.
+    await expect(page.getByRole('textbox',{name:'显示名',exact:true,includeHidden:true}).first()).toBeAttached();
     expect(reads).toEqual(['/api/models']);await expect(page.locator('#page .page-body')).toHaveCount(1);
   }finally{release();}
 });
@@ -163,7 +167,9 @@ test('same-revision reconnect finishes startup when matching credentials arrive 
     expect(snapshots).toEqual([{instance:identities[1],revision:0},{instance:identities[1],revision:0}]);
     console.info('actual-startup-reconnect',JSON.stringify({runtime:await runtime(),snapshots,reads,posts,pages:await page.locator('#page .page-body').count()}));
     await expect(page.locator('#page .page-body')).toHaveCount(1);
-    await expect(page.getByRole('textbox',{name:'显示名',exact:true}).first()).toBeVisible();
+    await expect(page.locator("[data-model='opencode-go:deepseek-v4-flash']")).toBeVisible();
+    // Models fields are mounted inside the initially collapsed details section.
+    await expect(page.getByRole('textbox',{name:'显示名',exact:true,includeHidden:true}).first()).toBeAttached();
     expect(reads).toEqual(['/api/models']);expect(posts).toEqual([]);expect(errors).toEqual([]);
     expect(await page.evaluate(()=>window.startupSources.filter(source=>source.readyState!==EventSource.CLOSED).length)).toBe(1);
     await expect(page.locator('#mainbar')).toHaveCount(1);

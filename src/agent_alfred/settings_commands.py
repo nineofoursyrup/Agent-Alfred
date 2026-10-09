@@ -24,8 +24,7 @@ def is_assignable(pin: PinRecord | None, support) -> bool:
     if support.support == "supported":
         return True
     return (
-        support.support == "unknown"
-        and pin.wire_style_override in IMPLEMENTED_STYLES
+        support.support == "unknown" and pin.wire_style_override in IMPLEMENTED_STYLES
     )
 
 
@@ -57,20 +56,14 @@ def pin(
         )
         if wire_style_override is None
         else wire_style_override,
-        display_name=(
-            existing.display_name if existing is not None else None
-        )
+        display_name=(existing.display_name if existing is not None else None)
         if display_name is None
         else display_name,
-        price_override=(
-            existing.price_override if existing is not None else None
-        )
+        price_override=(existing.price_override if existing is not None else None)
         if price_override is None
         else price_override,
     )
-    pins = tuple(
-        record if item.key == record.key else item for item in snapshot.pins
-    )
+    pins = tuple(record if item.key == record.key else item for item in snapshot.pins)
     if snapshot.pin(endpoint_id, model_id) is None:
         pins = snapshot.pins + (record,)
     return replace(snapshot, pins=pins)
@@ -82,9 +75,7 @@ def unpin(
     return replace(
         snapshot,
         pins=tuple(
-            item
-            for item in snapshot.pins
-            if item.key != (endpoint_id, model_id)
+            item for item in snapshot.pins if item.key != (endpoint_id, model_id)
         ),
     )
 
@@ -115,11 +106,14 @@ def set_display_name(
 ) -> ModelSettingsSnapshot:
     if snapshot.pin(endpoint_id, model_id) is None:
         raise ModelSettingsError("not_pinned")
-    return pin(
+    return replace(
         snapshot,
-        endpoint_id=endpoint_id,
-        model_id=model_id,
-        display_name=display_name,
+        pins=tuple(
+            replace(item, display_name=display_name)
+            if item.key == (endpoint_id, model_id)
+            else item
+            for item in snapshot.pins
+        ),
     )
 
 
@@ -150,11 +144,14 @@ def set_price_override(
         if all(item is None for item in fields.values())
         else UserPriceOverride(**fields)
     )
-    return pin(
+    return replace(
         snapshot,
-        endpoint_id=endpoint_id,
-        model_id=model_id,
-        price_override=override,
+        pins=tuple(
+            replace(item, price_override=override)
+            if item.key == (endpoint_id, model_id)
+            else item
+            for item in snapshot.pins
+        ),
     )
 
 
