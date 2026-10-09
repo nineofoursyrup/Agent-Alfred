@@ -4,7 +4,7 @@ import {localServer} from "./local-server.js";
 test("a real upgraded Session combines a new UI Run with every historic message in order", async ({page}) => {
   const server = await localServer();
   try {
-    await page.goto(server.origin);
+    await page.goto(server.origin + '/inbox');
     await page.getByRole("link", {name:"升级前消息 01",exact:true}).click();
     await page.getByRole("button", {name:"继续此会话",exact:true}).click();
     const chat = page.getByRole("region", {name:"主对话"});

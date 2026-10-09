@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 test("Models and Connections navigation keeps MainBar", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("link", { name: "模型", exact: true }).click();
+  await page.getByRole("navigation", { name: "主导航" }).getByRole("link", { name: "模型", exact: true }).click();
   await expect(page.getByRole("heading", { name: "模型", exact: true })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "主导航" })).toBeVisible();
   await page.getByRole("link", { name: "连接", exact: true }).click();

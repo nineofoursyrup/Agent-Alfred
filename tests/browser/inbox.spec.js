@@ -111,7 +111,7 @@ test("inbox viewing is read only; continue switches drafts explicitly", async ({
 test("a real v2 upgrade shows all historic messages and creates no synthetic Run", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/inbox");
   await page
     .getByRole("link", { name: "升级前消息 01", exact: true })
     .click();
@@ -216,7 +216,7 @@ test("inbox Run outcomes reuse distinct terminal wording independent of recordin
     ["interrupted","today","运行终态无法确认"],
   ];
   await page.route("**/api/sessions/runs?*", route => route.fulfill({json:{runs:outcomes.map(([outcome,started_at],i) => ({run_id:`terminal-${i}`,purpose:"chat",phase:"finished",outcome,started_at,gateway:"cli",accepted_at:"today",reply_preview:null,recording_state:i===0?"failed":"recorded"})),next_cursor:null}}));
-  await page.goto("/");
+  await page.goto("/inbox");
   await page.getByRole("link", {name:"终态会话",exact:true}).click();
   await page.getByRole("navigation", {name:"会话预览分区"}).getByRole("link", {name:"运行",exact:true}).click();
   const preview = page.getByRole("region", {name:"会话只读预览"});

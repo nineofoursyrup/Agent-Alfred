@@ -721,3 +721,61 @@ for(const outcome of ['accepted','rejected']) {
     } finally {release();await server.close();}
   });
 }
+
+test('S11 one real forgetting event retires hidden Run, aggregation, Overview and Database owners',async({page,context})=>{
+  const server=await memoryServer({script:'tests/browser/aggregation_server.py'});
+  let releaseDatabase=()=>{},releaseCounts=()=>{};
+  const others=[];
+  try{
+    const {other,memoryId}=await prepareDraft(page,server);
+    const accepted=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/runs'&&r.request().method()==='POST');
+    await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
+    const {run_id}=await acceptedRun(await accepted);
+    const form=page.getByRole('region',{name:'手动聚合',exact:true,includeHidden:true});
+    await expect(form.getByText('本次聚合已结束；草稿请在目标会话查看。',{exact:true})).toBeVisible();
+    await page.getByRole('button',{name:'收起主对话',exact:true}).click();
+    await form.getByRole('button',{name:'语义记忆 S1',exact:true}).click();
+    await expect(form.getByText('coffee source',{exact:true})).toBeVisible();
+    await page.setViewportSize({width:390,height:844});
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
+    const run=await context.newPage();others.push(run);await run.setViewportSize({width:390,height:844});
+    await run.goto(server.origin+'/runs/'+run_id);
+    const process=run.getByRole('region',{name:'运行过程',exact:true,includeHidden:true});
+    await process.getByRole('button',{name:'语义记忆 S1',exact:true}).click();
+    await expect(process.getByText('coffee source',{exact:true})).toBeVisible();
+    await run.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
+    const overview=await context.newPage();others.push(overview);await overview.setViewportSize({width:390,height:844});
+    await overview.goto(server.origin+'/overview');const counts=overview.getByLabel('当前记忆条目数');
+    await expect(counts).toContainText('语义 1 条');
+    let countsArrived;const countsReceived=new Promise(resolve=>countsArrived=resolve),countsGate=new Promise(resolve=>releaseCounts=resolve);
+    await overview.route('**/api/overview/memory-counts?**',async route=>{const response=await route.fetch();countsArrived();await countsGate;await route.fulfill({response});});
+    await overview.getByRole('button',{name:'刷新记忆计数',exact:true}).click();await countsReceived;
+    await overview.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
+    const database=await context.newPage();others.push(database);await database.setViewportSize({width:390,height:844});
+    await database.goto(server.origin+'/database');await expect(database.getByText('可执行',{exact:true})).toBeVisible();
+    await database.getByRole('textbox',{name:'SQL',exact:true}).fill('SELECT fact FROM diag_facts');
+    await database.getByRole('button',{name:'执行',exact:true}).click();
+    await expect(database.getByRole('region',{name:'查询结果',exact:true})).toContainText('coffee source');
+    await expect(database.getByRole('button',{name:'复制本页结果',exact:true})).toBeEnabled();
+    let queryArrived;const queryReceived=new Promise(resolve=>queryArrived=resolve),queryGate=new Promise(resolve=>releaseDatabase=resolve);
+    await database.route('**/api/database/queries/*/execute',async route=>{const response=await route.fetch();queryArrived();await queryGate;await route.fulfill({response});});
+    await database.getByRole('button',{name:'执行',exact:true}).click();await queryReceived;
+    await database.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
+    const deletion=await other.command({operation_id:'S11-fanout-delete',kind:'semantic',action:'delete',payload:{id:memoryId},expected_version:1});
+    expect(deletion.status).toBe(200);expect(deletion.body.forgetting.state).toBe('complete');
+    await expect(form.getByText('coffee source',{exact:true})).toHaveCount(0);
+    await expect(process.getByText('coffee source',{exact:true})).toHaveCount(0);
+    await expect(counts).not.toContainText('语义 1 条');
+    await expect(database.getByRole('button',{name:'复制本页结果',exact:true,includeHidden:true})).toBeDisabled();
+    const verified=await other.get('/api/database');expect(verified.status).toBe(200);
+    await expect(database.getByRole('region',{name:'诊断对象目录',includeHidden:true})).toContainText('记忆修订 '+verified.body.memory_revision);
+    releaseCounts();releaseDatabase();await overview.unrouteAll({behavior:'wait'});await database.unrouteAll({behavior:'wait'});
+    await expect(counts).not.toContainText('语义 1 条');
+    await expect(database.getByRole('region',{name:'查询结果',includeHidden:true})).toBeEmpty();
+    for(const tab of [page,run,overview,database])await tab.getByRole('button',{name:'收起主对话',exact:true}).click();
+    await overview.getByRole('button',{name:'刷新记忆计数',exact:true}).click();await expect(counts).toContainText('语义 0 条');
+    await database.getByRole('button',{name:'执行',exact:true}).click();await expect(database.getByRole('region',{name:'查询结果',exact:true})).toContainText('0 行');
+    expect((await other.get('/api/runs?filter=all')).body.runs.map(value=>value.run_id)).toEqual([run_id]);
+    expect((await other.get('/api/memory/record?kind=semantic&id='+memoryId)).status).toBe(404);
+  }finally{releaseCounts();releaseDatabase();for(const tab of others)await tab.close();await server.close();}
+});
