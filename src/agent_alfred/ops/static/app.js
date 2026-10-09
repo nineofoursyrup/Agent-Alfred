@@ -878,7 +878,9 @@ async function createSession(reveal = false) {
     // original user intent and must pass the current guard, including other tabs.
     const reason=owner.instance!==instance ? '创建时的进程已变化，请重新核验。'
       : owner.session!==session || owner.generation!==sessionGeneration ? '当前会话选择已变化，保留当前会话。'
-      : !connected || revision<0 ? '连接尚未同步，保留当前会话。'
+      // With no original Session, adopting the first real creation enables draft
+      // editing; Send still waits for the new Session's accepted Host snapshot.
+      : owner.session!==null && (!connected || revision<0) ? '连接尚未同步，保留当前会话。'
       : createSessionReason()
         || (pageOwner!==shell.generation || intent!==readingIntent ? '已有新的页面或阅读意图，保留当前会话和草稿。' : '');
     if(reason) {
