@@ -197,7 +197,11 @@ let locateGeneration=0;
 /** @type {Wire|null} */ let locatedRecord=null;
 let followLatest=true;
 let readingIntent=0;
-for(const kind of ['focusin','pointerdown','input','keydown','wheel','touchstart'])document.addEventListener(kind,()=>{readingIntent++;},{passive:true});
+let creationIntent=0;
+for(const kind of ['focusin','pointerdown','input','keydown','wheel','touchstart'])document.addEventListener(kind,()=>{
+  readingIntent++;
+  if(kind!=='focusin' || !shell.automaticTitleFocus)creationIntent++;
+},{passive:true});
 /** @type {Wire|null} */ let terminalStatus=null;
 /** @type {Wire|null} */ let processGap=null;
 /** @type {Set<string>} */ const notifiedReplies=new Set();
@@ -856,7 +860,7 @@ async function createSession(reveal = false) {
   const state = sessionActionState('create');
   if (!state.allowed) {error.textContent=state.reason;return {status:'blocked',reason:state.reason};}
   creating=true;
-  const intent=readingIntent;const pageOwner=shell.generation;
+  const intent=creationIntent;const pageOwner=shell.navigationGeneration;
   const owner={instance,session,generation:sessionGeneration};
   updateSend();
   try {
@@ -882,7 +886,7 @@ async function createSession(reveal = false) {
       // editing; Send still waits for the new Session's accepted Host snapshot.
       : owner.session!==null && (!connected || revision<0) ? '连接尚未同步，保留当前会话。'
       : createSessionReason()
-        || (pageOwner!==shell.generation || intent!==readingIntent ? '已有新的页面或阅读意图，保留当前会话和草稿。' : '');
+        || (pageOwner!==shell.navigationGeneration || intent!==creationIntent ? '已有新的页面或阅读意图，保留当前会话和草稿。' : '');
     if(reason) {
       createdSessions.set(JSON.stringify([owner.instance,result.session_id]),{session_id:result.session_id,instance:owner.instance,reason});
       error.textContent='';
@@ -899,7 +903,7 @@ async function createSession(reveal = false) {
     memory.disconnected();
     accountingView?.disconnect();
     stream.connect(session);
-    if(pageOwner===shell.generation && readingIntent===intent && (reveal || shell.visibleMainbar()))shell.openPanel("mainbar");
+    if(pageOwner===shell.navigationGeneration && creationIntent===intent && (reveal || shell.visibleMainbar()))shell.openPanel("mainbar");
     void loadMessages();
     return {status:'applied',session_id:session};
   } catch (failure) {

@@ -121,3 +121,39 @@ test('a successful creation from an earlier process stays a receipt until explic
     expect(await page.evaluate(id=>sessionStorage.getItem('alfred.draft:'+id),a)).toBe('重启也留在 A 的草稿');expect(posts).toEqual(['/api/sessions']);await oneStream(page);
   } finally {if(held)await held.release();await server.close();}
 });
+
+for(const intent of ['unchanged','navigate','focus'])test(`first native mount before the real creation receipt preserves ${intent} intent`,async({page})=>{
+  const server=await memoryServer({script:'tests/browser/overview_server.py'});let held,releaseSSE;
+  try {
+    await observeStream(page);
+    const sseGate=new Promise(resolve=>releaseSSE=resolve);
+    await page.route(/\/api\/events(?:\?.*)?$/,async route=>{await sseGate;await route.continue().catch(()=>{});});
+    const posts=[];page.on('request',request=>{if(request.method()==='POST')posts.push(new URL(request.url()).pathname);});
+    await page.goto(server.origin+'/inbox');held=await holdCreate(page);
+    await page.getByRole('button',{name:'新建会话',exact:true}).click();await held.ready;
+    expect(await selected(page)).toBeNull();await expect(page.locator('#page .page-body')).toHaveCount(0);
+    if(intent==='navigate')await page.getByRole('navigation',{name:'主导航',exact:true}).getByRole('link',{name:'数据库',exact:true}).click();
+    releaseSSE();
+    await expect(page.getByRole('heading',{name:intent==='navigate'?'数据库':'收件箱',exact:true})).toBeVisible();
+    await expect.poll(async()=>(await runtime(page)).connected).toBe(true);
+    if(intent==='navigate')await page.getByRole('textbox',{name:'SQL',exact:true}).fill('SELECT 87 AS untouched_draft');
+    if(intent==='focus') {
+      // A real keyboard focus move, not a test-time focus correction.
+      await page.keyboard.press('Tab');
+      expect(await page.evaluate(()=>document.activeElement?.tagName)).not.toMatch(/^(BODY|H1)$/);
+    }
+    const focused=await page.locator(':focus').elementHandle();
+    const b=held.body.session_id;await held.release();
+    const input=page.getByRole('textbox',{name:'消息',exact:true});
+    if(intent==='unchanged') {
+      await expect.poll(()=>selected(page)).toBe(b);await expect(input).toBeEnabled();await expect(input).toBeFocused();
+      await expect(page.getByRole('region',{name:'新建会话回执',exact:true})).toHaveCount(0);
+    } else {
+      const receipt=page.getByRole('region',{name:'新建会话回执',exact:true});await expect(receipt).toContainText(b);await expect(receipt).toContainText('新的页面或阅读意图');
+      expect(await selected(page)).toBeNull();await expect(input).toBeDisabled();
+      expect(await page.evaluate(expected=>document.activeElement===expected,focused)).toBe(true);
+      if(intent==='navigate')await expect(page.getByRole('textbox',{name:'SQL',exact:true})).toHaveValue('SELECT 87 AS untouched_draft');
+    }
+    await oneStream(page);expect(posts).toEqual(['/api/sessions']);
+  } finally {releaseSSE?.();if(held)await held.release();await server.close();}
+});
