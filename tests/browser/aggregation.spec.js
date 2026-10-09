@@ -241,6 +241,30 @@ test('aggregation CE-12: real HTTP forgetting keeps draft and disables source', 
   } finally { await server.close(); }
 });
 
+test('S06/S03: retiring Behaviour and Run owners clears their opened aggregation source',async({page})=>{
+  const server=await memoryServer({script:'tests/browser/aggregation_server.py'});
+  try {
+    const {other}=await prepareDraft(page,server);
+    await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
+    const form=page.getByRole('region',{name:'手动聚合',exact:true});
+    await expect(form.getByText('本次聚合已结束；草稿请在目标会话查看。',{exact:true})).toBeVisible();
+    await form.getByRole('button',{name:'语义记忆 S1',exact:true}).click();
+    await expect(form.getByText('coffee source',{exact:true})).toBeVisible();
+    const formSource=await form.getByText('coffee source',{exact:true}).elementHandle();
+    await form.getByRole('link',{name:'查看同一运行与资料',exact:true}).click();
+    await expect(page).toHaveURL(/\/runs\//);
+    expect(await formSource.evaluate(element=>({connected:element.isConnected,text:element.textContent}))).toEqual({connected:false,text:''});
+    const detail=page.getByRole('region',{name:'运行过程',exact:true});
+    await detail.getByRole('button',{name:'语义记忆 S1',exact:true}).click();
+    await expect(detail.getByText('coffee source',{exact:true})).toBeVisible();
+    const runSource=await detail.getByText('coffee source',{exact:true}).elementHandle();
+    await page.getByRole('link',{name:'行为',exact:true}).click();await expect(page).toHaveURL(/\/behaviour$/);
+    expect(await runSource.evaluate(element=>({connected:element.isConnected,text:element.textContent}))).toEqual({connected:false,text:''});
+    await expect(page.getByRole('region',{name:'手动聚合',exact:true}).getByText('尚未提交聚合请求。',{exact:true})).toBeVisible();
+    expect((await other.get('/api/runs?filter=chat&limit=25')).body.runs.filter(item=>item.purpose==='aggregation')).toHaveLength(1);
+  }finally{await server.close();}
+});
+
 
 test('aggregation CE-14: every source combination through Behaviour', async ({page}) => {
   const server = await memoryServer({script:'tests/browser/routing_server.py'});
