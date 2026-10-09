@@ -496,7 +496,7 @@ function receiptsPanel(page) {
         notes.set(
           entry.operation_id,
           !unconfirmed
-            ? `清理进度暂不可读取（${code}）。`
+            ? `清理进度暂不可读取（${code}）。当前进度待核验；已确认的删除与上次进度保留。`
             : response.status === 404
               ? "尚未找到提交记录：仍未确认，可重新发送同一操作。"
               : `查询失败（${code}）：仍未确认。`,
@@ -506,7 +506,7 @@ function receiptsPanel(page) {
       if (obsolete()) return;
       notes.set(
         entry.operation_id,
-        unconfirmed ? "查询失败：仍未确认。" : "清理进度暂不可读取。",
+        unconfirmed ? "查询失败：仍未确认。" : "清理进度暂不可读取。当前进度待核验；已确认的删除与上次进度保留。",
       );
     } finally {
       const again = querying.get(entry.operation_id);
@@ -720,8 +720,10 @@ function receiptsPanel(page) {
     const failures = unfinished.flatMap(entry => (entry.forgetting?.cleanup || [])
       .filter((/** @type {Wire} */ item) => item.state !== "complete")
       .map((/** @type {Wire} */ item) => `${item.target_id} · ${item.state}${item.error ? " · " + item.error : ""}`));
+    const notices = entries.filter(entry => notes.has(entry.operation_id)).map(entry =>
+      `操作 ${entry.operation_id}：${entry.forgetting?.state === "complete" ? "上次已读遗忘完成；" : ""}${notes.get(entry.operation_id)}`);
     return `仅本标签页 · 提交中 ${sending} · 结果待确认 ${pending} · 遗忘未完成 ${unfinished.length}` +
-      `${scope ? ` · 范围待确认 ${scope}` : ""}${notes.size ? ` · 核验提示 ${notes.size} 项（展开核对）` : ""}` +
+      `${scope ? ` · 范围待确认 ${scope}` : ""}${notices.length ? "；" + notices.join("；") : ""}` +
       `${failures.length ? "；" + [...new Set(failures)].join("；") : ""}` +
       `。已确认历史至多 20 项；未确认与未完成责任单独保留。`;
   }

@@ -210,6 +210,68 @@ test("S05: a folded receipt exposes uncertainty without automatic expansion or f
   } finally {await server.close();}
 });
 
+test("S05 ST-01: folded completed deletion exposes a failed progress read and clears it only after verification", async ({page}) => {
+  const server = await memoryServer();
+  try {
+    const other = await api(page.request, server.origin);
+    const saved = await other.command({operation_id:"summary-seed",kind:"semantic",action:"save",payload:{subject:"已删除的私有主题",fact:"已删除的私有正文"}});
+    const id = saved.body.result.memory_id;
+    await page.goto(server.origin + "/memory");
+    const panel = page.getByRole("tabpanel",{name:"语义记忆"});
+    await panel.getByRole("button",{name:"查看详情",exact:true}).click();
+    const detail = page.getByLabel("语义记忆详情");
+    let writes = 0;
+    await page.route("**/api/memory/commands",route=>{writes++;return route.continue();});
+    await detail.getByRole("button",{name:"删除",exact:true}).click();
+    await detail.getByRole("button",{name:"确认删除",exact:true}).click();
+    const receipts = page.getByRole("region",{name:"记忆操作回执",includeHidden:true});
+    await expect(receipts).toContainText("遗忘完成：条目、索引与受管副本均已清理并核实。");
+    const operation = await receipts.locator("article").getAttribute("data-operation");
+    const original = (await other.get(`/api/memory/operations?operation_id=${operation}`)).body;
+    const before = (await other.get("/api/memory/state")).body;
+    const toggle = page.getByRole("button",{name:"操作回执／遗忘进度",exact:true});
+    const summary = toggle.locator("xpath=../..").locator(".memory-summary");
+    const focus = panel.getByLabel("文本",{exact:true});
+    await focus.focus();
+    let failRead = true;
+    const failures = [];
+    await page.route("**/api/memory/operations?*",async route=>{
+      if (!failRead) return route.continue();
+      failures.push(new URL(route.request().url()).searchParams.get("operation_id"));
+      await route.fulfill({status:503,json:{error:{code:"storage_read_failed"}}});
+    });
+    await other.command({operation_id:"summary-revision",kind:"semantic",action:"save",payload:{subject:"触发真实修订",fact:"无关的新记录"}});
+    await expect(receipts).toContainText("清理进度暂不可读取（storage_read_failed）。");
+    const after = (await other.get("/api/memory/state")).body;
+    expect(before.process_instance_id).toEqual(expect.any(String));
+    expect(after.process_instance_id).toBe(before.process_instance_id);
+    expect(after.memory_revision).toBeGreaterThan(before.memory_revision);
+    expect(new Set(failures)).toEqual(new Set([operation]));
+    await expect(toggle).toHaveAttribute("aria-expanded","false");
+    await expect(receipts).toBeHidden();
+    await expect(focus).toBeFocused();
+    await expect(summary).toBeVisible();
+    await expect(summary).toContainText("清理进度暂不可读取（storage_read_failed）");
+    await expect(summary).toContainText("当前进度待核验");
+    await expect(summary).toContainText("上次已读遗忘完成");
+    await expect(summary).not.toContainText("已删除的私有");
+    await expect(page.locator(".memory-page")).not.toContainText("已删除的私有");
+    failRead = false;
+    await other.command({operation_id:"summary-recovery",kind:"semantic",action:"save",payload:{subject:"核验恢复触发",fact:"另一条无关记录"}});
+    await expect(summary).not.toContainText("storage_read_failed");
+    await expect(summary).not.toContainText("当前进度待核验");
+    await expect(summary).toContainText("遗忘未完成 0");
+    await expect(toggle).toHaveAttribute("aria-expanded","false");
+    await expect(receipts).toBeHidden();
+    await expect(focus).toBeFocused();
+    const verified = (await other.get(`/api/memory/operations?operation_id=${operation}`)).body;
+    expect(verified.result).toEqual(original.result);
+    expect(verified.forgetting.state).toBe("complete");
+    expect((await other.get(`/api/memory/record?kind=semantic&id=${id}`)).status).toBe(404);
+    expect(writes).toBe(1);
+  } finally {await server.close();}
+});
+
 test("S05: keyboard-only creation and detail return keep every primary control reachable", async ({page}) => {
   const server=await memoryServer();
   try {
