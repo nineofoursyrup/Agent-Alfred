@@ -366,7 +366,7 @@ test('S08 STD02 connection details and operation focus survive refresh without s
     await button.click();await received;const chat=page.getByRole('button',{name:'新建会话',exact:true});await chat.focus();
     release();await expect(button).toBeEnabled();await expect(chat).toBeFocused();expect(posts).toBe(2);
     expect((await control(s)).requests).toEqual(['/usage']);
-  }finally{release();await context.close();await s.close();}
+  }finally{release();try{await context.close();}finally{await s.close();}}
 });
 
 test('S08 STD01 Connections already isolates retired probe cleanup from a successor',async({browser})=>{
@@ -388,5 +388,5 @@ test('S08 STD01 Connections already isolates retired probe cleanup from a succes
     await expect(button).toBeDisabled();await expect(card).toContainText('测试连接正在提交');
     releaseB();await expect(button).toBeEnabled();expect(posts).toBe(2);
     expect((await control(s)).requests).toEqual(['/usage']);
-  }finally{releaseA();releaseB();await context.setOffline(false);await context.close();await s.close();}
+  }finally{releaseA();releaseB();await context.setOffline(false);try{await context.close();}finally{await s.close();}}
 });
