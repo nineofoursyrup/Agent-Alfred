@@ -65,7 +65,7 @@ export function confirmLeave(state) {
   });
 }
 
-/** @param {{mount:(url:URL)=>PageController, storage:TabStorage, onVisibility?:(visible:boolean)=>void}} options */
+/** @param {{mount:(url:URL)=>PageController, storage:TabStorage, onVisibility?:(visible:boolean)=>void, onNavigate?:()=>void}} options */
 export function createShell(options) {
   const page=/** @type {HTMLElement} */(document.getElementById('page'));
   const rail=/** @type {HTMLElement} */(document.querySelector('.site-header'));
@@ -179,7 +179,7 @@ export function createShell(options) {
   }
   /** @param {boolean} [initial] */
   function mount(initial=false) {
-    if(!initial)navigationGeneration++;
+    if(!initial){navigationGeneration++;options.onNavigate?.();}
     if(!started){activeNav();present();return;}
     const preserveMainbarFocus=!mounted && mainbar.contains(document.activeElement);
     stopScrollRestore();

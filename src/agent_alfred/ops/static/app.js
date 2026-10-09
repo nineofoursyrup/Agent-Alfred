@@ -802,10 +802,11 @@ function mountPage(url) {
     setVisible:(/** @type {boolean} */ visible)=>owner?.setVisible?.(visible),
     captureSource:()=>owner?.captureSource?.()||{},
     restoreSource:(/** @type {any} */ source)=>owner?.restoreSource?.(source),
-    dispose(){if(restoreRunPage?.page===owner)restoreRunPage=null;retireLocation();receipts.detach();if(owner?.dispose)owner.dispose();else owner?.close?.();root.remove();},
+    dispose(){if(restoreRunPage?.page===owner)restoreRunPage=null;receipts.detach();if(owner?.dispose)owner.dispose();else owner?.close?.();root.remove();},
   };
 }
-const shell=createShell({mount:mountPage,storage,onVisibility:()=>queueMicrotask(updateReadStatus)});
+// MainBar owns its location even before the first business page has mounted.
+const shell=createShell({mount:mountPage,storage,onNavigate:retireLocation,onVisibility:()=>queueMicrotask(updateReadStatus)});
 memory.watch(publishState);
 /** Shared page ports preserve the one MainBar/Stream owner. */
 export const dashboard = {
