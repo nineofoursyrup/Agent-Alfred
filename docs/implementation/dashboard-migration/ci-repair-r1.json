@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "snapshot_kind": "S11 CI repair addendum, code fixed; final gates pending",
-  "observed_at": "2026-10-09T06:41:47.930319+00:00",
-  "overall_result": "BLOCKED",
+  "snapshot_kind": "S11 CI repair addendum; current acceptance FAIL, fixed code reviewed, successor gates partially complete",
+  "observed_at": "2026-10-09T06:53:08.553597+00:00",
+  "overall_result": "FAIL",
   "completion": false,
   "candidate": {
     "code_head": "06588168d5049040abf0a4560091d659d244ddcf",
@@ -100,6 +100,55 @@
     "full_python": {
       "result": "INHERITED",
       "basis": "Python, Python tests, dependencies and runtime unchanged; root local full 6445 PASS and prior CI6423 PASS/22 platform skips. Asset-dependent checks refreshed."
+    },
+    "startup_bounded_repeat": {
+      "result": "PASS",
+      "cases": 2,
+      "repeat_each": 5,
+      "passed": 10,
+      "failed": 0,
+      "seconds": 16.3,
+      "code_head": "06588168d5049040abf0a4560091d659d244ddcf",
+      "evidence": "ci-repair-r1/final-gates/startup-retirement-stability-result.json"
+    },
+    "build": {
+      "result": "PASS",
+      "build_head": "c96c26d1446ba97bdb7b219d79cef0b5fd001b53",
+      "code_head": "06588168d5049040abf0a4560091d659d244ddcf",
+      "evidence": "ci-repair-r1/final-gates/build-03-result.json"
+    },
+    "installed_http": {
+      "result": "PASS",
+      "build_head": "c96c26d1446ba97bdb7b219d79cef0b5fd001b53",
+      "code_head": "06588168d5049040abf0a4560091d659d244ddcf",
+      "variants": 4,
+      "http_assertions_per_variant": 100,
+      "closure_assets_per_variant": 34,
+      "routes_per_variant": 16,
+      "source_contamination": false,
+      "evidence": "ci-repair-r1/final-gates/installations-03.json",
+      "summary": "ci-repair-r1/final-gates/installations-03-result.json"
+    },
+    "G08": {
+      "result": "PASS",
+      "code_head": "06588168d5049040abf0a4560091d659d244ddcf",
+      "support_head": "8d4adbc97cf1f5d55e3d36b65da7dbf2a1a1be2a",
+      "seconds": 5.01,
+      "normal_close_exit_codes": [
+        0,
+        0,
+        0
+      ],
+      "evidence": "ci-repair-r1/final-gates/lifecycle-01-portable.json",
+      "summary": "ci-repair-r1/final-gates/lifecycle-01-summary.json",
+      "scope": "One continuously retained new isolated state and browser tab across old/current/supported independently installed packages. No restoration or lock deletion; raw ephemeral fixture CSRF tokens omitted with explicit redaction provenance."
+    },
+    "full_browser": {
+      "result": "RUNNING",
+      "expected_cases": 535,
+      "code_head": "06588168d5049040abf0a4560091d659d244ddcf",
+      "started_on_head": "c96c26d1446ba97bdb7b219d79cef0b5fd001b53",
+      "scope": "No full-success claim until actual terminal result; no product/test changes during this documentation successor."
     }
   },
   "historical_checks": {
@@ -123,10 +172,12 @@
     }
   },
   "native200": {
-    "result": "APPLICABILITY_PROPOSED",
+    "result": "PASS_QUALIFIED_INHERITANCE",
     "tested_head": "4da39e52194e62f0f23637a83c8556069eb6a07d",
+    "successor_head": "06588168d5049040abf0a4560091d659d244ddcf",
     "assessment": "ci-repair-r1/native/successor-065-applicability.json",
-    "required": "Final installed HTTP bytes and independent candidate assessment; do not claim new native replay."
+    "installed_asset_binding": "ci-repair-r1/final-gates/native-installed-binding-03.json",
+    "scope": "Reviewed unchanged native geometry/input/send/open-close/scroll applicability, now supported by final installed HTTP bytes for all34 assets and HTML across four variants. This is not a new native replay or new IME evidence. Full browser and remote CI remain separate gates."
   },
   "native_IME": {
     "result": "BLOCKED",
@@ -142,17 +193,16 @@
     ]
   },
   "pending": [
-    "Portable addendum review",
-    "Final535 browser suite on fixed code",
-    "Final wheel/sdist x base/mcp resource closure",
-    "Repaired supported rollback target and new same-state G08",
-    "Final CI and canonical acceptance adjudication"
+    "Revised portable addendum review",
+    "Final535 browser suite terminal result on fixed code",
+    "Final remote CI and canonical acceptance adjudication"
   ],
   "acceptance_boundary": {
-    "AC25": "Original CI FAIL retained; successor CI NOT RUN",
-    "AC23_G01": "Original final-combination FAIL retained; focused successors passed but final complete gate pending",
+    "AC25": "Original37cd CI FAIL retained;065 code review PASS; final successor remote CI NOT RUN.",
+    "AC23_G01": "Original37cd final-combination FAIL retained;065 focused successors PASS and full535 RUNNING. Overall current acceptance remains FAIL pending qualified completion/adjudication.",
     "AC03": "BLOCKED native IME",
-    "R07": "Do not restore whole PASS while IME subresponsibility unresolved"
+    "R07": "Do not restore whole PASS while IME subresponsibility unresolved",
+    "G08": "New installed same-state old22c→current065(buildc96)→supported8d4adbc PASS; earlier chain remains historical to its own artifacts."
   },
   "source_mapping": [
     {
@@ -351,13 +401,18 @@
   },
   "rollback": {
     "prior_target": "989662c1229d347d0a66a8b4e06e2ba894b9ca6e",
-    "successor_target": "PENDING",
+    "successor_target": "8d4adbc97cf1f5d55e3d36b65da7dbf2a1a1be2a",
     "required_commits": [
       "b21451fb4674ce693cec2d53d16bc94647fa4965",
       "4da39e52194e62f0f23637a83c8556069eb6a07d",
       "06588168d5049040abf0a4560091d659d244ddcf"
     ],
-    "policy": "Retain supported Inbox default; old22c8720 is upgrade input, not supported rollback. Use new absent state directory and installed artifacts; no DB restore or lock deletion."
+    "policy": "Retain supported Inbox default; old22c8720 is upgrade input, not supported rollback. Use new absent state directory and installed artifacts; no DB restore or lock deletion.",
+    "successor_tree": "745dfb01c1d2061e9124e40fdbc3c191aa0e0f41",
+    "successor_src_tree": "ae90fae5e3c1954768af906597ed9fc8f3c0e17e",
+    "successor_package_source_tree": "3a76462bcaf179d84f38c4e66fcf0a3904c3aee0",
+    "lifecycle_result": "PASS",
+    "lifecycle_evidence": "ci-repair-r1/final-gates/lifecycle-01-portable.json"
   },
   "evidence": {
     "outputs": "ci-repair-r1/recorded-outputs.json",
@@ -482,8 +537,127 @@
         "path": "docs/implementation/dashboard-migration/ci-repair-r1/native/successor-065-applicability.json",
         "sha256": "e90de33322bbe1a46a1e46c497d99612fa70a0d76ea1990ea6c8b29e7380055b",
         "source": "native-ci-r2/successor-065-applicability.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/final-gates/build-03-result.json",
+        "sha256": "b953ae7574d82fbd90bc3523d8a9ae27a1181725c655868ad5eea4cb82224396",
+        "source": "S11/ci-r1/build-03-result.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/final-gates/installations-03.json",
+        "sha256": "8a295bdd3c31a74e95503af5a288251979b7cadd80c6b0cf35edacd50a363c7d",
+        "source": "S11/ci-r1/installations-03.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/final-gates/installations-03-result.json",
+        "sha256": "1a59810045501a33274e53812e1f7101fdb7f1870fa4d6681a600cad3b3cdebe",
+        "source": "S11/ci-r1/installations-03-result.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/final-gates/startup-retirement-stability-result.json",
+        "sha256": "29f471cf5a35afa39d92ceda46acf7c8ac5b5972a2da06158f658bb5c11f5446",
+        "source": "S11/ci-r1/startup-retirement-stability-result.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/final-gates/native-installed-binding-03.json",
+        "sha256": "e6abd33105ecfb9def8d86fd3ff087117d2ae7047a0a6d53755f6a7b912f7629",
+        "source": "S11/ci-r1/native-installed-binding-03.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/final-gates/lifecycle-manifest-01.json",
+        "sha256": "f646ce9befaf0f8921306c0422c58089895e776a722f8f8028acf643daf88dea",
+        "source": "S11/ci-r1/lifecycle-manifest-01.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/final-gates/lifecycle-setup-01-result.json",
+        "sha256": "9f534b5aaa30d802ae969a112d3e8a0886f537a8f6d616ee3ddb822a8d5c7c3f",
+        "source": "S11/ci-r1/lifecycle-setup-01-result.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/final-gates/lifecycle-01-summary.json",
+        "sha256": "e6ea96c09acb686359473a0fee840eafb0f6984d511e74b8d4dde90f2543886d",
+        "source": "S11/ci-r1/lifecycle-01-summary.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/final-gates/lifecycle-01-portable.json",
+        "sha256": "f5a96b000e042e508d7b810cb26774c25a4ad500493233e53f8182d69b77d705",
+        "source": "S11/ci-r1/lifecycle-01-portable.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-docs-r1-Standards.md",
+        "sha256": "2d41e280e1a394b874bb345e5661adecad12cdf7cb33d47f6135c9e84551ed02",
+        "source": "reviews/S11-ci-docs-r1-Standards.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-docs-r1-Standards-details.md",
+        "sha256": "b698254815d903e96191e4f55cc00e41942a4616af99ecf728f7afc411f4bda9",
+        "source": "reviews/S11-ci-docs-r1-Standards-details.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-docs-r1-Standards.json",
+        "sha256": "8ed101f5e84ea4ebe1488dc99e7fc5cb63a601f361d5c6291d9afa665c068748",
+        "source": "reviews/S11-ci-docs-r1-Standards.json"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-docs-r1-Spec.md",
+        "sha256": "347dd0b38e2ce0816a551df83e6a93bea987fa540155b126a95ad29de1415af3",
+        "source": "reviews/S11-ci-docs-r1-Spec.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-docs-r1-Spec-details.md",
+        "sha256": "b6928d3ae63cd2b3b31ee058c517440431d56aaea76e37b9daa7ad9697d09b57",
+        "source": "reviews/S11-ci-docs-r1-Spec-details.md"
+      },
+      {
+        "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-docs-r1-Spec-audit.json",
+        "sha256": "53bc35e4100aed3f52c400dd620f80f4c4443f42942c510e1d0fcb48d954b8c8",
+        "source": "reviews/S11-ci-docs-r1-Spec-audit.json"
       }
-    ]
+    ],
+    "final_gate_outputs": {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/final-gates/recorded-outputs.json",
+      "sha256": "1f0175cb39322437840535b83dd1448cdded84eeb7f937ffd17953baeaaec98e"
+    }
   },
-  "scope_limit": "This addendum does not mutate the frozen309/26AC/12MCE/8G proposal or canonical ledger and is not final S11 completion."
+  "scope_limit": "This addendum does not mutate the frozen309/26AC/12MCE/8G proposal or canonical ledger and is not final S11 completion.",
+  "overall_result_scope": "Current acceptance remains FAIL from the original37cd required CI/combination observations; the065 successor has not completed full-browser, document review and final CI gates. This is not a new product failure observed on065.",
+  "status_scopes": {
+    "current_acceptance": {
+      "result": "FAIL",
+      "observed_candidate": "37cd0180fd5222d0753a0f3203ae56b1df6e0f0a",
+      "basis": "Original required CI and final-combination failures retained until qualified successor gates and coordinator adjudication close them."
+    },
+    "repair_code_review": {
+      "result": "PASS",
+      "candidate": "06588168d5049040abf0a4560091d659d244ddcf",
+      "axes": [
+        "Standards",
+        "Spec"
+      ],
+      "findings": 0
+    },
+    "successor_remaining_gates": {
+      "result": "PENDING",
+      "items": [
+        "Full535 source-browser run",
+        "Revised portable document review",
+        "Final remote CI and canonical acceptance adjudication"
+      ]
+    },
+    "native_IME": {
+      "result": "BLOCKED",
+      "reason": "No verified real Chinese composition/confirm-Enter evidence."
+    }
+  },
+  "touch_evidence_scope": "Chromium hasTouch:true with locator.tap() verifies browser compatibility mouse/focus ordering. This is touch simulation, not a physical touchscreen/iPhone/iOS Safari/soft keyboard test; those remain NOT RUN and out of scope. Historical archived outputs remain byte-for-byte unchanged.",
+  "document_review_repair": {
+    "prior_candidate": "c96c26d1446ba97bdb7b219d79cef0b5fd001b53",
+    "prior_result": "FAIL",
+    "fixed_findings": [
+      "S11-CI-DOC-STD-01 / Spec F1 P2 candidate and status scope",
+      "Spec F2 P3 Chromium simulated touch scope"
+    ],
+    "prior_reports_preserved": true,
+    "successor_document_review": "PENDING"
+  }
 }

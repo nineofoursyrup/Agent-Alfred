@@ -1,0 +1,692 @@
+{
+  "observed_at": "2026-10-09T06:45:45.963061+00:00",
+  "candidate": "c96c26d1446ba97bdb7b219d79cef0b5fd001b53",
+  "tree": "3d5f0997f26921056db04e224a6e7fa9ad417f8d",
+  "code_candidate": "06588168d5049040abf0a4560091d659d244ddcf",
+  "source_tree": "0eaae1fbd39ec02656f4a61982ec73a06c46fe2f",
+  "file_hashes": {
+    "docs/implementation/dashboard-migration/ci-repair-r1.json": "10cb455297c30ab4610d3ec27531cc1b41b83be75d8e27b656bdc64ee4fc4838",
+    "docs/implementation/dashboard-migration/ci-repair-r1.md": "8cffeeab1c0e7adf772799d59f3bc2c4d2281110a6394a1c100e8913e139a489",
+    "docs/implementation/dashboard-migration/ci-repair-r1/native/result.json": "d048dbea18414b4ec80f80378f3d0c6cc4dafcf20f3a5dd7f08cdc1e11624b7e",
+    "docs/implementation/dashboard-migration/ci-repair-r1/native/successor-065-applicability.json": "e90de33322bbe1a46a1e46c497d99612fa70a0d76ea1990ea6c8b29e7380055b",
+    "docs/implementation/dashboard-migration/ci-repair-r1/recorded-outputs.json": "b349bcc7af8943c2c41a64ea30a1b2864f9815102cb3048e8095fdf7f6d16f3a",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-details.md": "032b3a57e575c9b6c2b88601d7b2fd9c725d9b3f090085b7b6a179fc3bb58a68",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-diagnosis-details.md": "d857bce6bcf813447f7a5842973ef70c1757261dbeeb031aa1eb43a0ca78b03f",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-diagnosis-mapping-addendum.json": "48bad71f51aa7ac2b55bad2d6f28c5a15d0e63ba45e5ecb1d9aac4cb412ede64",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-diagnosis.json": "2d0cf590ffb12dbc373eb81ff6d79aa5bbbbaef66ae5c0f401b36bfd02dfbaf7",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-diagnosis.md": "8a4369c69fffa545d5877aaf5087ec05d1975019853924e1e0a54410744e0198",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-verification.json": "96e87b256d9c2778bce3d20805339a85a2d7a076c6467d86f7bf0b0a6cb61b6b",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec.md": "38152d0a7fdc7cb6c8349e865d10885d103064216eceb440f4c8e2f2791da292",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Standards-details.md": "fc8613eba310403100c7f07c3e5901d1bd250106c39ad1688548eae0a4d7cf38",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Standards.json": "6f4c88a9d3c9c7beaf54e882d95d59cb5cbc83a5ab8ee97398bd3df3e7d5739d",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Standards.md": "7254422436409a6999dc5fb90f665283bad71f471a039ea3542383c69570c5f1",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Spec-details.md": "d4906bd9bb0718c68de7d214eec56c65fe9b7c40a7796e0131d06cfaeb457bfd",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Spec-verification.json": "412a46839adbe0f2bf81d454f224be3df68d5c7ca69749374116a6ad3145136f",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Spec.md": "d2cdea558b6dca6d86e2b6cd619a0f64b128fc2d6decbab6142e98114095a040",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Standards-details.md": "7b72d61ca1a43195941caca4a2a3e6f1ab35551c66f9f1aef2e7684c4aefb800",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Standards.json": "0dcd1338ecb882d91727c33c0622852de1e4e666f8659da2c84f6b5d33652c52",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Standards.md": "70983b2f31a4cdc3f92302e7573935549cabd5dd592e76e57c0e6a2c92a9abe2",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Spec-details.md": "38b43e8e03021a0cf57044c8756d5d46700be6654212865827bb83ef70d111bb",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Spec-verification.json": "553824a6a925991e1da74e49487a018738de0996e752c36bbd8cf06af85184e3",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Spec.md": "363d7d94dc8b9e9f1a90c147b96804a7ad1cf9c265e8a763bbc9e918a964f6af",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Standards-details.md": "e72aeab0b3bf4065ebeb0a69705f20ec8941410d7a7976b9d4a3639dd781877c",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Standards.json": "e4b1d08c716f7f5345e424551655c41b8992e6f0a5137dfc6628b43db0150aed",
+    "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Standards.md": "36b87d159f30b9ff08a3084a2048fc824c56f21a6aa480f87d031b59e2d2577c"
+  },
+  "checks": [
+    {
+      "name": "fixed documentation tree",
+      "passed": true
+    },
+    {
+      "name": "source identical code candidate",
+      "passed": true
+    },
+    {
+      "name": "only 27 portable new documents",
+      "passed": true,
+      "files": [
+        "docs/implementation/dashboard-migration/ci-repair-r1.json",
+        "docs/implementation/dashboard-migration/ci-repair-r1.md",
+        "docs/implementation/dashboard-migration/ci-repair-r1/native/result.json",
+        "docs/implementation/dashboard-migration/ci-repair-r1/native/successor-065-applicability.json",
+        "docs/implementation/dashboard-migration/ci-repair-r1/recorded-outputs.json",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-details.md",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-diagnosis-details.md",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-diagnosis-mapping-addendum.json",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-diagnosis.json",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-diagnosis.md",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-verification.json",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec.md",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Standards-details.md",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Standards.json",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Standards.md",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Spec-details.md",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Spec-verification.json",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Spec.md",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Standards-details.md",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Standards.json",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Standards.md",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Spec-details.md",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Spec-verification.json",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Spec.md",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Standards-details.md",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Standards.json",
+        "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Standards.md"
+      ]
+    },
+    {
+      "name": "commit chain c96 follows865 follows065",
+      "passed": true
+    },
+    {
+      "name": "code candidate commit binding",
+      "passed": true
+    },
+    {
+      "name": "code source binding",
+      "passed": true
+    },
+    {
+      "name": "package source binding",
+      "passed": true
+    },
+    {
+      "name": "raw output manifest hash",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r1-Spec-diagnosis.md",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r1-Spec-diagnosis.md",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r1-Spec-diagnosis-details.md",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r1-Spec-diagnosis-details.md",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r1-Spec-diagnosis.json",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r1-Spec-diagnosis.json",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r1-Spec-diagnosis-mapping-addendum.json",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r1-Spec-diagnosis-mapping-addendum.json",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r1-Spec.md",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r1-Spec.md",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r1-Spec-details.md",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r1-Spec-details.md",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r1-Spec-verification.json",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r1-Spec-verification.json",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r1-Standards.md",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r1-Standards.md",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r1-Standards-details.md",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r1-Standards-details.md",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r1-Standards.json",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r1-Standards.json",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r2-Spec.md",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r2-Spec.md",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r2-Spec-details.md",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r2-Spec-details.md",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r2-Spec-verification.json",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r2-Spec-verification.json",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r2-Standards.md",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r2-Standards.md",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r2-Standards-details.md",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r2-Standards-details.md",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r2-Standards.json",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r2-Standards.json",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r3-Spec.md",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r3-Spec.md",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r3-Spec-details.md",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r3-Spec-details.md",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r3-Spec-verification.json",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r3-Spec-verification.json",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r3-Standards.md",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r3-Standards.md",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r3-Standards-details.md",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r3-Standards-details.md",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash reviews/S11-ci-r3-Standards.json",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original reviews/S11-ci-r3-Standards.json",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash native-ci-r2/result.json",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original native-ci-r2/result.json",
+      "passed": true
+    },
+    {
+      "name": "copy manifest hash native-ci-r2/successor-065-applicability.json",
+      "passed": true
+    },
+    {
+      "name": "copy equals sealed original native-ci-r2/successor-065-applicability.json",
+      "passed": true
+    },
+    {
+      "name": "all new files accounted for",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash original-focused-01.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original original-focused-01.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash creation-red.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original creation-red.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash empty-identity-red.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original empty-identity-red.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash opener-focus-red.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original opener-focus-red.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash affected-green-01.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original affected-green-01.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash affected-green-02.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original affected-green-02.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash affected-green-03.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original affected-green-03.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash touch-probe-01.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original touch-probe-01.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash affected-green-04.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original affected-green-04.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash stability-01.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original stability-01.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash stability-02.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original stability-02.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash startup-navigation-probe-01.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original startup-navigation-probe-01.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash startup-retirement-red.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original startup-retirement-red.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash startup-retirement-green-01.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original startup-retirement-green-01.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash typecheck-04.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original typecheck-04.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash python-assets-protocol-03.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original python-assets-protocol-03.log",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash 37886281186-browser-original.txt",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original 37886281186-browser-original.txt",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash 37886278313-browser-original.txt",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original 37886278313-browser-original.txt",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash browser-full-01-result.json",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original browser-full-01-result.json",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash browser-full-01-interruption.json",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original browser-full-01-interruption.json",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash browser-full-02-result.json",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original browser-full-02-result.json",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash browser-full-02-interruption.json",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original browser-full-02-interruption.json",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash stability-01-result.json",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original stability-01-result.json",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash stability-02-result.json",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original stability-02-result.json",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash build-02-result.json",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original build-02-result.json",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash installations-02-result.json",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original installations-02-result.json",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash trace-order.json",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original trace-order.json",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash empty-identity-trace-order.json",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original empty-identity-trace-order.json",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output hash successor-065-diff.patch",
+      "passed": true
+    },
+    {
+      "name": "decoded raw output equals original successor-065-diff.patch",
+      "passed": true
+    },
+    {
+      "name": "encoded patch same as865 original",
+      "passed": true
+    },
+    {
+      "name": "encoded patch equals exact code delta",
+      "passed": true
+    },
+    {
+      "name": "encoded patch original SHA retained",
+      "passed": true
+    },
+    {
+      "name": "whitespace attributes unchanged",
+      "passed": true
+    },
+    {
+      "name": "fixed diff check",
+      "passed": true,
+      "output": ""
+    },
+    {
+      "name": "original diffcheck failure retained",
+      "passed": true
+    },
+    {
+      "name": "frozen design and original implementation proposal unchanged",
+      "passed": true
+    },
+    {
+      "name": "original proposal exact SHA",
+      "passed": true
+    },
+    {
+      "name": "original309/26/12/8 counts",
+      "passed": true
+    },
+    {
+      "name": "309 source identities unique",
+      "passed": true
+    },
+    {
+      "name": "source mapping authority issue-87:R03",
+      "passed": true
+    },
+    {
+      "name": "source mapping authority issue-87:R05",
+      "passed": true
+    },
+    {
+      "name": "source mapping authority issue-87:R07",
+      "passed": true
+    },
+    {
+      "name": "source mapping authority issue-87:R08",
+      "passed": true
+    },
+    {
+      "name": "source mapping authority issue-87:R09",
+      "passed": true
+    },
+    {
+      "name": "source mapping authority issue-87:section-14",
+      "passed": true
+    },
+    {
+      "name": "source mapping authority issue-89:D03",
+      "passed": true
+    },
+    {
+      "name": "source mapping authority issue-89:D04",
+      "passed": true
+    },
+    {
+      "name": "source mapping authority issue-89:D08",
+      "passed": true
+    },
+    {
+      "name": "source mapping authority issue-89:D09",
+      "passed": true
+    },
+    {
+      "name": "source mapping authority issue-89:D15",
+      "passed": true
+    },
+    {
+      "name": "relative markdown link acceptance-proposal.json",
+      "passed": true
+    },
+    {
+      "name": "relative markdown link ci-repair-r1/recorded-outputs.json",
+      "passed": true
+    },
+    {
+      "name": "relative markdown link ci-repair-r1/native/successor-065-applicability.json",
+      "passed": true
+    },
+    {
+      "name": "relative markdown link ci-repair-r1.json",
+      "passed": true
+    },
+    {
+      "name": "final code review metadata ci-repair-r1/reviews/S11-ci-r3-Spec.md",
+      "passed": true
+    },
+    {
+      "name": "final code review metadata ci-repair-r1/reviews/S11-ci-r3-Standards.md",
+      "passed": true
+    },
+    {
+      "name": "original CI failure result 37886281186",
+      "passed": true
+    },
+    {
+      "name": "original CI failure result 37886278313",
+      "passed": true
+    },
+    {
+      "name": "interrupted browser history 1",
+      "passed": true
+    },
+    {
+      "name": "interrupted browser history 2",
+      "passed": true
+    },
+    {
+      "name": "pending gates are explicit",
+      "passed": true
+    },
+    {
+      "name": "IME remains BLOCKED",
+      "passed": true
+    },
+    {
+      "name": "current fullPython merely inherited",
+      "passed": true
+    },
+    {
+      "name": "native applicability merely proposed",
+      "passed": true
+    }
+  ],
+  "audit_counts": {
+    "passed": 150,
+    "failed": 0
+  },
+  "result": "FAIL",
+  "hard_findings": [
+    {
+      "id": "S11-CI-DOC-STD-01",
+      "priority": "P2",
+      "file": "docs/implementation/dashboard-migration/ci-repair-r1.md",
+      "line": 3,
+      "also": "docs/implementation/dashboard-migration/ci-repair-r1.json:5",
+      "title": "Bind the overall status to its candidate without masking retained CI failures",
+      "rule": "docs/design/dashboard-implementation/VALIDATION.md:102: 必需范围中已有 FAIL 不能被其他 BLOCKED／环境缺口掩盖",
+      "reason": "The unqualified overall BLOCKED headline/scalar can replace the current 37cd CI FAIL even though that failure is preserved below. Separate original37cd FAIL, code065 PASS, final gates pending and native IME BLOCKED."
+    }
+  ],
+  "optional_smells": [],
+  "product_tests_run_by_reviewer": false,
+  "original_diffcheck_failure": {
+    "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/portable-diff-first.json",
+    "sha256": "316207e284bb51d0942c0d643fba8d2b39ebd70547071929df9c058e4c9ccbd7"
+  },
+  "scope": "Incremental portable evidence audit only; pending final gates are not findings."
+}

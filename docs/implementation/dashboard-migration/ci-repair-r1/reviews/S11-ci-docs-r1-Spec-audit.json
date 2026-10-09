@@ -1,0 +1,696 @@
+{
+  "candidate": "c96c26d1446ba97bdb7b219d79cef0b5fd001b53",
+  "tree": "3d5f0997f26921056db04e224a6e7fa9ad417f8d",
+  "code": "06588168d5049040abf0a4560091d659d244ddcf",
+  "binding": {
+    "tree": {
+      "actual": "ae04fad8eff5f0eed6afb06050e4afeb6707506c",
+      "recorded": "ae04fad8eff5f0eed6afb06050e4afeb6707506c"
+    },
+    "source_tree": {
+      "actual": "0eaae1fbd39ec02656f4a61982ec73a06c46fe2f",
+      "recorded": "0eaae1fbd39ec02656f4a61982ec73a06c46fe2f"
+    },
+    "package_source_tree": {
+      "actual": "91f1c1abcc26ea92be40fb5acee5fb93fbd62a0c",
+      "recorded": "91f1c1abcc26ea92be40fb5acee5fb93fbd62a0c"
+    },
+    ":src": {
+      "equal": true,
+      "object": "0eaae1fbd39ec02656f4a61982ec73a06c46fe2f"
+    },
+    ":tests": {
+      "equal": true,
+      "object": "eabcc63b24bfea8358faf76a1e5f7c438f86582d"
+    },
+    ":scripts": {
+      "equal": true,
+      "object": "739d01f2d6ec3d62acabfedb786bdcc10bb011f9"
+    },
+    ":pyproject.toml": {
+      "equal": true,
+      "object": "c56154ee889671042d8895a28db37bcd635fd560"
+    },
+    ":uv.lock": {
+      "equal": true,
+      "object": "b3488a713f6bada823a1fce43cea8c7d2e17214c"
+    },
+    ":package.json": {
+      "equal": true,
+      "object": "5611db2ff3c5bea5d63f1555656d89268193e46d"
+    },
+    ":package-lock.json": {
+      "equal": true,
+      "object": "f0461b899e1cf9ad4e7ab582fc5c4c62b5011e03"
+    }
+  },
+  "copies": [
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-diagnosis.md",
+      "sha256": "8a4369c69fffa545d5877aaf5087ec05d1975019853924e1e0a54410744e0198",
+      "bytes": 2592,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-diagnosis-details.md",
+      "sha256": "d857bce6bcf813447f7a5842973ef70c1757261dbeeb031aa1eb43a0ca78b03f",
+      "bytes": 8108,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-diagnosis.json",
+      "sha256": "2d0cf590ffb12dbc373eb81ff6d79aa5bbbbaef66ae5c0f401b36bfd02dfbaf7",
+      "bytes": 31707,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-diagnosis-mapping-addendum.json",
+      "sha256": "48bad71f51aa7ac2b55bad2d6f28c5a15d0e63ba45e5ecb1d9aac4cb412ede64",
+      "bytes": 693,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec.md",
+      "sha256": "38152d0a7fdc7cb6c8349e865d10885d103064216eceb440f4c8e2f2791da292",
+      "bytes": 1631,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-details.md",
+      "sha256": "032b3a57e575c9b6c2b88601d7b2fd9c725d9b3f090085b7b6a179fc3bb58a68",
+      "bytes": 4973,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-verification.json",
+      "sha256": "96e87b256d9c2778bce3d20805339a85a2d7a076c6467d86f7bf0b0a6cb61b6b",
+      "bytes": 7471,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Standards.md",
+      "sha256": "7254422436409a6999dc5fb90f665283bad71f471a039ea3542383c69570c5f1",
+      "bytes": 1106,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Standards-details.md",
+      "sha256": "fc8613eba310403100c7f07c3e5901d1bd250106c39ad1688548eae0a4d7cf38",
+      "bytes": 2964,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Standards.json",
+      "sha256": "6f4c88a9d3c9c7beaf54e882d95d59cb5cbc83a5ab8ee97398bd3df3e7d5739d",
+      "bytes": 3538,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Spec.md",
+      "sha256": "d2cdea558b6dca6d86e2b6cd619a0f64b128fc2d6decbab6142e98114095a040",
+      "bytes": 2371,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Spec-details.md",
+      "sha256": "d4906bd9bb0718c68de7d214eec56c65fe9b7c40a7796e0131d06cfaeb457bfd",
+      "bytes": 7054,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Spec-verification.json",
+      "sha256": "412a46839adbe0f2bf81d454f224be3df68d5c7ca69749374116a6ad3145136f",
+      "bytes": 10959,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Standards.md",
+      "sha256": "70983b2f31a4cdc3f92302e7573935549cabd5dd592e76e57c0e6a2c92a9abe2",
+      "bytes": 809,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Standards-details.md",
+      "sha256": "7b72d61ca1a43195941caca4a2a3e6f1ab35551c66f9f1aef2e7684c4aefb800",
+      "bytes": 3556,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r2-Standards.json",
+      "sha256": "0dcd1338ecb882d91727c33c0622852de1e4e666f8659da2c84f6b5d33652c52",
+      "bytes": 16490,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Spec.md",
+      "sha256": "363d7d94dc8b9e9f1a90c147b96804a7ad1cf9c265e8a763bbc9e918a964f6af",
+      "bytes": 1551,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Spec-details.md",
+      "sha256": "38b43e8e03021a0cf57044c8756d5d46700be6654212865827bb83ef70d111bb",
+      "bytes": 4694,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Spec-verification.json",
+      "sha256": "553824a6a925991e1da74e49487a018738de0996e752c36bbd8cf06af85184e3",
+      "bytes": 11947,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Standards.md",
+      "sha256": "36b87d159f30b9ff08a3084a2048fc824c56f21a6aa480f87d031b59e2d2577c",
+      "bytes": 657,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Standards-details.md",
+      "sha256": "e72aeab0b3bf4065ebeb0a69705f20ec8941410d7a7976b9d4a3639dd781877c",
+      "bytes": 3325,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r3-Standards.json",
+      "sha256": "e4b1d08c716f7f5345e424551655c41b8992e6f0a5137dfc6628b43db0150aed",
+      "bytes": 19878,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/native/result.json",
+      "sha256": "d048dbea18414b4ec80f80378f3d0c6cc4dafcf20f3a5dd7f08cdc1e11624b7e",
+      "bytes": 2394,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "path": "docs/implementation/dashboard-migration/ci-repair-r1/native/successor-065-applicability.json",
+      "sha256": "e90de33322bbe1a46a1e46c497d99612fa70a0d76ea1990ea6c8b29e7380055b",
+      "bytes": 1710,
+      "recorded_match": true,
+      "original_exact": true
+    }
+  ],
+  "outputs": [
+    {
+      "name": "original-focused-01.log",
+      "sha256": "7f16fda11c66ce6046bfcb43a9dc398f5c0769ca8374d741a184759c22d0fde3",
+      "bytes": 1359,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "creation-red.log",
+      "sha256": "5f7ea828e4d6820b6775b74c181dc19359be8ef3be042fa392d1cb9dd4a788d8",
+      "bytes": 6721,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "empty-identity-red.log",
+      "sha256": "2eb2628ac754ca130a40a0b0dbcdb6f7ee702d57810d3c775f6d1da4043e9671",
+      "bytes": 3564,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "opener-focus-red.log",
+      "sha256": "005a5ce520a13345a52516b0367b9ba531e6be4beb1afa57440ef5f9b5b8d0aa",
+      "bytes": 3932,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "affected-green-01.log",
+      "sha256": "82ea513bba43951ad3a4bda13a9794b191759729454d063a2a372b3883aef402",
+      "bytes": 3826,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "affected-green-02.log",
+      "sha256": "6c12e639ff06b807ae98f2fc391182dfba80026f8998e4d5c549eacbfa7ddd76",
+      "bytes": 7601,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "affected-green-03.log",
+      "sha256": "c5d226603228b6c0fdb0664273932e4bce66fa54c0965f90017c98a73027b122",
+      "bytes": 4271,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "touch-probe-01.log",
+      "sha256": "f3cdbf1d0d9abc9025f0e6a224b3f196e575ac784be486202c6f3545a7ca73e7",
+      "bytes": 3344,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "affected-green-04.log",
+      "sha256": "e564aa86ef911ea4deb1c8412606f8af91c6e9b73197dc98251f5abb4d3360b4",
+      "bytes": 4678,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "stability-01.log",
+      "sha256": "d802456168a4ae541f8fea06dfe7ca684f9ee9d44c262feb6271af0d536ed859",
+      "bytes": 7625,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "stability-02.log",
+      "sha256": "bb2e06e366310ad137db36f5ce2dab67392648a17f2ee0402eb4e512bf35f336",
+      "bytes": 9664,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "startup-navigation-probe-01.log",
+      "sha256": "bf7ea513ef903a19a205e4dab409950eac2ebc0e164e5d22151db83b88f1ca9c",
+      "bytes": 3693,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "startup-retirement-red.log",
+      "sha256": "beba4a151b2927eb4d6c3bd28f72c8476f6b738a82dbda3008bb229758404527",
+      "bytes": 3973,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "startup-retirement-green-01.log",
+      "sha256": "6eb094c8bfe6bca81894f638d5f0c1bd0f833d892bb16f71ce5a412346f6ebe6",
+      "bytes": 3313,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "typecheck-04.log",
+      "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f",
+      "bytes": 29,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "python-assets-protocol-03.log",
+      "sha256": "f993f7d614633a5a19c2385b27ffec3b04e7a35b78a8761d10d1b8b3ffaec39a",
+      "bytes": 603,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "37886281186-browser-original.txt",
+      "sha256": "1ff320ca67501012eb082235c889be60a4e88b237d37abb90e4e2a0f9d2aad20",
+      "bytes": 48303,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "37886278313-browser-original.txt",
+      "sha256": "abafc72ff8332de0ac7104985bf7b1d455cf7b716511a7c8399b8a47169bd2d3",
+      "bytes": 42975,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "browser-full-01-result.json",
+      "sha256": "897fb9c9b77111f4b197737f94dbc93d02a8129d6b218253432053d9d16bc269",
+      "bytes": 515,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "browser-full-01-interruption.json",
+      "sha256": "a236a35f45f5e53bd19ab767f020bff131946007c5c9259a04eb8642968fd7cb",
+      "bytes": 655,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "browser-full-02-result.json",
+      "sha256": "7ba69bdf14a471f7894633cdc79a0f7a6d0e79728c29972903f11ed09a9b68c1",
+      "bytes": 515,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "browser-full-02-interruption.json",
+      "sha256": "728b32715212d8b6527db9190260bfeb332603fde1f1b05bacaab7807f4bf018",
+      "bytes": 648,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "stability-01-result.json",
+      "sha256": "f9e38f66dd110243c97e562ebddb4817a1316eba37ed9f5472a3e056d217bb50",
+      "bytes": 390,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "stability-02-result.json",
+      "sha256": "2cad4656d54c09862b1deac66b374d7bb6b769357cc444d2b0117ac26e746e5f",
+      "bytes": 402,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "build-02-result.json",
+      "sha256": "229c8f34bdd3b92dfaf1a9815ea858669ec92f0c73a1f35ef5c3700052a50011",
+      "bytes": 721,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "installations-02-result.json",
+      "sha256": "58c781f3af41ed7ffd75bafbecaac4b48c2edc9f28ea3bc85cfaa54fcbed2724",
+      "bytes": 1562,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "trace-order.json",
+      "sha256": "4864c96e3a7ce3687d7fcca2c4908c530637730a20c5423a5940e02058687ed2",
+      "bytes": 27175,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "empty-identity-trace-order.json",
+      "sha256": "d8ca74a8774bea2eae0903597c4f74af794f234c5e3afd6b7712630dff5ca705",
+      "bytes": 3980,
+      "recorded_match": true,
+      "original_exact": true
+    },
+    {
+      "name": "successor-065-diff.patch",
+      "sha256": "768b2b936e0831bbb0b2952d4e8c1378683f3641edacd64d23c00aa615ad095e",
+      "bytes": 7778,
+      "recorded_match": true,
+      "original_exact": true
+    }
+  ],
+  "errors": [],
+  "original_proposal": {
+    "sha256": "90bbc73416b33ac8428fb3f7122bea7c21c81e2eb8002b60cb5599773d174544",
+    "recorded": "90bbc73416b33ac8428fb3f7122bea7c21c81e2eb8002b60cb5599773d174544"
+  },
+  "outputs_file_sha256": "b349bcc7af8943c2c41a64ea30a1b2864f9815102cb3048e8095fdf7f6d16f3a",
+  "diff_check": {
+    "exit_code": 0,
+    "output": ""
+  },
+  "source_mapping": [
+    {
+      "source_id": "issue-87:R03",
+      "matches": {
+        "source_id": true,
+        "source_document": true,
+        "source_line": true,
+        "source_end_line": true,
+        "source_text_sha256": true,
+        "owners": true,
+        "acceptance_ids": true
+      }
+    },
+    {
+      "source_id": "issue-87:R05",
+      "matches": {
+        "source_id": true,
+        "source_document": true,
+        "source_line": true,
+        "source_end_line": true,
+        "source_text_sha256": true,
+        "owners": true,
+        "acceptance_ids": true
+      }
+    },
+    {
+      "source_id": "issue-87:R07",
+      "matches": {
+        "source_id": true,
+        "source_document": true,
+        "source_line": true,
+        "source_end_line": true,
+        "source_text_sha256": true,
+        "owners": true,
+        "acceptance_ids": true
+      }
+    },
+    {
+      "source_id": "issue-87:R08",
+      "matches": {
+        "source_id": true,
+        "source_document": true,
+        "source_line": true,
+        "source_end_line": true,
+        "source_text_sha256": true,
+        "owners": true,
+        "acceptance_ids": true
+      }
+    },
+    {
+      "source_id": "issue-87:R09",
+      "matches": {
+        "source_id": true,
+        "source_document": true,
+        "source_line": true,
+        "source_end_line": true,
+        "source_text_sha256": true,
+        "owners": true,
+        "acceptance_ids": true
+      }
+    },
+    {
+      "source_id": "issue-87:section-14",
+      "matches": {
+        "source_id": true,
+        "source_document": true,
+        "source_line": true,
+        "source_end_line": true,
+        "source_text_sha256": true,
+        "owners": true,
+        "acceptance_ids": true
+      }
+    },
+    {
+      "source_id": "issue-89:D03",
+      "matches": {
+        "source_id": true,
+        "source_document": true,
+        "source_line": true,
+        "source_end_line": true,
+        "source_text_sha256": true,
+        "owners": true,
+        "acceptance_ids": true
+      }
+    },
+    {
+      "source_id": "issue-89:D04",
+      "matches": {
+        "source_id": true,
+        "source_document": true,
+        "source_line": true,
+        "source_end_line": true,
+        "source_text_sha256": true,
+        "owners": true,
+        "acceptance_ids": true
+      }
+    },
+    {
+      "source_id": "issue-89:D08",
+      "matches": {
+        "source_id": true,
+        "source_document": true,
+        "source_line": true,
+        "source_end_line": true,
+        "source_text_sha256": true,
+        "owners": true,
+        "acceptance_ids": true
+      }
+    },
+    {
+      "source_id": "issue-89:D09",
+      "matches": {
+        "source_id": true,
+        "source_document": true,
+        "source_line": true,
+        "source_end_line": true,
+        "source_text_sha256": true,
+        "owners": true,
+        "acceptance_ids": true
+      }
+    },
+    {
+      "source_id": "issue-89:D15",
+      "matches": {
+        "source_id": true,
+        "source_document": true,
+        "source_line": true,
+        "source_end_line": true,
+        "source_text_sha256": true,
+        "owners": true,
+        "acceptance_ids": true
+      }
+    }
+  ],
+  "frozen_design_unchanged": true,
+  "entry_links": [
+    {
+      "target": "docs/implementation/dashboard-migration/acceptance-proposal.json",
+      "exists": true
+    },
+    {
+      "target": "docs/implementation/dashboard-migration/ci-repair-r1/recorded-outputs.json",
+      "exists": true
+    },
+    {
+      "target": "docs/implementation/dashboard-migration/ci-repair-r1/native/successor-065-applicability.json",
+      "exists": true
+    },
+    {
+      "target": "docs/implementation/dashboard-migration/ci-repair-r1.json",
+      "exists": true
+    }
+  ],
+  "log_summaries": {
+    "original-focused-01.log": [
+      "  5 passed (7.8s)"
+    ],
+    "creation-red.log": [
+      "  2 failed"
+    ],
+    "empty-identity-red.log": [
+      "  1 failed"
+    ],
+    "opener-focus-red.log": [
+      "  1 failed"
+    ],
+    "affected-green-01.log": [
+      "  19 passed (22.7s)"
+    ],
+    "affected-green-02.log": [
+      "  1 failed",
+      "  21 passed (31.7s)"
+    ],
+    "affected-green-03.log": [
+      "  22 passed (25.5s)"
+    ],
+    "touch-probe-01.log": [
+      "  1 failed"
+    ],
+    "affected-green-04.log": [
+      "  24 passed (28.3s)"
+    ],
+    "stability-01.log": [
+      "  40 passed (49.7s)"
+    ],
+    "stability-02.log": [
+      "  50 passed (59.9s)"
+    ],
+    "startup-navigation-probe-01.log": [
+      "  1 failed"
+    ],
+    "startup-retirement-red.log": [
+      "  1 failed",
+      "  1 passed (7.7s)"
+    ],
+    "startup-retirement-green-01.log": [
+      "  16 passed (16.5s)"
+    ],
+    "typecheck-04.log": [],
+    "python-assets-protocol-03.log": [
+      "============================== 29 passed in 5.16s =============================="
+    ],
+    "37886281186-browser-original.txt": [
+      "2026-10-09T06:03:16.9801798Z actual-startup-server-exits [0,0]",
+      "2026-10-09T06:05:47.7792748Z   5 failed",
+      "2026-10-09T06:05:47.7797055Z   522 passed (18.0m)",
+      "2026-10-09T06:05:47.8002203Z ##[error]Process completed with exit code 1."
+    ],
+    "37886278313-browser-original.txt": [
+      "2026-10-09T06:04:55.0048568Z actual-startup-server-exits [0,0]",
+      "2026-10-09T06:07:29.7068950Z   2 failed",
+      "2026-10-09T06:07:29.7071429Z   525 passed (17.5m)",
+      "2026-10-09T06:07:29.7252914Z ##[error]Process completed with exit code 1."
+    ]
+  },
+  "finding_requirements": {
+    "docs/design/issue-92/ACCEPTANCE.md:37-38": [
+      "| AC25 | 源输入、候选、独立 Standards／Spec 评审、项目门禁及 wheel/sdist 身份一致；安装包文件与新增／变更资源 HTTP 路径均受检。默认入口最后修改、残留 dist 或集成分支无 CI 等缺口不能借旧绿灯通过。 | S11；各片提供身份与适用性；构建、四组隔离安装、源码浏览器分别报告 |",
+      "| AC26 | 移动只报告 Chromium 视口／触控模拟；iPhone／iOS Safari／真实软键盘 NOT RUN 且范围外，不阻塞本次限定范围。保留历史 BFCache BLOCKED 和首次 FAIL；必需项缺证仍阻塞，文档检查不冒产品通过。 | S11；执行环境、scope、结果和历史证据分别记录 |"
+    ],
+    "docs/design/issue-92/ACCEPTANCE.md:69-76": [
+      "| MCE-11 | 新测试通过、另有环境缺口或历史失败 | 覆盖首次 FAIL／BFCache BLOCKED，或用 BLOCKED 藏已有 FAIL；保存每次观察和裁定 |",
+      "| MCE-12 | 视觉差异不便修复或构建目录有旧包 | 改写获批基线／原图，或统计残留包为当前四组通过；固定资产与当前产物 hash |",
+      "",
+      "## 证据和完成判据",
+      "",
+      "- 每条证据有源项／AC／链路 ID、规格版本、候选 base/head/tree 或未提交 manifest、命令／步骤、输入与环境、预期／实际、结果及附件。结果取 PASS、FAIL、BLOCKED、NOT RUN；范围排除另记，不能用 PASS 表示未执行。",
+      "- 证据绑定原公共接口和实际可见行为；外部 IO、模型输出或传输顺序可控，定位、持久化、计价、分类、去重和清理不得替换为预设成功。",
+      "- 任一必需源项、AC 或关键不变量有 FAIL，整体验收不能通过；必需项无有效证据则保留 NOT RUN／BLOCKED 与条件。本次明确排除的真机环境、历史 BFCache 能力缺口不被偷改成新增必过承诺。"
+    ],
+    "docs/design/dashboard-implementation/VALIDATION.md:33-42": [
+      "- 故障用例必须检查原动作是否真的只提交一次；受理未知／缺回执／取消请求均不能推定服务未执行。恢复读取只恢复读取，不能新建动作。",
+      "- 用真实数据库提交／服务事件屏障控制关键交错；证明页面隐藏不触发 dispose，同时保护订阅仍能清掉隐藏内容。实际离页移交资源所有权，而非以页面卸载假定后台取消成功。",
+      "- 同候选已有确定性 PASS 只有在代码、输入、依赖、配置及环境继续适用时复用。修复后的 successor 保留首次 FAIL，只复核受影响检查与必要项目门禁。",
+      "",
+      "## 十页视觉、键盘与范围",
+      "",
+      "固定参考为 #86 `baseline/r1` 与 tokens，原始 HTML／预览／截图不覆盖。记录参考及候选 hash、浏览器／操作系统、字体、DPR 和场景后比较；字体抗锯齿差异可解释，遮挡、信息丢失、不可操作或不达对比度仍 FAIL。",
+      "",
+      "| 范围 | 要求／记录 |",
+      "| --- | --- |"
+    ]
+  },
+  "static_identity_result": "PASS",
+  "spec_review_result": "FAIL",
+  "findings": [
+    {
+      "id": "F1",
+      "priority": 2,
+      "file": "docs/implementation/dashboard-migration/ci-repair-r1.md",
+      "line": 3,
+      "also": "ci-repair-r1.json:5",
+      "requirement": "issue-92/ACCEPTANCE.md:69 MCE-11",
+      "summary": "Unqualified overall BLOCKED masks still-open acceptance FAIL; distinguish code PASS and pending successor gates."
+    },
+    {
+      "id": "F2",
+      "priority": 3,
+      "file": "docs/implementation/dashboard-migration/ci-repair-r1.md",
+      "line": 9,
+      "requirement": "issue-92/ACCEPTANCE.md:38 AC26",
+      "summary": "State Chromium hasTouch touch emulation rather than physical touch-screen execution."
+    }
+  ]
+}
