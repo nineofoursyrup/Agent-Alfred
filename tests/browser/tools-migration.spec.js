@@ -212,6 +212,55 @@ for(const receipt of ['success','missing','rejected']) test(`S07 F1 an in-flight
   } finally {release?.();await server.send('idle');await server.close();}
 });
 
+test('S07 F2 a new edit after lost receipt and failed readback retains its original CAS baseline', async ({page}) => {
+  const server=await memoryServer({script:'tests/browser/ops_server.py'});
+  try {
+    await page.goto(server.origin+'/tools');
+    const card=external(page),select=card.getByRole('combobox'),save=card.getByRole('button',{name:'保存授权',exact:true});
+    await card.getByRole('button',{name:'展开详情',exact:true}).click();
+    await expect(select).toHaveValue('unset');
+    const posts=[],statuses=[];
+    let blockReads=true;
+    await page.route('**/api/tools',route=>blockReads?route.fulfill({status:503,contentType:'application/json',body:'{"error":"readback_unavailable"}'}):route.continue());
+    await page.route('**/api/tools/authorization',async route=>{
+      posts.push(route.request().postDataJSON());
+      const response=await route.fetch();statuses.push(response.status());
+      if(posts.length===1)await route.abort('failed');
+      else await route.fulfill({response});
+    });
+    await select.selectOption('allowed');await save.click();
+    await expect(page.getByText(/当前授权状态无法核实；保留旧目录与草稿/)).toBeVisible();
+    await expect(card).toContainText('提交结果尚未确认');
+    const actual=await (await page.request.get(server.origin+'/api/tools')).json();
+    expect(actual.revision).toBe(1);expect(actual.authorizations[posts[0].identity]).toBe('allowed');
+    expect(statuses).toEqual([200]);expect(posts[0].expected_revision).toBe(0);
+    // This edit occurs after both requests ended, when submission is no longer pending.
+    await select.selectOption('unset');
+    await card.getByRole('button',{name:'收起详情',exact:true}).click();
+    await expect(card.getByLabel('工具状态摘要')).toContainText('未保存草稿：unset · 基线版本 0');
+    await card.getByRole('link',{name:'连接维护',exact:true}).click();
+    await expect(page.getByRole('button',{name:'留在此页',exact:true})).toBeFocused();
+    await page.getByRole('button',{name:'留在此页',exact:true}).click();
+    await card.getByRole('button',{name:'展开详情',exact:true}).click();
+    await expect(select).toHaveValue('unset');await expect(save).toBeDisabled();
+    blockReads=false;
+    await page.getByRole('button',{name:'核对当前授权',exact:true}).click();
+    await expect(save).toBeEnabled();
+    await expect(select).toHaveValue('unset');
+    await expect(card).toContainText('已保存授权：allowed');
+    await expect(card.getByLabel('工具状态摘要')).toContainText('未保存草稿：unset · 基线版本 0 · 版本冲突');
+    await expect(card).toContainText('提交结果尚未确认');expect(posts).toHaveLength(1);
+    await save.click();await expect(card).toContainText('authorization_conflict');
+    await expect(select).toHaveValue('unset');expect(posts[1].expected_revision).toBe(0);
+    await card.getByRole('button',{name:'基于当前版本继续编辑',exact:true}).click();
+    await save.click();await expect(save).toBeEnabled();
+    await expect(card).toContainText('已保存授权：unset');
+    await expect(card.getByLabel('工具状态摘要')).not.toContainText('未保存草稿');
+    expect(posts).toHaveLength(3);expect(posts[2].expected_revision).toBe(1);
+    expect(statuses).toEqual([200,409,200]);
+  } finally {await server.close();}
+});
+
 test('S07 unreadable catalog keeps draft and local status; unavailable MCP is visible without inventing a connection', async ({page}) => {
   const server=await mcpServer(['invalid']),origin=`http://127.0.0.1:${server.entry.port}`;
   try {
