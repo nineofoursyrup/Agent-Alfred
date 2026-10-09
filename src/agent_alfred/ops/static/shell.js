@@ -65,7 +65,7 @@ export function confirmLeave(state) {
   });
 }
 
-/** @param {{mount:(url:URL)=>PageController, storage:TabStorage, onVisibility?:(visible:boolean)=>void}} options */
+/** @param {{mount:(url:URL)=>PageController, storage:TabStorage, onVisibility?:(visible:boolean)=>void, onNavigate?:()=>void}} options */
 export function createShell(options) {
   const page=/** @type {HTMLElement} */(document.getElementById('page'));
   const rail=/** @type {HTMLElement} */(document.querySelector('.site-header'));
@@ -92,6 +92,7 @@ export function createShell(options) {
   // Navigation/restore intent is distinct from the first automatic mount.
   let navigationGeneration=0;
   let automaticTitleFocus=false;
+  let automaticMainbarFocus=false;
   /** @type {MutationObserver|null} */ let scrollObserver=null;
   let scrollFrame=0;
   function stopScrollRestore(){scrollObserver?.disconnect();scrollObserver=null;cancelAnimationFrame(scrollFrame);scrollFrame=0;}
@@ -163,8 +164,13 @@ export function createShell(options) {
       panel=kind;present();
     }
     if(kind==='navigation') /** @type {HTMLElement|null} */(nav.querySelector('[aria-current]')||nav.querySelector('a'))?.focus();
-    else if(narrow.matches) document.getElementById('mainbar-title')?.focus({preventScroll:true});
-    else {const input=/** @type {HTMLTextAreaElement|null} */(document.getElementById('message'));if(input&&!input.disabled)input.focus({preventScroll:true});else document.getElementById('mainbar-title')?.focus({preventScroll:true});}
+    else {
+      automaticMainbarFocus=true;
+      try {
+        if(narrow.matches) document.getElementById('mainbar-title')?.focus({preventScroll:true});
+        else {const input=/** @type {HTMLTextAreaElement|null} */(document.getElementById('message'));if(input&&!input.disabled)input.focus({preventScroll:true});else document.getElementById('mainbar-title')?.focus({preventScroll:true});}
+      } finally {automaticMainbarFocus=false;}
+    }
   }
   function returnFocus() {if(trigger?.isConnected && trigger.getClientRects().length)trigger.focus({preventScroll:true});else titleFocus();}
   function closePanel() {
@@ -173,7 +179,7 @@ export function createShell(options) {
   }
   /** @param {boolean} [initial] */
   function mount(initial=false) {
-    if(!initial)navigationGeneration++;
+    if(!initial){navigationGeneration++;options.onNavigate?.();}
     if(!started){activeNav();present();return;}
     const preserveMainbarFocus=!mounted && mainbar.contains(document.activeElement);
     stopScrollRestore();
@@ -281,6 +287,7 @@ export function createShell(options) {
     get generation(){return generation;},
     get navigationGeneration(){return navigationGeneration;},
     get automaticTitleFocus(){return automaticTitleFocus;},
+    get automaticMainbarFocus(){return automaticMainbarFocus;},
     /** @param {any} value */ publish(value){state=Object.freeze({...value});publish();},
     /** @param {(state:any)=>void} callback */ subscribeState(callback){subscribers.add(callback);callback(state);return ()=>subscribers.delete(callback);},
     /** Page-local query changes still share this history identity. @param {string|URL} target */

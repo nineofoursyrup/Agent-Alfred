@@ -1,0 +1,35 @@
+{
+  "head": "c96c26d1446ba97bdb7b219d79cef0b5fd001b53",
+  "code_head": "06588168d5049040abf0a4560091d659d244ddcf",
+  "support_head": "8d4adbc97cf1f5d55e3d36b65da7dbf2a1a1be2a",
+  "command": [
+    "/opt/homebrew/opt/node@22/bin/node",
+    "scripts/check_dashboard_lifecycle.mjs",
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/lifecycle-manifest-01.json"
+  ],
+  "exit_code": 0,
+  "seconds": 5.01,
+  "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "status": "PASS",
+  "result_sha256": "124ec7886bd5615f02c18a2e04d2ce9786f8a18938a6d78022cec416abef1971",
+  "stages": [
+    {
+      "label": "old",
+      "artifact_sha256": "d688a7aebdcc9451003e12f316be9930fd9fb7ffff8b5c12557fdb513fec4a46",
+      "instance": "ed95e4763dd14d9cbd21884af479a90c",
+      "close": 0
+    },
+    {
+      "label": "current",
+      "artifact_sha256": "0f1e47731a43389e8664e94fc3adb8c2ed3e62712d47de5da756aec513f9c8cb",
+      "instance": "2a3695bf950c4b70b84e6a7cc5e203f5",
+      "close": 0
+    },
+    {
+      "label": "supported",
+      "artifact_sha256": "6ee38e004360f437d0c11479172f3c315862b94c7727dbe8b8860f5b03ad6194",
+      "instance": "2ad9a9817c29437fa789aa6440f0760d",
+      "close": 0
+    }
+  ]
+}

@@ -198,9 +198,25 @@ let locateGeneration=0;
 let followLatest=true;
 let readingIntent=0;
 let creationIntent=0;
-for(const kind of ['focusin','pointerdown','input','keydown','wheel','touchstart'])document.addEventListener(kind,()=>{
+/** Pointer activation may focus its opener before the click opens MainBar.
+ * Independent keyboard/programmatic focus is still a new reading intent.
+ * @type {Element|null} */ let mainbarPointerOpener=null;
+// Touch emits its compatibility mousedown/focus after pointerup; retain the
+// same activation boundary without exempting unrelated standalone focus.
+document.addEventListener('mousedown',event=>{mainbarPointerOpener=event.target instanceof Element?event.target.closest('[data-open-panel="mainbar"]'):null;},{passive:true});
+for(const kind of ['pointerup','pointercancel','mouseup'])document.addEventListener(kind,()=>{mainbarPointerOpener=null;},{passive:true});
+for(const kind of ['focusin','pointerdown','input','keydown','wheel','touchstart'])document.addEventListener(kind,event=>{
   readingIntent++;
-  if(kind!=='focusin' || !shell.automaticTitleFocus)creationIntent++;
+  // Opening this MainBar is compatible with the explicit pending creation.
+  // Editing, closing, navigating or independently moving focus still retires it.
+  const opener=event.target instanceof Element && event.target.closest('[data-open-panel="mainbar"]');
+  if(kind==='pointerdown')mainbarPointerOpener=opener || null;
+  const opening=opener && (['pointerdown','touchstart'].includes(kind)
+    || kind==='focusin' && opener===mainbarPointerOpener
+    || kind==='keydown' && ['Enter',' '].includes(/** @type {KeyboardEvent} */(event).key));
+  if(kind==='focusin')mainbarPointerOpener=null;
+  const presentationFocus=kind==='focusin' && (shell.automaticTitleFocus || shell.automaticMainbarFocus);
+  if(!opening && !presentationFocus)creationIntent++;
 },{passive:true});
 /** @type {Wire|null} */ let terminalStatus=null;
 /** @type {Wire|null} */ let processGap=null;
@@ -289,7 +305,7 @@ document.addEventListener('visibilitychange',updateReadStatus);
 async function locateReply(target) {
   if(!target || target.process_instance_id!==instance || typeof target.session_id!=='string' || typeof target.run_id!=='string' || !target.action_id)return {status:'unavailable',reason:'定位身份已失效'};
   if(target.session_id!==session && !await resume(target.session_id))return {status:'blocked',reason:'当前会话的运行尚未收尾'};
-  retireLocation();const mine=locateGeneration;const owner=shell.generation;
+  retireLocation();const mine=locateGeneration;const owner=shell.navigationGeneration;
   locationTarget={...target,loading:true};locatedRecord=null;followLatest=false;
   shell.openPanel('mainbar');updateReadStatus();
   const intent=readingIntent;
@@ -297,7 +313,7 @@ async function locateReply(target) {
   try {
     const response=await fetch('/api/mainbar/locate?'+new URLSearchParams({process_instance_id:target.process_instance_id,session_id:target.session_id,run_id:target.run_id}),{signal:controller.signal});
     const body=await response.json();
-    if(mine!==locateGeneration || owner!==shell.generation || instance!==target.process_instance_id || session!==target.session_id)return {status:'retired'};
+    if(mine!==locateGeneration || owner!==shell.navigationGeneration || instance!==target.process_instance_id || session!==target.session_id)return {status:'retired'};
     if(!response.ok) {
       const labels=/** @type {Record<string,string>} */({reply_context_expired:'实例已变化，请重新同步后定位。',reply_target_unavailable:'目标记录不可用。',reply_withheld:'正文受保护，暂不可读取。',reply_unavailable:'正文未完整加载，可只读重试。'});
       throw new Error(labels[body.code]||'定位读取失败，可只读重试。');
@@ -786,10 +802,11 @@ function mountPage(url) {
     setVisible:(/** @type {boolean} */ visible)=>owner?.setVisible?.(visible),
     captureSource:()=>owner?.captureSource?.()||{},
     restoreSource:(/** @type {any} */ source)=>owner?.restoreSource?.(source),
-    dispose(){if(restoreRunPage?.page===owner)restoreRunPage=null;retireLocation();receipts.detach();if(owner?.dispose)owner.dispose();else owner?.close?.();root.remove();},
+    dispose(){if(restoreRunPage?.page===owner)restoreRunPage=null;receipts.detach();if(owner?.dispose)owner.dispose();else owner?.close?.();root.remove();},
   };
 }
-const shell=createShell({mount:mountPage,storage,onVisibility:()=>queueMicrotask(updateReadStatus)});
+// MainBar owns its location even before the first business page has mounted.
+const shell=createShell({mount:mountPage,storage,onNavigate:retireLocation,onVisibility:()=>queueMicrotask(updateReadStatus)});
 memory.watch(publishState);
 /** Shared page ports preserve the one MainBar/Stream owner. */
 export const dashboard = {

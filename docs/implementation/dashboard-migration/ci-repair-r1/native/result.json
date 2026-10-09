@@ -1,0 +1,47 @@
+{
+  "candidate": {
+    "head": "4da39e52194e62f0f23637a83c8556069eb6a07d",
+    "tree": "4ce90f7a91c21a9a5c14834e352500b5088cb405",
+    "source_tree": "598ca385e9c873a2f67815e0f5c638b6b4b85ffe",
+    "archive_sha256": "b2ec7337187ad4b88315c3fe3350bfc1874f12b5fdf76186260b98966fcab75a",
+    "prepared_at": "2026-10-09T06:27:32.107121+00:00",
+    "source": "/Users/nineofour/.codex/dashboard-migration-20261009/native-ci-r2/source",
+    "state": "/Users/nineofour/.codex/dashboard-migration-20261009/native-ci-r2/state",
+    "port": 18100,
+    "factory": "ScriptedModelFactory(BrowserModel([])); no external provider",
+    "fixture": "tests/browser/chat_server.py",
+    "scope": "Native200 affected delta of mousedown/up intent tracking; retain b214 complete geometry/input/send/scroll evidence and supplement actual final JS bytes",
+    "prior": "../native-ci-r1/result.json"
+  },
+  "observed_at": "2026-10-09T06:29:10.057581+00:00",
+  "native_desktop_200pct": {
+    "result": "PASS",
+    "method": "Native Chrome menu110% -> four plus clicks -> actual200% AX and screenshot; no viewport/CSS override",
+    "observations": [
+      "fixed4da newSession adopted and connected",
+      "native Shift+Enter two-line draft; input/send/close fit864x453, no document overflow, DPR4/CSSzoom1/visualViewportScale1",
+      "native send click produced exactly1Run/2messages and actual saved UI",
+      "native close returns opener focus and preserves draft; native reopen retains draft"
+    ],
+    "prior_applicable_evidence": "../native-ci-r1/result.json: geometry/input/Enter/send/scroll original; b214..4da only mousedown/up intent token added, same CSS/shell and send/scroll code"
+  },
+  "native_chinese_IME": {
+    "result": "BLOCKED",
+    "reason": "Original functioning composition/confirmation path unavailable; no native IME was reattempted or promoted",
+    "evidence": "../native-final/result.json"
+  },
+  "cleanup": {
+    "result": "PASS",
+    "normal_close": "stdin stop; existing dashboard.close assertion; toolsession3981 exit0",
+    "connect_ex": 61,
+    "reuseaddr_bind": true,
+    "counts": {
+      "sessions": 1,
+      "runs": 1,
+      "agent_log": 2
+    },
+    "task_tab_closed": true,
+    "zoom_restored_percent": 110
+  },
+  "qualification": "Native mouse/keyboard final-byte check; touch behavior separately evidenced by real Chromium hasTouch browser tests. Not full G08 or finalCI."
+}

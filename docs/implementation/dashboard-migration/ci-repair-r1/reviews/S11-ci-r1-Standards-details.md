@@ -1,0 +1,13 @@
+# S11 CI r1 Standards 细节
+
+沿用先前完整675→441 Standards及已读仓库规则、固定#92验证合同。完整阅读当前6文件diff、shell全部、app事件/locate/创建/继续/挂载/销毁路径，以及变化测试的上下文；完整12smell启发式重新列读，未见需新增的风格建议。只读Git固定对象，初查WT clean；未改产品或运行测试。
+
+已确认两处原CI缺陷修复方向正确：同一MainBar开合是呈现动作，不能单由开栏焦点使创建回执退为未选；首次自动挂载不应退休先行发起的合法空Session/Run定位。location改绑定navigationGeneration，真实导航仍递增且dispose retireLocation；session/instance/request身份与readingIntent、visibleMainbar焦点条件保留。自动Mainbar focus标记用try/finally限定同步focus，独立focus没有得到普遍豁免。
+
+真实held201测试覆盖无旧Session/有旧草稿，两项base RED均收到真实新ID但选择没变；empty identity测试在真实200返回屏障间放行首次SSE/mount，base RED无目标记录。首版过宽focus豁免被opener-focus RED抓到；最终非触控22例包括独立键盘focus、标题阅读、仅focus opener、close、navigate、外部active Run、新process、一次POST/一条Stream、320x360回执可达和迟到定位退休。green02的close失败为accessible textbox在刻意隐藏后不可定位，改#message并额外断言MainBar hidden，未弱化disabled/选择/焦点断言。
+
+Inbox旧测试等待target Stream真正connected并检查selectSession返回true与准确Session；没有强行绕过准入。重连测试等run.finished解码及older重新enabled才开始统计，仍严格一读、无关Run不可证明已保存、显式同Session重读才得到正确记录。未加sleep、重试预算、超时放宽或删除业务断言。原CI操作/网络时间显示201等待中点opener及setup queued reads的真实次序。typecheck和29 assets/protocol日志终态通过；bounded stability 8场景×5=40只作为有限样本。
+
+新增触控缺陷由reviewer对pointerup生命周期提出具体疑点后，owner在真实Chromium hasTouch context和真实held201证明。读取touch-probe spec/config/log确认locator.tap、真实route.fetch status201、未替换Session身份。记录的opener focus在pointerup之后；fixed app204清状态、212判定false、216增长creationIntent、902拒绝采用，因果闭合。主报告P2行落在必须调整的pointer生命周期清理处；修复不能回到所有opener focus均豁免，否则已证opener-focus首败将复发。该find属于当前已复现业务错误，不是smell或测试数量要求。
+
+证据hash与6文件blobhash记录在同名JSON；原始首败不改。完整源码src已经变化，前一最终候选的native/G08/安装/全browser不能直接作为本候选完成证明。真实IME仍BLOCKED，真实移动iOS仍excluded/NOT RUN。后继另发报告，不覆盖本FAIL。

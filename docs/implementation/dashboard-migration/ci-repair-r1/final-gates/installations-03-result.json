@@ -1,0 +1,56 @@
+{
+  "head": "c96c26d1446ba97bdb7b219d79cef0b5fd001b53",
+  "code_head": "06588168d5049040abf0a4560091d659d244ddcf",
+  "exit_code": 0,
+  "command": [
+    "uv",
+    "run",
+    "--extra",
+    "mcp",
+    "python",
+    "scripts/check_mcp_installations.py",
+    "--dist",
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/dist-03",
+    "--output",
+    "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/installations-03.json"
+  ],
+  "report_sha256": "8a295bdd3c31a74e95503af5a288251979b7cadd80c6b0cf35edacd50a363c7d",
+  "variants": [
+    {
+      "kind": "wheel",
+      "mode": "base",
+      "artifact_sha256": "0f1e47731a43389e8664e94fc3adb8c2ed3e62712d47de5da756aec513f9c8cb",
+      "source_contamination": false,
+      "http_assertions": 100,
+      "closure_assets": 34,
+      "routes": 16
+    },
+    {
+      "kind": "wheel",
+      "mode": "mcp",
+      "artifact_sha256": "0f1e47731a43389e8664e94fc3adb8c2ed3e62712d47de5da756aec513f9c8cb",
+      "source_contamination": false,
+      "http_assertions": 100,
+      "closure_assets": 34,
+      "routes": 16
+    },
+    {
+      "kind": "sdist",
+      "mode": "base",
+      "artifact_sha256": "86a9e940ac7618c27956ab6f366b84b24abd813d37ad8342a5300a3d2baadf0c",
+      "source_contamination": false,
+      "http_assertions": 100,
+      "closure_assets": 34,
+      "routes": 16
+    },
+    {
+      "kind": "sdist",
+      "mode": "mcp",
+      "artifact_sha256": "86a9e940ac7618c27956ab6f366b84b24abd813d37ad8342a5300a3d2baadf0c",
+      "source_contamination": false,
+      "http_assertions": 100,
+      "closure_assets": 34,
+      "routes": 16
+    }
+  ]
+}

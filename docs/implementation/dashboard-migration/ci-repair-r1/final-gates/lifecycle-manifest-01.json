@@ -1,0 +1,32 @@
+{
+  "directory": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/lifecycle-01",
+  "port": 17909,
+  "old": {
+    "python": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/lifecycle-old-env/bin/python",
+    "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/lifecycle-old-dist/agent_alfred-0.1.0-py3-none-any.whl",
+    "sha256": "d688a7aebdcc9451003e12f316be9930fd9fb7ffff8b5c12557fdb513fec4a46",
+    "head": "22c8720e1ec874fd012cc79b086cd8aace4c79b6",
+    "source_tree": "92c61b048894a24f040ab99bfbd913f8abb94812",
+    "source_path": "src/agent_alfred",
+    "src_tree": "5e2ea4ebaf3684938ca09012f8219ac2e0021e49"
+  },
+  "current": {
+    "python": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/lifecycle-current-03-env/bin/python",
+    "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/dist-03/agent_alfred-0.1.0-py3-none-any.whl",
+    "sha256": "0f1e47731a43389e8664e94fc3adb8c2ed3e62712d47de5da756aec513f9c8cb",
+    "head": "06588168d5049040abf0a4560091d659d244ddcf",
+    "source_tree": "91f1c1abcc26ea92be40fb5acee5fb93fbd62a0c",
+    "source_path": "src/agent_alfred",
+    "src_tree": "0eaae1fbd39ec02656f4a61982ec73a06c46fe2f",
+    "build_head": "c96c26d1446ba97bdb7b219d79cef0b5fd001b53"
+  },
+  "supported": {
+    "python": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/lifecycle-supported-env/bin/python",
+    "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/lifecycle-supported-dist/agent_alfred-0.1.0-py3-none-any.whl",
+    "sha256": "6ee38e004360f437d0c11479172f3c315862b94c7727dbe8b8860f5b03ad6194",
+    "head": "8d4adbc97cf1f5d55e3d36b65da7dbf2a1a1be2a",
+    "source_tree": "3a76462bcaf179d84f38c4e66fcf0a3904c3aee0",
+    "source_path": "src/agent_alfred",
+    "src_tree": "ae90fae5e3c1954768af906597ed9fc8f3c0e17e"
+  }
+}

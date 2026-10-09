@@ -1,0 +1,54 @@
+{
+  "observed_at": "2026-10-09T06:46:23.095658+00:00",
+  "result": "PASS installed resource-byte binding for qualified native200 inheritance",
+  "code_head": "06588168d5049040abf0a4560091d659d244ddcf",
+  "build_head": "c96c26d1446ba97bdb7b219d79cef0b5fd001b53",
+  "native_tested_head": "4da39e52194e62f0f23637a83c8556069eb6a07d",
+  "installations_report_sha256": "8a295bdd3c31a74e95503af5a288251979b7cadd80c6b0cf35edacd50a363c7d",
+  "variants": [
+    {
+      "kind": "wheel",
+      "mode": "base",
+      "artifact_sha256": "0f1e47731a43389e8664e94fc3adb8c2ed3e62712d47de5da756aec513f9c8cb",
+      "matched_closure_assets": 34,
+      "html_sha256": "95c08606a8ef01193eb476364cfbcf59270ed89f48b0d84d4ef759ae5ce597ac",
+      "app_js_sha256": "b067e8c66a42cb668ac4af5aeca5187772e4487d0d21c644351eb5def6a11198",
+      "shell_js_sha256": "3b311fd37a459902c4bfd801f7f4f566f037089a2821bab3d4f92f28ec1cfbc4",
+      "source_contamination": false
+    },
+    {
+      "kind": "wheel",
+      "mode": "mcp",
+      "artifact_sha256": "0f1e47731a43389e8664e94fc3adb8c2ed3e62712d47de5da756aec513f9c8cb",
+      "matched_closure_assets": 34,
+      "html_sha256": "95c08606a8ef01193eb476364cfbcf59270ed89f48b0d84d4ef759ae5ce597ac",
+      "app_js_sha256": "b067e8c66a42cb668ac4af5aeca5187772e4487d0d21c644351eb5def6a11198",
+      "shell_js_sha256": "3b311fd37a459902c4bfd801f7f4f566f037089a2821bab3d4f92f28ec1cfbc4",
+      "source_contamination": false
+    },
+    {
+      "kind": "sdist",
+      "mode": "base",
+      "artifact_sha256": "86a9e940ac7618c27956ab6f366b84b24abd813d37ad8342a5300a3d2baadf0c",
+      "matched_closure_assets": 34,
+      "html_sha256": "95c08606a8ef01193eb476364cfbcf59270ed89f48b0d84d4ef759ae5ce597ac",
+      "app_js_sha256": "b067e8c66a42cb668ac4af5aeca5187772e4487d0d21c644351eb5def6a11198",
+      "shell_js_sha256": "3b311fd37a459902c4bfd801f7f4f566f037089a2821bab3d4f92f28ec1cfbc4",
+      "source_contamination": false
+    },
+    {
+      "kind": "sdist",
+      "mode": "mcp",
+      "artifact_sha256": "86a9e940ac7618c27956ab6f366b84b24abd813d37ad8342a5300a3d2baadf0c",
+      "matched_closure_assets": 34,
+      "html_sha256": "95c08606a8ef01193eb476364cfbcf59270ed89f48b0d84d4ef759ae5ce597ac",
+      "app_js_sha256": "b067e8c66a42cb668ac4af5aeca5187772e4487d0d21c644351eb5def6a11198",
+      "shell_js_sha256": "3b311fd37a459902c4bfd801f7f4f566f037089a2821bab3d4f92f28ec1cfbc4",
+      "source_contamination": false
+    }
+  ],
+  "native_applicability": "native-ci-r2/successor-065-applicability.json",
+  "native_applicability_sha256": "e90de33322bbe1a46a1e46c497d99612fa70a0d76ea1990ea6c8b29e7380055b",
+  "qualification": "This closes installed asset identity only. It inherits the already reviewed native200 interaction applicability; it is not a fresh native run or proof of native IME. Full source-browser and final remote CI remain independently required.",
+  "native_ime": "BLOCKED"
+}
