@@ -9,6 +9,17 @@ PAGE_POLICY = (
 )
 
 ASSETS = {
+    "/assets/behaviour.js": ("behaviour.js", "text/javascript"),
+    "/assets/behaviour.css": ("behaviour.css", "text/css"),
+    "/assets/inbox.js": ("inbox.js", "text/javascript"),
+    "/assets/source.js": ("source.js", "text/javascript"),
+    "/assets/run-fields.js": ("run-fields.js", "text/javascript"),
+    "/assets/run-evidence.js": ("run-evidence.js", "text/javascript"),
+    "/assets/inbox-runs.css": ("inbox-runs.css", "text/css"),
+    "/assets/settings-focus.js": ("settings-focus.js", "text/javascript"),
+    "/assets/models.js": ("models.js", "text/javascript"),
+    "/assets/connections.js": ("connections.js", "text/javascript"),
+    "/assets/settings.css": ("settings.css", "text/css"),
     "/assets/overview.js": ("overview.js", "text/javascript"),
     "/assets/overview.css": ("overview.css", "text/css"),
     "/assets/shell.js": ("shell.js", "text/javascript"),

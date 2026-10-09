@@ -1,0 +1,38 @@
+/* Behaviour uses the shared r1 tokens; its observations keep separate lifetimes. */
+.behaviour-page {min-width:0}
+.behaviour-page > .card {padding:20px;margin:0 0 20px}
+.behaviour-page h2 {margin:0 0 12px}
+.behaviour-page .behaviour-actions {display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.behaviour-page .behaviour-actions button {margin:0}
+.behaviour-page .behaviour-saved {padding:10px 12px;border-left:3px solid var(--accent);background:var(--raised)}
+.behaviour-page .behaviour-draft[data-dirty=true] {color:var(--attention)}
+.behaviour-page .behaviour-receipt {color:var(--secondary)}
+.behaviour-page p:empty {display:none}
+.behaviour-page label {margin:12px 0}
+.behaviour-page label > select,.behaviour-page label > textarea,.behaviour-page label > input:not([type=checkbox]) {display:block;width:100%;margin-top:6px}
+.behaviour-page .topology {padding:12px;margin:18px 0 0;border-color:var(--border);border-radius:12px;background:var(--raised)}
+.behaviour-page .topology p {font-size:12px;color:var(--secondary)}
+.behaviour-page .topology-canvas {--topology-node:var(--selected)}
+.behaviour-page .topology-canvas text {fill:var(--text)}
+.behaviour-page .topology-controls {margin:10px 0}
+.behaviour-page .topology-controls button {font-size:12px}
+.behaviour-page .routing-statistics {background:var(--raised);margin-bottom:0}
+.behaviour-page .routing-statistics summary {cursor:pointer;font-weight:600}
+.behaviour-page .observation-summary {display:block;font-size:12px;font-weight:400;color:var(--secondary);margin-top:6px}
+.behaviour-page .routing-chart {list-style:none;margin:12px 0;padding:0}
+.behaviour-page .routing-chart li {margin:12px 0}
+.behaviour-page .routing-chart-label {display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;font-size:13px}
+.behaviour-page .routing-chart progress {appearance:none;display:block;width:100%;height:8px;margin-top:6px;border:0;border-radius:4px;background:var(--canvas);overflow:hidden}
+.behaviour-page .routing-chart progress::-webkit-progress-bar {background:var(--canvas)}
+.behaviour-page .routing-chart progress::-webkit-progress-value {background:var(--accent)}
+.behaviour-page .behaviour-table {max-width:100%;overflow:auto}
+.behaviour-page .topology pre {max-width:100%;overflow:auto}
+.behaviour-page .topology-full-details {overflow-wrap:anywhere}
+.behaviour-page [aria-label="节点详情"] {border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:12px}
+.behaviour-page [aria-label="节点详情"]:empty {display:none}
+.behaviour-page .aggregation-sources {display:flex;gap:16px;flex-wrap:wrap;border:1px solid var(--border);border-radius:8px;padding:8px 12px}
+.behaviour-page .aggregation-sources label {margin:4px 0}
+.behaviour-page .aggregation-result {border-top:1px solid var(--border);margin-top:16px;padding-top:12px;overflow-wrap:anywhere}
+.behaviour-page .aggregation-result a {display:inline-block;margin:8px 12px 8px 0}
+.behaviour-page .aggregation-identity {font-size:12px;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;overflow-wrap:anywhere;color:var(--secondary)}
+@container(max-width:679px){.behaviour-page > .card {padding:14px}.behaviour-page .routing-statistics {padding:12px}.behaviour-page .topology {padding:8px}}
