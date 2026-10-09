@@ -19,6 +19,7 @@ ASSETS = {
     "/assets/aggregation.js": ("aggregation.js", "text/javascript"),
     "/assets/tools.js": ("tools.js", "text/javascript"),
     "/assets/accounting.js": ("accounting.js", "text/javascript"),
+    "/assets/accounting.css": ("accounting.css", "text/css"),
     "/assets/app.js": ("app.js", "text/javascript"),
     "/assets/app.css": ("app.css", "text/css"),
     "/assets/stream.js": ("stream.js", "text/javascript"),
