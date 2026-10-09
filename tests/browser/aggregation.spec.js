@@ -392,10 +392,25 @@ test('SPEC-03 CE-08: accepted POST remains fixed while response waits and Sessio
     await expect.poll(async () => (await other.get('/api/run-evidence?run_id='+run_id)).body.memory?.aggregation?.graph_result).toBe('Completed');
     // The real server has accepted/completed A, but its HTTP acceptance has
     // not reached the form. All following changes occur with that POST pending.
+    const draft=page.getByRole('region',{name:'手动聚合',exact:true}).locator('.behaviour-draft');
+    await expect(draft).toHaveAttribute('data-dirty','false');
+    await page.getByRole('textbox',{name:'聚合关键词',exact:true}).fill('NEXT_KEYWORDS');
+    await expect(draft).toHaveAttribute('data-dirty','true');
+    await page.getByRole('textbox',{name:'聚合关键词',exact:true}).fill('coffee');
+    await expect(draft).toHaveAttribute('data-dirty','false');
+    await page.getByRole('checkbox',{name:'语义记忆',exact:true}).uncheck();
+    await expect(draft).toHaveAttribute('data-dirty','true');
+    await page.getByRole('checkbox',{name:'语义记忆',exact:true}).check();
+    await expect(draft).toHaveAttribute('data-dirty','false');
     await page.getByRole('button',{name:'新建会话',exact:true}).click();
     await expect.poll(() => page.evaluate(() => sessionStorage.getItem('alfred.session'))).not.toBe(session);
     const second=await page.evaluate(() => sessionStorage.getItem('alfred.session'));
     await page.getByRole('button',{name:'刷新会话',exact:true}).click();
+    await expect(draft).toHaveAttribute('data-dirty','false');
+    await page.getByRole('combobox',{name:'目标会话'}).selectOption(second);
+    await expect(draft).toHaveAttribute('data-dirty','true');
+    await page.getByRole('combobox',{name:'目标会话'}).selectOption(session);
+    await expect(draft).toHaveAttribute('data-dirty','false');
     await page.getByRole('combobox',{name:'目标会话'}).selectOption(second);
     await page.getByRole('textbox',{name:'聚合目标',exact:true}).fill('CHANGED_GOAL');
     await page.getByRole('textbox',{name:'聚合关键词',exact:true}).fill('CHANGED_KEYWORDS');
