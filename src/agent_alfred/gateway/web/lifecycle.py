@@ -34,6 +34,7 @@ import errno
 import fcntl
 import json
 import os
+import socket
 import threading
 import time
 from collections.abc import Callable
@@ -853,6 +854,11 @@ def _default_server_factory(
     from http.server import ThreadingHTTPServer
 
     class _Server(ThreadingHTTPServer):
+        # A reload opens new asset connections while the previous page's
+        # connections are still retiring. The stdlib's queue of five can
+        # reset that burst before any handler runs; use the platform's
+        # listening backlog without changing request admission or ownership.
+        request_queue_size = socket.SOMAXCONN
         # One thread per connection, and every one of them a daemon. SSE
         # holds a handler open for as long as the stream lives, so a
         # single-threaded server would serve exactly one browser tab and a
