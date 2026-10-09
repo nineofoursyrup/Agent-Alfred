@@ -1,0 +1,292 @@
+{
+  "head": "06588168d5049040abf0a4560091d659d244ddcf",
+  "base": "37cd0180fd5222d0753a0f3203ae56b1df6e0f0a",
+  "previous_candidate": "4da39e52194e62f0f23637a83c8556069eb6a07d",
+  "tree": "ae04fad8eff5f0eed6afb06050e4afeb6707506c",
+  "src_tree": "0eaae1fbd39ec02656f4a61982ec73a06c46fe2f",
+  "package_tree": "91f1c1abcc26ea92be40fb5acee5fb93fbd62a0c",
+  "result": "PASS",
+  "open_findings": [],
+  "closed_findings": [
+    {
+      "report": "S11-ci-r2-Spec.md",
+      "priority": "P2",
+      "title": "First-mount navigation leaves pending location",
+      "closure": "Confirmed navigation now calls shared owner retireLocation before !started return; cancelled/same-address/first automatic mount do not notify; real cancellation witnessed before releasing SSE/response."
+    }
+  ],
+  "changed_files": [
+    {
+      "path": "src/agent_alfred/ops/static/app.js",
+      "sha256": "b067e8c66a42cb668ac4af5aeca5187772e4487d0d21c644351eb5def6a11198",
+      "bytes": 49053
+    },
+    {
+      "path": "src/agent_alfred/ops/static/shell.js",
+      "sha256": "3b311fd37a459902c4bfd801f7f4f566f037089a2821bab3d4f92f28ec1cfbc4",
+      "bytes": 18972
+    },
+    {
+      "path": "tests/browser/inbox-run-navigation.spec.js",
+      "sha256": "a78c84b8dbee0a41fc6039a357aee6ca18f980c5a35e0d2aefaee67ec8a08bbd",
+      "bytes": 31525
+    },
+    {
+      "path": "tests/browser/mainbar-empty-identity.spec.js",
+      "sha256": "0743f5643cd41f4ef16492eb1deabe36086cfe9fc599b0e68c6ca65f8fcbbedf",
+      "bytes": 6263
+    },
+    {
+      "path": "tests/browser/mainbar-location.spec.js",
+      "sha256": "0e679a5f33b26511a532acc56234ae8910ac05a75416191a3b66d22d5cb09ca0",
+      "bytes": 9399
+    },
+    {
+      "path": "tests/browser/session-create-race.spec.js",
+      "sha256": "da7922d8d3f115a076dc85695462ccba70bfa7825c920085ec68be5ccbbea6f9",
+      "bytes": 18623
+    }
+  ],
+  "delta_from_r2": [
+    "src/agent_alfred/ops/static/app.js",
+    "src/agent_alfred/ops/static/shell.js",
+    "tests/browser/mainbar-empty-identity.spec.js"
+  ],
+  "evidence": [
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/creation-red.log",
+      "sha256": "5f7ea828e4d6820b6775b74c181dc19359be8ef3be042fa392d1cb9dd4a788d8",
+      "bytes": 6721,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/empty-identity-red.log",
+      "sha256": "2eb2628ac754ca130a40a0b0dbcdb6f7ee702d57810d3c775f6d1da4043e9671",
+      "bytes": 3564,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/opener-focus-red.log",
+      "sha256": "005a5ce520a13345a52516b0367b9ba531e6be4beb1afa57440ef5f9b5b8d0aa",
+      "bytes": 3932,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/affected-green-01.log",
+      "sha256": "82ea513bba43951ad3a4bda13a9794b191759729454d063a2a372b3883aef402",
+      "bytes": 3826,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/affected-green-02.log",
+      "sha256": "6c12e639ff06b807ae98f2fc391182dfba80026f8998e4d5c549eacbfa7ddd76",
+      "bytes": 7601,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/affected-green-03.log",
+      "sha256": "c5d226603228b6c0fdb0664273932e4bce66fa54c0965f90017c98a73027b122",
+      "bytes": 4271,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/typecheck-02.log",
+      "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f",
+      "bytes": 29,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/python-assets-protocol-01.log",
+      "sha256": "a49716bea29ccd882382b19c1580803815ade1a884221197a789e757764c6928",
+      "bytes": 603,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/trace-order.json",
+      "sha256": "4864c96e3a7ce3687d7fcca2c4908c530637730a20c5423a5940e02058687ed2",
+      "bytes": 27175,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/empty-identity-trace-order.json",
+      "sha256": "d8ca74a8774bea2eae0903597c4f74af794f234c5e3afd6b7712630dff5ca705",
+      "bytes": 3980,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/controlled-red-tests.patch",
+      "sha256": "b995e560be117022d5f0925b16167d4aa57f92f9131f7e53b3df61c088417f14",
+      "bytes": 4172,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/touch-probe-01.log",
+      "sha256": "f3cdbf1d0d9abc9025f0e6a224b3f196e575ac784be486202c6f3545a7ca73e7",
+      "bytes": 3344,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/affected-green-04.log",
+      "sha256": "e564aa86ef911ea4deb1c8412606f8af91c6e9b73197dc98251f5abb4d3360b4",
+      "bytes": 4678,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/typecheck-03.log",
+      "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f",
+      "bytes": 29,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/python-assets-protocol-02.log",
+      "sha256": "0a2a4c862daf524885b11e7e77d27c542ecaabc1d92cc5e7342359974caec777",
+      "bytes": 603,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/browser-full-01-result.json",
+      "sha256": "897fb9c9b77111f4b197737f94dbc93d02a8129d6b218253432053d9d16bc269",
+      "bytes": 515,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/browser-full-01-interruption.json",
+      "sha256": "a236a35f45f5e53bd19ab767f020bff131946007c5c9259a04eb8642968fd7cb",
+      "bytes": 655,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/startup-navigation-probe-01.log",
+      "sha256": "bf7ea513ef903a19a205e4dab409950eac2ebc0e164e5d22151db83b88f1ca9c",
+      "bytes": 3693,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/startup-retirement-red.log",
+      "sha256": "beba4a151b2927eb4d6c3bd28f72c8476f6b738a82dbda3008bb229758404527",
+      "bytes": 3973,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/startup-retirement-green-01.log",
+      "sha256": "6eb094c8bfe6bca81894f638d5f0c1bd0f833d892bb16f71ce5a412346f6ebe6",
+      "bytes": 3313,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/startup-retirement-red-tests.patch",
+      "sha256": "6a7868959cb0a1e3aef374559f7272c574e865921a8d67497b577a63b3c4ac7e",
+      "bytes": 5413,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/typecheck-04.log",
+      "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f",
+      "bytes": 29,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/python-assets-protocol-03.log",
+      "sha256": "f993f7d614633a5a19c2385b27ffec3b04e7a35b78a8761d10d1b8b3ffaec39a",
+      "bytes": 603,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/browser-full-02-result.json",
+      "sha256": "7ba69bdf14a471f7894633cdc79a0f7a6d0e79728c29972903f11ed09a9b68c1",
+      "bytes": 515,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/browser-full-02-interruption.json",
+      "sha256": "728b32715212d8b6527db9190260bfeb332603fde1f1b05bacaab7807f4bf018",
+      "bytes": 648,
+      "matches_handoff": true
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/REPAIR-HANDOFF.md",
+      "sha256": "08fc3b5e7494636e52f5bbb3e62faa66fc5d257d4c7c68fa79376106d90593b2",
+      "bytes": 7105
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/ci-r1/REPAIR-HANDOFF.json",
+      "sha256": "d33c63c07c731bc42ffcff765e77429692859401502bd0c4b22bb8570e2f7eaa",
+      "bytes": 9382
+    }
+  ],
+  "diff_checks": [
+    {
+      "base": "37cd0180fd5222d0753a0f3203ae56b1df6e0f0a",
+      "exit": 0,
+      "output": ""
+    },
+    {
+      "base": "4da39e52194e62f0f23637a83c8556069eb6a07d",
+      "exit": 0,
+      "output": ""
+    }
+  ],
+  "frozen_contract_and_dependency_delta": [],
+  "prior_unchanged_tests": [
+    "tests/browser/inbox-run-navigation.spec.js",
+    "tests/browser/mainbar-location.spec.js",
+    "tests/browser/session-create-race.spec.js"
+  ],
+  "observed_tests": {
+    "startup_retirement_red": {
+      "failed": 1,
+      "passed": 1
+    },
+    "startup_retirement_green_01": {
+      "passed": 16,
+      "seconds": 16.5
+    },
+    "typecheck_04": "PASS",
+    "python_assets_protocol_03": {
+      "passed": 29
+    },
+    "4da_full_browser": "SIGINT exit130; incomplete, not PASS"
+  },
+  "proof_boundary": "Old route handler completion after actual browser cancellation is not proof that its held HTTP 200 was delivered; assertions witness immediate requestfailed and loading cleanup, survival of newer pending location, and actual newer response application.",
+  "scope": "Independent Spec code/test delta only; full gates, portable documentation, installed asset identities, G08, and IME have separate responsibilities.",
+  "inherited_applicability": "Unchanged creation-intent logic and prior scoped checks may retain their original applicability; root native-200 control/send/CSS paths are unaffected by this retirement-only delta, subject to final asset identity readback. This review does not assert new native execution.",
+  "preserved_prior_reports": [
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S11-ci-r1-Spec.md",
+      "sha256": "38152d0a7fdc7cb6c8349e865d10885d103064216eceb440f4c8e2f2791da292",
+      "bytes": 1631
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S11-ci-r1-Spec-verification.json",
+      "sha256": "96e87b256d9c2778bce3d20805339a85a2d7a076c6467d86f7bf0b0a6cb61b6b",
+      "bytes": 7471
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S11-ci-r2-Spec.md",
+      "sha256": "d2cdea558b6dca6d86e2b6cd619a0f64b128fc2d6decbab6142e98114095a040",
+      "bytes": 2371
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S11-ci-r2-Spec-verification.json",
+      "sha256": "412a46839adbe0f2bf81d454f224be3df68d5c7ca69749374116a6ad3145136f",
+      "bytes": 10959
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S11-ci-r2-pre-probe-report/MANIFEST.json",
+      "sha256": "c05da07ddb1a257f06a7f44adda7647113162fec3492a9e32507ee24330d82e4",
+      "bytes": 752
+    }
+  ],
+  "reports": [
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S11-ci-r3-Spec.md",
+      "sha256": "363d7d94dc8b9e9f1a90c147b96804a7ad1cf9c265e8a763bbc9e918a964f6af",
+      "bytes": 1551
+    },
+    {
+      "path": "/Users/nineofour/.codex/dashboard-migration-20261009/reviews/S11-ci-r3-Spec-details.md",
+      "sha256": "38b43e8e03021a0cf57044c8756d5d46700be6654212865827bb83ef70d111bb",
+      "bytes": 4694
+    }
+  ]
+}

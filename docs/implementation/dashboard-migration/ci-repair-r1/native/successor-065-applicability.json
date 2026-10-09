@@ -1,0 +1,26 @@
+{
+  "observed_at": "2026-10-09T06:38:10.580640+00:00",
+  "tested_candidate": "4da39e52194e62f0f23637a83c8556069eb6a07d",
+  "successor_candidate": "06588168d5049040abf0a4560091d659d244ddcf",
+  "successor_source_tree": "0eaae1fbd39ec02656f4a61982ec73a06c46fe2f",
+  "result": "PASS native200 applicability; final installed asset identities pending",
+  "basis": [
+    "Exact delta moves existing locate retirement from business controller.dispose to shell actual-navigation commit callback; no CSS, template, dimensions, controls, input/newline/send, native opener focus or scroll code changes",
+    "Original native200 interaction had no pending exact location and used same-location presentation/history; new onNavigate only applies actual navigation/restore, so these native observations remain applicable",
+    "Native200 geometry and actual app/Chrome controls were checked on4da; no CSSzoom or syntheticIME substitution"
+  ],
+  "native_evidence": "native-ci-r2/result.json",
+  "delta_sha256": "768b2b936e0831bbb0b2952d4e8c1378683f3641edacd64d23c00aa615ad095e",
+  "files": [
+    "src/agent_alfred/ops/static/app.js",
+    "src/agent_alfred/ops/static/shell.js",
+    "tests/browser/mainbar-empty-identity.spec.js"
+  ],
+  "required_successor_evidence": [
+    "Actualfinal wheel/sdist four installs HTTP asset bytes for new app.js/shell.js",
+    "Reviewed original startup retirement RED and immediate-cancel/newer-locate GREEN",
+    "Final full sourcebrowser and CI"
+  ],
+  "native_IME": "BLOCKED unchanged, seven source subresponsibilities; no new native composition evidence",
+  "qualification": "Applicability assessment only; does not claim native replay of untested startup race or new whole acceptance."
+}
