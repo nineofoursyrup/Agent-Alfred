@@ -1,0 +1,23 @@
+### Result
+{"candidate":"11dcc66f18ceb264ade1c1bcc1b48287dc4f1516","tree":"41adbb9ad2479d16228c68f8c228882c6cd6ae91","origin":"http://127.0.0.1:18884","unpin":{"displayDisabled":true,"priceDisabled":true,"receipt":"连接中断，原操作结果未确认；请核对运行或设置，不会自动重送。","pinned":true,"connected":true,"revision":1},"purpose":{"input":{"purpose":"inference_probe","purpose_known":true,"filter":"system"},"output":"inference_probe（未知用途）"},"offlineFixture":{"catalog_requests":["https://opencode.ai/zen/go/v1/models"],"model_calls":[]}}
+### Ran Playwright code
+```js
+await (async (page) => {
+  const proof = await page.evaluate(async () => {
+    const row = document.querySelector('[data-model="opencode:qwen3.7-max"]');
+    const data = await (await fetch('/api/models')).json();
+    const model = data.endpoints.flatMap(group=>group.models).find(model=>model.endpoint_id==='opencode' && model.model_id==='qwen3.7-max');
+    const {runFields} = await import('/assets/run-fields.js');
+    return {
+      candidate:'11dcc66f18ceb264ade1c1bcc1b48287dc4f1516',
+      tree:'41adbb9ad2479d16228c68f8c228882c6cd6ae91',
+      origin:location.origin,
+      unpin:{displayDisabled:row.querySelector('input[aria-label="显示名"]').disabled, priceDisabled:row.querySelector('input[aria-label="output"]').disabled, receipt:row.querySelector('.model-row-state').textContent, pinned:model.pinned, connected:(await import('/assets/app.js')).dashboard.runtime().connected, revision:data.revision},
+      purpose:{input:{purpose:'inference_probe',purpose_known:true,filter:'system'}, output:runFields({purpose:'inference_probe',purpose_known:true,filter:'system'}).find(([label])=>label==='用途')[1]}
+    };
+  });
+  proof.offlineFixture = await (await page.request.get('http://127.0.0.1:60365')).json();
+  return proof;
+}
+)(page);
+```

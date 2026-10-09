@@ -1,0 +1,46 @@
+{
+  "at": "2026-10-09T11:35:58.624801+00:00",
+  "runs": [
+    {
+      "run_id": "d59935ea2e0f4693937f1540f33bf7e9",
+      "purpose": "chat",
+      "session_id": "7ed0f23a8bdc47fc9da2c557f0e9b122",
+      "gateway": "web",
+      "entry_surface_id": "mainbar",
+      "prompt_preview": "ni\n你",
+      "phase": "finished",
+      "outcome": "completed",
+      "accepted_at": "2026-10-09T11:34:23Z",
+      "started_at": "2026-10-09T11:34:23Z",
+      "finished_at": "2026-10-09T11:34:59Z",
+      "activity_revision": 4,
+      "telemetry": "{\"accounting_version\": 1, \"attempts\": [{\"attempt_id\": \"00a53a9e816c4fffb5d169a741c72737\", \"streamed\": false, \"model\": {\"endpoint_id\": \"opencode-go\", \"model_id\": \"deepseek-v4-flash\"}, \"outcome\": \"committed\", \"usage\": {\"total_input_tokens\": null, \"uncached_input_tokens\": null, \"cache_read_tokens\": null, \"cache_write_tokens\": null, \"output_tokens\": 4, \"reasoning_tokens\": null, \"endpoint_reported_cost_usd\": \"0.125\", \"raw\": {}}}], \"memory\": {\"gate_state\": \"evaluated\", \"gate\": {\"schema_version\": 1, \"decision\": true, \"outcome\": \"miss\", \"decision_source\": \"deterministic_fallback\", \"reason_code\": \"conservative_retrieve\", \"fallback_reason\": \"model_deadline\", \"rule_version\": \"memory-gate-rules-v1\", \"gate_step_index\": 1, \"model_ref\": {\"endpoint_id\": \"opencode-go\", \"model_id\": \"deepseek-v4-flash\", \"wire_style\": \"openai\"}, \"latency_ms\": 12008.57345800614, \"timing\": {\"model_ms\": 12005, \"search_ms\": 0.7690829806961119, \"selection_ms\": 0.012333999620750546}, \"stores\": {\"semantic\": {\"status\": \"succeeded\", \"hit_count\": 0, \"error_code\": null}, \"episodic\": {\"status\": \"succeeded\", \"hit_count\": 0, \"error_code\": null}}, \"hit_count\": 0, \"selected_count\": 0, \"references\": [], \"input_disposition\": \"no_hits\"}, \"input_attempts\": [{\"step_index\": 2, \"attempt_id\": \"00a53a9e816c4fffb5d169a741c72737\", \"purpose\": \"answer\", \"skills\": [], \"references\": [], \"working_history_groups\": [], \"measurement_version\": \"request-input-v1\", \"input_characters\": 4252, \"input_limit\": 64000, \"budget_omitted_groups\": 0, \"ledger_entries\": [], \"ledger_omitted\": 0, \"ledger_unknown_omitted\": 0, \"ledger_excluded\": 0, \"history_exclusions\": {\"incomplete\": 0, \"unsafe\": 0, \"round_limit\": 0}, \"dispatch_state\": \"sent\"}], \"routing_statistics\": {\"schema_version\": 1, \"route\": null, \"decision_complete\": true, \"graph_entered\": false, \"fallback\": false, \"bypass\": false, \"recovered\": false, \"blocked\": null}, \"skills\": {\"mode\": \"fallback\", \"status\": \"prepared\", \"selected\": [], \"loaded\": [], \"excluded\": [], \"control_line_applied\": false, \"notice\": \"Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。\", \"reason\": \"model_deadline\"}, \"skill_input_preparation\": {\"status\": \"prepared\", \"purpose\": \"skill_selector\", \"measurement_version\": \"request-input-v1\", \"characters\": 639, \"limit\": 64000, \"working_history_groups\": [], \"budget_omitted_groups\": 0, \"history_exclusions\": {\"incomplete\": 0, \"unsafe\": 0, \"round_limit\": 0}}, \"input_preparation\": {\"status\": \"prepared\", \"measurement_version\": \"request-input-v1\", \"gate_characters\": 631, \"gate_limit\": 64000, \"answer_characters\": 4252, \"answer_limit\": 64000, \"reserved_characters\": 16453, \"budget_omitted_groups\": 0, \"history_exclusions\": {\"incomplete\": 0, \"unsafe\": 0, \"round_limit\": 0}, \"ledger_entries\": [], \"ledger_omitted\": 0, \"ledger_unknown_omitted\": 0, \"ledger_excluded\": 0}}, \"trace_incomplete\": false, \"trace_incomplete_reason\": null}",
+      "admission_state": "admitted",
+      "routing_admission": "{\"schema_version\": 1, \"enablement\": \"disabled\", \"metrics_version\": \"routing-statistics-1\", \"policy_version\": \"message-routing-1\"}"
+    }
+  ],
+  "messages": [
+    {
+      "id": 1,
+      "session_id": "7ed0f23a8bdc47fc9da2c557f0e9b122",
+      "role": "user",
+      "content": "[{\"type\": \"text\", \"text\": \"ni\\n你\"}]",
+      "consolidated": 0,
+      "source": "web",
+      "telemetry": null,
+      "created_at": "2026-10-09T11:34:23Z",
+      "run_id": "d59935ea2e0f4693937f1540f33bf7e9"
+    },
+    {
+      "id": 2,
+      "session_id": "7ed0f23a8bdc47fc9da2c557f0e9b122",
+      "role": "assistant",
+      "content": "[{\"type\": \"text\", \"text\": \"离线模型回复\"}]",
+      "consolidated": 0,
+      "source": "web",
+      "telemetry": null,
+      "created_at": "2026-10-09T11:34:59Z",
+      "run_id": "d59935ea2e0f4693937f1540f33bf7e9"
+    }
+  ]
+}

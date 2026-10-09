@@ -1,0 +1,27 @@
+{
+  "runs": [
+    {
+      "run_id": "1ed4b93e65294efab717340fe31e1d84",
+      "session_id": "005b0eae58d746b58822d42d8e856aca",
+      "phase": "finished",
+      "outcome": "completed",
+      "prompt_preview": "重复准入原始请求",
+      "accepted_at": "2026-10-09T11:45:47Z",
+      "finished_at": "2026-10-09T11:46:23Z"
+    }
+  ],
+  "messages": [
+    {
+      "id": 1,
+      "role": "user",
+      "content": "[{\"type\": \"text\", \"text\": \"重复准入原始请求\"}]",
+      "run_id": "1ed4b93e65294efab717340fe31e1d84"
+    },
+    {
+      "id": 2,
+      "role": "assistant",
+      "content": "[{\"type\": \"text\", \"text\": \"离线模型回复\"}]",
+      "run_id": "1ed4b93e65294efab717340fe31e1d84"
+    }
+  ]
+}

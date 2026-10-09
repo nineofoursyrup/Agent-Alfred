@@ -1,0 +1,54 @@
+{
+  "checked_at": "2026-10-09T10:50:51.662792+00:00",
+  "worktree": "/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred",
+  "head": "11dcc66f18ceb264ade1c1bcc1b48287dc4f1516",
+  "base": "11dcc66f18ceb264ade1c1bcc1b48287dc4f1516",
+  "manifest": "/Users/nineofour/.codex/dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/final-manifest.json",
+  "manifest_sha256": "274775393b6f209350e45f2920b8abb5daa814f31160246421fbe84d1c822984",
+  "files": [
+    {
+      "absolute_path": "/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/src/agent_alfred/ops/static/app.js",
+      "expected_sha256": "fe7eb5ffb33490e85284f653bba74dd678ba7fff4ba0a85c3efcb34eee39b930",
+      "actual_sha256": "fe7eb5ffb33490e85284f653bba74dd678ba7fff4ba0a85c3efcb34eee39b930",
+      "matches": true
+    },
+    {
+      "absolute_path": "/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/src/agent_alfred/ops/static/models.js",
+      "expected_sha256": "617318593bccd41c7ca356856bc7c5d9ffd5aa5413cf62047968b2b5f9f51305",
+      "actual_sha256": "617318593bccd41c7ca356856bc7c5d9ffd5aa5413cf62047968b2b5f9f51305",
+      "matches": true
+    },
+    {
+      "absolute_path": "/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/src/agent_alfred/ops/static/overview.js",
+      "expected_sha256": "da5780e7f2ba08d5f6ae521f326fcb9c56cc7c6c2feffed1bb3156f10d91a425",
+      "actual_sha256": "da5780e7f2ba08d5f6ae521f326fcb9c56cc7c6c2feffed1bb3156f10d91a425",
+      "matches": true
+    },
+    {
+      "absolute_path": "/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/src/agent_alfred/ops/static/run-fields.js",
+      "expected_sha256": "36c02cabf34baf20c6de8e3671b5e003273e61307f634d2d9e82eafd720d0f72",
+      "actual_sha256": "36c02cabf34baf20c6de8e3671b5e003273e61307f634d2d9e82eafd720d0f72",
+      "matches": true
+    },
+    {
+      "absolute_path": "/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/tests/browser/mainbar-location.spec.js",
+      "expected_sha256": "c278db539b9751f0cc28c5167e766eca351e923e6acf7734c73f7c15e2d0f5b2",
+      "actual_sha256": "c278db539b9751f0cc28c5167e766eca351e923e6acf7734c73f7c15e2d0f5b2",
+      "matches": true
+    },
+    {
+      "absolute_path": "/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/tests/browser/models-migration.spec.js",
+      "expected_sha256": "ae28ff209d5c095b5fb33ad7522fb46cc9d2b5a163773df29f0a458b5b5fdf15",
+      "actual_sha256": "ae28ff209d5c095b5fb33ad7522fb46cc9d2b5a163773df29f0a458b5b5fdf15",
+      "matches": true
+    },
+    {
+      "absolute_path": "/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/tests/browser/run-purposes.spec.js",
+      "expected_sha256": "ed9a22bfe8051645aab0d42a261a3884a5646e7bdeca441541545f8080c8277d",
+      "actual_sha256": "ed9a22bfe8051645aab0d42a261a3884a5646e7bdeca441541545f8080c8277d",
+      "matches": true
+    }
+  ],
+  "exact_scope": true,
+  "no_drift": true
+}

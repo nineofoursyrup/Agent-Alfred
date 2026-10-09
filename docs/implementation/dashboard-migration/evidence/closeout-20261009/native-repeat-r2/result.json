@@ -1,0 +1,63 @@
+{
+  "result": "PASS",
+  "resolves": "SPEC-EVID-01",
+  "scope": "Controlled pending-admission UI sequence on the same product bytes; this is not an additional native IME claim. Text was pasted via CUA browser UI.",
+  "candidate": {
+    "base_head": "11dcc66f18ceb264ade1c1bcc1b48287dc4f1516",
+    "tree": "d5ae23a4c989b3624b853a5493f61af38a11c7aa",
+    "src_tree": "08582ef657e69669a3333606021918f9b0509e6f",
+    "package_tree": "f58442b625b51373f5389a3baa9bec0ba11cd0e9",
+    "manifest_sha256": "274775393b6f209350e45f2920b8abb5daa814f31160246421fbe84d1c822984",
+    "files": {
+      "src/agent_alfred/ops/static/app.js": "fe7eb5ffb33490e85284f653bba74dd678ba7fff4ba0a85c3efcb34eee39b930",
+      "src/agent_alfred/ops/static/models.js": "617318593bccd41c7ca356856bc7c5d9ffd5aa5413cf62047968b2b5f9f51305",
+      "src/agent_alfred/ops/static/overview.js": "da5780e7f2ba08d5f6ae521f326fcb9c56cc7c6c2feffed1bb3156f10d91a425",
+      "src/agent_alfred/ops/static/run-fields.js": "36c02cabf34baf20c6de8e3671b5e003273e61307f634d2d9e82eafd720d0f72",
+      "tests/browser/mainbar-location.spec.js": "c278db539b9751f0cc28c5167e766eca351e923e6acf7734c73f7c15e2d0f5b2",
+      "tests/browser/models-migration.spec.js": "ae28ff209d5c095b5fb33ad7522fb46cc9d2b5a163773df29f0a458b5b5fdf15",
+      "tests/browser/run-purposes.spec.js": "ed9a22bfe8051645aab0d42a261a3884a5646e7bdeca441541545f8080c8277d"
+    },
+    "at": "2026-10-09T11:36:34.510525+00:00",
+    "stage": "reviewed_uncommitted",
+    "index_unchanged": true
+  },
+  "initial_and_repeated_enter_events": 3,
+  "send_click_attempt": "CUA click on disabled Send while 202 held; disabled button consumes no activation",
+  "post_requests_during_and_after": 1,
+  "runs": 1,
+  "messages": 2,
+  "successor_draft": "202 前保留的新草稿",
+  "retained_focus": "IANA 时区",
+  "response_202_held_from": {
+    "status": 202,
+    "at": 1791546504.947061
+  },
+  "response_released_at": "2026-10-09T11:48:39.413556+00:00",
+  "fixture_close": {
+    "settled_run": "11d8b90421a24324900e19fec5a4dd87",
+    "normal_exit_code": 0
+  },
+  "evidence": [
+    "instrumented_server.py",
+    "instrument.js",
+    "events.jsonl",
+    "events-sequence-order.json",
+    "dispatches.jsonl",
+    "accepted-before-response.json",
+    "release-202",
+    "pending-dom.json",
+    "pending-state.json",
+    "final-dom.json",
+    "final-state.json",
+    "final-product.png",
+    "served-product-manifest.json",
+    "fixture.log"
+  ],
+  "product_changes": false,
+  "prior_fixture_failure": "../native-repeat/diagnostics.json",
+  "diagnostics": {
+    "fixture_missing_path_AttributeError": "RESOLVED",
+    "aborted_initial_GET": "BrokenPipeError logged when CUA initial navigation returned net::ERR_ABORTED; subsequent tab read/load, all subject requests and close succeeded. Original full fixture.log retained; no clean-log claim.",
+    "log": "fixture.log"
+  }
+}

@@ -1,0 +1,178 @@
+
+> test:browser
+> playwright test tests/browser/run-purposes.spec.js tests/browser/mainbar-aggregation-location.spec.js tests/browser/mainbar-empty-identity.spec.js tests/browser/mainbar-integration.spec.js tests/browser/mainbar.spec.js tests/browser/overview.spec.js tests/browser/runs.spec.js tests/browser/settings.spec.js tests/browser/streaming.spec.js tests/browser/recording.spec.js tests/browser/send-flow.spec.js tests/browser/session-create-race.spec.js tests/browser/read-retirement.spec.js --output /Users/nineofour/.codex/dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/affected-browser
+
+
+Running 83 tests using 1 worker
+
+(node:59178) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/browser/mainbar-aggregation-location.spec.js:4:103 › exact aggregation NoAction keeps independent disposition and sources_not_selected (360ms)
+  ✓   2 tests/browser/mainbar-aggregation-location.spec.js:4:103 › exact aggregation NoAction keeps independent disposition and no_matching_sources (342ms)
+  ✘   3 tests/browser/mainbar-empty-identity.spec.js:4:53 › restored unread for real empty Session and Run IDs uses one guarded read and preserves its draft: same-page (15.3s)
+(node:59394) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   4 tests/browser/mainbar-empty-identity.spec.js:4:53 › restored unread for real empty Session and Run IDs uses one guarded read and preserves its draft: navigate (15.2s)
+(node:59568) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   5 tests/browser/mainbar-integration.spec.js:3:1 › real S01 records compose with S02 exact location, identity merge and cross-Session drafts (625ms)
+  ✓   6 tests/browser/mainbar.spec.js:3:1 › MainBar keeps its draft and drawer across pages and a refresh (401ms)
+  ✓   7 tests/browser/mainbar.spec.js:29:1 › an accepted message receives one recorded reply, also after refresh (343ms)
+  ✓   8 tests/browser/overview.spec.js:8:1 › Overview reads three real independent sources without selecting a Session (896ms)
+  ✓   9 tests/browser/overview.spec.js:34:1 › Overview preserves full counts, separate costs and fixed calendar source on navigation (2.7s)
+  ✓  10 tests/browser/overview.spec.js:68:1 › Unknown, proven zero, no consumption, tiny positive and damaged membership stay distinct (1.4s)
+  ✓  11 tests/browser/overview.spec.js:104:1 › Three sources fail independently, retire replaced ranges and allow local retries (1.2s)
+  ✓  12 tests/browser/overview.spec.js:132:1 › Hidden Overview revokes a changed memory revision and rejects its delayed response (1.1s)
+  ✓  13 tests/browser/overview.spec.js:155:1 › Disconnect, same-instance reconnect and restart cannot renew or resurrect observations (2.6s)
+  ✓  14 tests/browser/overview.spec.js:178:1 › Original observation expires despite a failed refresh and layout changes; earlier source expiry wins (1.0s)
+  ✓  15 tests/browser/overview.spec.js:204:1 › Current saving Run shares one slot; ordinary completion only prompts a manual history refresh (1.1s)
+  ✓  16 tests/browser/overview.spec.js:234:1 › Invalid range and IANA timezone expose correction without blocking other sources (907ms)
+  ✓  17 tests/browser/overview.spec.js:252:1 › Repeated Overview reads preserve another Ops snapshot and trace pruning keeps accounting (1.4s)
+  ✓  18 tests/browser/overview.spec.js:271:1 › Source navigation records only identity and restores Overview after a real reread (1.3s)
+  ✓  19 tests/browser/overview.spec.js:339:1 › Gap and disconnect retire slow real reads even after a same-instance reconnect (1.1s)
+  ✓  20 tests/browser/overview.spec.js:362:1 › Overview keeps opaque colliding identities and reference layouts readable (1.4s)
+  ✓  21 tests/browser/overview.spec.js:400:1 › A real recorded read merges into the held current slot without duplicate or old pending downgrade (1.0s)
+  ✓  22 tests/browser/read-retirement.spec.js:114:3 › real Session response is retired across disconnect and same-instance reconnect (949ms)
+  ✓  23 tests/browser/read-retirement.spec.js:114:3 › real Session response is retired across broker replay gap and same-instance reconnect (947ms)
+  ✓  24 tests/browser/read-retirement.spec.js:162:5 › active Run summary retires its response without clearing stale after reconnect (1.2s)
+  ✓  25 tests/browser/read-retirement.spec.js:162:5 › active Run evidence retires its response without clearing stale after reconnect (1.2s)
+  ✓  26 tests/browser/read-retirement.spec.js:162:5 › active Run summary retires its response without clearing stale after broker replay gap (1.2s)
+  ✓  27 tests/browser/read-retirement.spec.js:162:5 › active Run evidence retires its response without clearing stale after broker replay gap (1.2s)
+  ✓  28 tests/browser/recording.spec.js:7:3 › real pending reconnect and second-tab draft survive recorded settlement (1.4s)
+  ✓  29 tests/browser/recording.spec.js:7:3 › real pending reconnect and second-tab draft survive failed settlement (1.4s)
+  ✘  30 tests/browser/run-purposes.spec.js:3:1 › Overview, Run list and details distinguish all known purposes from an unknown purpose (4.4s)
+(node:59830) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  31 tests/browser/runs.spec.js:4:1 › input source failure stays explicit after reloading run details (554ms)
+  ✓  32 tests/browser/runs.spec.js:31:1 › later failed preparation displays its own final exclusions after reload (539ms)
+  ✓  33 tests/browser/runs.spec.js:65:1 › unconfirmed input registration remains unknown after reload (524ms)
+  ✓  34 tests/browser/runs.spec.js:95:1 › oversized input shows preparation failure without an invented Attempt (13.9s)
+  ✓  35 tests/browser/runs.spec.js:126:1 › preparation exclusions use server counts without manufacturing actual input (596ms)
+  ✓  36 tests/browser/runs.spec.js:158:1 › a real recorded Run deep link loads published Attempt evidence and exact cost (561ms)
+  ✓  37 tests/browser/runs.spec.js:198:1 › a Run admitted after opening the list appears once as the pinned running row (386ms)
+  ✓  38 tests/browser/runs.spec.js:234:1 › aborted attempts stay in publication position and unknown cost never has an amount (273ms)
+  ✓  39 tests/browser/runs.spec.js:360:1 › durable accounting survives absent trace and event usage cannot manufacture a charge (256ms)
+  ✓  40 tests/browser/runs.spec.js:383:1 › live Attempt updates keep keyboard focus and collapse only the new abort (412ms)
+  ✓  41 tests/browser/runs.spec.js:408:1 › global busy stays in MainBar while pinned Runs obey filters and deep-link correction (402ms)
+  ✓  42 tests/browser/runs.spec.js:430:1 › unsent SSE preparation never becomes an actual Attempt (456ms)
+  ✓  43 tests/browser/runs.spec.js:462:39 › confirmed input survives unavailable accounting (terminal=false) (169ms)
+  ✓  44 tests/browser/runs.spec.js:462:39 › confirmed input survives unavailable accounting (terminal=true) (168ms)
+  ✓  45 tests/browser/runs.spec.js:473:3 › cached committed evidence survives unavailable receipts correctly (446ms)
+  ✓  46 tests/browser/runs.spec.js:473:3 › cached aborted evidence survives unavailable receipts correctly (439ms)
+  ✓  47 tests/browser/runs.spec.js:473:3 › cached block evidence survives unavailable receipts correctly (442ms)
+  ✓  48 tests/browser/runs.spec.js:473:3 › cached start-only evidence survives unavailable receipts correctly (433ms)
+  ✓  49 tests/browser/runs.spec.js:473:3 › cached terminal-only evidence survives unavailable receipts correctly (443ms)
+  ✓  50 tests/browser/runs.spec.js:521:3 › stream mode uses actual start metadata (streamed) (362ms)
+  ✓  51 tests/browser/runs.spec.js:521:3 › stream mode uses actual start metadata (nonstreamed) (356ms)
+  ✓  52 tests/browser/runs.spec.js:521:3 › stream mode uses actual start metadata (missing) (377ms)
+  ✓  53 tests/browser/runs.spec.js:521:3 › stream mode uses actual start metadata (terminal-only) (379ms)
+  ✓  54 tests/browser/send-flow.spec.js:6:1 › one real UI flow reaches 202, Step, Attempt, deltas and one reply across pages and reload (1.9s)
+  ✓  55 tests/browser/session-create-race.spec.js:44:1 › creating closes Send and Enter while a newer draft keeps the successful receipt explicit (1.0s)
+  ✓  56 tests/browser/session-create-race.spec.js:72:1 › an external real Run prevents late creation from switching the recording Session and never queues the switch (1.3s)
+  ✓  57 tests/browser/session-create-race.spec.js:102:1 › a successful creation from an earlier process stays a receipt until explicit current-process verification (2.6s)
+  ✓  58 tests/browser/session-create-race.spec.js:125:87 › first native mount before the real creation receipt preserves unchanged intent (976ms)
+  ✓  59 tests/browser/session-create-race.spec.js:125:87 › first native mount before the real creation receipt preserves navigate intent (969ms)
+  ✓  60 tests/browser/session-create-race.spec.js:125:87 › first native mount before the real creation receipt preserves focus intent (977ms)
+  ✓  61 tests/browser/session-create-race.spec.js:125:87 › first native mount before the real creation receipt preserves close intent (974ms)
+  ✓  62 tests/browser/session-create-race.spec.js:125:87 › first native mount before the real creation receipt preserves reading intent (960ms)
+  ✓  63 tests/browser/session-create-race.spec.js:125:87 › first native mount before the real creation receipt preserves opener-focus intent (955ms)
+  ✓  64 tests/browser/session-create-race.spec.js:165:95 › a delayed receipt keeps the editing controls reachable at 320x360 (1.1s)
+  ✓  65 tests/browser/session-create-race.spec.js:165:95 › a delayed receipt keeps the editing controls reachable at 320x800 (1.1s)
+  ✓  66 tests/browser/session-create-race.spec.js:165:95 › a delayed receipt keeps the editing controls reachable at 1440x360 (1.1s)
+  ✓  67 tests/browser/session-create-race.spec.js:204:41 › MainBar click › opening the same MainBar during a real creation receipt keeps the selection intent (existing=false) (1.0s)
+  ✓  68 tests/browser/session-create-race.spec.js:204:41 › MainBar click › opening the same MainBar during a real creation receipt keeps the selection intent (existing=true) (1.1s)
+  ✓  69 tests/browser/session-create-race.spec.js:204:41 › MainBar tap › opening the same MainBar during a real creation receipt keeps the selection intent (existing=false) (984ms)
+  ✓  70 tests/browser/session-create-race.spec.js:204:41 › MainBar tap › opening the same MainBar during a real creation receipt keeps the selection intent (existing=true) (1.1s)
+  ✓  71 tests/browser/settings.spec.js:3:1 › Models and Connections navigation keeps MainBar (289ms)
+  ✓  72 tests/browser/settings.spec.js:14:1 › unsupported grok rows do not show 支持 (234ms)
+  ✓  73 tests/browser/settings.spec.js:38:3 › auth probe button posts only endpoint_id, shows result, and restores (291ms)
+  ✓  74 tests/browser/settings.spec.js:137:3 › auth probe error restores the button and shows the machine code (288ms)
+  ✓  75 tests/browser/settings.spec.js:38:3 › auth probe button posts only endpoint_id, shows result, and restores after focus refresh (290ms)
+  ✓  76 tests/browser/settings.spec.js:137:3 › auth probe error restores the button and shows the machine code after focus refresh (297ms)
+  ✓  77 tests/browser/settings.spec.js:199:1 › assigned inference probe names the row and catalog refresh exists (255ms)
+  ✓  78 tests/browser/settings.spec.js:239:1 › S08 fields save explicitly and a delayed receipt keeps newer drafts (387ms)
+  ✓  79 tests/browser/streaming.spec.js:4:1 › disconnect clears an unfinished Attempt and suppresses its later deltas (419ms)
+  ✓  80 tests/browser/streaming.spec.js:101:1 › deltas_dropped withdraws text until every affected Attempt closes (419ms)
+  ✓  81 tests/browser/streaming.spec.js:160:1 › duplicate, regressing and foreign patches do not replace authoritative state (353ms)
+  ✓  82 tests/browser/streaming.spec.js:186:1 › a terminal Attempt snapshot settles the affected dropped-delta notice without inventing events (336ms)
+  ✓  83 tests/browser/streaming.spec.js:233:1 › an unrecorded terminal snapshot recovers full text and refuses stale pending (392ms)
+
+
+  1) tests/browser/mainbar-empty-identity.spec.js:4:53 › restored unread for real empty Session and Run IDs uses one guarded read and preserves its draft: same-page 
+
+    Test timeout of 15000ms exceeded.
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/affected-browser/mainbar-empty-identity-res-6b8ba-eserves-its-draft-same-page/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/affected-browser/mainbar-empty-identity-res-6b8ba-eserves-its-draft-same-page/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/affected-browser/mainbar-empty-identity-res-6b8ba-eserves-its-draft-same-page/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/affected-browser/mainbar-empty-identity-res-6b8ba-eserves-its-draft-same-page/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) tests/browser/mainbar-empty-identity.spec.js:4:53 › restored unread for real empty Session and Run IDs uses one guarded read and preserves its draft: navigate 
+
+    Test timeout of 15000ms exceeded.
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/affected-browser/mainbar-empty-identity-res-5d14e-reserves-its-draft-navigate/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/affected-browser/mainbar-empty-identity-res-5d14e-reserves-its-draft-navigate/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/affected-browser/mainbar-empty-identity-res-5d14e-reserves-its-draft-navigate/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/affected-browser/mainbar-empty-identity-res-5d14e-reserves-its-draft-navigate/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) tests/browser/run-purposes.spec.js:3:1 › Overview, Run list and details distinguish all known purposes from an unknown purpose 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('table', { name: '运行记录' }).locator('[data-source-id="purpose-inference_probe"]').getByText('推理探针（inference_probe）', { exact: true })
+    Expected: visible
+    Timeout: 4000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('table', { name: '运行记录' }).locator('[data-source-id="purpose-inference_probe"]').getByText('推理探针（inference_probe）', { exact: true }) with timeout 4000ms
+      - waiting for getByRole('table', { name: '运行记录' }).locator('[data-source-id="purpose-inference_probe"]').getByText('推理探针（inference_probe）', { exact: true })
+
+
+      50 |     const expected = label === null ? `${purpose}（未知用途）` : `${label}（${purpose}）`;
+      51 |     const row = page.getByRole('table', {name: '运行记录'}).locator(`[data-source-id="purpose-${purpose}"]`);
+    > 52 |     await expect(row.getByText(expected, {exact: true})).toBeVisible();
+         |                                                          ^
+      53 |     await row.getByRole('link', {name: '查看运行', exact: true}).click();
+      54 |     const summary = page.getByRole('region', {name: '运行摘要', exact: true});
+      55 |     await expect(summary.getByText(expected, {exact: true})).toBeVisible();
+        at /Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/tests/browser/run-purposes.spec.js:52:58
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/affected-browser/run-purposes-Overview-Run--206e2-ses-from-an-unknown-purpose/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/affected-browser/run-purposes-Overview-Run--206e2-ses-from-an-unknown-purpose/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/affected-browser/run-purposes-Overview-Run--206e2-ses-from-an-unknown-purpose/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/affected-browser/run-purposes-Overview-Run--206e2-ses-from-an-unknown-purpose/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3 failed
+    tests/browser/mainbar-empty-identity.spec.js:4:53 › restored unread for real empty Session and Run IDs uses one guarded read and preserves its draft: same-page 
+    tests/browser/mainbar-empty-identity.spec.js:4:53 › restored unread for real empty Session and Run IDs uses one guarded read and preserves its draft: navigate 
+    tests/browser/run-purposes.spec.js:3:1 › Overview, Run list and details distinguish all known purposes from an unknown purpose 
+  80 passed (1.9m)

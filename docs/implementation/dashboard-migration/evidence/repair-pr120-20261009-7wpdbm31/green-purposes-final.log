@@ -1,0 +1,12 @@
+
+> test:browser
+> playwright test tests/browser/run-purposes.spec.js --output /Users/nineofour/.codex/dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/green-purposes-final
+
+
+Running 1 test using 1 worker
+
+(node:60457) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/browser/run-purposes.spec.js:3:1 › Overview, Run list and details distinguish all known purposes from an unknown purpose (710ms)
+
+  1 passed (1.5s)

@@ -1,0 +1,13 @@
+{
+  "at": "2026-10-09T11:48:39.413556+00:00",
+  "post_requests": [
+    {
+      "path": "/api/runs",
+      "at": 1791546504.7900128,
+      "method": "POST"
+    }
+  ],
+  "run_count": 1,
+  "response_202_held": true,
+  "operator_actions": "three Enter presses total (1 initial +2 repeated), click disabled Send, edit successor draft, focus central field"
+}

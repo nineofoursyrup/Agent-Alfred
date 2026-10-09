@@ -1,0 +1,57 @@
+ready
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 54386)
+Traceback (most recent call last):
+  File "/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/src/agent_alfred/gateway/web/handler.py", line 353, in _handle_admitted
+    self._route_get(path)
+    ~~~~~~~~~~~~~~~^^^^^^
+  File "/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/src/agent_alfred/gateway/web/handler.py", line 393, in _route_get
+    self.wfile.write(body)
+    ~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py", line 845, in write
+    self._sock.sendall(b)
+    ~~~~~~~~~~~~~~~~~~^^^
+BrokenPipeError: [Errno 32] Broken pipe
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py", line 697, in process_request_thread
+    self.finish_request(request, client_address)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py", line 766, in __init__
+    self.handle()
+    ~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py", line 500, in handle
+    self.handle_one_request()
+    ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py", line 488, in handle_one_request
+    method()
+    ~~~~~~^^
+  File "/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/src/agent_alfred/gateway/web/handler.py", line 260, in do_GET
+    self._handle("GET")
+    ~~~~~~~~~~~~^^^^^^^
+  File "/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/src/agent_alfred/gateway/web/handler.py", line 326, in _handle
+    self._handle_admitted(method, authorization)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/src/agent_alfred/gateway/web/handler.py", line 360, in _handle_admitted
+    self._send(500, {"code": "internal_error"})
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/src/agent_alfred/gateway/web/handler.py", line 227, in _send
+    self.end_headers()
+    ~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py", line 602, in end_headers
+    self.flush_headers()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py", line 606, in flush_headers
+    self.wfile.write(b"".join(self._headers_buffer))
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py", line 845, in write
+    self._sock.sendall(b)
+    ~~~~~~~~~~~~~~~~~~^^^
+BrokenPipeError: [Errno 32] Broken pipe
+----------------------------------------
+ok wait-settled 11d8b90421a24324900e19fec5a4dd87

@@ -1,0 +1,96 @@
+{
+  "started_at": "2026-10-09T11:38:26.628773+00:00",
+  "command": [
+    "/opt/homebrew/opt/node@22/bin/node",
+    "/Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/scripts/check_dashboard_lifecycle.mjs",
+    "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation/lifecycle-manifest.json"
+  ],
+  "cwd": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation",
+  "seconds": 4.93,
+  "exit_code": 0,
+  "log": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation/lifecycle-01.log",
+  "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "manifest": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation/lifecycle-manifest.json",
+  "manifest_sha256": "f2b8fab79f958962f39aa2c958fcb995ba9235df38f5147da68eb5fac778ef02",
+  "raw_result": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-lifecycle-01/result.json",
+  "raw_result_sha256": "d08ecec57c384b3f34df3ae593e0cbd59d105a6080301e3bb7b9934394e22a5f",
+  "result": "PASS",
+  "script_status": "PASS",
+  "stages": [
+    {
+      "label": "old",
+      "instance": "7c85c1bcf706480093a6616fc71e0a3a",
+      "package": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-old-env/lib/python3.14/site-packages/agent_alfred",
+      "html_sha256": "dbc0fc0b6bd0a83c1380ce598f9af7ab6285c4ba6e8fc235d011e1483177d279",
+      "close": {
+        "code": 0,
+        "signal": null,
+        "events": [
+          {
+            "event": "ready",
+            "instance": "7c85c1bcf706480093a6616fc71e0a3a",
+            "package": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-old-env/lib/python3.14/site-packages/agent_alfred",
+            "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-old-env/bin/python",
+            "html_sha256": "dbc0fc0b6bd0a83c1380ce598f9af7ab6285c4ba6e8fc235d011e1483177d279"
+          },
+          {
+            "event": "closed",
+            "closed": true,
+            "model_calls": 2
+          }
+        ],
+        "stderr": ""
+      }
+    },
+    {
+      "label": "current",
+      "instance": "7ba96762d36f45c7820942c0ba575242",
+      "package": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-current-env/lib/python3.14/site-packages/agent_alfred",
+      "html_sha256": "95c08606a8ef01193eb476364cfbcf59270ed89f48b0d84d4ef759ae5ce597ac",
+      "close": {
+        "code": 0,
+        "signal": null,
+        "events": [
+          {
+            "event": "ready",
+            "instance": "7ba96762d36f45c7820942c0ba575242",
+            "package": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-current-env/lib/python3.14/site-packages/agent_alfred",
+            "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-current-env/bin/python",
+            "html_sha256": "95c08606a8ef01193eb476364cfbcf59270ed89f48b0d84d4ef759ae5ce597ac"
+          },
+          {
+            "event": "closed",
+            "closed": true,
+            "model_calls": 2
+          }
+        ],
+        "stderr": ""
+      }
+    },
+    {
+      "label": "supported",
+      "instance": "d390e627b33745928a81e49163cbd5da",
+      "package": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-supported-env/lib/python3.14/site-packages/agent_alfred",
+      "html_sha256": "5c0ac8efdf43a0fe7b4a18909a3c40e477c4d8f126e5ec03e1456a02d8674da6",
+      "close": {
+        "code": 0,
+        "signal": null,
+        "events": [
+          {
+            "event": "ready",
+            "instance": "d390e627b33745928a81e49163cbd5da",
+            "package": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-supported-env/lib/python3.14/site-packages/agent_alfred",
+            "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-supported-env/bin/python",
+            "html_sha256": "5c0ac8efdf43a0fe7b4a18909a3c40e477c4d8f126e5ec03e1456a02d8674da6"
+          },
+          {
+            "event": "closed",
+            "closed": true,
+            "model_calls": 0
+          }
+        ],
+        "stderr": ""
+      }
+    }
+  ]
+}

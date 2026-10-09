@@ -1,0 +1,96 @@
+
+> test:browser
+> playwright test tests/browser/mainbar-location.spec.js tests/browser/mainbar-reading.spec.js tests/browser/run-purposes.spec.js --output /Users/nineofour/.codex/dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/green-focused
+
+
+Running 15 tests using 1 worker
+
+(node:57181) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 tests/browser/mainbar-location.spec.js:16:1 › exact MainBar location is one bounded read with a marked preview and separate history cursor (386ms)
+  ✘   2 tests/browser/mainbar-location.spec.js:30:1 › successive exact locations stay separate until ordinary history or SSE owns the same records (15.1s)
+(node:57234) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   3 tests/browser/mainbar-location.spec.js:67:51 › exact location retires on offline and cannot overwrite a new location after reconnect (370ms)
+  ✓   4 tests/browser/mainbar-location.spec.js:67:51 › exact location retires on sse-error and cannot overwrite a new location after reconnect (353ms)
+  ✓   5 tests/browser/mainbar-location.spec.js:91:1 › process-gap navigation distinguishes a legal empty Run ID from an absent target (319ms)
+  ✓   6 tests/browser/mainbar-location.spec.js:100:1 › retired location cannot leave a loading state or late content after page navigation (386ms)
+  ✓   7 tests/browser/mainbar-location.spec.js:113:1 › failed exact location has an explicit read-only retry and does not create a Run (451ms)
+  ✓   8 tests/browser/mainbar-location.spec.js:126:1 › a later unavailable request cannot erase a retained preview marker (335ms)
+  ✓   9 tests/browser/mainbar-location.spec.js:135:1 › hidden no-reply failure retains outcome attention without inventing a new reply (352ms)
+  ✓  10 tests/browser/mainbar-location.spec.js:145:1 › restored unread identity remains unconfirmed when another history item is visible (375ms)
+  ✓  11 tests/browser/mainbar-location.spec.js:155:1 › a later preview cannot downgrade the same target full request or recorded state (334ms)
+  ✓  12 tests/browser/mainbar-location.spec.js:165:1 › idle reconnect verifies the same Run and does not infer saving from an unrelated persisted pair (386ms)
+  ✓  13 tests/browser/mainbar-reading.spec.js:13:1 › new reply preserves a selected old message and only explicit latest follows it (390ms)
+  ✓  14 tests/browser/mainbar-reading.spec.js:27:1 › opening hidden MainBar at an old position does not acknowledge the new reply (425ms)
+  ✘  15 tests/browser/run-purposes.spec.js:3:1 › Overview, Run list and details distinguish all known purposes from an unknown purpose (15.1s)
+
+
+  1) tests/browser/mainbar-location.spec.js:30:1 › successive exact locations stay separate until ordinary history or SSE owns the same records 
+
+    Test timeout of 15000ms exceeded.
+
+    Error: locator.click: Test timeout of 15000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: '更早的消息', exact: true })
+
+
+      52 |
+      53 |   await locate(page,session,'a');await locate(page,session,'b');
+    > 54 |   await page.getByRole('button',{name:'更早的消息',exact:true}).click();
+         |                                                            ^
+      55 |   await expect(page.locator('#messages [data-run-id="a"]')).toContainText('普通历史 a');
+      56 |   expect(cursors).toContain('ordinary-older');
+      57 |   await domain(page,1,session,{name:'run.finished',outcome:'completed',reply_disposition:'reply',reply:{blocks:[{type:'text',text:'SSE 确认正文 b'}]}},{runId:'b'});
+        at /Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/tests/browser/mainbar-location.spec.js:54:60
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/green-focused/mainbar-location-successiv-f87e7-r-SSE-owns-the-same-records/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/green-focused/mainbar-location-successiv-f87e7-r-SSE-owns-the-same-records/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/green-focused/mainbar-location-successiv-f87e7-r-SSE-owns-the-same-records/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/green-focused/mainbar-location-successiv-f87e7-r-SSE-owns-the-same-records/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) tests/browser/run-purposes.spec.js:3:1 › Overview, Run list and details distinguish all known purposes from an unknown purpose 
+
+    Test timeout of 15000ms exceeded.
+
+    Error: locator.click: Test timeout of 15000ms exceeded.
+    Call log:
+      - waiting for getByRole('link', { name: '返回运行列表', exact: true })
+
+
+      55 |     await expect(summary.getByText(expected, {exact: true})).toBeVisible();
+      56 |     if (label !== null) await expect(summary).not.toContainText('未知用途');
+    > 57 |     await page.getByRole('link', {name: '返回运行列表', exact: true}).click();
+         |                                                                 ^
+      58 |   }
+      59 | });
+      60 |
+        at /Users/nineofour/.codex/worktrees/dashboard-integration/Agent-Alfred/tests/browser/run-purposes.spec.js:57:65
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/green-focused/run-purposes-Overview-Run--206e2-ses-from-an-unknown-purpose/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/green-focused/run-purposes-Overview-Run--206e2-ses-from-an-unknown-purpose/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/green-focused/run-purposes-Overview-Run--206e2-ses-from-an-unknown-purpose/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/repair-pr120-20261009-7wpdbm31/green-focused/run-purposes-Overview-Run--206e2-ses-from-an-unknown-purpose/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    tests/browser/mainbar-location.spec.js:30:1 › successive exact locations stay separate until ordinary history or SSE owns the same records 
+    tests/browser/run-purposes.spec.js:3:1 › Overview, Run list and details distinguish all known purposes from an unknown purpose 
+  13 passed (36.4s)

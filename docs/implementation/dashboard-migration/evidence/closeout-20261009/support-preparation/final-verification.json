@@ -1,0 +1,54 @@
+{
+  "at": "2026-10-09T11:39:15.543046+00:00",
+  "result": "PASS",
+  "candidate": "support-closeout-r1-uncommitted",
+  "head_unchanged": "8d4adbc97cf1f5d55e3d36b65da7dbf2a1a1be2a",
+  "manifest_sha256": "54235b595fe2a096f1ebb33b1920efc8f5956dd36205c281fbfbd15833d0d60b",
+  "identity": {
+    "candidate": "support-closeout-r1-uncommitted",
+    "base_head": "8d4adbc97cf1f5d55e3d36b65da7dbf2a1a1be2a",
+    "tree": "641dba43d5e468f2d62be709953765b42b4bcaca",
+    "src_tree": "534f2caae73702d69a57ddf54b9af20dd207b326",
+    "package_tree": "ac9c0adf3bd35595e8280ecc1876fd0a1d5d2929",
+    "manifest": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/support-preparation/candidate-manifest.json",
+    "manifest_sha256": "54235b595fe2a096f1ebb33b1920efc8f5956dd36205c281fbfbd15833d0d60b",
+    "calculation": "Temporary GIT_INDEX_FILE from base plus the exact seven included paths; real index unchanged; no commit."
+  },
+  "files_match_frozen_manifest": 7,
+  "all_product_files_match_manifest": 620,
+  "integration_product_differences": [
+    "src/agent_alfred/ops/static/index.html",
+    "src/agent_alfred/ops/static/shell.js"
+  ],
+  "index": "EMPTY",
+  "status": " M src/agent_alfred/ops/static/app.js\n M src/agent_alfred/ops/static/models.js\n M src/agent_alfred/ops/static/overview.js\n M src/agent_alfred/ops/static/run-fields.js\n M tests/browser/mainbar-location.spec.js\n M tests/browser/models-migration.spec.js\n?? tests/browser/run-purposes.spec.js\n",
+  "diff_check_exit": 0,
+  "new_tests_added_by_executor": false,
+  "regression_reruns": false,
+  "new_lifecycle_run": {
+    "result": "PASS",
+    "first_attempt": true,
+    "exit_code": 0,
+    "seconds": 4.93,
+    "close_codes": [
+      0,
+      0,
+      0
+    ],
+    "close_confirmed": [
+      true,
+      true,
+      true
+    ],
+    "port_released": true,
+    "raw_sha256": "d08ecec57c384b3f34df3ae593e0cbd59d105a6080301e3bb7b9934394e22a5f",
+    "portable_sha256": "fadab8f1787c0cadf54743bd9f23d5b83a01c9930f6f402c54e4c5801957aa72",
+    "redactions": [
+      "stages[0].entry.csrf_token",
+      "stages[1].entry.csrf_token",
+      "stages[2].entry.csrf_token"
+    ]
+  },
+  "commit_push_remote_mutation": "NOT PERFORMED",
+  "integration_or_canonical_ledger_writes": "NOT PERFORMED"
+}
