@@ -58,3 +58,27 @@ test('AC-25: real browser offline and online clears results, preserves SQL, neve
   await expect(sql).toHaveValue('SELECT 7 AS online_value');
   expect(executes).toBe(1);
 });
+
+test('S10 a new process invalidates the old query and verifies new capability without rerunning', async ({page}) => {
+  const server = await memoryServer();
+  try {
+    await page.goto(server.origin+'/database');
+    await expect(page.getByText('可执行',{exact:true})).toBeVisible();
+    const sql = page.getByRole('textbox',{name:'SQL',exact:true});
+    let executions = 0;
+    page.on('request', r => {if(r.url().endsWith('/execute')) executions++;});
+    await sql.fill('SELECT 12 AS original');
+    await page.getByRole('button',{name:'执行',exact:true}).click();
+    await expect(page.getByRole('region',{name:'查询结果'}).locator('td')).toHaveText('12');
+    await sql.fill('SELECT 24 AS next_draft');
+    await server.restart();
+    await expect(page.getByText('可执行',{exact:true})).toBeVisible();
+    await expect(page.getByRole('region',{name:'查询结果'})).toBeEmpty();
+    await expect(page.getByRole('region',{name:'已提交查询'})).toBeEmpty();
+    await expect(sql).toHaveValue('SELECT 24 AS next_draft');
+    expect(executions).toBe(1);
+    await page.getByRole('button',{name:'执行',exact:true}).click();
+    await expect(page.getByRole('region',{name:'查询结果'}).locator('td')).toHaveText('24');
+    expect(executions).toBe(2);
+  } finally {await server.close();}
+});
