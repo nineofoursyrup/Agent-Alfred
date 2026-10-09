@@ -122,7 +122,7 @@ test('a successful creation from an earlier process stays a receipt until explic
   } finally {if(held)await held.release();await server.close();}
 });
 
-for(const intent of ['unchanged','navigate','focus'])test(`first native mount before the real creation receipt preserves ${intent} intent`,async({page})=>{
+for(const intent of ['unchanged','navigate','focus','close','reading','opener-focus'])test(`first native mount before the real creation receipt preserves ${intent} intent`,async({page})=>{
   const server=await memoryServer({script:'tests/browser/overview_server.py'});let held,releaseSSE;
   try {
     await observeStream(page);
@@ -142,9 +142,13 @@ for(const intent of ['unchanged','navigate','focus'])test(`first native mount be
       await page.keyboard.press('Tab');
       expect(await page.evaluate(()=>document.activeElement?.tagName)).not.toMatch(/^(BODY|H1)$/);
     }
+    if(intent==='close')await page.getByRole('button',{name:'收起主对话',exact:true}).click();
+    if(intent==='reading')await page.locator('#mainbar-title').focus();
+    if(intent==='opener-focus')await page.locator('#shell-toolbar [data-open-panel="mainbar"]').focus();
     const focused=await page.locator(':focus').elementHandle();
     const b=held.body.session_id;await held.release();
-    const input=page.getByRole('textbox',{name:'消息',exact:true});
+    const input=page.locator('#message');
+    if(intent==='close')await expect(page.getByRole('region',{name:'主对话',exact:true})).toBeHidden();
     if(intent==='unchanged') {
       await expect.poll(()=>selected(page)).toBe(b);await expect(input).toBeEnabled();await expect(input).toBeFocused();
       await expect(page.getByRole('region',{name:'新建会话回执',exact:true})).toHaveCount(0);
@@ -193,4 +197,30 @@ for(const viewport of [{width:320,height:360},{width:320,height:800},{width:1440
     if(viewport.width<1100){await page.locator('#shell-toolbar [data-open-panel="navigation"]').click();await expect(page.getByRole('navigation',{name:'主导航',exact:true}).getByRole('link',{name:'收件箱',exact:true})).toBeInViewport({ratio:1});}
     expect(posts).toEqual(['/api/sessions']);await oneStream(page);
   } finally {if(held)await held.release();await server.close();}
+});
+
+for (const existing of [false, true]) test(`opening the same MainBar during a real creation receipt keeps the selection intent (existing=${existing})`, async ({page}) => {
+  const server = await memoryServer({script:'tests/browser/overview_server.py'}); let held;
+  try {
+    let original = null;
+    if (existing) {
+      original = await setup(page, server.origin);
+      await page.getByRole('textbox',{name:'消息',exact:true}).fill('原会话独立草稿');
+    } else {
+      await observeStream(page); await page.goto(server.origin+'/inbox');
+      await expect.poll(async()=>(await runtime(page)).connected).toBe(true);
+    }
+    const posts=[]; page.on('request',request=>{if(request.method()==='POST')posts.push(new URL(request.url()).pathname);});
+    held=await holdCreate(page);
+    await page.getByRole('button',{name:'新建会话',exact:true}).click(); await held.ready;
+    const created=held.body.session_id;
+    await page.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
+    await held.release();
+    await expect.poll(()=>selected(page)).toBe(created);
+    await expect(page.getByRole('textbox',{name:'消息',exact:true})).toBeEnabled();
+    await expect(page.getByRole('textbox',{name:'消息',exact:true})).toHaveValue('');
+    await expect(page.getByRole('region',{name:'新建会话回执',exact:true})).toHaveCount(0);
+    if(existing) expect(await page.evaluate(id=>sessionStorage.getItem('alfred.draft:'+id),original)).toBe('原会话独立草稿');
+    await oneStream(page); expect(posts).toEqual(['/api/sessions']);
+  } finally {if(held)await held.release(); await server.close();}
 });

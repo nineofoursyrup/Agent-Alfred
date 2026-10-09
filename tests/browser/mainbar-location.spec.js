@@ -104,6 +104,11 @@ test('a later preview cannot downgrade the same target full request or recorded 
 test('idle reconnect verifies the same Run and does not infer saving from an unrelated persisted pair',async({page})=>{
   const session=await controlledTransport(page);let reads=0;
   await domain(page,1,session,{name:'run.finished',outcome:'completed',reply_disposition:'reply',reply:{blocks:[{type:'text',text:'待核对回复'}]}});
+  // Drain the setup/finished reads before counting this reconnect's one read.
+  // Domain decoding is asynchronous; seeing its reply proves it was applied,
+  // and the history control re-enables only after queued refreshes finish.
+  await expect(page.locator('#messages')).toContainText('待核对回复');
+  await expect(page.locator('#older')).toBeEnabled();
   await page.getByRole('button',{name:'收起主对话',exact:true}).click();
   await page.route('**/api/mainbar?*',route=>{reads++;return route.fulfill({json:{items:[{type:'run_pair',run_id:reads===1?'other-recorded-run':'r1',activity_revision:1,user:[{type:'text',text:'持久请求'}],assistant:[{type:'text',text:'持久回复'}]}],next_cursor:null,runs_pending:false}});});
   const sources=await page.evaluate(()=>window.sources.length);
