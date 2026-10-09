@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -169,10 +170,13 @@ model = ScriptedModel([])
 dashboard = build_dashboard(
     state_dir=root / "diagnostic-dashboard", port=port,
     factory=ScriptedModelFactory(model),
+    credentials=CredentialOverlay({}, None),
 )
 dashboard.start()
 try:
     origin = f"http://127.0.0.1:{port}"
+    from dashboard_installation_probe import verify_dashboard_http
+    dashboard_http = verify_dashboard_http(origin, package)
     def http(path, body=None):
         data = None if body is None else json.dumps(body).encode()
         headers = {} if body is None else {
@@ -208,6 +212,7 @@ print(
             "package": __import__("agent_alfred").__file__,
             "core": "PASS", "cli": "PASS", "files": "PASS",
             "database_dashboard": "PASS",
+            "dashboard_http": dashboard_http,
             "import_path": str(package), "python_path": sys.executable,
             "cwd": str(root), "source_contamination": False,
             "prefix": sys.prefix,
@@ -227,8 +232,9 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     artifacts = sorted(args.dist.resolve().glob("agent_alfred-*"))
-    assert any(p.suffix == ".whl" for p in artifacts)
-    assert any(p.name.endswith(".tar.gz") for p in artifacts)
+    assert len(artifacts) == 2, "Use a fresh dist with exactly one wheel and one sdist"
+    assert sum(p.suffix == ".whl" for p in artifacts) == 1
+    assert sum(p.name.endswith(".tar.gz") for p in artifacts) == 1
     source_root = Path(__file__).resolve().parents[1]
     package_root = source_root / "src" / "agent_alfred"
     expected = {
@@ -263,6 +269,10 @@ def main():
                 expected_path.write_text(json.dumps(expected))
                 smoke = root / "smoke.py"
                 smoke.write_text(SMOKE)
+                shutil.copyfile(
+                    source_root / "scripts/dashboard_installation_probe.py",
+                    root / "dashboard_installation_probe.py",
+                )
                 result = subprocess.run(
                     [
                         str(python),
