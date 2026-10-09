@@ -1,0 +1,36 @@
+{
+  "result": "PASS",
+  "candidate_tree": "123caa591cf8053a9cfbafa7fdbe2e9865e77686",
+  "support_tree": "19be93d8a59b0cb463f7fb2fbcbc2d0d371699b0",
+  "old_head": "22c8720e1ec874fd012cc79b086cd8aace4c79b6",
+  "same_fresh_state": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-result/state",
+  "normal_closes": [
+    {
+      "stage": "old",
+      "code": 0,
+      "closed": true
+    },
+    {
+      "stage": "current",
+      "code": 0,
+      "closed": true
+    },
+    {
+      "stage": "supported",
+      "code": 0,
+      "closed": true
+    }
+  ],
+  "port_released": true,
+  "port": 51270,
+  "raw_sha256": "c3cf221bb4751d5d2e3995e2dd78d12d3efb9c477f75d976836bca1af69f5880",
+  "portable_sha256": "28651e89af434f03f6917f5856f86cde2f4bc0e97274da64c23c3a67fd96908c",
+  "redactions": [
+    "/stages/0/entry/csrf_token",
+    "/stages/1/entry/csrf_token",
+    "/stages/2/entry/csrf_token"
+  ],
+  "source_binding": "lifecycle-source-binding.json",
+  "source_binding_sha256": "9bdd92263ae2a308e56ad10d960eb4db92b2aff6e722e4cb4850134dc48600db",
+  "claims": "Existing lifecycle runner completed all original assertions on old/current/supported installed wheels; same retained browser tab, normal release, preserved Session/messages/Memory/forgetting/accounting/settings/draft/deep-link, no automatic POST on refresh. No broader runtime rollback compatibility claimed."
+}

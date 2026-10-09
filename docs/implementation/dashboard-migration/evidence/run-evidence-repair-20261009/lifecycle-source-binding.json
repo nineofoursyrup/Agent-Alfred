@@ -1,0 +1,26 @@
+{
+  "old": {
+    "result": "PASS",
+    "package_files": 598,
+    "wheel_sha256": "d688a7aebdcc9451003e12f316be9930fd9fb7ffff8b5c12557fdb513fec4a46",
+    "source_tree": "22c8720e1ec874fd012cc79b086cd8aace4c79b6",
+    "installed_root": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-old-env/lib/python3.14/site-packages/agent_alfred",
+    "package_manifest_sha256": "61523fb6ff316e246185228ae4f67e2392d59852ca404cfa8bb97fdc8ad07597"
+  },
+  "current": {
+    "result": "PASS",
+    "package_files": 620,
+    "wheel_sha256": "d06e3d61e6bf33ff98b775451f05285f69387ba0159b27b2bc63bc7c554c780d",
+    "source_tree": "123caa591cf8053a9cfbafa7fdbe2e9865e77686",
+    "installed_root": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-current-env/lib/python3.14/site-packages/agent_alfred",
+    "package_manifest_sha256": "d283c4b95f1cb423cc1cf3ff8def668e0543abbd26f7f592f25e93259fcc5cfc"
+  },
+  "supported": {
+    "result": "PASS",
+    "package_files": 620,
+    "wheel_sha256": "98eaaf1bd01c3f52889447c4f207ba503fa22618f2c57d18464b58ca389022be",
+    "source_tree": "19be93d8a59b0cb463f7fb2fbcbc2d0d371699b0",
+    "installed_root": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-supported-env/lib/python3.14/site-packages/agent_alfred",
+    "package_manifest_sha256": "fe05a53dd00ee9862bf65175aac9d51834ec6407d1d2532a3b949b2e4ec7ec7e"
+  }
+}

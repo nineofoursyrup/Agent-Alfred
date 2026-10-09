@@ -1,0 +1,93 @@
+{
+  "request_id": "post120-run-evidence-repair-r1",
+  "generation": 1,
+  "finding_id": "POST-120-01",
+  "candidate_tree": "123caa591cf8053a9cfbafa7fdbe2e9865e77686",
+  "candidate_full_diff_sha256": "28bd8f28f77cf96b2a1e57be0fdcb7756b6700ae42f2b32a961740da7179d64d",
+  "environment": {
+    "node": "v22.23.2",
+    "python": "Python 3.14.7",
+    "playwright": "1.63.0",
+    "browser": "chromium from local installed Playwright bundle"
+  },
+  "checks": [
+    {
+      "name": "controlled-red",
+      "cwd": "/Users/nineofour/.codex/worktrees/dashboard-run-evidence-fix/Agent-Alfred",
+      "command": "ALFRED_BROWSER_TEST_PORT=17963 /opt/homebrew/opt/node@22/bin/node node_modules/@playwright/test/cli.js test tests/browser/run-path.spec.js --grep 'late process evidence' --output /Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/postmerge-controlled-red-results",
+      "log": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/postmerge-controlled-red.log",
+      "log_sha256": "a99903b70fb270bd6111efad8abde3f31467dc964399ffc5fe35b72d27b3cb39",
+      "exit_code": 1,
+      "result": "Expected missing Step 1 link; 1 failed (test 5.8s)",
+      "applies_to_frozen_candidate": false
+    },
+    {
+      "name": "controlled-red-r2",
+      "cwd": "/Users/nineofour/.codex/worktrees/dashboard-run-evidence-fix/Agent-Alfred",
+      "command": "ALFRED_BROWSER_TEST_PORT=17963 /opt/homebrew/opt/node@22/bin/node node_modules/@playwright/test/cli.js test tests/browser/run-path.spec.js --grep 'late process evidence' --output /Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/postmerge-controlled-red-r2-results",
+      "log": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/postmerge-controlled-red-r2.log",
+      "log_sha256": "82669c5cd1130b2cc0621960fe8967fdc9341c07c0c095f3fb8087abab45f21b",
+      "exit_code": 1,
+      "result": "Expected missing Step 1 link after raw definition focus/expansion assertions; 1 failed",
+      "applies_to_frozen_candidate": false
+    },
+    {
+      "name": "first-green",
+      "cwd": "/Users/nineofour/.codex/worktrees/dashboard-run-evidence-fix/Agent-Alfred",
+      "command": "ALFRED_BROWSER_TEST_PORT=17963 /opt/homebrew/opt/node@22/bin/node node_modules/@playwright/test/cli.js test tests/browser/run-path.spec.js --grep 'late process evidence' --output /Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/green-results",
+      "log": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/green.log",
+      "log_sha256": "5509a580e0e14534ec3ae2b2aa9c49ee51ef72df0d8670c8305f79e9b8fd556e",
+      "exit_code": 0,
+      "result": "1 passed (3.2s); before final trace-loss/restoration extension",
+      "applies_to_frozen_candidate": false
+    },
+    {
+      "name": "final-lifecycle",
+      "cwd": "/Users/nineofour/.codex/worktrees/dashboard-run-evidence-fix/Agent-Alfred",
+      "command": "ALFRED_BROWSER_TEST_PORT=17963 /opt/homebrew/opt/node@22/bin/node node_modules/@playwright/test/cli.js test tests/browser/run-path.spec.js --grep 'selected path references' --output /Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-results",
+      "log": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle.log",
+      "log_sha256": "5bb433baa9a77421d35a5cae7de191915b0ebfe4a80684d4819604df8e79e7e3",
+      "exit_code": 0,
+      "result": "1 passed (2.8s)",
+      "applies_to_frozen_candidate": true
+    },
+    {
+      "name": "related-browser",
+      "cwd": "/Users/nineofour/.codex/worktrees/dashboard-run-evidence-fix/Agent-Alfred",
+      "command": "ALFRED_BROWSER_TEST_PORT=17963 /opt/homebrew/opt/node@22/bin/node node_modules/@playwright/test/cli.js test tests/browser/run-path.spec.js tests/browser/topology.spec.js tests/browser/runs.spec.js tests/browser/inbox-run-sources.spec.js tests/browser/inbox-run-navigation.spec.js tests/browser/run-purposes.spec.js tests/browser/behaviour.spec.js --grep-invert 'selected path references follow' --output /Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/related-results",
+      "log": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/related.log",
+      "log_sha256": "5ef95fccf18d92bea360adb0ca060b766e7ed9c2a45f6dadbdccfabe1ad4fa08",
+      "exit_code": 0,
+      "result": "137 passed (3.0m); final lifecycle is reused from its unchanged-candidate run",
+      "applies_to_frozen_candidate": true
+    },
+    {
+      "name": "typecheck",
+      "cwd": "/Users/nineofour/.codex/worktrees/dashboard-run-evidence-fix/Agent-Alfred",
+      "command": "PATH=/opt/homebrew/opt/node@22/bin:$PATH npm run typecheck",
+      "log": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/typecheck.log",
+      "log_sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f",
+      "exit_code": 0,
+      "result": "tsc --noEmit PASS",
+      "applies_to_frozen_candidate": true
+    },
+    {
+      "name": "diff-check",
+      "cwd": "/Users/nineofour/.codex/worktrees/dashboard-run-evidence-fix/Agent-Alfred",
+      "command": "git diff --check",
+      "exit_code": 0,
+      "stdout": "",
+      "applies_to_frozen_candidate": true,
+      "record": "Executed independently and inside freeze-candidate.py before index-tree generation; support tree diff check also exited 0."
+    }
+  ],
+  "remaining": [
+    "Independent Standards / Spec review of exact frozen candidate by root coordinator",
+    "Remote PR/merge CI and acceptance writeback by root coordinator",
+    "New wheel and four-installation / G08 support evidence by root coordinator"
+  ],
+  "not_run": [
+    "Full local Python test suite and full local browser suite outside the seven affected files; product changes are confined to frontend reference synchronization",
+    "Separate support-tree browser run; all three changed files are byte-identical and only original index.html/shell.js defaults differ across 620 src files"
+  ]
+}

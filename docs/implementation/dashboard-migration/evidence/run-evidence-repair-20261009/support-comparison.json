@@ -1,0 +1,10 @@
+{
+  "main_tree": "123caa591cf8053a9cfbafa7fdbe2e9865e77686",
+  "support_tree": "19be93d8a59b0cb463f7fb2fbcbc2d0d371699b0",
+  "source_paths_compared": 620,
+  "source_differences": [
+    "src/agent_alfred/ops/static/index.html",
+    "src/agent_alfred/ops/static/shell.js"
+  ],
+  "all_three_repair_paths_identical": true
+}

@@ -1,0 +1,103 @@
+﻿2026-10-09T13:54:35.3169309Z ##[group]Run npm run test:browser
+2026-10-09T13:54:35.3169593Z [36;1mnpm run test:browser[0m
+2026-10-09T13:54:35.3222863Z shell: /usr/bin/bash -e {0}
+2026-10-09T13:54:35.3223204Z env:
+2026-10-09T13:54:35.3223442Z   pythonLocation: /opt/hostedtoolcache/Python/3.14.8/x64
+2026-10-09T13:54:35.3223757Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.14.8/x64/lib/pkgconfig
+2026-10-09T13:54:35.3238017Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.14.8/x64
+2026-10-09T13:54:35.3238244Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.14.8/x64
+2026-10-09T13:54:35.3238450Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.14.8/x64
+2026-10-09T13:54:35.3238689Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.14.8/x64/lib
+2026-10-09T13:54:35.3238866Z   UV_PYTHON: 3.14
+2026-10-09T13:54:35.3239011Z   UV_CACHE_DIR: /home/runner/work/_temp/setup-uv-cache
+2026-10-09T13:54:35.3239177Z ##[endgroup]
+2026-10-09T13:54:35.3911437Z 
+2026-10-09T13:54:35.3912045Z > test:browser
+2026-10-09T13:54:35.3912333Z > playwright test
+2026-10-09T13:54:35.3912488Z 
+2026-10-09T13:54:37.2374909Z 
+2026-10-09T13:54:37.2375646Z Running 541 tests using 1 worker
+2026-10-09T13:56:56.9798986Z ··································································actual-lifecycle reload {"before":{"query_id":"ak7HSj7XthVYzytSALGYVtKo","pid":18474,"status":"running","cleanup":"pending"},"after":{"query_id":"ak7HSj7XthVYzytSALGYVtKo","pid":18474,"pid_exists":false,"status":"cancelled","cleanup":"released","worker":null,"response_owner":null,"buffers":0,"source_write_lock":"acquired-and-released"}}
+2026-10-09T13:56:58.7206108Z ·actual-lifecycle close {"before":{"query_id":"w5JTs83s6IKIyjBNIpDOEK84","pid":18506,"status":"running","cleanup":"pending"},"after":{"query_id":"w5JTs83s6IKIyjBNIpDOEK84","pid":18506,"pid_exists":false,"status":"cancelled","cleanup":"released","worker":null,"response_owner":null,"buffers":0,"source_write_lock":"acquired-and-released"}}
+2026-10-09T13:57:14.2540557Z ···········real-status-loss {"kind":"failed","execute":{"http":400,"body":{"code":"sql_error","detail":"SQL 无法执行。","query_id":"TrSnQoo3d6CFfrLb0f-Lsus8"}},"status":{"http":200,"body":{"query_id":"TrSnQoo3d6CFfrLb0f-Lsus8","instance_id":"216fb9caaac24e2e9c98d2ec016a7432","status":"failed","cleanup":"released"}}}
+2026-10-09T13:57:20.5330842Z ·real-status-loss {"kind":"timed_out","execute":{"http":504,"body":{"code":"query_timeout","detail":"查询超过执行期限。","query_id":"i_x0TqsL2wIWJ2WUAxel3rUK"}},"status":{"http":200,"body":{"query_id":"i_x0TqsL2wIWJ2WUAxel3rUK","instance_id":"ef402fdb7ee7441db3357c237cd0e8b7","status":"timed_out","cleanup":"released"}}}
+2026-10-09T13:57:22.0068754Z ·real-status-loss {"kind":"completed","execute":{"http":200,"body":{"query_id":"DbLRrvlFnXGOW4k0MiAVEgoo","instance_id":"e35ce34fe19c436e9ac871d90f1cf85c","memory_revision":"11","protection_version":"5","objects":[],"coverage":{"attempts":{"recorded":0,"recorded_empty":0,"unrecorded":0,"in_progress_runs":0},"notice":"缺行不证明未发生请求"},"read_at":"2026-10-09T13:57:21.946794Z","columns":["unseen"],"rows":[[{"type":"integer","value":"12"}]],"returned_rows":1,"truncated":false,"truncation_reasons":[]}},"status":{"http":200,"body":{"query_id":"DbLRrvlFnXGOW4k0MiAVEgoo","instance_id":"e35ce34fe19c436e9ac871d90f1cf85c","status":"completed","cleanup":"released","result_delivered":true}}}
+2026-10-09T13:57:22.4449051Z 
+2026-10-09T13:57:40.9310353Z ·······actual-cleanup-failure {"cancel":{"query_id":"orqXIMxCsZXh8NUQ0gnK47C7","status":"failed","cleanup":"failed"},"status":{"query_id":"orqXIMxCsZXh8NUQ0gnK47C7","instance_id":"b7b59acd5c5e4a00868fa90d0deb8b73","status":"failed","cleanup":"failed"},"newHandleStatus":503}
+2026-10-09T13:57:43.9850073Z ··lost-receipt-recovery {"lost":"issuance","handles":["CNgsmnyeT99n5e2lWdffscHa","fp8EtVodVPxQ97gcr047nxli"],"executes":1,"lostStatusReads":0,"actual":{"query_id":"CNgsmnyeT99n5e2lWdffscHa","instance_id":"946236b8e2cf4673b5bfdc2928c4abab","status":"unused","cleanup":"released"},"capability":{"instance":"946236b8e2cf4673b5bfdc2928c4abab","available":true}}
+2026-10-09T13:57:45.6211188Z ·lost-receipt-recovery {"lost":"execute","handles":["3sT-pziHK3GggKSSPKPvi11E","mE5DMmu7oYaRKsnwJBHALEQx"],"executes":2,"lostStatusReads":2,"actual":{"query_id":"3sT-pziHK3GggKSSPKPvi11E","instance_id":"712d88ea87254d9694c63ae3d4c3efdb","status":"completed","cleanup":"released","result_delivered":true},"capability":{"instance":"712d88ea87254d9694c63ae3d4c3efdb","available":true}}
+2026-10-09T13:59:04.5910623Z [WebServer] ----------------------------------------
+2026-10-09T13:59:04.5911210Z [WebServer] Exception occurred during processing of request from ('127.0.0.1', 47322)
+2026-10-09T13:59:04.6412485Z [WebServer] Traceback (most recent call last):
+2026-10-09T13:59:04.6413738Z [WebServer]   File "/opt/hostedtoolcache/Python/3.14.8/x64/lib/python3.14/socketserver.py", line 697, in process_request_thread
+2026-10-09T13:59:04.6414707Z [WebServer]     self.finish_request(request, client_address)
+2026-10-09T13:59:04.6415300Z [WebServer]     ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-10-09T13:59:04.6416258Z [WebServer]   File "/opt/hostedtoolcache/Python/3.14.8/x64/lib/python3.14/socketserver.py", line 362, in finish_request
+2026-10-09T13:59:04.6417013Z [WebServer]     self.RequestHandlerClass(request, client_address, self)
+2026-10-09T13:59:04.6417521Z [WebServer]     ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-10-09T13:59:04.6418176Z [WebServer]   File "/opt/hostedtoolcache/Python/3.14.8/x64/lib/python3.14/socketserver.py", line 766, in __init__
+2026-10-09T13:59:04.6418671Z [WebServer]     self.handle()
+2026-10-09T13:59:04.6418907Z [WebServer]     ~~~~~~~~~~~^^
+2026-10-09T13:59:04.6419430Z [WebServer]   File "/opt/hostedtoolcache/Python/3.14.8/x64/lib/python3.14/http/server.py", line 502, in handle
+2026-10-09T13:59:04.6419930Z [WebServer]     self.handle_one_request()
+2026-10-09T13:59:04.6420249Z [WebServer]     ~~~~~~~~~~~~~~~~~~~~~~~^^
+2026-10-09T13:59:04.6420835Z [WebServer]   File "/opt/hostedtoolcache/Python/3.14.8/x64/lib/python3.14/http/server.py", line 468, in handle_one_request
+2026-10-09T13:59:04.6421436Z [WebServer]     self.raw_requestline = self.rfile.readline(65537)
+2026-10-09T13:59:04.6421846Z [WebServer]                            ~~~~~~~~~~~~~~~~~~~^^^^^^^
+2026-10-09T13:59:04.6422415Z [WebServer]   File "/opt/hostedtoolcache/Python/3.14.8/x64/lib/python3.14/socket.py", line 729, in readinto
+2026-10-09T13:59:04.6422954Z [WebServer]     return self._sock.recv_into(b)
+2026-10-09T13:59:04.6423299Z [WebServer]            ~~~~~~~~~~~~~~~~~~~~^^^
+2026-10-09T13:59:04.6423710Z [WebServer] ConnectionResetError: [Errno 104] Connection reset by peer
+2026-10-09T13:59:04.6424277Z [WebServer] ----------------------------------------
+2026-10-09T13:59:14.4447601Z ······································································
+2026-10-09T13:59:29.9077807Z ·········S08 Connections central widths [{"viewport":[1440,900],"central":{"x":232,"y":65.390625,"width":888,"height":834.609375}},{"viewport":[1280,800],"central":{"x":232,"y":65.390625,"width":728,"height":734.609375}},{"viewport":[390,844],"central":{"x":0,"y":61.390625,"width":390,"height":782.609375}},{"viewport":[320,800],"central":{"x":0,"y":61.390625,"width":320,"height":738.609375}}]
+2026-10-09T14:02:00.3218945Z ·······································································
+2026-10-09T14:02:46.6514374Z ·······················S08 Models central widths [{"viewport":[1440,900],"central":{"x":232,"y":65.390625,"width":888,"height":834.609375}},{"viewport":[1280,800],"central":{"x":232,"y":65.390625,"width":728,"height":734.609375}},{"viewport":[390,844],"central":{"x":0,"y":61.390625,"width":390,"height":782.609375}},{"viewport":[320,800],"central":{"x":0,"y":61.390625,"width":320,"height":738.609375}}]
+2026-10-09T14:04:15.5818227Z ·························································
+2026-10-09T14:06:52.0908544Z ··············F·································································
+2026-10-09T14:07:56.8935271Z ·····························································actual-startup-reconnect {"runtime":{"instance":"4eb781bd8d5a475f8c68c0cbdbd51247","connected":true,"session":"d75afea9dd2f44528cb6188038d7f2e5","active":null,"revision":0,"unavailable":false},"snapshots":[{"instance":"4eb781bd8d5a475f8c68c0cbdbd51247","revision":0},{"instance":"4eb781bd8d5a475f8c68c0cbdbd51247","revision":0}],"reads":["/api/models"],"posts":[],"pages":1}
+2026-10-09T14:07:57.3025304Z actual-startup-server-exits [0,0]
+2026-10-09T14:08:21.0058310Z ···················
+2026-10-09T14:10:13.1765324Z ·····························································
+2026-10-09T14:10:13.1780747Z 
+2026-10-09T14:10:13.1785719Z   1) tests/browser/run-path.spec.js:57:73 › CE-11/AC-19 keyboard graph/text equivalence 1280 ───────
+2026-10-09T14:10:13.1786816Z 
+2026-10-09T14:10:13.1787079Z     Error: expect(locator).toBeVisible() failed
+2026-10-09T14:10:13.1787289Z 
+2026-10-09T14:10:13.1787713Z     Locator: getByRole('region', { name: '本次执行路径', exact: true }).locator('[aria-label="节点详情"] a').first()
+2026-10-09T14:10:13.1788056Z     Expected: visible
+2026-10-09T14:10:13.1788210Z     Timeout: 4000ms
+2026-10-09T14:10:13.1788358Z     Error: element(s) not found
+2026-10-09T14:10:13.1788453Z 
+2026-10-09T14:10:13.1788501Z     Call log:
+2026-10-09T14:10:13.1788880Z       - Expect "toBeVisible" getByRole('region', { name: '本次执行路径', exact: true }).locator('[aria-label="节点详情"] a').first() with timeout 4000ms
+2026-10-09T14:10:13.1789370Z       - waiting for getByRole('region', { name: '本次执行路径', exact: true }).locator('[aria-label="节点详情"] a').first()
+2026-10-09T14:10:13.1789572Z 
+2026-10-09T14:10:13.1789576Z 
+2026-10-09T14:10:13.1789822Z       77 |     await panel.getByRole('button',{name:'放大',exact:true}).focus();await page.keyboard.press('Enter');
+2026-10-09T14:10:13.1790647Z       78 |     const reference=panel.locator('[aria-label="节点详情"] a').first();
+2026-10-09T14:10:13.1790889Z     > 79 |     await expect(reference).toBeVisible();
+2026-10-09T14:10:13.1791074Z          |                             ^
+2026-10-09T14:10:13.1791363Z       80 |     const target=await reference.getAttribute('href');
+2026-10-09T14:10:13.1791624Z       81 |     await reference.focus();await page.keyboard.press('Enter');
+2026-10-09T14:10:13.1791876Z       82 |     expect(await page.locator(target).count()).toBe(1);
+2026-10-09T14:10:13.1792171Z         at /home/runner/work/Agent-Alfred/Agent-Alfred/tests/browser/run-path.spec.js:79:29
+2026-10-09T14:10:13.1792358Z 
+2026-10-09T14:10:13.1792586Z     attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+2026-10-09T14:10:13.1792978Z     output/playwright/results/run-path-CE-11-AC-19-keyboard-graph-text-equivalence-1280/test-failed-1.png
+2026-10-09T14:10:13.1793410Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-09T14:10:13.1793566Z 
+2026-10-09T14:10:13.1793813Z     Error Context: output/playwright/results/run-path-CE-11-AC-19-keyboard-graph-text-equivalence-1280/error-context.md
+2026-10-09T14:10:13.1794260Z 
+2026-10-09T14:10:13.1794476Z     attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+2026-10-09T14:10:13.1794855Z     output/playwright/results/run-path-CE-11-AC-19-keyboard-graph-text-equivalence-1280/trace.zip
+2026-10-09T14:10:13.1795112Z     Usage:
+2026-10-09T14:10:13.1795180Z 
+2026-10-09T14:10:13.1795545Z         npx playwright show-trace output/playwright/results/run-path-CE-11-AC-19-keyboard-graph-text-equivalence-1280/trace.zip
+2026-10-09T14:10:13.1795963Z 
+2026-10-09T14:10:13.1797095Z     ────────────────────────────────────────────────────────────────────────────────────────────────
+2026-10-09T14:10:13.1797380Z 
+2026-10-09T14:10:13.1797461Z   1 failed
+2026-10-09T14:10:13.1797922Z     tests/browser/run-path.spec.js:57:73 › CE-11/AC-19 keyboard graph/text equivalence 1280 ────────
+2026-10-09T14:10:13.1798330Z   540 passed (15.6m)
+2026-10-09T14:10:13.2010620Z ##[error]Process completed with exit code 1.

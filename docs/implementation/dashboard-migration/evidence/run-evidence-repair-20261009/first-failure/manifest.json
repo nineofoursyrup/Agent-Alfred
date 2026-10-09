@@ -1,0 +1,39 @@
+{
+  "result": "FAIL",
+  "run": 37935569616,
+  "merge": "63fe1a6ac026084118cbc9585cedb30e7f03a0a2",
+  "finding": "POST-120-01",
+  "files": [
+    {
+      "name": "actual-merge-ci-identities.json",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/ci/postmerge/terminal-identities.json",
+      "sha256": "d995907bab64aad1c1389d631173f50d9ddfb2d34cdd92aab11b2a39c0fb59b2",
+      "bytes": 3626
+    },
+    {
+      "name": "actual-merge-browser.log",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/ci/postmerge/37935569616-raw-logs/lint _ skills _ env _ tests/16_Offline Dashboard browser tests.txt",
+      "sha256": "0616fdcc361d069a3f88a24ca787aeea6654f8fa1290f79b335598945de191fb",
+      "bytes": 13520
+    },
+    {
+      "name": "controlled-red.log",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/postmerge-controlled-red.log",
+      "sha256": "a99903b70fb270bd6111efad8abde3f31467dc964399ffc5fe35b72d27b3cb39",
+      "bytes": 3641
+    },
+    {
+      "name": "actual-merge-error-context.md",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/postmerge-first-failure-artifacts/run-path-CE-11-AC-19-keyboard-graph-text-equivalence-1280/error-context.md",
+      "sha256": "e9a241b55489f6daeec7ecd4a2221a9441bac5e3940f6f44ea60113518694d8e",
+      "bytes": 23515
+    },
+    {
+      "name": "actual-merge-failed.png",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/postmerge-first-failure-artifacts/run-path-CE-11-AC-19-keyboard-graph-text-equivalence-1280/test-failed-1.png",
+      "sha256": "7387282bf95a1aca3f2538431cce1f70e0292568d9a9c61a68abbce5ec8e285c",
+      "bytes": 139021
+    }
+  ],
+  "trace_qualification": "Raw browser traces may contain process-local CSRF tokens; trace originals retained locally, not copied to this publication set."
+}

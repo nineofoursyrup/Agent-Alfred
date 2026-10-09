@@ -1,0 +1,47 @@
+
+Running 1 test using 1 worker
+
+(node:86000) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 tests/browser/run-path.spec.js:95:1 › late process evidence makes selected path references available without rereading the path (5.8s)
+
+
+  1) tests/browser/run-path.spec.js:95:1 › late process evidence makes selected path references available without rereading the path 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('region', { name: '本次执行路径', exact: true }).locator('[aria-label="节点详情"]').getByRole('link', { name: 'Step 1', exact: true })
+    Expected: visible
+    Timeout: 4000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('region', { name: '本次执行路径', exact: true }).locator('[aria-label="节点详情"]').getByRole('link', { name: 'Step 1', exact: true }) with timeout 4000ms
+      - waiting for getByRole('region', { name: '本次执行路径', exact: true }).locator('[aria-label="节点详情"]').getByRole('link', { name: 'Step 1', exact: true })
+
+
+      122 |     await expect(page.locator('#step-1')).toHaveCount(1);
+      123 |     const step=details.getByRole('link',{name:'Step 1',exact:true});
+    > 124 |     await expect(step).toBeVisible();
+          |                        ^
+      125 |     await expect(details.getByRole('link',{name:/^Attempt /})).toBeVisible();
+      126 |     await expect(details).not.toContainText('关联证据不可用');
+      127 |     expect(pathReads).toBe(1);
+        at /Users/nineofour/.codex/worktrees/dashboard-run-evidence-fix/Agent-Alfred/tests/browser/run-path.spec.js:124:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/closeout-20261009/postmerge-controlled-red-results/run-path-late-process-evid-18058--without-rereading-the-path/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../dashboard-migration-20261009/closeout-20261009/postmerge-controlled-red-results/run-path-late-process-evid-18058--without-rereading-the-path/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../../../dashboard-migration-20261009/closeout-20261009/postmerge-controlled-red-results/run-path-late-process-evid-18058--without-rereading-the-path/trace.zip
+    Usage:
+
+        npx playwright show-trace ../../../dashboard-migration-20261009/closeout-20261009/postmerge-controlled-red-results/run-path-late-process-evid-18058--without-rereading-the-path/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    tests/browser/run-path.spec.js:95:1 › late process evidence makes selected path references available without rereading the path 

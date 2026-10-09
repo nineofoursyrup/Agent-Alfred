@@ -1,0 +1,73 @@
+[
+  {
+    "run": 37935569616,
+    "event": "push",
+    "result": "FAIL",
+    "head_sha": "63fe1a6ac026084118cbc9585cedb30e7f03a0a2",
+    "actual_checkout_sha": "63fe1a6ac026084118cbc9585cedb30e7f03a0a2",
+    "actual_checkout_tree": "831ffcd25230263dcfb5e2b06f969a8a20125f23",
+    "actual_checkout_parents": [
+      "22c8720e1ec874fd012cc79b086cd8aace4c79b6",
+      "e553ff40994bd07da7e64dab5f0ccea9ccc63df4"
+    ],
+    "checkout_evidence": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/ci/postmerge/37935569616-raw-logs/lint _ skills _ env _ tests/2_Checkout.txt",
+    "raw_log": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/ci/postmerge/37935569616-raw-logs/0_lint _ skills _ env _ tests.txt",
+    "raw_log_sha256": "0b1661721e9f42da1f76e8c3fb49433bcbc40ce051dfc5ad8e0968b11eb7aa5f",
+    "raw_log_archive_sha256": "f27bf00405b55da5573c859a8e707fb60123f9d769b42cc436d45e00241091cb",
+    "python": {
+      "result": "PASS",
+      "passed": 6423,
+      "skipped": 22,
+      "deselected": 1,
+      "seconds": 2280.42,
+      "evidence": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/ci/postmerge/37935569616-raw-logs/lint _ skills _ env _ tests/9_Offline deterministic tests.txt"
+    },
+    "browser": {
+      "result": "FAIL",
+      "passed": 540,
+      "failed": 1,
+      "duration": "15.6m",
+      "evidence": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/ci/postmerge/37935569616-raw-logs/lint _ skills _ env _ tests/16_Offline Dashboard browser tests.txt"
+    },
+    "installation": {
+      "result": "PASS",
+      "rows": 4,
+      "package_files": 620,
+      "HTTP_checks": 400,
+      "extracted_evidence": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/ci/postmerge/37935569616-installations.json",
+      "artifacts": {
+        "wheel": "55648a28cdfae7ca479033739ace599ab8f22546ebd5d03b5214d7d40cc96e5a",
+        "sdist": "97305b776a08290c390ba501c31b35513df3dae3cd803a735b5dc4a96fc61086"
+      },
+      "source_and_HTTP_equal_reviewed_local_product": true,
+      "reference": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/installation-results.json",
+      "reference_sha256": "4efa509d7d8f7e289478c5d79ec701cf0e8da24f1e89281f8364af37df5adafc",
+      "qualification": "Final sdist may include later portable documents; package bytes and HTTP closure matched reviewed product. No four full installed browser suites claimed."
+    },
+    "gates": {
+      "Set up job": "success",
+      "Checkout": "success",
+      "Install CPython (Database requires its shared SQLite C API)": "success",
+      "Install uv (Python 3.14)": "success",
+      "Install package (dev and mcp extras)": "success",
+      "Lint": "success",
+      "Skill validation": "success",
+      ".env.example consistency check": "success",
+      "Offline deterministic tests": "success",
+      "Build distributions": "success",
+      "Verify base and MCP artifact installations": "success",
+      "Install Node for Dashboard checks": "success",
+      "Install Dashboard test tools": "success",
+      "Dashboard typecheck": "success",
+      "Install test browser": "success",
+      "Offline Dashboard browser tests": "failure",
+      "Upload browser failure evidence": "success",
+      "Post Install Node for Dashboard checks": "skipped",
+      "Post Install uv (Python 3.14)": "skipped",
+      "Post Install CPython (Database requires its shared SQLite C API)": "skipped",
+      "Post Checkout": "success",
+      "Complete job": "success"
+    },
+    "observed_at": "2026-10-09T14:11:45.327627+00:00"
+  }
+]

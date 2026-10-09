@@ -1,0 +1,1733 @@
+{
+  "manifest": {
+    "directory": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-result",
+    "port": 51270,
+    "port_preflight": "Bound isolated localhost socket port0 then released before fixture setup",
+    "at": "2026-10-09T14:28:52.728203+00:00",
+    "old": {
+      "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-old-env/bin/python",
+      "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/lifecycle-old-dist/agent_alfred-0.1.0-py3-none-any.whl",
+      "sha256": "d688a7aebdcc9451003e12f316be9930fd9fb7ffff8b5c12557fdb513fec4a46",
+      "head": "22c8720e1ec874fd012cc79b086cd8aace4c79b6",
+      "source_tree": "92c61b048894a24f040ab99bfbd913f8abb94812",
+      "source_path": "src/agent_alfred",
+      "src_tree": "5e2ea4ebaf3684938ca09012f8219ac2e0021e49"
+    },
+    "current": {
+      "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-current-env/bin/python",
+      "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/dist/agent_alfred-0.1.0-py3-none-any.whl",
+      "sha256": "d06e3d61e6bf33ff98b775451f05285f69387ba0159b27b2bc63bc7c554c780d",
+      "base_head": "63fe1a6ac026084118cbc9585cedb30e7f03a0a2",
+      "tree": "123caa591cf8053a9cfbafa7fdbe2e9865e77686",
+      "src_tree": "209f93a5401dd4f00ea954dbd28eb5a820b36fba",
+      "package_tree": "a0658032643ea45d72d3fc4ac6c4ac83dcf7aa7e",
+      "manifest": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/candidate.json",
+      "manifest_sha256": "6150b3a441729251e24ce9834ca5d9017b88fdee3258f5acd7331f8bfbf8e07b",
+      "identity_state": "FROZEN_UNCOMMITTED_PRODUCT"
+    },
+    "supported": {
+      "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-supported-env/bin/python",
+      "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/support-dist/agent_alfred-0.1.0-py3-none-any.whl",
+      "sha256": "98eaaf1bd01c3f52889447c4f207ba503fa22618f2c57d18464b58ca389022be",
+      "base_head": "3f0588d3693d598cc1785c7eee82e3c52707dca0",
+      "tree": "19be93d8a59b0cb463f7fb2fbcbc2d0d371699b0",
+      "src_tree": "eefa1ae34847d8b9a91cc2cad7fc6e971786a15a",
+      "package_tree": "42a1a550d98e867a5f79aba80a6186a01e8dd0ab",
+      "manifest": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/support/candidate.json",
+      "manifest_sha256": "1aa30b80c99f9e44c55fd3b0216cb90a2fe57c144e969a4fb797191cb8b09192",
+      "identity_state": "FROZEN_UNCOMMITTED_PRODUCT"
+    },
+    "binding": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-source-binding.json",
+    "binding_sha256": "9bdd92263ae2a308e56ad10d960eb4db92b2aff6e722e4cb4850134dc48600db",
+    "runner": {
+      "path": "/Users/nineofour/.codex/worktrees/dashboard-run-evidence-fix/Agent-Alfred/scripts/check_dashboard_lifecycle.mjs",
+      "sha256": "25009de7efa91563297a08304690cd698244b998ab612fcf4a2e49cdd8dda9c7",
+      "server_sha256": "076efab69bfe060a27de4950b5ba8c037c5fde7aca2c97386183104140a997e4"
+    }
+  },
+  "stages": [
+    {
+      "label": "old",
+      "ready": {
+        "event": "ready",
+        "instance": "2003761169e3463680c5296974fcffbd",
+        "package": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-old-env/lib/python3.14/site-packages/agent_alfred",
+        "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-old-env/bin/python",
+        "html_sha256": "dbc0fc0b6bd0a83c1380ce598f9af7ab6285c4ba6e8fc235d011e1483177d279"
+      },
+      "entry": {
+        "instance_id": "2003761169e3463680c5296974fcffbd"
+      },
+      "artifact": {
+        "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-old-env/bin/python",
+        "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/S11/lifecycle-old-dist/agent_alfred-0.1.0-py3-none-any.whl",
+        "sha256": "d688a7aebdcc9451003e12f316be9930fd9fb7ffff8b5c12557fdb513fec4a46",
+        "head": "22c8720e1ec874fd012cc79b086cd8aace4c79b6",
+        "source_tree": "92c61b048894a24f040ab99bfbd913f8abb94812",
+        "source_path": "src/agent_alfred",
+        "src_tree": "5e2ea4ebaf3684938ca09012f8219ac2e0021e49"
+      },
+      "close": {
+        "code": 0,
+        "signal": null,
+        "events": [
+          {
+            "event": "ready",
+            "instance": "2003761169e3463680c5296974fcffbd",
+            "package": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-old-env/lib/python3.14/site-packages/agent_alfred",
+            "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/lifecycle-old-env/bin/python",
+            "html_sha256": "dbc0fc0b6bd0a83c1380ce598f9af7ab6285c4ba6e8fc235d011e1483177d279"
+          },
+          {
+            "event": "closed",
+            "closed": true,
+            "model_calls": 2
+          }
+        ],
+        "stderr": ""
+      }
+    },
+    {
+      "label": "current",
+      "ready": {
+        "event": "ready",
+        "instance": "8403e7ee04994fefad5d7eee8848cfc6",
+        "package": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-current-env/lib/python3.14/site-packages/agent_alfred",
+        "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-current-env/bin/python",
+        "html_sha256": "95c08606a8ef01193eb476364cfbcf59270ed89f48b0d84d4ef759ae5ce597ac"
+      },
+      "entry": {
+        "instance_id": "8403e7ee04994fefad5d7eee8848cfc6"
+      },
+      "artifact": {
+        "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-current-env/bin/python",
+        "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/dist/agent_alfred-0.1.0-py3-none-any.whl",
+        "sha256": "d06e3d61e6bf33ff98b775451f05285f69387ba0159b27b2bc63bc7c554c780d",
+        "base_head": "63fe1a6ac026084118cbc9585cedb30e7f03a0a2",
+        "tree": "123caa591cf8053a9cfbafa7fdbe2e9865e77686",
+        "src_tree": "209f93a5401dd4f00ea954dbd28eb5a820b36fba",
+        "package_tree": "a0658032643ea45d72d3fc4ac6c4ac83dcf7aa7e",
+        "manifest": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/candidate.json",
+        "manifest_sha256": "6150b3a441729251e24ce9834ca5d9017b88fdee3258f5acd7331f8bfbf8e07b",
+        "identity_state": "FROZEN_UNCOMMITTED_PRODUCT"
+      },
+      "close": {
+        "code": 0,
+        "signal": null,
+        "events": [
+          {
+            "event": "ready",
+            "instance": "8403e7ee04994fefad5d7eee8848cfc6",
+            "package": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-current-env/lib/python3.14/site-packages/agent_alfred",
+            "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-current-env/bin/python",
+            "html_sha256": "95c08606a8ef01193eb476364cfbcf59270ed89f48b0d84d4ef759ae5ce597ac"
+          },
+          {
+            "event": "closed",
+            "closed": true,
+            "model_calls": 2
+          }
+        ],
+        "stderr": ""
+      }
+    },
+    {
+      "label": "supported",
+      "ready": {
+        "event": "ready",
+        "instance": "3cc7644efbd34a5eae6ac41bed2955fd",
+        "package": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-supported-env/lib/python3.14/site-packages/agent_alfred",
+        "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-supported-env/bin/python",
+        "html_sha256": "5c0ac8efdf43a0fe7b4a18909a3c40e477c4d8f126e5ec03e1456a02d8674da6"
+      },
+      "entry": {
+        "instance_id": "3cc7644efbd34a5eae6ac41bed2955fd"
+      },
+      "artifact": {
+        "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-supported-env/bin/python",
+        "artifact": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/support-dist/agent_alfred-0.1.0-py3-none-any.whl",
+        "sha256": "98eaaf1bd01c3f52889447c4f207ba503fa22618f2c57d18464b58ca389022be",
+        "base_head": "3f0588d3693d598cc1785c7eee82e3c52707dca0",
+        "tree": "19be93d8a59b0cb463f7fb2fbcbc2d0d371699b0",
+        "src_tree": "eefa1ae34847d8b9a91cc2cad7fc6e971786a15a",
+        "package_tree": "42a1a550d98e867a5f79aba80a6186a01e8dd0ab",
+        "manifest": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/support/candidate.json",
+        "manifest_sha256": "1aa30b80c99f9e44c55fd3b0216cb90a2fe57c144e969a4fb797191cb8b09192",
+        "identity_state": "FROZEN_UNCOMMITTED_PRODUCT"
+      },
+      "close": {
+        "code": 0,
+        "signal": null,
+        "events": [
+          {
+            "event": "ready",
+            "instance": "3cc7644efbd34a5eae6ac41bed2955fd",
+            "package": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-supported-env/lib/python3.14/site-packages/agent_alfred",
+            "python": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-supported-env/bin/python",
+            "html_sha256": "5c0ac8efdf43a0fe7b4a18909a3c40e477c4d8f126e5ec03e1456a02d8674da6"
+          },
+          {
+            "event": "closed",
+            "closed": true,
+            "model_calls": 0
+          }
+        ],
+        "stderr": ""
+      }
+    }
+  ],
+  "requests": [
+    {
+      "stage": "old",
+      "path": "/api/sessions",
+      "body": {}
+    },
+    {
+      "stage": "old",
+      "path": "/api/runs",
+      "body": {
+        "message": "旧包的持久消息",
+        "session_id": "95a7bf9fd269414f8257149a3602db87"
+      }
+    },
+    {
+      "stage": "current",
+      "path": "/api/runs",
+      "body": {
+        "message": "新包的持久消息",
+        "session_id": "95a7bf9fd269414f8257149a3602db87"
+      }
+    }
+  ],
+  "old": {
+    "oldRun": {
+      "run_id": "8cef69c30b3047c795343918728a6311",
+      "session_id": "95a7bf9fd269414f8257149a3602db87"
+    },
+    "session": "95a7bf9fd269414f8257149a3602db87",
+    "retained": {
+      "schema_version": 1,
+      "process_instance_id": "2003761169e3463680c5296974fcffbd",
+      "memory_revision": 27,
+      "operation_id": "old-retained",
+      "result": {
+        "operation_id": "old-retained",
+        "action": "save",
+        "kind": "semantic",
+        "status": "saved",
+        "memory_id": "4a3e6cff-6533-4d20-92cb-30cca318289a",
+        "record_version": 1,
+        "affected_count": 1,
+        "committed_at": "2026-10-09T14:28:54.267395+00:00"
+      },
+      "forgetting": null
+    },
+    "forgotten": {
+      "schema_version": 1,
+      "process_instance_id": "2003761169e3463680c5296974fcffbd",
+      "memory_revision": 40,
+      "operation_id": "old-forget",
+      "result": {
+        "operation_id": "old-forget",
+        "action": "save",
+        "kind": "semantic",
+        "status": "saved",
+        "memory_id": "53dcac37-f889-4f75-93ee-70bd804c8b7d",
+        "record_version": 1,
+        "affected_count": 1,
+        "committed_at": "2026-10-09T14:28:54.278675+00:00"
+      },
+      "forgetting": null
+    },
+    "oldAccounting": {
+      "snapshot_id": "e7e8cbaa79684a4da3c135437aaf1e46",
+      "process_instance_id": "2003761169e3463680c5296974fcffbd",
+      "computed_at": "2026-10-09T14:28:54Z",
+      "filters": {
+        "range": "all",
+        "timezone": "UTC",
+        "start": null,
+        "end": null
+      },
+      "expires_at": "2026-10-09T14:43:54Z",
+      "summary": {
+        "run_count": 1,
+        "attempt_count": 2,
+        "unknown_cost_attempts": 0,
+        "incomplete_runs": 0,
+        "tool_requests": 0,
+        "confirmed_starts": 0,
+        "not_started": 0,
+        "unconfirmed_starts": 0,
+        "tokens": {
+          "total_input_tokens": {
+            "known": 0,
+            "missing_attempts": 2
+          },
+          "uncached_input_tokens": {
+            "known": 0,
+            "missing_attempts": 2
+          },
+          "cache_read_tokens": {
+            "known": 0,
+            "missing_attempts": 2
+          },
+          "cache_write_tokens": {
+            "known": 0,
+            "missing_attempts": 2
+          },
+          "output_tokens": {
+            "known": 8,
+            "missing_attempts": 0
+          },
+          "reasoning_tokens": {
+            "known": 0,
+            "missing_attempts": 2
+          }
+        },
+        "tool_cost_states": {
+          "not_billable": 0,
+          "reported": 0,
+          "unknown": 0,
+          "unrecorded": 0
+        },
+        "exact_usd": "0.250",
+        "estimated_usd": "0",
+        "tool_costs": []
+      },
+      "unresolved_membership": [],
+      "history_boundary": "Persistent Runs only; legacy messages excluded.",
+      "price_version": "9efe6500119469a312293f6cb99f663655085641834b8b8780a3a46a9e99e368",
+      "runs": [
+        {
+          "run_id": "8cef69c30b3047c795343918728a6311",
+          "session_id": "95a7bf9fd269414f8257149a3602db87",
+          "purpose": "chat",
+          "phase": "finished",
+          "outcome": "completed",
+          "accepted_at": "2026-10-09T14:28:54Z",
+          "started_at": "2026-10-09T14:28:54Z",
+          "activity_revision": 4,
+          "at": "2026-10-09T14:28:54Z",
+          "time_basis": "started_at",
+          "coverage": [],
+          "trace_incomplete": false,
+          "prune_reason": null
+        }
+      ],
+      "next_offset": null
+    },
+    "oldDetail": {
+      "snapshot_id": "e7e8cbaa79684a4da3c135437aaf1e46",
+      "process_instance_id": "2003761169e3463680c5296974fcffbd",
+      "computed_at": "2026-10-09T14:28:54Z",
+      "filters": {
+        "range": "all",
+        "timezone": "UTC",
+        "start": null,
+        "end": null
+      },
+      "expires_at": "2026-10-09T14:43:54Z",
+      "summary": {
+        "run_count": 1,
+        "attempt_count": 2,
+        "unknown_cost_attempts": 0,
+        "incomplete_runs": 0,
+        "tool_requests": 0,
+        "confirmed_starts": 0,
+        "not_started": 0,
+        "unconfirmed_starts": 0,
+        "tokens": {
+          "total_input_tokens": {
+            "known": 0,
+            "missing_attempts": 2
+          },
+          "uncached_input_tokens": {
+            "known": 0,
+            "missing_attempts": 2
+          },
+          "cache_read_tokens": {
+            "known": 0,
+            "missing_attempts": 2
+          },
+          "cache_write_tokens": {
+            "known": 0,
+            "missing_attempts": 2
+          },
+          "output_tokens": {
+            "known": 8,
+            "missing_attempts": 0
+          },
+          "reasoning_tokens": {
+            "known": 0,
+            "missing_attempts": 2
+          }
+        },
+        "tool_cost_states": {
+          "not_billable": 0,
+          "reported": 0,
+          "unknown": 0,
+          "unrecorded": 0
+        },
+        "exact_usd": "0.250",
+        "estimated_usd": "0",
+        "tool_costs": []
+      },
+      "unresolved_membership": [],
+      "history_boundary": "Persistent Runs only; legacy messages excluded.",
+      "price_version": "9efe6500119469a312293f6cb99f663655085641834b8b8780a3a46a9e99e368",
+      "run": {
+        "run_id": "8cef69c30b3047c795343918728a6311",
+        "session_id": "95a7bf9fd269414f8257149a3602db87",
+        "purpose": "chat",
+        "phase": "finished",
+        "outcome": "completed",
+        "accepted_at": "2026-10-09T14:28:54Z",
+        "started_at": "2026-10-09T14:28:54Z",
+        "activity_revision": 4,
+        "at": "2026-10-09T14:28:54Z",
+        "time_basis": "started_at",
+        "tools": [],
+        "coverage": [],
+        "trace_incomplete": false,
+        "prune_reason": null,
+        "attempts": [
+          {
+            "attempt_id": "c3040cc3-79b4-4fab-8128-1db35d92fc39",
+            "outcome": "committed",
+            "model": {
+              "endpoint_id": "opencode-go",
+              "model_id": "deepseek-v4-flash"
+            },
+            "usage": {
+              "total_input_tokens": null,
+              "uncached_input_tokens": null,
+              "cache_read_tokens": null,
+              "cache_write_tokens": null,
+              "output_tokens": 4,
+              "reasoning_tokens": null,
+              "endpoint_reported_cost_usd": "0.125"
+            },
+            "cost": {
+              "state": "exact",
+              "amount": "0.125",
+              "currency": "USD",
+              "computed_at": "2026-10-09T14:28:54Z"
+            }
+          },
+          {
+            "attempt_id": "6090d91b-6b4d-44df-b83d-74fde76464ea",
+            "outcome": "committed",
+            "model": {
+              "endpoint_id": "opencode-go",
+              "model_id": "deepseek-v4-flash"
+            },
+            "usage": {
+              "total_input_tokens": null,
+              "uncached_input_tokens": null,
+              "cache_read_tokens": null,
+              "cache_write_tokens": null,
+              "output_tokens": 4,
+              "reasoning_tokens": null,
+              "endpoint_reported_cost_usd": "0.125"
+            },
+            "cost": {
+              "state": "exact",
+              "amount": "0.125",
+              "currency": "USD",
+              "computed_at": "2026-10-09T14:28:54Z"
+            }
+          }
+        ]
+      }
+    },
+    "deepLink": "/runs/8cef69c30b3047c795343918728a6311?filter=all"
+  },
+  "current": {
+    "nextRun": {
+      "run_id": "bf59e384284e47abbc680e32e58bdc19",
+      "session_id": "95a7bf9fd269414f8257149a3602db87"
+    },
+    "newMemory": {
+      "schema_version": 1,
+      "process_instance_id": "8403e7ee04994fefad5d7eee8848cfc6",
+      "memory_revision": 57,
+      "operation_id": "new-retained",
+      "result": {
+        "operation_id": "new-retained",
+        "action": "save",
+        "kind": "semantic",
+        "status": "saved",
+        "memory_id": "97f90db9-3cb7-48b0-aefa-8e18668c34d9",
+        "record_version": 1,
+        "affected_count": 1,
+        "committed_at": "2026-10-09T14:28:55.702452+00:00"
+      },
+      "forgetting": null
+    },
+    "deletion": {
+      "schema_version": 1,
+      "process_instance_id": "8403e7ee04994fefad5d7eee8848cfc6",
+      "memory_revision": 79,
+      "operation_id": "new-forget",
+      "result": {
+        "operation_id": "new-forget",
+        "action": "delete",
+        "kind": "semantic",
+        "status": "deleted",
+        "memory_id": "53dcac37-f889-4f75-93ee-70bd804c8b7d",
+        "record_version": null,
+        "affected_count": 1,
+        "committed_at": "2026-10-09T14:28:55.713444+00:00",
+        "fingerprint": "4d08b14ad968e0aab03251b1f0017a4adefcc561af03bcc21669c45d7b3a9e96",
+        "key_id": "48ad603c9719088edc090f19eded370d"
+      },
+      "forgetting": {
+        "operation_id": "new-forget",
+        "kind": "semantic",
+        "memory_id": "53dcac37-f889-4f75-93ee-70bd804c8b7d",
+        "completeness": "known",
+        "state": "complete",
+        "unresolved_scopes": 0,
+        "projection_recovery_error": null,
+        "projection_recovery_failed_at": null,
+        "projection_recovery_pending": false,
+        "observations": [
+          {
+            "progress_revision": 5,
+            "observed_at": "2026-10-09T14:28:55.714433+00:00",
+            "state": "cleaning"
+          },
+          {
+            "progress_revision": 13,
+            "observed_at": "2026-10-09T14:28:55.729117+00:00",
+            "state": "complete"
+          }
+        ],
+        "cleanup": [
+          {
+            "target_id": "database-console",
+            "revision": 1,
+            "state": "complete",
+            "error": null
+          },
+          {
+            "target_id": "memory/episodes.md",
+            "revision": 1,
+            "state": "complete",
+            "error": null
+          },
+          {
+            "target_id": "memory/facts.md",
+            "revision": 1,
+            "state": "complete",
+            "error": null
+          },
+          {
+            "target_id": "trace-export:managed",
+            "revision": 1,
+            "state": "complete",
+            "error": null
+          }
+        ],
+        "progress_revision": 13,
+        "limits": []
+      }
+    },
+    "beforeRollback": {
+      "status": "ok",
+      "revision": 4,
+      "assignments": {
+        "primary": {
+          "endpoint_id": "opencode-go",
+          "model_id": "deepseek-v4-flash"
+        },
+        "retrieval_gate": null
+      },
+      "endpoints": [
+        {
+          "endpoint_id": "anthropic",
+          "base_url": "https://api.anthropic.com/v1",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": []
+        },
+        {
+          "endpoint_id": "openai",
+          "base_url": "https://api.openai.com/v1",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": []
+        },
+        {
+          "endpoint_id": "xai",
+          "base_url": "https://api.x.ai/v1",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": []
+        },
+        {
+          "endpoint_id": "deepseek",
+          "base_url": "https://api.deepseek.com",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": []
+        },
+        {
+          "endpoint_id": "opencode",
+          "base_url": "https://opencode.ai/zen/v1",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": [
+            {
+              "endpoint_id": "opencode",
+              "model_id": "deepseek-v4-flash",
+              "sources": [
+                "builtin"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": false,
+              "assignable": false,
+              "support": "supported",
+              "support_basis": "builtin_table",
+              "wire_style": "openai",
+              "wire_style_source": "builtin_table",
+              "support_label": "支持",
+              "reason": null,
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": false,
+              "probe_enabled": false
+            },
+            {
+              "endpoint_id": "opencode",
+              "model_id": "qwen3.7-max",
+              "sources": [
+                "builtin"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": false,
+              "assignable": false,
+              "support": "supported",
+              "support_basis": "builtin_table",
+              "wire_style": "anthropic",
+              "wire_style_source": "builtin_table",
+              "support_label": "支持",
+              "reason": null,
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": false,
+              "probe_enabled": false
+            },
+            {
+              "endpoint_id": "opencode",
+              "model_id": "grok-4.6",
+              "sources": [
+                "builtin"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": false,
+              "assignable": false,
+              "support": "unsupported",
+              "support_basis": "builtin_table",
+              "wire_style": "responses",
+              "wire_style_source": "builtin_table",
+              "support_label": "unsupported_wire_style: responses",
+              "reason": "unsupported_wire_style: responses",
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": false,
+              "probe_enabled": false
+            }
+          ]
+        },
+        {
+          "endpoint_id": "opencode-go",
+          "base_url": "https://opencode.ai/zen/go/v1",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": [
+            {
+              "endpoint_id": "opencode-go",
+              "model_id": "deepseek-v4-flash",
+              "sources": [
+                "builtin",
+                "pinned"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": true,
+              "assignable": true,
+              "support": "supported",
+              "support_basis": "builtin_table",
+              "wire_style": "openai",
+              "wire_style_source": "builtin_table",
+              "support_label": "支持",
+              "reason": null,
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": true,
+              "probe_enabled": false
+            },
+            {
+              "endpoint_id": "opencode-go",
+              "model_id": "qwen3.7-max",
+              "sources": [
+                "builtin"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": false,
+              "assignable": false,
+              "support": "supported",
+              "support_basis": "builtin_table",
+              "wire_style": "anthropic",
+              "wire_style_source": "builtin_table",
+              "support_label": "支持",
+              "reason": null,
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": false,
+              "probe_enabled": false
+            },
+            {
+              "endpoint_id": "opencode-go",
+              "model_id": "grok-4.6",
+              "sources": [
+                "builtin"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": false,
+              "assignable": false,
+              "support": "unsupported",
+              "support_basis": "builtin_table",
+              "wire_style": "responses",
+              "wire_style_source": "builtin_table",
+              "support_label": "unsupported_wire_style: responses",
+              "reason": "unsupported_wire_style: responses",
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": false,
+              "probe_enabled": false
+            }
+          ]
+        }
+      ]
+    },
+    "currentAccounting": {
+      "snapshot_id": "880bd91e71d1475da3aafc7860e862c3",
+      "process_instance_id": "8403e7ee04994fefad5d7eee8848cfc6",
+      "computed_at": "2026-10-09T14:28:55Z",
+      "filters": {
+        "range": "all",
+        "timezone": "UTC",
+        "start": null,
+        "end": null
+      },
+      "expires_at": "2026-10-09T14:43:55Z",
+      "summary": {
+        "run_count": 2,
+        "attempt_count": 4,
+        "unknown_cost_attempts": 0,
+        "exact_attempts": 4,
+        "estimated_attempts": 0,
+        "price_sources": {},
+        "stale_price_attempts": 0,
+        "tiered_price_attempts": 0,
+        "incomplete_runs": 0,
+        "tool_requests": 0,
+        "confirmed_starts": 0,
+        "not_started": 0,
+        "unconfirmed_starts": 0,
+        "tokens": {
+          "total_input_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "uncached_input_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "cache_read_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "cache_write_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "output_tokens": {
+            "known": 16,
+            "missing_attempts": 0
+          },
+          "reasoning_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          }
+        },
+        "tool_cost_states": {
+          "not_billable": 0,
+          "reported": 0,
+          "unknown": 0,
+          "unrecorded": 0
+        },
+        "exact_usd": "0.500",
+        "estimated_usd": "0",
+        "tool_costs": []
+      },
+      "unresolved_membership": [],
+      "history_boundary": "Persistent Runs only; legacy messages excluded.",
+      "price_version": "8b65cbfdc14e396263c02bdd24d2f20b9b228025b14c86e529942c5bff5e37ab",
+      "runs": [
+        {
+          "run_id": "bf59e384284e47abbc680e32e58bdc19",
+          "session_id": "95a7bf9fd269414f8257149a3602db87",
+          "purpose": "chat",
+          "phase": "finished",
+          "outcome": "completed",
+          "accepted_at": "2026-10-09T14:28:55Z",
+          "started_at": "2026-10-09T14:28:55Z",
+          "activity_revision": 7,
+          "at": "2026-10-09T14:28:55Z",
+          "time_basis": "started_at",
+          "coverage": [],
+          "trace_incomplete": false,
+          "prune_reason": null
+        },
+        {
+          "run_id": "8cef69c30b3047c795343918728a6311",
+          "session_id": "95a7bf9fd269414f8257149a3602db87",
+          "purpose": "chat",
+          "phase": "finished",
+          "outcome": "completed",
+          "accepted_at": "2026-10-09T14:28:54Z",
+          "started_at": "2026-10-09T14:28:54Z",
+          "activity_revision": 4,
+          "at": "2026-10-09T14:28:54Z",
+          "time_basis": "started_at",
+          "coverage": [],
+          "trace_incomplete": false,
+          "prune_reason": null
+        }
+      ],
+      "next_offset": null
+    },
+    "currentOldDetail": {
+      "snapshot_id": "880bd91e71d1475da3aafc7860e862c3",
+      "process_instance_id": "8403e7ee04994fefad5d7eee8848cfc6",
+      "computed_at": "2026-10-09T14:28:55Z",
+      "filters": {
+        "range": "all",
+        "timezone": "UTC",
+        "start": null,
+        "end": null
+      },
+      "expires_at": "2026-10-09T14:43:55Z",
+      "summary": {
+        "run_count": 2,
+        "attempt_count": 4,
+        "unknown_cost_attempts": 0,
+        "exact_attempts": 4,
+        "estimated_attempts": 0,
+        "price_sources": {},
+        "stale_price_attempts": 0,
+        "tiered_price_attempts": 0,
+        "incomplete_runs": 0,
+        "tool_requests": 0,
+        "confirmed_starts": 0,
+        "not_started": 0,
+        "unconfirmed_starts": 0,
+        "tokens": {
+          "total_input_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "uncached_input_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "cache_read_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "cache_write_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "output_tokens": {
+            "known": 16,
+            "missing_attempts": 0
+          },
+          "reasoning_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          }
+        },
+        "tool_cost_states": {
+          "not_billable": 0,
+          "reported": 0,
+          "unknown": 0,
+          "unrecorded": 0
+        },
+        "exact_usd": "0.500",
+        "estimated_usd": "0",
+        "tool_costs": []
+      },
+      "unresolved_membership": [],
+      "history_boundary": "Persistent Runs only; legacy messages excluded.",
+      "price_version": "8b65cbfdc14e396263c02bdd24d2f20b9b228025b14c86e529942c5bff5e37ab",
+      "run": {
+        "run_id": "8cef69c30b3047c795343918728a6311",
+        "session_id": "95a7bf9fd269414f8257149a3602db87",
+        "purpose": "chat",
+        "phase": "finished",
+        "outcome": "completed",
+        "accepted_at": "2026-10-09T14:28:54Z",
+        "started_at": "2026-10-09T14:28:54Z",
+        "activity_revision": 4,
+        "at": "2026-10-09T14:28:54Z",
+        "time_basis": "started_at",
+        "tools": [],
+        "coverage": [],
+        "trace_incomplete": false,
+        "prune_reason": null,
+        "attempts": [
+          {
+            "attempt_id": "c3040cc3-79b4-4fab-8128-1db35d92fc39",
+            "outcome": "committed",
+            "model": {
+              "endpoint_id": "opencode-go",
+              "model_id": "deepseek-v4-flash"
+            },
+            "usage": {
+              "total_input_tokens": null,
+              "uncached_input_tokens": null,
+              "cache_read_tokens": null,
+              "cache_write_tokens": null,
+              "output_tokens": 4,
+              "reasoning_tokens": null,
+              "endpoint_reported_cost_usd": "0.125"
+            },
+            "cost": {
+              "state": "exact",
+              "amount": "0.125",
+              "currency": "USD",
+              "computed_at": "2026-10-09T14:28:55Z"
+            }
+          },
+          {
+            "attempt_id": "6090d91b-6b4d-44df-b83d-74fde76464ea",
+            "outcome": "committed",
+            "model": {
+              "endpoint_id": "opencode-go",
+              "model_id": "deepseek-v4-flash"
+            },
+            "usage": {
+              "total_input_tokens": null,
+              "uncached_input_tokens": null,
+              "cache_read_tokens": null,
+              "cache_write_tokens": null,
+              "output_tokens": 4,
+              "reasoning_tokens": null,
+              "endpoint_reported_cost_usd": "0.125"
+            },
+            "cost": {
+              "state": "exact",
+              "amount": "0.125",
+              "currency": "USD",
+              "computed_at": "2026-10-09T14:28:55Z"
+            }
+          }
+        ]
+      }
+    },
+    "query": {
+      "query_id": "1DubBSamZzAwgKeVk4E3qJI5",
+      "instance_id": "8403e7ee04994fefad5d7eee8848cfc6",
+      "expires_in_s": 30
+    },
+    "queryResult": {
+      "query_id": "1DubBSamZzAwgKeVk4E3qJI5",
+      "instance_id": "8403e7ee04994fefad5d7eee8848cfc6",
+      "memory_revision": "79",
+      "protection_version": "5",
+      "objects": [
+        "diag_sessions"
+      ],
+      "coverage": {
+        "attempts": {
+          "recorded": 0,
+          "recorded_empty": 0,
+          "unrecorded": 0,
+          "in_progress_runs": 0
+        },
+        "notice": "缺行不证明未发生请求"
+      },
+      "read_at": "2026-10-09T14:28:55.902474Z",
+      "columns": [
+        "n"
+      ],
+      "rows": [
+        [
+          {
+            "type": "integer",
+            "value": "1"
+          }
+        ]
+      ],
+      "returned_rows": 1,
+      "truncated": false,
+      "truncation_reasons": []
+    },
+    "automaticPostsOnRefresh": 0
+  },
+  "supported": {
+    "modelState": {
+      "status": "ok",
+      "revision": 4,
+      "assignments": {
+        "primary": {
+          "endpoint_id": "opencode-go",
+          "model_id": "deepseek-v4-flash"
+        },
+        "retrieval_gate": null
+      },
+      "endpoints": [
+        {
+          "endpoint_id": "anthropic",
+          "base_url": "https://api.anthropic.com/v1",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": []
+        },
+        {
+          "endpoint_id": "openai",
+          "base_url": "https://api.openai.com/v1",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": []
+        },
+        {
+          "endpoint_id": "xai",
+          "base_url": "https://api.x.ai/v1",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": []
+        },
+        {
+          "endpoint_id": "deepseek",
+          "base_url": "https://api.deepseek.com",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": []
+        },
+        {
+          "endpoint_id": "opencode",
+          "base_url": "https://opencode.ai/zen/v1",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": [
+            {
+              "endpoint_id": "opencode",
+              "model_id": "deepseek-v4-flash",
+              "sources": [
+                "builtin"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": false,
+              "assignable": false,
+              "support": "supported",
+              "support_basis": "builtin_table",
+              "wire_style": "openai",
+              "wire_style_source": "builtin_table",
+              "support_label": "支持",
+              "reason": null,
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": false,
+              "probe_enabled": false
+            },
+            {
+              "endpoint_id": "opencode",
+              "model_id": "qwen3.7-max",
+              "sources": [
+                "builtin"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": false,
+              "assignable": false,
+              "support": "supported",
+              "support_basis": "builtin_table",
+              "wire_style": "anthropic",
+              "wire_style_source": "builtin_table",
+              "support_label": "支持",
+              "reason": null,
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": false,
+              "probe_enabled": false
+            },
+            {
+              "endpoint_id": "opencode",
+              "model_id": "grok-4.6",
+              "sources": [
+                "builtin"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": false,
+              "assignable": false,
+              "support": "unsupported",
+              "support_basis": "builtin_table",
+              "wire_style": "responses",
+              "wire_style_source": "builtin_table",
+              "support_label": "unsupported_wire_style: responses",
+              "reason": "unsupported_wire_style: responses",
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": false,
+              "probe_enabled": false
+            }
+          ]
+        },
+        {
+          "endpoint_id": "opencode-go",
+          "base_url": "https://opencode.ai/zen/go/v1",
+          "observation": {
+            "state": "unconfigured",
+            "checked_at": null,
+            "checked_via": null,
+            "reason": null
+          },
+          "catalog": {
+            "health": "unfetched",
+            "last_success_at": null,
+            "last_error": null,
+            "retry_at": null
+          },
+          "models": [
+            {
+              "endpoint_id": "opencode-go",
+              "model_id": "deepseek-v4-flash",
+              "sources": [
+                "builtin",
+                "pinned"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": true,
+              "assignable": true,
+              "support": "supported",
+              "support_basis": "builtin_table",
+              "wire_style": "openai",
+              "wire_style_source": "builtin_table",
+              "support_label": "支持",
+              "reason": null,
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": true,
+              "probe_enabled": false
+            },
+            {
+              "endpoint_id": "opencode-go",
+              "model_id": "qwen3.7-max",
+              "sources": [
+                "builtin"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": false,
+              "assignable": false,
+              "support": "supported",
+              "support_basis": "builtin_table",
+              "wire_style": "anthropic",
+              "wire_style_source": "builtin_table",
+              "support_label": "支持",
+              "reason": null,
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": false,
+              "probe_enabled": false
+            },
+            {
+              "endpoint_id": "opencode-go",
+              "model_id": "grok-4.6",
+              "sources": [
+                "builtin"
+              ],
+              "display_name": null,
+              "display_name_override": null,
+              "pinned": false,
+              "assignable": false,
+              "support": "unsupported",
+              "support_basis": "builtin_table",
+              "wire_style": "responses",
+              "wire_style_source": "builtin_table",
+              "support_label": "unsupported_wire_style: responses",
+              "reason": "unsupported_wire_style: responses",
+              "disable_code": null,
+              "disable_dimension": null,
+              "price_override": null,
+              "probe": false,
+              "probe_enabled": false
+            }
+          ]
+        }
+      ]
+    },
+    "history": {
+      "session_id": "95a7bf9fd269414f8257149a3602db87",
+      "title": "旧包的持久消息",
+      "messages": [
+        {
+          "role": "user",
+          "blocks": [
+            {
+              "type": "text",
+              "text": "旧包的持久消息"
+            }
+          ],
+          "source": "web",
+          "created_at": "2026-10-09T14:28:54Z",
+          "run_id": "8cef69c30b3047c795343918728a6311",
+          "message_anchor": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoiOTVhN2JmOWZkMjY5NDE0ZjgyNTcxNDlhMzYwMmRiODciLCJzZWciOiJydW5zIiwiaWQiOjF9"
+        },
+        {
+          "role": "assistant",
+          "blocks": [
+            {
+              "type": "text",
+              "text": "离线生命周期回复"
+            }
+          ],
+          "source": "web",
+          "created_at": "2026-10-09T14:28:54Z",
+          "run_id": "8cef69c30b3047c795343918728a6311",
+          "message_anchor": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoiOTVhN2JmOWZkMjY5NDE0ZjgyNTcxNDlhMzYwMmRiODciLCJzZWciOiJydW5zIiwiaWQiOjJ9"
+        },
+        {
+          "role": "user",
+          "blocks": [
+            {
+              "type": "text",
+              "text": "新包的持久消息"
+            }
+          ],
+          "source": "web",
+          "created_at": "2026-10-09T14:28:55Z",
+          "run_id": "bf59e384284e47abbc680e32e58bdc19",
+          "message_anchor": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoiOTVhN2JmOWZkMjY5NDE0ZjgyNTcxNDlhMzYwMmRiODciLCJzZWciOiJydW5zIiwiaWQiOjN9"
+        },
+        {
+          "role": "assistant",
+          "blocks": [
+            {
+              "type": "text",
+              "text": "离线生命周期回复"
+            }
+          ],
+          "source": "web",
+          "created_at": "2026-10-09T14:28:55Z",
+          "run_id": "bf59e384284e47abbc680e32e58bdc19",
+          "message_anchor": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoiOTVhN2JmOWZkMjY5NDE0ZjgyNTcxNDlhMzYwMmRiODciLCJzZWciOiJydW5zIiwiaWQiOjR9"
+        }
+      ],
+      "next_cursor": null,
+      "runs_pending": false
+    },
+    "runs": {
+      "filter": "all",
+      "runs": [
+        {
+          "run_id": "bf59e384284e47abbc680e32e58bdc19",
+          "purpose": "chat",
+          "filter": "chat",
+          "purpose_known": true,
+          "admission_state": "admitted",
+          "admission_label": "已获准",
+          "session_id": "95a7bf9fd269414f8257149a3602db87",
+          "gateway": "web",
+          "entry_surface_id": "mainbar",
+          "prompt_preview": "新包的持久消息",
+          "phase": "finished",
+          "outcome": "completed",
+          "accepted_at": "2026-10-09T14:28:55Z",
+          "started_at": "2026-10-09T14:28:55Z",
+          "finished_at": "2026-10-09T14:28:55Z",
+          "activity_revision": 7,
+          "recording_state": "recorded",
+          "recording_source": "durable_finalization",
+          "aggregation": null
+        },
+        {
+          "run_id": "8cef69c30b3047c795343918728a6311",
+          "purpose": "chat",
+          "filter": "chat",
+          "purpose_known": true,
+          "admission_state": "admitted",
+          "admission_label": "已获准",
+          "session_id": "95a7bf9fd269414f8257149a3602db87",
+          "gateway": "web",
+          "entry_surface_id": "mainbar",
+          "prompt_preview": "旧包的持久消息",
+          "phase": "finished",
+          "outcome": "completed",
+          "accepted_at": "2026-10-09T14:28:54Z",
+          "started_at": "2026-10-09T14:28:54Z",
+          "finished_at": "2026-10-09T14:28:54Z",
+          "activity_revision": 4,
+          "recording_state": "recorded",
+          "recording_source": "durable_finalization",
+          "aggregation": null
+        }
+      ],
+      "non_terminal": null,
+      "next_cursor": null
+    },
+    "absent": {
+      "error": {
+        "code": "not_found",
+        "memory_revision": 99
+      }
+    },
+    "receipt": {
+      "schema_version": 1,
+      "process_instance_id": "3cc7644efbd34a5eae6ac41bed2955fd",
+      "memory_revision": 99,
+      "operation_id": "new-forget",
+      "result": {
+        "action": "delete",
+        "affected_count": 1,
+        "committed_at": "2026-10-09T14:28:55.713444+00:00",
+        "fingerprint": "4d08b14ad968e0aab03251b1f0017a4adefcc561af03bcc21669c45d7b3a9e96",
+        "key_id": "48ad603c9719088edc090f19eded370d",
+        "kind": "semantic",
+        "memory_id": "53dcac37-f889-4f75-93ee-70bd804c8b7d",
+        "operation_id": "new-forget",
+        "record_version": null,
+        "status": "deleted"
+      },
+      "forgetting": {
+        "operation_id": "new-forget",
+        "kind": "semantic",
+        "memory_id": "53dcac37-f889-4f75-93ee-70bd804c8b7d",
+        "completeness": "known",
+        "state": "complete",
+        "unresolved_scopes": 0,
+        "projection_recovery_error": null,
+        "projection_recovery_failed_at": null,
+        "projection_recovery_pending": false,
+        "observations": [
+          {
+            "progress_revision": 5,
+            "observed_at": "2026-10-09T14:28:55.714433+00:00",
+            "state": "cleaning"
+          },
+          {
+            "progress_revision": 13,
+            "observed_at": "2026-10-09T14:28:55.729117+00:00",
+            "state": "complete"
+          },
+          {
+            "progress_revision": 14,
+            "observed_at": "2026-10-09T14:28:56.847700+00:00",
+            "state": "cleaning"
+          },
+          {
+            "progress_revision": 25,
+            "observed_at": "2026-10-09T14:28:56.863603+00:00",
+            "state": "complete"
+          }
+        ],
+        "cleanup": [
+          {
+            "target_id": "database-console",
+            "revision": 5,
+            "state": "complete",
+            "error": null
+          },
+          {
+            "target_id": "memory/episodes.md",
+            "revision": 3,
+            "state": "complete",
+            "error": null
+          },
+          {
+            "target_id": "memory/facts.md",
+            "revision": 3,
+            "state": "complete",
+            "error": null
+          },
+          {
+            "target_id": "trace-export:managed",
+            "revision": 5,
+            "state": "complete",
+            "error": null
+          }
+        ],
+        "progress_revision": 25,
+        "limits": []
+      },
+      "scopes": []
+    },
+    "accounting": {
+      "snapshot_id": "155f297488814df695518ae3307f10f1",
+      "process_instance_id": "3cc7644efbd34a5eae6ac41bed2955fd",
+      "computed_at": "2026-10-09T14:28:56Z",
+      "filters": {
+        "range": "all",
+        "timezone": "UTC",
+        "start": null,
+        "end": null
+      },
+      "expires_at": "2026-10-09T14:43:56Z",
+      "summary": {
+        "run_count": 2,
+        "attempt_count": 4,
+        "unknown_cost_attempts": 0,
+        "exact_attempts": 4,
+        "estimated_attempts": 0,
+        "price_sources": {},
+        "stale_price_attempts": 0,
+        "tiered_price_attempts": 0,
+        "incomplete_runs": 0,
+        "tool_requests": 0,
+        "confirmed_starts": 0,
+        "not_started": 0,
+        "unconfirmed_starts": 0,
+        "tokens": {
+          "total_input_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "uncached_input_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "cache_read_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "cache_write_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "output_tokens": {
+            "known": 16,
+            "missing_attempts": 0
+          },
+          "reasoning_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          }
+        },
+        "tool_cost_states": {
+          "not_billable": 0,
+          "reported": 0,
+          "unknown": 0,
+          "unrecorded": 0
+        },
+        "exact_usd": "0.500",
+        "estimated_usd": "0",
+        "tool_costs": []
+      },
+      "unresolved_membership": [],
+      "history_boundary": "Persistent Runs only; legacy messages excluded.",
+      "price_version": "8b65cbfdc14e396263c02bdd24d2f20b9b228025b14c86e529942c5bff5e37ab",
+      "runs": [
+        {
+          "run_id": "bf59e384284e47abbc680e32e58bdc19",
+          "session_id": "95a7bf9fd269414f8257149a3602db87",
+          "purpose": "chat",
+          "phase": "finished",
+          "outcome": "completed",
+          "accepted_at": "2026-10-09T14:28:55Z",
+          "started_at": "2026-10-09T14:28:55Z",
+          "activity_revision": 7,
+          "at": "2026-10-09T14:28:55Z",
+          "time_basis": "started_at",
+          "coverage": [],
+          "trace_incomplete": false,
+          "prune_reason": null
+        },
+        {
+          "run_id": "8cef69c30b3047c795343918728a6311",
+          "session_id": "95a7bf9fd269414f8257149a3602db87",
+          "purpose": "chat",
+          "phase": "finished",
+          "outcome": "completed",
+          "accepted_at": "2026-10-09T14:28:54Z",
+          "started_at": "2026-10-09T14:28:54Z",
+          "activity_revision": 4,
+          "at": "2026-10-09T14:28:54Z",
+          "time_basis": "started_at",
+          "coverage": [],
+          "trace_incomplete": false,
+          "prune_reason": null
+        }
+      ],
+      "next_offset": null
+    },
+    "detail": {
+      "snapshot_id": "155f297488814df695518ae3307f10f1",
+      "process_instance_id": "3cc7644efbd34a5eae6ac41bed2955fd",
+      "computed_at": "2026-10-09T14:28:56Z",
+      "filters": {
+        "range": "all",
+        "timezone": "UTC",
+        "start": null,
+        "end": null
+      },
+      "expires_at": "2026-10-09T14:43:56Z",
+      "summary": {
+        "run_count": 2,
+        "attempt_count": 4,
+        "unknown_cost_attempts": 0,
+        "exact_attempts": 4,
+        "estimated_attempts": 0,
+        "price_sources": {},
+        "stale_price_attempts": 0,
+        "tiered_price_attempts": 0,
+        "incomplete_runs": 0,
+        "tool_requests": 0,
+        "confirmed_starts": 0,
+        "not_started": 0,
+        "unconfirmed_starts": 0,
+        "tokens": {
+          "total_input_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "uncached_input_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "cache_read_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "cache_write_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          },
+          "output_tokens": {
+            "known": 16,
+            "missing_attempts": 0
+          },
+          "reasoning_tokens": {
+            "known": 0,
+            "missing_attempts": 4
+          }
+        },
+        "tool_cost_states": {
+          "not_billable": 0,
+          "reported": 0,
+          "unknown": 0,
+          "unrecorded": 0
+        },
+        "exact_usd": "0.500",
+        "estimated_usd": "0",
+        "tool_costs": []
+      },
+      "unresolved_membership": [],
+      "history_boundary": "Persistent Runs only; legacy messages excluded.",
+      "price_version": "8b65cbfdc14e396263c02bdd24d2f20b9b228025b14c86e529942c5bff5e37ab",
+      "run": {
+        "run_id": "8cef69c30b3047c795343918728a6311",
+        "session_id": "95a7bf9fd269414f8257149a3602db87",
+        "purpose": "chat",
+        "phase": "finished",
+        "outcome": "completed",
+        "accepted_at": "2026-10-09T14:28:54Z",
+        "started_at": "2026-10-09T14:28:54Z",
+        "activity_revision": 4,
+        "at": "2026-10-09T14:28:54Z",
+        "time_basis": "started_at",
+        "tools": [],
+        "coverage": [],
+        "trace_incomplete": false,
+        "prune_reason": null,
+        "attempts": [
+          {
+            "attempt_id": "c3040cc3-79b4-4fab-8128-1db35d92fc39",
+            "outcome": "committed",
+            "model": {
+              "endpoint_id": "opencode-go",
+              "model_id": "deepseek-v4-flash"
+            },
+            "usage": {
+              "total_input_tokens": null,
+              "uncached_input_tokens": null,
+              "cache_read_tokens": null,
+              "cache_write_tokens": null,
+              "output_tokens": 4,
+              "reasoning_tokens": null,
+              "endpoint_reported_cost_usd": "0.125"
+            },
+            "cost": {
+              "state": "exact",
+              "amount": "0.125",
+              "currency": "USD",
+              "computed_at": "2026-10-09T14:28:56Z"
+            }
+          },
+          {
+            "attempt_id": "6090d91b-6b4d-44df-b83d-74fde76464ea",
+            "outcome": "committed",
+            "model": {
+              "endpoint_id": "opencode-go",
+              "model_id": "deepseek-v4-flash"
+            },
+            "usage": {
+              "total_input_tokens": null,
+              "uncached_input_tokens": null,
+              "cache_read_tokens": null,
+              "cache_write_tokens": null,
+              "output_tokens": 4,
+              "reasoning_tokens": null,
+              "endpoint_reported_cost_usd": "0.125"
+            },
+            "cost": {
+              "state": "exact",
+              "amount": "0.125",
+              "currency": "USD",
+              "computed_at": "2026-10-09T14:28:56Z"
+            }
+          }
+        ]
+      }
+    },
+    "automaticPostsOnRefresh": 0
+  },
+  "lostCapabilities": [
+    "默认根地址与品牌入口回到收件箱；已迁移十页和全部语义修复仍可用"
+  ],
+  "status": "PASS"
+}

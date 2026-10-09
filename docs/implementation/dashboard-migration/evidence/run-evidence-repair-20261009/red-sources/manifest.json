@@ -1,0 +1,16 @@
+[
+  {
+    "test_source": "controlled-red.spec.js",
+    "source_sha256": "21fac09f8034d5937266e8f33a75b24389ef8b63375b9b51aca976500a840995",
+    "trace": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/postmerge-controlled-red-results/run-path-late-process-evid-18058--without-rereading-the-path/trace.zip",
+    "trace_sha256": "a2085d55f83871805e5a5919a9e438dfba51e5c0ea08e73c2bad54933be639b1",
+    "source_entry": "src/42cc87f6d352ce5ddc6629500fe534564c7c3396.js"
+  },
+  {
+    "test_source": "controlled-red-r2.spec.js",
+    "source_sha256": "65699b87e26904131292f5e83e0efc5664d47d317bd1ba7c5575ef8f23873a24",
+    "trace": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/postmerge-controlled-red-r2-results/run-path-late-process-evid-18058--without-rereading-the-path/trace.zip",
+    "trace_sha256": "f0fadb2e4aa83aea2c16500a4a0f9e068c321b52ac18e0b08fcd24515204dd84",
+    "source_entry": "src/42cc87f6d352ce5ddc6629500fe534564c7c3396.js"
+  }
+]

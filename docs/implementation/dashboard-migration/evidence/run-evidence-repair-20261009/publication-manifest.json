@@ -1,0 +1,247 @@
+{
+  "result": "PASS",
+  "scope": "Immutable allowlisted successor evidence copies; no trace archive, raw lifecycle credentials, databases, environments or package archives",
+  "candidate_sha256": "6150b3a441729251e24ce9834ca5d9017b88fdee3258f5acd7331f8bfbf8e07b",
+  "files": [
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/APPLICABILITY.md",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/APPLICABILITY.md",
+      "sha256": "ac789882e0571f05699fcd43e6d4a4934b9bc4be33262e8c3030b2dfc925ff3c",
+      "bytes": 4247
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/REPORT.md",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/REPORT.md",
+      "sha256": "d07b4c17ae3a44e934781ada29ed196c9816e4aa97b68e69d851042454cbcbf2",
+      "bytes": 3009
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/build.log",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/build.log",
+      "sha256": "56061f0b7315d94ee6d11c3e111d65ef5b93994e7ecf2be2da4df0d71b2af69d",
+      "bytes": 367
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/candidate.diff",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/candidate.diff",
+      "sha256": "28bd8f28f77cf96b2a1e57be0fdcb7756b6700ae42f2b32a961740da7179d64d",
+      "bytes": 10302
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/candidate.json",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/candidate.json",
+      "sha256": "6150b3a441729251e24ce9834ca5d9017b88fdee3258f5acd7331f8bfbf8e07b",
+      "bytes": 1430
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/commits.json",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/commits.json",
+      "sha256": "c31c5e71bda8ae84f9ae678c1357c1013161ed063dc76f49c7262e3808fe045d",
+      "bytes": 999
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/controlled-red-r2.log",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/postmerge-controlled-red-r2.log",
+      "sha256": "82669c5cd1130b2cc0621960fe8967fdc9341c07c0c095f3fb8087abab45f21b",
+      "bytes": 3645
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/diagnosis.md",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/diagnosis.md",
+      "sha256": "eee575de79be7937416dcce78f2672e390aede203bc038af8371f146a1091c35",
+      "bytes": 4335
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/first-failure/actual-merge-browser.log",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/first-failure/actual-merge-browser.log",
+      "sha256": "0616fdcc361d069a3f88a24ca787aeea6654f8fa1290f79b335598945de191fb",
+      "bytes": 13520
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/first-failure/actual-merge-ci-identities.json",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/first-failure/actual-merge-ci-identities.json",
+      "sha256": "d995907bab64aad1c1389d631173f50d9ddfb2d34cdd92aab11b2a39c0fb59b2",
+      "bytes": 3626
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/first-failure/actual-merge-error-context.md",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/first-failure/actual-merge-error-context.md",
+      "sha256": "e9a241b55489f6daeec7ecd4a2221a9441bac5e3940f6f44ea60113518694d8e",
+      "bytes": 23515
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/first-failure/actual-merge-failed.png",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/first-failure/actual-merge-failed.png",
+      "sha256": "7387282bf95a1aca3f2538431cce1f70e0292568d9a9c61a68abbce5ec8e285c",
+      "bytes": 139021
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/first-failure/controlled-red.log",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/first-failure/controlled-red.log",
+      "sha256": "a99903b70fb270bd6111efad8abde3f31467dc964399ffc5fe35b72d27b3cb39",
+      "bytes": 3641
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/first-failure/manifest.json",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/first-failure/manifest.json",
+      "sha256": "51d5bb7e5b4600eedb3687357992f7645a16f1a243a33de29e8eae4e7df34d75",
+      "bytes": 1942
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/installation-results.json",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/installation-results.json",
+      "sha256": "4bfdb6211bfc5bf5c6c4a5cab3df0dbbc9532f127904adcdff3b768746f34376",
+      "bytes": 619796
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/issue-audit-delta.json",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/issue-audit-delta.json",
+      "sha256": "93b0a24ac2e7a0674a5f2b49ac8e7789c2e1a0037aa0985cfb4b1a56bfa719d1",
+      "bytes": 15074
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/lifecycle-manifest.json",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-manifest.json",
+      "sha256": "f23d2ec2a7112ad977766d79f1bac69b86b03a19e9a16b7d26c5fa4b05c502b4",
+      "bytes": 3214
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/lifecycle-portable.json",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-portable.json",
+      "sha256": "28651e89af434f03f6917f5856f86cde2f4bc0e97274da64c23c3a67fd96908c",
+      "bytes": 57879
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/lifecycle-source-binding.json",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-source-binding.json",
+      "sha256": "9bdd92263ae2a308e56ad10d960eb4db92b2aff6e722e4cb4850134dc48600db",
+      "bytes": 1470
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/lifecycle-summary.json",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle-summary.json",
+      "sha256": "b4442037108fdfa42ad3a5f01d192bea7c40c757b69d2e2d9b2e08fc43a2525d",
+      "bytes": 1411
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/lifecycle.log",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/lifecycle.log",
+      "sha256": "5bb433baa9a77421d35a5cae7de191915b0ebfe4a80684d4819604df8e79e7e3",
+      "bytes": 374
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/red-sources/controlled-red-r2.spec.js",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/red-sources/controlled-red-r2.spec.js",
+      "sha256": "65699b87e26904131292f5e83e0efc5664d47d317bd1ba7c5575ef8f23873a24",
+      "bytes": 50211
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/red-sources/controlled-red.spec.js",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/red-sources/controlled-red.spec.js",
+      "sha256": "21fac09f8034d5937266e8f33a75b24389ef8b63375b9b51aca976500a840995",
+      "bytes": 49441
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/red-sources/manifest.json",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/red-sources/manifest.json",
+      "sha256": "807140318e540fd6c2efc1d78c2ff89541dc7f38702cfbd61db12dbb6ad676e2",
+      "bytes": 993
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/related.log",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/related.log",
+      "sha256": "5ef95fccf18d92bea360adb0ca060b766e7ed9c2a45f6dadbdccfabe1ad4fa08",
+      "bytes": 17181
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/reviews/spec-verification.json",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/reviews/spec-verification.json",
+      "sha256": "7fcddac54f9b7c362e47863ebdffadf48e6d38e1d3f0f91db78c036baa5168d0",
+      "bytes": 7014
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/reviews/spec.md",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/reviews/spec.md",
+      "sha256": "9b7169b3a19927e131f8042ac1082777817f0867470553f6155c9b7609e03dd0",
+      "bytes": 2446
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/reviews/standards.md",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/reviews/standards.md",
+      "sha256": "174532ac1bb21caa7a395251429d79c49cf4ff3decd8cbff1e66e097e1dba43e",
+      "bytes": 2196
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/source/src/agent_alfred/ops/static/runs.js",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/source/src/agent_alfred/ops/static/runs.js",
+      "sha256": "86bc882a38c32044b975b93f44b9ce5547847e15dd8187480579853c76d38e0f",
+      "bytes": 28838
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/source/src/agent_alfred/ops/static/topology.js",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/source/src/agent_alfred/ops/static/topology.js",
+      "sha256": "da3c1dda2d0ab85dee05eaf1c19e4974c12c405fe65422601571d32363cd1c08",
+      "bytes": 27019
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/source/tests/browser/run-path.spec.js",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/source/tests/browser/run-path.spec.js",
+      "sha256": "a1f997e0497d71f8036ff33cc55e579a9813637f835e5026adb6373cd86216a9",
+      "bytes": 51588
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/support-build.log",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/support-build.log",
+      "sha256": "663b0456753e5540542c4dff672a4387207c244e4e3049b87e99c2abb593f5e5",
+      "bytes": 383
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/support-comparison.json",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/support-comparison.json",
+      "sha256": "675b0166d4c8c08fdac4277fec67e9ca65f88c3c33920b522130e3469433d4b8",
+      "bytes": 320
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/support/candidate.diff",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/support/candidate.diff",
+      "sha256": "28bd8f28f77cf96b2a1e57be0fdcb7756b6700ae42f2b32a961740da7179d64d",
+      "bytes": 10302
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/support/candidate.json",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/support/candidate.json",
+      "sha256": "1aa30b80c99f9e44c55fd3b0216cb90a2fe57c144e969a4fb797191cb8b09192",
+      "bytes": 1441
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/support/source/src/agent_alfred/ops/static/runs.js",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/support/source/src/agent_alfred/ops/static/runs.js",
+      "sha256": "86bc882a38c32044b975b93f44b9ce5547847e15dd8187480579853c76d38e0f",
+      "bytes": 28838
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/support/source/src/agent_alfred/ops/static/topology.js",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/support/source/src/agent_alfred/ops/static/topology.js",
+      "sha256": "da3c1dda2d0ab85dee05eaf1c19e4974c12c405fe65422601571d32363cd1c08",
+      "bytes": 27019
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/support/source/tests/browser/run-path.spec.js",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/support/source/tests/browser/run-path.spec.js",
+      "sha256": "a1f997e0497d71f8036ff33cc55e579a9813637f835e5026adb6373cd86216a9",
+      "bytes": 51588
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/typecheck.log",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/typecheck.log",
+      "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f",
+      "bytes": 29
+    },
+    {
+      "repository_path": "docs/implementation/dashboard-migration/evidence/run-evidence-repair-20261009/verification.json",
+      "source": "/Users/nineofour/.codex/dashboard-migration-20261009/closeout-20261009/run-evidence-repair/verification.json",
+      "sha256": "1074a6b7aa109074c6d3a78e39327f6d3291c8f59e03664de1bf7592942cf27c",
+      "bytes": 6155
+    }
+  ]
+}
