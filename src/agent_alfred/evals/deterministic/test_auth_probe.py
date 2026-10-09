@@ -431,16 +431,3 @@ def test_urllib_transport_does_not_follow_redirects_or_set_content_type() -> Non
     assert [item[0:2] for item in hits] == [("GET", "/from"), ("POST", "/empty")]
     post_headers = {name.lower(): value for name, value in hits[1][2].items()}
     assert "content-type" not in post_headers
-
-
-def test_connections_script_posts_only_endpoint_id() -> None:
-    source = (
-        Path(__file__).resolve().parents[2] / "ops" / "static" / "pages.js"
-    ).read_text(encoding="utf-8")
-    connections = source.split("export function connectionsPage", 1)[1]
-    connections = connections.split("export function modelsPage", 1)[0]
-    assert '"验证凭据"' in connections or "验证凭据" in connections
-    assert "/api/connections/probe" in connections
-    assert "endpoint_id" in connections
-    assert "button.isConnected" in connections
-    assert "button.disabled = true" in connections

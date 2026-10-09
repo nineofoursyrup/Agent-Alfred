@@ -9,6 +9,10 @@ PAGE_POLICY = (
 )
 
 ASSETS = {
+    "/assets/settings-focus.js": ("settings-focus.js", "text/javascript"),
+    "/assets/models.js": ("models.js", "text/javascript"),
+    "/assets/connections.js": ("connections.js", "text/javascript"),
+    "/assets/settings.css": ("settings.css", "text/css"),
     "/assets/overview.js": ("overview.js", "text/javascript"),
     "/assets/overview.css": ("overview.css", "text/css"),
     "/assets/shell.js": ("shell.js", "text/javascript"),

@@ -246,14 +246,5 @@ def test_refresh_does_not_write_connection_observation() -> None:
     assert pool.cached_observation("openai") is None
 
 
-def test_models_page_script_refresh_disables_while_inflight() -> None:
-    from pathlib import Path
-
-    source = (
-        Path(__file__).resolve().parents[2] / "ops" / "static" / "pages.js"
-    ).read_text(encoding="utf-8")
-    models = source.split("export function modelsPage", 1)[1]
-    assert 'node("button", "刷新目录")' in models
-    assert 'refresh: "1"' in models
-    assert "button.disabled = true" in models
-    assert "button.isConnected" in models
+# Catalog refresh in-flight behavior is exercised by models-migration.spec.js through
+# the browser and the public GET /api/models seam.
