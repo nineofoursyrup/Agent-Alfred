@@ -50,10 +50,12 @@ test('A06: a late successful authorization receipt does not replace newer pendin
   const persisted=new Promise(resolve=>{saved=resolve;});
   try {
     await page.goto(server.origin+'/tools');
+    await externalCard(page).getByRole('button',{name:'展开详情',exact:true}).click();
     await page.route('**/api/tools/authorization',async route=>{const response=await route.fetch(); saved(); await gate; await route.fulfill({response});});
     await externalCard(page).getByLabel('external_fixture 授权草稿').selectOption('allowed');
     await externalCard(page).getByRole('button',{name:'保存授权',exact:true}).click(); await persisted;
     await other.goto(server.origin+'/tools');
+    await externalCard(other).getByRole('button',{name:'展开详情',exact:true}).click();
     await server.send('apply-fail');
     await externalCard(other).getByLabel('external_fixture 授权草稿').selectOption('denied');
     await externalCard(other).getByRole('button',{name:'保存授权',exact:true}).click();
@@ -71,6 +73,8 @@ test('A04 A05 A06 A08: two tabs keep drafts, reject busy, and distinguish lost r
   const server=await fixture(); const other=await context.newPage();
   try {
     await page.goto(server.origin+'/tools'); await other.goto(server.origin+'/tools');
+    await externalCard(page).getByRole('button',{name:'展开详情',exact:true}).click();
+    await externalCard(other).getByRole('button',{name:'展开详情',exact:true}).click();
     const card=externalCard(page), second=externalCard(other);
     await card.getByLabel('external_fixture 授权草稿').selectOption('allowed');
     await second.getByLabel('external_fixture 授权草稿').selectOption('denied');
@@ -147,6 +151,7 @@ for (const trigger of ['focus', 'reconnect']) test(`A07: ${trigger} detects malf
   try {
     await page.goto(server.origin+'/tools');
     const card = externalCard(page);
+    await card.getByRole('button',{name:'展开详情',exact:true}).click();
     await card.getByLabel('external_fixture 授权草稿').selectOption('allowed');
     await card.getByRole('button', {name:'保存授权',exact:true}).click();
     await expect(card).toContainText('模型暴露：real');

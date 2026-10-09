@@ -1,17 +1,5 @@
 import {test, expect} from '@playwright/test';
-import {spawn} from 'node:child_process';
-import {createInterface} from 'node:readline';
-import {once} from 'node:events';
-
-async function server(args=[]) {
-  const child = spawn('.venv/bin/python', ['tests/browser/mcp_server.py',...args]);
-  const lines = createInterface({input:child.stdout});
-  let errors='';child.stderr.on('data',d=>errors+=d);
-  const value=await Promise.race([once(lines,'line').then(([l])=>JSON.parse(l)),
-    once(child,'exit').then(()=>{throw new Error(errors);})]);
-  return {...value, async close(){const done=once(child,'exit');child.kill('SIGTERM');await done;lines.close();if(child.exitCode!==0)throw new Error(errors);}};
-}
-const control=async(s,body)=> (await fetch(s.control, body?{method:'POST',body:JSON.stringify(body)}:{})).json();
+import {mcpServer as server, control} from './mcp-server.js';
 
 test('MCP CE-01 CE-05 CE-11 MainBar authorization, safe result and persistent cost',async({browser})=>{
   const s=await server();const context=await browser.newContext();
@@ -22,8 +10,17 @@ test('MCP CE-01 CE-05 CE-11 MainBar authorization, safe result and persistent co
     const tool=b.locator('article').filter({has:b.getByRole('heading',{name:'mcp_test_echo',exact:true})});
     await expect(tool).toContainText('模型暴露：hidden');
     expect((await control(s)).requests.filter(r=>r.method==='tools/call')).toHaveLength(0);
+    await tool.getByRole('button',{name:'展开详情',exact:true}).click();
     await tool.getByRole('combobox').selectOption('allowed');await tool.getByRole('button',{name:'保存授权',exact:true}).click();
     await expect(tool).toContainText('模型暴露：real');
+    const identity=await tool.getAttribute('data-tool-identity');
+    await tool.getByRole('link',{name:'连接维护',exact:true}).click();
+    const connection=b.locator('[data-mcp-server="test"]');
+    await expect(connection).toContainText('可用数不等于已授权数');
+    await connection.getByText('服务器详情',{exact:true}).click();
+    await connection.getByRole('link',{name:'到工具页核对授权',exact:true}).click();
+    await expect(tool).toHaveAttribute('data-tool-identity',identity);
+    await expect(tool).toContainText('已保存授权：allowed');
     await b.getByRole('button',{name:'新建会话',exact:true}).click();
     await b.locator('#shell-toolbar [data-open-panel="mainbar"]').click();
     await b.getByRole('textbox',{name:'消息'}).fill('MCP 验收');await b.getByRole('button',{name:'发送',exact:true}).click();
@@ -33,8 +30,18 @@ test('MCP CE-01 CE-05 CE-11 MainBar authorization, safe result and persistent co
     expect(await b.evaluate(()=>window.injected)).toBeUndefined();
     await expect(chat).toContainText('不支持');
     expect((await control(s)).requests.filter(r=>r.method==='tools/call')).toHaveLength(1);
-    await b.goto(origin+'/ops');await expect(b.getByRole('region',{name:'账目汇总'})).toContainText('未知');
-  }finally{await context.close();await s.close();}
+    await tool.getByRole('link',{name:'查看包含该工具的运行',exact:true}).click();
+    await expect(b.getByLabel('工具身份',{exact:true})).toHaveValue(identity);
+    await expect(b.getByRole('region',{name:'账目汇总'})).toContainText('未知');
+    await b.getByRole('button',{name:/查看账目 /}).first().click();
+    const run=b.getByRole('link',{name:'进入运行过程（保留账目快照）',exact:true});
+    const href=await run.getAttribute('href'),snapshot=new URL(href,origin).searchParams.get('snapshot_id');
+    const read=b.waitForResponse(r=>new URL(r.url()).pathname==='/api/run-evidence');
+    await run.click();expect(new URL((await read).url()).searchParams.get('snapshot_id')).toBe(snapshot);
+    await expect(b.getByRole('region',{name:'运行摘要',exact:true})).toContainText('Run');
+    await b.goBack();await expect(b.getByLabel('工具身份',{exact:true})).toHaveValue(identity);
+    expect((await control(s)).requests.filter(r=>r.method==='tools/call')).toHaveLength(1);
+  }finally{try{await context.close();}finally{await s.close();}}
 });
 
 test('MCP CE-09 CE-14 double-tab env publication and explicit reconnect',async({browser})=>{
@@ -131,6 +138,7 @@ test('MCP CE-14 delayed Tools response cannot undo new environment isolation',as
     const a=await context.newPage(),b=await context.newPage();const origin=`http://127.0.0.1:${s.entry.port}`;
     await a.goto(origin+'/tools');await b.goto(origin+'/connections');
     const tool=a.locator('article').filter({has:a.getByRole('heading',{name:'mcp_test_echo',exact:true})});
+    await tool.getByRole('button',{name:'展开详情',exact:true}).click();
     await tool.getByRole('combobox').selectOption('allowed');await tool.getByRole('button',{name:'保存授权',exact:true}).click();
     await expect(tool).toContainText('模型暴露：real');
     let captured,delivered;const received=new Promise(r=>captured=r),finished=new Promise(r=>delivered=r);
