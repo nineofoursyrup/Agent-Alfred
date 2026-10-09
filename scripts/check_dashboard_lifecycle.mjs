@@ -51,8 +51,8 @@ async function send(text){
   await page.getByRole('textbox',{name:'消息',exact:true}).fill(text);
   const response=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/runs'&&r.request().method()==='POST');
   await page.getByRole('button',{name:'发送',exact:true}).click();const r=await response;assert.equal(r.status(),202);const identity=await r.json();
-  await expect(page.getByRole('region',{name:'主对话',exact:true})).toContainText('已保存');
   await expect.poll(async()=>{const v=await get('/api/runs?filter=all');return v.runs.some(x=>x.run_id===identity.run_id);}).toBe(true);
+  await expect.poll(async()=>JSON.stringify(await get('/api/sessions/messages?'+new URLSearchParams({session_id:identity.session_id,page_size:'100'})))).toContain(text);
   return identity;
 }
 try{
@@ -80,7 +80,7 @@ try{
   const newMemory=await memory('new-retained','新包保留记忆','回退仍应读取的新事实');
   const deletion=await post('/api/memory/commands',{schema_version:1,operation_id:'new-forget',kind:'semantic',action:'delete',payload:{id:forgotten.result.memory_id},expected_version:1});
   assert.equal(deletion.result.status,'deleted');
-  await expect.poll(async()=>(await get('/api/memory?operation_id=new-forget')).forgetting?.state).toBe('complete');
+  await expect.poll(async()=>(await get('/api/memory/operations?operation_id=new-forget')).forgetting?.state).toBe('complete');
   const beforeRollback=await get('/api/models');
   const currentAccounting=await post('/api/ops/snapshots',{range:'all',timezone:'UTC'});
   const currentOldDetail=await get('/api/ops/detail?'+new URLSearchParams({snapshot_id:currentAccounting.snapshot_id,run_id:oldRun.run_id}));
@@ -102,7 +102,7 @@ try{
   assert.equal((await get('/api/memory/record?kind=semantic&id='+retained.result.memory_id)).record.fact,'仍需保留的旧事实');
   assert.equal((await get('/api/memory/record?kind=semantic&id='+newMemory.result.memory_id)).record.fact,'回退仍应读取的新事实');
   const absent=await get('/api/memory/record?kind=semantic&id='+forgotten.result.memory_id,404);
-  const receipt=await get('/api/memory?operation_id=new-forget');assert.equal(receipt.forgetting.state,'complete');
+  const receipt=await get('/api/memory/operations?operation_id=new-forget');assert.equal(receipt.forgetting.state,'complete');
   const accounting=await post('/api/ops/snapshots',{range:'all',timezone:'UTC'});assert.deepEqual(accounting.summary,currentAccounting.summary);
   const detail=await get('/api/ops/detail?'+new URLSearchParams({snapshot_id:accounting.snapshot_id,run_id:oldRun.run_id}));
   proof.supported={modelState,history,runs,absent,receipt,accounting,detail,automaticPostsOnRefresh:proof.requests.length-rollbackWrites};
