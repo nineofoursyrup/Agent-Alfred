@@ -19,6 +19,31 @@ async function saved(page) {
   return data.endpoints.flatMap(group=>group.models).find(model=>model.endpoint_id==='opencode-go' && model.model_id==='deepseek-v4-flash');
 }
 
+for (const lost of [false,true])
+test(`S11 model ${lost?'unknown':'pending'} save protects a successor equal to its old saved value`,async({browser})=>{
+  const s=await server(),context=await browser.newContext({baseURL:s.origin});let release=()=>{};
+  try{
+    const page=await context.newPage();await open(page,s.origin);const row=selected(page);
+    const input=row.getByRole('textbox',{name:'显示名',exact:true}),save=row.getByRole('button',{name:'保存显示名',exact:true});
+    await input.fill('A');await save.click();await expect(row.getByText('已确认保存',{exact:true})).toBeVisible();
+    let received;const arrived=new Promise(resolve=>received=resolve),gate=new Promise(resolve=>release=resolve);const posts=[];
+    await page.route('**/api/settings',async route=>{posts.push(route.request().postDataJSON());const response=await route.fetch();received();await gate;if(lost)await route.abort();else await route.fulfill({response});});
+    await input.fill('B');await save.click();await arrived;
+    if(lost){release();await expect(row.getByText('保存结果未确认。先核对当前值；不会自动重送。',{exact:true})).toBeVisible();}
+    await input.fill('A');
+    await page.locator('nav a[href="/overview"]').click();
+    await expect(page.getByRole('button',{name:'留在此页',exact:true})).toBeFocused();
+    await page.keyboard.press('Escape');await expect(input).toHaveValue('A');
+    if(lost){await page.getByRole('button',{name:'核对当前模型设置',exact:true}).click();await expect(row.getByText('当前保存值：B',{exact:true})).toBeVisible();await expect(input).toHaveValue('A');}
+    await input.fill('B'); // The submitted value itself is no unsaved successor.
+    await page.locator('nav a[href="/overview"]').click();
+    await expect(page).toHaveURL(/\/overview$/);await expect(page.getByRole('dialog')).toHaveCount(0);
+    release();expect(posts.map(p=>[p.display_name,p.expected_revision])).toEqual([['B',1]]);
+    expect((await saved(page)).display_name_override).toBe('B');
+    expect((await (await fetch(s.control)).json()).model_calls).toHaveLength(0);
+  }finally{release();await context.close();await s.close();}
+});
+
 test('S08 real catalog label and explicit clearing survive HTTP read and page reentry',async({browser})=>{
   const s=await server(), context=await browser.newContext({baseURL:s.origin});
   try {
