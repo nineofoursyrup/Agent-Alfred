@@ -2,16 +2,16 @@
   "product_head": "593564fc4b6ed08bc332bbfcf76dcf67107929c0",
   "source_tree": "5e5affdf0c481f4b5ad38f02cf47d7fc2d5c483a",
   "native_source_tree": "5e5affdf0c481f4b5ad38f02cf47d7fc2d5c483a",
-  "applicability": "Production src tree is byte identical. Later commits change tests and isolated harnesses only. Native IME remains BLOCKED. Source browser final gate remains running.",
+  "applicability": "Native product593564 and installed product675cb69 have byte-identical src trees. Later commits change tests, isolated harnesses, documentation and exact original-log whitespace attributes only. Native IME remains BLOCKED; browser and other project gate statuses are recorded separately.",
   "native_result_sha256": "907fc8f958e0d40a3155b582fe368da41b49b1f9e9c4f0b2fa972d77096fa2d1",
-  "installations_result_sha256": "d5b546ccbcb05d4a89e4f1097d81a6b851218f40fa76691cd2030bbc6a93549c",
+  "installations_result_sha256": "0c69975608372b97f6159d6d2fb176ffd514fc013d03aab6bb0c9ad55a97fbe5",
   "artifact_candidates": [
     {
       "kind": "wheel",
       "mode": "base",
       "artifact": "agent_alfred-0.1.0-py3-none-any.whl",
       "artifact_sha256": "9dafdc90a3735b70883c03afa2dc60ea0454ba229b3f32c405915a8a63fa76f0",
-      "import_path": "/private/var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/alfred-mcp-install-ny7n70l7/env/lib/python3.14/site-packages/agent_alfred",
+      "import_path": "/private/var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/alfred-mcp-install-raxperab/env/lib/python3.14/site-packages/agent_alfred",
       "source_contamination": false,
       "resource_count": 34,
       "http_checks": 100,
@@ -39,7 +39,7 @@
       "mode": "mcp",
       "artifact": "agent_alfred-0.1.0-py3-none-any.whl",
       "artifact_sha256": "9dafdc90a3735b70883c03afa2dc60ea0454ba229b3f32c405915a8a63fa76f0",
-      "import_path": "/private/var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/alfred-mcp-install-paadfmvo/env/lib/python3.14/site-packages/agent_alfred",
+      "import_path": "/private/var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/alfred-mcp-install-kmimk37a/env/lib/python3.14/site-packages/agent_alfred",
       "source_contamination": false,
       "resource_count": 34,
       "http_checks": 100,
@@ -66,8 +66,8 @@
       "kind": "sdist",
       "mode": "base",
       "artifact": "agent_alfred-0.1.0.tar.gz",
-      "artifact_sha256": "e5f382d7e65473ac9b6e9ee0b19fb33ba37e0aef8fb1d5fcab8d58c90b68a8a0",
-      "import_path": "/private/var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/alfred-mcp-install-r2vwa633/env/lib/python3.14/site-packages/agent_alfred",
+      "artifact_sha256": "7703d8350741a83c50be7f309e575e64e3873808d6b906e59b64a0a2018b5ff1",
+      "import_path": "/private/var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/alfred-mcp-install-qqlql7rx/env/lib/python3.14/site-packages/agent_alfred",
       "source_contamination": false,
       "resource_count": 34,
       "http_checks": 100,
@@ -94,8 +94,8 @@
       "kind": "sdist",
       "mode": "mcp",
       "artifact": "agent_alfred-0.1.0.tar.gz",
-      "artifact_sha256": "e5f382d7e65473ac9b6e9ee0b19fb33ba37e0aef8fb1d5fcab8d58c90b68a8a0",
-      "import_path": "/private/var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/alfred-mcp-install-gtfv9tv7/env/lib/python3.14/site-packages/agent_alfred",
+      "artifact_sha256": "7703d8350741a83c50be7f309e575e64e3873808d6b906e59b64a0a2018b5ff1",
+      "import_path": "/private/var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/alfred-mcp-install-ow2zrtc5/env/lib/python3.14/site-packages/agent_alfred",
       "source_contamination": false,
       "resource_count": 34,
       "http_checks": 100,
@@ -118,5 +118,16 @@
         "/ops?range=today&timezone=Asia%2FShanghai"
       ]
     }
-  ]
+  ],
+  "source_path": "src",
+  "installation_build_candidate": "675cb695fed3d14059dd17071aef160971b3f303",
+  "portable_installation_detail": "installed-http.json",
+  "installation_artifact_set": "dist-02",
+  "superseded_summary": {
+    "scope": "historical-only dist-01 native/install applicability summary",
+    "original_sha256": "0ebe832fa4b4cc1afea6a73e64ee82b6b4964006abdc5185029a1f6a2949c564",
+    "original_evidence": "S11/native-install-applicability.json",
+    "repository_version": "2dc8d7e00f2fffd6b9ed74994165b893c9b704a9:docs/implementation/dashboard-migration/native-install-applicability.json",
+    "reason": "Independent Standards phase2 found dist01 report/sdist identities in the portable final summary. This derivative now binds the already-completed final dist02 evidence; no product or installation rerun."
+  }
 }
