@@ -174,6 +174,21 @@ test("A52: explicit save, next-Run hit, source, edit conflict, delete and requer
     await sourceLink.click();
     await expect(page).toHaveURL(sourceURL);
     expect(await page.evaluate(() => sessionStorage.getItem("alfred.session"))).toBe(selectedSession);
+    const returnToMemory = page.getByRole("link", {name:"返回来源",exact:true});
+    await expect(returnToMemory).toHaveAttribute("href", "/memory?tab=semantic");
+    const sourceRead = page.waitForResponse(response => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/memory/record" && url.searchParams.get("id") === id && response.status() === 200;
+    });
+    await returnToMemory.click();
+    expect((await (await sourceRead).json()).record.id).toBe(id);
+    await expect(page).toHaveURL(server.origin + "/memory?tab=semantic");
+    await expect(sourceLink).toBeFocused();
+    await expect(detail.locator(".memory-summary")).toContainText(id);
+    expect(await page.evaluate(() => sessionStorage.getItem("alfred.session"))).toBe(selectedSession);
+    // Keep the independent browser Back/Forward and late-focus checks below.
+    await sourceLink.click();
+    await expect(page).toHaveURL(sourceURL);
     await page.goBack();
     await expect(sourceLink).toBeVisible();
     await expect(sourceLink).toBeFocused();
@@ -684,6 +699,22 @@ test("A47: queue states and actions are explicit; busy is 409 and nothing bypass
     await recorded(first);
     const generatingRun=first.getByRole("link",{name:/^提炼运行 /});
     const generatingHref=await generatingRun.getAttribute("href");
+    const generatingBatch=await first.getAttribute("data-batch");
+    await generatingRun.click();
+    await expect(page).toHaveURL(server.origin+generatingHref);
+    const origin = await page.evaluate(() => history.state.alfredShell.source.returnSource);
+    expect(origin.queue.batchId).toBe(generatingBatch);
+    expect(origin.focusHref).toBe(generatingHref);
+    const batchRead = page.waitForResponse(response => {
+      const url = new URL(response.url());
+      return url.pathname === "/api/memory/consolidation" && url.searchParams.get("batch_id") === origin.queue.batchId && response.status() === 200;
+    });
+    await page.getByRole("link",{name:"返回来源",exact:true}).click();
+    await batchRead;
+    await expect(page).toHaveURL(server.origin + origin.route);
+    expect(await page.evaluate(() => history.state.alfredShell.source.queue)).toEqual(origin.queue);
+    await expect(generatingRun).toBeFocused();
+    await expect(first.getByLabel("候选差异")).toContainText("情景摘要：浏览器提炼摘要");
     await generatingRun.click();
     await expect(page).toHaveURL(server.origin+generatingHref);
     await page.goBack();
