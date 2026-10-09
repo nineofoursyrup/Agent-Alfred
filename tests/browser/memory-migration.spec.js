@@ -184,6 +184,93 @@ test("S05: real forgetting invalidates folded details, drafts and mirror preview
   } finally {release?.();await server.close();}
 });
 
+for (const collapseBeforeFailure of [true, false])
+test(`S05 Spec-F1: mirror preview ${collapseBeforeFailure ? "loading then collapse" : "failure then collapse"} retains its own error until a current read succeeds`, async ({page}) => {
+  const server = await memoryServer();
+  const deferred = () => {let resolve;const promise = new Promise(done=>{resolve=done;});return {promise,resolve};};
+  let gate = deferred(), arrived = deferred(), mode = "fail", completed = 0;
+  try {
+    const other = await api(page.request, server.origin);
+    const saved = await other.command({operation_id:"preview-seed",kind:"semantic",action:"save",payload:{subject:"镜像私有主题",fact:"镜像受保护正文"}});
+    await page.goto(server.origin + "/memory");
+    const toggle = page.getByRole("button",{name:"Markdown 镜像",exact:true});
+    const summary = toggle.locator("xpath=../..").locator(".memory-summary");
+    const mirrors = page.getByRole("region",{name:"Markdown 镜像",includeHidden:true});
+    const facts = mirrors.locator('[data-mirror="facts"]');
+    const focus = page.getByRole("tabpanel",{name:"语义记忆"}).getByLabel("文本",{exact:true});
+    await toggle.click();
+    await facts.getByRole("button",{name:"预览",exact:true}).click();
+    await expect(facts.locator("pre")).toContainText("镜像受保护正文");
+    await page.route("**/api/memory/mirrors?name=facts&preview=1",async route=>{
+      if (mode === "pass") return route.continue();
+      const ownMode = mode, ownGate = gate;
+      arrived.resolve();
+      await ownGate.promise;
+      if (ownMode === "recover") await route.continue();
+      else await route.fulfill({status:503,json:{error:{code:"storage_read_failed"}}});
+      completed++;
+    });
+    await facts.getByRole("button",{name:"预览",exact:true}).click();
+    await arrived.promise;
+    const loading = await summary.textContent();
+    if (collapseBeforeFailure) await toggle.click();
+    gate.resolve();
+    await expect(facts.locator("pre")).toHaveText("当前镜像未核验或不可读，不显示旧内容。");
+    if (!collapseBeforeFailure) await toggle.click();
+    await focus.focus();
+    await expect(summary).toContainText("事实预览：读取失败（storage_read_failed）");
+    expect(loading).toContain("事实预览：读取中");
+    await expect(summary).toContainText("事实：已同步并核验");
+    await expect(summary).not.toContainText("情景预览：读取失败");
+    await expect(summary).not.toContainText("镜像受保护正文");
+    await expect(facts).not.toContainText("镜像受保护正文");
+    await expect(toggle).toHaveAttribute("aria-expanded","false");
+    await expect(focus).toBeFocused();
+    gate = deferred();arrived = deferred();
+    if (collapseBeforeFailure) {
+      // A real deletion invalidates the list, but that list success cannot
+      // clear a previous preview failure while its new preview read is held.
+      mode = "recover";
+      const before = (await other.get("/api/memory/state")).body;
+      expect((await other.command({operation_id:"preview-delete",kind:"semantic",action:"delete",payload:{id:saved.body.result.memory_id},expected_version:1})).body.result.status).toBe("deleted");
+      await arrived.promise;
+      const after = (await other.get("/api/memory/state")).body;
+      expect(after.process_instance_id).toBe(before.process_instance_id);
+      expect(after.memory_revision).toBeGreaterThan(before.memory_revision);
+      await expect(summary).toContainText("事实：已同步并核验");
+      await expect(summary).toContainText("事实预览：读取中");
+      await expect(summary).toContainText("storage_read_failed");
+      await expect(page.locator(".memory-page")).not.toContainText("镜像受保护正文");
+      mode = "pass";gate.resolve();
+      await expect(summary).toContainText("事实预览：已核验");
+      await expect(summary).not.toContainText("storage_read_failed");
+      await expect(toggle).toHaveAttribute("aria-expanded","false");
+      await expect(focus).toBeFocused();
+      await toggle.click();
+      await expect(facts.locator("pre")).toContainText("# Facts");
+      await expect(facts).not.toContainText("镜像受保护正文");
+    } else {
+      // Two reads for the same mirror share the list revision. A newer
+      // authoritative success owns both the preview body and its status.
+      mode = "late-fail";
+      await toggle.click();
+      await facts.getByRole("button",{name:"预览",exact:true}).click();
+      await arrived.promise;
+      mode = "pass";
+      await facts.getByRole("button",{name:"预览",exact:true}).click();
+      await expect(summary).toContainText("事实预览：已核验");
+      await expect(summary).not.toContainText("storage_read_failed");
+      await toggle.click();await focus.focus();
+      const earlier = completed;gate.resolve();
+      await expect.poll(()=>completed).toBeGreaterThan(earlier);
+      await expect(summary).toContainText("事实预览：已核验");
+      await expect(summary).not.toContainText("storage_read_failed");
+      await expect(toggle).toHaveAttribute("aria-expanded","false");
+      await expect(focus).toBeFocused();
+    }
+  } finally {gate.resolve();await server.close();}
+});
+
 test("S05: a folded receipt exposes uncertainty without automatic expansion or focus movement", async ({page}) => {
   const server = await memoryServer();
   try {

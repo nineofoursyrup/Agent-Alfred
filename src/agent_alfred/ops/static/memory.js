@@ -2014,13 +2014,18 @@ function mirrorsPanel(page) {
     output,
   );
   /** @type {Map<string,string>} */ const previews = new Map();
+  /** @type {Map<string,{state:string,error:string,reason:string}>} */ const previewStates = new Map();
   /** @type {Wire[]} */ let mirrors = [];
   let request = 0;
   let disposed = false;
   async function load() {
     if (disposed) return;
     const token = ++request;
-    for (const name of previews.keys()) previews.set(name, "正在重新核验预览…");
+    for (const name of previews.keys()) {
+      previews.set(name, "正在重新核验预览…");
+      const state = previewStates.get(name);
+      if (state) state.state = "reading";
+    }
     render();
     const result = await page.sync.read("/api/memory/mirrors", {});
     if (disposed || token !== request || result.state === "stale") return;
@@ -2034,14 +2039,31 @@ function mirrorsPanel(page) {
   async function preview(name) {
     if (disposed) return;
     const token = request;
+    // A list refresh or a different mirror cannot clear a preview failure.
+    // The object also identifies the newest read for this exact mirror.
+    const state = {state:"reading",error:previewStates.get(name)?.error || "",reason:""};
+    previewStates.set(name, state);
     previews.set(name, "正在读取预览…");
     render();
     const result = await page.sync.read("/api/memory/mirrors", { name, preview: "1" });
-    if (disposed || token !== request || result.state === "stale" || !previews.has(name)) return;
-    const mirror = result.state === "ok" ? result.body.mirrors[0] : null;
+    if (disposed || token !== request || previewStates.get(name) !== state || !previews.has(name)) return;
+    const mirror = result.state === "ok" && Array.isArray(result.body.mirrors)
+      ? result.body.mirrors.find((/** @type {Wire} */ item) => item.name === name) : null;
+    const verified = mirror?.ready && typeof mirror.text === "string";
+    if (verified) {
+      state.state = "ready";
+      state.error = "";
+    } else if (result.state === "failed") {
+      state.state = "failed";
+      state.error = result.code;
+    } else {
+      state.state = "unverified";
+      state.reason = mirror?.conflict ? "外部修改待确认" : mirror?.error
+        ? `同步失败（${mirror.error}）` : "当前预览尚未核验";
+    }
     previews.set(
       name,
-      mirror?.ready && typeof mirror.text === "string"
+      verified
         ? mirror.text
         : "当前镜像未核验或不可读，不显示旧内容。",
     );
@@ -2058,6 +2080,7 @@ function mirrorsPanel(page) {
     if (disposed) return;
     output.replaceChildren();
     if (!page.sync.online) {
+      for (const state of previewStates.values()) state.state = "unverified";
       output.append(node("p", "连接中断：镜像预览已隐藏，重连并核验后再显示。"));
       return;
     }
@@ -2111,12 +2134,18 @@ function mirrorsPanel(page) {
     }
   }
   function summary() {
-    const action = note.textContent ? ` · ${note.textContent}` : "";
+    const previews = [...previewStates].map(([name, state]) => {
+      const status = state.state === "reading" ? "读取中" : state.state === "ready" ? "已核验"
+        : state.state === "failed" ? `读取失败（${state.error}）` : state.reason || "待重新核验";
+      const failure = state.error && state.state !== "failed" ? `；此前读取失败（${state.error}），仍待核验` : "";
+      return `${name === "facts" ? "事实" : "情景"}预览：${status}${failure}`;
+    });
+    const action = (previews.length ? "；" + previews.join("；") : "") + (note.textContent ? ` · ${note.textContent}` : "");
     if (!page.sync.online) return "镜像未核验，预览已隐藏。" + action;
     if (readError.textContent) return readError.textContent + action;
     return (mirrors.length ? mirrors.map(mirror => `${mirror.name === "facts" ? "事实" : "情景"}：${mirror.conflict ? "外部修改待确认" : mirror.error ? `同步失败（${mirror.error}）` : mirror.ready ? "已同步并核验" : "待同步或核验中"}`).join("；") : "镜像状态尚未读取。") + action;
   }
-  return { section, load, render, summary, dispose(){disposed=true;++request;previews.clear();mirrors=[];} };
+  return { section, load, render, summary, dispose(){disposed=true;++request;previews.clear();previewStates.clear();mirrors=[];} };
 }
 
 /**
