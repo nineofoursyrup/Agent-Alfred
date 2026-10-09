@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "snapshot_kind": "S11 CI repair addendum, code fixed; final gates pending",
-  "observed_at": "2026-10-09T06:41:24.744132+00:00",
+  "observed_at": "2026-10-09T06:41:47.930319+00:00",
   "overall_result": "BLOCKED",
   "completion": false,
   "candidate": {
@@ -361,7 +361,7 @@
   },
   "evidence": {
     "outputs": "ci-repair-r1/recorded-outputs.json",
-    "sha256": "b888a8c80e23c0b3a9ce9756763a921883b92a218e2779f5d3a550aca86f64aa",
+    "sha256": "b349bcc7af8943c2c41a64ea30a1b2864f9815102cb3048e8095fdf7f6d16f3a",
     "copies": [
       {
         "path": "docs/implementation/dashboard-migration/ci-repair-r1/reviews/S11-ci-r1-Spec-diagnosis.md",
@@ -482,11 +482,6 @@
         "path": "docs/implementation/dashboard-migration/ci-repair-r1/native/successor-065-applicability.json",
         "sha256": "e90de33322bbe1a46a1e46c497d99612fa70a0d76ea1990ea6c8b29e7380055b",
         "source": "native-ci-r2/successor-065-applicability.json"
-      },
-      {
-        "path": "docs/implementation/dashboard-migration/ci-repair-r1/native/successor-065-diff.patch",
-        "sha256": "768b2b936e0831bbb0b2952d4e8c1378683f3641edacd64d23c00aa615ad095e",
-        "source": "native-ci-r2/successor-065-diff.patch"
       }
     ]
   },
