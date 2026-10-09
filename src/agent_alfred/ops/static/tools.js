@@ -87,7 +87,9 @@ export function toolsPage(root, csrf) {
       select.onchange=()=>{
         if(!current)return;
         const old=drafts.get(tool.identity);
-        if(select.value===saved(tool)&&(!old||!conflict(old)))drafts.delete(tool.identity);
+        // During submission even a return to the old saved value is new intent.
+        // Only the unchanged submitted draft may be cleared by its receipt.
+        if(submission?.identity!==tool.identity&&select.value===saved(tool)&&(!old||!conflict(old)))drafts.delete(tool.identity);
         else drafts.set(tool.identity,{value:select.value,revision:old?.revision??current.revision,instance:old?.instance??current.process_instance_id});
         render();
       };

@@ -157,6 +157,61 @@ test('S07 an already submitted authorization can leave without discarding input 
   } finally {release?.();await server.close();}
 });
 
+for(const receipt of ['success','missing','rejected']) test(`S07 F1 an in-flight edit back to the saved baseline remains a new draft (${receipt})`, async ({page}) => {
+  const server=await memoryServer({script:'tests/browser/ops_server.py'});
+  let release;
+  try {
+    await page.goto(server.origin+'/tools');
+    const card=external(page),select=card.getByRole('combobox'),save=card.getByRole('button',{name:'保存授权',exact:true});
+    await card.getByRole('button',{name:'展开详情',exact:true}).click();
+    await expect(select).toHaveValue('unset');
+    let captured;const arrived=new Promise(resolve=>captured=resolve),gate=new Promise(resolve=>release=resolve);
+    const posts=[];
+    await page.route('**/api/tools/authorization',async route=>{
+      posts.push(route.request().postDataJSON());
+      const response=await route.fetch();captured(response.status());await gate;
+      if(receipt==='missing'&&posts.length===1)await route.abort('failed');
+      else await route.fulfill({response});
+    });
+    if(receipt==='rejected')await server.send('busy');
+    await select.selectOption('allowed');await save.click();
+    expect(await arrived).toBe(receipt==='rejected'?409:200);
+    await select.selectOption('unset');
+    await card.getByRole('button',{name:'收起详情',exact:true}).click();
+    await expect(card.getByLabel('工具状态摘要')).toContainText('未保存草稿：unset');
+    if(receipt==='rejected')await server.send('idle');
+    release();
+    await card.getByRole('button',{name:'展开详情',exact:true}).click();
+    await expect(save).toBeEnabled();
+    await expect(select).toHaveValue('unset');
+    await expect(card).toContainText('已保存授权：'+(receipt==='rejected'?'unset':'allowed'));
+    await expect(card).toContainText(receipt==='missing'?'提交结果尚未确认':receipt==='rejected'?'保存未完成：mutation_in_flight':'服务端确认操作');
+    await page.getByRole('button',{name:'核对当前授权',exact:true}).click();
+    await expect(select).toHaveValue('unset');
+    await card.getByRole('link',{name:'连接维护',exact:true}).click();
+    await expect(page.getByRole('button',{name:'留在此页',exact:true})).toBeFocused();
+    await page.getByRole('button',{name:'留在此页',exact:true}).click();
+    await expect(select).toHaveValue('unset');expect(posts).toHaveLength(1);
+    if(receipt==='success') {
+      // Keeping the new input does not silently adopt the revision just saved.
+      await save.click();await expect(card).toContainText('authorization_conflict');
+      await expect(select).toHaveValue('unset');expect(posts[1].expected_revision).toBe(0);
+      await card.getByRole('button',{name:'基于当前版本继续编辑',exact:true}).click();
+      await save.click();await expect(save).toBeEnabled();
+      await expect(card).toContainText('已保存授权：unset');
+      await expect(card.getByLabel('工具状态摘要')).not.toContainText('未保存草稿');
+      expect(posts).toHaveLength(3);expect(posts[2].expected_revision).toBe(1);
+    } else {
+      await card.getByRole('link',{name:'连接维护',exact:true}).click();
+      await page.getByRole('button',{name:'放弃并离开',exact:true}).click();
+      await expect(page).toHaveURL(server.origin+'/connections');
+      await page.getByRole('link',{name:'工具',exact:true}).click();
+      await expect(card.getByLabel('工具状态摘要')).not.toContainText('未保存草稿');
+      await expect(card).not.toContainText('服务端确认操作');expect(posts).toHaveLength(1);
+    }
+  } finally {release?.();await server.send('idle');await server.close();}
+});
+
 test('S07 unreadable catalog keeps draft and local status; unavailable MCP is visible without inventing a connection', async ({page}) => {
   const server=await mcpServer(['invalid']),origin=`http://127.0.0.1:${server.entry.port}`;
   try {
