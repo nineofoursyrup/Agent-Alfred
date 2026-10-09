@@ -7,6 +7,7 @@ const reasons = /** @type {Record<string,string>} */ ({sources_not_selected:'未
 
 /** @param {Element} root @param {Wire} facts @param {import("./memory.js").MemorySync} sync */
 export function aggregationFacts(root, facts, sync) {
+  /** @type {Set<()=>void>} */ const releases = new Set();
   root.append(node('h3', facts.reply_disposition === 'reply' ? '聚合草稿' : '手动聚合'));
   if (facts.reason_code) root.append(node('p', reasons[facts.reason_code] || facts.reason_code));
   if (facts.error) root.append(node('p', `未生成草稿：${facts.error}`));
@@ -28,6 +29,7 @@ export function aggregationFacts(root, facts, sync) {
         const button = node('button', label); const detail = node('p');
         let serial = 0;
         /** @type {null|(()=>void)} */ let unwatch = null;
+        releases.add(() => {serial++;unwatch?.();unwatch=null;detail.textContent='';});
         button.addEventListener('click', async () => {
           if (!unwatch) unwatch = sync.watch(() => {
             serial++;
@@ -51,6 +53,7 @@ export function aggregationFacts(root, facts, sync) {
 
     }
   }
+  return () => {for (const release of releases) release();releases.clear();};
 }
 
 /** @param {HTMLElement} root @param {()=>string} csrf @param {()=>Wire} runtime @param {import('./memory.js').MemorySync} sync */
@@ -162,8 +165,7 @@ export function aggregationForm(root, csrf, runtime, sync) {
     const key = JSON.stringify(facts);
     if (key === rendered) return;
     clearResult(); rendered = key;
-    // This return is optional for existing callers until their owner retires.
-    clearFacts = /** @type {any} */ (aggregationFacts(result,facts,sync));
+    clearFacts = aggregationFacts(result,facts,sync);
     for (const [kind,source] of Object.entries(/** @type {Record<string,Wire>} */ (facts.sources || {}))) {
       if (Number.isSafeInteger(source.prepared_count)) result.append(node('p',`${names[kind] || kind}发送状态：已准备 ${source.prepared_count}；${source.dispatch_state === 'sent' ? '已发送' : source.dispatch_state === 'not_sent' ? '未发送' : '发送状态未知'}。准备不代表实际提供。`));
     }

@@ -63,9 +63,7 @@ def test_unconfigured_supported_stays_assignable() -> None:
         (PinRecord(DEFAULT_ENDPOINT_ID, DEFAULT_MODEL_ID),),
         ModelRef(DEFAULT_ENDPOINT_ID, DEFAULT_MODEL_ID),
     )
-    page = project_models_page(
-        snapshot=snapshot, endpoints=(endpoint,), catalogs={}
-    )
+    page = project_models_page(snapshot=snapshot, endpoints=(endpoint,), catalogs={})
     model = next(
         item
         for item in page["endpoints"][0]["models"]
@@ -227,10 +225,45 @@ def test_never_successful_catalog_omits_success_time() -> None:
 
 def test_models_group_header_script_renders_last_success_with_failure() -> None:
     source = (
-        Path(__file__).resolve().parents[2] / "ops" / "static" / "pages.js"
+        Path(__file__).resolve().parents[2] / "ops" / "static" / "models.js"
     ).read_text(encoding="utf-8")
     models = source.split("export function modelsPage", 1)[1]
     header = models.split("for (const model of group.models)", 1)[0]
     assert "group.catalog.last_success_at" in header
     assert "group.catalog.last_error" in header
     assert "group.catalog.retry_at" in header
+
+
+def test_catalog_label_is_not_the_saved_display_name_override():
+    from dataclasses import replace
+
+    from agent_alfred.catalog import CatalogModel
+    from agent_alfred.settings_commands import set_display_name
+
+    endpoint = ModelEndpoint("openai", "https://example.invalid", "OPENAI_API_KEY")
+    snapshot = _snapshot(
+        (PinRecord("openai", "fixture", display_name="User label"),),
+        ModelRef("openai", "fixture"),
+    )
+    catalogs = {
+        "openai": CatalogState(
+            "fresh",
+            models=(CatalogModel("fixture", display_name="Catalog label"),),
+        )
+    }
+    before = project_models_page(
+        snapshot=snapshot, endpoints=(endpoint,), catalogs=catalogs
+    )
+    assert before["endpoints"][0]["models"][0]["display_name"] == "User label"
+    assert before["endpoints"][0]["models"][0]["display_name_override"] == "User label"
+    cleared = set_display_name(
+        snapshot,
+        endpoint_id="openai",
+        model_id="fixture",
+        display_name=None,
+    )
+    after = project_models_page(
+        snapshot=replace(cleared, revision=2), endpoints=(endpoint,), catalogs=catalogs
+    )
+    assert after["endpoints"][0]["models"][0]["display_name"] == "Catalog label"
+    assert after["endpoints"][0]["models"][0]["display_name_override"] is None

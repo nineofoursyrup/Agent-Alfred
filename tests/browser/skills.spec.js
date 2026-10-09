@@ -90,6 +90,7 @@ test("CE-23: a late real evidence response cannot replace the next Run", async (
     });
     await page.goto(`${server.origin}/runs/${first}`, {waitUntil: "domcontentloaded"});
     await intercepted;
+    await page.getByRole('link',{name:'返回运行列表',exact:true}).click();
     await page.locator(`a[href^="/runs/${second}"]`).click();
     const input = page.locator('details[data-attempt="input-explanation"]');
     await input.locator("summary").click();

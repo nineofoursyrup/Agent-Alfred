@@ -21,10 +21,14 @@ export async function controlledEventSource(page) {
 export async function controlledTransport(page) {
   await controlledEventSource(page);
   await page.goto("/");
+  const entry = await (await page.request.get("/api/entry")).json();
+  // The controlled stream must establish the same initial authority as the real
+  // Host before a successful creation can apply its Session-selection intent.
+  await emit(page,"state_patch",state(null,0,{process_instance_id:entry.instance_id,session_valid:false}));
+  await expect.poll(()=>page.evaluate(async()=>(await import('/assets/app.js')).dashboard.runtime().connected)).toBe(true);
   await page.getByRole("button", { name: "新建会话", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "消息" })).toBeEnabled();
   await expect.poll(() => page.evaluate(() => window.sources.length)).toBe(2);
-  const entry = await (await page.request.get("/api/entry")).json();
   await page.route("**/api/entry", (route) =>
     route.fulfill({ json: { ...entry, instance_id: "test-process" } }),
   );
