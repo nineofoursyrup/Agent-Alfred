@@ -111,7 +111,7 @@ export function topologyView(root, workflow, runtime, sync, runId=null) {
   const connection=node('p'); connection.setAttribute('role','status');
   const refresh=node('button','重新读取');
   const drawing=node('div'); const details=node('div');
-  content.append(refresh,connection,status,drawing,details); panel.append(toggle,content); root.append(panel);
+  content.append(refresh,drawing,details); panel.append(toggle,connection,status,content); root.append(panel);
   let expanded=false, closed=false, sequence=0, selected='';
   let knownInstance=runtime().instance || '', online=runtime().connected;
   /** @type {Wire|null} */ let snapshot=null;
@@ -148,7 +148,7 @@ export function topologyView(root, workflow, runtime, sync, runId=null) {
     const prefix=snapshot ? `${oldProcess ? '来自上一服务实例 · 旧快照；' : ''}${pathMode?'读取时的执行路径':'读取时的结构'} · ${snapshot.read_at}。` : '';
     const pathNotice=pathMode && snapshot ? `来源：${snapshot.source==='process'?'本次进程观测，尚未保证保存':'持久 trace'}；路径 ${snapshot.path_status}；Graph ${snapshot.graph_outcome||'尚未观察到终态'}；Run ${snapshot.run.outcome||snapshot.run.phase}；记录 ${snapshot.run.recording_state||'未落定'}。${snapshot.graph_reason||''}` : '';
     /** @type {Record<string,string>} */
-    const messages={idle:'',loading:snapshot ? '旧快照 · 重新读取中…' : '正在读取…',ready:'',failed:snapshot ? '旧快照 / 本次读取失败，请重新读取。' : '首次读取失败，请重试读取。',incompatible:snapshot ? '上次成功的旧快照；当前响应无法展示（不兼容），请重新读取。' : '当前响应无法展示（不兼容），请重试读取。',unavailable:(pathMode?'路径不可用。':'当前没有已发布的图。') + unavailableReason};
+    const messages={idle:'尚未读取；展开后读取。',loading:snapshot ? '旧快照 · 重新读取中…' : '正在读取…',ready:'',failed:snapshot ? '旧快照 / 本次读取失败，请重新读取。' : '首次读取失败，请重试读取。',incompatible:snapshot ? '上次成功的旧快照；当前响应无法展示（不兼容），请重新读取。' : '当前响应无法展示（不兼容），请重试读取。',unavailable:(pathMode?'路径不可用。':'当前没有已发布的图。') + unavailableReason};
     status.textContent=prefix + pathNotice + (messages[phase] || '') + (changed ? '结构已更新，已适应全图并关闭旧节点详情。' : '');
     refresh.textContent=(!snapshot && ['failed','incompatible'].includes(phase)) ? '重试读取' : '重新读取';
   }
@@ -158,7 +158,10 @@ export function topologyView(root, workflow, runtime, sync, runId=null) {
     const d=snapshot.description, n=d.topology.nodes.find((/** @type {Wire} */ n)=>n.node_id === selected);
     if (!n) return;
     const c=caption(d,n);
-    nodeDetail.append(node('h4',`${c.name} · ${n.node_id}`),node('p',c.description),node('p',terminal(n)+nodeState(n)),node('pre',JSON.stringify(n,null,2)));
+    nodeDetail.append(node('h4',`${c.name} · ${n.node_id}`),node('p',c.description),node('p',`节点类型：${n.kind} · ${terminal(n)}${nodeState(n)}`));
+    const raw = node('details'), definition = node('pre',JSON.stringify(n,null,2));
+    definition.tabIndex=0;definition.setAttribute('role','region');definition.setAttribute('aria-label','节点原始定义内容');
+    raw.append(node('summary','节点原始定义'),definition);nodeDetail.append(raw);
     if (pathMode) {
       const f=snapshot.nodes.find((/** @type {Wire} */ f)=>f.node_id===selected);
       for (const ref of f?.references||[]) {
@@ -217,8 +220,8 @@ export function topologyView(root, workflow, runtime, sync, runId=null) {
       const p=positions.get(n.node_id), c=caption(d,n);
       const g=svgNode('g',{'data-node-id':n.node_id});
       g.append(svgNode('rect',{x:p.x,y:p.y,width:240,height:90,rx:8,fill:'var(--topology-node, #f5f7fa)',stroke:'currentColor'}),
-        svgNode('text',{x:p.x+10,y:p.y+25,'font-size':14},c.name),svgNode('text',{x:p.x+10,y:p.y+49,'font-size':11},n.node_id),
-        svgNode('text',{x:p.x+10,y:p.y+74,'font-size':12},pathMode?nodeState(n):n.terminal ? n.terminal.kind==='result'?'结果出口':'无动作出口':'步骤'));
+        svgNode('text',{x:p.x+10,y:p.y+25,'font-size':14},c.name),svgNode('text',{x:p.x+10,y:p.y+49,'font-size':12},n.node_id),
+        svgNode('text',{x:p.x+10,y:p.y+74,'font-size':12},pathMode?nodeState(n):`${n.kind} · ${n.terminal ? n.terminal.kind==='result'?'结果出口':'无动作出口':'步骤'}`));
       svg.append(g);
     }
     /** @type {null|{pointer:number,x:number,y:number,view:typeof viewport,nodeId:string,moved:boolean}} */
@@ -249,19 +252,21 @@ export function topologyView(root, workflow, runtime, sync, runId=null) {
     const cancel=()=>{drag=null;};
     svg.addEventListener('pointercancel',cancel);svg.addEventListener('lostpointercapture',cancel);
     drawing.append(svg);viewbox();
-    details.append(node('h3','完整文字明细'),node('p',pathMode?'仅展示读取边界内可证明的事实。taken 不证明目标成功；波撤销不撤回工具副作用或费用。':'这是声明结构，不代表某次运行已经执行、成功或跳过。图存在不承诺模型/工具可用或下一次运行成功。'));
+    nodeDetail=node('div'); nodeDetail.setAttribute('aria-label','节点详情');
+    details.append(nodeDetail);
+    const fullDetails=node('div');fullDetails.className='topology-full-details';details.append(fullDetails);
+    fullDetails.append(node('h3','完整文字明细'),node('p',pathMode?'仅展示读取边界内可证明的事实。taken 不证明目标成功；波撤销不撤回工具副作用或费用。':'这是声明结构，不代表某次运行已经执行、成功或跳过。图存在不承诺模型/工具可用或下一次运行成功。'));
     if (typeof d.presentation?.policy==='string') details.append(node('p',d.presentation.policy));
     const identity=node('details'); identity.append(node('summary','快照身份与输入声明'),node('pre',JSON.stringify({workflow:snapshot.workflow,graph_id:snapshot.graph_id,process_instance_id:snapshot.process_instance_id,publication_generation:snapshot.publication_generation,schema_version:d.schema_version,topology_hash:d.topology_hash,inputs:t.inputs,...(pathMode?{run_id:runId,original_identity:snapshot.identity,source:snapshot.source,boundary:snapshot.boundary,run:snapshot.run}: {})},null,2))); details.append(identity);
     const nodes=node('ul');
     for (const n of t.nodes) {
       const c=caption(d,n), li=node('li'), b=node('button',`${c.name} · ${n.node_id}`);
-      b.addEventListener('click',()=>select(n.node_id)); li.append(b,node('p',c.description),node('p',terminal(n)+nodeState(n))); nodes.append(li);
+      b.addEventListener('click',()=>select(n.node_id)); li.append(b,node('p',c.description),node('p',`节点类型：${n.kind} · ${terminal(n)}${nodeState(n)}`)); nodes.append(li);
     }
-    nodeDetail=node('div'); nodeDetail.setAttribute('aria-label','节点详情');
-    details.append(nodes,nodeDetail,node('h4','全部连接与条件'));
+    fullDetails.append(nodes,node('h4','全部连接与条件'));
     const edges=node('ul');
     for (const e of t.edges) {const li=node('li',connectionText(e));li.dataset.topologyEdge=JSON.stringify(e);edges.append(li);}
-    details.append(edges);
+    fullDetails.append(edges);
     if (pathMode) {
       details.append(node('h4','按 wave 分组'));
       for (const wave of snapshot.waves) details.append(node('p',`Wave ${wave.wave} · ${pathState(wave.state)} · ${wave.nodes.join(', ')}${wave.reason?' · '+wave.reason:''}`));
@@ -269,6 +274,7 @@ export function topologyView(root, workflow, runtime, sync, runId=null) {
       details.append(node('h4','独立业务摘要'),node('pre',JSON.stringify({stages:snapshot.stages,...snapshot.summary},null,2)));
     }
     const routers=node('details');routers.append(node('summary','条件映射与读取声明'),node('pre',JSON.stringify(t.routers,null,2)));details.append(routers);showNode();
+    for(const pre of details.querySelectorAll('pre')) {pre.tabIndex=0;pre.setAttribute('role','region');if(!pre.hasAttribute('aria-label'))pre.setAttribute('aria-label',pre.previousElementSibling?.textContent||'流程技术明细');}
   }
   async function read() {
     invalidate(); const request=sequence;
@@ -299,8 +305,9 @@ export function topologyView(root, workflow, runtime, sync, runId=null) {
     }
   }
   toggle.addEventListener('click',()=>{
+    if(expanded && content.contains(document.activeElement)) toggle.focus();
     expanded=!expanded; content.hidden=!expanded; toggle.textContent=expanded?(pathMode?'收起执行路径':'收起流程'):openLabel;toggle.setAttribute('aria-expanded',String(expanded));
-    if (expanded) void read(); else invalidate();
+    if (expanded) void read(); else {invalidate();if(phase==='loading')phase=snapshot?'ready':'idle';notices();}
   });
   refresh.addEventListener('click',()=>void read());
   const unwatch=sync.watch(()=>{
