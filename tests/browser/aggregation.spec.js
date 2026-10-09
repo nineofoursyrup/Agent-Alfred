@@ -401,6 +401,10 @@ test('SPEC-03 CE-08: accepted POST remains fixed while response waits and Sessio
     expect((await other.get('/api/runs?filter=chat&limit=25')).body.runs.filter(r=>r.purpose==='aggregation')).toHaveLength(1);
     await expect(page.locator('#messages')).not.toContainText('已验证草稿');
     await expect(page.getByRole('textbox',{name:'聚合目标',exact:true})).toHaveValue('CHANGED_GOAL');
+    await page.getByRole('button',{name:'切换到此会话并查看草稿',exact:true}).click();
+    await expect.poll(()=>page.evaluate(()=>sessionStorage.getItem('alfred.session'))).toBe(session);
+    await expect(page.locator('#messages').getByText('已验证草稿 [[S1]]',{exact:true})).toHaveCount(1);
+    await expect(page.getByRole('textbox',{name:'聚合目标',exact:true})).toHaveValue('CHANGED_GOAL');
   } finally { release(); await server.close(); }
 });
 
