@@ -91,13 +91,19 @@ export function aggregationForm(root, csrf, runtime, sync) {
   /** @type {string|null} */ let baselineSession = null;
   let recording = '', observedInstance = runtime().instance;
   /** @type {Wire|null} */ let submitted = null;
+  /** Only successor edits are unsubmitted while admission is pending or unknown.
+   * @type {Map<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement,string>|null} */ let submittedInputs = null;
   /** @type {AbortController|null} */ let observation = null;
   /** @type {AbortController|null} */ let sessionController = null;
   /** @type {ReturnType<typeof setTimeout>|null} */ let timer = null;
   /** @type {(()=>void)|undefined} */ let clearFacts;
   /** @type {HTMLButtonElement|null} */ let locate = null;
   function valid() {return !closed && section.isConnected;}
-  function dirty() {return drafts.dirty() || selectedSession !== baselineSession;}
+  function dirty() {
+    if (submittedInputs && submitted) return selectedSession !== submitted.session_id
+      || [...submittedInputs].some(([input,value]) => drafts.value(input) !== value);
+    return drafts.dirty() || selectedSession !== baselineSession;
+  }
   function cancelObservation() {readSequence++;observation?.abort();observation = null;}
   function clearResult() {clearFacts?.();clearFacts = undefined;rendered = '';result.replaceChildren();}
   function updateControls() {
@@ -253,17 +259,18 @@ export function aggregationForm(root, csrf, runtime, sync) {
     const inputs = new Map([...drafts.inputs.keys()].map(input => [input,drafts.value(input)]));
     const owned = ++generation, process = runtime().instance;
     cancelObservation(); clearResult(); links.replaceChildren(); identity.replaceChildren(); locationStatus.textContent = '';locate = null;run = '';recording = '';retry.hidden = true;
-    pending = true; status.textContent = '正在提交…'; submitted = body;updateControls();
+    pending = true; status.textContent = '正在提交…'; submitted = body;submittedInputs = inputs;updateControls();
     identity.append(node('p',`本次目标 Session：${body.session_id}`),node('p',`提交的目标：${body.message}`),node('p',`关键词：${body.keywords}；所选来源：${body.sources.map(key => names[key]).join('、') || '全部未选'}`));
     try {
       const response = await fetch('/api/runs',{method:'POST',headers:{'Content-Type':'application/json','x-agent-alfred-csrf':csrf()},body:JSON.stringify(body)});
       const value = await response.json();
       if (!valid() || owned !== generation) return;
       if (process !== runtime().instance) throw new Error();
-      if (!response.ok) {status.textContent = `未提交：${value.code}；表单已保留。`;return;}
+      if (!response.ok) {submittedInputs = null;status.textContent = `未提交：${value.code}；表单已保留。`;return;}
       if (response.status !== 202 || typeof value.run_id !== 'string' || value.session_id !== body.session_id) throw new Error();
       for (const [input,value] of inputs) drafts.saved(input,value);
       baselineSession = body.session_id;
+      submittedInputs = null;
       run = value.run_id; awaiting = true; status.textContent = '正在读取资料或起草…';identity.append(node('p',`本次 Run：${run}`));renderLinks();
     } catch {
       if (valid() && owned === generation) {

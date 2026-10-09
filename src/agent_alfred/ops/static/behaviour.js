@@ -30,6 +30,8 @@ export function behaviourPage(root, csrf, runtime, memory, instance) {
   /** @type {AbortController|null} */ let readController = null;
   /** @type {Wire|null} */ let current = null;
   /** @type {Wire|null} */ let baseline = null;
+  /** Submitted input remains distinct from the confirmed CAS baseline, including a lost receipt.
+   * @type {boolean|null} */ let submittedChoice = null;
   // subscribeState is the immutable Host source. MainBar's retained reply cache
   // must never nominate a result for this form.
   let host = {...dashboard.runtime(),projection:null};
@@ -57,13 +59,14 @@ export function behaviourPage(root, csrf, runtime, memory, instance) {
   const statistics = routingStatistics(routing,instance);
 
   function cancelRead() {readSequence++; readController?.abort(); readController = null;}
+  function dirty() {return submittedChoice === null ? drafts.dirty() : enabled.checked !== submittedChoice;}
   function present() {
     const changed = current && baseline && (current.revision !== baseline.revision || current.fingerprint !== baseline.fingerprint);
     actual.textContent = !current ? '已保存的分流设置：尚未核验。'
       : current.status === 'ok' ? `已保存的分流设置：${current.enabled ? '开启' : '关闭'} · revision ${current.revision}。能查看结构不代表已经启用或可以成功执行。`
       : `分流设置未知 / ${settingsReasons[current.status]}（${current.status}）。`;
-    choiceState.textContent = baseline ? `${drafts.dirty() ? '未提交选择' : '当前选择'}：${enabled.checked ? '开启' : '关闭'} · 编辑基线 revision ${baseline.revision}。${changed ? '已读取的配置已变化；原选择和基线保留，可比较后明确采用当前版本。' : ''}` : '正在核对设置。';
-    choiceState.dataset.dirty = String(drafts.dirty());
+    choiceState.textContent = baseline ? `${dirty() ? '未提交选择' : submittedChoice !== null ? '已提交选择' : '当前选择'}：${enabled.checked ? '开启' : '关闭'} · 编辑基线 revision ${baseline.revision}。${changed ? '已读取的配置已变化；原选择和基线保留，可比较后明确采用当前版本。' : ''}` : '正在核对设置。';
+    choiceState.dataset.dirty = String(dirty());
     enabled.disabled = current?.status !== 'ok';
     save.disabled = pending || current?.status !== 'ok' || baseline?.status !== 'ok';
     refresh.disabled = pending;
@@ -82,7 +85,7 @@ export function behaviourPage(root, csrf, runtime, memory, instance) {
       if (!alive || request !== readSequence || expectedInstance !== instance()) return;
       if (!response.ok || !validSettings(value)) throw new Error();
       current = value;
-      if (!baseline || !drafts.dirty()) {
+      if (!baseline || (submittedChoice === null && !drafts.dirty())) {
         baseline = value; enabled.checked = value.enabled; drafts.saved(enabled);
       }
       reading.textContent = value.status === 'ok' ? '当前值已核对；设置在下一 Run 生效。'
@@ -98,7 +101,7 @@ export function behaviourPage(root, csrf, runtime, memory, instance) {
     const original = action === 'recover' ? current : baseline;
     const submitted = enabled.checked;
     const expectedInstance = instance();
-    cancelRead(); pending = true; receipt.textContent = action === 'recover' ? '正在备份原文件并恢复…' : '正在保存提交时的选择…'; present();
+    cancelRead(); submittedChoice = submitted; pending = true; receipt.textContent = action === 'recover' ? '正在备份原文件并恢复…' : '正在保存提交时的选择…'; present();
     try {
       const response = await fetch('/api/behaviour',{
         method:'POST',headers:{'Content-Type':'application/json','x-agent-alfred-csrf':csrf()},
@@ -108,6 +111,7 @@ export function behaviourPage(root, csrf, runtime, memory, instance) {
       if (!alive) return;
       if (expectedInstance !== instance()) {receipt.textContent = '保存结果未确认：服务实例已改变，请刷新核验。'; return;}
       if (!response.ok) {
+        submittedChoice = null;
         const conflict = value.cause === 'external_change' ? '磁盘外部修改' : value.cause === 'stale_revision' ? '版本冲突' : settingsReasons[value.code] || value.code;
         receipt.textContent = `未保存（${value.code}${value.cause ? ' / '+value.cause : ''}）：${conflict}。选择已保留，请刷新核对。${value.backup_path ? '备份：'+value.backup_path : ''}`;
         return;
@@ -116,6 +120,7 @@ export function behaviourPage(root, csrf, runtime, memory, instance) {
       current = baseline = value;
       if (enabled.checked === submitted) enabled.checked = value.enabled;
       drafts.saved(enabled,String(value.enabled));
+      submittedChoice = null;
       reading.textContent = '';
       receipt.textContent = action === 'recover' ? '已备份原文件并恢复为关闭；下一 Run 生效。' : '已保存；下一 Run 生效。';
       if (action === 'recover' && value.backup_path) reading.textContent = `原文件备份：${value.backup_path}`;
@@ -129,11 +134,11 @@ export function behaviourPage(root, csrf, runtime, memory, instance) {
   refresh.addEventListener('click',() => void read());
   rebase.addEventListener('click',() => {
     if (!current || current.status !== 'ok' || pending) return;
-    baseline = current; drafts.saved(enabled,String(current.enabled)); present();
+    baseline = current; drafts.saved(enabled,String(current.enabled)); submittedChoice = null; present();
   });
   present(); void read();
   return {
-    getLeaveState() {const a = aggregation.getLeaveState(); return {dirty:drafts.dirty() || a.dirty,summary:'分流设置或聚合表单有未提交输入。',pending:pending || a.pending};},
+    getLeaveState() {const a = aggregation.getLeaveState(); return {dirty:dirty() || a.dirty,summary:'分流设置或聚合表单有未提交输入。',pending:pending || submittedChoice !== null || a.pending};},
     sync() {statistics.sync();},
     disconnect() {cancelRead();statistics.disconnect();},
     close() {alive = false;cancelRead();unsubscribe();statistics.close();aggregation.close();for (const view of views) view.close();},

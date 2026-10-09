@@ -151,6 +151,14 @@ test('aggregation CE-08: dropped accepted response does not resubmit or move Ses
     });
     await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();
     await expect(page.getByText(/准入未确认；请查看已有运行/)).toBeVisible();
+    const draft=page.getByRole('region',{name:'手动聚合',exact:true}).locator('.behaviour-draft');
+    await expect(draft).toHaveAttribute('data-dirty','false');
+    await page.getByRole('textbox',{name:'聚合目标',exact:true}).fill('unknown successor');
+    await expect(draft).toHaveAttribute('data-dirty','true');
+    await page.getByRole('link',{name:'运行',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('button',{name:'留在此页',exact:true}).click();
+    await page.getByRole('textbox',{name:'聚合目标',exact:true}).fill('draft goal');
+    await expect(draft).toHaveAttribute('data-dirty','false');
     await server.send('wait-stream');
     expect(accepted.session_id).toBe(session);
     expect(sent).toBe(1);
@@ -615,9 +623,15 @@ test('S06 CE-24/27: leaving a form with an accepted delayed POST retires only it
       await gate;await route.fulfill({response}).catch(()=>{});finished();
     });
     await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();const {run_id}=await submitted;
+    const draft=page.getByRole('region',{name:'手动聚合',exact:true}).locator('.behaviour-draft');
+    await expect(draft).toHaveAttribute('data-dirty','false');
     await page.getByRole('textbox',{name:'聚合目标',exact:true}).fill('提交后新增的草稿');
+    await expect(draft).toHaveAttribute('data-dirty','true');
     await page.getByRole('link',{name:'运行',exact:true}).click();await page.getByRole('button',{name:'留在此页',exact:true}).click();
     await expect(page.getByRole('textbox',{name:'聚合目标',exact:true})).toHaveValue('提交后新增的草稿');
+    await page.getByRole('textbox',{name:'聚合目标',exact:true}).fill('draft goal');
+    await expect(draft).toHaveAttribute('data-dirty','false');
+    await page.getByRole('textbox',{name:'聚合目标',exact:true}).fill('提交后新增的草稿');
     await page.getByRole('link',{name:'运行',exact:true}).click();await page.getByRole('button',{name:'放弃并离开',exact:true}).click();
     await expect(page).toHaveURL(/\/runs$/);release();await settled;
     await expect(page.getByRole('region',{name:'手动聚合',exact:true})).toHaveCount(0);
@@ -629,3 +643,42 @@ test('S06 CE-24/27: leaving a form with an accepted delayed POST retires only it
     await expect(form.getByText('尚未提交聚合请求。',{exact:true})).toBeVisible();
   }finally{release();await server.close();}
 });
+
+for(const outcome of ['accepted','rejected']) {
+  test(`S06-ST-01: aggregation ${outcome} delayed receipt separates submitted inputs from confirmation`,async({page})=>{
+    const server=await memoryServer({script:'tests/browser/aggregation_server.py'});
+    let release=()=>{};
+    try {
+      const {other,session}=await prepareDraft(page,server);
+      if(outcome==='rejected')await page.getByRole('textbox',{name:'聚合目标',exact:true}).fill('');
+      let accepted,finished;
+      const submitted=new Promise(resolve=>accepted=resolve),settled=new Promise(resolve=>finished=resolve),gate=new Promise(resolve=>release=resolve);
+      const posts=[];
+      await page.route('**/api/runs',async route=>{
+        if(route.request().method()!=='POST')return route.continue();
+        posts.push(route.request().postDataJSON());const response=await route.fetch();accepted({status:response.status(),body:await response.json()});
+        await gate;await route.fulfill({response}).catch(()=>{});finished();
+      });
+      await page.getByRole('button',{name:'生成聚合草稿',exact:true}).click();const receipt=await submitted;
+      expect(receipt.status).toBe(outcome==='accepted'?202:400);
+      const form=page.getByRole('region',{name:'手动聚合',exact:true}),draft=form.locator('.behaviour-draft');
+      await expect(draft).toHaveAttribute('data-dirty','false');await expect(form.getByText('正在提交…',{exact:true})).toBeVisible();
+      await expect(form.getByText(/本次 Run：/)).toHaveCount(0);
+      if(outcome==='rejected') {
+        expect(receipt.body.code).toBe('empty_message');release();await settled;
+        await expect(form.getByText('未提交：empty_message；表单已保留。',{exact:true})).toBeVisible();
+        await expect(draft).toHaveAttribute('data-dirty','true');
+        await page.getByRole('link',{name:'运行',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();
+        await page.getByRole('button',{name:'留在此页',exact:true}).click();
+        expect((await other.get('/api/runs?filter=chat&limit=25')).body.runs.filter(item=>item.purpose==='aggregation')).toHaveLength(0);
+      } else {
+        expect(receipt.body.session_id).toBe(session);
+        await page.getByRole('link',{name:'运行',exact:true}).click();await expect(page).toHaveURL(/\/runs$/);
+        await expect(page.getByRole('dialog')).toHaveCount(0);release();await settled;
+        await expect.poll(async()=>(await other.get('/api/run-evidence?run_id='+receipt.body.run_id)).body.memory?.aggregation?.graph_result).toBe('Completed');
+        expect((await other.get('/api/runs?filter=chat&limit=25')).body.runs.filter(item=>item.purpose==='aggregation')).toHaveLength(1);
+      }
+      expect(posts).toHaveLength(1);expect(posts[0].session_id).toBe(session);
+    } finally {release();await server.close();}
+  });
+}

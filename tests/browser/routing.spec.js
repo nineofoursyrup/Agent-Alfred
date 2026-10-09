@@ -29,6 +29,10 @@ test('S06 CE-13: read-only comparison cannot rebase a dirty routing choice', asy
     expect(response.status()).toBe(409);
     await expect(page.getByText(/settings_conflict/)).toBeVisible();
     await expect(choice).toBeChecked();
+    await expect(page.getByRole('region',{name:'消息分流',exact:true}).locator('.behaviour-draft')).toHaveAttribute('data-dirty','true');
+    await page.getByRole('link',{name:'运行',exact:true}).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('button',{name:'留在此页',exact:true}).click();
     await page.getByRole('button',{name:'基于当前版本继续编辑',exact:true}).click();
     await choice.uncheck();
     await page.getByRole('button',{name:'保存设置',exact:true}).click();
@@ -233,6 +237,15 @@ test('S06 CE-13: a delayed save receipt preserves the choice edited after submis
       const response = await route.fetch();accepted();await gate;await route.fulfill({response});
     });
     await page.getByRole('button',{name:'保存设置',exact:true}).click();await started;
+    const draft=page.getByRole('region',{name:'消息分流',exact:true}).locator('.behaviour-draft');
+    await expect(draft).toHaveAttribute('data-dirty','false');
+    await choice.uncheck();
+    await expect(draft).toHaveAttribute('data-dirty','true');
+    await page.getByRole('link',{name:'运行',exact:true}).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('button',{name:'留在此页',exact:true}).click();
+    await choice.check();
+    await expect(draft).toHaveAttribute('data-dirty','false');
     await choice.uncheck();
     await expect(page.getByRole('button',{name:'刷新设置',exact:true})).toBeDisabled();
     release();
@@ -245,3 +258,45 @@ test('S06 CE-13: a delayed save receipt preserves the choice edited after submis
     expect((await(await page.request.get(server.origin+'/api/behaviour')).json()).enabled).toBe(true);
   } finally {release();await server.close();}
 });
+
+for(const transport of ['delayed','lost']) {
+  test(`S06-ST-01: routing ${transport} receipt does not label submitted-only input as dirty`,async({page})=>{
+    const server=await memoryServer({script:'tests/browser/routing_server.py'});
+    let release=()=>{};
+    try {
+      await page.goto(server.origin+'/behaviour');
+      const choice=page.getByRole('checkbox',{name:'启用消息分流'});await choice.check();
+      let accepted,finished;
+      const admitted=new Promise(resolve=>accepted=resolve),settled=new Promise(resolve=>finished=resolve),gate=new Promise(resolve=>release=resolve);
+      const posts=[];
+      await page.route('**/api/behaviour',async route=>{
+        if(route.request().method()!=='POST')return route.continue();
+        posts.push(route.request().postDataJSON());const response=await route.fetch();accepted({status:response.status(),body:await response.json()});
+        if(transport==='lost')await route.abort();else {await gate;await route.fulfill({response}).catch(()=>{});}
+        finished();
+      });
+      await page.getByRole('button',{name:'保存设置',exact:true}).click();
+      expect(await admitted).toMatchObject({status:200,body:{enabled:true,revision:1}});
+      const region=page.getByRole('region',{name:'消息分流',exact:true}),draft=region.locator('.behaviour-draft');
+      await expect(draft).toHaveAttribute('data-dirty','false');
+      await expect(region.getByText(/已保存的分流设置：关闭 · revision 0/)).toBeVisible();
+      await expect(region.getByText('已保存；下一 Run 生效。',{exact:true})).toHaveCount(0);
+      if(transport==='lost') {
+        await expect(region.getByText(/保存结果未确认，请刷新核验/)).toBeVisible();
+        await choice.uncheck();await expect(draft).toHaveAttribute('data-dirty','true');
+        await region.getByRole('button',{name:'刷新设置',exact:true}).click();
+        await expect(region.getByText(/已保存的分流设置：开启 · revision 1/)).toBeVisible();
+        await expect(choice).not.toBeChecked();
+        await expect(draft).toContainText('未提交选择：关闭 · 编辑基线 revision 0');
+        await expect(region.getByText(/保存结果未确认，请刷新核验/)).toBeVisible();
+        await page.getByRole('link',{name:'运行',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();
+        await page.getByRole('button',{name:'留在此页',exact:true}).click();await choice.check();
+        await expect(draft).toHaveAttribute('data-dirty','false');
+      } else await expect(region.getByText('正在保存提交时的选择…',{exact:true})).toBeVisible();
+      await page.getByRole('link',{name:'运行',exact:true}).click();await expect(page).toHaveURL(/\/runs$/);
+      await expect(page.getByRole('dialog')).toHaveCount(0);release();await settled;
+      expect(posts).toEqual([{action:'save',enabled:true,expected_revision:0,fingerprint:null}]);
+      expect(await(await page.request.get(server.origin+'/api/behaviour')).json()).toMatchObject({enabled:true,revision:1});
+    } finally {release();await server.close();}
+  });
+}
