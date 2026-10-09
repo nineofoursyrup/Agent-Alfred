@@ -88,6 +88,9 @@ export function createShell(options) {
   let started=false;
   let mounted=false;
   let generation=0;
+  // Navigation/restore intent is distinct from the first automatic mount.
+  let navigationGeneration=0;
+  let automaticTitleFocus=false;
   /** @type {MutationObserver|null} */ let scrollObserver=null;
   let scrollFrame=0;
   function stopScrollRestore(){scrollObserver?.disconnect();scrollObserver=null;cancelAnimationFrame(scrollFrame);scrollFrame=0;}
@@ -167,7 +170,9 @@ export function createShell(options) {
     if(narrow.matches){if(panel)history.back();}
     else {wideOpen=false;temporaryWide=false;options.storage.set('alfred.shell.wideOpen','false');present();returnFocus();}
   }
-  function mount() {
+  /** @param {boolean} [initial] */
+  function mount(initial=false) {
+    if(!initial)navigationGeneration++;
     if(!started){activeNav();present();return;}
     const preserveMainbarFocus=!mounted && mainbar.contains(document.activeElement);
     stopScrollRestore();
@@ -175,7 +180,10 @@ export function createShell(options) {
     controller=options.mount(currentUrl);mounted=true;
     activeNav();present();
     if(current.source){controller.restoreSource?.(current.source);restoreScroll(current.source.scrollTop||0);}else page.scrollTop=0;
-    if(!preserveMainbarFocus)titleFocus();
+    if(!preserveMainbarFocus){
+      automaticTitleFocus=initial;
+      try{titleFocus();}finally{automaticTitleFocus=false;}
+    }
   }
   /** @param {string|URL} target @param {{replace?:boolean,source?:Object,intent?:string}} [intent] */
   async function navigate(target,intent={}) {
@@ -266,8 +274,10 @@ export function createShell(options) {
   } else storeCurrent();
   activeNav();present();
   return {
-    start(){started=true;if(!mounted&&!navigating)mount();},restore(){capture();mount();},navigate,openPanel,closePanel,visibleMainbar,
+    start(){started=true;if(!mounted&&!navigating)mount(true);},restore(){capture();mount();},navigate,openPanel,closePanel,visibleMainbar,
     get generation(){return generation;},
+    get navigationGeneration(){return navigationGeneration;},
+    get automaticTitleFocus(){return automaticTitleFocus;},
     /** @param {any} value */ publish(value){state=Object.freeze({...value});publish();},
     /** @param {(state:any)=>void} callback */ subscribeState(callback){subscribers.add(callback);callback(state);return ()=>subscribers.delete(callback);},
     /** Page-local query changes still share this history identity. @param {string|URL} target */

@@ -6,6 +6,7 @@ const reasons = /** @type {Record<string,string>} */ ({sources_not_selected:'未
 
 /** @param {Element} root @param {Wire} facts @param {import("./memory.js").MemorySync} sync */
 export function aggregationFacts(root, facts, sync) {
+  /** @type {Set<()=>void>} */ const releases = new Set();
   root.append(node('h3', facts.reply_disposition === 'reply' ? '聚合草稿' : '手动聚合'));
   if (facts.reason_code) root.append(node('p', reasons[facts.reason_code] || facts.reason_code));
   if (facts.error) root.append(node('p', `未生成草稿：${facts.error}`));
@@ -27,6 +28,7 @@ export function aggregationFacts(root, facts, sync) {
         const button = node('button', label); const detail = node('p');
         let serial = 0;
         /** @type {null|(()=>void)} */ let unwatch = null;
+        releases.add(() => {serial++;unwatch?.();unwatch=null;detail.textContent='';});
         button.addEventListener('click', async () => {
           if (!unwatch) unwatch = sync.watch(() => {
             serial++;
@@ -50,6 +52,7 @@ export function aggregationFacts(root, facts, sync) {
 
     }
   }
+  return () => {for (const release of releases) release();releases.clear();};
 }
 
 /** @param {HTMLElement} root @param {()=>string} csrf @param {()=>Wire} runtime @param {import("./memory.js").MemorySync} sync */

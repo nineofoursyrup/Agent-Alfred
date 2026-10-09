@@ -2,6 +2,7 @@ import {test,expect} from '@playwright/test';
 
 for(const name of ['models','behaviour','tools'])test(`${name} registers real unsaved input across panel visibility and confirmed navigation`,async({page})=>{
   await page.goto('/'+name);
+  if(name==='models')await page.locator("[data-model='opencode-go:deepseek-v4-flash']").getByText('模型详情',{exact:true}).click();
   const control=name==='models'?page.getByRole('textbox',{name:'显示名',exact:true}).first():name==='behaviour'?page.getByRole('checkbox',{name:'启用消息分流'}):page.getByRole('combobox',{name:'web_search 授权草稿'});
   if(name==='models')await control.fill('未保存的模型名称');
   else if(name==='behaviour')await control.check();
@@ -31,9 +32,10 @@ test('amplified text at reduced available height retains scrollable MainBar cont
 });
 
 test('display-name late save advances the dirty baseline while retaining the newer draft',async({page})=>{
-  const models=name=>({revision:name==='A'?1:2,status:'ok',endpoints:[{endpoint_id:'fixture',catalog:{health:'fresh'},models:[{endpoint_id:'fixture',model_id:'model',display_name:name,pinned:true,assignable:true,price_override:{},support_label:'fixture'}]}]});
+  const models=name=>({revision:name==='A'?1:2,status:'ok',endpoints:[{endpoint_id:'fixture',catalog:{health:'fresh'},models:[{endpoint_id:'fixture',model_id:'model',display_name:name,display_name_override:name,pinned:true,assignable:true,price_override:{},support_label:'fixture'}]}]});
   await page.route('**/api/models',route=>route.fulfill({json:models('A')}));
   await page.goto('/models');
+  await page.getByText('模型详情',{exact:true}).click();
   const name=page.getByRole('textbox',{name:'显示名',exact:true});await expect(name).toHaveValue('A');
   let release,entered;const gate=new Promise(r=>release=r),held=new Promise(r=>entered=r);
   await page.route('**/api/settings',async route=>{expect(route.request().postDataJSON().display_name).toBe('B');entered();await gate;await route.fulfill({json:models('B')});});

@@ -120,6 +120,9 @@ def project_models_page(
             "model_id": row["model_id"],
             "sources": sorted(row["sources"]),
             "display_name": row["display_name"],
+            # The candidate label may come from the catalog. Editing must use
+            # the saved user override so clearing it cannot copy that label back.
+            "display_name_override": None if pin is None else pin.display_name,
             "pinned": pin is not None,
             "assignable": can_assign,
             "support": support.support,

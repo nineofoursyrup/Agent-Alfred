@@ -349,3 +349,44 @@ for (const restarted of [false, true]) {
     });
   }
 }
+
+test('S08 STD02 connection details and operation focus survive refresh without stealing MainBar focus',async({browser})=>{
+  const s=await server(),context=await browser.newContext();let release=()=>{};
+  try {
+    const page=await context.newPage(),origin=`http://127.0.0.1:${s.entry.port}`;await page.goto(origin+'/connections');
+    const card=page.locator('[data-integration="tavily"]');await card.getByText('集成详情',{exact:true}).click();
+    const link=card.getByRole('link',{name:'到工具页核对授权',exact:true});await link.focus();
+    const reread=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/connections');
+    await page.evaluate(()=>window.dispatchEvent(new Event('focus')));await reread;await expect(link).toBeFocused();
+    let entered,posts=0;let received=new Promise(resolve=>entered=resolve);let held=new Promise(resolve=>release=resolve);
+    await page.route('**/api/connections/probe',async route=>{posts++;const response=await route.fetch();entered();await held;await route.fulfill({response}).catch(()=>{});});
+    const button=card.getByRole('button',{name:'测试连接',exact:true});await button.click();await received;release();
+    await expect(card).toContainText('连接：已连接');await expect(button).toBeFocused();
+    received=new Promise(resolve=>entered=resolve);held=new Promise(resolve=>release=resolve);
+    await button.click();await received;const chat=page.getByRole('button',{name:'新建会话',exact:true});await chat.focus();
+    release();await expect(button).toBeEnabled();await expect(chat).toBeFocused();expect(posts).toBe(2);
+    expect((await control(s)).requests).toEqual(['/usage']);
+  }finally{release();await context.close();await s.close();}
+});
+
+test('S08 STD01 Connections already isolates retired probe cleanup from a successor',async({browser})=>{
+  const s=await server(),context=await browser.newContext();let releaseA=()=>{},releaseB=()=>{};
+  try {
+    const page=await context.newPage(),origin=`http://127.0.0.1:${s.entry.port}`;await page.goto(origin+'/connections');
+    const card=page.locator('[data-integration="tavily"]'),button=card.getByRole('button',{name:'测试连接',exact:true});
+    let gotA,gotB,posts=0;const recvA=new Promise(resolve=>gotA=resolve),recvB=new Promise(resolve=>gotB=resolve);
+    const heldA=new Promise(resolve=>releaseA=resolve),heldB=new Promise(resolve=>releaseB=resolve);
+    await page.route('**/api/connections/probe',async route=>{
+      const index=++posts,response=await route.fetch();expect(response.status()).toBe(200);
+      if(index===1){gotA();await heldA;}else{gotB();await heldB;}
+      await route.fulfill({response}).catch(()=>{});
+    });
+    await button.click();await recvA;await context.setOffline(true);
+    await expect(page.getByText('连接中断，原操作结果未确认；请核对，不会自动重送。',{exact:true})).toBeVisible();
+    await context.setOffline(false);await expect(button).toBeEnabled();await button.click();await recvB;
+    const arrived=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/connections/probe');releaseA();await arrived;
+    await expect(button).toBeDisabled();await expect(card).toContainText('测试连接正在提交');
+    releaseB();await expect(button).toBeEnabled();expect(posts).toBe(2);
+    expect((await control(s)).requests).toEqual(['/usage']);
+  }finally{releaseA();releaseB();await context.setOffline(false);await context.close();await s.close();}
+});

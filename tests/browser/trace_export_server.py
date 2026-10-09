@@ -133,14 +133,17 @@ class IOControls:
             replacement.write_bytes(trace.read_bytes())
             replacement.chmod(0o600)
             replacement.replace(trace)
-        elif command == "recording-hold-fail":
+        elif command in ("recording-hold", "recording-hold-fail"):
             host = self.dashboard.host
             host._recorder._before_recording_commit = self.recording_gate
-            with host._store.reading() as conn:
-                conn.execute("""CREATE TRIGGER export_recording_failure
-                    BEFORE UPDATE OF telemetry ON runs WHEN NEW.telemetry IS NOT NULL
-                    BEGIN SELECT RAISE(FAIL, 'fixture recording failure'); END""")
-                conn.commit()
+            if command == "recording-hold-fail":
+                with host._store.reading() as conn:
+                    conn.execute("""CREATE TRIGGER export_recording_failure
+                        BEFORE UPDATE OF telemetry ON runs
+                        WHEN NEW.telemetry IS NOT NULL
+                        BEGIN SELECT RAISE(FAIL, 'fixture recording failure');
+                        END""")
+                    conn.commit()
         elif command == "await-recording":
             assert self.recording_gate.entered.wait(5)
         elif command == "release-recording":
