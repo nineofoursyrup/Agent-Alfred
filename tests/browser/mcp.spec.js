@@ -169,6 +169,10 @@ test('S08 lost MCP receipt requires explicit same-operation retry and preserves 
     await expect(page.getByText(/MCP 操作 completed/)).toBeVisible();
     expect(payloads).toHaveLength(2);expect(payloads[1]).toEqual(payloads[0]);
     expect((await control(s)).requests.filter(r=>r.method==='initialize')).toHaveLength(before+1);
+    // The receipt notice precedes the final current-state read and its card redraw.
+    await expect(page.getByText(`最近操作 ${payloads[0].operation_id}：completed`,{exact:false})).toBeVisible();
+    await expect(card.getByRole('button',{name:'重连',exact:true})).toBeEnabled();
+    await expect(card.locator('details')).toHaveAttribute('open','');
     const dimensions=[];
     for(const [width,height] of [[1440,900],[1280,800],[390,844],[320,800]]) {
       await page.setViewportSize({width,height});await card.scrollIntoViewIfNeeded();
