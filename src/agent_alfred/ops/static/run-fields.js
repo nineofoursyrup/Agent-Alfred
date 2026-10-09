@@ -40,7 +40,7 @@ export function runFields(run) {
   const purpose = /** @type {Record<string,string>} */ ({
     chat: "普通聊天（chat）",
     aggregation: "手动聚合（aggregation）",
-    probe: "推理探针（probe）",
+    inference_probe: "推理探针（inference_probe）",
     consolidation: "记忆提炼（consolidation）",
   });
   const fields = [

@@ -194,7 +194,6 @@ function renderBusy(summary) {
 /** @type {Wire|null} */ let locationTarget=null;
 let locateGeneration=0;
 /** @type {AbortController|null} */ let locateController=null;
-/** @type {Wire|null} */ let locatedRecord=null;
 let followLatest=true;
 let readingIntent=0;
 let creationIntent=0;
@@ -306,7 +305,7 @@ async function locateReply(target) {
   if(!target || target.process_instance_id!==instance || typeof target.session_id!=='string' || typeof target.run_id!=='string' || !target.action_id)return {status:'unavailable',reason:'定位身份已失效'};
   if(target.session_id!==session && !await resume(target.session_id))return {status:'blocked',reason:'当前会话的运行尚未收尾'};
   retireLocation();const mine=locateGeneration;const owner=shell.navigationGeneration;
-  locationTarget={...target,loading:true};locatedRecord=null;followLatest=false;
+  locationTarget={...target,loading:true};followLatest=false;
   shell.openPanel('mainbar');updateReadStatus();
   const intent=readingIntent;
   const controller=new AbortController();locateController=controller;
@@ -319,12 +318,14 @@ async function locateReply(target) {
       throw new Error(labels[body.code]||'定位读取失败，可只读重试。');
     }
     if(body.process_instance_id!==instance || body.session_id!==session || body.run_id!==target.run_id || !['chat','aggregation'].includes(body.purpose) || typeof body.item_key!=='string' || body.history_contiguous!==false)throw new Error('定位响应身份无法核验。');
-    locatedRecord=body;
     const old=replies.get(target.run_id)||{};
     const recording=['recorded','failed'].includes(old.recording_state)&&body.recording_state==='pending'?old.recording_state:body.recording_state;
     const completeness=/** @type {Record<string,number>} */({full:2,preview:1,unavailable:0});
     const keepUser=(completeness[old.userAvailability]||0)>(completeness[body.user?.availability]||0);
-    replies.set(target.run_id,{...old,session_id:session,user:keepUser?old.user:body.user?.availability==='full'?textBlocks(body.user.blocks):body.user?.preview||old.user,userAvailability:keepUser?old.userAvailability:body.user?.availability,reply_disposition:body.reply_disposition,text:body.reply_disposition==='no_reply'?undefined:body.reply_text,skill_notice:body.skill_notice,aggregation:body.aggregation||old.aggregation,recording_state:recording,recording_unverified:false,loading:body.reply_disposition!=='no_reply' && typeof body.reply_text!=='string',purpose:body.purpose});
+    // Exact reads retain their evidence without joining ordinary history.
+    // A later history page or live reply can independently admit this Run.
+    const locationOnly=old.locationOnly ?? (!replies.has(target.run_id) && !historyItems.some(item=>item.type==='run_pair' && item.run_id===target.run_id));
+    replies.set(target.run_id,{...old,locationOnly,session_id:session,user:keepUser?old.user:body.user?.availability==='full'?textBlocks(body.user.blocks):body.user?.preview||old.user,userAvailability:keepUser?old.userAvailability:body.user?.availability,reply_disposition:body.reply_disposition,text:body.reply_disposition==='no_reply'?undefined:body.reply_text,skill_notice:body.skill_notice,aggregation:body.aggregation||old.aggregation,recording_state:recording,recording_unverified:false,loading:body.reply_disposition!=='no_reply' && typeof body.reply_text!=='string',purpose:body.purpose});
     locationTarget={...target,loading:false,purpose:body.purpose,reply_disposition:body.reply_disposition};
     renderMessages();
     const record=messageNodes.get('run:'+target.run_id)?.element;
@@ -350,7 +351,7 @@ function renderMessages() {
     if(reply.session_id!==session)continue;
     const key='run:'+id;const recorded=items.get(key);
     if(recorded){items.set(key,{...recorded,replyMeta:reply});continue;}
-    if(locatedRecord?.run_id===id && !locationTarget)continue;
+    if(reply.locationOnly && locationTarget?.run_id!==id)continue;
     items.set(key,{...reply,key,run_id:id,type:'projection'});
   }
   if(locationTarget && !items.has('run:'+locationTarget.run_id) && locationTarget.loading)items.set('location-loading',{key:'location-loading',text:'正在读取目标记录…'});
@@ -394,7 +395,7 @@ function renderMessages() {
 }
 function resetHistory() {
   sessionGeneration++;
-  retireLocation();locationTarget=null;locatedRecord=null;messageNodes.clear();element("messages").replaceChildren();restoreUnread();
+  retireLocation();locationTarget=null;messageNodes.clear();element("messages").replaceChildren();restoreUnread();
   historyRequest++;
   historyItems = [];
   historyCursor = "";
@@ -438,7 +439,7 @@ async function loadMessages(older = false) {
     const items = /** @type {Wire[]} */ ([...page.items].reverse());
     for(const item of items)if(item.type==='run_pair'){
       const reply=replies.get(item.run_id);
-      if(reply && reply.session_id===target){reply.recording_state='recorded';reply.recording_unverified=false;}
+      if(reply && reply.session_id===target){reply.recording_state='recorded';reply.recording_unverified=false;reply.locationOnly=false;}
       if(terminalStatus && terminalStatus.run_id===item.run_id && terminalStatus.session_id===target){terminalStatus.recording_state='recorded';terminalStatus.recording_unverified=false;}
     }
     if (!historyLoaded) historyItems = items;
@@ -572,6 +573,7 @@ const stream = new Stream(
         const old = replies.get(projection.run_id) || {};
         replies.set(projection.run_id, {
           ...old,
+          locationOnly: false,
           session_id: projection.session_id,
           user: old.user || projection.prompt_preview,
           userAvailability:old.userAvailability||'preview',
@@ -641,6 +643,7 @@ const stream = new Stream(
         const old = replies.get(envelope.run_id) || {};
         replies.set(envelope.run_id, {
           ...old,
+          locationOnly: false,
           session_id: envelope.session_id,
           outcome: event.outcome,
           aggregation: event.aggregation,
@@ -674,6 +677,7 @@ const stream = new Stream(
   },
   () => {
     connected = false;
+    retireLocation();
     progress.interrupt();
     notices.disconnected();
     memory.disconnected();
@@ -851,6 +855,7 @@ input.addEventListener("input", () => {
 });
 window.addEventListener("offline", () => {
   connected = false;
+  retireLocation();
   stream.source?.close();
   progress.interrupt();
   memory.disconnected();
@@ -867,6 +872,7 @@ window.addEventListener("pageshow", (event) => {
   if (event.persisted && runPage) {
     restoreRunPage={page:runPage,generation:shell.generation};
     connected = false;
+    retireLocation();
     stream.source?.close();
     memory.disconnected();
     stream.connect(session);

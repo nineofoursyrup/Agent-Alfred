@@ -261,7 +261,7 @@ export function overviewPage(root,options) {
 /** @param {Wire} run @param {boolean} current @param {Wire[]} peers */
 function runCard(run,current,peers) {
   const card=node('article');card.className='overview-run';card.dataset.runId=run.run_id;
-  const purposes=/** @type {Record<string,string>} */({chat:'普通聊天',aggregation:'手动聚合',probe:'模型探针',consolidation:'记忆提炼'});
+  const purposes=/** @type {Record<string,string>} */({chat:'普通聊天',aggregation:'手动聚合',inference_probe:'推理探针',consolidation:'记忆提炼'});
   const outcomes=/** @type {Record<string,string>} */({completed:run.purpose==='chat'&&run.reply_disposition==='reply'?'回复完成':'已完成',max_steps:'受控停止',failed:'受控失败',interrupted:'终态无法确认'});
   const id=run.run_id,short=id.length>16?id.slice(0,12)+'…':id;
   const collides=peers.some(peer=>peer.run_id!==id&&peer.run_id.slice(0,12)===id.slice(0,12));
