@@ -98,8 +98,9 @@
       "evidence": "python-assets-protocol-03.log"
     },
     "full_python": {
-      "result": "INHERITED",
-      "basis": "Python, Python tests, dependencies and runtime unchanged; root local full 6445 PASS and prior CI6423 PASS/22 platform skips. Asset-dependent checks refreshed."
+      "result": "PASS",
+      "basis": "Python, Python tests, dependencies and runtime unchanged; root local full 6445 PASS and prior CI6423 PASS/22 platform skips. Asset-dependent checks refreshed.",
+      "qualification": "inherited: Python, tests, dependencies and runtime remain unchanged; existing full checks are reused."
     },
     "startup_bounded_repeat": {
       "result": "PASS",
@@ -144,11 +145,12 @@
       "scope": "One continuously retained new isolated state and browser tab across old/current/supported independently installed packages. No restoration or lock deletion; raw ephemeral fixture CSRF tokens omitted with explicit redaction provenance."
     },
     "full_browser": {
-      "result": "RUNNING",
+      "result": "NOT RUN",
       "expected_cases": 535,
       "code_head": "06588168d5049040abf0a4560091d659d244ddcf",
       "started_on_head": "c96c26d1446ba97bdb7b219d79cef0b5fd001b53",
-      "scope": "No full-success claim until actual terminal result; no product/test changes during this documentation successor."
+      "scope": "No full-success claim until actual terminal result; no product/test changes during this documentation successor.",
+      "execution": "RUNNING at the preserved e27 observation time; no terminal result was available in this snapshot."
     }
   },
   "historical_checks": {
@@ -166,18 +168,20 @@
       "result_file": "installations-02-result.json"
     },
     "b214_and_4da_full_browser": {
-      "result": "NOTRUN_INCOMPLETE_SUPERSEDED",
+      "result": "NOT RUN",
       "exit": 130,
-      "reason": "Stopped with SIGINT before editing successors after real adjacent RED; terminal records preserved."
+      "reason": "Stopped with SIGINT before editing successors after real adjacent RED; terminal records preserved.",
+      "execution": "INCOMPLETE_SUPERSEDED; original exit130 and interruption observations remain preserved in archived outputs."
     }
   },
   "native200": {
-    "result": "PASS_QUALIFIED_INHERITANCE",
+    "result": "PASS",
     "tested_head": "4da39e52194e62f0f23637a83c8556069eb6a07d",
     "successor_head": "06588168d5049040abf0a4560091d659d244ddcf",
     "assessment": "ci-repair-r1/native/successor-065-applicability.json",
     "installed_asset_binding": "ci-repair-r1/final-gates/native-installed-binding-03.json",
-    "scope": "Reviewed unchanged native geometry/input/send/open-close/scroll applicability, now supported by final installed HTTP bytes for all34 assets and HTML across four variants. This is not a new native replay or new IME evidence. Full browser and remote CI remain separate gates."
+    "scope": "Reviewed unchanged native geometry/input/send/open-close/scroll applicability, now supported by final installed HTTP bytes for all34 assets and HTML across four variants. This is not a new native replay or new IME evidence. Full browser and remote CI remain separate gates.",
+    "qualification": "qualified inheritance of reviewed4da native200 observations, with final065 installed HTTP byte binding; not a new native execution."
   },
   "native_IME": {
     "result": "BLOCKED",
@@ -637,12 +641,13 @@
       "findings": 0
     },
     "successor_remaining_gates": {
-      "result": "PENDING",
+      "result": "NOT RUN",
       "items": [
         "Full535 source-browser run",
         "Revised portable document review",
         "Final remote CI and canonical acceptance adjudication"
-      ]
+      ],
+      "execution": "PENDING at the preserved e27 observation time."
     },
     "native_IME": {
       "result": "BLOCKED",
@@ -658,6 +663,7 @@
       "Spec F2 P3 Chromium simulated touch scope"
     ],
     "prior_reports_preserved": true,
-    "successor_document_review": "PENDING"
+    "successor_document_review": "NOT RUN",
+    "successor_document_review_execution": "PENDING at the preserved e27 observation time."
   }
 }
