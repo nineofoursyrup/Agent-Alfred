@@ -6,6 +6,36 @@ import {mkdtemp,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 
+test('a first native snapshot arriving after MainBar editing preserves focus and selection across the breakpoint',async({page},testInfo)=>{
+  let release;const gate=new Promise(resolve=>release=resolve);
+  // Hold actual SSE requests, including the replacement after explicit Session
+  // creation. The real snapshot and shell/media-query handlers stay unchanged.
+  await page.route(/\/api\/events(?:\?.*)?$/,async route=>{await gate;await route.continue();});
+  const observations=[];
+  const observe=async label=>observations.push({label,...await page.evaluate(()=>({active:document.activeElement?.id||document.activeElement?.tagName,panel:document.body.dataset.panel,layout:document.body.dataset.layout,mainbarHidden:document.getElementById('mainbar').hidden,pages:document.querySelectorAll('#page .page-body').length,selection:[document.getElementById('message').selectionStart,document.getElementById('message').selectionEnd]}))});
+  try{
+    await page.setViewportSize({width:1100,height:800});await page.goto('/inbox');
+    await page.getByRole('button',{name:'新建会话',exact:true}).click();
+    const input=page.getByRole('textbox',{name:'消息'});await input.fill('保留选区和当前输入');
+    await input.evaluate(input=>input.setSelectionRange(2,5));
+    await expect(page.locator('#page .page-body')).toHaveCount(0);await expect(input).toBeFocused();
+    const preference=await page.evaluate(()=>sessionStorage.getItem('alfred.shell.wideOpen'));
+    await observe('editing-before-first-snapshot');release();
+    await expect(page.getByRole('heading',{name:'收件箱',exact:true})).toBeVisible();
+    await observe('first-page-mounted-before-resize');
+    await page.setViewportSize({width:1099,height:800});
+    await expect(page.locator('body')).toHaveAttribute('data-layout','narrow');
+    await observe('narrow-after-media-change');
+    await testInfo.attach('startup-breakpoint-observations',{body:JSON.stringify(observations,null,2),contentType:'application/json'});
+    await expect(input).toBeVisible();await expect(input).toBeFocused();
+    expect(await input.evaluate(input=>[input.selectionStart,input.selectionEnd])).toEqual([2,5]);
+    await expect(input).toHaveValue('保留选区和当前输入');
+    await page.setViewportSize({width:1100,height:800});await expect(input).toBeFocused();
+    expect(await input.evaluate(input=>[input.selectionStart,input.selectionEnd])).toEqual([2,5]);
+    expect(await page.evaluate(()=>sessionStorage.getItem('alfred.shell.wideOpen'))).toBe(preference);
+  }finally{release();}
+});
+
 for(const boundary of ['entry','state'])test(`initial ${boundary} barrier preserves route history and mounts only the latest target after synchronization`,async({page})=>{
   const entry=await (await page.request.get('/api/entry')).json();
   const created=await page.request.post('/api/sessions',{headers:{'x-agent-alfred-csrf':entry.csrf_token},data:{}});
