@@ -120,6 +120,7 @@ export function topologyView(root, workflow, runtime, sync, runId=null) {
   /** @type {SVGElement|null} */ let svg=null;
   /** @type {AbortController|null} */ let pending=null;
   /** @type {HTMLElement|null} */ let nodeDetail=null;
+  /** @type {{target:string,label:string,element:HTMLElement,available:boolean}[]} */ let references=[];
   function invalidate() {sequence++; pending?.abort(); pending=null;}
   function viewbox() {svg?.setAttribute('viewBox',`${viewport.x} ${viewport.y} ${viewport.width} ${viewport.height}`);}
   function fit() {viewport={...full}; viewbox();}
@@ -152,9 +153,37 @@ export function topologyView(root, workflow, runtime, sync, runId=null) {
     status.textContent=prefix + pathNotice + (messages[phase] || '') + (changed ? '结构已更新，已适应全图并关闭旧节点详情。' : '');
     refresh.textContent=(!snapshot && ['failed','incompatible'].includes(phase)) ? '重试读取' : '重新读取';
   }
+  // Process evidence arrives independently of the manually read path. Update
+  // only changed references so the selected node's reading state stays intact.
+  function syncReferences() {
+    if (closed || !pathMode || !nodeDetail?.isConnected) return;
+    for (const ref of references) {
+      const available=Boolean(document.getElementById(ref.target));
+      if (available===ref.available) continue;
+      const previous=ref.element, focused=document.activeElement===previous;
+      if (available) {
+        const link=node('a',ref.label);link.href='#'+encodeURIComponent(ref.target);
+        link.addEventListener('click',event=>{
+          event.preventDefault();event.stopPropagation();
+          const evidence=document.getElementById(ref.target);
+          if (!evidence) {syncReferences();return;}
+          if(evidence instanceof HTMLDetailsElement) evidence.open=true;
+          evidence.tabIndex=-1;evidence.focus();evidence.scrollIntoView({block:'center'});
+        });
+        ref.element=link;
+      } else ref.element=node('p',ref.label+' · 关联证据不可用');
+      ref.available=available;
+      previous.replaceWith(ref.element);
+      if (focused) {
+        if (!available) ref.element.tabIndex=-1;
+        ref.element.focus({preventScroll:true});
+      }
+    }
+  }
   function showNode() {
     if (!nodeDetail || !snapshot) return;
     nodeDetail.replaceChildren();
+    references=[];
     const d=snapshot.description, n=d.topology.nodes.find((/** @type {Wire} */ n)=>n.node_id === selected);
     if (!n) return;
     const c=caption(d,n);
@@ -167,18 +196,11 @@ export function topologyView(root, workflow, runtime, sync, runId=null) {
       for (const ref of f?.references||[]) {
         const target=ref.attempt_id ? `attempt-${ref.attempt_id}` : `step-${ref.step_index}`;
         const label=ref.attempt_id?`Attempt ${ref.attempt_id}`:`Step ${ref.step_index}`;
-        if (document.getElementById(target)) {
-          const link=node('a',label); link.href='#'+encodeURIComponent(target);
-          link.addEventListener('click',event=>{
-            event.preventDefault(); event.stopPropagation();
-            const evidence=document.getElementById(target);
-            if (!evidence) {link.replaceWith(node('p',label+' · 关联证据不可用')); return;}
-            if(evidence instanceof HTMLDetailsElement) evidence.open=true;
-            evidence.tabIndex=-1; evidence.focus(); evidence.scrollIntoView({block:'center'});
-          });
-          nodeDetail.append(link);
-        } else nodeDetail.append(node('p',label+' · 关联证据不可用'));
+        const element=node('p',label+' · 关联证据不可用');
+        references.push({target,label,element,available:false});
+        nodeDetail.append(element);
       }
+      syncReferences();
     }
   }
   /** @param {string} id */
@@ -325,7 +347,7 @@ export function topologyView(root, workflow, runtime, sync, runId=null) {
     online=current.connected;notices();
   });
   notices();
-  return {close(){closed=true;invalidate();unwatch();}};
+  return {syncReferences,close(){closed=true;invalidate();unwatch();}};
 }
 
 /** @param {string} value */
