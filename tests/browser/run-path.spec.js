@@ -92,6 +92,87 @@ for(const viewport of [{width:1280,height:850},{width:390,height:844}]) test(`CE
   }finally{await server.close();}
 });
 
+test('selected path references follow late, missing and restored process evidence without rereading the path',async({page})=>{
+  const server=await memoryServer({script:'tests/browser/routing_server.py'});
+  let evidenceSeen=barrier(),releaseEvidence=barrier();
+  try{
+    const run=await routingRun(page,server);
+    await page.route('**/api/run-evidence?*',async route=>{
+      const seen=evidenceSeen,release=releaseEvidence;
+      const response=await route.fetch();
+      seen.resolve();
+      await release.promise;
+      await route.fulfill({response});
+    });
+    let pathReads=0;
+    page.on('request',request=>{if(request.url().includes('/api/run-path?'))pathReads++;});
+    await page.goto(server.origin+'/runs/'+run);
+    await evidenceSeen.promise;
+    await page.getByRole('button',{name:'本次执行路径',exact:true}).click();
+    const panel=region(page);
+    await expect(panel.locator('svg [data-node-id]')).toHaveCount(9);
+    const select=panel.getByRole('button',{name:/ · classify$/});
+    await select.focus();await page.keyboard.press('Enter');
+    const details=panel.locator('[aria-label="节点详情"]');
+    await expect(details).toContainText('Step 1 · 关联证据不可用');
+    await expect(page.locator('#step-1')).toHaveCount(0);
+    const zoom=panel.getByRole('button',{name:'放大',exact:true});
+    await zoom.focus();await page.keyboard.press('Enter');
+    const view=await panel.locator('svg').getAttribute('viewBox');
+    const definition=details.locator('details');
+    const definitionToggle=definition.locator('summary');
+    await definitionToggle.focus();await page.keyboard.press('Enter');
+    releaseEvidence.resolve();
+    await expect(page.locator('#step-1')).toHaveCount(1);
+    await expect(definition).toHaveJSProperty('open',true);
+    await expect(definitionToggle).toBeFocused();
+    const step=details.getByRole('link',{name:'Step 1',exact:true});
+    await expect(step).toBeVisible();
+    await expect(details.getByRole('link',{name:/^Attempt /})).toBeVisible();
+    await expect(details).not.toContainText('关联证据不可用');
+    expect(pathReads).toBe(1);
+    await expect(panel.locator('svg')).toHaveAttribute('viewBox',view);
+    evidenceSeen=barrier();releaseEvidence=barrier();
+    const refresh=page.getByRole('button',{name:'刷新过程证据',exact:true});
+    await refresh.click();await evidenceSeen.promise;
+    await step.focus();releaseEvidence.resolve();
+    await expect(refresh).toBeEnabled();
+    await expect(step).toBeFocused();
+    await expect(definition).toHaveJSProperty('open',true);
+    expect(pathReads).toBe(1);
+    await expect(panel.locator('svg')).toHaveAttribute('viewBox',view);
+    await step.focus();await page.keyboard.press('Enter');
+    await expect(page.locator('#step-1')).toBeFocused();
+    const {readdir,readFile,unlink,writeFile}=await import('node:fs/promises');
+    const {join}=await import('node:path');
+    const files=await readdir(join(server.directory,'traces'),{recursive:true});
+    const trace=join(server.directory,'traces',files.find(file=>file.endsWith('/trace.jsonl')));
+    const bytes=await readFile(trace);await unlink(trace);
+    evidenceSeen=barrier();releaseEvidence=barrier();
+    await refresh.click();await evidenceSeen.promise;
+    await step.focus();releaseEvidence.resolve();
+    await expect(page.locator('#step-1')).toHaveCount(0);
+    await expect(details.getByRole('link')).toHaveCount(0);
+    const missingStep=details.getByText('Step 1 · 关联证据不可用',{exact:true});
+    await expect(missingStep).toBeFocused();
+    await expect(definition).toHaveJSProperty('open',true);
+    await writeFile(trace,bytes);
+    evidenceSeen=barrier();releaseEvidence=barrier();
+    await refresh.click();await evidenceSeen.promise;
+    await missingStep.focus();releaseEvidence.resolve();
+    await expect(step).toBeFocused();
+    await expect(step).toHaveJSProperty('tabIndex',0);
+    await expect(details.getByRole('link',{name:/^Attempt /})).toBeVisible();
+    await expect(definition).toHaveJSProperty('open',true);
+    expect(pathReads).toBe(1);
+    await expect(panel.locator('svg')).toHaveAttribute('viewBox',view);
+  }finally{
+    releaseEvidence.resolve();
+    await page.unroute('**/api/run-evidence?*');
+    await server.close();
+  }
+});
+
 test('CE-08 latest request wins across reverse responses, reopen and Run navigation',async({page})=>{
   const server=await memoryServer({script:'tests/browser/routing_server.py'});
   try{

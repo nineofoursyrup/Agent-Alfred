@@ -576,6 +576,7 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
       const link = node("a", "返回账本核对筛选并刷新");
       link.href = "/ops?" + filters;
       detail.append(node("p", "账目快照已失效；尚未核验当前过程记录。"), link);
+      pathView?.syncReferences();
       paintAction();
       return;
     }
@@ -733,6 +734,7 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
         button.focus({ preventScroll: true });
     }
     restoreReading();
+    pathView?.syncReferences();
     paintAction();
   }
   function paintTimes() {
