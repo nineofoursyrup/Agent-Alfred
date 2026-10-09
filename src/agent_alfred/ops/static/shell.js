@@ -17,7 +17,7 @@ export const PAGES = [
 /** @typedef {{getLeaveState?:()=>LeaveState, setVisible?:(visible:boolean)=>void, captureSource?:()=>Object, restoreSource?:(source:any)=>void, dispose?:()=>void}} PageController */
 /** @param {URL} url */
 export function pageDefinition(url) {
-  return PAGES.find(page => page.path === url.pathname || (page.path === '/runs' && url.pathname.startsWith('/runs/')) || (page.path === '/inbox' && url.pathname === '/'));
+  return PAGES.find(page => page.path === url.pathname || (page.path === '/runs' && url.pathname.startsWith('/runs/')) || (page.path === '/overview' && url.pathname === '/'));
 }
 
 /** Storage failures degrade to this document's memory; never lose typed text. */
@@ -81,6 +81,7 @@ export function createShell(options) {
   /** @type {HTMLElement|null} */ let trigger=null;
   /** @type {PageController|null} */ let controller=null;
   let currentUrl=new URL(location.href);
+  if(currentUrl.pathname==='/')currentUrl.pathname='/overview';
   let current={version:1,documentId,index:0,epoch,panel:/** @type {string|null} */(null),url:currentUrl.href,source:/** @type {any} */(null)};
   /** @type {null|(()=>void)} */ let restoreHistory=null;
   let navigating=false;
@@ -189,6 +190,7 @@ export function createShell(options) {
   async function navigate(target,intent={}) {
     let url;try{url=new URL(target,location.href);}catch{return 'unavailable';}
     if(url.origin!==location.origin || !pageDefinition(url))return 'unavailable';
+    if(url.pathname==='/')url.pathname='/overview';
     if(url.href===currentUrl.href){if(panel)closePanel();return 'unchanged';}
     if(navigating)return 'unavailable';navigating=true;
     try {
@@ -208,6 +210,7 @@ export function createShell(options) {
       // Browser history from an earlier document has no reusable panel ownership.
       const url=new URL(location.href);
       if(!pageDefinition(url))return;
+      if(url.pathname==='/')url.pathname='/overview';
       if(navigating)return;navigating=true;
       const old=current;const delta=next?next.index-current.index:-1;
       try {
