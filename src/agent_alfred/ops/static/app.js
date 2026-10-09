@@ -34,6 +34,9 @@ let valid = false;
 let sending = false;
 let creating = false;
 let createdSessionRevision = 0;
+/** Successful creations whose original selection intent can no longer apply.
+ * @type {Map<string,{session_id:string,instance:string,reason:string}>} */
+const createdSessions = new Map();
 /** @type {Set<()=>void>} */ const sessionActionListeners = new Set();
 let unavailable = false;
 /** @type {Wire|null} */ let busySummary = null;
@@ -119,9 +122,16 @@ function canSend() {
     !busySummary &&
     !unavailable &&
     !sending &&
+    !creating &&
     session !== null &&
     !!input.value.trim()
   );
+}
+function createSessionReason() {
+  return sending ? '正在提交，请等待当前请求确认。'
+    : !csrf ? '入口凭据尚未就绪，请等待连接核验。'
+    : active || busySummary ? '当前运行尚未收尾，请完成后再新建。'
+    : unavailable ? '记录服务不可用，暂不能新建会话。' : '';
 }
 /** The one owner supplies both control availability and click-time checks.
  * @param {'create'|'continue'} action @param {string|null} [target] */
@@ -130,8 +140,7 @@ function sessionActionState(action, target = null) {
     : sending ? '正在提交，请等待当前请求确认。'
     : !csrf ? '入口凭据尚未就绪，请等待连接核验。' : '';
   if (!reason && action === 'create') {
-    reason = active || busySummary ? '当前运行尚未收尾，请完成后再新建。'
-      : unavailable ? '记录服务不可用，暂不能新建会话。' : '';
+    reason = createSessionReason();
   } else if (!reason && action === 'continue') {
     reason = !connected ? '连接尚未同步，请等待状态核验。'
       : typeof target !== 'string' ? '会话身份不可用。'
@@ -143,10 +152,11 @@ function sessionActionState(action, target = null) {
 }
 function updateSend() {
   /** @type {HTMLButtonElement} */ (element("send")).disabled = !canSend();
-  element("send-reason").textContent=session===null?"请显式新建或继续会话。":!connected?"连接尚未同步；草稿仍可编辑。":!valid?"会话不可用；请保留草稿并选择会话。":unavailable?"记录服务不可用；不会排队发送。":sending?"正在提交；新增输入会保留。":active||busySummary?"当前运行尚未收尾；不会排队发送。":"Enter 发送 · Shift+Enter 换行";
+  element("send-reason").textContent=creating?"正在新建会话；草稿仍可编辑，不会排队发送。":session===null?"请显式新建或继续会话。":!connected?"连接尚未同步；草稿仍可编辑。":!valid?"会话不可用；请保留草稿并选择会话。":unavailable?"记录服务不可用；不会排队发送。":sending?"正在提交；新增输入会保留。":active||busySummary?"当前运行尚未收尾；不会排队发送。":"Enter 发送 · Shift+Enter 换行";
   /** @type {HTMLButtonElement} */ (element("new-session")).disabled =
     !sessionActionState('create').allowed;
   for (const listener of sessionActionListeners) listener();
+  if(createdSessions.size)renderShellStatus();
 }
 /** @param {Wire|null} summary */
 function renderBusy(summary) {
@@ -216,7 +226,14 @@ function updateReadStatus() {
   renderShellStatus();
 }
 function renderShellStatus() {
-  const status=element('shell-status');status.replaceChildren();
+  const container=element('shell-status');
+  // Keep deferred receipt controls attached: ordinary Host updates must not
+  // discard their focus while their availability changes.
+  for(const child of Array.from(container.children)){
+    const key=child.getAttribute('data-created-receipt');
+    if(key===null || !createdSessions.has(key))child.remove();
+  }
+  const status=document.createDocumentFragment();
   const facts=[];
   if(!connected)facts.push('连接中断或正在同步');
   if(busySummary)facts.push(`${busySummary.stage} · ${busySummary.gateway==='cli'?'CLI':busySummary.gateway==='web'?'Web':busySummary.gateway||'来源未知'}`);
@@ -239,6 +256,22 @@ function renderShellStatus() {
   if(unread&&!unread.seen){const show=node('button','查看新回复');show.onclick=()=>{shell.openPanel('mainbar');returnLatest();};status.append(show);}
   if(unread&&!unread.seen && messageNodes.get('run:'+unread.run_id)?.element.dataset.replyComplete!=='true'){
     const verify=node('button','核对未读结果');verify.onclick=()=>{if(session!==null&&unread)void locateReply({process_instance_id:instance,session_id:session,run_id:unread.run_id,action_id:crypto.randomUUID()});};status.append(verify);
+  }
+  container.insertBefore(status,container.firstChild);
+  for(const [key,receipt] of createdSessions) {
+    let box=Array.from(container.children).find(child=>child.getAttribute('data-created-receipt')===key);
+    if(!box) {
+      box=node('section');box.setAttribute('aria-label','新建会话回执');box.setAttribute('data-created-receipt',key);
+      box.append(node('p',`会话 ${receipt.session_id === '' ? '（空标识）' : receipt.session_id} 已创建，尚未切换。`),node('p',`当时未切换：${receipt.reason}`));
+      const availability=node('p');availability.setAttribute('data-created-availability','');box.append(availability);
+      const open=node('button','打开已创建会话');
+      open.onclick=()=>{if(receipt.instance===instance)void continueSession(receipt.session_id);};
+      const inspect=node('a','查看已创建会话');inspect.href='/inbox?'+new URLSearchParams({session_id:receipt.session_id,view:'messages'});
+      box.append(open,inspect);container.append(box);
+    }
+    const reason=receipt.instance!==instance ? '进程已变化，请先查看并核验已创建会话。' : sessionActionState('continue',receipt.session_id).reason;
+    /** @type {HTMLElement} */(box.querySelector('[data-created-availability]')).textContent=reason || '可显式打开；不会自动切换。';
+    /** @type {HTMLButtonElement} */(box.querySelector('button')).disabled=!!reason;
   }
 }
 function publishState() {shell.publish({instance,connected,session,active,revision,unavailable,memoryRevision:memory.revision,memoryState:memory.state,projection:hostProjection,readGapRevision});renderShellStatus();}
@@ -784,6 +817,8 @@ async function continueSession(target) {
     accountingView?.disconnect();
     stream.connect(session);
   }
+  for(const [key,receipt] of createdSessions)if(receipt.session_id===target)createdSessions.delete(key);
+  renderShellStatus();
   shell.openPanel('mainbar');
   updateSend();
   void loadMessages();
@@ -822,6 +857,7 @@ async function createSession(reveal = false) {
   if (!state.allowed) {error.textContent=state.reason;return {status:'blocked',reason:state.reason};}
   creating=true;
   const intent=readingIntent;const pageOwner=shell.generation;
+  const owner={instance,session,generation:sessionGeneration};
   updateSend();
   try {
     const response = await fetch("/api/sessions", {
@@ -838,6 +874,18 @@ async function createSession(reveal = false) {
       throw new Error(reasons[result.code] || "会话未能创建，请稍后重试。");
     }
     createdSessionRevision++;
+    // Creation is committed on the server. Selecting it is still owned by the
+    // original user intent and must pass the current guard, including other tabs.
+    const reason=owner.instance!==instance ? '创建时的进程已变化，请重新核验。'
+      : owner.session!==session || owner.generation!==sessionGeneration ? '当前会话选择已变化，保留当前会话。'
+      : !connected || revision<0 ? '连接尚未同步，保留当前会话。'
+      : createSessionReason()
+        || (pageOwner!==shell.generation || intent!==readingIntent ? '已有新的页面或阅读意图，保留当前会话和草稿。' : '');
+    if(reason) {
+      createdSessions.set(JSON.stringify([owner.instance,result.session_id]),{session_id:result.session_id,instance:owner.instance,reason});
+      error.textContent='';
+      return {status:'created',session_id:result.session_id,reason:'会话已创建，尚未切换：'+reason};
+    }
     retireLocation();
     session = result.session_id;
     storage.set("alfred.session", /** @type {string} */ (session));
