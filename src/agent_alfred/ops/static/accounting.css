@@ -1,18 +1,18 @@
 .accounting {min-width:0;overflow-wrap:anywhere}
-.accounting form,.accounting>section {border:1px solid var(--border);border-radius:12px;padding:18px;background:var(--surface)}
+.accounting form,.accounting>section {border:1px solid var(--border);border-radius:var(--radius-usage);padding:18px;background:var(--surface)}
 .accounting .ops-filter-fields {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:8px 16px}
 .accounting label {display:flex;flex-direction:column;gap:4px;margin:0;min-width:0}
-.accounting label>span {font-size:12px;color:var(--secondary)}
+.accounting label>span {font-size:var(--font-size-meta);font-family:var(--font-mono);color:var(--muted)}
 .accounting details {margin:12px 0;min-width:0}
 .accounting summary {cursor:pointer;color:var(--secondary)}
 .accounting .table-scroll {margin:12px 0}
 .accounting .ops-runs table,.accounting .ops-attempts table,.accounting .ops-prices table {min-width:760px}
 .accounting .ops-runs td,.accounting .ops-attempts td {min-width:110px}
-.accounting .ops-runs td:first-child,.accounting .ops-attempts td:first-child {min-width:170px;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+.accounting .ops-runs td:first-child,.accounting .ops-attempts td:first-child {min-width:170px;font-family:var(--font-mono)}
 .accounting .ops-prices td {min-width:100px}
 .accounting .ops-prices td:last-child {min-width:230px}
 .accounting caption {text-align:left;margin-bottom:8px;color:var(--secondary)}
-.accounting pre {max-height:400px;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--raised);padding:12px;border-radius:8px;outline-offset:-3px}
+.accounting pre {max-height:400px;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--raised);padding:12px;border-radius:var(--radius-console);outline-offset:-3px}
 .accounting button {margin:4px 8px 4px 0}
 .accounting p {margin:8px 0}
 .accounting [role=status] {color:var(--attention)}
