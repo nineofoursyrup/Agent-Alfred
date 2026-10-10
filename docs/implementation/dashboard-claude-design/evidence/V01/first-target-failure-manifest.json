@@ -1,0 +1,279 @@
+{
+  "source": "/tmp/alfred-v01-impl-first-failure-0gqi0z_5",
+  "archive": "first-target-failure",
+  "file_count": 54,
+  "bytes_identical": true,
+  "candidate": "uncommitted intermediate implementation; full candidate identity was not captured",
+  "files": [
+    {
+      "path": "RUN.md",
+      "bytes": 1266,
+      "sha256": "c0bb49d8366029177564a9a63bdc82216bac03a8f395605c8245034576f58230"
+    },
+    {
+      "path": "completion.txt",
+      "bytes": 947,
+      "sha256": "dac4e2bedff2f1dd04c1364a790fd2239bb46f80c5d09e3ef1d6417633083eeb"
+    },
+    {
+      "path": "results/.last-run.json",
+      "bytes": 96,
+      "sha256": "d6425b620f9c1485732206fa92876c3948b3e7e2c7f67944ef481ea129ab0c4a"
+    },
+    {
+      "path": "results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/layout-metrics.json",
+      "bytes": 1879,
+      "sha256": "f8738d6409c9dac7b5342c368d1748d1d1ca92c86d79f5f35e3bce5aa9a5fa65"
+    },
+    {
+      "path": "results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-1099-filters.png",
+      "bytes": 85536,
+      "sha256": "7d9765cf1f7c02b7a0e4558fbebd8c51da5e7d7dad004a84d631d67a912b4f44"
+    },
+    {
+      "path": "results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-1099-prices.png",
+      "bytes": 107352,
+      "sha256": "3baaa3247ddc474624262a0b744330969be269da1bc151664553251dc1f5f569"
+    },
+    {
+      "path": "results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-1100-filters.png",
+      "bytes": 77502,
+      "sha256": "e85fb9ce59c316b6d65737977120c114511fc971983867a409c52b7673dcf1af"
+    },
+    {
+      "path": "results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-1100-prices.png",
+      "bytes": 93082,
+      "sha256": "f97c3c5515afc338f15e642c8b7d4bfdb8fab87b0616a234baeac27330278f71"
+    },
+    {
+      "path": "results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-1280-filters.png",
+      "bytes": 109743,
+      "sha256": "35fe8062bc9a2af11a44ff070346fff436ce71b3ef85809de49f9c7c5f02ffe5"
+    },
+    {
+      "path": "results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-1280-prices.png",
+      "bytes": 108385,
+      "sha256": "05f01226341941351c1e16b2eefa5e965015225f13eed526d34e7a54c30a3d48"
+    },
+    {
+      "path": "results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-1440-filters.png",
+      "bytes": 123339,
+      "sha256": "1363368b36cf551e66355e1c47727a3c3adb3ff524d6b4ca0e030eeeb41cbae4"
+    },
+    {
+      "path": "results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-1440-prices.png",
+      "bytes": 116090,
+      "sha256": "eb9a47f8935b7ae287aa8a80366a6c979f27ce1b62a0f96087fcf247cf149a5e"
+    },
+    {
+      "path": "results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-320-filters.png",
+      "bytes": 43843,
+      "sha256": "2b3a61c26f9698042c680929023c9185e5719d6d3362c8cc2d51afe09d0ccf7e"
+    },
+    {
+      "path": "results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-320-prices.png",
+      "bytes": 41969,
+      "sha256": "dc37e4db163f8e073693ae0315f5bcbb3ba528c83af1e42b373cc3bfba20ad65"
+    },
+    {
+      "path": "results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-390-filters.png",
+      "bytes": 48872,
+      "sha256": "45a0b58ad9c7309b0d91bf25845d88de3732d21aa489493d903c74106b37b642"
+    },
+    {
+      "path": "results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-390-prices.png",
+      "bytes": 51178,
+      "sha256": "889c77d44be7d907ecf9cdb55c40ea2c3e05a35fa7cdbbc1e7b7a671e7d74493"
+    },
+    {
+      "path": "results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-central-679.png",
+      "bytes": 119688,
+      "sha256": "28dd15b59b27095b05fe03d0ae4d721c14c93d601bce74ff89249df7426c1ed0"
+    },
+    {
+      "path": "results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-central-680.png",
+      "bytes": 117357,
+      "sha256": "e46481633617e1e89fcd7a93da4b96874a7ab2395044331a1959532d478def3a"
+    },
+    {
+      "path": "results/database_migration-1280x80-e6312-emain-reachable-at-1280x800/attachments/geometry-and-environment-57b0316cab0fde80444c145903c093e429dd9da0.json",
+      "bytes": 643,
+      "sha256": "dfadd5eeb0662f988afa7dda079ca117cbe2c36bee5b23a31a6d035420c9afc3"
+    },
+    {
+      "path": "results/database_migration-1280x80-e6312-emain-reachable-at-1280x800/database-1280x800-long-result.png",
+      "bytes": 103553,
+      "sha256": "965dcce749c59c59f1a1876b1ba3ebe973d1f116fbae5380228531a02f33c46f"
+    },
+    {
+      "path": "results/database_migration-1280x80-e6312-emain-reachable-at-1280x800/database-1280x800-top.png",
+      "bytes": 153672,
+      "sha256": "e9a5dcfef448d960828848df93ad82d5a8a5791bb07be61330bbb912f169e400"
+    },
+    {
+      "path": "results/database_migration-1280x80-e6312-emain-reachable-at-1280x800/geometry-and-environment.json",
+      "bytes": 643,
+      "sha256": "dfadd5eeb0662f988afa7dda079ca117cbe2c36bee5b23a31a6d035420c9afc3"
+    },
+    {
+      "path": "results/database_migration-1440x90-b7c6f-emain-reachable-at-1440x900/attachments/geometry-and-environment-1c69908b01911a56cef0b31590e61a34bfe01bbf.json",
+      "bytes": 643,
+      "sha256": "7645da13c2841d61152ab759c2ec293425b6a445419cd83d20dfe85c6b67db22"
+    },
+    {
+      "path": "results/database_migration-1440x90-b7c6f-emain-reachable-at-1440x900/database-1440x900-long-result.png",
+      "bytes": 132859,
+      "sha256": "7ba036ba10598be83d448e0142135e031c26d5e56236b8cb988d06c8138dcc39"
+    },
+    {
+      "path": "results/database_migration-1440x90-b7c6f-emain-reachable-at-1440x900/database-1440x900-top.png",
+      "bytes": 174149,
+      "sha256": "2957410e54f162d51940b48eae0a9f79024effeaac5ae0adfd80faedd6db3d97"
+    },
+    {
+      "path": "results/database_migration-1440x90-b7c6f-emain-reachable-at-1440x900/geometry-and-environment.json",
+      "bytes": 643,
+      "sha256": "7645da13c2841d61152ab759c2ec293425b6a445419cd83d20dfe85c6b67db22"
+    },
+    {
+      "path": "results/database_migration-320x800-4257f-remain-reachable-at-320x800/attachments/geometry-and-environment-4127e7a13567e597bbb30e924581beec4f7281f8.json",
+      "bytes": 670,
+      "sha256": "da1fed7fe0a4339f0799cea237b396ba3c24b2eb3bcc66343c6c8e89d2a9694c"
+    },
+    {
+      "path": "results/database_migration-320x800-4257f-remain-reachable-at-320x800/database-320x800-long-result.png",
+      "bytes": 51467,
+      "sha256": "9a18750e192d8c5e1225aaeb499d42891ebee18829267b53c9e376fd55f505ee"
+    },
+    {
+      "path": "results/database_migration-320x800-4257f-remain-reachable-at-320x800/database-320x800-top.png",
+      "bytes": 72253,
+      "sha256": "f7b3a4e2868b2c1aa8ed087d33b5a6dfeec26641e7c5bd73778721fe0a52cb33"
+    },
+    {
+      "path": "results/database_migration-320x800-4257f-remain-reachable-at-320x800/geometry-and-environment.json",
+      "bytes": 670,
+      "sha256": "da1fed7fe0a4339f0799cea237b396ba3c24b2eb3bcc66343c6c8e89d2a9694c"
+    },
+    {
+      "path": "results/database_migration-390x844-08fca-remain-reachable-at-390x844/attachments/geometry-and-environment-afec0e811373bcd238187de3c3677d8ccbd719d2.json",
+      "bytes": 670,
+      "sha256": "0117077dd53efb01ac2a000188fbb099ae5f69a5ebc8c265d0b9fffde34eb0de"
+    },
+    {
+      "path": "results/database_migration-390x844-08fca-remain-reachable-at-390x844/database-390x844-long-result.png",
+      "bytes": 58580,
+      "sha256": "d9df91655a16372ee6b6aa2a095d4f63956447c65aabdba3b1904f3d7f5f8c2b"
+    },
+    {
+      "path": "results/database_migration-390x844-08fca-remain-reachable-at-390x844/database-390x844-top.png",
+      "bytes": 59622,
+      "sha256": "91ab95ec7310e9525a3b85962c13a6063263ebe62f3b7ca8675426d0273bbe41"
+    },
+    {
+      "path": "results/database_migration-390x844-08fca-remain-reachable-at-390x844/geometry-and-environment.json",
+      "bytes": 670,
+      "sha256": "0117077dd53efb01ac2a000188fbb099ae5f69a5ebc8c265d0b9fffde34eb0de"
+    },
+    {
+      "path": "results/database_migration-Databas-00669-00-without-clipping-actions/database-central-679.png",
+      "bytes": 64740,
+      "sha256": "748dfabefb88c79543ef66120d27214ad8d285b3d1155ea976da0ef1958d2302"
+    },
+    {
+      "path": "results/database_migration-Databas-00669-00-without-clipping-actions/database-central-680.png",
+      "bytes": 70302,
+      "sha256": "0a9b9e68f19518f18f6ff190e2230aa18a2c8d0adc924b5b0ebb4ee70db6d8a9"
+    },
+    {
+      "path": "results/database_migration-Databas-00669-00-without-clipping-actions/database-shell-1099.png",
+      "bytes": 73322,
+      "sha256": "e4cabdce0e3ef8ed853806004da554fe388f7df4fa43197361fdc29a8b0850d6"
+    },
+    {
+      "path": "results/database_migration-Databas-00669-00-without-clipping-actions/error-context.md",
+      "bytes": 12052,
+      "sha256": "317c74b79f70af23b361d59411575395b12808250c0d2739650578f0757f40d8"
+    },
+    {
+      "path": "results/database_migration-Databas-00669-00-without-clipping-actions/test-failed-1.png",
+      "bytes": 97860,
+      "sha256": "a9c5e418a406117d936c564d7981a0e59bb0c43e7684e97498689be1e38821e6"
+    },
+    {
+      "path": "results/database_migration-Databas-00669-00-without-clipping-actions/trace.zip",
+      "bytes": 321977,
+      "sha256": "5942ecf5a6273ca46c0d8d182b0ab3c3720d95ce0791d01530accbbab75d1feb"
+    },
+    {
+      "path": "results/database_migration-Databas-3dd46-ow-actual-worker-boundaries/database-65-columns-rejected.png",
+      "bytes": 98690,
+      "sha256": "2693e0963c880ed98f3280f09fd03e9e7e246aaf49f4bca1b2c8a80e302c3872"
+    },
+    {
+      "path": "results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/geometry-fonts-and-scope.json",
+      "bytes": 2259,
+      "sha256": "3fb50e234bd9f32acda4c698ad6ef0204f543110dc570aced0fe2ef31216801a"
+    },
+    {
+      "path": "results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-central-679.png",
+      "bytes": 126690,
+      "sha256": "34114da7a552e1dc2cbaeabe28a0ef1ac648fb78b1c9e712aa7623d3a5843a7b"
+    },
+    {
+      "path": "results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-central-680.png",
+      "bytes": 135199,
+      "sha256": "a40fad4b8c904d5bb3edca032dfde1683df852aee146ca2f4878bcc2ac46de64"
+    },
+    {
+      "path": "results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-long-draft-1280.png",
+      "bytes": 126971,
+      "sha256": "e2869c5f642db95ad9ba110bb30035f17bb3875287485a03a65ecb62dc19c9cc"
+    },
+    {
+      "path": "results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-long-draft-1440.png",
+      "bytes": 143743,
+      "sha256": "cad144c7604bef23e80ee1bca774dd5408e475978ff7e5745d317fdde2ae10be"
+    },
+    {
+      "path": "results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-long-draft-320.png",
+      "bytes": 53772,
+      "sha256": "69068a95822167b602f01aa26d751b1b24b28390b9cb8535d65a1ff5cabad103"
+    },
+    {
+      "path": "results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-long-draft-390.png",
+      "bytes": 60429,
+      "sha256": "fb997bdd10c50229a9dcbfc6b147cb4161ab925d6e58523fe8e16924320160a1"
+    },
+    {
+      "path": "results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-normal-1280.png",
+      "bytes": 113777,
+      "sha256": "ef294e79651bf2274587b7adb5144fe2cc80f6c948a0d62ee83911bfab68eae2"
+    },
+    {
+      "path": "results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-normal-1440.png",
+      "bytes": 139191,
+      "sha256": "74d9549a1ca4b9e22613bb3766e97d0abc95d977cf4da9a51432e9d4a58c2e67"
+    },
+    {
+      "path": "results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-normal-320.png",
+      "bytes": 68389,
+      "sha256": "363ed3571a462b3de19c6b2fce8a70f75bec3d135763e5b540d892e377e92098"
+    },
+    {
+      "path": "results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-normal-390.png",
+      "bytes": 75081,
+      "sha256": "be3847fda37f228908f76e73ee0669a112781ff2eaf32da4679723b6d74de480"
+    },
+    {
+      "path": "results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-shell-1099.png",
+      "bytes": 105798,
+      "sha256": "157384a36a112318dddf979140a64b1dd181250ef800fe950c8717dc788577f9"
+    },
+    {
+      "path": "results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-shell-1100.png",
+      "bytes": 126769,
+      "sha256": "dd3f9c7b4eb00db9b4db22a208eae45ede8d8321b7ec291ce306dd128be5288f"
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "candidate": "fca0b7194791d264adfa73897746d750176e166f",
+  "command": "ALFRED_BROWSER_TEST_PORT=17810 npm run test:browser",
+  "exit_code": 1,
+  "passed": 541,
+  "failed": 2,
+  "log": "gates/04-browser.log",
+  "log_sha256": "11d57a2ff32c7ab37e118d3b22f424fa8bb8040de8ce13c610e91c7a82802281",
+  "byte_identical_to_original_results": true,
+  "files": [
+    {
+      "path": ".last-run.json",
+      "bytes": 145,
+      "sha256": "56232527e5e49437cb7af6e25c22e6a8cd66161b2870b2e79175d864e72fa355"
+    },
+    {
+      "path": "accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/error-context.md",
+      "bytes": 24379,
+      "sha256": "26e1f017562360cd59a5f07a2b4e01d3c81e2a4b122dfa3fe03b3ac4b3f2bc64"
+    },
+    {
+      "path": "accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/source-position-observations.json",
+      "bytes": 856,
+      "sha256": "b4059c99927b960c79fa67f117ff2a8b69f604654c065b3ea21914ae453e7ff3"
+    },
+    {
+      "path": "accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/source-return-none.png",
+      "bytes": 81544,
+      "sha256": "b6d50f262c6664bd41a6f8a3f087b5c52620ded0053515b3b1ca4dcc8e47c788"
+    },
+    {
+      "path": "accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/test-failed-1.png",
+      "bytes": 82082,
+      "sha256": "d8090e09ea39d92c3932da16089067935c8265a450909c028967fba49143778b"
+    },
+    {
+      "path": "accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/trace.zip",
+      "bytes": 425962,
+      "sha256": "e87a17e7f60bfc8b134856aebacb4054d51798c4c3bd407ea5ade7e43a8760ba"
+    },
+    {
+      "path": "accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/error-context.md",
+      "bytes": 26391,
+      "sha256": "55dd86cec2815c4d2b88e9a9f8fa93de4acf43ac198bb9b507f1e66f8d1fc3d3"
+    },
+    {
+      "path": "accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/source-position-observations.json",
+      "bytes": 857,
+      "sha256": "b20a47f6fa4bb2a35d4862557270b389f0ac068176bdbe508813fc757986944f"
+    },
+    {
+      "path": "accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/source-return-none.png",
+      "bytes": 143765,
+      "sha256": "87d668f5f0f4f90303f95663b531974376668e0234f36574aad98c3a5502c98e"
+    },
+    {
+      "path": "accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/test-failed-1.png",
+      "bytes": 157336,
+      "sha256": "0db66d33281d8c6886dd004639e02140864a8451b7d57051a4f931761cce89db"
+    },
+    {
+      "path": "accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/trace.zip",
+      "bytes": 802742,
+      "sha256": "37d711679d3d854acba366d3a33968b893d64a079e1322b1e377aa0760ec41e7"
+    }
+  ]
+}

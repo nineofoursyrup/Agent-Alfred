@@ -1,0 +1,20 @@
+
+> test:browser
+> playwright test tests/browser/tools-visual.spec.js tests/browser/database_migration.spec.js tests/browser/accounting-layout.spec.js
+
+
+Running 11 tests using 1 worker
+
+  ✓   1 tests/browser/accounting-layout.spec.js:5:1 › S09 real Ops layout keeps filter, price and history controls reachable at reference and boundary widths (2.5s)
+  ✓   2 tests/browser/database_migration.spec.js:14:1 › Database catalog preserves every approved field and expanded state across capability checks (1.6s)
+  ✓   3 tests/browser/database_migration.spec.js:50:3 › 1440x900 › Database types, long content and keyboard actions remain reachable at 1440x900 (949ms)
+  ✓   4 tests/browser/database_migration.spec.js:50:3 › 1280x800 › Database types, long content and keyboard actions remain reachable at 1280x800 (909ms)
+  ✓   5 tests/browser/database_migration.spec.js:50:3 › 390x844 › Database types, long content and keyboard actions remain reachable at 390x844 (996ms)
+  ✓   6 tests/browser/database_migration.spec.js:50:3 › 320x800 › Database types, long content and keyboard actions remain reachable at 320x800 (1.0s)
+  ✓   7 tests/browser/database_migration.spec.js:114:1 › Database row, column and byte results follow actual worker boundaries (1.4s)
+  ✓   8 tests/browser/database_migration.spec.js:143:1 › Database failed clipboard writes give local feedback and unavailable results cannot copy (280ms)
+  ✓   9 tests/browser/database_migration.spec.js:153:1 › Database measures central 679/680 and shell 1099/1100 without clipping actions (403ms)
+  ✓  10 tests/browser/tools-visual.spec.js:5:1 › S07 four viewports, shell and measured central boundaries retain full text and keyboard controls (2.6s)
+  ✓  11 tests/browser/tools-visual.spec.js:77:1 › V01 public recipes keep pulse opt-in, selection visible and reduced motion still (587ms)
+
+  11 passed (14.1s)

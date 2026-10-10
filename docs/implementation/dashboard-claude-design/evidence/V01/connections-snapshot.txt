@@ -1,0 +1,137 @@
+### Page
+- Page URL: http://127.0.0.1:17810/connections
+- Page Title: Agent-Alfred
+### Snapshot
+```yaml
+- generic [ref=f7e1]:
+  - banner "导航面板" [ref=f7e2]:
+    - link "Agent-Alfred 本地助手" [ref=f7e3] [cursor=pointer]:
+      - /url: /overview
+      - text: Agent-Alfred
+      - generic [ref=f7e4]: 本地助手
+    - navigation "主导航" [ref=f7e5]:
+      - paragraph [ref=f7e6]: 工作区
+      - link "总览" [ref=f7e7] [cursor=pointer]:
+        - /url: /overview
+      - link "收件箱" [ref=f7e8] [cursor=pointer]:
+        - /url: /inbox
+      - link "运行" [ref=f7e9] [cursor=pointer]:
+        - /url: /runs
+      - link "记忆" [ref=f7e10] [cursor=pointer]:
+        - /url: /memory
+      - paragraph [ref=f7e11]: Agent 配置
+      - link "模型" [ref=f7e12] [cursor=pointer]:
+        - /url: /models
+      - link "连接" [ref=f7e13] [cursor=pointer]:
+        - /url: /connections
+      - link "行为" [ref=f7e14] [cursor=pointer]:
+        - /url: /behaviour
+      - link "工具" [ref=f7e15] [cursor=pointer]:
+        - /url: /tools
+      - paragraph [ref=f7e16]: 诊断
+      - link "用量账本" [ref=f7e17] [cursor=pointer]:
+        - /url: /ops
+      - link "数据库" [ref=f7e18] [cursor=pointer]:
+        - /url: /database
+    - paragraph [ref=f7e19]: 本地优先 · 共享运行宿主
+  - generic [ref=f7e20]:
+    - generic "壳层状态与操作" [ref=f7e21]:
+      - button "打开主对话" [expanded] [ref=f7e22] [cursor=pointer]
+      - region "运行与连接摘要" [ref=f7e23]:
+        - paragraph [ref=f7e24]: 已同步
+    - main [ref=f7e25]:
+      - heading "连接" [active] [level=1] [ref=f7e26]
+      - generic [ref=f7e27]:
+        - paragraph
+        - paragraph
+        - button "重新读取 .env" [ref=f7e28] [cursor=pointer]
+        - generic "端点连接" [ref=f7e29]:
+          - region "模型端点" [ref=f7e30]:
+            - heading "模型端点" [level=2] [ref=f7e31]
+            - article [ref=f7e32]:
+              - heading "anthropic" [level=3] [ref=f7e33]
+              - paragraph [ref=f7e34]: 连接：未配置
+              - paragraph [ref=f7e35]: 目录：未拉取；上次成功 尚无
+              - paragraph [ref=f7e36]: 密钥：未配置
+              - paragraph [ref=f7e37]: 无免费认证探针
+              - group [ref=f7e38]:
+                - generic "端点详情" [ref=f7e39] [cursor=pointer]
+            - article [ref=f7e40]:
+              - heading "openai" [level=3] [ref=f7e41]
+              - paragraph [ref=f7e42]: 连接：未配置
+              - paragraph [ref=f7e43]: 目录：未拉取；上次成功 尚无
+              - paragraph [ref=f7e44]: 密钥：未配置
+              - paragraph [ref=f7e45]: 无免费认证探针
+              - group [ref=f7e46]:
+                - generic "端点详情" [ref=f7e47] [cursor=pointer]
+            - article [ref=f7e48]:
+              - heading "xai" [level=3] [ref=f7e49]
+              - paragraph [ref=f7e50]: 连接：未配置
+              - paragraph [ref=f7e51]: 目录：未拉取；上次成功 尚无
+              - paragraph [ref=f7e52]: 密钥：未配置
+              - paragraph [ref=f7e53]: 无免费认证探针
+              - group [ref=f7e54]:
+                - generic "端点详情" [ref=f7e55] [cursor=pointer]
+            - article [ref=f7e56]:
+              - heading "deepseek" [level=3] [ref=f7e57]
+              - paragraph [ref=f7e58]: 连接：未配置
+              - paragraph [ref=f7e59]: 目录：未拉取；上次成功 尚无
+              - paragraph [ref=f7e60]: 密钥：未配置
+              - paragraph [ref=f7e61]: 无免费认证探针
+              - group [ref=f7e62]:
+                - generic "端点详情" [ref=f7e63] [cursor=pointer]
+            - article [ref=f7e64]:
+              - heading "opencode" [level=3] [ref=f7e65]
+              - paragraph [ref=f7e66]: 连接：未配置
+              - paragraph [ref=f7e67]: 目录：未拉取；上次成功 尚无
+              - paragraph [ref=f7e68]: 密钥：未配置
+              - paragraph [ref=f7e69]: 无免费认证探针
+              - group [ref=f7e70]:
+                - generic "端点详情" [ref=f7e71] [cursor=pointer]
+            - article [ref=f7e72]:
+              - heading "opencode-go" [level=3] [ref=f7e73]
+              - paragraph [ref=f7e74]: 连接：未配置
+              - paragraph [ref=f7e75]: 目录：未拉取；上次成功 尚无
+              - paragraph [ref=f7e76]: 密钥：未配置
+              - paragraph [ref=f7e77]: 无免费认证探针
+              - group [ref=f7e78]:
+                - generic "端点详情" [ref=f7e79] [cursor=pointer]
+          - region "可选集成" [ref=f7e80]:
+            - heading "可选集成" [level=2] [ref=f7e81]
+            - article [ref=f7e82]:
+              - heading "tavily" [level=3] [ref=f7e83]
+              - paragraph [ref=f7e84]: 连接：未配置
+              - paragraph [ref=f7e85]: 密钥：未配置
+              - paragraph [ref=f7e86]: 仅显式测试发送 /usage；探活免费未证实。测试连接不授予工具权限。
+              - button "测试连接" [disabled] [ref=f7e87]
+              - paragraph [ref=f7e88]: 测试不可用：unconfigured
+              - group [ref=f7e89]:
+                - generic "集成详情" [ref=f7e90] [cursor=pointer]
+          - region "MCP 服务器" [ref=f7e91]:
+            - heading "MCP 服务器" [level=2] [ref=f7e92]
+            - paragraph [ref=f7e93]: 配置来源：/var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/alfred-browser-i5ih0nqi/mcp.json
+            - paragraph [ref=f7e94]: 启用配置允许启动本地程序；工具调用仍需在工具页逐项授权。命令不是沙箱，配置指纹不证明程序内容未变。
+            - paragraph [ref=f7e95]: "未配置服务器；在状态目录 mcp.json 中显式设置 enabled: true 后应用。"
+            - button "应用 mcp.json" [ref=f7e96] [cursor=pointer]
+  - region "MainBar" [ref=f7e97]:
+    - generic [ref=f7e98]:
+      - heading "主对话" [level=2] [ref=f7e99]
+      - button "收起主对话" [ref=f7e100] [cursor=pointer]
+    - generic [ref=f7e101]:
+      - generic [ref=f7e102]: 会话
+      - button "新建会话" [ref=f7e103] [cursor=pointer]
+    - region "主对话" [ref=f7e104]:
+      - article [ref=f7e106]:
+        - paragraph [ref=f7e107]: V01 视觉验收 · 离线模型
+        - paragraph [ref=f7e108]: 离线模型回复
+        - paragraph [ref=f7e109]: Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。
+        - generic [ref=f7e110]: 已保存
+    - generic [ref=f7e111]:
+      - generic [ref=f7e112]: 消息
+      - textbox "消息" [ref=f7e113]:
+        - /placeholder: 写下消息；/skills 指定流程…
+      - button "发送" [disabled] [ref=f7e114]
+    - paragraph [ref=f7e115]: Enter 发送 · Shift+Enter 换行
+  - status [ref=f7e116]: 就绪
+  - alert [ref=f7e117]
+```

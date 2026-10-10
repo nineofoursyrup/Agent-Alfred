@@ -1,0 +1,28 @@
+
+> test:browser
+> playwright test
+
+
+Running 543 tests using 1 worker
+(node:46553) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+··································································actual-lifecycle reload {"before":{"query_id":"yv3IzE_7suyu7RVWlNajXouj","pid":48860,"status":"running","cleanup":"pending"},"after":{"query_id":"yv3IzE_7suyu7RVWlNajXouj","pid":48860,"pid_exists":false,"status":"cancelled","cleanup":"released","worker":null,"response_owner":null,"buffers":0,"source_write_lock":"acquired-and-released"}}
+·actual-lifecycle close {"before":{"query_id":"ZH93IbUcSAgiNOv-waYLh3SM","pid":48890,"status":"running","cleanup":"pending"},"after":{"query_id":"ZH93IbUcSAgiNOv-waYLh3SM","pid":48890,"pid_exists":false,"status":"cancelled","cleanup":"released","worker":null,"response_owner":null,"buffers":0,"source_write_lock":"acquired-and-released"}}
+···········real-status-loss {"kind":"failed","execute":{"http":400,"body":{"code":"sql_error","detail":"SQL 无法执行。","query_id":"z5JJNZ1DkAlN212NhUqNl0ab"}},"status":{"http":200,"body":{"query_id":"z5JJNZ1DkAlN212NhUqNl0ab","instance_id":"f2b4a17911064b338b931fda05bd86a7","status":"failed","cleanup":"released"}}}
+·real-status-loss {"kind":"timed_out","execute":{"http":504,"body":{"code":"query_timeout","detail":"查询超过执行期限。","query_id":"C2Clrkw5sQMjlWlRsGAQnZlZ"}},"status":{"http":200,"body":{"query_id":"C2Clrkw5sQMjlWlRsGAQnZlZ","instance_id":"f229a9abd13041599f52638e57c2df7b","status":"timed_out","cleanup":"released"}}}
+·real-status-loss {"kind":"completed","execute":{"http":200,"body":{"query_id":"-wwASt9T4HJ8rvxmIz6XRc0s","instance_id":"dce1702c281848f6aa0922dce25116dd","memory_revision":"11","protection_version":"5","objects":[],"coverage":{"attempts":{"recorded":0,"recorded_empty":0,"unrecorded":0,"in_progress_runs":0},"notice":"缺行不证明未发生请求"},"read_at":"2026-10-10T16:31:34.312252Z","columns":["unseen"],"rows":[[{"type":"integer","value":"12"}]],"returned_rows":1,"truncated":false,"truncation_reasons":[]}},"status":{"http":200,"body":{"query_id":"-wwASt9T4HJ8rvxmIz6XRc0s","instance_id":"dce1702c281848f6aa0922dce25116dd","status":"completed","cleanup":"released","result_delivered":true}}}
+
+·······actual-cleanup-failure {"cancel":{"query_id":"oyRV50gJAA923663v2Zg3LfE","status":"failed","cleanup":"failed"},"status":{"query_id":"oyRV50gJAA923663v2Zg3LfE","instance_id":"e24313a2a075420baade634ede6fa09b","status":"failed","cleanup":"failed"},"newHandleStatus":503}
+··lost-receipt-recovery {"lost":"issuance","handles":["znW86SX_aMbKwApXa3gVgeNq","oaLXkJ0V6yZ7gfdPSpMsu-ES"],"executes":1,"lostStatusReads":0,"actual":{"query_id":"znW86SX_aMbKwApXa3gVgeNq","instance_id":"bbfee89b8fb84235a180dead689fe2a4","status":"unused","cleanup":"released"},"capability":{"instance":"bbfee89b8fb84235a180dead689fe2a4","available":true}}
+·lost-receipt-recovery {"lost":"execute","handles":["OGEty9YpW3TNSBKoPDCxkeX2","NOli_icgBp8A3TBI3DIn8GqO"],"executes":2,"lostStatusReads":2,"actual":{"query_id":"OGEty9YpW3TNSBKoPDCxkeX2","instance_id":"d3cc68d162ff4ea3bd07560c6047f167","status":"completed","cleanup":"released","result_delivered":true},"capability":{"instance":"d3cc68d162ff4ea3bd07560c6047f167","available":true}}
+······································································
+·········S08 Connections central widths [{"viewport":[1440,900],"central":{"x":232,"y":57.9375,"width":888,"height":842.0625}},{"viewport":[1280,800],"central":{"x":232,"y":57.9375,"width":728,"height":742.0625}},{"viewport":[390,844],"central":{"x":0,"y":53.9375,"width":390,"height":790.0625}},{"viewport":[320,800],"central":{"x":0,"y":53.9375,"width":320,"height":746.0625}}]
+·······································································
+·······················S08 Models central widths [{"viewport":[1440,900],"central":{"x":232,"y":57.9375,"width":888,"height":842.0625}},{"viewport":[1280,800],"central":{"x":232,"y":57.9375,"width":728,"height":742.0625}},{"viewport":[390,844],"central":{"x":0,"y":53.9375,"width":390,"height":790.0625}},{"viewport":[320,800],"central":{"x":0,"y":53.9375,"width":320,"height":746.0625}}]
+·························································
+················································································
+······························································actual-startup-reconnect {"runtime":{"instance":"2c12ac75241249159e3dd0c083043f6e","connected":true,"session":"1de9e1d4602a4b36a5f4da3e71b887e0","active":null,"revision":0,"unavailable":false},"snapshots":[{"instance":"2c12ac75241249159e3dd0c083043f6e","revision":0},{"instance":"2c12ac75241249159e3dd0c083043f6e","revision":0}],"reads":["/api/models"],"posts":[],"pages":1}
+actual-startup-server-exits [0,0]
+··················
+·······························································
+  543 passed (11.5m)

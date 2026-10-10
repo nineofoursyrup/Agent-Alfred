@@ -1,0 +1,96 @@
+[
+  {
+    "label": "viewport-1440",
+    "height": 900,
+    "viewport": 1440,
+    "documentClient": 1440,
+    "documentScroll": 1440,
+    "pageClient": 879,
+    "pageScroll": 879,
+    "central": 823,
+    "font": "13px",
+    "tableFont": "13px",
+    "reducedMotion": true
+  },
+  {
+    "label": "viewport-1280",
+    "height": 800,
+    "viewport": 1280,
+    "documentClient": 1280,
+    "documentScroll": 1280,
+    "pageClient": 719,
+    "pageScroll": 719,
+    "central": 663,
+    "font": "13px",
+    "tableFont": "13px",
+    "reducedMotion": true
+  },
+  {
+    "label": "viewport-390",
+    "height": 844,
+    "viewport": 390,
+    "documentClient": 390,
+    "documentScroll": 390,
+    "pageClient": 381,
+    "pageScroll": 381,
+    "central": 349,
+    "font": "13px",
+    "tableFont": "13px",
+    "reducedMotion": true
+  },
+  {
+    "label": "viewport-320",
+    "height": 800,
+    "viewport": 320,
+    "documentClient": 320,
+    "documentScroll": 320,
+    "pageClient": 311,
+    "pageScroll": 311,
+    "central": 279,
+    "font": "13px",
+    "tableFont": "13px",
+    "reducedMotion": true
+  },
+  {
+    "label": "viewport-1099",
+    "height": 800,
+    "viewport": 1099,
+    "documentClient": 1099,
+    "documentScroll": 1099,
+    "pageClient": 1090,
+    "pageScroll": 1090,
+    "central": 1058,
+    "font": "13px",
+    "tableFont": "13px",
+    "reducedMotion": true
+  },
+  {
+    "label": "viewport-1100",
+    "height": 800,
+    "viewport": 1100,
+    "documentClient": 1100,
+    "documentScroll": 1100,
+    "pageClient": 539,
+    "pageScroll": 539,
+    "central": 483,
+    "font": "13px",
+    "tableFont": "13px",
+    "reducedMotion": true
+  },
+  {
+    "label": "central-679",
+    "central": 679,
+    "viewport": {
+      "width": 1296,
+      "height": 900
+    }
+  },
+  {
+    "label": "central-680",
+    "central": 680,
+    "viewport": {
+      "width": 1297,
+      "height": 900
+    }
+  }
+]

@@ -1,0 +1,10 @@
+
+> test:browser
+> playwright test tests/browser/database_migration.spec.js --grep Database measures central
+
+
+Running 1 test using 1 worker
+
+  ✓  1 tests/browser/database_migration.spec.js:153:1 › Database measures central 679/680 and shell 1099/1100 without clipping actions (412ms)
+
+  1 passed (1.3s)

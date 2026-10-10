@@ -1,0 +1,19 @@
+  1) tests/browser/database_migration.spec.js:153:1 › Database measures central 679/680 and shell 1099/1100 without clipping actions
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 232
+    Received: 0
+
+      173 |       clipped:document.documentElement.scrollWidth>innerWidth}));
+      174 |     expect(geometry.clipped).toBe(false);
+    > 175 |     if(width===1100){expect(geometry.rail).toBe(232);expect(geometry.mainbar).toBe(320);}
+          |                                            ^
+      176 |     evidence.push(geometry);
+      177 |     await page.screenshot({path:testInfo.outputPath(`database-shell-${width}.png`)});
+      178 |   }
+        at /Users/nineofour/Agent-Alfred-v01-impl/tests/browser/database_migration.spec.js:175:44
+
+  1 failed
+    tests/browser/database_migration.spec.js:153:1 › Database measures central 679/680 and shell 1099/1100 without clipping actions
+  37 passed (33.3s)

@@ -1,0 +1,102 @@
+### Page
+- Page URL: http://127.0.0.1:17810/memory?tab=semantic
+- Page Title: Agent-Alfred
+### Snapshot
+```yaml
+- generic [ref=f4e1]:
+  - banner "导航面板" [ref=f4e2]:
+    - link "Agent-Alfred 本地助手" [ref=f4e3] [cursor=pointer]:
+      - /url: /overview
+      - text: Agent-Alfred
+      - generic [ref=f4e4]: 本地助手
+    - navigation "主导航" [ref=f4e5]:
+      - paragraph [ref=f4e6]: 工作区
+      - link "总览" [ref=f4e7] [cursor=pointer]:
+        - /url: /overview
+      - link "收件箱" [ref=f4e8] [cursor=pointer]:
+        - /url: /inbox
+      - link "运行" [ref=f4e9] [cursor=pointer]:
+        - /url: /runs
+      - link "记忆" [ref=f4e10] [cursor=pointer]:
+        - /url: /memory
+      - paragraph [ref=f4e11]: Agent 配置
+      - link "模型" [ref=f4e12] [cursor=pointer]:
+        - /url: /models
+      - link "连接" [ref=f4e13] [cursor=pointer]:
+        - /url: /connections
+      - link "行为" [ref=f4e14] [cursor=pointer]:
+        - /url: /behaviour
+      - link "工具" [ref=f4e15] [cursor=pointer]:
+        - /url: /tools
+      - paragraph [ref=f4e16]: 诊断
+      - link "用量账本" [ref=f4e17] [cursor=pointer]:
+        - /url: /ops
+      - link "数据库" [ref=f4e18] [cursor=pointer]:
+        - /url: /database
+    - paragraph [ref=f4e19]: 本地优先 · 共享运行宿主
+  - generic [ref=f4e20]:
+    - generic "壳层状态与操作" [ref=f4e21]:
+      - button "打开主对话" [expanded] [ref=f4e22] [cursor=pointer]
+      - region "运行与连接摘要" [ref=f4e23]:
+        - paragraph [ref=f4e24]: 已同步
+    - main [ref=f4e25]:
+      - heading "记忆" [active] [level=1] [ref=f4e26]
+      - generic [ref=f4e27]:
+        - tablist "记忆类别" [ref=f4e28]:
+          - tab "语义记忆" [selected] [ref=f4e29] [cursor=pointer]
+          - tab "情景记忆" [ref=f4e30] [cursor=pointer]
+          - tab "Skill 目录" [ref=f4e31] [cursor=pointer]
+        - tabpanel "语义记忆" [ref=f4e32]:
+          - generic [ref=f4e33]:
+            - heading "语义记忆" [level=2] [ref=f4e34]
+            - button "新建语义记忆" [ref=f4e36] [cursor=pointer]
+            - form "搜索语义记忆" [ref=f4e37]:
+              - generic [ref=f4e38]:
+                - text: 文本
+                - textbox "文本" [ref=f4e39]
+              - generic [ref=f4e40]:
+                - text: 主题（精确匹配）
+                - textbox "主题（精确匹配）" [ref=f4e41]
+              - button "搜索" [ref=f4e42] [cursor=pointer]
+              - button "显示全部" [ref=f4e43] [cursor=pointer]
+            - status [ref=f4e44]: 记忆库为空。
+            - generic "语义记忆列表"
+        - heading "记忆维护" [level=2] [ref=f4e45]
+        - generic [ref=f4e46]:
+          - heading [level=2] [ref=f4e47]:
+            - button "操作回执／遗忘进度" [ref=f4e48] [cursor=pointer]: 操作回执／遗忘进度 ＋
+          - paragraph [ref=f4e49]: 本标签页尚无记忆操作。
+        - generic [ref=f4e50]:
+          - heading [level=2] [ref=f4e51]:
+            - button "提炼队列" [ref=f4e52] [cursor=pointer]: 提炼队列 ＋
+          - paragraph [ref=f4e53]: 当前队列页 1 · 2 个会话／0 个批次 · 本页无批次 · 当前筛选已到末页；不是全局待办总数。
+        - generic [ref=f4e54]:
+          - heading [level=2] [ref=f4e55]:
+            - button "检索统计" [ref=f4e56] [cursor=pointer]: 检索统计 ＋
+          - paragraph [ref=f4e57]: 已读取 · 全部会话 · [2026-10-03T14:52:54.332187+00:00, 2026-10-10T14:52:54.332187+00:00)
+        - generic [ref=f4e58]:
+          - heading [level=2] [ref=f4e59]:
+            - button "Markdown 镜像" [ref=f4e60] [cursor=pointer]: Markdown 镜像 ＋
+          - paragraph [ref=f4e61]: 事实：已同步并核验；情景：已同步并核验
+  - region "MainBar" [ref=f4e62]:
+    - generic [ref=f4e63]:
+      - heading "主对话" [level=2] [ref=f4e64]
+      - button "收起主对话" [ref=f4e65] [cursor=pointer]
+    - generic [ref=f4e66]:
+      - generic [ref=f4e67]: 会话
+      - button "新建会话" [ref=f4e68] [cursor=pointer]
+    - region "主对话" [ref=f4e69]:
+      - article [ref=f4e71]:
+        - paragraph [ref=f4e72]: V01 视觉验收 · 离线模型
+        - paragraph [ref=f4e73]: 离线模型回复
+        - paragraph [ref=f4e74]: Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。
+        - generic [ref=f4e75]: 已保存
+    - generic [ref=f4e76]:
+      - generic [ref=f4e77]: 消息
+      - textbox "消息" [ref=f4e78]:
+        - /placeholder: 写下消息；/skills 指定流程…
+      - button "发送" [disabled] [ref=f4e79]
+    - paragraph [ref=f4e80]: Enter 发送 · Shift+Enter 换行
+  - status [ref=f4e81]: 就绪
+  - alert [ref=f4e82]
+```

@@ -1,0 +1,178 @@
+### Page
+- Page URL: http://127.0.0.1:17810/overview
+- Page Title: Agent-Alfred
+### Snapshot
+```yaml
+- generic [ref=f1e1]:
+  - banner "导航面板" [ref=f1e2]:
+    - link "Agent-Alfred 本地助手" [ref=f1e3] [cursor=pointer]:
+      - /url: /overview
+      - text: Agent-Alfred
+      - generic [ref=f1e4]: 本地助手
+    - navigation "主导航" [ref=f1e5]:
+      - paragraph [ref=f1e6]: 工作区
+      - link "总览" [ref=f1e7] [cursor=pointer]:
+        - /url: /overview
+      - link "收件箱" [ref=f1e8] [cursor=pointer]:
+        - /url: /inbox
+      - link "运行" [ref=f1e9] [cursor=pointer]:
+        - /url: /runs
+      - link "记忆" [ref=f1e10] [cursor=pointer]:
+        - /url: /memory
+      - paragraph [ref=f1e11]: Agent 配置
+      - link "模型" [ref=f1e12] [cursor=pointer]:
+        - /url: /models
+      - link "连接" [ref=f1e13] [cursor=pointer]:
+        - /url: /connections
+      - link "行为" [ref=f1e14] [cursor=pointer]:
+        - /url: /behaviour
+      - link "工具" [ref=f1e15] [cursor=pointer]:
+        - /url: /tools
+      - paragraph [ref=f1e16]: 诊断
+      - link "用量账本" [ref=f1e17] [cursor=pointer]:
+        - /url: /ops
+      - link "数据库" [ref=f1e18] [cursor=pointer]:
+        - /url: /database
+    - paragraph [ref=f1e19]: 本地优先 · 共享运行宿主
+  - generic [ref=f1e20]:
+    - generic "壳层状态与操作" [ref=f1e21]:
+      - button "打开主对话" [expanded] [ref=f1e22] [cursor=pointer]
+      - region "运行与连接摘要" [ref=f1e23]:
+        - paragraph [ref=f1e24]: 已同步
+    - main [ref=f1e25]:
+      - heading "总览" [active] [level=1] [ref=f1e26]
+      - generic [ref=f1e27]:
+        - button "刷新全部来源" [ref=f1e28] [cursor=pointer]
+        - generic [ref=f1e29]:
+          - region "期间指标" [ref=f1e30]:
+            - heading "期间指标" [level=2] [ref=f1e31]
+            - generic [ref=f1e32]:
+              - text: 总览期间
+              - combobox "总览期间" [ref=f1e33]:
+                - option "今天"
+                - option "最近七个自然日" [selected]
+                - option "最近三十个自然日"
+            - generic [ref=f1e34]:
+              - text: IANA 时区
+              - textbox "IANA 时区" [ref=f1e35]: Asia/Shanghai
+            - button "应用时区" [ref=f1e36] [cursor=pointer]
+            - button "刷新期间指标" [ref=f1e37] [cursor=pointer]
+            - status [ref=f1e38]: 来源观察：2026-10-10T14:52:34Z
+            - generic [ref=f1e39]:
+              - article [ref=f1e40]:
+                - heading "运行记录数" [level=3] [ref=f1e41]
+                - paragraph [ref=f1e42]: 1 条 Run 记录
+              - article [ref=f1e43]:
+                - heading "模型费用" [level=3] [ref=f1e44]
+                - paragraph [ref=f1e45]: 精确 USD 0.375
+                - paragraph [ref=f1e46]: 已记录 Attempt 3 次 · 费用未知 0 次
+                - paragraph [ref=f1e47]: 精确金额来自端点报告，未经外部账单核对。
+                - paragraph [ref=f1e48]: 模型账目完整
+                - paragraph [ref=f1e49]: 模型 USD 分项不相加称总费用；工具计量另在用量账本按服务／单位查看。
+              - paragraph [ref=f1e50]: 本次当地日期 [2026-10-04, 2026-10-11) · Asia/Shanghai
+              - group [ref=f1e51]:
+                - generic "本次期间与来源" [ref=f1e52] [cursor=pointer]
+              - link "查看本期账目（按原期间重新读取）" [ref=f1e53] [cursor=pointer]:
+                - /url: /ops?range=custom&timezone=Asia%2FShanghai&start=2026-10-04&end=2026-10-11
+              - paragraph [ref=f1e54]: 账本会创建新快照；新增记录或价格变化可能改变金额。
+          - region "当前记忆条目数" [ref=f1e55]:
+            - heading "当前记忆条目数" [level=2] [ref=f1e56]
+            - button "刷新记忆计数" [ref=f1e57] [cursor=pointer]
+            - status [ref=f1e58]: 来源观察：2026-10-10T14:52:34Z
+            - generic [ref=f1e59]:
+              - paragraph [ref=f1e139]: 尚无已保存的语义／情景记忆
+              - paragraph [ref=f1e140]: 语义 0 条 · 情景 0 条
+              - group [ref=f1e141]:
+                - generic "本次记忆来源" [ref=f1e142] [cursor=pointer]
+            - paragraph [ref=f1e61]: 当前存量；不随期间变化。不等同于可自动输入的条目，删除计数不证明遗忘清理完成。
+            - link "查看当前记忆（重新读取）" [ref=f1e62] [cursor=pointer]:
+              - /url: /memory
+        - region "静态架构说明" [ref=f1e63]:
+          - heading "静态架构说明" [level=2] [ref=f1e64]
+          - paragraph [ref=f1e65]: 本版本的组件关系；不表示当前配置可用性或某次运行的执行路径
+          - img "CLI 与 Web 入口提交到共享宿主。宿主连接对话处理、显式手动聚合与持久账目；对话和聚合按需使用模型、工具、记忆。" [ref=f1e66]:
+            - generic [ref=f1e67]:
+              - generic [ref=f1e68]: CLI 入口／Web 入口
+              - generic [ref=f1e69]: 提交请求 →
+              - generic [ref=f1e70]: 共享运行宿主与准入
+            - generic [ref=f1e71]:
+              - generic [ref=f1e72]: 共享运行宿主与准入
+              - generic [ref=f1e73]: 对话请求 →
+              - generic [ref=f1e74]: 对话处理与可选消息分流
+            - generic [ref=f1e75]:
+              - generic [ref=f1e76]: 共享运行宿主与准入
+              - generic [ref=f1e77]: 显式发起 →
+              - generic [ref=f1e78]: 手动聚合
+            - generic [ref=f1e79]:
+              - generic [ref=f1e80]: 对话处理
+              - generic [ref=f1e81]: 按需使用 →
+              - generic [ref=f1e82]: 模型 · 工具 · 记忆
+            - generic [ref=f1e83]:
+              - generic [ref=f1e84]: 手动聚合
+              - generic [ref=f1e85]: 按选择使用 →
+              - generic [ref=f1e86]: 模型 · 工具 · 记忆
+            - generic [ref=f1e87]:
+              - generic [ref=f1e88]: 共享运行宿主与准入
+              - generic [ref=f1e89]: 收尾与持久事实 →
+              - generic [ref=f1e90]: 本地记录与账目
+          - paragraph [ref=f1e91]: 可选分流、检索门与工具不是每次运行的必经路径；记忆准备可能在图调用之前。Skill 文件与语义／情景条目分开计量。
+          - generic [ref=f1e92]:
+            - link "流程与手动聚合" [ref=f1e93] [cursor=pointer]:
+              - /url: /behaviour
+            - link "模型" [ref=f1e94] [cursor=pointer]:
+              - /url: /models
+            - link "端点连接" [ref=f1e95] [cursor=pointer]:
+              - /url: /connections
+            - link "工具" [ref=f1e96] [cursor=pointer]:
+              - /url: /tools
+            - link "记忆" [ref=f1e97] [cursor=pointer]:
+              - /url: /memory
+            - link "运行活动" [ref=f1e98] [cursor=pointer]:
+              - /url: /runs?filter=all
+            - link "用量账本" [ref=f1e99] [cursor=pointer]:
+              - /url: /ops
+            - link "数据库诊断" [ref=f1e100] [cursor=pointer]:
+              - /url: /database
+        - region "全历史最近运行" [ref=f1e101]:
+          - heading "全历史最近运行" [level=2] [ref=f1e102]
+          - button "刷新最近运行" [ref=f1e103] [cursor=pointer]
+          - status [ref=f1e104]: 来源观察：2026-10-10T14:52:34Z
+          - status
+          - generic "当前运行槽"
+          - generic [ref=f1e105]:
+            - article [ref=f1e106]:
+              - link "Run 176954858276…" [ref=f1e107] [cursor=pointer]:
+                - /url: /runs/1769548582764d0a9150465ce86cf580
+              - paragraph [ref=f1e108]: 普通聊天 · 已完成
+              - paragraph [ref=f1e109]: 已保存
+              - paragraph [ref=f1e110]: 受理时间：2026-10-10T14:52:15Z
+              - paragraph [ref=f1e111]: 入口：web / mainbar · 已获准
+              - group [ref=f1e112]:
+                - generic "完整 Run 标识" [ref=f1e113] [cursor=pointer]
+            - group [ref=f1e114]:
+              - generic "本次最近运行来源" [ref=f1e115] [cursor=pointer]
+          - link "查看全部运行" [ref=f1e116] [cursor=pointer]:
+            - /url: /runs?filter=all
+          - paragraph [ref=f1e117]: 最多五条已结束 Run，与期间指标范围不同；当前槽来自共享宿主状态。
+  - region "MainBar" [ref=f1e118]:
+    - generic [ref=f1e119]:
+      - heading "主对话" [level=2] [ref=f1e120]
+      - button "收起主对话" [ref=f1e121] [cursor=pointer]
+    - generic [ref=f1e122]:
+      - generic [ref=f1e123]: 会话
+      - button "新建会话" [ref=f1e124] [cursor=pointer]
+    - region "主对话" [ref=f1e125]:
+      - article [ref=f1e127]:
+        - paragraph [ref=f1e128]: V01 视觉验收 · 离线模型
+        - paragraph [ref=f1e129]: 离线模型回复
+        - paragraph [ref=f1e130]: Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。
+        - generic [ref=f1e131]: 已保存
+    - generic [ref=f1e132]:
+      - generic [ref=f1e133]: 消息
+      - textbox "消息" [ref=f1e134]:
+        - /placeholder: 写下消息；/skills 指定流程…
+      - button "发送" [disabled] [ref=f1e135]
+    - paragraph [ref=f1e136]: Enter 发送 · Shift+Enter 换行
+  - status [ref=f1e137]: 就绪
+  - alert [ref=f1e138]
+```

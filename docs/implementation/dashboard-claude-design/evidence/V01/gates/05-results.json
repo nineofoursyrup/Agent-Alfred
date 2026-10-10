@@ -1,0 +1,58 @@
+{
+  "candidate": "13aa84fe2c6a273e3c8d2857983159271ac10c4f",
+  "base": "6a262ff37cac835777982e75d3a8950d6dbefd3c",
+  "browser_test_port": 17810,
+  "batch": "05",
+  "checks": [
+    {
+      "name": "typecheck",
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "seconds": 0.43,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-typecheck.log",
+      "tail": [
+        "",
+        "> typecheck",
+        "> tsc --noEmit",
+        ""
+      ]
+    },
+    {
+      "name": "browser",
+      "command": [
+        "npm",
+        "run",
+        "test:browser"
+      ],
+      "exit_code": 0,
+      "seconds": 690.16,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-browser.log",
+      "tail": [
+        "·······················S08 Models central widths [{\"viewport\":[1440,900],\"central\":{\"x\":232,\"y\":57.9375,\"width\":888,\"height\":842.0625}},{\"viewport\":[1280,800],\"central\":{\"x\":232,\"y\":57.9375,\"width\":728,\"height\":742.0625}},{\"viewport\":[390,844],\"central\":{\"x\":0,\"y\":53.9375,\"width\":390,\"height\":790.0625}},{\"viewport\":[320,800],\"central\":{\"x\":0,\"y\":53.9375,\"width\":320,\"height\":746.0625}}]",
+        "·························································",
+        "················································································",
+        "······························································actual-startup-reconnect {\"runtime\":{\"instance\":\"2c12ac75241249159e3dd0c083043f6e\",\"connected\":true,\"session\":\"1de9e1d4602a4b36a5f4da3e71b887e0\",\"active\":null,\"revision\":0,\"unavailable\":false},\"snapshots\":[{\"instance\":\"2c12ac75241249159e3dd0c083043f6e\",\"revision\":0},{\"instance\":\"2c12ac75241249159e3dd0c083043f6e\",\"revision\":0}],\"reads\":[\"/api/models\"],\"posts\":[],\"pages\":1}",
+        "actual-startup-server-exits [0,0]",
+        "··················",
+        "·······························································",
+        "  543 passed (11.5m)"
+      ]
+    },
+    {
+      "name": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "seconds": 0.04,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-diff-check.log",
+      "tail": []
+    }
+  ]
+}
