@@ -4,7 +4,7 @@
  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB",sans-serif;
  --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
  --canvas:#101012;--rail:#0e0e10;--surface:#141416;--raised:#18181b;--hover:#16161a;--selected:#20223a;--bubble-border:#2f3252;
- --shell-border:#1c1c1f;--border:#26262b;--control:#2c2c31;--chip-emphasis-border:#333338;--panel-divider:#1f1f23;--row-divider:#1a1a1d;--line:var(--row-divider);--bar-track:#1e1e22;--scrollbar:#26262a;
+ --shell-border:#1c1c1f;--border:#26262b;--control:#2c2c31;--chip-emphasis-border:#333338;--panel-divider:#1f1f23;--row-divider:#1a1a1d;--bar-track:#1e1e22;--scrollbar:#26262a;
  --text:#ececea;--secondary:#d8d7de;--tertiary:#a9a8b3;--muted:#8d8c96;--weak:#6f6e69;--metadata:#5f5e66;--faint:#45454b;
  --accent:#7c8aec;--accent-hover:#9aa5f2;--success:#4cc38a;--attention:#e0a458;--error:#ff8f9b;--focus:#b9b0ff;--diagram-line:#3a3a40;--diagram-arrow:#6b6a73;
  --font-size-title:27px;--font-size-brand:19px;--font-size-body:13px;--font-size-row:12.5px;--font-size-input:12px;--font-size-eyebrow:10px;--font-size-panel-eyebrow:11px;--font-size-list-header:10.5px;--font-size-meta:11px;--font-size-meta-small:10.5px;--font-size-meta-large:11.5px;--font-size-table:13px;--font-size-table-header:10.5px;--font-size-metric:23px;--font-size-metric-memory:20px;--font-size-metric-usage:22px;
@@ -93,7 +93,6 @@ th {font:600 var(--font-size-table-header)/1.45 var(--font-mono);color:var(--fai
 #compose textarea {resize:none}
 #send {background:var(--selected);border-color:var(--accent)}
 #error,#storage-warning {color:var(--attention);margin:8px 0;font-size:var(--font-size-meta);flex-shrink:0}
-#error {color:var(--error)}
 #error:empty,#storage-warning:empty,#reading-status:empty {display:none}
 #connection {padding:8px;background:var(--raised);font:400 var(--font-size-meta)/1.6 var(--font-mono);border-radius:var(--radius-control);flex-shrink:0}
 #connection:empty {display:none}
@@ -113,7 +112,6 @@ dialog::backdrop {background:#000a}
  #shell-toolbar {padding:10px 12px}
  #shell-toolbar [data-open-panel=navigation] {display:block}
  #page {padding:20px 16px}
- h1 {font-size:var(--font-size-title)}
  .panel-actions {display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
  .site-header {position:fixed;inset:0 auto 0 0;width:min(300px,100vw);z-index:5;padding:20px 16px}
  #mainbar {position:fixed;inset:0;width:100%;z-index:5;border:0;padding:16px}

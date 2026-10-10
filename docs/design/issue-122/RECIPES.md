@@ -9,7 +9,7 @@
 | 类别 | 稳定 token |
 | --- | --- |
 | 背景 | `--canvas` 画布；`--rail` 导航／MainBar；`--surface` 面板／指标卡；`--raised` 输入／芯片／控制台；`--hover` 悬停；`--selected` 选中；`--bubble-border` 用户气泡边。 |
-| 边线 | `--shell-border` 壳层分隔；`--border` 卡片；`--control` 控件／芯片；`--chip-emphasis-border` 强调芯片；`--panel-divider` 面板头；`--row-divider` 行；`--line` 为行分隔兼容别名；`--bar-track` 条形轨道；`--scrollbar` 滑块。 |
+| 边线 | `--shell-border` 壳层分隔；`--border` 卡片；`--control` 控件／芯片；`--chip-emphasis-border` 强调芯片；`--panel-divider` 面板头；`--row-divider` 行；`--bar-track` 条形轨道；`--scrollbar` 滑块。 |
 | 文字 | `--text` 正文；`--secondary` 次级正文；`--tertiary` 三级；`--muted` 说明；`--weak` 弱说明；`--metadata` 眉标／元数据；`--faint` 表头／路径。 |
 | 语义 | `--accent`、`--accent-hover`、`--success`、`--attention`、`--error`、`--focus`；`--diagram-line`、`--diagram-arrow` 只用于图示。颜色之外必须保留文字事实。 |
 | 字体 | `--font-sans` 系统无衬线；`--font-mono` 系统等宽。数字、标识、眉标、元数据、按钮用等宽。 |

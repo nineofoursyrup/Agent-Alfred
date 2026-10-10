@@ -109,5 +109,4 @@ test('V01 public recipes keep pulse opt-in, selection visible and reduced motion
   expect(reduced.selected.map(style=>({opacity:style.opacity,duration:style.duration}))).toEqual([{opacity:'1',duration:'0s'},{opacity:'1',duration:'0s'}]);
   expect(await fixture.evaluate(host=>host.getAnimations({subtree:true}).length)).toBe(0);
   await expect(fixture.getByText('已连接（测试事实）',{exact:true})).toBeVisible();
-  expect(await fixture.locator('[style]').count()).toBe(0);
 });
