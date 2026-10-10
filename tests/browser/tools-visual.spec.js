@@ -77,8 +77,8 @@ test('S07 four viewports, shell and measured central boundaries retain full text
 test('V01 public recipes keep pulse opt-in, selection visible and reduced motion still',async({page})=>{
   await page.emulateMedia({reducedMotion:'no-preference'});
   await page.goto('/tools');
-  // A consumer fixture exercises public CSS without binding production state.
-  await page.locator('#page').evaluate(host=>{
+  // Keep this CSS consumer outside the application's page rendering host.
+  await page.evaluate(()=>{
     const fixture=document.createElement('section');fixture.setAttribute('aria-label','公共配方检查');fixture.className='sy-panel';
     fixture.innerHTML=`<header class="sy-panel-header"><h2 class="sy-panel-eyebrow">公共配方</h2></header>
       <div class="sy-panel-body">
@@ -88,7 +88,7 @@ test('V01 public recipes keep pulse opt-in, selection visible and reduced motion
         <button class="sy-tab" aria-pressed="false">查看测试类别</button>
         <div class="sy-row" data-selected="false"><span class="sy-row-content">运行摘要（测试事实）</span><span class="sy-row-meta">回复完成 · 未保存</span></div>
       </div>`;
-    host.replaceChildren(fixture);
+    document.body.append(fixture);
   });
   const fixture=page.getByRole('region',{name:'公共配方检查'}),tab=fixture.getByRole('button',{name:'查看测试类别'}),row=fixture.locator('.sy-row');
   const styles=()=>fixture.evaluate(host=>{
