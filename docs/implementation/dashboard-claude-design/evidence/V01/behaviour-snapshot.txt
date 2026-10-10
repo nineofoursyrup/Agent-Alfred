@@ -1,0 +1,127 @@
+### Page
+- Page URL: http://127.0.0.1:17810/behaviour
+- Page Title: Agent-Alfred
+### Snapshot
+```yaml
+- generic [ref=f5e1]:
+  - banner "导航面板" [ref=f5e2]:
+    - link "Agent-Alfred 本地助手" [ref=f5e3] [cursor=pointer]:
+      - /url: /overview
+      - text: Agent-Alfred
+      - generic [ref=f5e4]: 本地助手
+    - navigation "主导航" [ref=f5e5]:
+      - paragraph [ref=f5e6]: 工作区
+      - link "总览" [ref=f5e7] [cursor=pointer]:
+        - /url: /overview
+      - link "收件箱" [ref=f5e8] [cursor=pointer]:
+        - /url: /inbox
+      - link "运行" [ref=f5e9] [cursor=pointer]:
+        - /url: /runs
+      - link "记忆" [ref=f5e10] [cursor=pointer]:
+        - /url: /memory
+      - paragraph [ref=f5e11]: Agent 配置
+      - link "模型" [ref=f5e12] [cursor=pointer]:
+        - /url: /models
+      - link "连接" [ref=f5e13] [cursor=pointer]:
+        - /url: /connections
+      - link "行为" [ref=f5e14] [cursor=pointer]:
+        - /url: /behaviour
+      - link "工具" [ref=f5e15] [cursor=pointer]:
+        - /url: /tools
+      - paragraph [ref=f5e16]: 诊断
+      - link "用量账本" [ref=f5e17] [cursor=pointer]:
+        - /url: /ops
+      - link "数据库" [ref=f5e18] [cursor=pointer]:
+        - /url: /database
+    - paragraph [ref=f5e19]: 本地优先 · 共享运行宿主
+  - generic [ref=f5e20]:
+    - generic "壳层状态与操作" [ref=f5e21]:
+      - button "打开主对话" [expanded] [ref=f5e22] [cursor=pointer]
+      - region "运行与连接摘要" [ref=f5e23]:
+        - paragraph [ref=f5e24]: 已同步
+    - main [ref=f5e25]:
+      - heading "行为" [active] [level=1] [ref=f5e26]
+      - generic [ref=f5e27]:
+        - region "消息分流" [ref=f5e28]:
+          - heading "消息分流" [level=2] [ref=f5e29]
+          - paragraph [ref=f5e30]: 持续设置 · CLI/Web 共享。默认关闭；保存后下一 Run 生效。回复进入当前会话，静默时只记用户消息，不生成助手消息或长期记忆。
+          - paragraph [ref=f5e31]: 已保存的分流设置：关闭 · revision 0。能查看结构不代表已经启用或可以成功执行。
+          - paragraph [ref=f5e32]: 启用后识别纯问候、致谢及明确无需回复的消息；实际任务仍进入完整回答。
+          - generic [ref=f5e33]:
+            - checkbox "启用消息分流" [ref=f5e34]
+            - text: 启用消息分流
+          - paragraph [ref=f5e35]: 当前选择：关闭 · 编辑基线 revision 0。
+          - generic [ref=f5e36]:
+            - button "保存设置" [ref=f5e37] [cursor=pointer]
+            - button "刷新设置" [ref=f5e38] [cursor=pointer]
+          - status [ref=f5e39]: 当前值已核对；设置在下一 Run 生效。
+          - region "流程拓扑" [ref=f5e40]:
+            - button "查看流程" [ref=f5e41] [cursor=pointer]
+            - status [ref=f5e42]: 服务已连接；结构仅在手动读取时更新。
+            - status [ref=f5e43]: 尚未读取；展开后读取。
+          - group [ref=f5e44]:
+            - generic "路由统计" [ref=f5e45] [cursor=pointer]:
+              - text: 路由统计
+              - status [ref=f5e46]: 未读取；展开后读取统计。
+            - option "24小时"
+            - option "7天" [selected]
+            - option "30天"
+            - option "全部"
+        - region "手动聚合" [ref=f5e47]:
+          - heading "手动聚合" [level=2] [ref=f5e48]
+          - paragraph [ref=f5e49]: 单次动作 · 显式生成时固定目标会话与所选来源，草稿进入目标会话。草稿不自动进入工作窗口、后续聚合或提炼；再次生成会创建新运行。
+          - generic [ref=f5e50]:
+            - text: 目标会话
+            - combobox "目标会话" [ref=f5e51]:
+              - option "请选择目标会话"
+              - option "V01 视觉验收 · 离线模型" [selected]
+              - option "升级前消息 01"
+          - generic [ref=f5e52]:
+            - text: 聚合目标
+            - textbox "聚合目标" [ref=f5e53]
+          - generic [ref=f5e54]:
+            - text: 聚合关键词
+            - textbox "聚合关键词" [ref=f5e55]
+          - group "本次资料来源" [ref=f5e56]:
+            - generic [ref=f5e58]:
+              - checkbox "语义记忆" [checked] [ref=f5e59]
+              - text: 语义记忆
+            - generic [ref=f5e60]:
+              - checkbox "情景记忆" [checked] [ref=f5e61]
+              - text: 情景记忆
+            - generic [ref=f5e62]:
+              - checkbox "会话窗口" [checked] [ref=f5e63]
+              - text: 会话窗口
+          - paragraph [ref=f5e64]: 未选择的来源不会读取；全不选来源仍可提交，将记录无动作。关键词仅用于所选记忆来源。
+          - generic [ref=f5e65]:
+            - button "生成聚合草稿" [ref=f5e66] [cursor=pointer]
+            - button "刷新会话" [ref=f5e67] [cursor=pointer]
+          - paragraph [ref=f5e68]: 表单没有新增的未提交修改。
+          - status [ref=f5e69]: 本次读取 2 个会话。刷新列表不会改变已提交目标。
+          - status [ref=f5e70]: 尚未提交聚合请求。
+          - region "流程拓扑" [ref=f5e72]:
+            - button "查看流程" [ref=f5e73] [cursor=pointer]
+            - status [ref=f5e74]: 服务已连接；结构仅在手动读取时更新。
+            - status [ref=f5e75]: 尚未读取；展开后读取。
+  - region "MainBar" [ref=f5e76]:
+    - generic [ref=f5e77]:
+      - heading "主对话" [level=2] [ref=f5e78]
+      - button "收起主对话" [ref=f5e79] [cursor=pointer]
+    - generic [ref=f5e80]:
+      - generic [ref=f5e81]: 会话
+      - button "新建会话" [ref=f5e82] [cursor=pointer]
+    - region "主对话" [ref=f5e83]:
+      - article [ref=f5e85]:
+        - paragraph [ref=f5e86]: V01 视觉验收 · 离线模型
+        - paragraph [ref=f5e87]: 离线模型回复
+        - paragraph [ref=f5e88]: Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。
+        - generic [ref=f5e89]: 已保存
+    - generic [ref=f5e90]:
+      - generic [ref=f5e91]: 消息
+      - textbox "消息" [ref=f5e92]:
+        - /placeholder: 写下消息；/skills 指定流程…
+      - button "发送" [disabled] [ref=f5e93]
+    - paragraph [ref=f5e94]: Enter 发送 · Shift+Enter 换行
+  - status [ref=f5e95]: 就绪
+  - alert [ref=f5e96]
+```

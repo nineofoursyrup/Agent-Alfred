@@ -1,0 +1,958 @@
+{
+  "candidate": "fca0b7194791d264adfa73897746d750176e166f",
+  "scope": "real Dashboard, offline BrowserModel, ephemeral state, CSS viewport; native 200% zoom and Chinese IME not run in V01",
+  "pages": [
+    {
+      "url": "http://127.0.0.1:17810/overview",
+      "title": "总览",
+      "viewport": [
+        1440,
+        900
+      ],
+      "dpr": 1,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+      "fullPageOverflow": 0,
+      "inlineStyles": 0,
+      "loading": [],
+      "body": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(236, 236, 234)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 1440,
+        "height": 900
+      },
+      "navigation": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "border": "rgb(236, 236, 234) rgb(28, 28, 31) rgb(236, 236, 234) rgb(236, 236, 234)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 232,
+        "height": 900
+      },
+      "mainbar": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "border": "rgb(236, 236, 234) rgb(236, 236, 234) rgb(236, 236, 234) rgb(28, 28, 31)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 320,
+        "height": 900
+      },
+      "heading": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(236, 236, 234)",
+        "fontSize": "27px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 823,
+        "height": 29.6875
+      },
+      "card": null,
+      "button": {
+        "color": "rgb(216, 215, 222)",
+        "background": "rgb(24, 24, 27)",
+        "border": "rgb(44, 44, 49)",
+        "fontSize": "11.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "borderRadius": "8px",
+        "width": 0,
+        "height": 0
+      },
+      "tableHeader": null,
+      "input": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(24, 24, 27)",
+        "border": "rgb(44, 44, 49)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "9px",
+        "width": 234,
+        "height": 80.390625
+      },
+      "metadata": {
+        "color": "rgb(216, 215, 222)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(216, 215, 222)",
+        "fontSize": "11px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "borderRadius": "0px",
+        "width": 130,
+        "height": 17.59375
+      },
+      "message": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(20, 20, 22)",
+        "border": "rgb(38, 38, 43)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "12px",
+        "width": 287,
+        "height": 185.0625
+      },
+      "screenshot": "docs/implementation/dashboard-claude-design/evidence/V01/overview-1440x900.png",
+      "sha256": "7dff2d950625628bbd1f58096fe85acfb6e5396be36f014da3cab39374bb2991"
+    },
+    {
+      "url": "http://127.0.0.1:17810/inbox",
+      "title": "收件箱",
+      "viewport": [
+        1440,
+        900
+      ],
+      "dpr": 1,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+      "fullPageOverflow": 0,
+      "inlineStyles": 0,
+      "loading": [],
+      "body": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(236, 236, 234)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 1440,
+        "height": 900
+      },
+      "navigation": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "border": "rgb(236, 236, 234) rgb(28, 28, 31) rgb(236, 236, 234) rgb(236, 236, 234)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 232,
+        "height": 900
+      },
+      "mainbar": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "border": "rgb(236, 236, 234) rgb(236, 236, 234) rgb(236, 236, 234) rgb(28, 28, 31)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 320,
+        "height": 900
+      },
+      "heading": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(236, 236, 234)",
+        "fontSize": "27px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 823,
+        "height": 29.6875
+      },
+      "card": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(20, 20, 22)",
+        "border": "rgb(38, 38, 43)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "14px",
+        "width": 823,
+        "height": 149.390625
+      },
+      "button": {
+        "color": "rgb(216, 215, 222)",
+        "background": "rgb(24, 24, 27)",
+        "border": "rgb(44, 44, 49)",
+        "fontSize": "11.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "borderRadius": "8px",
+        "width": 0,
+        "height": 0
+      },
+      "tableHeader": null,
+      "input": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(24, 24, 27)",
+        "border": "rgb(44, 44, 49)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "9px",
+        "width": 234,
+        "height": 80.390625
+      },
+      "metadata": null,
+      "message": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(20, 20, 22)",
+        "border": "rgb(38, 38, 43)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "12px",
+        "width": 287,
+        "height": 185.0625
+      },
+      "screenshot": "docs/implementation/dashboard-claude-design/evidence/V01/inbox-1440x900.png",
+      "sha256": "a4eb098820bcf9cb2096ba5455f549a6dcbe967d3a0e47c5cc718155eb41d964"
+    },
+    {
+      "url": "http://127.0.0.1:17810/runs",
+      "title": "运行",
+      "viewport": [
+        1440,
+        900
+      ],
+      "dpr": 1,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+      "fullPageOverflow": 0,
+      "inlineStyles": 0,
+      "loading": [],
+      "body": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(236, 236, 234)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 1440,
+        "height": 900
+      },
+      "navigation": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "border": "rgb(236, 236, 234) rgb(28, 28, 31) rgb(236, 236, 234) rgb(236, 236, 234)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 232,
+        "height": 900
+      },
+      "mainbar": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "border": "rgb(236, 236, 234) rgb(236, 236, 234) rgb(236, 236, 234) rgb(28, 28, 31)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 320,
+        "height": 900
+      },
+      "heading": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(236, 236, 234)",
+        "fontSize": "27px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 823,
+        "height": 29.6875
+      },
+      "card": null,
+      "button": {
+        "color": "rgb(216, 215, 222)",
+        "background": "rgb(24, 24, 27)",
+        "border": "rgb(44, 44, 49)",
+        "fontSize": "11.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "borderRadius": "8px",
+        "width": 0,
+        "height": 0
+      },
+      "tableHeader": {
+        "color": "rgb(69, 69, 75)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(69, 69, 75) rgb(69, 69, 75) rgb(26, 26, 29)",
+        "fontSize": "10.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "borderRadius": "0px",
+        "width": 164.390625,
+        "height": 32.21875
+      },
+      "input": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(24, 24, 27)",
+        "border": "rgb(44, 44, 49)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "9px",
+        "width": 234,
+        "height": 80.390625
+      },
+      "metadata": null,
+      "message": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(20, 20, 22)",
+        "border": "rgb(38, 38, 43)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "12px",
+        "width": 287,
+        "height": 185.0625
+      },
+      "screenshot": "docs/implementation/dashboard-claude-design/evidence/V01/runs-1440x900.png",
+      "sha256": "89d1a40eeb4dd3eaa9393df133f246cff7b281342eb50dc6f1e7e1e73f2aa6f6"
+    },
+    {
+      "url": "http://127.0.0.1:17810/memory?tab=semantic",
+      "title": "记忆",
+      "viewport": [
+        1440,
+        900
+      ],
+      "dpr": 1,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+      "fullPageOverflow": 0,
+      "inlineStyles": 0,
+      "loading": [],
+      "body": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(236, 236, 234)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 1440,
+        "height": 900
+      },
+      "navigation": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "border": "rgb(236, 236, 234) rgb(28, 28, 31) rgb(236, 236, 234) rgb(236, 236, 234)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 232,
+        "height": 900
+      },
+      "mainbar": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "border": "rgb(236, 236, 234) rgb(236, 236, 234) rgb(236, 236, 234) rgb(28, 28, 31)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 320,
+        "height": 900
+      },
+      "heading": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(236, 236, 234)",
+        "fontSize": "27px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 823,
+        "height": 29.6875
+      },
+      "card": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(20, 20, 22)",
+        "border": "rgb(38, 38, 43)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "14px",
+        "width": 0,
+        "height": 0
+      },
+      "button": {
+        "color": "rgb(216, 215, 222)",
+        "background": "rgb(24, 24, 27)",
+        "border": "rgb(44, 44, 49)",
+        "fontSize": "11.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "borderRadius": "8px",
+        "width": 0,
+        "height": 0
+      },
+      "tableHeader": null,
+      "input": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(24, 24, 27)",
+        "border": "rgb(44, 44, 49)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "9px",
+        "width": 0,
+        "height": 0
+      },
+      "metadata": {
+        "color": "rgb(141, 140, 150)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(141, 140, 150)",
+        "fontSize": "11px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "borderRadius": "0px",
+        "width": 823,
+        "height": 0
+      },
+      "message": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(20, 20, 22)",
+        "border": "rgb(38, 38, 43)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "12px",
+        "width": 287,
+        "height": 185.0625
+      },
+      "screenshot": "docs/implementation/dashboard-claude-design/evidence/V01/memory-1440x900.png",
+      "sha256": "fd2e9022aea2e08ae8679637ca94a9cc7376bc730743b3ea6334ccc0769d5a69"
+    },
+    {
+      "url": "http://127.0.0.1:17810/behaviour",
+      "title": "行为",
+      "viewport": [
+        1440,
+        900
+      ],
+      "dpr": 1,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+      "fullPageOverflow": 0,
+      "inlineStyles": 0,
+      "loading": [],
+      "body": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(236, 236, 234)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 1440,
+        "height": 900
+      },
+      "navigation": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "border": "rgb(236, 236, 234) rgb(28, 28, 31) rgb(236, 236, 234) rgb(236, 236, 234)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 232,
+        "height": 900
+      },
+      "mainbar": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "border": "rgb(236, 236, 234) rgb(236, 236, 234) rgb(236, 236, 234) rgb(28, 28, 31)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 320,
+        "height": 900
+      },
+      "heading": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(236, 236, 234)",
+        "fontSize": "27px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 823,
+        "height": 29.6875
+      },
+      "card": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(20, 20, 22)",
+        "border": "rgb(38, 38, 43)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "14px",
+        "width": 823,
+        "height": 591.34375
+      },
+      "button": {
+        "color": "rgb(216, 215, 222)",
+        "background": "rgb(24, 24, 27)",
+        "border": "rgb(44, 44, 49)",
+        "fontSize": "11.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "borderRadius": "8px",
+        "width": 0,
+        "height": 0
+      },
+      "tableHeader": null,
+      "input": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(24, 24, 27)",
+        "border": "rgb(44, 44, 49)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "9px",
+        "width": 781,
+        "height": 70
+      },
+      "metadata": null,
+      "message": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(20, 20, 22)",
+        "border": "rgb(38, 38, 43)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "12px",
+        "width": 287,
+        "height": 185.0625
+      },
+      "screenshot": "docs/implementation/dashboard-claude-design/evidence/V01/behaviour-1440x900.png",
+      "sha256": "42013cc630247ef660e82b1a513aa3e4e04f0845f4cd398dd7cc40d329f4a328"
+    },
+    {
+      "url": "http://127.0.0.1:17810/models",
+      "title": "模型",
+      "viewport": [
+        1440,
+        900
+      ],
+      "dpr": 1,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+      "fullPageOverflow": 0,
+      "inlineStyles": 0,
+      "loading": [],
+      "body": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(236, 236, 234)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 1440,
+        "height": 900
+      },
+      "navigation": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "border": "rgb(236, 236, 234) rgb(28, 28, 31) rgb(236, 236, 234) rgb(236, 236, 234)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 232,
+        "height": 900
+      },
+      "mainbar": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "border": "rgb(236, 236, 234) rgb(236, 236, 234) rgb(236, 236, 234) rgb(28, 28, 31)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 320,
+        "height": 900
+      },
+      "heading": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(236, 236, 234)",
+        "fontSize": "27px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 823,
+        "height": 29.6875
+      },
+      "card": null,
+      "button": {
+        "color": "rgb(216, 215, 222)",
+        "background": "rgb(24, 24, 27)",
+        "border": "rgb(44, 44, 49)",
+        "fontSize": "11.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "borderRadius": "8px",
+        "width": 0,
+        "height": 0
+      },
+      "tableHeader": null,
+      "input": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(24, 24, 27)",
+        "border": "rgb(44, 44, 49)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "9px",
+        "width": 234,
+        "height": 80.390625
+      },
+      "metadata": null,
+      "message": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(20, 20, 22)",
+        "border": "rgb(38, 38, 43)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "12px",
+        "width": 287,
+        "height": 185.0625
+      },
+      "screenshot": "docs/implementation/dashboard-claude-design/evidence/V01/models-1440x900.png",
+      "sha256": "a625fe6cd9567f19a1c537e069a69f43896ea14d9db9c25f44d40bf4888a87bb"
+    },
+    {
+      "url": "http://127.0.0.1:17810/connections",
+      "title": "连接",
+      "viewport": [
+        1440,
+        900
+      ],
+      "dpr": 1,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+      "fullPageOverflow": 0,
+      "inlineStyles": 0,
+      "loading": [],
+      "body": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(236, 236, 234)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 1440,
+        "height": 900
+      },
+      "navigation": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "border": "rgb(236, 236, 234) rgb(28, 28, 31) rgb(236, 236, 234) rgb(236, 236, 234)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 232,
+        "height": 900
+      },
+      "mainbar": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "border": "rgb(236, 236, 234) rgb(236, 236, 234) rgb(236, 236, 234) rgb(28, 28, 31)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 320,
+        "height": 900
+      },
+      "heading": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(236, 236, 234)",
+        "fontSize": "27px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 823,
+        "height": 29.6875
+      },
+      "card": null,
+      "button": {
+        "color": "rgb(216, 215, 222)",
+        "background": "rgb(24, 24, 27)",
+        "border": "rgb(44, 44, 49)",
+        "fontSize": "11.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "borderRadius": "8px",
+        "width": 0,
+        "height": 0
+      },
+      "tableHeader": null,
+      "input": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(24, 24, 27)",
+        "border": "rgb(44, 44, 49)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "9px",
+        "width": 234,
+        "height": 80.390625
+      },
+      "metadata": null,
+      "message": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(20, 20, 22)",
+        "border": "rgb(38, 38, 43)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "12px",
+        "width": 287,
+        "height": 185.0625
+      },
+      "screenshot": "docs/implementation/dashboard-claude-design/evidence/V01/connections-1440x900.png",
+      "sha256": "e62b03323a38edfba87ceea17de6095491855f015c043de89f6d60544d2caaa2"
+    },
+    {
+      "url": "http://127.0.0.1:17810/tools",
+      "title": "工具",
+      "viewport": [
+        1440,
+        900
+      ],
+      "dpr": 1,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+      "fullPageOverflow": 0,
+      "inlineStyles": 0,
+      "loading": [],
+      "body": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(236, 236, 234)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 1440,
+        "height": 900
+      },
+      "navigation": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "border": "rgb(236, 236, 234) rgb(28, 28, 31) rgb(236, 236, 234) rgb(236, 236, 234)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 232,
+        "height": 900
+      },
+      "mainbar": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "border": "rgb(236, 236, 234) rgb(236, 236, 234) rgb(236, 236, 234) rgb(28, 28, 31)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 320,
+        "height": 900
+      },
+      "heading": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(236, 236, 234)",
+        "fontSize": "27px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 823,
+        "height": 29.6875
+      },
+      "card": null,
+      "button": {
+        "color": "rgb(216, 215, 222)",
+        "background": "rgb(24, 24, 27)",
+        "border": "rgb(44, 44, 49)",
+        "fontSize": "11.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "borderRadius": "8px",
+        "width": 0,
+        "height": 0
+      },
+      "tableHeader": null,
+      "input": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(24, 24, 27)",
+        "border": "rgb(44, 44, 49)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "9px",
+        "width": 234,
+        "height": 80.390625
+      },
+      "metadata": null,
+      "message": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(20, 20, 22)",
+        "border": "rgb(38, 38, 43)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "12px",
+        "width": 287,
+        "height": 185.0625
+      },
+      "screenshot": "docs/implementation/dashboard-claude-design/evidence/V01/tools-1440x900.png",
+      "sha256": "a7cc24c678820c6a95d1d822c9c7bb74576322291e4dcef0ae7e02a241025cbf"
+    },
+    {
+      "url": "http://127.0.0.1:17810/ops",
+      "title": "用量账本",
+      "viewport": [
+        1440,
+        900
+      ],
+      "dpr": 1,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+      "fullPageOverflow": 0,
+      "inlineStyles": 0,
+      "loading": [],
+      "body": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(236, 236, 234)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 1440,
+        "height": 900
+      },
+      "navigation": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "border": "rgb(236, 236, 234) rgb(28, 28, 31) rgb(236, 236, 234) rgb(236, 236, 234)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 232,
+        "height": 900
+      },
+      "mainbar": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "border": "rgb(236, 236, 234) rgb(236, 236, 234) rgb(236, 236, 234) rgb(28, 28, 31)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 320,
+        "height": 900
+      },
+      "heading": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(236, 236, 234)",
+        "fontSize": "27px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 823,
+        "height": 29.6875
+      },
+      "card": null,
+      "button": {
+        "color": "rgb(216, 215, 222)",
+        "background": "rgb(24, 24, 27)",
+        "border": "rgb(44, 44, 49)",
+        "fontSize": "11.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "borderRadius": "8px",
+        "width": 0,
+        "height": 0
+      },
+      "tableHeader": {
+        "color": "rgb(69, 69, 75)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(69, 69, 75) rgb(69, 69, 75) rgb(31, 31, 35)",
+        "fontSize": "10.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "borderRadius": "0px",
+        "width": 219.59375,
+        "height": 31.71875
+      },
+      "input": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(24, 24, 27)",
+        "border": "rgb(44, 44, 49)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "9px",
+        "width": 234,
+        "height": 80.390625
+      },
+      "metadata": {
+        "color": "rgb(141, 140, 150)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(141, 140, 150)",
+        "fontSize": "11px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "borderRadius": "0px",
+        "width": 251,
+        "height": 17.59375
+      },
+      "message": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(20, 20, 22)",
+        "border": "rgb(38, 38, 43)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "12px",
+        "width": 287,
+        "height": 185.0625
+      },
+      "screenshot": "docs/implementation/dashboard-claude-design/evidence/V01/ops-1440x900.png",
+      "sha256": "e6ef89d18c1b4c75de31408b5ddd90d421eaca56c19a9045e3e2bb26c25dcfad"
+    },
+    {
+      "url": "http://127.0.0.1:17810/database",
+      "title": "数据库",
+      "viewport": [
+        1440,
+        900
+      ],
+      "dpr": 1,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+      "fullPageOverflow": 0,
+      "inlineStyles": 0,
+      "loading": [],
+      "body": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(236, 236, 234)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 1440,
+        "height": 900
+      },
+      "navigation": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "border": "rgb(236, 236, 234) rgb(28, 28, 31) rgb(236, 236, 234) rgb(236, 236, 234)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 232,
+        "height": 900
+      },
+      "mainbar": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "border": "rgb(236, 236, 234) rgb(236, 236, 234) rgb(236, 236, 234) rgb(28, 28, 31)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 320,
+        "height": 900
+      },
+      "heading": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "border": "rgb(236, 236, 234)",
+        "fontSize": "27px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "0px",
+        "width": 823,
+        "height": 29.6875
+      },
+      "card": null,
+      "button": {
+        "color": "rgb(216, 215, 222)",
+        "background": "rgb(24, 24, 27)",
+        "border": "rgb(44, 44, 49)",
+        "fontSize": "11.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "borderRadius": "8px",
+        "width": 0,
+        "height": 0
+      },
+      "tableHeader": null,
+      "input": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(24, 24, 27)",
+        "border": "rgb(44, 44, 49)",
+        "fontSize": "12.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "borderRadius": "10px",
+        "width": 823,
+        "height": 178
+      },
+      "metadata": null,
+      "message": {
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(20, 20, 22)",
+        "border": "rgb(38, 38, 43)",
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "borderRadius": "12px",
+        "width": 287,
+        "height": 185.0625
+      },
+      "screenshot": "docs/implementation/dashboard-claude-design/evidence/V01/database-1440x900.png",
+      "sha256": "87912c2891d2e8a117e003ddb2d3d5e683adf7ed698ec2550e4dd088d869d1eb"
+    }
+  ]
+}

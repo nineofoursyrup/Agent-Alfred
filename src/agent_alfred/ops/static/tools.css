@@ -2,16 +2,16 @@
 .tools-page .tools-controls {display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
 .tools-page .tools-source {margin:24px 0}
 .tools-page .tools-source>h2 {margin-bottom:4px}
-.tools-page .tools-source>p {margin:4px 0;color:var(--secondary);font-size:12px}
-.tools-page .tool-row {padding:16px 0;border-top:1px solid var(--border);min-width:0}
-.tools-page .tool-row h3 {margin:0;font-size:14px;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+.tools-page .tools-source>p {margin:4px 0;color:var(--muted);font-size:var(--font-size-meta);font-family:var(--font-mono)}
+.tools-page .tool-row {padding:16px 0;border-top:1px solid var(--row-divider);min-width:0}
+.tools-page .tool-row h3 {margin:0;font-size:var(--font-size-row);font-family:var(--font-mono)}
 .tools-page .tool-row p {margin:6px 0}
-.tools-page .tool-identity {font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:12px;color:var(--secondary);overflow-wrap:anywhere}
-.tools-page .tool-brief {display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;color:var(--secondary)}
-.tools-page .tool-status {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px;font-size:13px}
+.tools-page .tool-identity {font-family:var(--font-mono);font-size:var(--font-size-meta);color:var(--metadata);overflow-wrap:anywhere}
+.tools-page .tool-brief {display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;color:var(--muted);font-size:var(--font-size-meta-large);line-height:1.45}
+.tools-page .tool-status {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px;font-size:var(--font-size-body)}
 .tools-page .tool-status p {min-width:0}
 .tools-page .tool-attention {color:var(--attention)}
-.tools-page .tool-detail {background:var(--surface);padding:16px;border:1px solid var(--border);border-radius:12px}
+.tools-page .tool-detail {background:var(--surface);padding:16px;border:1px solid var(--border);border-radius:var(--radius-panel)}
 .tools-page .tool-description {white-space:pre-wrap}
 .tools-page .tool-detail label {display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .tools-page .tool-detail button {margin:8px 8px 0 0}

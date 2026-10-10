@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @keyframes sy-pulse { 0%,100% { opacity:.35 } 50% { opacity:1 } }
+  html,body { margin:0; padding:0; background:#101012; }
+  ::-webkit-scrollbar { width:9px; height:9px }
+  ::-webkit-scrollbar-thumb { background:#26262a; border-radius:6px }
+  ::-webkit-scrollbar-track { background:transparent }
+  a { color:#7c8aec; text-decoration:none }
+  a:hover { color:#9aa5f2 }
+  input, button { font-family:inherit }
+</style>
+</helmet>
+<div style="display:flex;height:100vh;overflow:hidden;background:#101012;color:#ececea;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB',sans-serif;-webkit-font-smoothing:antialiased">
+
+  <nav style="width:232px;flex:0 1 232px;min-width:190px;border-right:1px solid #1c1c1f;background:#0e0e10;display:flex;flex-direction:column;overflow-y:auto">
+    <div style="padding:20px 18px 15px;border-bottom:1px solid #1c1c1f">
+      <div style="display:flex;align-items:baseline;gap:8px">
+        <div style="font:700 19px/1 inherit">Syrup</div>
+        <div style="font:400 11px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#5f5e66">v0.9 · {{ t.local }}</div>
+      </div>
+      <div style="margin-top:9px;display:flex;align-items:center;gap:6px;font:400 11px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#8d8c96">
+        <span style="width:6px;height:6px;border-radius:50%;background:#4cc38a;animation:sy-pulse 1.6s infinite"></span>
+        <span>claude-sonnet-4-5</span>
+      </div>
+      <div style="margin-top:5px;font:400 11px/1.4 ui-monospace,'SF Mono',Menlo,monospace;color:#45454b">127.0.0.1:9049</div>
+    </div>
+
+    <div style="padding:16px 12px 6px;font:600 10px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:2.2px;color:#5f5e66">SYSTEM</div>
+    <div style="display:flex;flex-direction:column;gap:2px;padding:0 8px">
+      <a href="#" onClick="{{ go.overview }}" style="position:relative;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:7px;color:#d8d7de;font:400 13px/1.25 inherit" style-hover="background:#16161a;color:#ececea">
+        <div style="position:absolute;inset:0;border-radius:7px;background:#20223a;box-shadow:inset 2px 0 0 #7c8aec;opacity:{{ nav.overview }};transition:opacity .18s;pointer-events:none"></div>
+        <span style="position:relative">Overview</span>
+      </a>
+      <a href="#" onClick="{{ go.loop }}" style="position:relative;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:7px;color:#d8d7de;font:400 13px/1.25 inherit" style-hover="background:#16161a;color:#ececea">
+        <div style="position:absolute;inset:0;border-radius:7px;background:#20223a;box-shadow:inset 2px 0 0 #7c8aec;opacity:{{ nav.loop }};transition:opacity .18s;pointer-events:none"></div>
+        <span style="position:relative">Loop</span>
+        <span style="position:relative;font:400 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#5f5e66">48</span>
+      </a>
+      <a href="#" onClick="{{ go.memory }}" style="position:relative;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:7px;color:#d8d7de;font:400 13px/1.25 inherit" style-hover="background:#16161a;color:#ececea">
+        <div style="position:absolute;inset:0;border-radius:7px;background:#20223a;box-shadow:inset 2px 0 0 #7c8aec;opacity:{{ nav.memory }};transition:opacity .18s;pointer-events:none"></div>
+        <span style="position:relative">Memory</span>
+        <span style="position:relative;font:400 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#5f5e66">126</span>
+      </a>
+      <a href="#" onClick="{{ go.graph }}" style="position:relative;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:7px;color:#d8d7de;font:400 13px/1.25 inherit" style-hover="background:#16161a;color:#ececea">
+        <div style="position:absolute;inset:0;border-radius:7px;background:#20223a;box-shadow:inset 2px 0 0 #7c8aec;opacity:{{ nav.graph }};transition:opacity .18s;pointer-events:none"></div>
+        <span style="position:relative">Graph</span>
+        <span style="position:relative;font:400 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#e0a458">on</span>
+      </a>
+      <a href="#" onClick="{{ go.ops }}" style="position:relative;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:7px;color:#d8d7de;font:400 13px/1.25 inherit" style-hover="background:#16161a;color:#ececea">
+        <div style="position:absolute;inset:0;border-radius:7px;background:#20223a;box-shadow:inset 2px 0 0 #7c8aec;opacity:{{ nav.ops }};transition:opacity .18s;pointer-events:none"></div>
+        <span style="position:relative">Ops</span>
+        <span style="position:relative;font:400 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#4cc38a">pass</span>
+      </a>
+    </div>
+
+    <div style="padding:18px 12px 6px;font:600 10px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:2.2px;color:#5f5e66">DATA</div>
+    <div style="display:flex;flex-direction:column;gap:2px;padding:0 8px">
+      <a href="#" onClick="{{ go.tools }}" style="position:relative;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:7px;color:#d8d7de;font:400 13px/1.25 inherit" style-hover="background:#16161a;color:#ececea">
+        <div style="position:absolute;inset:0;border-radius:7px;background:#20223a;box-shadow:inset 2px 0 0 #7c8aec;opacity:{{ nav.tools }};transition:opacity .18s;pointer-events:none"></div>
+        <span style="position:relative">Tools</span>
+        <span style="position:relative;font:400 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#5f5e66">14</span>
+      </a>
+      <a href="#" onClick="{{ go.database }}" style="position:relative;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:7px;color:#d8d7de;font:400 13px/1.25 inherit" style-hover="background:#16161a;color:#ececea">
+        <div style="position:absolute;inset:0;border-radius:7px;background:#20223a;box-shadow:inset 2px 0 0 #7c8aec;opacity:{{ nav.database }};transition:opacity .18s;pointer-events:none"></div>
+        <span style="position:relative">Database</span>
+        <span style="position:relative;font:400 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#5f5e66">state.db</span>
+      </a>
+    </div>
+
+    <div style="margin-top:auto;padding:14px 16px;border-top:1px solid #1c1c1f;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;padding:3px;background:#141416;border:1px solid #26262b;border-radius:8px">
+        <button onClick="{{ setZh }}" style="flex:1;padding:5px 0;border:0;border-radius:6px;cursor:pointer;background:{{ zhBg }};color:{{ zhFg }};font:500 11px/1.3 ui-monospace,'SF Mono',Menlo,monospace">中文</button>
+        <button onClick="{{ setEn }}" style="flex:1;padding:5px 0;border:0;border-radius:6px;cursor:pointer;background:{{ enBg }};color:{{ enFg }};font:500 11px/1.3 ui-monospace,'SF Mono',Menlo,monospace">EN</button>
+      </div>
+      <div style="font:400 10.5px/1.6 ui-monospace,'SF Mono',Menlo,monospace;color:#45454b">~/.syrup/state.db · 1.4 MB<br>traces/2026-08-17.jsonl</div>
+    </div>
+  </nav>
+
+  <main style="flex:1 1 520px;min-width:0;display:flex;flex-direction:column;overflow-y:auto">
+    <header style="padding:24px 28px 18px;border-bottom:1px solid #1c1c1f;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 24px">
+      <div>
+        <div style="font:600 10px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:2.6px;color:#5f5e66">{{ t.eyebrow }}</div>
+        <h1 style="margin:11px 0 6px;font:700 27px/1.1 inherit">{{ pageTitle }}</h1>
+        <div style="font:400 13px/1.55 inherit;color:#8d8c96;text-wrap:pretty;max-width:660px">{{ t.sub }}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid #2c2c31;border-radius:20px;background:#141416;white-space:nowrap;flex:0 0 auto">
+        <span style="width:6px;height:6px;border-radius:50%;background:#4cc38a;animation:sy-pulse 1.4s infinite"></span>
+        <span style="font:400 11px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#a9a8b3">live · turn #48</span>
+      </div>
+    </header>
+
+    <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:20px 28px 30px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:12px">
+          <div style="background:#141416;border:1px solid #26262b;border-radius:11px;padding:14px 15px">
+            <div style="font:600 23px/1 ui-monospace,'SF Mono',Menlo,monospace">48</div>
+            <div style="margin-top:8px;font:400 11px/1.45 ui-monospace,'SF Mono',Menlo,monospace;color:#8d8c96">{{ t.k1 }}</div>
+          </div>
+          <div style="background:#141416;border:1px solid #26262b;border-radius:11px;padding:14px 15px">
+            <div style="font:600 23px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#4cc38a">$0.87</div>
+            <div style="margin-top:8px;font:400 11px/1.45 ui-monospace,'SF Mono',Menlo,monospace;color:#8d8c96">{{ t.k2 }}</div>
+          </div>
+          <div style="background:#141416;border:1px solid #26262b;border-radius:11px;padding:14px 15px">
+            <div style="font:600 23px/1 ui-monospace,'SF Mono',Menlo,monospace">2.6s</div>
+            <div style="margin-top:8px;font:400 11px/1.45 ui-monospace,'SF Mono',Menlo,monospace;color:#8d8c96">{{ t.k3 }}</div>
+          </div>
+          <div style="background:#141416;border:1px solid #26262b;border-radius:11px;padding:14px 15px">
+            <div style="font:600 23px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#7c8aec">61%</div>
+            <div style="margin-top:8px;font:400 11px/1.45 ui-monospace,'SF Mono',Menlo,monospace;color:#8d8c96">{{ t.k4 }}</div>
+          </div>
+          <div style="background:#141416;border:1px solid #26262b;border-radius:11px;padding:14px 15px">
+            <div style="font:600 23px/1 ui-monospace,'SF Mono',Menlo,monospace">126</div>
+            <div style="margin-top:8px;font:400 11px/1.45 ui-monospace,'SF Mono',Menlo,monospace;color:#8d8c96">{{ t.k5 }}</div>
+          </div>
+        </div>
+
+        <div style="background:#141416;border:1px solid #26262b;border-radius:14px;overflow:hidden">
+          <div style="padding:15px 18px;border-bottom:1px solid #1f1f23;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px">
+            <div>
+              <div style="font:600 11px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:2px;color:#7c8aec">ARCHITECTURE</div>
+              <div style="margin-top:7px;font:400 12.5px/1.45 inherit;color:#8d8c96">{{ t.archNote }}</div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 9px;min-width:0;padding:6px 12px;background:#18181b;border:1px solid #2c2c31;border-radius:8px">
+              <span style="font:400 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:1.4px;color:#5f5e66">{{ t.now }}</span>
+              <span style="font:500 11.5px/1 ui-monospace,'SF Mono',Menlo,monospace">{{ stageLabel }}</span>
+              <span style="font:400 11.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#6f6e69">{{ stageNote }}</span>
+            </div>
+          </div>
+
+          <div style="padding:18px 16px;overflow-x:auto">
+      <svg viewBox="0 -10 1044 674" style="display:block;width:100%;min-width:880px;height:auto">
+        <defs>
+          <marker id="sy-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#6b6a73"></path>
+          </marker>
+        </defs>
+        <rect x="12" y="20" width="1020" height="628" rx="16" fill="none" stroke="#26262b" stroke-dasharray="6 6"></rect>
+        <text x="16" y="4" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="11" letter-spacing="1.8" font-weight="600" fill="#5f5e66" opacity="{{ langZh }}">HARNESS — 跑在你自己的机器上 · 这一轮本身是短暂的</text><text x="16" y="4" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="11" letter-spacing="1.8" font-weight="600" fill="#5f5e66" opacity="{{ langEn }}">HARNESS — runs on your laptop · the turn inside is ephemeral</text>
+
+        <g>
+          <rect x="32" y="72" width="128" height="56" rx="9" fill="#18181b" stroke="#2c2c31"></rect>
+          <rect x="32" y="72" width="128" height="56" rx="9" fill="rgba(124,138,236,.10)" stroke="#7c8aec" stroke-width="1.5" opacity="{{ hl.gateway }}" style="transition:opacity .3s"></rect>
+          <text x="45" y="96" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="14.5" font-weight="600" fill="#ececea">Gateway</text>
+          <text x="45" y="115" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96">cli &#183; voice &#183; web</text>
+        </g>
+        <path d="M160 100 L192 100" fill="none" stroke="#3a3a40" stroke-width="1.4" marker-end="url(#sy-arr)"></path>
+        <path d="M160 100 L192 100" fill="none" stroke="#7c8aec" stroke-width="1.8" opacity="{{ hl.eGwWm }}" style="transition:opacity .3s"></path>
+
+        <g>
+          <rect x="192" y="72" width="144" height="56" rx="9" fill="#18181b" stroke="#2c2c31"></rect>
+          <rect x="192" y="72" width="144" height="56" rx="9" fill="rgba(124,138,236,.10)" stroke="#7c8aec" stroke-width="1.5" opacity="{{ hl.wm }}" style="transition:opacity .3s"></rect>
+          <text x="205" y="96" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="14.5" font-weight="600" fill="#ececea">Working memory</text>
+          <text x="205" y="115" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96" opacity="{{ langZh }}">每一轮重新组装</text><text x="205" y="115" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96" opacity="{{ langEn }}">assembled per turn</text>
+        </g>
+        <rect x="370" y="56" width="168" height="166" rx="12" fill="rgba(124,138,236,.05)" stroke="#7c8aec" stroke-opacity=".5"></rect>
+        <text x="384" y="48" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="11" letter-spacing="1.8" font-weight="600" fill="#5f5e66">LOOP</text>
+
+        <g>
+          <rect x="384" y="72" width="140" height="50" rx="9" fill="#18181b" stroke="#2c2c31"></rect>
+          <rect x="384" y="72" width="140" height="50" rx="9" fill="rgba(124,138,236,.10)" stroke="#7c8aec" stroke-width="1.5" opacity="{{ hl.llm }}" style="transition:opacity .3s"></rect>
+          <text x="397" y="96" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="14.5" font-weight="600" fill="#ececea">LLM agent</text>
+          <text x="397" y="115" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96">reason</text>
+        </g>
+
+        <g>
+          <rect x="384" y="152" width="140" height="52" rx="9" fill="#18181b" stroke="#2c2c31"></rect>
+          <rect x="384" y="152" width="140" height="52" rx="9" fill="rgba(124,138,236,.10)" stroke="#7c8aec" stroke-width="1.5" opacity="{{ hl.tools }}" style="transition:opacity .3s"></rect>
+          <text x="397" y="176" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="14.5" font-weight="600" fill="#ececea">Tools</text>
+          <text x="397" y="195" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96">create_event&#8230;</text>
+        </g>
+        <path d="M448 122 L448 152" fill="none" stroke="#3a3a40" stroke-width="1.4"></path>
+        <path d="M470 152 L470 122" fill="none" stroke="#3a3a40" stroke-width="1.4"></path>
+        <text x="456" y="141" text-anchor="start" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#6f6e69">act</text>
+        <path d="M336 100 L370 100" fill="none" stroke="#3a3a40" stroke-width="1.4" marker-end="url(#sy-arr)"></path>
+        <path d="M336 100 L370 100" fill="none" stroke="#7c8aec" stroke-width="1.8" opacity="{{ hl.eWmLoop }}" style="transition:opacity .3s"></path>
+        <path d="M538 100 L558 106" fill="none" stroke="#3a3a40" stroke-width="1.4"></path>
+        <text x="542" y="93" text-anchor="start" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#6f6e69">reply</text>
+
+        <g>
+          <rect x="558" y="84" width="104" height="52" rx="9" fill="#18181b" stroke="#2c2c31"></rect>
+          <rect x="558" y="84" width="104" height="52" rx="9" fill="rgba(124,138,236,.10)" stroke="#7c8aec" stroke-width="1.5" opacity="{{ hl.reply }}" style="transition:opacity .3s"></rect>
+          <text x="571" y="108" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="14.5" font-weight="600" fill="#ececea">Reply</text>
+          <text x="571" y="127" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96" opacity="{{ langZh }}">→ 回到你手里</text><text x="571" y="127" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96" opacity="{{ langEn }}">→ back to you</text>
+        </g>
+        <path d="M610 84 C610 40 596 34 566 34 L130 34 C104 34 96 44 96 72" fill="none" stroke="#3a3a40" stroke-width="1.4" marker-end="url(#sy-arr)"></path>
+        <path d="M610 84 C610 40 596 34 566 34 L130 34 C104 34 96 44 96 72" fill="none" stroke="#7c8aec" stroke-width="1.8" opacity="{{ hl.eReplyGw }}" style="transition:opacity .3s"></path>
+        <text x="348" y="28" text-anchor="middle" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#6f6e69" opacity="{{ langZh }}">回复从进来的那扇 gateway 出去</text><text x="348" y="28" text-anchor="middle" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#6f6e69" opacity="{{ langEn }}">reply, out the same gateway</text>
+        <path d="M650 136 C660 150 660 200 660 600 L430 600" fill="none" stroke="#3a3a40" stroke-width="1.4" stroke-dasharray="5 5" marker-end="url(#sy-arr)"></path>
+        <path d="M650 136 C660 150 660 200 660 600 L430 600" fill="none" stroke="#7c8aec" stroke-width="1.8" stroke-dasharray="5 5" opacity="{{ hl.eReplySave }}" style="transition:opacity .3s"></path>
+        <text x="668" y="214" text-anchor="start" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#6f6e69" opacity="{{ langZh }}">存下对话</text><text x="668" y="214" text-anchor="start" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#6f6e69" opacity="{{ langEn }}">save chats</text>
+        <g>
+          <path d="M264 250 L340 296 L264 342 L188 296 Z" fill="#18181b" stroke="#7c8aec" stroke-opacity=".7"></path>
+          <path d="M264 250 L340 296 L264 342 L188 296 Z" fill="rgba(224,164,88,.12)" stroke="#e0a458" stroke-width="1.6" opacity="{{ hl.gate }}" style="transition:opacity .3s"></path>
+          <text x="264" y="292" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="14" font-weight="600" fill="#ececea">Retrieval gate</text>
+          <text x="264" y="311" text-anchor="middle" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96">29 skip &#183; 19 retrieve</text>
+        </g>
+        <path d="M264 250 L264 128" fill="none" stroke="#3a3a40" stroke-width="1.4" stroke-dasharray="5 5" marker-end="url(#sy-arr)"></path>
+        <path d="M264 250 L264 128" fill="none" stroke="#7c8aec" stroke-width="1.8" stroke-dasharray="5 5" opacity="{{ hl.eGateWm }}" style="transition:opacity .3s"></path>
+        <text x="274" y="196" text-anchor="start" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#6f6e69" opacity="{{ langZh }}">只在需要时</text><text x="274" y="196" text-anchor="start" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#6f6e69" opacity="{{ langEn }}">only if needed</text>
+        <text x="40" y="404" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="11" letter-spacing="1.8" font-weight="600" fill="#5f5e66" opacity="{{ langZh }}">MEMORY — 三根支柱</text><text x="40" y="404" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="11" letter-spacing="1.8" font-weight="600" fill="#5f5e66" opacity="{{ langEn }}">MEMORY — three pillars</text>
+        <rect x="28" y="414" width="600" height="128" rx="12" fill="#131315" stroke="#1f1f23"></rect>
+        <path d="M148 452 L246 336" fill="none" stroke="#3a3a40" stroke-width="1.4" stroke-dasharray="5 5" marker-end="url(#sy-arr)"></path>
+        <path d="M148 452 L246 336" fill="none" stroke="#7c8aec" stroke-width="1.8" stroke-dasharray="5 5" opacity="{{ hl.eGateProc }}" style="transition:opacity .3s"></path>
+        <path d="M340 452 L272 344" fill="none" stroke="#3a3a40" stroke-width="1.4" stroke-dasharray="5 5" marker-end="url(#sy-arr)"></path>
+        <path d="M340 452 L272 344" fill="none" stroke="#7c8aec" stroke-width="1.8" stroke-dasharray="5 5" opacity="{{ hl.eGateSem }}" style="transition:opacity .3s"></path>
+        <path d="M542 452 L286 338" fill="none" stroke="#3a3a40" stroke-width="1.4" stroke-dasharray="5 5" marker-end="url(#sy-arr)"></path>
+        <path d="M542 452 L286 338" fill="none" stroke="#7c8aec" stroke-width="1.8" stroke-dasharray="5 5" opacity="{{ hl.eGateEpi }}" style="transition:opacity .3s"></path>
+        <text x="356" y="392" text-anchor="middle" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#6f6e69" opacity="{{ langZh }}">闸门读这三种</text><text x="356" y="392" text-anchor="middle" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#6f6e69" opacity="{{ langEn }}">the gate reads all three</text>
+
+        <g>
+          <rect x="44" y="452" width="208" height="72" rx="9" fill="#18181b" stroke="#2c2c31"></rect>
+          <rect x="44" y="452" width="208" height="72" rx="9" fill="rgba(124,138,236,.10)" stroke="#7c8aec" stroke-width="1.5" opacity="{{ hl.procedural }}" style="transition:opacity .3s"></rect>
+          <text x="57" y="476" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="14.5" font-weight="600" fill="#ececea">Procedural</text>
+          <text x="57" y="495" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96" opacity="{{ langZh }}">怎么做 · SKILL.md · 3 skills</text><text x="57" y="495" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96" opacity="{{ langEn }}">SKILL.md · 3 skills</text>
+        </g>
+
+        <g>
+          <rect x="264" y="452" width="204" height="72" rx="9" fill="#18181b" stroke="#2c2c31"></rect>
+          <rect x="264" y="452" width="204" height="72" rx="9" fill="rgba(124,138,236,.10)" stroke="#7c8aec" stroke-width="1.5" opacity="{{ hl.semantic }}" style="transition:opacity .3s"></rect>
+          <text x="277" y="476" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="14.5" font-weight="600" fill="#ececea">Semantic &#183; FTS5</text>
+          <text x="277" y="495" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96" opacity="{{ langZh }}">持久事实 · 126 facts</text><text x="277" y="495" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96" opacity="{{ langEn }}">durable facts · 126 facts</text>
+        </g>
+
+        <g>
+          <rect x="480" y="452" width="132" height="72" rx="9" fill="#18181b" stroke="#2c2c31"></rect>
+          <rect x="480" y="452" width="132" height="72" rx="9" fill="rgba(124,138,236,.10)" stroke="#7c8aec" stroke-width="1.5" opacity="{{ hl.episodic }}" style="transition:opacity .3s"></rect>
+          <text x="493" y="476" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="14.5" font-weight="600" fill="#ececea">Episodic</text>
+          <text x="493" y="495" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96" opacity="{{ langZh }}">34 episodes</text><text x="493" y="495" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96" opacity="{{ langEn }}">34 episodes</text>
+        </g>
+
+        <g>
+          <rect x="44" y="576" width="384" height="52" rx="9" fill="#18181b" stroke="#2c2c31"></rect>
+          <rect x="44" y="576" width="384" height="52" rx="9" fill="rgba(124,138,236,.10)" stroke="#7c8aec" stroke-width="1.5" opacity="{{ hl.consolidation }}" style="transition:opacity .3s"></rect>
+          <text x="57" y="600" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="14.5" font-weight="600" fill="#ececea" opacity="{{ langZh }}">Consolidation &#183; 每 6 轮一次</text><text x="57" y="600" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="14.5" font-weight="600" fill="#ececea" opacity="{{ langEn }}">Consolidation &#183; every 6 exchanges</text>
+          <text x="57" y="619" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96" opacity="{{ langZh }}">0/12 排队中 → 沉淀成事实</text><text x="57" y="619" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96" opacity="{{ langEn }}">0/12 queued → distilled into facts</text>
+        </g>
+        <path d="M340 576 L340 528" fill="none" stroke="#3a3a40" stroke-width="1.4" marker-end="url(#sy-arr)"></path>
+        <path d="M340 576 L340 528" fill="none" stroke="#7c8aec" stroke-width="1.8" opacity="{{ hl.eConsolSem }}" style="transition:opacity .3s"></path>
+        <text x="350" y="560" text-anchor="start" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#6f6e69" opacity="{{ langZh }}">沉淀</text><text x="350" y="560" text-anchor="start" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#6f6e69" opacity="{{ langEn }}">distill</text>
+        <rect x="736" y="40" width="280" height="372" rx="14" fill="rgba(124,138,236,.06)" stroke="#2f3252"></rect>
+        <text x="752" y="64" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="11" letter-spacing="1.8" font-weight="600" fill="#5f5e66">LLM OPS</text>
+        <text x="752" y="82" text-anchor="start" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#6f6e69" opacity="{{ langZh }}">观察每一次运行 · 改进这个 agent</text><text x="752" y="82" text-anchor="start" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#6f6e69" opacity="{{ langEn }}">observes each run · improves the agent</text>
+        <path d="M660 104 C700 100 726 100 752 106" fill="none" stroke="#3a3a40" stroke-width="1.4" marker-end="url(#sy-arr)"></path>
+        <path d="M660 104 C700 100 726 100 752 106" fill="none" stroke="#7c8aec" stroke-width="1.8" opacity="{{ hl.eReplyTrace }}" style="transition:opacity .3s"></path>
+        <text x="688" y="96" text-anchor="start" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#6f6e69" opacity="{{ langZh }}">每一轮</text><text x="688" y="96" text-anchor="start" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#6f6e69" opacity="{{ langEn }}">each turn</text>
+
+        <g>
+          <rect x="752" y="92" width="250" height="50" rx="9" fill="#18181b" stroke="#2c2c31"></rect>
+          <rect x="752" y="92" width="250" height="50" rx="9" fill="rgba(124,138,236,.10)" stroke="#7c8aec" stroke-width="1.5" opacity="{{ hl.trace }}" style="transition:opacity .3s"></rect>
+          <text x="765" y="116" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="14.5" font-weight="600" fill="#ececea">Trace</text>
+          <text x="765" y="135" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96" opacity="{{ langZh }}">5 个文件 · 一直开着</text><text x="765" y="135" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96" opacity="{{ langEn }}">5 file(s) · always on</text>
+        </g>
+        <path d="M878 142 L878 156" fill="none" stroke="#3a3a40" stroke-width="1.4"></path>
+
+        <g>
+          <rect x="752" y="156" width="250" height="50" rx="9" fill="#18181b" stroke="#2c2c31"></rect>
+          <rect x="752" y="156" width="250" height="50" rx="9" fill="rgba(124,138,236,.10)" stroke="#7c8aec" stroke-width="1.5" opacity="{{ hl.evalNode }}" style="transition:opacity .3s"></rect>
+          <text x="765" y="180" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="14.5" font-weight="600" fill="#ececea">Eval</text>
+          <text x="765" y="199" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96">deterministic + judge</text>
+        </g>
+        <path d="M878 206 L878 220" fill="none" stroke="#3a3a40" stroke-width="1.4"></path>
+
+        <g>
+          <rect x="752" y="220" width="250" height="50" rx="9" fill="#18181b" stroke="#2c2c31"></rect>
+          <rect x="752" y="220" width="250" height="50" rx="9" fill="rgba(124,138,236,.10)" stroke="#7c8aec" stroke-width="1.5" opacity="{{ hl.gateNode }}" style="transition:opacity .3s"></rect>
+          <text x="765" y="244" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="14.5" font-weight="600" fill="#ececea">Release gate</text>
+          <text x="765" y="263" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96">det pass &#183; judge pass</text>
+        </g>
+        <path d="M878 270 L878 284" fill="none" stroke="#3a3a40" stroke-width="1.4"></path>
+
+        <g>
+          <rect x="752" y="284" width="250" height="50" rx="9" fill="#18181b" stroke="#2c2c31"></rect>
+          <rect x="752" y="284" width="250" height="50" rx="9" fill="rgba(124,138,236,.10)" stroke="#7c8aec" stroke-width="1.5" opacity="{{ hl.release }}" style="transition:opacity .3s"></rect>
+          <text x="765" y="308" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="14.5" font-weight="600" fill="#ececea">Release</text>
+          <text x="765" y="327" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#8d8c96">new prompt &#183; model &#183; config</text>
+        </g>
+        <path d="M752 312 C712 324 698 352 676 358" fill="none" stroke="#3a3a40" stroke-width="1.4" stroke-dasharray="5 5"></path>
+        <text x="596" y="346" text-anchor="end" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#6f6e69" opacity="{{ langZh }}">更好的提示词 + 配置</text><text x="596" y="346" text-anchor="end" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10.5" fill="#6f6e69" opacity="{{ langEn }}">improved prompt + config</text>
+      </svg>
+    </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px">
+          <div style="background:#141416;border:1px solid #26262b;border-radius:14px;padding:17px 19px">
+            <div style="font:600 11px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:2px;color:#e0a458">RETRIEVAL GATE · 48 turns</div>
+            <div style="margin-top:7px;font:400 12.5px/1.5 inherit;color:#8d8c96;text-wrap:pretty">{{ t.gatePanel }}</div>
+            <div style="margin-top:15px;display:flex;height:10px;border-radius:6px;overflow:hidden;background:#1e1e22">
+              <div style="width:61%;background:#6f6e69"></div>
+              <div style="width:39%;background:#7c8aec"></div>
+            </div>
+            <div style="margin-top:9px;display:flex;flex-wrap:wrap;gap:6px;justify-content:space-between;font:400 11px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#8d8c96">
+              <span>skip 29</span><span style="color:#7c8aec">retrieve 19</span>
+            </div>
+            <div style="margin-top:16px;display:flex;flex-direction:column;gap:8px;padding-top:15px;border-top:1px solid #1f1f23">
+              <div style="font:400 12.5px/1.5 ui-monospace,'SF Mono',Menlo,monospace">you &#8250; 12 乘 8 等于几？</div>
+              <div style="font:400 12.5px/1.5 ui-monospace,'SF Mono',Menlo,monospace;color:#6f6e69;padding-left:22px">gate &#183; skip &#8212; {{ t.gateSkip }}</div>
+              <div style="margin-top:5px;font:400 12.5px/1.5 ui-monospace,'SF Mono',Menlo,monospace">you &#8250; 我什么时候见 Alex？</div>
+              <div style="font:400 12.5px/1.5 ui-monospace,'SF Mono',Menlo,monospace;color:#6f6e69;padding-left:22px">gate &#183; <span style="color:#7c8aec">retrieve</span> &#8212; {{ t.gateRetrieve }}</div>
+            </div>
+          </div>
+
+          <div style="background:#141416;border:1px solid #26262b;border-radius:14px;padding:17px 19px">
+            <div style="font:600 11px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:2px;color:#7c8aec">RECENT TURNS</div>
+            <div style="margin-top:12px;display:flex;flex-direction:column">
+              <sc-for list="{{ turns }}" as="tn" hint-placeholder-count="5">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #1f1f23">
+                  <div style="min-width:0;font:400 12.5px/1.35 inherit;color:#d8d7de;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ tn.msg }}</div>
+                  <div style="display:flex;gap:9px;font:400 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#5f5e66;white-space:nowrap">
+                    <span style="color:{{ tn.gateColor }}">{{ tn.gate }}</span>
+                    <span>{{ tn.iter }}</span>
+                    <span>{{ tn.secs }}</span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isLoop }}">
+      <div style="padding:20px 28px 30px;display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+        <div style="flex:1 1 250px;min-width:0;background:#141416;border:1px solid #26262b;border-radius:14px;overflow:hidden">
+          <div style="padding:13px 16px;border-bottom:1px solid #1f1f23;font:600 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:2px;color:#5f5e66">TURNS · 48</div>
+          <sc-for list="{{ turns }}" as="tn" hint-placeholder-count="5">
+            <div style="position:relative;padding:11px 16px;border-bottom:1px solid #1f1f23;cursor:pointer" style-hover="background:#16161a">
+              <div style="position:absolute;inset:0;background:#20223a;box-shadow:inset 2px 0 0 #7c8aec;opacity:{{ tn.sel }};pointer-events:none"></div>
+              <div style="position:relative;font:400 12.5px/1.4 inherit;color:#d8d7de;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ tn.msg }}</div>
+              <div style="position:relative;margin-top:5px;display:flex;gap:9px;font:400 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#5f5e66">
+                <span style="color:{{ tn.gateColor }}">{{ tn.gate }}</span><span>{{ tn.iter }}</span><span>{{ tn.secs }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="flex:3 1 460px;min-width:0;display:flex;flex-direction:column;gap:14px">
+          <div style="background:#141416;border:1px solid #26262b;border-radius:14px;padding:17px 19px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap">
+              <div style="font:400 14px/1.4 inherit;color:#ececea">搜一下世界杯还没打的比赛，每一场都加进我的日历</div>
+              <div style="display:flex;gap:12px;font:400 11px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#5f5e66"><span style="color:#7c8aec">retrieve</span><span>8 iter</span><span>11.4s</span><span style="color:#4cc38a">$0.041</span></div>
+            </div>
+            <div style="margin-top:9px;font:400 12.5px/1.5 inherit;color:#8d8c96;text-wrap:pretty">{{ t.loopNote }}</div>
+          </div>
+
+          <div style="background:#141416;border:1px solid #26262b;border-radius:14px;overflow:hidden">
+            <div style="padding:13px 19px;border-bottom:1px solid #1f1f23;display:flex;justify-content:space-between;font:600 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:2px;color:#5f5e66"><span>ITERATIONS</span><span>{{ t.stopReason }}</span></div>
+            <div style="padding:6px 0">
+              <sc-for list="{{ iters }}" as="it" hint-placeholder-count="6">
+                <div style="display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;padding:11px 19px;border-bottom:1px solid #1a1a1d">
+                  <div style="flex:0 0 24px;font:400 11px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#45454b">{{ it.n }}</div>
+                  <div style="flex:0 0 62px;font:600 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:1.3px;color:{{ it.color }}">{{ it.kind }}</div>
+                  <div style="flex:1 1 220px;min-width:0;font:400 12.5px/1.5 ui-monospace,'SF Mono',Menlo,monospace;color:#a9a8b3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ it.detail }}</div>
+                  <div style="flex:0 0 auto;margin-left:auto;font:400 11px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#5f5e66">{{ it.ms }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isMemory }}">
+      <div style="padding:20px 28px 30px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;gap:7px">
+          <sc-for list="{{ memTabs }}" as="mt" hint-placeholder-count="4">
+            <button onClick="{{ mt.pick }}" style="padding:7px 14px;border-radius:8px;border:1px solid {{ mt.bd }};background:{{ mt.bg }};color:{{ mt.fg }};cursor:pointer;font:500 11.5px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:.6px">{{ mt.label }}</button>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+          <div style="background:#141416;border:1px solid #26262b;border-radius:11px;padding:14px 15px">
+            <div style="font:600 20px/1 ui-monospace,'SF Mono',Menlo,monospace">126</div>
+            <div style="margin-top:7px;font:400 11px/1.45 ui-monospace,'SF Mono',Menlo,monospace;color:#8d8c96">semantic · {{ t.mFacts }}</div>
+          </div>
+          <div style="background:#141416;border:1px solid #26262b;border-radius:11px;padding:14px 15px">
+            <div style="font:600 20px/1 ui-monospace,'SF Mono',Menlo,monospace">34</div>
+            <div style="margin-top:7px;font:400 11px/1.45 ui-monospace,'SF Mono',Menlo,monospace;color:#8d8c96">episodic · {{ t.mEpisodes }}</div>
+          </div>
+          <div style="background:#141416;border:1px solid #26262b;border-radius:11px;padding:14px 15px">
+            <div style="font:600 20px/1 ui-monospace,'SF Mono',Menlo,monospace">3</div>
+            <div style="margin-top:7px;font:400 11px/1.45 ui-monospace,'SF Mono',Menlo,monospace;color:#8d8c96">procedural · {{ t.mSkills }}</div>
+          </div>
+        </div>
+
+        <div style="background:#141416;border:1px solid #26262b;border-radius:14px;overflow:hidden">
+          <div style="padding:14px 19px;border-bottom:1px solid #1f1f23;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 16px">
+            <div>
+              <div style="font:600 11px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:2px;color:#7c8aec">{{ memPanelTitle }}</div>
+              <div style="margin-top:6px;font:400 12px/1.45 inherit;color:#8d8c96">{{ memPanelNote }}</div>
+            </div>
+            <input placeholder="{{ t.searchMemory }}" style="width:100%;max-width:220px;min-width:0;flex:1 1 160px;padding:7px 11px;background:#18181b;border:1px solid #2c2c31;border-radius:8px;color:#ececea;font:400 12px/1.3 ui-monospace,'SF Mono',Menlo,monospace;outline:none" style-focus="border-color:#7c8aec">
+          </div>
+          <div>
+            <sc-for list="{{ memRows }}" as="r" hint-placeholder-count="6">
+              <div style="display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;padding:12px 19px;border-bottom:1px solid #1a1a1d">
+                <div style="flex:1 1 200px;min-width:0;font:400 13px/1.45 inherit;color:#d8d7de">{{ r.text }}</div>
+                <div style="flex:0 0 auto;white-space:nowrap;font:400 11px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#8d8c96">{{ r.tag }}</div>
+                <div style="flex:0 0 auto;white-space:nowrap;font:400 11px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#5f5e66">{{ r.when }}</div>
+                <div style="flex:0 0 auto;white-space:nowrap;font:400 11px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#7c8aec;cursor:pointer">{{ t.edit }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="background:#141416;border:1px solid #26262b;border-radius:14px;padding:17px 19px">
+          <div style="font:600 11px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:2px;color:#e0a458">CONSOLIDATION</div>
+          <div style="margin-top:7px;font:400 12.5px/1.55 inherit;color:#8d8c96;text-wrap:pretty">{{ t.consPanel }}</div>
+          <div style="margin-top:13px;display:flex;flex-direction:column;gap:7px;font:400 12px/1.5 ui-monospace,'SF Mono',Menlo,monospace;color:#a9a8b3">
+            <div>turn 44 &#8594; <span style="color:#4cc38a">+2</span> facts &#183; “Alex 更喜欢上午开会”, “周六 8:00 游泳”</div>
+            <div>turn 39 &#8594; <span style="color:#4cc38a">+1</span> fact &#183; “不喜欢周一开会”</div>
+            <div>turn 33 &#8594; <span style="color:#6f6e69">0</span> facts &#183; {{ t.nothingWorth }}</div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isGraph }}">
+      <div style="padding:20px 28px 30px;display:flex;flex-direction:column;gap:14px">
+        <div style="background:#141416;border:1px solid #26262b;border-radius:14px;overflow:hidden">
+          <div style="padding:15px 19px;border-bottom:1px solid #1f1f23;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 16px">
+            <div>
+              <div style="font:600 11px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:2px;color:#e0a458">TRIAGE TOPOLOGY</div>
+              <div style="margin-top:7px;font:400 12.5px/1.45 inherit;color:#8d8c96">{{ t.graphNote }}</div>
+            </div>
+            <div style="padding:6px 12px;background:#18181b;border:1px solid #2c2c31;border-radius:8px;font:400 11px/1.4 ui-monospace,'SF Mono',Menlo,monospace;color:#a9a8b3;min-width:0;overflow-wrap:anywhere">SYRUP_GRAPH_WORKFLOWS=1</div>
+          </div>
+          <div style="padding:26px 22px;display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+            <div style="padding:10px 14px;background:#1e1e22;border:1px solid #2c2c31;border-radius:20px;font:500 11px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:1px;color:#d8d7de">START</div>
+            <div style="font:400 15px/1 ui-monospace,monospace;color:#45454b">&#8250;</div>
+            <div style="display:flex;flex-direction:column;gap:8px;flex:1 1 200px;min-width:180px">
+              <div style="background:#18181b;border:1px solid #2c2c31;border-radius:10px;padding:11px 14px">
+                <div style="font:600 11px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:1.3px">CLASSIFY</div>
+                <div style="margin-top:6px;font:400 11.5px/1.45 inherit;color:#8d8c96">{{ t.classify }}</div>
+              </div>
+              <div style="background:#18181b;border:1px solid #2c2c31;border-radius:10px;padding:11px 14px">
+                <div style="font:600 11px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:1.3px">CHECK CALENDAR</div>
+                <div style="margin-top:6px;font:400 11.5px/1.45 inherit;color:#8d8c96">{{ t.checkCal }}</div>
+              </div>
+            </div>
+            <div style="font:400 15px/1 ui-monospace,monospace;color:#45454b">&#8250;</div>
+            <div style="padding:12px 16px;background:#1e1e22;border:1px solid #333338;border-radius:22px;font:500 11.5px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:1.4px;color:#ececea">ROUTE</div>
+            <div style="font:400 15px/1 ui-monospace,monospace;color:#45454b">&#8250;</div>
+            <div style="display:flex;flex-direction:column;gap:8px;flex:1.1 1 210px;min-width:180px">
+              <div style="background:#18181b;border:1px solid #2c2c31;border-radius:10px;padding:11px 14px">
+                <div style="font:600 11px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:1.3px">QUICK REPLY</div>
+                <div style="margin-top:6px;font:400 11.5px/1.45 inherit;color:#8d8c96">{{ t.quickReply }}</div>
+              </div>
+              <div style="background:#18181b;border:1px solid #2c2c31;border-radius:10px;padding:11px 14px">
+                <div style="font:600 11px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:1.3px;color:#7c8aec">FULL AGENT</div>
+                <div style="margin-top:6px;font:400 11.5px/1.45 inherit;color:#8d8c96">{{ t.fullAgent }}</div>
+              </div>
+            </div>
+          </div>
+          <div style="padding:11px 19px;border-top:1px solid #1f1f23;font:400 11px/1.5 ui-monospace,'SF Mono',Menlo,monospace;color:#5f5e66">syrup/graph/engine.py &#183; {{ t.fallback }}</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px">
+          <div style="background:#141416;border:1px solid #26262b;border-radius:14px;padding:17px 19px">
+            <div style="font:600 11px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:2px;color:#7c8aec">ROUTES · 48 turns</div>
+            <div style="margin-top:15px;display:flex;flex-direction:column;gap:11px">
+              <div>
+                <div style="display:flex;justify-content:space-between;font:400 11.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#a9a8b3"><span>quick_reply</span><span>17</span></div>
+                <div style="margin-top:6px;height:7px;border-radius:4px;background:#1e1e22;overflow:hidden"><div style="width:35%;height:100%;background:#e0a458"></div></div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font:400 11.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#a9a8b3"><span>full_agent</span><span>29</span></div>
+                <div style="margin-top:6px;height:7px;border-radius:4px;background:#1e1e22;overflow:hidden"><div style="width:60%;height:100%;background:#7c8aec"></div></div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font:400 11.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#a9a8b3"><span>fallback &#8594; loop</span><span>2</span></div>
+                <div style="margin-top:6px;height:7px;border-radius:4px;background:#1e1e22;overflow:hidden"><div style="width:5%;height:100%;background:#6f6e69"></div></div>
+              </div>
+            </div>
+          </div>
+          <div style="background:#141416;border:1px solid #26262b;border-radius:14px;padding:17px 19px">
+            <div style="font:600 11px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:2px;color:#7c8aec">LAST ROUTE DECISIONS</div>
+            <div style="margin-top:13px;display:flex;flex-direction:column;gap:9px;font:400 12px/1.5 ui-monospace,'SF Mono',Menlo,monospace;color:#a9a8b3">
+              <div>“谢谢！” &#8594; <span style="color:#e0a458">quick_reply</span> &#183; 0.4s</div>
+              <div>“周六安排个游泳” &#8594; <span style="color:#7c8aec">full_agent</span> &#183; 4.1s</div>
+              <div>“我今天日历上有什么？” &#8594; <span style="color:#7c8aec">full_agent</span> &#183; 2.2s</div>
+              <div>“早” &#8594; <span style="color:#e0a458">quick_reply</span> &#183; 0.3s</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isOps }}">
+      <div style="padding:20px 28px 30px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px">
+          <div style="background:#141416;border:1px solid #26262b;border-radius:12px;padding:16px 18px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between"><div style="font:600 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:1.8px;color:#5f5e66">DETERMINISTIC</div><div style="font:400 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#4cc38a">100%</div></div>
+            <div style="margin-top:12px;font:600 22px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#4cc38a">68 / 68</div>
+            <div style="margin-top:8px;font:400 11.5px/1.5 inherit;color:#8d8c96">{{ t.detNote }}</div>
+          </div>
+          <div style="background:#141416;border:1px solid #26262b;border-radius:12px;padding:16px 18px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between"><div style="font:600 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:1.8px;color:#5f5e66">JUDGE</div><div style="font:400 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#8d8c96">threshold 7.0</div></div>
+            <div style="margin-top:12px;font:600 22px/1 ui-monospace,'SF Mono',Menlo,monospace">8.4 <span style="font-size:13px;color:#5f5e66">/ 10</span></div>
+            <div style="margin-top:8px;font:400 11.5px/1.5 inherit;color:#8d8c96">{{ t.judgeNote }}</div>
+          </div>
+          <div style="background:#141416;border:1px solid #26262b;border-radius:12px;padding:16px 18px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between"><div style="font:600 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:1.8px;color:#5f5e66">RELEASE GATE</div><div style="font:400 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#4cc38a">pass</div></div>
+            <div style="margin-top:12px;font:600 22px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#4cc38a">make gate</div>
+            <div style="margin-top:8px;font:400 11.5px/1.5 inherit;color:#8d8c96">{{ t.gateOps }}</div>
+          </div>
+        </div>
+
+        <div style="background:#141416;border:1px solid #26262b;border-radius:14px;overflow:hidden">
+          <div style="padding:14px 19px;border-bottom:1px solid #1f1f23;font:600 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:2px;color:#5f5e66">SLOWEST TURNS</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px 14px;padding:10px 19px;border-bottom:1px solid #1f1f23;font:400 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#45454b">
+            <div style="flex:1 1 200px;min-width:0">{{ t.thTurn }}</div><div style="flex:0 0 62px">latency</div><div style="flex:0 0 62px">cost</div><div style="flex:0 0 170px">tools</div>
+          </div>
+          <sc-for list="{{ slow }}" as="s" hint-placeholder-count="4">
+            <div style="display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;padding:12px 19px;border-bottom:1px solid #1a1a1d">
+              <div style="flex:1 1 200px;min-width:0;font:400 12.5px/1.4 inherit;color:#d8d7de;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.msg }}</div>
+              <div style="flex:0 0 62px;font:400 11.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#a9a8b3">{{ s.lat }}</div>
+              <div style="flex:0 0 62px;font:400 11.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#4cc38a">{{ s.cost }}</div>
+              <div style="flex:1 1 170px;min-width:0;font:400 11.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#5f5e66;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ s.tools }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="background:#141416;border:1px solid #26262b;border-radius:14px;padding:17px 19px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px">
+            <div style="font:600 11px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:2px;color:#4cc38a">COST · usage.jsonl</div>
+            <div style="font:400 11px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#5f5e66">{{ t.costNote }}</div>
+          </div>
+          <div style="margin-top:18px;display:flex;align-items:flex-end;gap:7px;height:96px">
+            <sc-for list="{{ bars }}" as="b" hint-placeholder-count="14">
+              <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;gap:6px">
+                <div style="height:{{ b.h }};background:{{ b.color }};border-radius:3px"></div>
+                <div style="font:400 9.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#45454b;text-align:center">{{ b.day }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isTools }}">
+      <div style="padding:20px 28px 30px;display:flex;flex-direction:column;gap:14px">
+        <sc-for list="{{ toolGroups }}" as="g" hint-placeholder-count="3">
+          <div style="background:#141416;border:1px solid #26262b;border-radius:14px;overflow:hidden">
+            <div style="padding:14px 19px;border-bottom:1px solid #1f1f23;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 16px">
+              <div style="font:600 11px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:2px;color:#7c8aec">{{ g.name }}</div>
+              <div style="font:400 11px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#5f5e66">{{ g.note }}</div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+              <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="4">
+                <div style="padding:13px 19px;border-bottom:1px solid #1a1a1d;display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+                  <div style="min-width:0">
+                    <div style="font:500 12.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#ececea">{{ i.name }}</div>
+                    <div style="margin-top:6px;font:400 11.5px/1.45 inherit;color:#8d8c96">{{ i.desc }}</div>
+                  </div>
+                  <div style="font:400 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:{{ i.color }};white-space:nowrap">{{ i.calls }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isDatabase }}">
+      <div style="padding:20px 28px 30px;display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+        <div style="flex:1 1 200px;min-width:0;background:#141416;border:1px solid #26262b;border-radius:14px;overflow:hidden">
+          <div style="padding:13px 16px;border-bottom:1px solid #1f1f23;font:600 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:2px;color:#5f5e66">TABLES</div>
+          <sc-for list="{{ tables }}" as="tb" hint-placeholder-count="6">
+            <div style="position:relative;display:flex;justify-content:space-between;gap:10px;padding:11px 16px;border-bottom:1px solid #1a1a1d;cursor:pointer" style-hover="background:#16161a">
+              <div style="position:absolute;inset:0;background:#20223a;box-shadow:inset 2px 0 0 #7c8aec;opacity:{{ tb.sel }};pointer-events:none"></div>
+              <div style="position:relative;font:400 12px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#d8d7de">{{ tb.name }}</div>
+              <div style="position:relative;font:400 11px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#5f5e66">{{ tb.rows }}</div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="flex:3 1 420px;min-width:0;display:flex;flex-direction:column;gap:14px">
+          <div style="background:#141416;border:1px solid #26262b;border-radius:14px;padding:16px 19px">
+            <div style="font:600 11px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:2px;color:#7c8aec">SQL CONSOLE · {{ t.readOnly }}</div>
+            <div style="margin-top:12px;padding:13px 15px;background:#18181b;border:1px solid #2c2c31;border-radius:10px;font:400 12.5px/1.6 ui-monospace,'SF Mono',Menlo,monospace;color:#ececea">select text, created_at from facts order by created_at desc limit 5;</div>
+            <div style="margin-top:10px;display:flex;gap:9px">
+              <button style="padding:7px 14px;border:1px solid #7c8aec;border-radius:8px;background:#20223a;color:#ececea;cursor:pointer;font:500 11.5px/1 ui-monospace,'SF Mono',Menlo,monospace">{{ t.run }}</button>
+              <div style="align-self:center;font:400 11px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#5f5e66">5 rows · 3 ms</div>
+            </div>
+          </div>
+
+          <div style="background:#141416;border:1px solid #26262b;border-radius:14px;overflow:hidden">
+            <div style="display:flex;flex-wrap:wrap;gap:6px 14px;padding:11px 19px;border-bottom:1px solid #1f1f23;font:400 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#45454b">
+              <div style="flex:1 1 200px;min-width:0">text</div><div style="flex:0 0 auto">created_at</div>
+            </div>
+            <sc-for list="{{ memRows }}" as="r" hint-placeholder-count="5">
+              <div style="display:flex;flex-wrap:wrap;gap:6px 14px;padding:12px 19px;border-bottom:1px solid #1a1a1d">
+                <div style="flex:1 1 200px;min-width:0;font:400 12.5px/1.45 ui-monospace,'SF Mono',Menlo,monospace;color:#d8d7de">{{ r.text }}</div>
+                <div style="flex:0 0 auto;white-space:nowrap;font:400 11.5px/1.45 ui-monospace,'SF Mono',Menlo,monospace;color:#5f5e66">{{ r.stamp }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </main>
+
+  <aside style="width:320px;flex:0 1 320px;min-width:292px;border-left:1px solid #1c1c1f;background:#0e0e10;display:flex;flex-direction:column">
+    <div style="padding:16px 18px;border-bottom:1px solid #1c1c1f;display:flex;align-items:center;justify-content:space-between">
+      <div style="font:600 11px/1 ui-monospace,'SF Mono',Menlo,monospace;letter-spacing:2px;color:#8d8c96">CHAT</div>
+      <div style="display:flex;align-items:center;gap:7px;font:400 10.5px/1 ui-monospace,'SF Mono',Menlo,monospace;color:#5f5e66">
+        <span style="width:5px;height:5px;border-radius:50%;background:#7c8aec;animation:sy-pulse 1.2s infinite"></span>
+        <span>{{ stageLabel }}</span>
+      </div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+      <div style="align-self:flex-end;max-width:88%;padding:10px 13px;background:#20223a;border:1px solid #2f3252;border-radius:12px 12px 4px 12px;font:400 13px/1.55 inherit;color:#ececea">记住 Alex 更喜欢上午开会</div>
+      <div style="max-width:92%">
+        <div style="padding:10px 13px;background:#18181b;border:1px solid #26262b;border-radius:12px 12px 12px 4px;font:400 13px/1.6 inherit;color:#d8d7de">好，记下了。以后给你和 Alex 排会我会默认放在上午。</div>
+        <div style="margin-top:7px;display:flex;flex-wrap:wrap;gap:4px 9px;font:400 10.5px/1.3 ui-monospace,'SF Mono',Menlo,monospace;color:#45454b"><span>skip</span><span>2 iter</span><span>1.9s</span><span style="color:#4cc38a">+1 fact</span></div>
+      </div>
+      <div style="align-self:flex-end;max-width:88%;padding:10px 13px;background:#20223a;border:1px solid #2f3252;border-radius:12px 12px 4px 12px;font:400 13px/1.55 inherit;color:#ececea">周五和 Alex 约个碰头</div>
+      <div style="max-width:92%">
+        <div style="padding:10px 13px;background:#18181b;border:1px solid #26262b;border-radius:12px 12px 12px 4px;font:400 13px/1.6 inherit;color:#d8d7de">已排在周五 09:00 —— 用的是你之前告诉我的偏好。</div>
+        <div style="margin-top:7px;display:flex;flex-wrap:wrap;gap:4px 9px;font:400 10.5px/1.3 ui-monospace,'SF Mono',Menlo,monospace;color:#45454b"><span style="color:#7c8aec">retrieve</span><span>3 iter</span><span>3.4s</span><span>create_event</span></div>
+      </div>
+      <div style="max-width:92%;padding:9px 12px;border:1px dashed #2c2c31;border-radius:10px;font:400 11.5px/1.5 ui-monospace,'SF Mono',Menlo,monospace;color:#6f6e69">{{ t.streaming }}</div>
+    </div>
+    <div style="padding:12px 14px;border-top:1px solid #1c1c1f;display:flex;gap:8px">
+      <input placeholder="{{ t.msgPlaceholder }}" style="flex:1;min-width:0;padding:9px 12px;background:#141416;border:1px solid #26262b;border-radius:9px;color:#ececea;font:400 12.5px/1.3 inherit;outline:none" style-focus="border-color:#7c8aec">
+      <button style="flex:0 0 auto;white-space:nowrap;padding:9px 14px;border:1px solid #7c8aec;border-radius:9px;background:#20223a;color:#ececea;cursor:pointer;font:500 12px/1.3 ui-monospace,'SF Mono',Menlo,monospace">{{ t.send }}</button>
+    </div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;lang&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;zh&quot;,&quot;en&quot;],&quot;default&quot;:&quot;zh&quot;,&quot;tsType&quot;:&quot;'zh'|'en'&quot;,&quot;section&quot;:&quot;界面&quot;},&quot;animate&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;界面&quot;}}">
+const ZH = {
+  local: "本地", now: "当前",
+  eyebrow: { overview: "看着它思考", loop: "SYRUP/LOOP/AGENT.PY · 约 95 行", memory: "三种记忆 + 闸门 + 整理",
+    graph: "当一轮对话需要「形状」", ops: "拿证据，不拿感觉", tools: "每个工具都要占提示词的位置", database: "你的记忆就是一个文件" },
+  title: { overview: "Overview", loop: "Loop", memory: "Memory", graph: "Graph", ops: "Ops", tools: "Tools", database: "Database" },
+  sub: { overview: "一条消息在四根支柱之间流动的全过程，逐段点亮。",
+    loop: "一轮对话里的每一次迭代，按顺序摊开：think、act、observe。",
+    memory: "语义（什么是真的）、情节（发生过什么）、程序（这件事该怎么做）—— 都可以直接编辑。",
+    graph: "循环之外的一层可选结构：分类和查日历并行跑，route 决定谁来回答。",
+    ops: "确定性测试和 LLM 裁判分开跑，release gate 守在上线之前。",
+    tools: "按来源分组的工具，以及它们真实的调用次数。",
+    database: "state.db 的实时浏览器：分表、表结构，还有一个只读 SQL 控制台。" },
+  k1: "今日轮次", k2: "累计花费", k3: "平均耗时 · p95 6.1s", k4: "闸门跳过检索的比例", k5: "已存事实",
+  archNote: "图里每个方框都是仓库里真实存在的一个目录。",
+  gatewayNote: "只搬运文本，不做任何决定", workingNote: "这一轮真正进模型的东西",
+  replyNote: "从进来的那扇门回去", gateNote: "这一轮到底需不需要记忆？",
+  consNote: "聊天很廉价，事实才是目的",
+  gatePanel: "61% 的轮次跳过了检索 —— 省下的是延迟，避开的是被无关记忆带偏。",
+  gateSkip: "纯数学，不需要记忆", gateRetrieve: "提到了用户自己的安排",
+  loopNote: "八次迭代：搜索、推理、逐场创建日程 —— 直到模型不再要工具，自然结束。",
+  stopReason: "停止原因：模型不再要工具",
+  mFacts: "事实", mEpisodes: "事件", mSkills: "技能",
+  searchMemory: "搜索记忆…", edit: "编辑",
+  consPanel: "每隔 N 轮，一道流程回头读原始对话，把值得留下的沉淀成持久事实。",
+  nothingWorth: "没有值得留下的东西",
+  graphNote: "这张图由引擎自己描述出来，画的就是它真正跑的东西。",
+  classify: "小模型读一遍消息", checkCal: "同时并行读本地日历",
+  quickReply: "小模型直接回；大模型根本不醒", fullAgent: "就是左边那个 loop，作为图里的一个节点",
+  fallback: "任何一环出问题，都回退到普通 loop",
+  detNote: "该调的工具调了吗 —— 0 或 1，没有模型打分",
+  judgeNote: "回复好不好 —— 由裁判模型打分", gateOps: "两套测试都必须过，才能发布",
+  thTurn: "轮次", costNote: "近 14 天 · 由 token 估算",
+  readOnly: "只读", run: "执行",
+  streaming: "正在流式输出… 事件同时写进 trace",
+  msgPlaceholder: "跟 Syrup 说点什么…", send: "发送",
+  dHarness: "HARNESS — 跑在你自己的机器上 · 这一轮本身是短暂的",
+  dWmSub: "每一轮重新组装", dReplySub: "→ 回到你手里",
+  dReplyOut: "回复从进来的那扇 gateway 出去", dSaveChats: "存下对话",
+  dOnlyIfNeeded: "只在需要时", dReadsAll: "闸门读这三种",
+  dMemPillars: "MEMORY — 三根支柱",
+  dProcSub: "怎么做 · SKILL.md · 3 skills", dSemSub: "持久事实 · 126 facts", dEpiSub: "34 episodes",
+  dEvery: "每 6 轮一次", dConsSub: "0/12 排队中 → 沉淀成事实", dDistill: "沉淀",
+  dOpsSub: "观察每一次运行 · 改进这个 agent", dEachTurn: "每一轮", dTraceSub: "5 个文件 · 一直开着",
+  dImproved: "更好的提示词 + 配置"
+};
+const EN = {
+  local: "local", now: "NOW",
+  eyebrow: { overview: "WATCH IT THINK", loop: "SYRUP/LOOP/AGENT.PY · ~95 LINES", memory: "THREE KINDS + GATE + CONSOLIDATION",
+    graph: "WHEN A TURN NEEDS A SHAPE", ops: "EVIDENCE, NOT VIBES", tools: "EVERY TOOL COSTS PROMPT ROOM", database: "YOUR MEMORY IS A FILE" },
+  title: { overview: "Overview", loop: "Loop", memory: "Memory", graph: "Graph", ops: "Ops", tools: "Tools", database: "Database" },
+  sub: { overview: "One turn, lit up as it moves through the four pillars.",
+    loop: "Every iteration of one turn, in order — think, act, observe.",
+    memory: "Semantic (what's true), episodic (what happened), procedural (how to do it) — all editable here.",
+    graph: "Opt-in structure around the loop: classify and calendar run side by side, route decides who answers.",
+    ops: "Deterministic tests and the LLM judge run apart; the release gate stands before anything ships.",
+    tools: "Tools grouped by source, with their real call counts.",
+    database: "A live browser over state.db — tables, schema, and a read-only SQL console." },
+  k1: "turns today", k2: "spent · all-time", k3: "avg turn · p95 6.1s", k4: "gate skipped memory", k5: "facts stored",
+  archNote: "Every box is a real directory in the repo.",
+  gatewayNote: "carries text, decides nothing", workingNote: "what actually enters the model",
+  replyNote: "back out the same door", gateNote: "does this turn need memory at all?",
+  consNote: "chat is cheap, facts are the point",
+  gatePanel: "61% of turns skipped memory — that's latency saved and bias avoided.",
+  gateSkip: "pure math", gateRetrieve: "references user's plans",
+  loopNote: "Eight iterations: search, reason, create one event per match — until the model stops asking for tools.",
+  stopReason: "stopped: no tool call",
+  mFacts: "facts", mEpisodes: "episodes", mSkills: "skills",
+  searchMemory: "Search memory…", edit: "edit",
+  consPanel: "Every N turns, a pass rereads the raw conversation and settles what's worth keeping into durable facts.",
+  nothingWorth: "nothing worth keeping",
+  graphNote: "The engine describes this topology itself, so the picture is what it runs.",
+  classify: "a small model reads the message", checkCal: "a local read, at the same time",
+  quickReply: "small model answers; the big one never wakes", fullAgent: "the loop on the left, as one node of this map",
+  fallback: "anything that goes wrong falls back to the plain loop",
+  detNote: "did it call the right tool — 0 or 1, no judge",
+  judgeNote: "is the reply any good — scored by a model", gateOps: "both suites must pass before release",
+  thTurn: "turn", costNote: "last 14 days · estimated from tokens",
+  readOnly: "read-only", run: "Run",
+  streaming: "streaming… the same events are written to the trace",
+  msgPlaceholder: "Message Syrup…", send: "Send",
+  dHarness: "HARNESS — runs on your laptop · the turn inside is ephemeral",
+  dWmSub: "assembled per turn", dReplySub: "→ back to you",
+  dReplyOut: "reply, out the same gateway", dSaveChats: "save chats",
+  dOnlyIfNeeded: "only if needed", dReadsAll: "the gate reads all three",
+  dMemPillars: "MEMORY — three pillars",
+  dProcSub: "how to act · SKILL.md · 3 skills", dSemSub: "durable facts · 126 facts", dEpiSub: "34 episodes",
+  dEvery: "every 6 exchanges", dConsSub: "0/12 queued → distilled into facts", dDistill: "distill",
+  dOpsSub: "observes each run · improves the agent", dEachTurn: "each turn", dTraceSub: "5 file(s) · always on",
+  dImproved: "improved prompt + config"
+};
+
+const STAGES = [
+  ["gateway", "gateway", "telegram"], ["gate", "gate", "retrieve"], ["memory", "memory", "3 facts"],
+  ["working", "working memory", "soul + tail"], ["think", "loop · think", "iter 3"],
+  ["act", "loop · act", "create_event"], ["observe", "loop · observe", "ok"],
+  ["consolidate", "consolidation", "+1 fact"], ["reply", "reply", "0.4s"], ["trace", "trace", "jsonl"]
+];
+
+class Component extends DCLogic {
+  state = { view: "overview", lang: null, stage: 0, memTab: "semantic", turn: 0, table: "facts" };
+
+  componentDidMount() {
+    if (this.props.animate === false) return;
+    this.timer = setInterval(() => this.setState(s => ({ stage: (s.stage + 1) % STAGES.length })), 1300);
+  }
+  componentWillUnmount() { clearInterval(this.timer); }
+
+  lang() { return this.state.lang ?? (this.props.lang || "zh"); }
+
+  renderVals() {
+    const v = this.state.view, zh = this.lang() === "zh", t0 = zh ? ZH : EN;
+    const t = Object.assign({}, t0, { eyebrow: t0.eyebrow[v], sub: t0.sub[v] });
+    const nav = {}, go = {};
+    ["overview", "loop", "memory", "graph", "ops", "tools", "database"].forEach(k => {
+      nav[k] = v === k ? 1 : 0;
+      go[k] = e => { e.preventDefault(); this.setState({ view: k }); };
+    });
+    const st = STAGES[this.state.stage], cur = st[0];
+    const on = {};
+    ["gateway", "gate", "memory", "working", "think", "act", "observe", "consolidate", "reply", "trace"].forEach(k => on[k] = cur === k ? 1 : 0);
+    on.loop = (cur === "think" || cur === "act" || cur === "observe") ? 1 : 0;
+
+    // archSVG node/edge highlights, keyed to the same stage clock
+    const LIT = {
+      gateway:     { gateway: 1, wm: 1, eGwWm: 1 },
+      gate:        { gate: 1, eGateWm: 1 },
+      memory:      { gate: 1, procedural: 1, semantic: 1, episodic: 1, eGateProc: 1, eGateSem: 1, eGateEpi: 1 },
+      working:     { wm: 1, eGateWm: 1 },
+      think:       { llm: 1, eWmLoop: 1 },
+      act:         { tools: 1 },
+      observe:     { tools: 1, llm: 1 },
+      consolidate: { consolidation: 1, semantic: 1, eConsolSem: 1 },
+      reply:       { reply: 1, eReplyGw: 1 },
+      trace:       { trace: 1, eReplyTrace: 1, eReplySave: 1 }
+    };
+    const hl = {};
+    ["gateway", "wm", "llm", "tools", "reply", "gate", "procedural", "semantic", "episodic", "consolidation",
+     "trace", "evalNode", "gateNode", "release", "eGwWm", "eWmLoop", "eGateWm", "eGateProc", "eGateSem",
+     "eGateEpi", "eConsolSem", "eReplyTrace", "eReplySave", "eReplyGw"].forEach(k => hl[k] = 0);
+    Object.assign(hl, LIT[cur] || {});
+
+    const turnsRaw = [
+      ["搜一下世界杯还没打的比赛，都加进日历", "retrieve", "8 iter", "11.4s"],
+      ["周六安排个游泳", "retrieve", "3 iter", "4.1s"],
+      ["记住 Alex 更喜欢上午开会", "skip", "2 iter", "1.9s"],
+      ["谢谢！", "quick", "0 iter", "0.4s"],
+      ["我今天日历上有什么？", "retrieve", "2 iter", "2.2s"]
+    ];
+    const turns = turnsRaw.map((r, i) => ({
+      msg: r[0], gate: r[1], iter: r[2], secs: r[3],
+      gateColor: r[1] === "retrieve" ? "#7c8aec" : r[1] === "quick" ? "#e0a458" : "#6f6e69",
+      sel: i === this.state.turn ? 1 : 0
+    }));
+
+    const iters = [
+      ["01", "THINK", "「先看看有哪些还没打的比赛」", "620 ms", "#7c8aec"],
+      ["02", "ACT", "search_web(query=\"world cup remaining fixtures\")", "1.9 s", "#e0a458"],
+      ["03", "OBSERVE", "6 results · 4 fixtures parsed", "12 ms", "#6f6e69"],
+      ["04", "THINK", "「时区要按本地算，再逐场建日程」", "540 ms", "#7c8aec"],
+      ["05", "ACT", "create_event(title=\"QF · ARG vs NED\", start=\"2026-06-27T21:00\")", "180 ms", "#e0a458"],
+      ["06", "ACT", "create_event(title=\"QF · BRA vs FRA\", start=\"2026-06-28T21:00\")", "160 ms", "#e0a458"],
+      ["07", "OBSERVE", "4 events written · calendar.ics + state.db", "24 ms", "#6f6e69"],
+      ["08", "THINK", "no tool call — 自然结束，回复人类", "410 ms", "#7c8aec"]
+    ].map(r => ({ n: r[0], kind: r[1], detail: r[2], ms: r[3], color: r[4] }));
+
+    const memSets = {
+      semantic: [
+        ["Alex 更喜欢上午开会", "preference", "2 天前", "2026-08-15 09:12"],
+        ["周六 08:00 固定去游泳", "routine", "3 天前", "2026-08-14 20:41"],
+        ["不喜欢周一开会", "preference", "6 天前", "2026-08-11 11:02"],
+        ["用 uv 管理 Python 环境", "fact", "1 周前", "2026-08-09 15:30"],
+        ["咖啡只喝手冲，不加奶", "preference", "2 周前", "2026-08-03 08:15"],
+        ["妹妹的生日是 11 月 4 日", "fact", "3 周前", "2026-07-28 22:07"]
+      ],
+      episodic: [
+        ["周二我们约了周六去游泳", "episode", "3 天前", "2026-08-14 20:41"],
+        ["把四场世界杯比赛加进了日历", "episode", "今天", "2026-08-17 06:02"],
+        ["修好了「不知道当前时间」的 bug", "episode", "5 天前", "2026-08-12 17:20"],
+        ["和 Alex 的周会改到了上午", "episode", "1 周前", "2026-08-10 09:45"]
+      ],
+      skills: [
+        ["weekly-brief · 每周复盘的流程", "SKILL.md", "已装", "skills/weekly-brief"],
+        ["schedule-pin · 把一件事订到一个时刻", "SKILL.md", "已装", "skills/schedule-pin"],
+        ["find-skills · 从社区找技能", "SKILL.md", "已装", "skills/community/find-skills"]
+      ],
+      soul: [
+        ["说话简短，先说结论", "SOUL.md", "手动编辑", "soul:1"],
+        ["排会默认放在上午", "SOUL.md", "由对话学到", "soul:2"],
+        ["不确定就问，不要编", "SOUL.md", "手动编辑", "soul:3"]
+      ]
+    };
+    const memRows = (memSets[this.state.memTab] || memSets.semantic).map(r => ({ text: r[0], tag: r[1], when: r[2], stamp: r[3] }));
+    const memTabs = ["semantic", "episodic", "skills", "soul"].map(k => {
+      const active = this.state.memTab === k;
+      return { label: k === "soul" ? "SOUL.md" : k, pick: () => this.setState({ memTab: k }),
+        bg: active ? "#20223a" : "#141416", bd: active ? "#7c8aec" : "#26262b", fg: active ? "#ececea" : "#8d8c96" };
+    });
+    const memTitles = { semantic: ["SEMANTIC · facts", zh ? "什么是真的 —— 可查询的源头在 state.db" : "What's true — the queryable source lives in state.db"],
+      episodic: ["EPISODIC · episodes", zh ? "发生过什么 —— 带时间的事件" : "What happened — events with a timestamp"],
+      skills: ["PROCEDURAL · skills", zh ? "这件事该怎么做 —— markdown 写的说明书" : "How to do a thing — instructions written in markdown"],
+      soul: ["SOUL.md", zh ? "Syrup 是谁 —— 每一轮都在提示词里" : "Who Syrup is — in the prompt on every turn"] };
+    const mt = memTitles[this.state.memTab] || memTitles.semantic;
+
+    const slow = [
+      ["搜一下世界杯还没打的比赛，都加进日历", "11.4s", "$0.041", "search_web, create_event ×4"],
+      ["帮我梳理这一周", "7.8s", "$0.028", "read_calendar, read_mail"],
+      ["把上周的复盘写成技能", "6.1s", "$0.019", "create_skill"],
+      ["周六安排个游泳", "4.1s", "$0.007", "create_event"]
+    ].map(r => ({ msg: r[0], lat: r[1], cost: r[2], tools: r[3] }));
+
+    const heights = [18, 34, 26, 52, 41, 63, 30, 47, 72, 55, 38, 66, 81, 44];
+    const bars = heights.map((h, i) => ({ h: h + "%", day: String(i + 4).padStart(2, "0"),
+      color: i === heights.length - 1 ? "#7c8aec" : "#2f3252" }));
+
+    const toolGroups = [
+      { name: "CALENDAR & NOTES", note: "syrup/tools/", items: [
+        ["create_event", zh ? "把一件事订到一个时刻" : "pin one thing to one moment", "31", "#a9a8b3"],
+        ["read_calendar", zh ? "读本地日历（ics + sqlite）" : "read the local calendar (ics + sqlite)", "44", "#a9a8b3"],
+        ["write_note", zh ? "写一条笔记到 outbox" : "write a note into the outbox", "6", "#5f5e66"],
+        ["search_web", zh ? "联网搜索（Tavily / DuckDuckGo）" : "search the web (Tavily / DuckDuckGo)", "12", "#a9a8b3"]
+      ]},
+      { name: "MEMORY", note: "syrup/tools/memory_admin.py", items: [
+        ["manage_memory", zh ? "改正或忘掉一条事实" : "correct or forget a fact", "9", "#a9a8b3"],
+        ["update_soul", zh ? "记下长期偏好到 SOUL.md" : "record a lasting preference in SOUL.md", "4", "#5f5e66"],
+        ["create_skill", zh ? "把一套流程存成技能" : "save a repeatable process as a skill", "3", "#5f5e66"],
+        ["search_memory", zh ? "FTS5 关键词检索" : "FTS5 keyword search", "19", "#a9a8b3"]
+      ]},
+      { name: "MCP · demo", note: ".syrup/mcp.json", items: [
+        ["demo_word_count", zh ? "外部 MCP 服务提供" : "provided by an external MCP server", "2", "#5f5e66"],
+        ["delegate_task", zh ? "把编码任务派给 pi（实验）" : "hand a coding task to pi (experimental)", "1", "#e0a458"]
+      ]}
+    ].map(g => ({ name: g.name, note: g.note, items: g.items.map(i => ({ name: i[0], desc: i[1], calls: i[2] + (zh ? " 次" : " calls"), color: i[3] })) }));
+
+    const tables = [["facts", "126"], ["episodes", "34"], ["skills", "3"], ["turns", "48"], ["events", "27"], ["usage", "312"]]
+      .map(r => ({ name: r[0], rows: r[1], sel: this.state.table === r[0] ? 1 : 0 }));
+
+    return {
+      t, nav, go, on, hl, turns, langZh: zh ? 1 : 0, langEn: zh ? 0 : 1, iters, memRows, memTabs, slow, bars, toolGroups, tables,
+      pageTitle: t0.title[v],
+      stageLabel: st[1], stageNote: st[2],
+      memPanelTitle: mt[0], memPanelNote: mt[1],
+      isOverview: v === "overview", isLoop: v === "loop", isMemory: v === "memory",
+      isGraph: v === "graph", isOps: v === "ops", isTools: v === "tools", isDatabase: v === "database",
+      setZh: () => this.setState({ lang: "zh" }), setEn: () => this.setState({ lang: "en" }),
+      zhBg: zh ? "#20223a" : "transparent", zhFg: zh ? "#ececea" : "#5f5e66",
+      enBg: zh ? "transparent" : "#20223a", enFg: zh ? "#5f5e66" : "#ececea"
+    };
+  }
+}
+</script>
+</body>
+</html>

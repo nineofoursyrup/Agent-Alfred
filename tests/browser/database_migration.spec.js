@@ -96,9 +96,9 @@ for (const [width,height] of [[1440,900],[1280,800],[390,844],[320,800]]) {
         scope:innerWidth<1100?'Chromium viewport simulation, no real mobile keyboard':'Chromium desktop viewport'};
     });
     expect(metrics.maxTouchPoints > 0).toBe(width < 1100);
-    expect(metrics.body.fontSize).toBe('14px');
+    expect(metrics.body.fontSize).toBe('13px');
     expect(metrics.table.fontSize).toBe('13px');
-    expect(metrics.meta.fontSize).toBe('12px');
+    expect(metrics.meta.fontSize).toBe('11px');
     expect(metrics.activeAnimations).toBe(0);
     const metricFile = testInfo.outputPath('geometry-and-environment.json');
     await writeFile(metricFile,JSON.stringify(metrics,null,2));
@@ -166,6 +166,8 @@ test('Database measures central 679/680 and shell 1099/1100 without clipping act
   }
   for (const width of [1099,1100]) {
     await page.setViewportSize({width,height:800});
+    // matchMedia updates shell visibility after the viewport resize arrives.
+    await expect.poll(()=>page.locator('.site-header').evaluate(el=>el.getBoundingClientRect().width)).toBe(width===1100?232:0);
     const geometry = await page.evaluate(()=>({viewport:innerWidth,
       central:document.querySelector('.page-body').getBoundingClientRect().width,
       rail:document.querySelector('.site-header').getBoundingClientRect().width,

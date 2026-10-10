@@ -39,7 +39,7 @@ test('S09 real Ops layout keeps filter, price and history controls reachable at 
       });
       expect(size.documentScroll).toBeLessThanOrEqual(size.documentClient+1);
       expect(size.pageScroll).toBeLessThanOrEqual(size.pageClient+1);
-      expect(size.font).toBe('14px');expect(size.tableFont).toBe('13px');expect(size.reducedMotion).toBe(true);
+      expect(size.font).toBe('13px');expect(size.tableFont).toBe('13px');expect(size.reducedMotion).toBe(true);
       metrics.push({label:`viewport-${width}`,height,...size});
       await page.screenshot({path:testInfo.outputPath(`ops-${width}-prices.png`)});
       if(width<1100){

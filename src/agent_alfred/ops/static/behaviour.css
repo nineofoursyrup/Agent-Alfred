@@ -1,4 +1,4 @@
-/* Behaviour uses the shared r1 tokens; its observations keep separate lifetimes. */
+/* Behaviour uses the shared Claude Design tokens; its observations keep separate lifetimes. */
 .behaviour-page {min-width:0}
 .behaviour-page > .card {padding:20px;margin:0 0 20px}
 .behaviour-page h2 {margin:0 0 12px}
@@ -10,18 +10,18 @@
 .behaviour-page p:empty {display:none}
 .behaviour-page label {margin:12px 0}
 .behaviour-page label > select,.behaviour-page label > textarea,.behaviour-page label > input:not([type=checkbox]) {display:block;width:100%;margin-top:6px}
-.behaviour-page .topology {padding:12px;margin:18px 0 0;border-color:var(--border);border-radius:12px;background:var(--raised)}
-.behaviour-page .topology p {font-size:12px;color:var(--secondary)}
+.behaviour-page .topology {padding:12px;margin:18px 0 0;border-color:var(--border);border-radius:var(--radius-panel);background:var(--raised)}
+.behaviour-page .topology p {font-size:var(--font-size-row);color:var(--muted)}
 .behaviour-page .topology-canvas {--topology-node:var(--selected)}
 .behaviour-page .topology-canvas text {fill:var(--text)}
 .behaviour-page .topology-controls {margin:10px 0}
-.behaviour-page .topology-controls button {font-size:12px}
+.behaviour-page .topology-controls button {font-size:var(--font-size-meta-large)}
 .behaviour-page .routing-statistics {background:var(--raised);margin-bottom:0}
 .behaviour-page .routing-statistics summary {cursor:pointer;font-weight:600}
-.behaviour-page .observation-summary {display:block;font-size:12px;font-weight:400;color:var(--secondary);margin-top:6px}
+.behaviour-page .observation-summary {display:block;font-size:var(--font-size-meta);font-family:var(--font-mono);font-weight:400;color:var(--muted);margin-top:6px}
 .behaviour-page .routing-chart {list-style:none;margin:12px 0;padding:0}
 .behaviour-page .routing-chart li {margin:12px 0}
-.behaviour-page .routing-chart-label {display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;font-size:13px}
+.behaviour-page .routing-chart-label {display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;font-size:var(--font-size-body)}
 .behaviour-page .routing-chart progress {appearance:none;display:block;width:100%;height:8px;margin-top:6px;border:0;border-radius:4px;background:var(--canvas);overflow:hidden}
 .behaviour-page .routing-chart progress::-webkit-progress-bar {background:var(--canvas)}
 .behaviour-page .routing-chart progress::-webkit-progress-value {background:var(--accent)}
@@ -34,5 +34,5 @@
 .behaviour-page .aggregation-sources label {margin:4px 0}
 .behaviour-page .aggregation-result {border-top:1px solid var(--border);margin-top:16px;padding-top:12px;overflow-wrap:anywhere}
 .behaviour-page .aggregation-result a {display:inline-block;margin:8px 12px 8px 0}
-.behaviour-page .aggregation-identity {font-size:12px;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;overflow-wrap:anywhere;color:var(--secondary)}
+.behaviour-page .aggregation-identity {font-size:var(--font-size-meta);font-family:var(--font-mono);overflow-wrap:anywhere;color:var(--secondary)}
 @container(max-width:679px){.behaviour-page > .card {padding:14px}.behaviour-page .routing-statistics {padding:12px}.behaviour-page .topology {padding:8px}}

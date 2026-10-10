@@ -1,0 +1,74 @@
+{
+  "captured_at": "2026-10-10T16:31:28.531389+00:00",
+  "base": "6a262ff37cac835777982e75d3a8950d6dbefd3c",
+  "candidate": "13aa84fe2c6a273e3c8d2857983159271ac10c4f",
+  "changed_paths": [
+    "docs/adr/0049-claude-design-original-is-dashboard-visual-authority.md",
+    "docs/design/dashboard-implementation/SPEC.md",
+    "docs/design/issue-122/RECIPES.md",
+    "docs/design/issue-122/reference/README.md",
+    "docs/design/issue-122/reference/Syrup Dashboard.dc.html",
+    "docs/design/issue-122/reference/support.js",
+    "src/agent_alfred/ops/static/accounting.css",
+    "src/agent_alfred/ops/static/app.css",
+    "src/agent_alfred/ops/static/behaviour.css",
+    "src/agent_alfred/ops/static/database.css",
+    "src/agent_alfred/ops/static/inbox-runs.css",
+    "src/agent_alfred/ops/static/memory.css",
+    "src/agent_alfred/ops/static/overview.css",
+    "src/agent_alfred/ops/static/settings.css",
+    "src/agent_alfred/ops/static/tools.css",
+    "tests/browser/accounting-layout.spec.js",
+    "tests/browser/accounting-migration.spec.js",
+    "tests/browser/database_migration.spec.js",
+    "tests/browser/inbox-run-sources.spec.js",
+    "tests/browser/tools-visual.spec.js"
+  ],
+  "production_css_count": 9,
+  "production_non_css_changes": [],
+  "preserved_paths": {
+    "CONTEXT.md": true,
+    "docs/dashboard.md": true,
+    "docs/design/issue-86": true,
+    "docs/adr/0045-syrup-visual-baseline-preserves-domain-evidence.md": true,
+    "docs/adr/0046-panel-visibility-preserves-page-lifecycle.md": true,
+    "docs/adr/0047-overview-preserves-source-snapshot-boundaries.md": true
+  },
+  "reference": [
+    {
+      "file": "Syrup Dashboard.dc.html",
+      "source_sha256": "54807adb38541fa2966e5b0c334b9d0e8d71c60b814245601bc4f35b8ec54b84",
+      "archive_sha256": "54807adb38541fa2966e5b0c334b9d0e8d71c60b814245601bc4f35b8ec54b84",
+      "byte_identical": true
+    },
+    {
+      "file": "support.js",
+      "source_sha256": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe",
+      "archive_sha256": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe",
+      "byte_identical": true
+    }
+  ],
+  "protected_main": {
+    "known_file_count": 150,
+    "changed_or_missing_count": 0,
+    "snapshot_sha256": "d984b560063cec3dd44b355231b32583231cfece72aaa7172025375b84482386",
+    "git_status": "M docs/dashboard.md\n?? README.md\n?? tmp/"
+  },
+  "screenshot_console": {
+    "errors": 1,
+    "warnings": 0,
+    "log": "screenshot-console.log",
+    "sha256": "70bab8da24be62bab9b1917ad693e9f5fbe967545620723aad56c11dcfb73449"
+  },
+  "screenshot_candidate_equivalence": {
+    "screenshot_candidate": "fca0b7194791d264adfa73897746d750176e166f",
+    "final_test_candidate": "13aa84fe2c6a273e3c8d2857983159271ac10c4f",
+    "production_src_tree_hashes": {
+      "fca0b7194791d264adfa73897746d750176e166f": "377935df23c9c1cddac61015567bde480a74b569",
+      "13aa84fe2c6a273e3c8d2857983159271ac10c4f": "377935df23c9c1cddac61015567bde480a74b569"
+    },
+    "byte_equivalent": true,
+    "only_changed_path": "tests/browser/accounting-migration.spec.js",
+    "initial_audit": "source-audit-initial.json"
+  }
+}

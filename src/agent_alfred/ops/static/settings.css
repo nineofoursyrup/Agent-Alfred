@@ -1,22 +1,22 @@
 .settings-page {overflow-wrap:anywhere}
 .settings-page section, .settings-page article, .settings-page details {min-width:0}
-.settings-page h2 {margin:12px 0;font-size:16px}
-.settings-page h3 {margin:0;font-size:14px}
-.settings-page h4 {font-size:14px;margin:8px 0}
+.settings-page h2 {margin:12px 0;font-size:var(--font-size-body)}
+.settings-page h3 {margin:0;font-size:var(--font-size-body)}
+.settings-page h4 {font-size:var(--font-size-body);margin:8px 0}
 .settings-page p {margin:8px 0}
 .settings-page .settings-group {margin:22px 0;border-top:1px solid var(--border);padding-top:14px}
-.settings-page .model-row, .settings-page .connection-row {padding:14px;margin:10px 0;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.settings-page .model-row, .settings-page .connection-row {padding:14px;margin:10px 0;border:1px solid var(--border);border-radius:var(--radius-panel);background:var(--surface)}
 .settings-page summary {cursor:pointer;padding:10px 0;font-weight:600;overflow-wrap:anywhere}
-.settings-page summary:focus-visible {outline:2px solid var(--focus);outline-offset:3px;border-radius:4px}
-.settings-page .model-row-state {color:var(--accent);font-size:13px}
+.settings-page summary:focus-visible {outline:3px solid var(--focus);outline-offset:3px;border-radius:4px}
+.settings-page .model-row-state {color:var(--accent);font-size:var(--font-size-body)}
 .settings-page .settings-actions {display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
 .settings-page .settings-actions p {flex-basis:100%}
-.settings-page .setting-field {margin:14px 0;padding:12px;border:1px solid var(--border);border-radius:8px}
+.settings-page .setting-field {margin:14px 0;padding:12px;border:1px solid var(--border);border-radius:var(--radius-control)}
 .settings-page .setting-field label {display:block;font-weight:600}
 .settings-page .setting-field input, .settings-page .setting-field select {display:block;width:100%;margin:8px 0}
-.settings-page .setting-help {color:var(--muted);font-size:12px;line-height:1.6}
+.settings-page .setting-help {color:var(--muted);font-size:var(--font-size-meta);line-height:1.6}
 .settings-page .setting-field button {margin:4px 8px 4px 0}
 .settings-page .model-probe {border-top:1px solid var(--border);margin-top:18px;padding-top:10px}
 .settings-page .model-probe a {display:block;margin-top:10px}
-.settings-page pre {white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;font-size:13px}
+.settings-page pre {white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;font-size:var(--font-size-body)}
 .settings-page .connection-row details {border-top:1px solid var(--border);margin-top:10px}

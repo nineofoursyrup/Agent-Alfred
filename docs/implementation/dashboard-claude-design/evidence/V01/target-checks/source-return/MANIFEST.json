@@ -1,0 +1,77 @@
+{
+  "candidate": "13aa84fe2c6a273e3c8d2857983159271ac10c4f",
+  "test_blob": "7ec1deec1e62d5956bc6583db41b7bf1e7410bf1",
+  "command": "CI=1 ALFRED_BROWSER_TEST_PORT=17810 npx playwright test tests/browser/accounting-migration.spec.js --grep 'S09 migrated Run explicit return restores its visible source' --output=output/playwright/source-return-retest",
+  "passed": 2,
+  "seconds": 7.1,
+  "exit_code": 0,
+  "typecheck_exit_code": 0,
+  "git_diff_check_exit_code": 0,
+  "files": [
+    {
+      "path": "results/.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903"
+    },
+    {
+      "path": "results/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/migrated-source-roundtrip.json",
+      "bytes": 6493,
+      "sha256": "3fcbb1be5d64412cc00c6df2ce4be3bf3bd458fc619cbe491ed993513a9f6ee1"
+    },
+    {
+      "path": "results/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/source-position-observations.json",
+      "bytes": 2955,
+      "sha256": "446a9827c376a39f698dcea1b9c909c36b43017651684b9f73db6f7d5b363b5a"
+    },
+    {
+      "path": "results/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/source-return-focus.png",
+      "bytes": 53517,
+      "sha256": "8647fb172c35b30e3018dbde62d9494c68ce68a56540b72bded2cae7fd4507e0"
+    },
+    {
+      "path": "results/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/source-return-none.png",
+      "bytes": 82060,
+      "sha256": "821cd3d4c0cb16bc2aa9e6f55268b806ba33556867e72a82595161cb0b5c7cb8"
+    },
+    {
+      "path": "results/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/source-return-scroll.png",
+      "bytes": 63078,
+      "sha256": "4155e562fb2b999d5af63eff5f7d5bb01ad2714e8f8fe9a47d56b8c014de5874"
+    },
+    {
+      "path": "results/accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/migrated-source-roundtrip.json",
+      "bytes": 6512,
+      "sha256": "9125dda6dc74326653d28972f60190670178609f91be03bfc372b4fc8138118e"
+    },
+    {
+      "path": "results/accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/source-position-observations.json",
+      "bytes": 2972,
+      "sha256": "541a5fa50c5debbd72ffe8b9d54cfd0fd9d0532b18aa6c49285eb767e6c43af5"
+    },
+    {
+      "path": "results/accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/source-return-focus.png",
+      "bytes": 118135,
+      "sha256": "ed1688bd1f1e2be4841fa47d1b3b0ed91d34e374d7d2d4337a132290e4fac144"
+    },
+    {
+      "path": "results/accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/source-return-none.png",
+      "bytes": 143895,
+      "sha256": "e89e6a835c969d9014887b3109f2567d0b9e24945157f3143a707a50c61c8f6f"
+    },
+    {
+      "path": "results/accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/source-return-scroll.png",
+      "bytes": 128189,
+      "sha256": "d72508444ef1cd2e0de9389259855250df3fa01117eff084b6aff10e192768af"
+    },
+    {
+      "path": "retest.log",
+      "bytes": 219,
+      "sha256": "36688c61ea91f59e6fec27d2e5c21143e68359a058b845b16d5a1b37bd93e9ff"
+    },
+    {
+      "path": "typecheck.log",
+      "bytes": 29,
+      "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f"
+    }
+  ]
+}

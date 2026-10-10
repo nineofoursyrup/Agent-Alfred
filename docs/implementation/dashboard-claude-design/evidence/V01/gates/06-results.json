@@ -1,0 +1,63 @@
+{
+  "candidate": "8997bd879489f1495d2bd3c0012590e86d133725",
+  "previous_delivery": "4f243645d6fc5176f04d9da5d2bd1374b839ec74",
+  "base": "6a262ff37cac835777982e75d3a8950d6dbefd3c",
+  "captured_at": "2026-10-10T17:01:38.954417+00:00",
+  "browser_test_port": 17810,
+  "batch": "06-review-fixes",
+  "checks": [
+    {
+      "name": "typecheck",
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "seconds": 0.54,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/06-typecheck-output.json",
+      "tail": [
+        "",
+        "> typecheck",
+        "> tsc --noEmit",
+        ""
+      ],
+      "output_sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f"
+    },
+    {
+      "name": "browser",
+      "command": [
+        "npm",
+        "run",
+        "test:browser"
+      ],
+      "exit_code": 0,
+      "seconds": 680.03,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/06-browser.log",
+      "tail": [
+        "·······················S08 Models central widths [{\"viewport\":[1440,900],\"central\":{\"x\":232,\"y\":57.9375,\"width\":888,\"height\":842.0625}},{\"viewport\":[1280,800],\"central\":{\"x\":232,\"y\":57.9375,\"width\":728,\"height\":742.0625}},{\"viewport\":[390,844],\"central\":{\"x\":0,\"y\":53.9375,\"width\":390,\"height\":790.0625}},{\"viewport\":[320,800],\"central\":{\"x\":0,\"y\":53.9375,\"width\":320,\"height\":746.0625}}]",
+        "·························································",
+        "················································································",
+        "······························································actual-startup-reconnect {\"runtime\":{\"instance\":\"72d91e152a3642f796c820649c833a94\",\"connected\":true,\"session\":\"1293b4b18b5d4c56a8c8849ec9070688\",\"active\":null,\"revision\":0,\"unavailable\":false},\"snapshots\":[{\"instance\":\"72d91e152a3642f796c820649c833a94\",\"revision\":0},{\"instance\":\"72d91e152a3642f796c820649c833a94\",\"revision\":0}],\"reads\":[\"/api/models\"],\"posts\":[],\"pages\":1}",
+        "actual-startup-server-exits [0,0]",
+        "··················",
+        "·······························································",
+        "  543 passed (11.3m)"
+      ],
+      "output_sha256": "2192fb80a114104d3d7d96c4e8d97ce24e0bc80dcd7fe5b85ca05b3e4b314bcf"
+    },
+    {
+      "name": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "seconds": 0.03,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/06-diff-check.log",
+      "tail": [],
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "browser": "153.0.8010.12",
+  "observations": [
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "touch": 0,
+      "bodyOverflow": 0,
+      "central": 1143,
+      "focusOutline": "3px",
+      "fonts": {
+        "name": "13px",
+        "identity": "11px",
+        "body": "13px",
+        "button": "11.5px"
+      },
+      "color": "rgb(236, 236, 234)",
+      "background": "rgba(0, 0, 0, 0)",
+      "transitions": []
+    },
+    {
+      "viewport": [
+        1280,
+        800
+      ],
+      "touch": 0,
+      "bodyOverflow": 0,
+      "central": 983,
+      "focusOutline": "3px",
+      "fonts": {
+        "name": "13px",
+        "identity": "11px",
+        "body": "13px",
+        "button": "11.5px"
+      },
+      "color": "rgb(236, 236, 234)",
+      "background": "rgba(0, 0, 0, 0)",
+      "transitions": []
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "touch": 1,
+      "bodyOverflow": 0,
+      "central": 349,
+      "focusOutline": "3px",
+      "fonts": {
+        "name": "13px",
+        "identity": "11px",
+        "body": "13px",
+        "button": "11.5px"
+      },
+      "color": "rgb(236, 236, 234)",
+      "background": "rgba(0, 0, 0, 0)",
+      "transitions": []
+    },
+    {
+      "viewport": [
+        320,
+        800
+      ],
+      "touch": 1,
+      "bodyOverflow": 0,
+      "central": 279,
+      "focusOutline": "3px",
+      "fonts": {
+        "name": "13px",
+        "identity": "11px",
+        "body": "13px",
+        "button": "11.5px"
+      },
+      "color": "rgb(236, 236, 234)",
+      "background": "rgba(0, 0, 0, 0)",
+      "transitions": []
+    },
+    {
+      "viewport": 1099,
+      "nav": 0,
+      "mainbar": 0,
+      "central": 1058
+    },
+    {
+      "viewport": 1100,
+      "nav": 232,
+      "mainbar": 320,
+      "central": 483
+    },
+    {
+      "central": 679,
+      "viewport": {
+        "width": 1296,
+        "height": 900
+      },
+      "columns": 1
+    },
+    {
+      "central": 680,
+      "viewport": {
+        "width": 1297,
+        "height": 900
+      },
+      "columns": 2
+    }
+  ],
+  "native_zoom": "NOT RUN — coordinator",
+  "native_ime": "NOT RUN — coordinator",
+  "mobile": "Chromium viewport/touch simulation only",
+  "bfcache": "historical BLOCKED preserved"
+}

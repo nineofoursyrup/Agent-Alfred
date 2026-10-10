@@ -1,0 +1,15 @@
+{
+  "old_candidate": "59aea6b4ddef2496a2223299bbf3185073cb6902",
+  "old_test_sha256": "b9df00de2d82f8b1725858e6f01d60459a3b5dae06361badf09630e8ea3e230c",
+  "fixed_test_candidate": "f9fef124f3fd656e5711c5d047f488f6e09c0783",
+  "fixed_test_sha256": "7d3dace40cc3b956bddf22388d4c032d187376dedfe836b6b00e2a73d1520a95",
+  "proof": "The controlled old/new tests and repeat20 ran before the fix commit. Their source_test_sha256 fields equal the respective committed file bytes; their recorded base_head remains 59aea6b and has not been relabeled.",
+  "test_assertions_unchanged": true,
+  "temporary_test_file_removed": true,
+  "production_src_tree": "26f7e16ee406e0e08ec81a7b429e20fd0f649b5a",
+  "production_src_tree_at_failed_head": "26f7e16ee406e0e08ec81a7b429e20fd0f649b5a",
+  "retries": 0,
+  "test_timeout_ms": 15000,
+  "expect_timeout_ms": 4000,
+  "browser_test_port": 17810
+}

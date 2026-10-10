@@ -1,0 +1,112 @@
+{
+  "candidate": "fca0b7194791d264adfa73897746d750176e166f",
+  "base": "6a262ff37cac835777982e75d3a8950d6dbefd3c",
+  "browser_test_port": 17810,
+  "batch": "04",
+  "checks": [
+    {
+      "name": "ruff",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "--no-cache",
+        "."
+      ],
+      "exit_code": 0,
+      "seconds": 0.09,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/04-ruff.log",
+      "tail": [
+        "All checks passed!"
+      ]
+    },
+    {
+      "name": "check-skills",
+      "command": [
+        ".venv/bin/python",
+        "-B",
+        "scripts/check_skills.py"
+      ],
+      "exit_code": 0,
+      "seconds": 0.04,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/04-check-skills.log",
+      "tail": [
+        "PASS: skill check (empty tree; no SKILL.md)"
+      ]
+    },
+    {
+      "name": "check-env-example",
+      "command": [
+        ".venv/bin/python",
+        "-B",
+        "scripts/check_env_example.py"
+      ],
+      "exit_code": 0,
+      "seconds": 1.82,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/04-check-env-example.log",
+      "tail": [
+        "PASS: .env.example consistency check"
+      ]
+    },
+    {
+      "name": "pytest",
+      "command": [
+        ".venv/bin/python",
+        "-B",
+        "-m",
+        "pytest",
+        "-q"
+      ],
+      "exit_code": 0,
+      "seconds": 2430.45,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/04-pytest.log",
+      "tail": [
+        "    next(map(partial(setattr, receiver, attribute), starmap(operation, ((),))))",
+        "",
+        "src/agent_alfred/evals/deterministic/test_local_native_probe.py::test_fork_probe_timeout_reaps_only_its_child",
+        "  /Users/nineofour/Agent-Alfred-v01/src/agent_alfred/evals/deterministic/test_local_native_probe.py:43: DeprecationWarning: This process (pid=80017) is multi-threaded, use of fork() may lead to deadlocks in the child.",
+        "    pid = original()",
+        "",
+        "-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html",
+        "6445 passed, 1 deselected, 14 warnings in 2428.86s (0:40:28)"
+      ]
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "seconds": 1.42,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/04-typecheck.log",
+      "tail": [
+        "",
+        "> typecheck",
+        "> tsc --noEmit",
+        ""
+      ]
+    },
+    {
+      "name": "browser",
+      "command": [
+        "npm",
+        "run",
+        "test:browser"
+      ],
+      "exit_code": 1,
+      "seconds": 691.44,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/04-browser.log",
+      "tail": [
+        "        npx playwright show-trace output/playwright/results/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/trace.zip",
+        "",
+        "    ────────────────────────────────────────────────────────────────────────────────────────────────",
+        "",
+        "  2 failed",
+        "    tests/browser/accounting-migration.spec.js:230:3 › S09 migrated Run explicit return restores its visible source at 1280px and honors newer intent ",
+        "    tests/browser/accounting-migration.spec.js:230:3 › S09 migrated Run explicit return restores its visible source at 390px and honors newer intent ",
+        "  541 passed (11.5m)"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "fixed_test_candidate": "f9fef124f3fd656e5711c5d047f488f6e09c0783",
+  "failed_ci_head": "59aea6b4ddef2496a2223299bbf3185073cb6902",
+  "source_scope": [
+    "tests/browser/tools-visual.spec.js"
+  ],
+  "production_src_tree_at_both_heads": "26f7e16ee406e0e08ec81a7b429e20fd0f649b5a",
+  "test_change": "Only the fixture mounting host and its explanatory comment change; fixture HTML and all existing assertions are unchanged.",
+  "test_sha256": "7d3dace40cc3b956bddf22388d4c032d187376dedfe836b6b00e2a73d1520a95",
+  "temporary_reproduction_test_removed": true,
+  "retries": 0,
+  "test_timeout_ms": 15000,
+  "screenshot_reuse": {
+    "reused": true,
+    "original_capture_candidate": "fca0b7194791d264adfa73897746d750176e166f",
+    "prior_review_reuse_record": "docs/implementation/dashboard-claude-design/evidence/V01/review-fixes-screenshot-reuse.json",
+    "reason": "This repair changes only the test fixture host. No production bytes change from the already-audited failed CI head. All ten PNG/snapshot byte streams remain equal to that head; original screenshot capture identity is preserved.",
+    "pages": [
+      {
+        "title": "总览",
+        "png": "docs/implementation/dashboard-claude-design/evidence/V01/overview-1440x900.png",
+        "png_sha256": "7dff2d950625628bbd1f58096fe85acfb6e5396be36f014da3cab39374bb2991",
+        "snapshot": "docs/implementation/dashboard-claude-design/evidence/V01/overview-snapshot.txt",
+        "snapshot_sha256": "870c3b9757a741636afbf7e022618a69d0fea6f74cbc1370f409ce2af0edcd09"
+      },
+      {
+        "title": "收件箱",
+        "png": "docs/implementation/dashboard-claude-design/evidence/V01/inbox-1440x900.png",
+        "png_sha256": "a4eb098820bcf9cb2096ba5455f549a6dcbe967d3a0e47c5cc718155eb41d964",
+        "snapshot": "docs/implementation/dashboard-claude-design/evidence/V01/inbox-snapshot.txt",
+        "snapshot_sha256": "497b2285428a010576ce6926ae74797a056a40d45c9673c98a26bf50974491de"
+      },
+      {
+        "title": "运行",
+        "png": "docs/implementation/dashboard-claude-design/evidence/V01/runs-1440x900.png",
+        "png_sha256": "89d1a40eeb4dd3eaa9393df133f246cff7b281342eb50dc6f1e7e1e73f2aa6f6",
+        "snapshot": "docs/implementation/dashboard-claude-design/evidence/V01/runs-snapshot.txt",
+        "snapshot_sha256": "07b522aaf1c4c8b216ef66b758289c25b93992e81833687ed1d0e6ad6ae3673d"
+      },
+      {
+        "title": "记忆",
+        "png": "docs/implementation/dashboard-claude-design/evidence/V01/memory-1440x900.png",
+        "png_sha256": "fd2e9022aea2e08ae8679637ca94a9cc7376bc730743b3ea6334ccc0769d5a69",
+        "snapshot": "docs/implementation/dashboard-claude-design/evidence/V01/memory-snapshot.txt",
+        "snapshot_sha256": "e917daabe9ba78d87341e30ad5a92fe2d359f3643070cf563c5c844aae017f87"
+      },
+      {
+        "title": "行为",
+        "png": "docs/implementation/dashboard-claude-design/evidence/V01/behaviour-1440x900.png",
+        "png_sha256": "42013cc630247ef660e82b1a513aa3e4e04f0845f4cd398dd7cc40d329f4a328",
+        "snapshot": "docs/implementation/dashboard-claude-design/evidence/V01/behaviour-snapshot.txt",
+        "snapshot_sha256": "12201abf740e08356f5668c95647d18b7760a75803f8eb1b17ddccb64c71f11a"
+      },
+      {
+        "title": "模型",
+        "png": "docs/implementation/dashboard-claude-design/evidence/V01/models-1440x900.png",
+        "png_sha256": "a625fe6cd9567f19a1c537e069a69f43896ea14d9db9c25f44d40bf4888a87bb",
+        "snapshot": "docs/implementation/dashboard-claude-design/evidence/V01/models-snapshot.txt",
+        "snapshot_sha256": "1988a04968fa4db5722f17b67014e03fda327a96c75df35f5dfc49a8b52d7b16"
+      },
+      {
+        "title": "连接",
+        "png": "docs/implementation/dashboard-claude-design/evidence/V01/connections-1440x900.png",
+        "png_sha256": "e62b03323a38edfba87ceea17de6095491855f015c043de89f6d60544d2caaa2",
+        "snapshot": "docs/implementation/dashboard-claude-design/evidence/V01/connections-snapshot.txt",
+        "snapshot_sha256": "09886af7a4fa89a429c558eaa024eaa232545245a1781813e884a57ebd09d9ba"
+      },
+      {
+        "title": "工具",
+        "png": "docs/implementation/dashboard-claude-design/evidence/V01/tools-1440x900.png",
+        "png_sha256": "a7cc24c678820c6a95d1d822c9c7bb74576322291e4dcef0ae7e02a241025cbf",
+        "snapshot": "docs/implementation/dashboard-claude-design/evidence/V01/tools-snapshot.txt",
+        "snapshot_sha256": "da7045e72530fa59e62a917467abf8e3e2810b96f35aed2f8502314ad0b7086c"
+      },
+      {
+        "title": "用量账本",
+        "png": "docs/implementation/dashboard-claude-design/evidence/V01/ops-1440x900.png",
+        "png_sha256": "e6ef89d18c1b4c75de31408b5ddd90d421eaca56c19a9045e3e2bb26c25dcfad",
+        "snapshot": "docs/implementation/dashboard-claude-design/evidence/V01/ops-snapshot.txt",
+        "snapshot_sha256": "68bf38351922f865f7c581e10a8e826321b8c698243bec18e0d625a09f7a016e"
+      },
+      {
+        "title": "数据库",
+        "png": "docs/implementation/dashboard-claude-design/evidence/V01/database-1440x900.png",
+        "png_sha256": "87912c2891d2e8a117e003ddb2d3d5e683adf7ed698ec2550e4dd088d869d1eb",
+        "snapshot": "docs/implementation/dashboard-claude-design/evidence/V01/database-snapshot.txt",
+        "snapshot_sha256": "4bbc0c5f3f8ebe2dd7b8109669dc79708c4a6ce73971c50273028f0ab95696c9"
+      }
+    ]
+  },
+  "previous_v01_sha256": "60285ed8b96697f8a35c19e9f59955330cb64d158001185bfad38f5332733976",
+  "previous_v01_preserved_as_prefix": true,
+  "main_protected_file_count": 150,
+  "main_protected_files_unchanged": true,
+  "captured_at": "2026-10-10T20:28:07.424719+00:00",
+  "prior_evidence_files_verified_unchanged": 145
+}

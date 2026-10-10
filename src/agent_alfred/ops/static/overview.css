@@ -1,14 +1,14 @@
 .overview {display:flex;flex-direction:column;gap:20px;min-width:0}
 .overview>button {align-self:flex-start}
-.overview section {border:1px solid var(--border);border-radius:12px;padding:18px;background:var(--surface);min-width:0}
+.overview section {border:1px solid var(--border);border-radius:var(--radius-panel);padding:18px;background:var(--surface);min-width:0}
 .overview h2 {margin-top:0}
 .overview p,.overview li {overflow-wrap:anywhere}
 .overview-metrics {display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:16px;align-items:start}
 .overview-period-cards {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .overview-period-cards>details,.overview-period-cards>a,.overview-period-cards>p {grid-column:1/-1}
-.overview article {border:1px solid var(--border);border-radius:8px;padding:12px;min-width:0}
+.overview article {border:1px solid var(--border);border-radius:var(--radius-metric);padding:12px;min-width:0}
 .overview article h3 {margin-top:0}
-.overview details {overflow-wrap:anywhere;font-size:12px;color:var(--secondary)}
+.overview details {overflow-wrap:anywhere;font-size:var(--font-size-meta);font-family:var(--font-mono);color:var(--muted)}
 .overview summary {cursor:pointer;padding:6px 0}
 .overview-links {display:flex;gap:12px;flex-wrap:wrap}
 .overview-run {margin:12px 0}
@@ -17,7 +17,7 @@
 .overview input {min-width:0;max-width:100%;flex:1}
 .overview-diagram {display:grid;gap:10px;margin:16px 0}
 .overview-relation {display:grid;grid-template-columns:minmax(0,1fr) 130px minmax(0,1fr);gap:8px;align-items:center;text-align:center}
-.overview-relation span {border:1px solid var(--border);border-radius:8px;padding:12px;background:var(--raised);overflow-wrap:anywhere}
+.overview-relation span {border:1px solid var(--control);border-radius:var(--radius-console);padding:12px;background:var(--raised);overflow-wrap:anywhere}
 .overview-relation small {color:var(--secondary);overflow-wrap:anywhere}
 @container (max-width:679px) {.overview-relation {grid-template-columns:minmax(0,1fr)} .overview-relation small {padding:0 8px}}
 
@@ -25,4 +25,4 @@
 
 .overview>[role=status]:empty {display:none}
 .overview-period-cards {align-items:start}
-.overview-period-cards article>p:first-of-type,.overview-memory>div>p:first-child {font-size:22px;font-weight:600;line-height:1.4}
+.overview-period-cards article>p:first-of-type,.overview-memory>div>p:first-child {font-size:var(--font-size-metric);font-family:var(--font-mono);font-weight:600;line-height:1.4}

@@ -1,0 +1,83 @@
+### Page
+- Page URL: http://127.0.0.1:17810/inbox
+- Page Title: Agent-Alfred
+### Snapshot
+```yaml
+- generic [ref=f2e1]:
+  - banner "导航面板" [ref=f2e2]:
+    - link "Agent-Alfred 本地助手" [ref=f2e3] [cursor=pointer]:
+      - /url: /overview
+      - text: Agent-Alfred
+      - generic [ref=f2e4]: 本地助手
+    - navigation "主导航" [ref=f2e5]:
+      - paragraph [ref=f2e6]: 工作区
+      - link "总览" [ref=f2e7] [cursor=pointer]:
+        - /url: /overview
+      - link "收件箱" [ref=f2e8] [cursor=pointer]:
+        - /url: /inbox
+      - link "运行" [ref=f2e9] [cursor=pointer]:
+        - /url: /runs
+      - link "记忆" [ref=f2e10] [cursor=pointer]:
+        - /url: /memory
+      - paragraph [ref=f2e11]: Agent 配置
+      - link "模型" [ref=f2e12] [cursor=pointer]:
+        - /url: /models
+      - link "连接" [ref=f2e13] [cursor=pointer]:
+        - /url: /connections
+      - link "行为" [ref=f2e14] [cursor=pointer]:
+        - /url: /behaviour
+      - link "工具" [ref=f2e15] [cursor=pointer]:
+        - /url: /tools
+      - paragraph [ref=f2e16]: 诊断
+      - link "用量账本" [ref=f2e17] [cursor=pointer]:
+        - /url: /ops
+      - link "数据库" [ref=f2e18] [cursor=pointer]:
+        - /url: /database
+    - paragraph [ref=f2e19]: 本地优先 · 共享运行宿主
+  - generic [ref=f2e20]:
+    - generic "壳层状态与操作" [ref=f2e21]:
+      - button "打开主对话" [expanded] [ref=f2e22] [cursor=pointer]
+      - region "运行与连接摘要" [ref=f2e23]:
+        - paragraph [ref=f2e24]: 已同步
+    - main [ref=f2e25]:
+      - heading "收件箱" [active] [level=1] [ref=f2e26]
+      - region "会话列表" [ref=f2e28]:
+        - heading "最近会话" [level=2] [ref=f2e29]
+        - button "新建会话并打开主对话" [ref=f2e31] [cursor=pointer]
+        - status
+        - generic [ref=f2e32]:
+          - article [ref=f2e33]:
+            - link "V01 视觉验收 · 离线模型" [ref=f2e34] [cursor=pointer]:
+              - /url: /inbox?session_id=2bc9cfea84244fd3a7ac1114c7aa0950&view=messages
+            - paragraph [ref=f2e35]: 2bc9cfea84244fd3a7ac1114c7aa0950
+            - paragraph [ref=f2e36]: 2026-10-10T14:51:52Z
+          - article [ref=f2e37]:
+            - link "升级前消息 01" [ref=f2e38] [cursor=pointer]:
+              - /url: /inbox?session_id=legacy+%2F%E4%BC%9A%E8%AF%9D%3F&view=messages
+            - paragraph [ref=f2e39]: legacy /会话?
+            - paragraph [ref=f2e40]: 非规范旧时间
+        - generic [ref=f2e41]:
+          - status [ref=f2e42]: 读取于 22:52:41
+          - button "刷新会话" [ref=f2e43] [cursor=pointer]
+  - region "MainBar" [ref=f2e44]:
+    - generic [ref=f2e45]:
+      - heading "主对话" [level=2] [ref=f2e46]
+      - button "收起主对话" [ref=f2e47] [cursor=pointer]
+    - generic [ref=f2e48]:
+      - generic [ref=f2e49]: 会话
+      - button "新建会话" [ref=f2e50] [cursor=pointer]
+    - region "主对话" [ref=f2e51]:
+      - article [ref=f2e53]:
+        - paragraph [ref=f2e54]: V01 视觉验收 · 离线模型
+        - paragraph [ref=f2e55]: 离线模型回复
+        - paragraph [ref=f2e56]: Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。
+        - generic [ref=f2e57]: 已保存
+    - generic [ref=f2e58]:
+      - generic [ref=f2e59]: 消息
+      - textbox "消息" [ref=f2e60]:
+        - /placeholder: 写下消息；/skills 指定流程…
+      - button "发送" [disabled] [ref=f2e61]
+    - paragraph [ref=f2e62]: Enter 发送 · Shift+Enter 换行
+  - status [ref=f2e63]: 就绪
+  - alert [ref=f2e64]
+```

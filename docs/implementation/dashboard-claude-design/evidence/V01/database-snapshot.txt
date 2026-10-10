@@ -1,0 +1,99 @@
+### Page
+- Page URL: http://127.0.0.1:17810/database
+- Page Title: Agent-Alfred
+### Snapshot
+```yaml
+- generic [ref=f10e1]:
+  - banner "导航面板" [ref=f10e2]:
+    - link "Agent-Alfred 本地助手" [ref=f10e3] [cursor=pointer]:
+      - /url: /overview
+      - text: Agent-Alfred
+      - generic [ref=f10e4]: 本地助手
+    - navigation "主导航" [ref=f10e5]:
+      - paragraph [ref=f10e6]: 工作区
+      - link "总览" [ref=f10e7] [cursor=pointer]:
+        - /url: /overview
+      - link "收件箱" [ref=f10e8] [cursor=pointer]:
+        - /url: /inbox
+      - link "运行" [ref=f10e9] [cursor=pointer]:
+        - /url: /runs
+      - link "记忆" [ref=f10e10] [cursor=pointer]:
+        - /url: /memory
+      - paragraph [ref=f10e11]: Agent 配置
+      - link "模型" [ref=f10e12] [cursor=pointer]:
+        - /url: /models
+      - link "连接" [ref=f10e13] [cursor=pointer]:
+        - /url: /connections
+      - link "行为" [ref=f10e14] [cursor=pointer]:
+        - /url: /behaviour
+      - link "工具" [ref=f10e15] [cursor=pointer]:
+        - /url: /tools
+      - paragraph [ref=f10e16]: 诊断
+      - link "用量账本" [ref=f10e17] [cursor=pointer]:
+        - /url: /ops
+      - link "数据库" [ref=f10e18] [cursor=pointer]:
+        - /url: /database
+    - paragraph [ref=f10e19]: 本地优先 · 共享运行宿主
+  - generic [ref=f10e20]:
+    - generic "壳层状态与操作" [ref=f10e21]:
+      - button "打开主对话" [expanded] [ref=f10e22] [cursor=pointer]
+      - region "运行与连接摘要" [ref=f10e23]:
+        - paragraph [ref=f10e24]: 已同步
+    - main [ref=f10e25]:
+      - heading "数据库" [active] [level=1] [ref=f10e26]
+      - generic [ref=f10e27]:
+        - paragraph [ref=f10e28]: 查询受保护的临时数据。SQL 的 WHERE／LIMIT 不缩小准备范围。结果有上限，不是数据库总量。
+        - region "诊断对象目录" [ref=f10e29]:
+          - paragraph [ref=f10e78]: 当前实例固定。记忆修订 20 · 保护规则版本 5
+          - paragraph [ref=f10e30]: 可用性：已核验可用
+          - paragraph [ref=f10e79]: 执行预算 5 秒 · 最多 1000 行／64 列／2 MiB JSON
+          - group [ref=f10e31]:
+            - generic "对象目录" [ref=f10e32] [cursor=pointer]
+          - group [ref=f10e33]:
+            - generic "完整限制与寿命" [ref=f10e34] [cursor=pointer]
+        - generic [ref=f10e35]: SQL 草稿
+        - textbox "SQL" [ref=f10e36]:
+          - /placeholder: SELECT * FROM diag_sessions LIMIT 20
+        - paragraph [ref=f10e37]: Enter 换行。仅点击执行才提交；查询中可编辑下一份草稿。
+        - generic [ref=f10e38]:
+          - button "执行" [ref=f10e39] [cursor=pointer]
+          - button "取消" [disabled] [ref=f10e40]
+          - button "核验查询与可用性" [ref=f10e41] [cursor=pointer]
+          - button "复制 SQL" [disabled] [ref=f10e42]
+        - paragraph [ref=f10e44]: 记忆或保护版本变化：已清除结果及提交关联；草稿保留，核验后仍需显式执行。
+        - region "查询与资源状态" [ref=f10e45]:
+          - generic [ref=f10e46]:
+            - heading "执行" [level=3] [ref=f10e47]
+            - paragraph [ref=f10e48]: 可执行
+          - generic [ref=f10e49]:
+            - heading "正文" [level=3] [ref=f10e50]
+            - paragraph [ref=f10e51]: 尚未收到查询正文
+          - generic [ref=f10e52]:
+            - heading "清理" [level=3] [ref=f10e53]
+            - paragraph [ref=f10e54]: 尚无查询清理责任
+        - region "已提交查询"
+        - button "复制本页结果" [disabled] [ref=f10e55]
+        - status [ref=f10e56]: 尚无有效结果可复制。
+        - region "查询结果"
+  - region "MainBar" [ref=f10e57]:
+    - generic [ref=f10e58]:
+      - heading "主对话" [level=2] [ref=f10e59]
+      - button "收起主对话" [ref=f10e60] [cursor=pointer]
+    - generic [ref=f10e61]:
+      - generic [ref=f10e62]: 会话
+      - button "新建会话" [ref=f10e63] [cursor=pointer]
+    - region "主对话" [ref=f10e64]:
+      - article [ref=f10e66]:
+        - paragraph [ref=f10e67]: V01 视觉验收 · 离线模型
+        - paragraph [ref=f10e68]: 离线模型回复
+        - paragraph [ref=f10e69]: Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。
+        - generic [ref=f10e70]: 已保存
+    - generic [ref=f10e71]:
+      - generic [ref=f10e72]: 消息
+      - textbox "消息" [ref=f10e73]:
+        - /placeholder: 写下消息；/skills 指定流程…
+      - button "发送" [disabled] [ref=f10e74]
+    - paragraph [ref=f10e75]: Enter 发送 · Shift+Enter 换行
+  - status [ref=f10e76]: 就绪
+  - alert [ref=f10e77]
+```

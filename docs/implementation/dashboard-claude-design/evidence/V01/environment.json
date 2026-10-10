@@ -1,0 +1,39 @@
+{
+  "base": "6a262ff37cac835777982e75d3a8950d6dbefd3c",
+  "branch": "dashboard-visual/v01-authority",
+  "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+  "python": "Python 3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]",
+  "node": "v26.8.2",
+  "npm": "11.19.1",
+  "browser_test_port": 17810,
+  "viewport": [
+    1440,
+    900
+  ],
+  "device_scale_factor": 1,
+  "installation": [
+    "uv sync --extra dev --locked",
+    "npm ci --ignore-scripts",
+    "npx playwright install chromium"
+  ],
+  "screenshot_service": "tests/browser/server.py with a temporary state directory and offline BrowserModel",
+  "scope": "V01 global visual authority and styles; no state binding, page reordering or shell lifecycle change",
+  "full_gate_environment_repair": {
+    "initial": "Dashboard development install only enabled dev; jsonschema and referencing absent",
+    "command": "uv sync --extra dev --extra mcp --locked",
+    "authority": ".github/workflows/ci.yml install step",
+    "installed": {
+      "attrs": "26.1.0",
+      "jsonschema": "4.26.0",
+      "jsonschema-specifications": "2025.9.1",
+      "referencing": "0.37.0",
+      "rpds-py": "2026.6.3"
+    },
+    "uv_lock_changes": false,
+    "source_changes": false,
+    "initial_full_gate": "01-results.json; interrupted, exit -15",
+    "diagnostic_rerun": "02-python-failures-rerun.log; 3 failed, process ended with SIGTERM exit 143 after summary",
+    "after_repair": "03-python-environment-retest.log; 3 passed in 5.34s",
+    "final_gate_batch": "04"
+  }
+}

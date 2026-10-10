@@ -1,0 +1,28 @@
+{
+  "fixed_test_candidate": "f9fef124f3fd656e5711c5d047f488f6e09c0783",
+  "captured_at": "2026-10-10T20:28:07.810605+00:00",
+  "checks": [
+    {
+      "command": [
+        "git",
+        "diff",
+        "--cached",
+        "--check"
+      ],
+      "exit_code": 0,
+      "stdout_stderr": "",
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "59aea6b4ddef2496a2223299bbf3185073cb6902"
+      ],
+      "exit_code": 0,
+      "stdout_stderr": "",
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

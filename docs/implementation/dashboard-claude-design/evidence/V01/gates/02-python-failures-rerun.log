@@ -1,0 +1,126 @@
+FFF                                                                      [100%]
+=================================== FAILURES ===================================
+____ test_ce08_mcp_invalid_external_result_stops_graph_and_records_unknown _____
+
+tmp_path = PosixPath('/private/var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/pytest-of-nineofour/pytest-72/test_ce08_mcp_invalid_external0')
+
+    def test_ce08_mcp_invalid_external_result_stops_graph_and_records_unknown(tmp_path):
+        import json
+    
+        from agent_alfred.evals.deterministic.test_mcp import FIXTURE, configure
+        from agent_alfred.graph import Failed, settle_graph, tool_node
+        from agent_alfred.mcp import MCPBridge
+        from agent_alfred.tools import ToolPolicy
+    
+        behavior = tmp_path / "behavior.json"
+        behavior.write_text(json.dumps({"result": {"content": "invalid"}}))
+        state = configure(tmp_path, enabled=True, args=[str(FIXTURE), str(behavior)])
+        host, conn, item, ctx, recorder, captured = setup_run(tmp_path)
+        state.chmod(0o700)
+        bridge = MCPBridge(state, {}, ctx.clock, Redactor(()))
+        bridge.start()
+        store = RecordingStore(conn, threading.Lock())
+        try:
+            declarations = bridge.declarations()
+>           assert declarations
+E           assert ()
+
+src/agent_alfred/evals/deterministic/test_graph_recording.py:396: AssertionError
+____________ test_ce08_late_mcp_success_never_reopens_failed_graph _____________
+
+tmp_path = PosixPath('/private/var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/pytest-of-nineofour/pytest-72/test_ce08_late_mcp_success_nev0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x108309f30>
+
+    def test_ce08_late_mcp_success_never_reopens_failed_graph(tmp_path, monkeypatch):
+        import json
+        import os
+        import select
+    
+        from agent_alfred.evals.deterministic.test_mcp import FIXTURE, configure
+        from agent_alfred.graph import Failed, settle_graph, tool_node
+        from agent_alfred.mcp import MCPBridge, transport
+        from agent_alfred.tools import ToolPolicy
+    
+        event, release = tmp_path / "event", tmp_path / "release"
+        os.mkfifo(event)
+        os.mkfifo(release)
+        event_fd = os.open(event, os.O_RDWR | os.O_NONBLOCK)
+        release_fd = os.open(release, os.O_RDWR | os.O_NONBLOCK)
+        behavior = tmp_path / "behavior.json"
+        behavior.write_text(
+            json.dumps(
+                {
+                    "block_call": True,
+                    "ignore_eof": True,
+                    "duplicate": True,
+                    "event_fifo": str(event),
+                    "release_fifo": str(release),
+                }
+            )
+        )
+        state = configure(tmp_path, enabled=True, args=[str(FIXTURE), str(behavior)])
+        state.chmod(0o700)
+        host, conn, item, ctx, recorder, captured = setup_run(tmp_path)
+        bridge = MCPBridge(state, {}, ctx.clock, Redactor(()))
+        bridge.start()
+        store = RecordingStore(conn, threading.Lock())
+>       pid = int((state / "spawned").read_text())
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+src/agent_alfred/evals/deterministic/test_graph_recording.py:473: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/pytest-of-nineofour/pytest-72/test_ce08_late_mcp_success_nev0/state/spawned')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/pytest-of-nineofour/pytest-72/test_ce08_late_mcp_success_nev0/state/spawned'
+
+/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+______ test_close_keeps_the_fanout_open_while_the_worker_is_still_working ______
+
+    def test_close_keeps_the_fanout_open_while_the_worker_is_still_working() -> None:
+        """The old ``close()`` closed the FanOut 5 seconds after asking the
+        worker to stop, whether or not the worker had stopped."""
+        sink = _BlockingBarrierSink()
+        host, _conn, _capture, _model = _host(["pong"], extra_sinks=[sink])
+        host.start()
+        try:
+            submitted = host.submit(SubmitRequest(message="hello"))
+            assert submitted.kind == "accepted"
+            assert sink.entered.wait(2.0), "the worker must reach the barrier"
+    
+            closed = host.close(timeout=0.05)
+    
+            assert closed is False, "an unfinished worker is an unfinished close"
+            assert sink.closed == 0, "the FanOut must not close under a live worker"
+            assert host.closed is False
+            assert _run_worker_alive(), "the worker is still finishing the Run"
+    
+            sink.release.set()
+            assert host.close(timeout=CLOSE_GRACE_S) is True
+            assert sink.closed == 1, "the FanOut closes once, after the worker ends"
+>           assert not _run_worker_alive()
+E           assert not True
+E            +  where True = _run_worker_alive()
+
+src/agent_alfred/evals/deterministic/test_host_lifecycle.py:622: AssertionError
+=========================== short test summary info ============================
+FAILED src/agent_alfred/evals/deterministic/test_graph_recording.py::test_ce08_mcp_invalid_external_result_stops_graph_and_records_unknown - assert ()
+FAILED src/agent_alfred/evals/deterministic/test_graph_recording.py::test_ce08_late_mcp_success_never_reopens_failed_graph - FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/pytest-of-nineofour/pytest-72/test_ce08_late_mcp_success_nev0/state/spawned'
+FAILED src/agent_alfred/evals/deterministic/test_host_lifecycle.py::test_close_keeps_the_fanout_open_while_the_worker_is_still_working - assert not True
+ +  where True = _run_worker_alive()
+3 failed in 0.54s

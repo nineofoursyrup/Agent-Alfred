@@ -1,29 +1,29 @@
 /* Database owns its catalog, drafts and protected result presentation. */
 .db-console {min-width:0}
 .db-console p {margin:8px 0;overflow-wrap:anywhere}
-.db-console .db-catalog {padding:16px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.db-console .db-catalog {padding:16px;border:1px solid var(--border);border-radius:var(--radius-panel);background:var(--surface)}
 .db-console details {min-width:0;border-top:1px solid var(--border);padding:10px 0}
 .db-console summary {cursor:pointer;font-weight:600;overflow-wrap:anywhere}
-.db-console details details {margin:8px 0;padding:12px;background:var(--raised);border:1px solid var(--border);border-radius:8px}
-.db-console details details summary {font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:13px}
-.db-console .db-fields {display:grid;grid-template-columns:minmax(90px,1fr) minmax(0,3fr);gap:8px 12px;font-size:13px}
-.db-console dt {font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;overflow-wrap:anywhere;color:var(--secondary)}
+.db-console details details {margin:8px 0;padding:12px;background:var(--raised);border:1px solid var(--border);border-radius:var(--radius-console)}
+.db-console details details summary {font-family:var(--font-mono);font-size:var(--font-size-body)}
+.db-console .db-fields {display:grid;grid-template-columns:minmax(90px,1fr) minmax(0,3fr);gap:8px 12px;font-size:var(--font-size-body)}
+.db-console dt {font-family:var(--font-mono);overflow-wrap:anywhere;color:var(--secondary)}
 .db-console dd {margin:0;overflow-wrap:anywhere}
-.db-console textarea {display:block;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;min-height:150px;max-height:50dvh}
+.db-console textarea {display:block;font-family:var(--font-mono);font-size:var(--font-size-row);border-radius:var(--radius-console);min-height:150px;max-height:50dvh}
 .db-console .db-actions {display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
 .db-console .db-actions button:first-child {border-color:var(--accent);background:var(--selected)}
-.db-console .db-facts {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px}
-.db-console .db-facts h3 {font-size:12px;color:var(--secondary);margin:0 0 4px}
+.db-console .db-facts {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-panel)}
+.db-console .db-facts h3 {font-size:var(--font-size-meta);font-family:var(--font-mono);color:var(--metadata);margin:0 0 4px}
 .db-console .db-facts p {margin:0}
 .db-console .db-attention {color:var(--attention)}
 .db-console [data-state=failed],.db-console [data-state=sql_error],.db-console [data-state=timeout] {color:var(--error)}
 .db-console [data-state=invalidated],.db-console [data-state=missing],.db-console [data-state=truncated] {color:var(--attention)}
 .db-console p:empty {display:none}
 .db-console pre {max-height:240px;overflow:auto;white-space:pre-wrap;outline-offset:-3px}
-.db-console .db-result-meta {padding:12px 16px;border:1px solid var(--border);border-radius:12px;margin:12px 0;font-size:12px;color:var(--secondary)}
+.db-console .db-result-meta {padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-panel);margin:12px 0;font-size:var(--font-size-meta);font-family:var(--font-mono);color:var(--metadata)}
 .db-console .table-scroll {max-height:55dvh;border:1px solid var(--border)}
 .db-console .table-scroll table {width:max-content;min-width:100%;max-width:none}
-.db-console th,.db-console td {min-width:100px;max-width:400px;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+.db-console th,.db-console td {min-width:100px;max-width:400px;font-family:var(--font-mono)}
 .db-console .db-cell {display:block;max-width:360px;max-height:180px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;outline-offset:-3px}
 @container(max-width:679px){
  .db-console .db-fields {grid-template-columns:minmax(0,1fr)}

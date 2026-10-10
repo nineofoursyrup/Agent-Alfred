@@ -1,0 +1,11 @@
+{
+  "command": [
+    "npm",
+    "run",
+    "typecheck"
+  ],
+  "exit_code": 0,
+  "encoding": "utf-8",
+  "combined_stdout_stderr": "\n> typecheck\n> tsc --noEmit\n\n",
+  "raw_sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f"
+}
