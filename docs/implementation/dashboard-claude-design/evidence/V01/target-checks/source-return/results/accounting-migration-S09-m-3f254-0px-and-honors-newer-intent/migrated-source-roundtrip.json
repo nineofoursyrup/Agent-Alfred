@@ -1,0 +1,225 @@
+{
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "snapshot": "72263cd1f39440fdb33cab12b9f08cbb",
+  "filters": {
+    "purpose": "chat",
+    "range": "7d",
+    "timezone": "Asia/Shanghai",
+    "start": "2026-10-04T16:00:00+00:00",
+    "end": "2026-10-11T16:00:00+00:00"
+  },
+  "origins": [
+    {
+      "kind": "ops",
+      "route": "/ops?timezone=Asia%2FShanghai&purpose=chat&range=custom&start=2026-10-05&end=2026-10-12&snapshot_id=72263cd1f39440fdb33cab12b9f08cbb",
+      "snapshot_id": "72263cd1f39440fdb33cab12b9f08cbb",
+      "process_instance_id": "cfc977cd93354dc4a61b38800631b156",
+      "filters": {
+        "purpose": "chat",
+        "range": "7d",
+        "timezone": "Asia/Shanghai",
+        "start": "2026-10-04T16:00:00+00:00",
+        "end": "2026-10-11T16:00:00+00:00"
+      },
+      "offset": 50,
+      "run_id": "206a986ed0f847bfa13effb586e90d39",
+      "trigger": {
+        "kind": "detail-link",
+        "run_id": "206a986ed0f847bfa13effb586e90d39",
+        "href": "/runs/206a986ed0f847bfa13effb586e90d39?ops_timezone=Asia%2FShanghai&ops_purpose=chat&ops_range=custom&ops_start=2026-10-05&ops_end=2026-10-12&snapshot_id=72263cd1f39440fdb33cab12b9f08cbb"
+      },
+      "scrollTop": 0,
+      "reading_position": {
+        "anchor_offset": 386.890625
+      }
+    },
+    {
+      "kind": "ops",
+      "route": "/ops?timezone=Asia%2FShanghai&purpose=chat&range=custom&start=2026-10-05&end=2026-10-12&snapshot_id=72263cd1f39440fdb33cab12b9f08cbb",
+      "snapshot_id": "72263cd1f39440fdb33cab12b9f08cbb",
+      "process_instance_id": "cfc977cd93354dc4a61b38800631b156",
+      "filters": {
+        "purpose": "chat",
+        "range": "7d",
+        "timezone": "Asia/Shanghai",
+        "start": "2026-10-04T16:00:00+00:00",
+        "end": "2026-10-11T16:00:00+00:00"
+      },
+      "offset": 50,
+      "run_id": "206a986ed0f847bfa13effb586e90d39",
+      "trigger": {
+        "kind": "detail-link",
+        "run_id": "206a986ed0f847bfa13effb586e90d39",
+        "href": "/runs/206a986ed0f847bfa13effb586e90d39?ops_timezone=Asia%2FShanghai&ops_purpose=chat&ops_range=custom&ops_start=2026-10-05&ops_end=2026-10-12&snapshot_id=72263cd1f39440fdb33cab12b9f08cbb"
+      },
+      "scrollTop": 0,
+      "reading_position": {
+        "anchor_offset": 386.390625
+      }
+    },
+    {
+      "kind": "ops",
+      "route": "/ops?timezone=Asia%2FShanghai&purpose=chat&range=custom&start=2026-10-05&end=2026-10-12&snapshot_id=72263cd1f39440fdb33cab12b9f08cbb",
+      "snapshot_id": "72263cd1f39440fdb33cab12b9f08cbb",
+      "process_instance_id": "cfc977cd93354dc4a61b38800631b156",
+      "filters": {
+        "purpose": "chat",
+        "range": "7d",
+        "timezone": "Asia/Shanghai",
+        "start": "2026-10-04T16:00:00+00:00",
+        "end": "2026-10-11T16:00:00+00:00"
+      },
+      "offset": 50,
+      "run_id": "206a986ed0f847bfa13effb586e90d39",
+      "trigger": {
+        "kind": "detail-link",
+        "run_id": "206a986ed0f847bfa13effb586e90d39",
+        "href": "/runs/206a986ed0f847bfa13effb586e90d39?ops_timezone=Asia%2FShanghai&ops_purpose=chat&ops_range=custom&ops_start=2026-10-05&ops_end=2026-10-12&snapshot_id=72263cd1f39440fdb33cab12b9f08cbb"
+      },
+      "scrollTop": 0,
+      "reading_position": {
+        "anchor_offset": 387.1875
+      }
+    }
+  ],
+  "reads": [
+    "http://127.0.0.1:17814/api/ops?snapshot_id=72263cd1f39440fdb33cab12b9f08cbb&offset=50",
+    "http://127.0.0.1:17814/api/ops?snapshot_id=72263cd1f39440fdb33cab12b9f08cbb&offset=50",
+    "http://127.0.0.1:17814/api/ops?snapshot_id=72263cd1f39440fdb33cab12b9f08cbb&offset=50"
+  ],
+  "posts": 0,
+  "observations": [
+    {
+      "intent": "none",
+      "before": {
+        "scrollTop": 7074,
+        "panel": {
+          "top": 53.9375,
+          "bottom": 844,
+          "height": 790.0625
+        },
+        "link": {
+          "top": 440.828125,
+          "bottom": 456.828125,
+          "height": 16
+        },
+        "anchorOffset": 386.890625,
+        "focused": true,
+        "visibleInPanel": true
+      },
+      "after": {
+        "scrollTop": 1937,
+        "panel": {
+          "top": 53.9375,
+          "bottom": 844,
+          "height": 790.0625
+        },
+        "link": {
+          "top": 440.328125,
+          "bottom": 456.328125,
+          "height": 16
+        },
+        "anchorOffset": 386.390625,
+        "focused": true,
+        "visibleInPanel": true
+      }
+    },
+    {
+      "intent": "focus",
+      "before": {
+        "scrollTop": 1937,
+        "panel": {
+          "top": 53.9375,
+          "bottom": 844,
+          "height": 790.0625
+        },
+        "link": {
+          "top": 440.328125,
+          "bottom": 456.328125,
+          "height": 16
+        },
+        "anchorOffset": 386.390625,
+        "focused": true,
+        "visibleInPanel": true
+      },
+      "intentPosition": {
+        "scrollTop": 0,
+        "panel": {
+          "top": 53.9375,
+          "bottom": 844,
+          "height": 790.0625
+        },
+        "link": null,
+        "anchorOffset": null,
+        "focused": false,
+        "visibleInPanel": false
+      },
+      "after": {
+        "scrollTop": 0,
+        "panel": {
+          "top": 53.9375,
+          "bottom": 844,
+          "height": 790.0625
+        },
+        "link": {
+          "top": 2398.125,
+          "bottom": 2414.125,
+          "height": 16
+        },
+        "anchorOffset": 2344.1875,
+        "focused": false,
+        "visibleInPanel": false
+      }
+    },
+    {
+      "intent": "scroll",
+      "before": {
+        "scrollTop": 1957,
+        "panel": {
+          "top": 53.9375,
+          "bottom": 844,
+          "height": 790.0625
+        },
+        "link": {
+          "top": 441.125,
+          "bottom": 457.125,
+          "height": 16
+        },
+        "anchorOffset": 387.1875,
+        "focused": true,
+        "visibleInPanel": true
+      },
+      "intentPosition": {
+        "scrollTop": 240,
+        "panel": {
+          "top": 53.9375,
+          "bottom": 844,
+          "height": 790.0625
+        },
+        "link": null,
+        "anchorOffset": null,
+        "focused": false,
+        "visibleInPanel": false
+      },
+      "after": {
+        "scrollTop": 240,
+        "panel": {
+          "top": 53.9375,
+          "bottom": 844,
+          "height": 790.0625
+        },
+        "link": {
+          "top": 2137.328125,
+          "bottom": 2153.328125,
+          "height": 16
+        },
+        "anchorOffset": 2083.390625,
+        "focused": false,
+        "visibleInPanel": false
+      }
+    }
+  ]
+}

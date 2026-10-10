@@ -1,0 +1,74 @@
+{
+  "candidate": "fca0b7194791d264adfa73897746d750176e166f",
+  "base": "6a262ff37cac835777982e75d3a8950d6dbefd3c",
+  "browser_test_port": 17810,
+  "batch": "01",
+  "checks": [
+    {
+      "name": "ruff",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "--no-cache",
+        "."
+      ],
+      "exit_code": 0,
+      "seconds": 0.43,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/01-ruff.log",
+      "tail": [
+        "All checks passed!"
+      ]
+    },
+    {
+      "name": "check-skills",
+      "command": [
+        ".venv/bin/python",
+        "-B",
+        "scripts/check_skills.py"
+      ],
+      "exit_code": 0,
+      "seconds": 0.03,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/01-check-skills.log",
+      "tail": [
+        "PASS: skill check (empty tree; no SKILL.md)"
+      ]
+    },
+    {
+      "name": "check-env-example",
+      "command": [
+        ".venv/bin/python",
+        "-B",
+        "scripts/check_env_example.py"
+      ],
+      "exit_code": 0,
+      "seconds": 1.8,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/01-check-env-example.log",
+      "tail": [
+        "PASS: .env.example consistency check"
+      ]
+    },
+    {
+      "name": "pytest",
+      "command": [
+        ".venv/bin/python",
+        "-B",
+        "-m",
+        "pytest",
+        "-q"
+      ],
+      "exit_code": -15,
+      "seconds": 2092.23,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/01-pytest.log",
+      "tail": [
+        " +      where <built-in function monotonic> = time.monotonic",
+        "FAILED src/agent_alfred/evals/deterministic/test_mcp_review.py::test_spec07_ce09_invalid_then_identical_apply_keeps_healthy_pid - StopIteration",
+        "FAILED src/agent_alfred/evals/deterministic/test_mcp_review.py::test_spec08_ce14_cleanup_completion_clears_residual_flag - FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/pytest-of-nineofour/pytest-71/test_spec08_ce14_cleanup_compl0/state/spawned'",
+        "FAILED src/agent_alfred/evals/deterministic/test_routing_mcp.py::test_ce14_real_catalog_schema_name_change_and_failed_publication - StopIteration",
+        "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! KeyboardInterrupt !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!",
+        "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/threading.py:369: KeyboardInterrupt",
+        "(to show a full traceback on KeyboardInterrupt use --full-trace)",
+        "118 failed, 3699 passed, 1 deselected, 14 warnings in 2061.06s (0:34:21)"
+      ]
+    }
+  ]
+}

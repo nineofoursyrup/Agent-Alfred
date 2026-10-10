@@ -1,0 +1,104 @@
+
+> test:browser
+> playwright test
+
+
+Running 543 tests using 1 worker
+(node:25625) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+··········F(node:25904) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+F(node:25960) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+······················································actual-lifecycle reload {"before":{"query_id":"hULvneiUJ7lqYbPGxu6k-hH7","pid":27913,"status":"running","cleanup":"pending"},"after":{"query_id":"hULvneiUJ7lqYbPGxu6k-hH7","pid":27913,"pid_exists":false,"status":"cancelled","cleanup":"released","worker":null,"response_owner":null,"buffers":0,"source_write_lock":"acquired-and-released"}}
+·actual-lifecycle close {"before":{"query_id":"kv4yNLXf7Q7wIGJNp-N05H2B","pid":27937,"status":"running","cleanup":"pending"},"after":{"query_id":"kv4yNLXf7Q7wIGJNp-N05H2B","pid":27937,"pid_exists":false,"status":"cancelled","cleanup":"released","worker":null,"response_owner":null,"buffers":0,"source_write_lock":"acquired-and-released"}}
+···········real-status-loss {"kind":"failed","execute":{"http":400,"body":{"code":"sql_error","detail":"SQL 无法执行。","query_id":"uhZsosU9_StC4NwcuwH4klLI"}},"status":{"http":200,"body":{"query_id":"uhZsosU9_StC4NwcuwH4klLI","instance_id":"e06be0d533f24a6b86f92135b923c5c8","status":"failed","cleanup":"released"}}}
+·real-status-loss {"kind":"timed_out","execute":{"http":504,"body":{"code":"query_timeout","detail":"查询超过执行期限。","query_id":"NA-KtJ43iLOYOjM280Tt_g8Z"}},"status":{"http":200,"body":{"query_id":"NA-KtJ43iLOYOjM280Tt_g8Z","instance_id":"8e9160a16c48450ba8b91bacc2607168","status":"timed_out","cleanup":"released"}}}
+·real-status-loss {"kind":"completed","execute":{"http":200,"body":{"query_id":"CrSSzrtsPA3RvMqalyf6ojPf","instance_id":"845d4c79f97b46909d23a13a3f9b5d1c","memory_revision":"11","protection_version":"5","objects":[],"coverage":{"attempts":{"recorded":0,"recorded_empty":0,"unrecorded":0,"in_progress_runs":0},"notice":"缺行不证明未发生请求"},"read_at":"2026-10-10T16:14:16.276414Z","columns":["unseen"],"rows":[[{"type":"integer","value":"12"}]],"returned_rows":1,"truncated":false,"truncation_reasons":[]}},"status":{"http":200,"body":{"query_id":"CrSSzrtsPA3RvMqalyf6ojPf","instance_id":"845d4c79f97b46909d23a13a3f9b5d1c","status":"completed","cleanup":"released","result_delivered":true}}}
+
+·······actual-cleanup-failure {"cancel":{"query_id":"dOwYfT2izHyj8n4iL4RW_mUW","status":"failed","cleanup":"failed"},"status":{"query_id":"dOwYfT2izHyj8n4iL4RW_mUW","instance_id":"12be66eb566545138a662bc7322ec1f8","status":"failed","cleanup":"failed"},"newHandleStatus":503}
+··lost-receipt-recovery {"lost":"issuance","handles":["G9tlj1jMDtUe1kVYGuEWf8lf","QAovc4hPEj3k3iPeB2CdKTxf"],"executes":1,"lostStatusReads":0,"actual":{"query_id":"G9tlj1jMDtUe1kVYGuEWf8lf","instance_id":"72ae2fa326de457d91b440d4b4c51a41","status":"unused","cleanup":"released"},"capability":{"instance":"72ae2fa326de457d91b440d4b4c51a41","available":true}}
+·lost-receipt-recovery {"lost":"execute","handles":["V3IJ88VmDxSNySzbg2qpm7KP","nhl4bLiRp-U_gLeWoXYGImM2"],"executes":2,"lostStatusReads":2,"actual":{"query_id":"V3IJ88VmDxSNySzbg2qpm7KP","instance_id":"887aa2d437c5456bb7103b955a6bfdf7","status":"completed","cleanup":"released","result_delivered":true},"capability":{"instance":"887aa2d437c5456bb7103b955a6bfdf7","available":true}}
+······································································
+·········S08 Connections central widths [{"viewport":[1440,900],"central":{"x":232,"y":57.9375,"width":888,"height":842.0625}},{"viewport":[1280,800],"central":{"x":232,"y":57.9375,"width":728,"height":742.0625}},{"viewport":[390,844],"central":{"x":0,"y":53.9375,"width":390,"height":790.0625}},{"viewport":[320,800],"central":{"x":0,"y":53.9375,"width":320,"height":746.0625}}]
+·······································································
+·······················S08 Models central widths [{"viewport":[1440,900],"central":{"x":232,"y":57.9375,"width":888,"height":842.0625}},{"viewport":[1280,800],"central":{"x":232,"y":57.9375,"width":728,"height":742.0625}},{"viewport":[390,844],"central":{"x":0,"y":53.9375,"width":390,"height":790.0625}},{"viewport":[320,800],"central":{"x":0,"y":53.9375,"width":320,"height":746.0625}}]
+·························································
+················································································
+······························································actual-startup-reconnect {"runtime":{"instance":"9bcc926f8d544ffa88d191e17cfdffa5","connected":true,"session":"0a9c3602bcc94dcd981dbef967145b23","active":null,"revision":0,"unavailable":false},"snapshots":[{"instance":"9bcc926f8d544ffa88d191e17cfdffa5","revision":0},{"instance":"9bcc926f8d544ffa88d191e17cfdffa5","revision":0}],"reads":["/api/models"],"posts":[],"pages":1}
+actual-startup-server-exits [0,0]
+··················
+·······························································
+
+  1) tests/browser/accounting-migration.spec.js:230:3 › S09 migrated Run explicit return restores its visible source at 1280px and honors newer intent 
+
+    Error: expect(received).toBeCloseTo(expected, precision)
+
+    Expected: 362.578125
+    Received: 362.078125
+
+    Expected precision:    0
+    Expected difference: < 0.5
+    Received difference:   0.5
+
+      296 |       }else{
+      297 |         await expect(entry).toBeFocused();expect(afterPosition.visibleInPanel).toBe(true);
+    > 298 |         expect(afterPosition.anchorOffset).toBeCloseTo(beforePosition.anchorOffset,0);
+          |                                            ^
+      299 |       }
+      300 |       expect(posts).toBe(0);
+      301 |       await page.unrouteAll({behavior:'wait'});pending=[];
+        at /Users/nineofour/Agent-Alfred-v01/tests/browser/accounting-migration.spec.js:298:44
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    output/playwright/results/accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: output/playwright/results/accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    output/playwright/results/accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/trace.zip
+    Usage:
+
+        npx playwright show-trace output/playwright/results/accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) tests/browser/accounting-migration.spec.js:230:3 › S09 migrated Run explicit return restores its visible source at 390px and honors newer intent 
+
+    Error: expect(received).toBeCloseTo(expected, precision)
+
+    Expected: 386.890625
+    Received: 386.390625
+
+    Expected precision:    0
+    Expected difference: < 0.5
+    Received difference:   0.5
+
+      296 |       }else{
+      297 |         await expect(entry).toBeFocused();expect(afterPosition.visibleInPanel).toBe(true);
+    > 298 |         expect(afterPosition.anchorOffset).toBeCloseTo(beforePosition.anchorOffset,0);
+          |                                            ^
+      299 |       }
+      300 |       expect(posts).toBe(0);
+      301 |       await page.unrouteAll({behavior:'wait'});pending=[];
+        at /Users/nineofour/Agent-Alfred-v01/tests/browser/accounting-migration.spec.js:298:44
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    output/playwright/results/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: output/playwright/results/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    output/playwright/results/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/trace.zip
+    Usage:
+
+        npx playwright show-trace output/playwright/results/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    tests/browser/accounting-migration.spec.js:230:3 › S09 migrated Run explicit return restores its visible source at 1280px and honors newer intent 
+    tests/browser/accounting-migration.spec.js:230:3 › S09 migrated Run explicit return restores its visible source at 390px and honors newer intent 
+  541 passed (11.5m)

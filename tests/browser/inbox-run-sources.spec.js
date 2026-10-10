@@ -258,7 +258,7 @@ test("real summary privacy gates and container 679/680 use one equivalent table/
             ...new Set(items.map((item) => getComputedStyle(item).fontSize)),
           ]),
         )
-        .toEqual(["12px"]);
+        .toEqual(["11px"]);
     }
   } finally {
     await server.close();

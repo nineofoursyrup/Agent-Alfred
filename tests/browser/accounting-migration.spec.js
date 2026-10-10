@@ -295,7 +295,11 @@ for(const viewport of [{width:1280,height:800},{width:390,height:844}])
         await expect(entry).not.toBeFocused();expect(afterPosition.scrollTop).toBeCloseTo(intentPosition.scrollTop,0);
       }else{
         await expect(entry).toBeFocused();expect(afterPosition.visibleInPanel).toBe(true);
-        expect(afterPosition.anchorOffset).toBeCloseTo(beforePosition.anchorOffset,0);
+        // Fractional typography can leave a half-pixel content anchor;
+        // Chromium at DPR 1 quantizes scrollTop to integer CSS pixels.
+        const contentOffset=afterPosition.scrollTop+afterPosition.anchorOffset;
+        const requestedScrollTop=contentOffset-beforePosition.anchorOffset;
+        expect(afterPosition.scrollTop).toBe(Math.round(requestedScrollTop));
       }
       expect(posts).toBe(0);
       await page.unrouteAll({behavior:'wait'});pending=[];

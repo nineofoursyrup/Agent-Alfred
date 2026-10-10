@@ -3,3 +3,16 @@
 docs/implementation/dashboard-migration/evidence/S11/browser-full-01.log -whitespace
 docs/implementation/dashboard-migration/evidence/S11/composition-successor-01.log -whitespace
 docs/implementation/dashboard-migration/evidence/S11/entry-red.log -whitespace
+# Preserve the original Playwright failure context, including source excerpt spacing.
+docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-Databas-00669-00-without-clipping-actions/error-context.md -whitespace
+# Freeze raw failed Python runs before the missing MCP extra was installed.
+docs/implementation/dashboard-claude-design/evidence/V01/gates/01-pytest.log -whitespace
+docs/implementation/dashboard-claude-design/evidence/V01/gates/02-python-failures-rerun.log -whitespace
+# Freeze the first full browser failure and its original source excerpt spacing.
+docs/implementation/dashboard-claude-design/evidence/V01/gates/04-browser.log -whitespace
+docs/implementation/dashboard-claude-design/evidence/V01/first-full-browser-failure/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/error-context.md -whitespace
+docs/implementation/dashboard-claude-design/evidence/V01/first-full-browser-failure/accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/error-context.md -whitespace
+# Preserve npm's terminal blank line in this frozen typecheck output.
+docs/implementation/dashboard-claude-design/evidence/V01/gates/04-typecheck.log -whitespace
+docs/implementation/dashboard-claude-design/evidence/V01/gates/05-typecheck.log -whitespace
+docs/implementation/dashboard-claude-design/evidence/V01/target-checks/source-return/typecheck.log -whitespace

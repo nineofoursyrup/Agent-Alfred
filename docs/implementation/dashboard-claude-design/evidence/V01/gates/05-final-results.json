@@ -1,0 +1,148 @@
+{
+  "candidate": "13aa84fe2c6a273e3c8d2857983159271ac10c4f",
+  "base": "6a262ff37cac835777982e75d3a8950d6dbefd3c",
+  "captured_at": "2026-10-10T16:40:52.600842+00:00",
+  "browser_test_port": 17810,
+  "checks": [
+    {
+      "name": "ruff",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "--no-cache",
+        "."
+      ],
+      "exit_code": 0,
+      "seconds": 0.09,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/04-ruff.log",
+      "tail": [
+        "All checks passed!"
+      ],
+      "source_candidate": "fca0b7194791d264adfa73897746d750176e166f",
+      "reused": true
+    },
+    {
+      "name": "check-skills",
+      "command": [
+        ".venv/bin/python",
+        "-B",
+        "scripts/check_skills.py"
+      ],
+      "exit_code": 0,
+      "seconds": 0.04,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/04-check-skills.log",
+      "tail": [
+        "PASS: skill check (empty tree; no SKILL.md)"
+      ],
+      "source_candidate": "fca0b7194791d264adfa73897746d750176e166f",
+      "reused": true
+    },
+    {
+      "name": "check-env-example",
+      "command": [
+        ".venv/bin/python",
+        "-B",
+        "scripts/check_env_example.py"
+      ],
+      "exit_code": 0,
+      "seconds": 1.82,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/04-check-env-example.log",
+      "tail": [
+        "PASS: .env.example consistency check"
+      ],
+      "source_candidate": "fca0b7194791d264adfa73897746d750176e166f",
+      "reused": true
+    },
+    {
+      "name": "pytest",
+      "command": [
+        ".venv/bin/python",
+        "-B",
+        "-m",
+        "pytest",
+        "-q"
+      ],
+      "exit_code": 0,
+      "seconds": 2430.45,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/04-pytest.log",
+      "tail": [
+        "    next(map(partial(setattr, receiver, attribute), starmap(operation, ((),))))",
+        "",
+        "src/agent_alfred/evals/deterministic/test_local_native_probe.py::test_fork_probe_timeout_reaps_only_its_child",
+        "  /Users/nineofour/Agent-Alfred-v01/src/agent_alfred/evals/deterministic/test_local_native_probe.py:43: DeprecationWarning: This process (pid=80017) is multi-threaded, use of fork() may lead to deadlocks in the child.",
+        "    pid = original()",
+        "",
+        "-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html",
+        "6445 passed, 1 deselected, 14 warnings in 2428.86s (0:40:28)"
+      ],
+      "source_candidate": "fca0b7194791d264adfa73897746d750176e166f",
+      "reused": true
+    },
+    {
+      "name": "typecheck",
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "seconds": 0.43,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-typecheck.log",
+      "tail": [
+        "",
+        "> typecheck",
+        "> tsc --noEmit",
+        ""
+      ],
+      "source_candidate": "13aa84fe2c6a273e3c8d2857983159271ac10c4f",
+      "reused": false
+    },
+    {
+      "name": "browser",
+      "command": [
+        "npm",
+        "run",
+        "test:browser"
+      ],
+      "exit_code": 0,
+      "seconds": 690.16,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-browser.log",
+      "tail": [
+        "·······················S08 Models central widths [{\"viewport\":[1440,900],\"central\":{\"x\":232,\"y\":57.9375,\"width\":888,\"height\":842.0625}},{\"viewport\":[1280,800],\"central\":{\"x\":232,\"y\":57.9375,\"width\":728,\"height\":742.0625}},{\"viewport\":[390,844],\"central\":{\"x\":0,\"y\":53.9375,\"width\":390,\"height\":790.0625}},{\"viewport\":[320,800],\"central\":{\"x\":0,\"y\":53.9375,\"width\":320,\"height\":746.0625}}]",
+        "·························································",
+        "················································································",
+        "······························································actual-startup-reconnect {\"runtime\":{\"instance\":\"2c12ac75241249159e3dd0c083043f6e\",\"connected\":true,\"session\":\"1de9e1d4602a4b36a5f4da3e71b887e0\",\"active\":null,\"revision\":0,\"unavailable\":false},\"snapshots\":[{\"instance\":\"2c12ac75241249159e3dd0c083043f6e\",\"revision\":0},{\"instance\":\"2c12ac75241249159e3dd0c083043f6e\",\"revision\":0}],\"reads\":[\"/api/models\"],\"posts\":[],\"pages\":1}",
+        "actual-startup-server-exits [0,0]",
+        "··················",
+        "·······························································",
+        "  543 passed (11.5m)"
+      ],
+      "source_candidate": "13aa84fe2c6a273e3c8d2857983159271ac10c4f",
+      "reused": false
+    },
+    {
+      "name": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "seconds": 0.04,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-diff-check.log",
+      "tail": [],
+      "source_candidate": "13aa84fe2c6a273e3c8d2857983159271ac10c4f",
+      "reused": false
+    }
+  ],
+  "reuse_basis": {
+    "changed_paths_between_checked_candidates": [
+      "tests/browser/accounting-migration.spec.js"
+    ],
+    "product_tree_hashes": {
+      "initial": "377935df23c9c1cddac61015567bde480a74b569",
+      "final": "377935df23c9c1cddac61015567bde480a74b569"
+    },
+    "reason": "Only one browser test geometry assertion changed; Python source/tests/config, skill/env check inputs and all production sources are unchanged."
+  }
+}

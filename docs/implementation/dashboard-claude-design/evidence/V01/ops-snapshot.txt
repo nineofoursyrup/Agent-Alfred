@@ -1,0 +1,149 @@
+### Page
+- Page URL: http://127.0.0.1:17810/ops
+- Page Title: Agent-Alfred
+### Snapshot
+```yaml
+- generic [ref=f9e1]:
+  - banner "导航面板" [ref=f9e2]:
+    - link "Agent-Alfred 本地助手" [ref=f9e3] [cursor=pointer]:
+      - /url: /overview
+      - text: Agent-Alfred
+      - generic [ref=f9e4]: 本地助手
+    - navigation "主导航" [ref=f9e5]:
+      - paragraph [ref=f9e6]: 工作区
+      - link "总览" [ref=f9e7] [cursor=pointer]:
+        - /url: /overview
+      - link "收件箱" [ref=f9e8] [cursor=pointer]:
+        - /url: /inbox
+      - link "运行" [ref=f9e9] [cursor=pointer]:
+        - /url: /runs
+      - link "记忆" [ref=f9e10] [cursor=pointer]:
+        - /url: /memory
+      - paragraph [ref=f9e11]: Agent 配置
+      - link "模型" [ref=f9e12] [cursor=pointer]:
+        - /url: /models
+      - link "连接" [ref=f9e13] [cursor=pointer]:
+        - /url: /connections
+      - link "行为" [ref=f9e14] [cursor=pointer]:
+        - /url: /behaviour
+      - link "工具" [ref=f9e15] [cursor=pointer]:
+        - /url: /tools
+      - paragraph [ref=f9e16]: 诊断
+      - link "用量账本" [ref=f9e17] [cursor=pointer]:
+        - /url: /ops
+      - link "数据库" [ref=f9e18] [cursor=pointer]:
+        - /url: /database
+    - paragraph [ref=f9e19]: 本地优先 · 共享运行宿主
+  - generic [ref=f9e20]:
+    - generic "壳层状态与操作" [ref=f9e21]:
+      - button "打开主对话" [expanded] [ref=f9e22] [cursor=pointer]
+      - region "运行与连接摘要" [ref=f9e23]:
+        - paragraph [ref=f9e24]: 已同步
+    - main [ref=f9e25]:
+      - heading "用量账本" [active] [level=1] [ref=f9e26]
+      - generic [ref=f9e27]:
+        - form "账目筛选" [ref=f9e28]:
+          - heading "待查询条件" [level=2] [ref=f9e29]
+          - generic [ref=f9e30]:
+            - generic [ref=f9e31]:
+              - generic [ref=f9e32]: 时间范围
+              - combobox "时间范围" [ref=f9e33]:
+                - option "近七个自然日" [selected]
+                - option "今天"
+                - option "近三十个自然日"
+                - option "自定义半开区间"
+                - option "全部历史"
+            - generic [ref=f9e34]:
+              - generic [ref=f9e35]: IANA 时区
+              - textbox "IANA 时区" [ref=f9e36]: Asia/Shanghai
+            - generic [ref=f9e37]:
+              - generic [ref=f9e38]: 开始日期（含）
+              - textbox "开始日期（含）" [ref=f9e39]
+              - generic [ref=f9e40]: 自定义期间使用当地日期
+            - generic [ref=f9e41]:
+              - generic [ref=f9e42]: 结束日期（不含）
+              - textbox "结束日期（不含）" [ref=f9e43]
+              - generic [ref=f9e44]: 结束日为排他边界
+            - generic [ref=f9e45]:
+              - generic [ref=f9e46]: 会话 ID
+              - textbox "会话 ID" [ref=f9e47]
+            - generic [ref=f9e48]:
+              - generic [ref=f9e49]: 运行用途
+              - combobox "运行用途" [ref=f9e50]:
+                - option "全部用途" [selected]
+                - option "普通聊天"
+                - option "手动聚合"
+                - option "模型推理探针"
+                - option "记忆提炼"
+            - generic [ref=f9e51]:
+              - generic [ref=f9e52]: 工具身份
+              - textbox "工具身份" [ref=f9e53]:
+                - /placeholder: 来源与能力身份
+              - generic [ref=f9e54]: 包含匹配工具的完整 Run
+            - generic [ref=f9e55]:
+              - generic [ref=f9e56]: Run ID
+              - textbox "Run ID" [ref=f9e57]:
+                - /placeholder: 精确 Run ID
+              - generic [ref=f9e58]: 使用完整不透明标识
+          - status [ref=f9e59]: 筛选只在点击“刷新账目”时应用。
+          - button "刷新账目" [ref=f9e60] [cursor=pointer]
+        - status [ref=f9e61]: 固定账目快照；后台变化后请显式刷新。
+        - status
+        - region "当前账目快照" [ref=f9e62]:
+          - heading "当前账目快照" [level=2] [ref=f9e63]
+          - paragraph [ref=f9e64]: 半开期间 [2026-10-03T16:00:00+00:00, 2026-10-10T16:00:00+00:00) · 时区 Asia/Shanghai · Session 全部 · 用途 全部 · 工具身份 全部 · 精确 Run 全部
+          - paragraph [ref=f9e65]: 计算时刻 2026-10-10T14:53:25Z · 有效至 2026-10-10T15:08:25Z
+          - group [ref=f9e66]:
+            - generic "快照与价格身份" [ref=f9e67] [cursor=pointer]
+        - paragraph [ref=f9e68]: 工具筛选展示包含该工具的完整 Run；模型 USD 与工具服务／单位分列，不能归因给单一工具。
+        - region "账目汇总" [ref=f9e69]:
+          - heading "分项汇总" [level=2] [ref=f9e70]
+          - paragraph [ref=f9e71]: Run 1 · 模型 Attempt 3 · 账目覆盖不足 Run 0
+          - paragraph [ref=f9e72]: 精确费用 USD 0.375 · 估算费用 USD 0 · 费用未知 Attempt 0
+          - paragraph [ref=f9e73]: 工具请求 0 · 已确认启动 0 · 明确未启动 0 · 启动未确认 0
+          - paragraph [ref=f9e74]: 精确 Attempt 3 · 估算 Attempt 0 · 使用陈旧价格 0 · 涉及阶梯价 0
+          - paragraph [ref=f9e75]: 估算价格来源：无
+          - paragraph [ref=f9e76]: 工具计量状态：不计费 0 · 已报告计量 0 · 结果未知，请核验原操作 0 · 历史未记录 0
+          - group [ref=f9e77]:
+            - generic "Token 用量与缺失覆盖" [ref=f9e78] [cursor=pointer]
+          - paragraph [ref=f9e79]: 仅统计持久 Run 与可读账目；无 Run 的旧消息不计入。账目覆盖不证明正式回复已保存，完整记录状态请进入运行过程核对。
+        - region "Run 账目索引" [ref=f9e81]:
+          - table [ref=f9e82]:
+            - caption [ref=f9e83]: Run 账目索引
+            - rowgroup [ref=f9e84]:
+              - row [ref=f9e85]:
+                - columnheader "Run / Session" [ref=f9e86]
+                - columnheader "用途与状态" [ref=f9e87]
+                - columnheader "归属时间" [ref=f9e88]
+                - columnheader "账目与过程覆盖" [ref=f9e89]
+                - columnheader "操作" [ref=f9e90]
+            - rowgroup [ref=f9e91]:
+              - row [ref=f9e92]:
+                - cell "1769548582764d0a9150465ce86cf580 / 2bc9cfea84244fd3a7ac1114c7aa0950" [ref=f9e93]
+                - cell "普通聊天 · finished · completed" [ref=f9e94]
+                - cell "2026-10-10T14:52:15Z（开始时间）" [ref=f9e95]
+                - cell "账目覆盖无已报告缺口 · 未报告过程缺口" [ref=f9e96]
+                - cell [ref=f9e97]:
+                  - button "查看账目 1769548582764d0a9150465ce86cf580" [ref=f9e98] [cursor=pointer]
+  - region "MainBar" [ref=f9e99]:
+    - generic [ref=f9e100]:
+      - heading "主对话" [level=2] [ref=f9e101]
+      - button "收起主对话" [ref=f9e102] [cursor=pointer]
+    - generic [ref=f9e103]:
+      - generic [ref=f9e104]: 会话
+      - button "新建会话" [ref=f9e105] [cursor=pointer]
+    - region "主对话" [ref=f9e106]:
+      - article [ref=f9e108]:
+        - paragraph [ref=f9e109]: V01 视觉验收 · 离线模型
+        - paragraph [ref=f9e110]: 离线模型回复
+        - paragraph [ref=f9e111]: Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。
+        - generic [ref=f9e112]: 已保存
+    - generic [ref=f9e113]:
+      - generic [ref=f9e114]: 消息
+      - textbox "消息" [ref=f9e115]:
+        - /placeholder: 写下消息；/skills 指定流程…
+      - button "发送" [disabled] [ref=f9e116]
+    - paragraph [ref=f9e117]: Enter 发送 · Shift+Enter 换行
+  - status [ref=f9e118]: 就绪
+  - alert [ref=f9e119]
+```

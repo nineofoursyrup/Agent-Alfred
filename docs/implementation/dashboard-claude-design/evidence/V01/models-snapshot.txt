@@ -1,0 +1,165 @@
+### Page
+- Page URL: http://127.0.0.1:17810/models
+- Page Title: Agent-Alfred
+### Snapshot
+```yaml
+- generic [ref=f6e1]:
+  - banner "导航面板" [ref=f6e2]:
+    - link "Agent-Alfred 本地助手" [ref=f6e3] [cursor=pointer]:
+      - /url: /overview
+      - text: Agent-Alfred
+      - generic [ref=f6e4]: 本地助手
+    - navigation "主导航" [ref=f6e5]:
+      - paragraph [ref=f6e6]: 工作区
+      - link "总览" [ref=f6e7] [cursor=pointer]:
+        - /url: /overview
+      - link "收件箱" [ref=f6e8] [cursor=pointer]:
+        - /url: /inbox
+      - link "运行" [ref=f6e9] [cursor=pointer]:
+        - /url: /runs
+      - link "记忆" [ref=f6e10] [cursor=pointer]:
+        - /url: /memory
+      - paragraph [ref=f6e11]: Agent 配置
+      - link "模型" [ref=f6e12] [cursor=pointer]:
+        - /url: /models
+      - link "连接" [ref=f6e13] [cursor=pointer]:
+        - /url: /connections
+      - link "行为" [ref=f6e14] [cursor=pointer]:
+        - /url: /behaviour
+      - link "工具" [ref=f6e15] [cursor=pointer]:
+        - /url: /tools
+      - paragraph [ref=f6e16]: 诊断
+      - link "用量账本" [ref=f6e17] [cursor=pointer]:
+        - /url: /ops
+      - link "数据库" [ref=f6e18] [cursor=pointer]:
+        - /url: /database
+    - paragraph [ref=f6e19]: 本地优先 · 共享运行宿主
+  - generic [ref=f6e20]:
+    - generic "壳层状态与操作" [ref=f6e21]:
+      - button "打开主对话" [expanded] [ref=f6e22] [cursor=pointer]
+      - region "运行与连接摘要" [ref=f6e23]:
+        - paragraph [ref=f6e24]: 已同步
+    - main [ref=f6e25]:
+      - heading "模型" [active] [level=1] [ref=f6e26]
+      - generic [ref=f6e27]:
+        - status [ref=f6e28]: 设置 revision 0；单项保存，各项互不代存。
+        - button "核对当前模型设置" [ref=f6e29] [cursor=pointer]
+        - region "模型指派" [ref=f6e30]:
+          - heading "模型指派" [level=2] [ref=f6e31]
+          - paragraph [ref=f6e32]: 主模型：opencode-go / deepseek-v4-flash
+          - paragraph [ref=f6e33]: 辅助小模型：跟随主模型
+          - paragraph [ref=f6e34]: 辅助小模型用于记忆检索门、Skill 自动选择与消息分类。
+        - generic "模型候选" [ref=f6e35]:
+          - generic [ref=f6e36]:
+            - heading "anthropic" [level=2] [ref=f6e37]
+            - paragraph [ref=f6e38]: 连接：未配置
+            - paragraph [ref=f6e39]: 目录：尚未获取；上次成功 尚无
+            - button "展开此端点" [ref=f6e40] [cursor=pointer]
+            - button "刷新目录" [ref=f6e41] [cursor=pointer]
+            - paragraph [ref=f6e42]: 暂无候选；目录尚未获取、失败或为空均不代表当前无指派。
+          - generic [ref=f6e43]:
+            - heading "openai" [level=2] [ref=f6e44]
+            - paragraph [ref=f6e45]: 连接：未配置
+            - paragraph [ref=f6e46]: 目录：尚未获取；上次成功 尚无
+            - button "展开此端点" [ref=f6e47] [cursor=pointer]
+            - button "刷新目录" [ref=f6e48] [cursor=pointer]
+            - paragraph [ref=f6e49]: 暂无候选；目录尚未获取、失败或为空均不代表当前无指派。
+          - generic [ref=f6e50]:
+            - heading "xai" [level=2] [ref=f6e51]
+            - paragraph [ref=f6e52]: 连接：未配置
+            - paragraph [ref=f6e53]: 目录：尚未获取；上次成功 尚无
+            - button "展开此端点" [ref=f6e54] [cursor=pointer]
+            - button "刷新目录" [ref=f6e55] [cursor=pointer]
+            - paragraph [ref=f6e56]: 暂无候选；目录尚未获取、失败或为空均不代表当前无指派。
+          - generic [ref=f6e57]:
+            - heading "deepseek" [level=2] [ref=f6e58]
+            - paragraph [ref=f6e59]: 连接：未配置
+            - paragraph [ref=f6e60]: 目录：尚未获取；上次成功 尚无
+            - button "展开此端点" [ref=f6e61] [cursor=pointer]
+            - button "刷新目录" [ref=f6e62] [cursor=pointer]
+            - paragraph [ref=f6e63]: 暂无候选；目录尚未获取、失败或为空均不代表当前无指派。
+          - generic [ref=f6e64]:
+            - heading "opencode" [level=2] [ref=f6e65]
+            - paragraph [ref=f6e66]: 连接：未配置
+            - paragraph [ref=f6e67]: 目录：尚未获取；上次成功 尚无
+            - button "展开此端点" [ref=f6e68] [cursor=pointer]
+            - button "刷新目录" [ref=f6e69] [cursor=pointer]
+            - article [ref=f6e70]:
+              - heading "deepseek-v4-flash" [level=3] [ref=f6e71]
+              - paragraph [ref=f6e72]: deepseek-v4-flash
+              - paragraph [ref=f6e73]: 支持状态：支持
+              - paragraph [ref=f6e74]: 未钉选
+              - paragraph
+              - group [ref=f6e75]:
+                - generic "模型详情" [ref=f6e76] [cursor=pointer]
+            - article [ref=f6e77]:
+              - heading "qwen3.7-max" [level=3] [ref=f6e78]
+              - paragraph [ref=f6e79]: qwen3.7-max
+              - paragraph [ref=f6e80]: 支持状态：支持
+              - paragraph [ref=f6e81]: 未钉选
+              - paragraph
+              - group [ref=f6e82]:
+                - generic "模型详情" [ref=f6e83] [cursor=pointer]
+            - article [ref=f6e84]:
+              - heading "grok-4.6" [level=3] [ref=f6e85]
+              - paragraph [ref=f6e86]: grok-4.6
+              - paragraph [ref=f6e87]: "支持状态：unsupported_wire_style: responses unsupported_wire_style: responses"
+              - paragraph [ref=f6e88]: 未钉选
+              - paragraph
+              - group [ref=f6e89]:
+                - generic "模型详情" [ref=f6e90] [cursor=pointer]
+          - generic [ref=f6e91]:
+            - heading "opencode-go" [level=2] [ref=f6e92]
+            - paragraph [ref=f6e93]: 连接：未配置
+            - paragraph [ref=f6e94]: 目录：尚未获取；上次成功 尚无
+            - button "展开此端点" [ref=f6e95] [cursor=pointer]
+            - button "刷新目录" [ref=f6e96] [cursor=pointer]
+            - article [ref=f6e97]:
+              - heading "deepseek-v4-flash" [level=3] [ref=f6e98]
+              - paragraph [ref=f6e99]: deepseek-v4-flash
+              - paragraph [ref=f6e100]: 支持状态：支持
+              - paragraph [ref=f6e101]: 已钉选 · 当前主模型
+              - paragraph
+              - group [ref=f6e102]:
+                - generic "模型详情" [ref=f6e103] [cursor=pointer]
+                - option "内置（当前，无复位操作）" [disabled] [selected]
+                - option "openai"
+                - option "anthropic"
+            - article [ref=f6e104]:
+              - heading "qwen3.7-max" [level=3] [ref=f6e105]
+              - paragraph [ref=f6e106]: qwen3.7-max
+              - paragraph [ref=f6e107]: 支持状态：支持
+              - paragraph [ref=f6e108]: 未钉选
+              - paragraph
+              - group [ref=f6e109]:
+                - generic "模型详情" [ref=f6e110] [cursor=pointer]
+            - article [ref=f6e111]:
+              - heading "grok-4.6" [level=3] [ref=f6e112]
+              - paragraph [ref=f6e113]: grok-4.6
+              - paragraph [ref=f6e114]: "支持状态：unsupported_wire_style: responses unsupported_wire_style: responses"
+              - paragraph [ref=f6e115]: 未钉选
+              - paragraph
+              - group [ref=f6e116]:
+                - generic "模型详情" [ref=f6e117] [cursor=pointer]
+  - region "MainBar" [ref=f6e118]:
+    - generic [ref=f6e119]:
+      - heading "主对话" [level=2] [ref=f6e120]
+      - button "收起主对话" [ref=f6e121] [cursor=pointer]
+    - generic [ref=f6e122]:
+      - generic [ref=f6e123]: 会话
+      - button "新建会话" [ref=f6e124] [cursor=pointer]
+    - region "主对话" [ref=f6e125]:
+      - article [ref=f6e127]:
+        - paragraph [ref=f6e128]: V01 视觉验收 · 离线模型
+        - paragraph [ref=f6e129]: 离线模型回复
+        - paragraph [ref=f6e130]: Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。
+        - generic [ref=f6e131]: 已保存
+    - generic [ref=f6e132]:
+      - generic [ref=f6e133]: 消息
+      - textbox "消息" [ref=f6e134]:
+        - /placeholder: 写下消息；/skills 指定流程…
+      - button "发送" [disabled] [ref=f6e135]
+    - paragraph [ref=f6e136]: Enter 发送 · Shift+Enter 换行
+  - status [ref=f6e137]: 就绪
+  - alert [ref=f6e138]
+```

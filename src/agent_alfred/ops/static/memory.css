@@ -7,29 +7,29 @@
 .memory-page form label input:not([type=checkbox]),.memory-page form label textarea {display:block;width:100%;margin-top:6px;color:var(--text)}
 .memory-page form p,.memory-page form small {flex-basis:100%;margin:8px 0}
 .memory-page [role=tabpanel]>div>h2 {margin-top:24px}
-.memory-create {margin:16px 0;padding:16px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.memory-create {margin:16px 0;padding:16px;border:1px solid var(--border);border-radius:var(--radius-panel);background:var(--surface)}
 .memory-create>div {padding-top:12px}
-.memory-summary {color:var(--secondary);font-size:12px;overflow-wrap:anywhere;margin:8px 0}
+.memory-summary {color:var(--secondary);font-size:var(--font-size-meta);font-family:var(--font-mono);overflow-wrap:anywhere;margin:8px 0}
 .memory-summary:empty,.memory-page [role=status]:empty {display:none}
 .memory-excerpt {display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;margin:8px 0}
 .memory-page .card small {display:block;line-height:1.6}
-.memory-page [aria-label$="记忆详情"] {margin-top:24px;padding:18px;border:1px solid var(--control);border-radius:12px;background:var(--surface)}
-.memory-page [aria-label$="记忆详情"]>h3 {margin-top:0;font-size:16px}
+.memory-page [aria-label$="记忆详情"] {margin-top:24px;padding:18px;border:1px solid var(--control);border-radius:var(--radius-panel);background:var(--surface)}
+.memory-page [aria-label$="记忆详情"]>h3 {margin-top:0;font-size:var(--font-size-body)}
 .memory-page [aria-label$="记忆详情"]>button {margin:0 8px 4px 0}
 .memory-record-content>p {white-space:pre-wrap}
 .memory-page [aria-label$="记忆详情"] form {border-top:1px solid var(--border);padding-top:16px;margin-top:16px}
-.memory-page [aria-label="删除确认"] {border:1px solid var(--attention);border-radius:8px;padding:12px;margin:12px 0}
+.memory-page [aria-label="删除确认"] {border:1px solid var(--attention);border-radius:var(--radius-control);padding:12px;margin:12px 0}
 .memory-page [aria-label="删除确认"] button {margin:4px}
-.memory-maintenance {border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:16px}
+.memory-maintenance {border:1px solid var(--border);border-radius:var(--radius-panel);background:var(--surface);padding:16px}
 .memory-maintenance>h2 {margin:0}
 .memory-maintenance>h2>button {width:100%;text-align:left;border:0;padding:4px 0;background:transparent;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .memory-maintenance>h2>button::after {content:"＋";color:var(--muted)}
 .memory-maintenance>h2>button[aria-expanded=true]::after {content:"−"}
 .memory-maintenance-body {margin-top:12px;border-top:1px solid var(--border);padding-top:12px}
 .memory-maintenance-body>section>h2 {display:none}
-.memory-page pre {overflow:auto;max-height:440px;white-space:pre;outline-offset:-3px;border:1px solid var(--border);border-radius:8px;padding:12px}
+.memory-page pre {overflow:auto;max-height:440px;white-space:pre;outline-offset:-3px;border:1px solid var(--border);border-radius:var(--radius-control);padding:12px}
 .memory-page pre:empty {display:none}
-.memory-page fieldset {min-width:0;margin:12px 0;border:1px solid var(--control);border-radius:8px}
+.memory-page fieldset {min-width:0;margin:12px 0;border:1px solid var(--control);border-radius:var(--radius-control)}
 .memory-page legend,.memory-page small {overflow-wrap:anywhere}
 @container(max-width:400px){
  .memory-page .card,.memory-create,.memory-maintenance,.memory-page [aria-label$="记忆详情"] {padding:12px}

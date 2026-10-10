@@ -1,0 +1,256 @@
+### Page
+- Page URL: http://127.0.0.1:17810/tools
+- Page Title: Agent-Alfred
+### Snapshot
+```yaml
+- generic [ref=f8e1]:
+  - banner "导航面板" [ref=f8e2]:
+    - link "Agent-Alfred 本地助手" [ref=f8e3] [cursor=pointer]:
+      - /url: /overview
+      - text: Agent-Alfred
+      - generic [ref=f8e4]: 本地助手
+    - navigation "主导航" [ref=f8e5]:
+      - paragraph [ref=f8e6]: 工作区
+      - link "总览" [ref=f8e7] [cursor=pointer]:
+        - /url: /overview
+      - link "收件箱" [ref=f8e8] [cursor=pointer]:
+        - /url: /inbox
+      - link "运行" [ref=f8e9] [cursor=pointer]:
+        - /url: /runs
+      - link "记忆" [ref=f8e10] [cursor=pointer]:
+        - /url: /memory
+      - paragraph [ref=f8e11]: Agent 配置
+      - link "模型" [ref=f8e12] [cursor=pointer]:
+        - /url: /models
+      - link "连接" [ref=f8e13] [cursor=pointer]:
+        - /url: /connections
+      - link "行为" [ref=f8e14] [cursor=pointer]:
+        - /url: /behaviour
+      - link "工具" [ref=f8e15] [cursor=pointer]:
+        - /url: /tools
+      - paragraph [ref=f8e16]: 诊断
+      - link "用量账本" [ref=f8e17] [cursor=pointer]:
+        - /url: /ops
+      - link "数据库" [ref=f8e18] [cursor=pointer]:
+        - /url: /database
+    - paragraph [ref=f8e19]: 本地优先 · 共享运行宿主
+  - generic [ref=f8e20]:
+    - generic "壳层状态与操作" [ref=f8e21]:
+      - button "打开主对话" [expanded] [ref=f8e22] [cursor=pointer]
+      - region "运行与连接摘要" [ref=f8e23]:
+        - paragraph [ref=f8e24]: 已同步
+    - main [ref=f8e25]:
+      - heading "工具" [active] [level=1] [ref=f8e26]
+      - generic [ref=f8e27]:
+        - paragraph [ref=f8e28]: 配置：ok · 保存版本 0 · 生效：applied
+        - status [ref=f8e29]: 当前目录已核对；连接观测、保存与生效分别显示。
+        - status
+        - paragraph [ref=f8e30]: MCP 目录：未配置服务器
+        - generic [ref=f8e31]:
+          - button "核对当前授权" [ref=f8e32] [cursor=pointer]
+          - button "重新应用已保存授权" [ref=f8e33] [cursor=pointer]
+          - link "连接、凭据与 MCP 维护" [ref=f8e34] [cursor=pointer]:
+            - /url: /connections
+        - paragraph [ref=f8e35]: 从 MainBar 明确提出工具请求；本页查看来源、能力和授权。人格 read_persona / update_persona 保留完整版本、覆盖限制与冲突，修改从下一 Run 生效。
+        - generic [ref=f8e36]:
+          - region "内置工具" [ref=f8e37]:
+            - heading "内置工具" [level=2] [ref=f8e38]
+            - paragraph [ref=f8e39]: builtin
+            - paragraph
+            - generic [ref=f8e40]:
+              - article [ref=f8e41]:
+                - heading "create_event" [level=3] [ref=f8e42]
+                - paragraph [ref=f8e43]: 来源 builtin · 能力 create_event
+                - paragraph [ref=f8e44]: Create a local calendar entry; time requires UTC offset.
+                - generic "工具状态摘要" [ref=f8e45]:
+                  - paragraph [ref=f8e46]: 副作用：local_write · 可用性：configured
+                  - paragraph [ref=f8e47]: 本地工具，不需要外部授权
+                  - paragraph [ref=f8e48]: 授权：不适用
+                  - paragraph [ref=f8e49]: 模型暴露：real
+                  - paragraph [ref=f8e50]: 阻止原因：无已报告阻止原因
+                - generic [ref=f8e51]:
+                  - button "展开详情" [ref=f8e52] [cursor=pointer]
+                  - link "查看包含该工具的运行" [ref=f8e53] [cursor=pointer]:
+                    - /url: /ops?tool=%5B%22builtin%22%2C%22create_event%22%5D
+              - article [ref=f8e54]:
+                - heading "create_skill" [level=3] [ref=f8e55]
+                - paragraph [ref=f8e56]: 来源 builtin · 能力 create_skill
+                - paragraph [ref=f8e57]: Create a new user Skill; requires restart to load. Existing user names are protected; builtin overrides need user confirmation.
+                - generic "工具状态摘要" [ref=f8e58]:
+                  - paragraph [ref=f8e59]: 副作用：local_write · 可用性：configured
+                  - paragraph [ref=f8e60]: 本地工具，不需要外部授权
+                  - paragraph [ref=f8e61]: 授权：不适用
+                  - paragraph [ref=f8e62]: 模型暴露：real
+                  - paragraph [ref=f8e63]: 阻止原因：无已报告阻止原因
+                - generic [ref=f8e64]:
+                  - button "展开详情" [ref=f8e65] [cursor=pointer]
+                  - link "查看包含该工具的运行" [ref=f8e66] [cursor=pointer]:
+                    - /url: /ops?tool=%5B%22builtin%22%2C%22create_skill%22%5D
+              - article [ref=f8e67]:
+                - heading "delete_memory" [level=3] [ref=f8e68]
+                - paragraph [ref=f8e69]: 来源 builtin · 能力 delete_memory
+                - paragraph [ref=f8e70]: Delete one explicit memory ID and version.
+                - generic "工具状态摘要" [ref=f8e71]:
+                  - paragraph [ref=f8e72]: 副作用：local_write · 可用性：configured
+                  - paragraph [ref=f8e73]: 本地工具，不需要外部授权
+                  - paragraph [ref=f8e74]: 授权：不适用
+                  - paragraph [ref=f8e75]: 模型暴露：real
+                  - paragraph [ref=f8e76]: 阻止原因：无已报告阻止原因
+                - generic [ref=f8e77]:
+                  - button "展开详情" [ref=f8e78] [cursor=pointer]
+                  - link "查看包含该工具的运行" [ref=f8e79] [cursor=pointer]:
+                    - /url: /ops?tool=%5B%22builtin%22%2C%22delete_memory%22%5D
+              - article [ref=f8e80]:
+                - heading "draft_message" [level=3] [ref=f8e81]
+                - paragraph [ref=f8e82]: 来源 builtin · 能力 draft_message
+                - paragraph [ref=f8e83]: Create a local Markdown draft; never send it.
+                - generic "工具状态摘要" [ref=f8e84]:
+                  - paragraph [ref=f8e85]: 副作用：local_write · 可用性：configured
+                  - paragraph [ref=f8e86]: 本地工具，不需要外部授权
+                  - paragraph [ref=f8e87]: 授权：不适用
+                  - paragraph [ref=f8e88]: 模型暴露：real
+                  - paragraph [ref=f8e89]: 阻止原因：无已报告阻止原因
+                - generic [ref=f8e90]:
+                  - button "展开详情" [ref=f8e91] [cursor=pointer]
+                  - link "查看包含该工具的运行" [ref=f8e92] [cursor=pointer]:
+                    - /url: /ops?tool=%5B%22builtin%22%2C%22draft_message%22%5D
+              - article [ref=f8e93]:
+                - heading "get_memory" [level=3] [ref=f8e94]
+                - paragraph [ref=f8e95]: 来源 builtin · 能力 get_memory
+                - paragraph [ref=f8e96]: Read one memory and its current version.
+                - generic "工具状态摘要" [ref=f8e97]:
+                  - paragraph [ref=f8e98]: 副作用：local_read · 可用性：configured
+                  - paragraph [ref=f8e99]: 本地工具，不需要外部授权
+                  - paragraph [ref=f8e100]: 授权：不适用
+                  - paragraph [ref=f8e101]: 模型暴露：real
+                  - paragraph [ref=f8e102]: 阻止原因：无已报告阻止原因
+                - generic [ref=f8e103]:
+                  - button "展开详情" [ref=f8e104] [cursor=pointer]
+                  - link "查看包含该工具的运行" [ref=f8e105] [cursor=pointer]:
+                    - /url: /ops?tool=%5B%22builtin%22%2C%22get_memory%22%5D
+              - article [ref=f8e106]:
+                - heading "query_events" [level=3] [ref=f8e107]
+                - paragraph [ref=f8e108]: 来源 builtin · 能力 query_events
+                - paragraph [ref=f8e109]: Query local calendar entries by absolute time.
+                - generic "工具状态摘要" [ref=f8e110]:
+                  - paragraph [ref=f8e111]: 副作用：local_read · 可用性：configured
+                  - paragraph [ref=f8e112]: 本地工具，不需要外部授权
+                  - paragraph [ref=f8e113]: 授权：不适用
+                  - paragraph [ref=f8e114]: 模型暴露：real
+                  - paragraph [ref=f8e115]: 阻止原因：无已报告阻止原因
+                - generic [ref=f8e116]:
+                  - button "展开详情" [ref=f8e117] [cursor=pointer]
+                  - link "查看包含该工具的运行" [ref=f8e118] [cursor=pointer]:
+                    - /url: /ops?tool=%5B%22builtin%22%2C%22query_events%22%5D
+              - article [ref=f8e119]:
+                - heading "query_memory" [level=3] [ref=f8e120]
+                - paragraph [ref=f8e121]: 来源 builtin · 能力 query_memory
+                - paragraph [ref=f8e122]: Find explicit memory targets; clarify ambiguous matches.
+                - generic "工具状态摘要" [ref=f8e123]:
+                  - paragraph [ref=f8e124]: 副作用：local_read · 可用性：configured
+                  - paragraph [ref=f8e125]: 本地工具，不需要外部授权
+                  - paragraph [ref=f8e126]: 授权：不适用
+                  - paragraph [ref=f8e127]: 模型暴露：real
+                  - paragraph [ref=f8e128]: 阻止原因：无已报告阻止原因
+                - generic [ref=f8e129]:
+                  - button "展开详情" [ref=f8e130] [cursor=pointer]
+                  - link "查看包含该工具的运行" [ref=f8e131] [cursor=pointer]:
+                    - /url: /ops?tool=%5B%22builtin%22%2C%22query_memory%22%5D
+              - article [ref=f8e132]:
+                - heading "read_persona" [level=3] [ref=f8e133]
+                - paragraph [ref=f8e134]: 来源 builtin · 能力 read_persona
+                - paragraph [ref=f8e135]: Read the complete effective persona and its version.
+                - generic "工具状态摘要" [ref=f8e136]:
+                  - paragraph [ref=f8e137]: 副作用：local_read · 可用性：configured
+                  - paragraph [ref=f8e138]: 本地工具，不需要外部授权
+                  - paragraph [ref=f8e139]: 授权：不适用
+                  - paragraph [ref=f8e140]: 模型暴露：real
+                  - paragraph [ref=f8e141]: 阻止原因：无已报告阻止原因
+                - generic [ref=f8e142]:
+                  - button "展开详情" [ref=f8e143] [cursor=pointer]
+                  - link "查看包含该工具的运行" [ref=f8e144] [cursor=pointer]:
+                    - /url: /ops?tool=%5B%22builtin%22%2C%22read_persona%22%5D
+              - article [ref=f8e145]:
+                - heading "save_fact" [level=3] [ref=f8e146]
+                - paragraph [ref=f8e147]: 来源 builtin · 能力 save_fact
+                - paragraph [ref=f8e148]: Save a fact only when the user explicitly asks to save it.
+                - generic "工具状态摘要" [ref=f8e149]:
+                  - paragraph [ref=f8e150]: 副作用：local_write · 可用性：configured
+                  - paragraph [ref=f8e151]: 本地工具，不需要外部授权
+                  - paragraph [ref=f8e152]: 授权：不适用
+                  - paragraph [ref=f8e153]: 模型暴露：real
+                  - paragraph [ref=f8e154]: 阻止原因：无已报告阻止原因
+                - generic [ref=f8e155]:
+                  - button "展开详情" [ref=f8e156] [cursor=pointer]
+                  - link "查看包含该工具的运行" [ref=f8e157] [cursor=pointer]:
+                    - /url: /ops?tool=%5B%22builtin%22%2C%22save_fact%22%5D
+              - article [ref=f8e158]:
+                - heading "update_memory" [level=3] [ref=f8e159]
+                - paragraph [ref=f8e160]: 来源 builtin · 能力 update_memory
+                - paragraph [ref=f8e161]: Update one memory using its observed version.
+                - generic "工具状态摘要" [ref=f8e162]:
+                  - paragraph [ref=f8e163]: 副作用：local_write · 可用性：configured
+                  - paragraph [ref=f8e164]: 本地工具，不需要外部授权
+                  - paragraph [ref=f8e165]: 授权：不适用
+                  - paragraph [ref=f8e166]: 模型暴露：real
+                  - paragraph [ref=f8e167]: 阻止原因：无已报告阻止原因
+                - generic [ref=f8e168]:
+                  - button "展开详情" [ref=f8e169] [cursor=pointer]
+                  - link "查看包含该工具的运行" [ref=f8e170] [cursor=pointer]:
+                    - /url: /ops?tool=%5B%22builtin%22%2C%22update_memory%22%5D
+              - article [ref=f8e171]:
+                - heading "update_persona" [level=3] [ref=f8e172]
+                - paragraph [ref=f8e173]: 来源 builtin · 能力 update_persona
+                - paragraph [ref=f8e174]: Replace the managed persona using the read version. Preserve instructions the user did not ask to change. Next Run applies it.
+                - generic "工具状态摘要" [ref=f8e175]:
+                  - paragraph [ref=f8e176]: 副作用：local_write · 可用性：configured
+                  - paragraph [ref=f8e177]: 本地工具，不需要外部授权
+                  - paragraph [ref=f8e178]: 授权：不适用
+                  - paragraph [ref=f8e179]: 模型暴露：real
+                  - paragraph [ref=f8e180]: 阻止原因：无已报告阻止原因
+                - generic [ref=f8e181]:
+                  - button "展开详情" [ref=f8e182] [cursor=pointer]
+                  - link "查看包含该工具的运行" [ref=f8e183] [cursor=pointer]:
+                    - /url: /ops?tool=%5B%22builtin%22%2C%22update_persona%22%5D
+          - region "集成 · tavily" [ref=f8e184]:
+            - heading "集成 · tavily" [level=2] [ref=f8e185]
+            - paragraph [ref=f8e186]: tavily
+            - paragraph
+            - article [ref=f8e188]:
+              - heading "web_search" [level=3] [ref=f8e189]
+              - paragraph [ref=f8e190]: 来源 tavily · 能力 web_search
+              - paragraph [ref=f8e191]: 搜索网络并返回外部来源标题、链接与片段。
+              - generic "工具状态摘要" [ref=f8e192]:
+                - paragraph [ref=f8e193]: 副作用：external · 可用性：unconfigured
+                - paragraph [ref=f8e194]: 连接观测：unconfigured
+                - paragraph [ref=f8e195]: 已保存授权：unset · 实际应用：applied
+                - paragraph [ref=f8e196]: 模型暴露：guidance
+                - paragraph [ref=f8e197]: 阻止原因：configuration_required
+              - generic [ref=f8e198]:
+                - button "展开详情" [ref=f8e199] [cursor=pointer]
+                - link "查看包含该工具的运行" [ref=f8e200] [cursor=pointer]:
+                  - /url: /ops?tool=%5B%22tavily%22%2C%22web_search%22%5D
+                - link "连接维护" [ref=f8e201] [cursor=pointer]:
+                  - /url: /connections
+  - region "MainBar" [ref=f8e202]:
+    - generic [ref=f8e203]:
+      - heading "主对话" [level=2] [ref=f8e204]
+      - button "收起主对话" [ref=f8e205] [cursor=pointer]
+    - generic [ref=f8e206]:
+      - generic [ref=f8e207]: 会话
+      - button "新建会话" [ref=f8e208] [cursor=pointer]
+    - region "主对话" [ref=f8e209]:
+      - article [ref=f8e211]:
+        - paragraph [ref=f8e212]: V01 视觉验收 · 离线模型
+        - paragraph [ref=f8e213]: 离线模型回复
+        - paragraph [ref=f8e214]: Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。
+        - generic [ref=f8e215]: 已保存
+    - generic [ref=f8e216]:
+      - generic [ref=f8e217]: 消息
+      - textbox "消息" [ref=f8e218]:
+        - /placeholder: 写下消息；/skills 指定流程…
+      - button "发送" [disabled] [ref=f8e219]
+    - paragraph [ref=f8e220]: Enter 发送 · Shift+Enter 换行
+  - status [ref=f8e221]: 就绪
+  - alert [ref=f8e222]
+```

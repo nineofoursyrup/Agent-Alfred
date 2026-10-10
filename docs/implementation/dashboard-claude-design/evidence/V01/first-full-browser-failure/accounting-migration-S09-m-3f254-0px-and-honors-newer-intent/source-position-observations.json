@@ -1,0 +1,43 @@
+{
+  "viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "observations": [
+    {
+      "intent": "none",
+      "before": {
+        "scrollTop": 7074,
+        "panel": {
+          "top": 53.9375,
+          "bottom": 844,
+          "height": 790.0625
+        },
+        "link": {
+          "top": 440.828125,
+          "bottom": 456.828125,
+          "height": 16
+        },
+        "anchorOffset": 386.890625,
+        "focused": true,
+        "visibleInPanel": true
+      },
+      "after": {
+        "scrollTop": 1937,
+        "panel": {
+          "top": 53.9375,
+          "bottom": 844,
+          "height": 790.0625
+        },
+        "link": {
+          "top": 440.328125,
+          "bottom": 456.328125,
+          "height": 16
+        },
+        "anchorOffset": 386.390625,
+        "focused": true,
+        "visibleInPanel": true
+      }
+    }
+  ]
+}
