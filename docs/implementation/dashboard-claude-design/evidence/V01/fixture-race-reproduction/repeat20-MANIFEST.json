@@ -1,0 +1,86 @@
+{
+  "fixed_test_candidate": "f9fef124f3fd656e5711c5d047f488f6e09c0783",
+  "measured_before_commit": true,
+  "source_test_sha256": "7d3dace40cc3b956bddf22388d4c032d187376dedfe836b6b00e2a73d1520a95",
+  "runs": {
+    "no-tests-found": {
+      "outcome": "NOT RUN: incorrect anchored grep selected no tests; invocation failure preserved",
+      "report": {
+        "base_head": "59aea6b4ddef2496a2223299bbf3185073cb6902",
+        "source_test_sha256": "7d3dace40cc3b956bddf22388d4c032d187376dedfe836b6b00e2a73d1520a95",
+        "command": [
+          "npx",
+          "playwright",
+          "test",
+          "tests/browser/tools-visual.spec.js",
+          "--grep",
+          "^V01 public recipes",
+          "--repeat-each=20",
+          "--output=/tmp/alfred-v01-fixture-race-repeat20/results"
+        ],
+        "browser_test_port": 17810,
+        "temporary_instrumentation": false,
+        "retries": 0,
+        "configured_test_timeout_ms": 15000,
+        "exit_code": 1,
+        "seconds": 1.23
+      }
+    },
+    "successor": {
+      "outcome": "20/20 PASS without temporary route or instrumentation",
+      "report": {
+        "base_head": "59aea6b4ddef2496a2223299bbf3185073cb6902",
+        "source_test_sha256": "7d3dace40cc3b956bddf22388d4c032d187376dedfe836b6b00e2a73d1520a95",
+        "command": [
+          "npx",
+          "playwright",
+          "test",
+          "tests/browser/tools-visual.spec.js",
+          "--grep",
+          "V01 public recipes keep pulse opt-in, selection visible and reduced motion still",
+          "--repeat-each=20",
+          "--output=/tmp/alfred-v01-fixture-race-repeat20-successor/results"
+        ],
+        "browser_test_port": 17810,
+        "temporary_instrumentation": false,
+        "retries": 0,
+        "configured_test_timeout_ms": 15000,
+        "exit_code": 0,
+        "seconds": 21.72
+      }
+    }
+  },
+  "members": [
+    {
+      "path": "no-tests-found/output.log",
+      "size": 168,
+      "sha256": "330690de673564e2636fc855d8b7e1872ddbf82abacad3c89ef1ecaae61b7742"
+    },
+    {
+      "path": "no-tests-found/results/.last-run.json",
+      "size": 45,
+      "sha256": "e22df5d0991eb28c09093b1e678b3fa8cd1fab48185d38e67cf79fb6e63ad5ea"
+    },
+    {
+      "path": "no-tests-found/results.json",
+      "size": 543,
+      "sha256": "62c967f4351e4602a48eee5e55221b98ae6dce307a1491bcba6244b2ca151767"
+    },
+    {
+      "path": "successor/output.log",
+      "size": 3374,
+      "sha256": "1a614e39e9ff25582b2bafd6b69e8ff2dda88829fd0610eaf47e4e929b3d3b7d"
+    },
+    {
+      "path": "successor/results/.last-run.json",
+      "size": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903"
+    },
+    {
+      "path": "successor/results.json",
+      "size": 615,
+      "sha256": "0610e25eddedca0f7700fa4929b2e37c829d9f82d136fbe88fa8a40194b14308"
+    }
+  ],
+  "archive_sha256": "ad35e1f8d1c60e6dcd66fa50606589bb16324d0dfde306fe26a40581b95c6a29"
+}

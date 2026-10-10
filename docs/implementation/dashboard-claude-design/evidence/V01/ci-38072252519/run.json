@@ -1,0 +1,194 @@
+{
+  "conclusion": "failure",
+  "headSha": "59aea6b4ddef2496a2223299bbf3185073cb6902",
+  "jobs": [
+    {
+      "completedAt": "2026-10-10T18:47:57Z",
+      "conclusion": "failure",
+      "databaseId": 114271902875,
+      "name": "lint / skills / env / tests",
+      "startedAt": "2026-10-10T17:33:55Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-10T17:33:58Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-10T17:33:56Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T17:34:00Z",
+          "conclusion": "success",
+          "name": "Checkout",
+          "number": 2,
+          "startedAt": "2026-10-10T17:33:58Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T17:34:00Z",
+          "conclusion": "success",
+          "name": "Install CPython (Database requires its shared SQLite C API)",
+          "number": 3,
+          "startedAt": "2026-10-10T17:34:00Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T17:34:03Z",
+          "conclusion": "success",
+          "name": "Install uv (Python 3.14)",
+          "number": 4,
+          "startedAt": "2026-10-10T17:34:00Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T17:34:04Z",
+          "conclusion": "success",
+          "name": "Install package (dev and mcp extras)",
+          "number": 5,
+          "startedAt": "2026-10-10T17:34:03Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T17:34:04Z",
+          "conclusion": "success",
+          "name": "Lint",
+          "number": 6,
+          "startedAt": "2026-10-10T17:34:04Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T17:34:04Z",
+          "conclusion": "success",
+          "name": "Skill validation",
+          "number": 7,
+          "startedAt": "2026-10-10T17:34:04Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T17:34:08Z",
+          "conclusion": "success",
+          "name": ".env.example consistency check",
+          "number": 8,
+          "startedAt": "2026-10-10T17:34:04Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T18:29:08Z",
+          "conclusion": "success",
+          "name": "Offline deterministic tests",
+          "number": 9,
+          "startedAt": "2026-10-10T17:34:08Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T18:29:13Z",
+          "conclusion": "success",
+          "name": "Build distributions",
+          "number": 10,
+          "startedAt": "2026-10-10T18:29:08Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T18:29:24Z",
+          "conclusion": "success",
+          "name": "Verify base and MCP artifact installations",
+          "number": 11,
+          "startedAt": "2026-10-10T18:29:13Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T18:29:26Z",
+          "conclusion": "success",
+          "name": "Install Node for Dashboard checks",
+          "number": 12,
+          "startedAt": "2026-10-10T18:29:24Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T18:29:28Z",
+          "conclusion": "success",
+          "name": "Install Dashboard test tools",
+          "number": 13,
+          "startedAt": "2026-10-10T18:29:26Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T18:29:28Z",
+          "conclusion": "success",
+          "name": "Dashboard typecheck",
+          "number": 14,
+          "startedAt": "2026-10-10T18:29:28Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T18:29:48Z",
+          "conclusion": "success",
+          "name": "Install test browser",
+          "number": 15,
+          "startedAt": "2026-10-10T18:29:28Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T18:47:52Z",
+          "conclusion": "failure",
+          "name": "Offline Dashboard browser tests",
+          "number": 16,
+          "startedAt": "2026-10-10T18:29:48Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T18:47:54Z",
+          "conclusion": "success",
+          "name": "Upload browser failure evidence",
+          "number": 17,
+          "startedAt": "2026-10-10T18:47:52Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T18:47:54Z",
+          "conclusion": "skipped",
+          "name": "Post Install Node for Dashboard checks",
+          "number": 31,
+          "startedAt": "2026-10-10T18:47:54Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T18:47:54Z",
+          "conclusion": "skipped",
+          "name": "Post Install uv (Python 3.14)",
+          "number": 32,
+          "startedAt": "2026-10-10T18:47:54Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T18:47:54Z",
+          "conclusion": "skipped",
+          "name": "Post Install CPython (Database requires its shared SQLite C API)",
+          "number": 33,
+          "startedAt": "2026-10-10T18:47:54Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T18:47:54Z",
+          "conclusion": "success",
+          "name": "Post Checkout",
+          "number": 34,
+          "startedAt": "2026-10-10T18:47:54Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-10T18:47:54Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 35,
+          "startedAt": "2026-10-10T18:47:54Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/nineofoursyrup/Agent-Alfred/actions/runs/38072252519/job/114271902875"
+    }
+  ],
+  "status": "completed"
+}

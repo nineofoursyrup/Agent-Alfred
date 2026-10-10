@@ -1,0 +1,47 @@
+{
+  "report": {
+    "mode": "new",
+    "base_head": "59aea6b4ddef2496a2223299bbf3185073cb6902",
+    "source_test_sha256": "7d3dace40cc3b956bddf22388d4c032d187376dedfe836b6b00e2a73d1520a95",
+    "instrumented_test_sha256": "d3dc696b99282c5f030098557cf39902e4df835df5bd2ba434405f505eb53e2f",
+    "browser_test_port": 17810,
+    "method": "Hold /api/entry response behind a route promise; inject fixture and set tab aria-pressed; observe #page child-list replacement; release startup entry and await that mount before the original row assertion.",
+    "temporary_only": true,
+    "retries": 0,
+    "configured_test_timeout_ms": 15000,
+    "command": [
+      "npx",
+      "playwright",
+      "test",
+      "tests/browser/_v01-race-repro.spec.js",
+      "--repeat-each=3",
+      "--output=/tmp/alfred-v01-fixture-race-repro/new/results"
+    ],
+    "exit_code": 0,
+    "seconds": 4.24
+  },
+  "observations": [
+    {
+      "entry_response_released": true,
+      "application_root_replaced": true,
+      "fixture_count": 1,
+      "fixture_parent": "BODY",
+      "application_heading": "工具"
+    },
+    {
+      "entry_response_released": true,
+      "application_root_replaced": true,
+      "fixture_count": 1,
+      "fixture_parent": "BODY",
+      "application_heading": "工具"
+    },
+    {
+      "entry_response_released": true,
+      "application_root_replaced": true,
+      "fixture_count": 1,
+      "fixture_parent": "BODY",
+      "application_heading": "工具"
+    }
+  ],
+  "expected_outcome": "3/3 passed with fixture retained under BODY"
+}

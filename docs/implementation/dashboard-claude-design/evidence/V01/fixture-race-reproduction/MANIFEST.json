@@ -1,0 +1,211 @@
+{
+  "test": "V01 public recipes keep pulse opt-in, selection visible and reduced motion still",
+  "base_head": "59aea6b4ddef2496a2223299bbf3185073cb6902",
+  "browser_test_port": 17810,
+  "temporary_instrumentation_committed_as_test": false,
+  "runs": {
+    "old": {
+      "report": {
+        "mode": "old",
+        "base_head": "59aea6b4ddef2496a2223299bbf3185073cb6902",
+        "source_test_sha256": "b9df00de2d82f8b1725858e6f01d60459a3b5dae06361badf09630e8ea3e230c",
+        "instrumented_test_sha256": "72d717910e9da5080107a20c20f3f680af0d669ee8e7c014e02491e1f17079a0",
+        "browser_test_port": 17810,
+        "method": "Hold /api/entry response behind a route promise; inject fixture and set tab aria-pressed; observe #page child-list replacement; release startup entry and await that mount before the original row assertion.",
+        "temporary_only": true,
+        "retries": 0,
+        "configured_test_timeout_ms": 15000,
+        "command": [
+          "npx",
+          "playwright",
+          "test",
+          "tests/browser/_v01-race-repro.spec.js",
+          "--repeat-each=3",
+          "--output=/tmp/alfred-v01-fixture-race-repro/old/results"
+        ],
+        "exit_code": 1,
+        "seconds": 48.13
+      },
+      "observations": [
+        {
+          "entry_response_released": true,
+          "application_root_replaced": true,
+          "fixture_count": 0,
+          "fixture_parent": null,
+          "application_heading": "工具"
+        },
+        {
+          "entry_response_released": true,
+          "application_root_replaced": true,
+          "fixture_count": 0,
+          "fixture_parent": null,
+          "application_heading": "工具"
+        },
+        {
+          "entry_response_released": true,
+          "application_root_replaced": true,
+          "fixture_count": 0,
+          "fixture_parent": null,
+          "application_heading": "工具"
+        }
+      ],
+      "expected_outcome": "3/3 failed at row.evaluate after fixture removal"
+    },
+    "new": {
+      "report": {
+        "mode": "new",
+        "base_head": "59aea6b4ddef2496a2223299bbf3185073cb6902",
+        "source_test_sha256": "7d3dace40cc3b956bddf22388d4c032d187376dedfe836b6b00e2a73d1520a95",
+        "instrumented_test_sha256": "d3dc696b99282c5f030098557cf39902e4df835df5bd2ba434405f505eb53e2f",
+        "browser_test_port": 17810,
+        "method": "Hold /api/entry response behind a route promise; inject fixture and set tab aria-pressed; observe #page child-list replacement; release startup entry and await that mount before the original row assertion.",
+        "temporary_only": true,
+        "retries": 0,
+        "configured_test_timeout_ms": 15000,
+        "command": [
+          "npx",
+          "playwright",
+          "test",
+          "tests/browser/_v01-race-repro.spec.js",
+          "--repeat-each=3",
+          "--output=/tmp/alfred-v01-fixture-race-repro/new/results"
+        ],
+        "exit_code": 0,
+        "seconds": 4.24
+      },
+      "observations": [
+        {
+          "entry_response_released": true,
+          "application_root_replaced": true,
+          "fixture_count": 1,
+          "fixture_parent": "BODY",
+          "application_heading": "工具"
+        },
+        {
+          "entry_response_released": true,
+          "application_root_replaced": true,
+          "fixture_count": 1,
+          "fixture_parent": "BODY",
+          "application_heading": "工具"
+        },
+        {
+          "entry_response_released": true,
+          "application_root_replaced": true,
+          "fixture_count": 1,
+          "fixture_parent": "BODY",
+          "application_heading": "工具"
+        }
+      ],
+      "expected_outcome": "3/3 passed with fixture retained under BODY"
+    }
+  },
+  "members": [
+    {
+      "path": "old/output.log",
+      "size": 9325,
+      "sha256": "0f7229dd4ecc0c8088bada62d6713ed6eb64618b550ec1c7608e815bae454ec5"
+    },
+    {
+      "path": "old/results/.last-run.json",
+      "size": 194,
+      "sha256": "62bea2510d3443ceb3192fdfb13017b022ed337d621d7364b7912d43fce1de75"
+    },
+    {
+      "path": "old/results/_v01-race-repro-V01-public-176f8-le-and-reduced-motion-still/error-context.md",
+      "size": 21356,
+      "sha256": "fe7ab5700559c935baa4a103528343f13fb7b64e8cb0019768a8f57905216326"
+    },
+    {
+      "path": "old/results/_v01-race-repro-V01-public-176f8-le-and-reduced-motion-still/race-observation.json",
+      "size": 158,
+      "sha256": "2ddde95a2102541362fefd6c82facefe4d28c5ed78cfc1f051c349a7424e538b"
+    },
+    {
+      "path": "old/results/_v01-race-repro-V01-public-176f8-le-and-reduced-motion-still/test-failed-1.png",
+      "size": 108190,
+      "sha256": "a3e4e4354929e5ca2f73ae22c60088727b6a7bdaf8b14ccc5f1e16c3703efa36"
+    },
+    {
+      "path": "old/results/_v01-race-repro-V01-public-176f8-le-and-reduced-motion-still/trace.zip",
+      "size": 303078,
+      "sha256": "960c39d106865dd1fbaae300fe58d361c1e743bf24628021d0e05e5e8159d68b"
+    },
+    {
+      "path": "old/results/_v01-race-repro-V01-public-176f8-le-and-reduced-motion-still-repeat1/error-context.md",
+      "size": 21356,
+      "sha256": "fe7ab5700559c935baa4a103528343f13fb7b64e8cb0019768a8f57905216326"
+    },
+    {
+      "path": "old/results/_v01-race-repro-V01-public-176f8-le-and-reduced-motion-still-repeat1/race-observation.json",
+      "size": 158,
+      "sha256": "2ddde95a2102541362fefd6c82facefe4d28c5ed78cfc1f051c349a7424e538b"
+    },
+    {
+      "path": "old/results/_v01-race-repro-V01-public-176f8-le-and-reduced-motion-still-repeat1/test-failed-1.png",
+      "size": 108190,
+      "sha256": "a3e4e4354929e5ca2f73ae22c60088727b6a7bdaf8b14ccc5f1e16c3703efa36"
+    },
+    {
+      "path": "old/results/_v01-race-repro-V01-public-176f8-le-and-reduced-motion-still-repeat1/trace.zip",
+      "size": 302637,
+      "sha256": "142fee8e3da3cf97e3e7c1bfa58f50a7814879c6556f1057509ad0e67e58d56c"
+    },
+    {
+      "path": "old/results/_v01-race-repro-V01-public-176f8-le-and-reduced-motion-still-repeat2/error-context.md",
+      "size": 21356,
+      "sha256": "fe7ab5700559c935baa4a103528343f13fb7b64e8cb0019768a8f57905216326"
+    },
+    {
+      "path": "old/results/_v01-race-repro-V01-public-176f8-le-and-reduced-motion-still-repeat2/race-observation.json",
+      "size": 158,
+      "sha256": "2ddde95a2102541362fefd6c82facefe4d28c5ed78cfc1f051c349a7424e538b"
+    },
+    {
+      "path": "old/results/_v01-race-repro-V01-public-176f8-le-and-reduced-motion-still-repeat2/test-failed-1.png",
+      "size": 108190,
+      "sha256": "a3e4e4354929e5ca2f73ae22c60088727b6a7bdaf8b14ccc5f1e16c3703efa36"
+    },
+    {
+      "path": "old/results/_v01-race-repro-V01-public-176f8-le-and-reduced-motion-still-repeat2/trace.zip",
+      "size": 287561,
+      "sha256": "8961b11ff3ce0e15202adb7a2d2d141022e3aa57c69e7999f6881333913468af"
+    },
+    {
+      "path": "old/results.json",
+      "size": 830,
+      "sha256": "32a838a42ba46aa53d17cd03479f38e71ddc33e7c3c592c7eaec8fab498cdcba"
+    },
+    {
+      "path": "new/output.log",
+      "size": 1026,
+      "sha256": "6b173de618cf2679d25f1822c3aeaed5f823a05af7de0156339c8033b84dfb12"
+    },
+    {
+      "path": "new/results/.last-run.json",
+      "size": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903"
+    },
+    {
+      "path": "new/results/_v01-race-repro-V01-public-176f8-le-and-reduced-motion-still/race-observation.json",
+      "size": 160,
+      "sha256": "5720c6cc4da0a7ce0b2cb483ac7cff4c9f020eababf64020e7c61ee6f236590d"
+    },
+    {
+      "path": "new/results/_v01-race-repro-V01-public-176f8-le-and-reduced-motion-still-repeat1/race-observation.json",
+      "size": 160,
+      "sha256": "5720c6cc4da0a7ce0b2cb483ac7cff4c9f020eababf64020e7c61ee6f236590d"
+    },
+    {
+      "path": "new/results/_v01-race-repro-V01-public-176f8-le-and-reduced-motion-still-repeat2/race-observation.json",
+      "size": 160,
+      "sha256": "5720c6cc4da0a7ce0b2cb483ac7cff4c9f020eababf64020e7c61ee6f236590d"
+    },
+    {
+      "path": "new/results.json",
+      "size": 829,
+      "sha256": "d08e6ab137fc6bf0589f5902803053e6b3b79ae66c6047c6a2ef7e50e0e13dd3"
+    }
+  ],
+  "archive_sha256": "ff82afe271307882c06cc82a78f18f3ad7a3f939351ffc5196ab54d06d2b4346",
+  "temporary_source_not_committed": "The helper script and generated reproduction test remain only in /tmp and are excluded from this archive; machine-generated failure traces/context are preserved as observed evidence."
+}

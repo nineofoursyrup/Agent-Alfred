@@ -1,0 +1,73 @@
+{
+  "candidate": "f9fef124f3fd656e5711c5d047f488f6e09c0783",
+  "previous_delivery": "59aea6b4ddef2496a2223299bbf3185073cb6902",
+  "base": "6a262ff37cac835777982e75d3a8950d6dbefd3c",
+  "captured_at": "2026-10-10T20:15:34.497911+00:00",
+  "browser_test_port": 17810,
+  "checks": [
+    {
+      "name": "typecheck",
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "seconds": 0.47,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/07-typecheck-output.json",
+      "tail": [
+        "",
+        "> typecheck",
+        "> tsc --noEmit",
+        ""
+      ],
+      "output_sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f",
+      "source_candidate": "f9fef124f3fd656e5711c5d047f488f6e09c0783",
+      "source_batch": "07-ci-fixture-race",
+      "reused": false
+    },
+    {
+      "name": "browser",
+      "command": [
+        "npm",
+        "run",
+        "test:browser"
+      ],
+      "exit_code": 0,
+      "seconds": 702.81,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/07-browser-output.json",
+      "tail": [
+        "·········S08 Connections central widths [{\"viewport\":[1440,900],\"central\":{\"x\":232,\"y\":57.9375,\"width\":888,\"height\":842.0625}},{\"viewport\":[1280,800],\"central\":{\"x\":232,\"y\":57.9375,\"width\":728,\"height\":742.0625}},{\"viewport\":[390,844],\"central\":{\"x\":0,\"y\":53.9375,\"width\":390,\"height\":790.0625}},{\"viewport\":[320,800],\"central\":{\"x\":0,\"y\":53.9375,\"width\":320,\"height\":746.0625}}]",
+        "·······································································",
+        "·······················S08 Models central widths [{\"viewport\":[1440,900],\"central\":{\"x\":232,\"y\":57.9375,\"width\":888,\"height\":842.0625}},{\"viewport\":[1280,800],\"central\":{\"x\":232,\"y\":57.9375,\"width\":728,\"height\":742.0625}},{\"viewport\":[390,844],\"central\":{\"x\":0,\"y\":53.9375,\"width\":390,\"height\":790.0625}},{\"viewport\":[320,800],\"central\":{\"x\":0,\"y\":53.9375,\"width\":320,\"height\":746.0625}}]",
+        "·························································",
+        "················································································",
+        "······························································actual-startup-reconnect {\"runtime\":{\"instance\":\"19a9f0c8a87c43d78f043f0f202eac03\",\"connected\":true,\"session\":\"8308b1bb14fe47da994061ca8b0cf4ad\",\"active\":null,\"revision\":0,\"unavailable\":false},\"snapshots\":[{\"instance\":\"19a9f0c8a87c43d78f043f0f202eac03\",\"revision\":0},{\"instance\":\"19a9f0c8a87c43d78f043f0f202eac03\",\"revision\":0}],\"reads\":[\"/api/models\"],\"posts\":[],\"pages\":1}",
+        "actual-startup-server-exits [0,0]",
+        "··················",
+        "·······························································",
+        "  543 passed (11.7m)"
+      ],
+      "output_sha256": "d3de8af93f609747b87ea4e07ae8c252d5786e5a051a645dda2482620c958c19",
+      "source_candidate": "f9fef124f3fd656e5711c5d047f488f6e09c0783",
+      "source_batch": "07-ci-fixture-race",
+      "reused": false
+    },
+    {
+      "name": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "seconds": 0.03,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/07-diff-check-output.json",
+      "tail": [],
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_candidate": "f9fef124f3fd656e5711c5d047f488f6e09c0783",
+      "source_batch": "07-ci-fixture-race",
+      "reused": false
+    }
+  ]
+}

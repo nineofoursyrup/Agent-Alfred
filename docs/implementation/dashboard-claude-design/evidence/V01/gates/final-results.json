@@ -1,8 +1,8 @@
 {
-  "candidate": "8997bd879489f1495d2bd3c0012590e86d133725",
-  "previous_delivery": "4f243645d6fc5176f04d9da5d2bd1374b839ec74",
+  "candidate": "f9fef124f3fd656e5711c5d047f488f6e09c0783",
+  "previous_delivery": "59aea6b4ddef2496a2223299bbf3185073cb6902",
   "base": "6a262ff37cac835777982e75d3a8950d6dbefd3c",
-  "captured_at": "2026-10-10T17:12:59.556202+00:00",
+  "captured_at": "2026-10-10T20:15:34.497911+00:00",
   "browser_test_port": 17810,
   "checks": [
     {
@@ -22,7 +22,7 @@
       "source_candidate": "fca0b7194791d264adfa73897746d750176e166f",
       "source_batch": "04",
       "reused": true,
-      "reuse_reason": "The five scoped review fixes change only app.css, one browser test, ADR-0049, SPEC section 5 and RECIPES.md. No Python source/tests/config, scripts, skill files, .env.example, CI config or locked dependencies changed; the existing environment was not reinstalled. Reuse the applicable successful 04 checks as explicitly requested; rerun typecheck, the complete browser suite and diff-check at candidate 8997bd8."
+      "reuse_reason": "Only the public-recipes browser test fixture host and its comment change after 59aea6b. Python source/tests/config, check scripts, skills, .env.example, CI config and locked dependencies remain unchanged since the successful 04 source candidate; the existing environment was not reinstalled. Reuse the four applicable 04 checks as explicitly requested; rerun typecheck, the complete browser suite and diff-check at the fixed test candidate."
     },
     {
       "name": "check-skills",
@@ -40,7 +40,7 @@
       "source_candidate": "fca0b7194791d264adfa73897746d750176e166f",
       "source_batch": "04",
       "reused": true,
-      "reuse_reason": "The five scoped review fixes change only app.css, one browser test, ADR-0049, SPEC section 5 and RECIPES.md. No Python source/tests/config, scripts, skill files, .env.example, CI config or locked dependencies changed; the existing environment was not reinstalled. Reuse the applicable successful 04 checks as explicitly requested; rerun typecheck, the complete browser suite and diff-check at candidate 8997bd8."
+      "reuse_reason": "Only the public-recipes browser test fixture host and its comment change after 59aea6b. Python source/tests/config, check scripts, skills, .env.example, CI config and locked dependencies remain unchanged since the successful 04 source candidate; the existing environment was not reinstalled. Reuse the four applicable 04 checks as explicitly requested; rerun typecheck, the complete browser suite and diff-check at the fixed test candidate."
     },
     {
       "name": "check-env-example",
@@ -58,7 +58,7 @@
       "source_candidate": "fca0b7194791d264adfa73897746d750176e166f",
       "source_batch": "04",
       "reused": true,
-      "reuse_reason": "The five scoped review fixes change only app.css, one browser test, ADR-0049, SPEC section 5 and RECIPES.md. No Python source/tests/config, scripts, skill files, .env.example, CI config or locked dependencies changed; the existing environment was not reinstalled. Reuse the applicable successful 04 checks as explicitly requested; rerun typecheck, the complete browser suite and diff-check at candidate 8997bd8."
+      "reuse_reason": "Only the public-recipes browser test fixture host and its comment change after 59aea6b. Python source/tests/config, check scripts, skills, .env.example, CI config and locked dependencies remain unchanged since the successful 04 source candidate; the existing environment was not reinstalled. Reuse the four applicable 04 checks as explicitly requested; rerun typecheck, the complete browser suite and diff-check at the fixed test candidate."
     },
     {
       "name": "pytest",
@@ -85,7 +85,7 @@
       "source_candidate": "fca0b7194791d264adfa73897746d750176e166f",
       "source_batch": "04",
       "reused": true,
-      "reuse_reason": "The five scoped review fixes change only app.css, one browser test, ADR-0049, SPEC section 5 and RECIPES.md. No Python source/tests/config, scripts, skill files, .env.example, CI config or locked dependencies changed; the existing environment was not reinstalled. Reuse the applicable successful 04 checks as explicitly requested; rerun typecheck, the complete browser suite and diff-check at candidate 8997bd8."
+      "reuse_reason": "Only the public-recipes browser test fixture host and its comment change after 59aea6b. Python source/tests/config, check scripts, skills, .env.example, CI config and locked dependencies remain unchanged since the successful 04 source candidate; the existing environment was not reinstalled. Reuse the four applicable 04 checks as explicitly requested; rerun typecheck, the complete browser suite and diff-check at the fixed test candidate."
     },
     {
       "name": "typecheck",
@@ -95,8 +95,8 @@
         "typecheck"
       ],
       "exit_code": 0,
-      "seconds": 0.54,
-      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/06-typecheck-output.json",
+      "seconds": 0.47,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/07-typecheck-output.json",
       "tail": [
         "",
         "> typecheck",
@@ -104,8 +104,8 @@
         ""
       ],
       "output_sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f",
-      "source_candidate": "8997bd879489f1495d2bd3c0012590e86d133725",
-      "source_batch": "06-review-fixes",
+      "source_candidate": "f9fef124f3fd656e5711c5d047f488f6e09c0783",
+      "source_batch": "07-ci-fixture-race",
       "reused": false
     },
     {
@@ -116,21 +116,23 @@
         "test:browser"
       ],
       "exit_code": 0,
-      "seconds": 680.03,
-      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/06-browser.log",
+      "seconds": 702.81,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/07-browser-output.json",
       "tail": [
+        "·········S08 Connections central widths [{\"viewport\":[1440,900],\"central\":{\"x\":232,\"y\":57.9375,\"width\":888,\"height\":842.0625}},{\"viewport\":[1280,800],\"central\":{\"x\":232,\"y\":57.9375,\"width\":728,\"height\":742.0625}},{\"viewport\":[390,844],\"central\":{\"x\":0,\"y\":53.9375,\"width\":390,\"height\":790.0625}},{\"viewport\":[320,800],\"central\":{\"x\":0,\"y\":53.9375,\"width\":320,\"height\":746.0625}}]",
+        "·······································································",
         "·······················S08 Models central widths [{\"viewport\":[1440,900],\"central\":{\"x\":232,\"y\":57.9375,\"width\":888,\"height\":842.0625}},{\"viewport\":[1280,800],\"central\":{\"x\":232,\"y\":57.9375,\"width\":728,\"height\":742.0625}},{\"viewport\":[390,844],\"central\":{\"x\":0,\"y\":53.9375,\"width\":390,\"height\":790.0625}},{\"viewport\":[320,800],\"central\":{\"x\":0,\"y\":53.9375,\"width\":320,\"height\":746.0625}}]",
         "·························································",
         "················································································",
-        "······························································actual-startup-reconnect {\"runtime\":{\"instance\":\"72d91e152a3642f796c820649c833a94\",\"connected\":true,\"session\":\"1293b4b18b5d4c56a8c8849ec9070688\",\"active\":null,\"revision\":0,\"unavailable\":false},\"snapshots\":[{\"instance\":\"72d91e152a3642f796c820649c833a94\",\"revision\":0},{\"instance\":\"72d91e152a3642f796c820649c833a94\",\"revision\":0}],\"reads\":[\"/api/models\"],\"posts\":[],\"pages\":1}",
+        "······························································actual-startup-reconnect {\"runtime\":{\"instance\":\"19a9f0c8a87c43d78f043f0f202eac03\",\"connected\":true,\"session\":\"8308b1bb14fe47da994061ca8b0cf4ad\",\"active\":null,\"revision\":0,\"unavailable\":false},\"snapshots\":[{\"instance\":\"19a9f0c8a87c43d78f043f0f202eac03\",\"revision\":0},{\"instance\":\"19a9f0c8a87c43d78f043f0f202eac03\",\"revision\":0}],\"reads\":[\"/api/models\"],\"posts\":[],\"pages\":1}",
         "actual-startup-server-exits [0,0]",
         "··················",
         "·······························································",
-        "  543 passed (11.3m)"
+        "  543 passed (11.7m)"
       ],
-      "output_sha256": "2192fb80a114104d3d7d96c4e8d97ce24e0bc80dcd7fe5b85ca05b3e4b314bcf",
-      "source_candidate": "8997bd879489f1495d2bd3c0012590e86d133725",
-      "source_batch": "06-review-fixes",
+      "output_sha256": "d3de8af93f609747b87ea4e07ae8c252d5786e5a051a645dda2482620c958c19",
+      "source_candidate": "f9fef124f3fd656e5711c5d047f488f6e09c0783",
+      "source_batch": "07-ci-fixture-race",
       "reused": false
     },
     {
@@ -142,17 +144,18 @@
       ],
       "exit_code": 0,
       "seconds": 0.03,
-      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/06-diff-check.log",
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/07-diff-check-output.json",
       "tail": [],
       "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "source_candidate": "8997bd879489f1495d2bd3c0012590e86d133725",
-      "source_batch": "06-review-fixes",
+      "source_candidate": "f9fef124f3fd656e5711c5d047f488f6e09c0783",
+      "source_batch": "07-ci-fixture-race",
       "reused": false
     }
   ],
   "reuse_basis": {
-    "reason": "The five scoped review fixes change only app.css, one browser test, ADR-0049, SPEC section 5 and RECIPES.md. No Python source/tests/config, scripts, skill files, .env.example, CI config or locked dependencies changed; the existing environment was not reinstalled. Reuse the applicable successful 04 checks as explicitly requested; rerun typecheck, the complete browser suite and diff-check at candidate 8997bd8.",
+    "reason": "Only the public-recipes browser test fixture host and its comment change after 59aea6b. Python source/tests/config, check scripts, skills, .env.example, CI config and locked dependencies remain unchanged since the successful 04 source candidate; the existing environment was not reinstalled. Reuse the four applicable 04 checks as explicitly requested; rerun typecheck, the complete browser suite and diff-check at the fixed test candidate.",
     "unchanged_python_skill_env_config_paths": [],
+    "environment_reinstalled": false,
     "changed_paths_since_04": [
       ".gitattributes",
       "docs/adr/0049-claude-design-original-is-dashboard-visual-authority.md",
@@ -252,8 +255,14 @@
       "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-browser-last-run.json",
       "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-browser.log",
       "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-diff-check.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-final-results.json",
       "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-results.json",
       "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-typecheck.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/06-browser-last-run.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/06-browser.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/06-diff-check.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/06-results.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/06-typecheck-output.json",
       "docs/implementation/dashboard-claude-design/evidence/V01/gates/final-results.json",
       "docs/implementation/dashboard-claude-design/evidence/V01/inbox-1440x900.png",
       "docs/implementation/dashboard-claude-design/evidence/V01/inbox-snapshot.txt",
@@ -265,6 +274,7 @@
       "docs/implementation/dashboard-claude-design/evidence/V01/ops-snapshot.txt",
       "docs/implementation/dashboard-claude-design/evidence/V01/overview-1440x900.png",
       "docs/implementation/dashboard-claude-design/evidence/V01/overview-snapshot.txt",
+      "docs/implementation/dashboard-claude-design/evidence/V01/review-fixes-screenshot-reuse.json",
       "docs/implementation/dashboard-claude-design/evidence/V01/reviews/spec-env.md",
       "docs/implementation/dashboard-claude-design/evidence/V01/reviews/spec-evidence.md",
       "docs/implementation/dashboard-claude-design/evidence/V01/reviews/spec-scroll.md",
@@ -302,41 +312,47 @@
       "tests/browser/accounting-migration.spec.js",
       "tests/browser/tools-visual.spec.js"
     ],
-    "previous_summary": "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-final-results.json",
-    "previous_summary_sha256": "c021bd2a8615204f7bf963b3a8d0d7a7617547bbca0e5a4011d3a15c80a1722f"
+    "python_source_candidate": "fca0b7194791d264adfa73897746d750176e166f",
+    "failed_remote_head": "59aea6b4ddef2496a2223299bbf3185073cb6902",
+    "unchanged_production_src_tree": "26f7e16ee406e0e08ec81a7b429e20fd0f649b5a",
+    "browser_test_sha256": "7d3dace40cc3b956bddf22388d4c032d187376dedfe836b6b00e2a73d1520a95",
+    "prior_final_results_archive": "docs/implementation/dashboard-claude-design/evidence/V01/gates/06-final-results.json",
+    "evidence_followup": "Subsequent evidence-only edits leave production code, this test and all gate inputs unchanged; authored evidence receives a final staged diff check."
   },
-  "review_fix_scope": {
-    "changed_paths_from_previous_delivery": [
-      "docs/adr/0049-claude-design-original-is-dashboard-visual-authority.md",
-      "docs/design/dashboard-implementation/SPEC.md",
-      "docs/design/issue-122/RECIPES.md",
-      "src/agent_alfred/ops/static/app.css",
-      "tests/browser/tools-visual.spec.js"
+  "validation_index": {
+    "ci_first_failure": "docs/implementation/dashboard-claude-design/evidence/V01/ci-38072252519/README.md",
+    "controlled_reproduction_and_repeat20": "docs/implementation/dashboard-claude-design/evidence/V01/fixture-race-reproduction/README.md",
+    "controlled_old": "3/3 expected FAIL, fixture removed, original row timeout 15000ms",
+    "controlled_new": "3/3 PASS, fixture retained under BODY",
+    "unmodified_final_test_repeat20": "20/20 PASS (21.2s)",
+    "repair_scope_and_screenshot_reuse": "docs/implementation/dashboard-claude-design/evidence/V01/fixture-race-repair-audit.json"
+  },
+  "evidence_validation": {
+    "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/07-evidence-diff-check.json",
+    "checks": [
+      {
+        "command": [
+          "git",
+          "diff",
+          "--cached",
+          "--check"
+        ],
+        "exit_code": 0,
+        "stdout_stderr": "",
+        "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "command": [
+          "git",
+          "diff",
+          "--check",
+          "59aea6b4ddef2496a2223299bbf3185073cb6902"
+        ],
+        "exit_code": 0,
+        "stdout_stderr": "",
+        "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
     ],
-    "alias_scan": {
-      "command": [
-        "rg",
-        "-l",
-        "--glob",
-        "!**/evidence/**",
-        "--",
-        "--line\\b",
-        "src",
-        "tests",
-        "docs"
-      ],
-      "source_and_test_matches": [],
-      "docs_matches_excluding_evidence": [
-        "docs/design/issue-86/dashboard-prototype.html",
-        "docs/design/issue-86/baseline/r1/dashboard-prototype.html"
-      ],
-      "reason": "Both remaining matches are standalone variables in immutable #86 historical HTML; no current public alias or recipe references remain."
-    },
-    "screenshot_reuse": {
-      "pages": 10,
-      "recaptured_pages": 0,
-      "manifest": "docs/implementation/dashboard-claude-design/evidence/V01/review-fixes-screenshot-reuse.json"
-    },
-    "evidence_followup": "Later evidence edits do not change this fixed candidate production source or browser test inputs."
+    "final_authored_json_also_checked_before_commit": true
   }
 }
