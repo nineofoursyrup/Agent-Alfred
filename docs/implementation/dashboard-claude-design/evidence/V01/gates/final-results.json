@@ -1,7 +1,8 @@
 {
-  "candidate": "13aa84fe2c6a273e3c8d2857983159271ac10c4f",
+  "candidate": "8997bd879489f1495d2bd3c0012590e86d133725",
+  "previous_delivery": "4f243645d6fc5176f04d9da5d2bd1374b839ec74",
   "base": "6a262ff37cac835777982e75d3a8950d6dbefd3c",
-  "captured_at": "2026-10-10T16:40:52.600842+00:00",
+  "captured_at": "2026-10-10T17:12:59.556202+00:00",
   "browser_test_port": 17810,
   "checks": [
     {
@@ -19,7 +20,9 @@
         "All checks passed!"
       ],
       "source_candidate": "fca0b7194791d264adfa73897746d750176e166f",
-      "reused": true
+      "source_batch": "04",
+      "reused": true,
+      "reuse_reason": "The five scoped review fixes change only app.css, one browser test, ADR-0049, SPEC section 5 and RECIPES.md. No Python source/tests/config, scripts, skill files, .env.example, CI config or locked dependencies changed; the existing environment was not reinstalled. Reuse the applicable successful 04 checks as explicitly requested; rerun typecheck, the complete browser suite and diff-check at candidate 8997bd8."
     },
     {
       "name": "check-skills",
@@ -35,7 +38,9 @@
         "PASS: skill check (empty tree; no SKILL.md)"
       ],
       "source_candidate": "fca0b7194791d264adfa73897746d750176e166f",
-      "reused": true
+      "source_batch": "04",
+      "reused": true,
+      "reuse_reason": "The five scoped review fixes change only app.css, one browser test, ADR-0049, SPEC section 5 and RECIPES.md. No Python source/tests/config, scripts, skill files, .env.example, CI config or locked dependencies changed; the existing environment was not reinstalled. Reuse the applicable successful 04 checks as explicitly requested; rerun typecheck, the complete browser suite and diff-check at candidate 8997bd8."
     },
     {
       "name": "check-env-example",
@@ -51,7 +56,9 @@
         "PASS: .env.example consistency check"
       ],
       "source_candidate": "fca0b7194791d264adfa73897746d750176e166f",
-      "reused": true
+      "source_batch": "04",
+      "reused": true,
+      "reuse_reason": "The five scoped review fixes change only app.css, one browser test, ADR-0049, SPEC section 5 and RECIPES.md. No Python source/tests/config, scripts, skill files, .env.example, CI config or locked dependencies changed; the existing environment was not reinstalled. Reuse the applicable successful 04 checks as explicitly requested; rerun typecheck, the complete browser suite and diff-check at candidate 8997bd8."
     },
     {
       "name": "pytest",
@@ -76,7 +83,9 @@
         "6445 passed, 1 deselected, 14 warnings in 2428.86s (0:40:28)"
       ],
       "source_candidate": "fca0b7194791d264adfa73897746d750176e166f",
-      "reused": true
+      "source_batch": "04",
+      "reused": true,
+      "reuse_reason": "The five scoped review fixes change only app.css, one browser test, ADR-0049, SPEC section 5 and RECIPES.md. No Python source/tests/config, scripts, skill files, .env.example, CI config or locked dependencies changed; the existing environment was not reinstalled. Reuse the applicable successful 04 checks as explicitly requested; rerun typecheck, the complete browser suite and diff-check at candidate 8997bd8."
     },
     {
       "name": "typecheck",
@@ -86,15 +95,17 @@
         "typecheck"
       ],
       "exit_code": 0,
-      "seconds": 0.43,
-      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-typecheck.log",
+      "seconds": 0.54,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/06-typecheck-output.json",
       "tail": [
         "",
         "> typecheck",
         "> tsc --noEmit",
         ""
       ],
-      "source_candidate": "13aa84fe2c6a273e3c8d2857983159271ac10c4f",
+      "output_sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f",
+      "source_candidate": "8997bd879489f1495d2bd3c0012590e86d133725",
+      "source_batch": "06-review-fixes",
       "reused": false
     },
     {
@@ -105,19 +116,21 @@
         "test:browser"
       ],
       "exit_code": 0,
-      "seconds": 690.16,
-      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-browser.log",
+      "seconds": 680.03,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/06-browser.log",
       "tail": [
         "·······················S08 Models central widths [{\"viewport\":[1440,900],\"central\":{\"x\":232,\"y\":57.9375,\"width\":888,\"height\":842.0625}},{\"viewport\":[1280,800],\"central\":{\"x\":232,\"y\":57.9375,\"width\":728,\"height\":742.0625}},{\"viewport\":[390,844],\"central\":{\"x\":0,\"y\":53.9375,\"width\":390,\"height\":790.0625}},{\"viewport\":[320,800],\"central\":{\"x\":0,\"y\":53.9375,\"width\":320,\"height\":746.0625}}]",
         "·························································",
         "················································································",
-        "······························································actual-startup-reconnect {\"runtime\":{\"instance\":\"2c12ac75241249159e3dd0c083043f6e\",\"connected\":true,\"session\":\"1de9e1d4602a4b36a5f4da3e71b887e0\",\"active\":null,\"revision\":0,\"unavailable\":false},\"snapshots\":[{\"instance\":\"2c12ac75241249159e3dd0c083043f6e\",\"revision\":0},{\"instance\":\"2c12ac75241249159e3dd0c083043f6e\",\"revision\":0}],\"reads\":[\"/api/models\"],\"posts\":[],\"pages\":1}",
+        "······························································actual-startup-reconnect {\"runtime\":{\"instance\":\"72d91e152a3642f796c820649c833a94\",\"connected\":true,\"session\":\"1293b4b18b5d4c56a8c8849ec9070688\",\"active\":null,\"revision\":0,\"unavailable\":false},\"snapshots\":[{\"instance\":\"72d91e152a3642f796c820649c833a94\",\"revision\":0},{\"instance\":\"72d91e152a3642f796c820649c833a94\",\"revision\":0}],\"reads\":[\"/api/models\"],\"posts\":[],\"pages\":1}",
         "actual-startup-server-exits [0,0]",
         "··················",
         "·······························································",
-        "  543 passed (11.5m)"
+        "  543 passed (11.3m)"
       ],
-      "source_candidate": "13aa84fe2c6a273e3c8d2857983159271ac10c4f",
+      "output_sha256": "2192fb80a114104d3d7d96c4e8d97ce24e0bc80dcd7fe5b85ca05b3e4b314bcf",
+      "source_candidate": "8997bd879489f1495d2bd3c0012590e86d133725",
+      "source_batch": "06-review-fixes",
       "reused": false
     },
     {
@@ -128,21 +141,202 @@
         "--check"
       ],
       "exit_code": 0,
-      "seconds": 0.04,
-      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-diff-check.log",
+      "seconds": 0.03,
+      "log": "docs/implementation/dashboard-claude-design/evidence/V01/gates/06-diff-check.log",
       "tail": [],
-      "source_candidate": "13aa84fe2c6a273e3c8d2857983159271ac10c4f",
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_candidate": "8997bd879489f1495d2bd3c0012590e86d133725",
+      "source_batch": "06-review-fixes",
       "reused": false
     }
   ],
   "reuse_basis": {
-    "changed_paths_between_checked_candidates": [
-      "tests/browser/accounting-migration.spec.js"
+    "reason": "The five scoped review fixes change only app.css, one browser test, ADR-0049, SPEC section 5 and RECIPES.md. No Python source/tests/config, scripts, skill files, .env.example, CI config or locked dependencies changed; the existing environment was not reinstalled. Reuse the applicable successful 04 checks as explicitly requested; rerun typecheck, the complete browser suite and diff-check at candidate 8997bd8.",
+    "unchanged_python_skill_env_config_paths": [],
+    "changed_paths_since_04": [
+      ".gitattributes",
+      "docs/adr/0049-claude-design-original-is-dashboard-visual-authority.md",
+      "docs/design/dashboard-implementation/SPEC.md",
+      "docs/design/issue-122/RECIPES.md",
+      "docs/implementation/dashboard-claude-design/V01.md",
+      "docs/implementation/dashboard-claude-design/evidence/V01/behaviour-1440x900.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/behaviour-snapshot.txt",
+      "docs/implementation/dashboard-claude-design/evidence/V01/connections-1440x900.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/connections-snapshot.txt",
+      "docs/implementation/dashboard-claude-design/evidence/V01/database-1440x900.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/database-boundary-rerun.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/database-snapshot.txt",
+      "docs/implementation/dashboard-claude-design/evidence/V01/environment.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-full-browser-failure-manifest.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-full-browser-failure/.last-run.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-full-browser-failure/RUN.md",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-full-browser-failure/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/error-context.md",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-full-browser-failure/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/source-position-observations.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-full-browser-failure/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/source-return-none.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-full-browser-failure/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/test-failed-1.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-full-browser-failure/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/trace.zip",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-full-browser-failure/accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/error-context.md",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-full-browser-failure/accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/source-position-observations.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-full-browser-failure/accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/source-return-none.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-full-browser-failure/accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/test-failed-1.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-full-browser-failure/accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/trace.zip",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure-manifest.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/RUN.md",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/completion.txt",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/.last-run.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/layout-metrics.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-1099-filters.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-1099-prices.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-1100-filters.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-1100-prices.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-1280-filters.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-1280-prices.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-1440-filters.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-1440-prices.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-320-filters.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-320-prices.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-390-filters.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-390-prices.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-central-679.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/ops-central-680.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-1280x80-e6312-emain-reachable-at-1280x800/attachments/geometry-and-environment-57b0316cab0fde80444c145903c093e429dd9da0.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-1280x80-e6312-emain-reachable-at-1280x800/database-1280x800-long-result.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-1280x80-e6312-emain-reachable-at-1280x800/database-1280x800-top.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-1280x80-e6312-emain-reachable-at-1280x800/geometry-and-environment.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-1440x90-b7c6f-emain-reachable-at-1440x900/attachments/geometry-and-environment-1c69908b01911a56cef0b31590e61a34bfe01bbf.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-1440x90-b7c6f-emain-reachable-at-1440x900/database-1440x900-long-result.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-1440x90-b7c6f-emain-reachable-at-1440x900/database-1440x900-top.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-1440x90-b7c6f-emain-reachable-at-1440x900/geometry-and-environment.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-320x800-4257f-remain-reachable-at-320x800/attachments/geometry-and-environment-4127e7a13567e597bbb30e924581beec4f7281f8.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-320x800-4257f-remain-reachable-at-320x800/database-320x800-long-result.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-320x800-4257f-remain-reachable-at-320x800/database-320x800-top.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-320x800-4257f-remain-reachable-at-320x800/geometry-and-environment.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-390x844-08fca-remain-reachable-at-390x844/attachments/geometry-and-environment-afec0e811373bcd238187de3c3677d8ccbd719d2.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-390x844-08fca-remain-reachable-at-390x844/database-390x844-long-result.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-390x844-08fca-remain-reachable-at-390x844/database-390x844-top.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-390x844-08fca-remain-reachable-at-390x844/geometry-and-environment.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-Databas-00669-00-without-clipping-actions/database-central-679.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-Databas-00669-00-without-clipping-actions/database-central-680.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-Databas-00669-00-without-clipping-actions/database-shell-1099.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-Databas-00669-00-without-clipping-actions/error-context.md",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-Databas-00669-00-without-clipping-actions/test-failed-1.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-Databas-00669-00-without-clipping-actions/trace.zip",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/database_migration-Databas-3dd46-ow-actual-worker-boundaries/database-65-columns-rejected.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/geometry-fonts-and-scope.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-central-679.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-central-680.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-long-draft-1280.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-long-draft-1440.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-long-draft-320.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-long-draft-390.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-normal-1280.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-normal-1440.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-normal-320.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-normal-390.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-shell-1099.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/first-target-failure/results/tools-visual-S07-four-view-cd961--text-and-keyboard-controls/tools-shell-1100.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/01-check-env-example.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/01-check-skills.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/01-pytest.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/01-results.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/01-ruff.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/02-python-failures-rerun.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/03-python-environment-retest.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/04-browser.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/04-check-env-example.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/04-check-skills.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/04-pytest.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/04-results.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/04-ruff.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/04-typecheck.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-browser-last-run.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-browser.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-diff-check.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-results.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-typecheck.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/gates/final-results.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/inbox-1440x900.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/inbox-snapshot.txt",
+      "docs/implementation/dashboard-claude-design/evidence/V01/memory-1440x900.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/memory-snapshot.txt",
+      "docs/implementation/dashboard-claude-design/evidence/V01/models-1440x900.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/models-snapshot.txt",
+      "docs/implementation/dashboard-claude-design/evidence/V01/ops-1440x900.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/ops-snapshot.txt",
+      "docs/implementation/dashboard-claude-design/evidence/V01/overview-1440x900.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/overview-snapshot.txt",
+      "docs/implementation/dashboard-claude-design/evidence/V01/reviews/spec-env.md",
+      "docs/implementation/dashboard-claude-design/evidence/V01/reviews/spec-evidence.md",
+      "docs/implementation/dashboard-claude-design/evidence/V01/reviews/spec-scroll.md",
+      "docs/implementation/dashboard-claude-design/evidence/V01/reviews/spec.md",
+      "docs/implementation/dashboard-claude-design/evidence/V01/reviews/standards-env.md",
+      "docs/implementation/dashboard-claude-design/evidence/V01/reviews/standards-evidence.md",
+      "docs/implementation/dashboard-claude-design/evidence/V01/reviews/standards-scroll.md",
+      "docs/implementation/dashboard-claude-design/evidence/V01/reviews/standards.md",
+      "docs/implementation/dashboard-claude-design/evidence/V01/runs-1440x900.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/runs-snapshot.txt",
+      "docs/implementation/dashboard-claude-design/evidence/V01/screenshot-console.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/screenshots.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/source-audit-initial.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/source-audit.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/target-checks/.last-run.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/target-checks/final-targets.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/target-checks/source-return/MANIFEST.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/target-checks/source-return/RUN.md",
+      "docs/implementation/dashboard-claude-design/evidence/V01/target-checks/source-return/results/.last-run.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/target-checks/source-return/results/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/migrated-source-roundtrip.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/target-checks/source-return/results/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/source-position-observations.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/target-checks/source-return/results/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/source-return-focus.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/target-checks/source-return/results/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/source-return-none.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/target-checks/source-return/results/accounting-migration-S09-m-3f254-0px-and-honors-newer-intent/source-return-scroll.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/target-checks/source-return/results/accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/migrated-source-roundtrip.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/target-checks/source-return/results/accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/source-position-observations.json",
+      "docs/implementation/dashboard-claude-design/evidence/V01/target-checks/source-return/results/accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/source-return-focus.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/target-checks/source-return/results/accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/source-return-none.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/target-checks/source-return/results/accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent/source-return-scroll.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/target-checks/source-return/retest.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/target-checks/source-return/typecheck.log",
+      "docs/implementation/dashboard-claude-design/evidence/V01/tools-1440x900.png",
+      "docs/implementation/dashboard-claude-design/evidence/V01/tools-snapshot.txt",
+      "src/agent_alfred/ops/static/app.css",
+      "tests/browser/accounting-migration.spec.js",
+      "tests/browser/tools-visual.spec.js"
     ],
-    "product_tree_hashes": {
-      "initial": "377935df23c9c1cddac61015567bde480a74b569",
-      "final": "377935df23c9c1cddac61015567bde480a74b569"
+    "previous_summary": "docs/implementation/dashboard-claude-design/evidence/V01/gates/05-final-results.json",
+    "previous_summary_sha256": "c021bd2a8615204f7bf963b3a8d0d7a7617547bbca0e5a4011d3a15c80a1722f"
+  },
+  "review_fix_scope": {
+    "changed_paths_from_previous_delivery": [
+      "docs/adr/0049-claude-design-original-is-dashboard-visual-authority.md",
+      "docs/design/dashboard-implementation/SPEC.md",
+      "docs/design/issue-122/RECIPES.md",
+      "src/agent_alfred/ops/static/app.css",
+      "tests/browser/tools-visual.spec.js"
+    ],
+    "alias_scan": {
+      "command": [
+        "rg",
+        "-l",
+        "--glob",
+        "!**/evidence/**",
+        "--",
+        "--line\\b",
+        "src",
+        "tests",
+        "docs"
+      ],
+      "source_and_test_matches": [],
+      "docs_matches_excluding_evidence": [
+        "docs/design/issue-86/dashboard-prototype.html",
+        "docs/design/issue-86/baseline/r1/dashboard-prototype.html"
+      ],
+      "reason": "Both remaining matches are standalone variables in immutable #86 historical HTML; no current public alias or recipe references remain."
     },
-    "reason": "Only one browser test geometry assertion changed; Python source/tests/config, skill/env check inputs and all production sources are unchanged."
+    "screenshot_reuse": {
+      "pages": 10,
+      "recaptured_pages": 0,
+      "manifest": "docs/implementation/dashboard-claude-design/evidence/V01/review-fixes-screenshot-reuse.json"
+    },
+    "evidence_followup": "Later evidence edits do not change this fixed candidate production source or browser test inputs."
   }
 }
