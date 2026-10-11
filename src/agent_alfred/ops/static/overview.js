@@ -329,7 +329,7 @@ function renderArchitecture(root) {
   const body=node('div');body.className='sy-panel-body';
   const scroll=node('div');scroll.className='overview-diagram-scroll';scroll.tabIndex=0;scroll.setAttribute('role','region');scroll.setAttribute('aria-label','静态架构说明图示（宽度不足时可横向滚动）');
   const relations=document.createElementNS('http://www.w3.org/2000/svg','svg');relations.classList.add('overview-diagram');relations.setAttribute('viewBox','0 0 780 480');relations.setAttribute('role','img');relations.setAttribute('aria-label','CLI 与 Web 入口提交到共享宿主。宿主连接对话处理、显式手动聚合与持久账目；对话和聚合按需使用模型、工具、记忆。');
-  // Coordinates are SVG presentation geometry; all visual roles live in scoped CSS.
+  // Geometry and marker references belong to this SVG; visual roles live in scoped CSS.
   relations.innerHTML=`
     <defs><marker id="overview-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="overview-arrow" d="M0 0 L10 5 L0 10 Z"/></marker></defs>
     <rect class="overview-partition" x="8" y="30" width="764" height="434"/>
@@ -338,17 +338,17 @@ function renderArchitecture(root) {
     <text class="overview-diagram-eyebrow" x="294" y="54">RUNTIME · 共享宿主</text>
     <rect class="overview-partition" x="530" y="206" width="242" height="230"/>
     <text class="overview-diagram-eyebrow" x="542" y="194">CAPABILITIES · 按需使用</text>
-    <path class="overview-edge" d="M196 128 H300"/>
+    <path class="overview-edge" marker-end="url(#overview-arrow)" d="M196 128 H300"/>
     <text class="overview-edge-label" x="220" y="116">提交请求</text>
-    <path class="overview-edge" d="M488 128 H616"/>
+    <path class="overview-edge" marker-end="url(#overview-arrow)" d="M488 128 H616"/>
     <text class="overview-edge-label" x="508" y="116">收尾与持久事实</text>
-    <path class="overview-edge" d="M394 160 V232"/>
+    <path class="overview-edge" marker-end="url(#overview-arrow)" d="M394 160 V232"/>
     <text class="overview-edge-label" x="404" y="199">对话请求</text>
-    <path class="overview-edge overview-edge-optional" d="M348 160 V180 H252 V390 H300"/>
+    <path class="overview-edge overview-edge-optional" marker-end="url(#overview-arrow)" d="M348 160 V180 H252 V390 H300"/>
     <text class="overview-edge-label" x="262" y="325">显式发起</text>
-    <path class="overview-edge overview-edge-optional" d="M488 264 H616"/>
+    <path class="overview-edge overview-edge-optional" marker-end="url(#overview-arrow)" d="M488 264 H616"/>
     <text class="overview-edge-label" x="524" y="252">按需使用</text>
-    <path class="overview-edge overview-edge-optional" d="M488 390 H574 V284 H616"/>
+    <path class="overview-edge overview-edge-optional" marker-end="url(#overview-arrow)" d="M488 390 H574 V284 H616"/>
     <text class="overview-edge-label" x="498" y="378">按选择使用</text>
     <g class="overview-diagram-node"><rect x="22" y="96" width="174" height="64"/><text x="36" y="122">CLI 入口／Web 入口</text><text class="overview-node-note" x="36" y="144">共享宿主的两个入口</text></g>
     <g class="overview-diagram-node"><rect x="300" y="96" width="188" height="64"/><text x="314" y="122">共享运行宿主与准入</text><text class="overview-node-note" x="314" y="144">接收请求 · 管理运行</text></g>

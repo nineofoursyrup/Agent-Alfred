@@ -2,7 +2,7 @@ import {chromium,expect} from '@playwright/test';
 import {memoryServer} from '../../tests/browser/memory-server.js';
 import {writeFile,readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
-const evidence='docs/implementation/dashboard-claude-design/evidence/V04';
+const evidence=process.env.V04_CAPTURE_DIR||'docs/implementation/dashboard-claude-design/evidence/V04';
 const browser=await chromium.launch();
 const server=await memoryServer({script:'tests/browser/overview_server.py'});
 const files=['src/agent_alfred/ops/static/overview.js','src/agent_alfred/ops/static/overview.css','tests/browser/overview.spec.js'];
@@ -81,7 +81,9 @@ try {
         const label=labels[index].getBBox();
         const distance=Math.min(...segments.map(s=>Math.hypot(Math.max(Math.min(s.x,s.nx)-label.x-label.width,label.x-Math.max(s.x,s.nx),0),Math.max(Math.min(s.y,s.ny)-label.y-label.height,label.y-Math.max(s.y,s.ny),0))));
         const alongBorders=segments.filter(s=>nodes.some(b=>s.y===s.ny&&(s.y===b.y||s.y===b.y+b.height)&&Math.min(Math.max(s.x,s.nx),b.x+b.width)>Math.max(Math.min(s.x,s.nx),b.x)||s.x===s.nx&&(s.x===b.x||s.x===b.x+b.width)&&Math.min(Math.max(s.y,s.ny),b.y+b.height)>Math.max(Math.min(s.y,s.ny),b.y)));
-        return {path:edge.getAttribute('d'),label:labels[index].textContent,distance,alongBorders,optional:edge.classList.contains('overview-edge-optional')};
+        const marker=getComputedStyle(edge).markerEnd;
+        const reference=new URL(marker.replace(/^url\(["']?|["']?\)$/g,''),node.baseURI);
+        return {path:edge.getAttribute('d'),label:labels[index].textContent,distance,alongBorders,optional:edge.classList.contains('overview-edge-optional'),markerAttribute:edge.getAttribute('marker-end'),computedMarker:marker,markerSameDocument:reference.href.split('#')[0]===node.baseURI.split('#')[0],markerInSvg:node.querySelector(reference.hash)?.tagName==='marker'};
       });
       return {viewBoxWidth:node.viewBox.baseVal.width,renderedWidth:node.getBoundingClientRect().width,texts,nodes,overlaps,borders,outside,edges,partitions:node.querySelectorAll('.overview-partition').length};
     });
@@ -90,7 +92,7 @@ try {
     expect(svg.nodes).toHaveLength(6);expect(svg.edges).toHaveLength(6);expect(svg.partitions).toBe(3);
     expect(svg.overlaps).toEqual([]);expect(svg.borders).toEqual([]);expect(svg.outside).toEqual([]);
     expect(svg.edges.filter(edge=>edge.optional)).toHaveLength(3);
-    for(const edge of svg.edges){expect(edge.distance).toBeLessThanOrEqual(12);expect(edge.alongBorders).toEqual([]);expect(edge.label).not.toContain('→');}
+    for(const edge of svg.edges){expect(edge.distance).toBeLessThanOrEqual(12);expect(edge.alongBorders).toEqual([]);expect(edge.label).not.toContain('→');expect(edge.markerAttribute).toBe('url(#overview-arrow)');expect(edge.computedMarker).toContain('#overview-arrow');expect(edge.markerSameDocument).toBe(true);expect(edge.markerInSvg).toBe(true);}
     if(width===1440)expect(scroll.scrollWidth).toBeLessThanOrEqual(scroll.clientWidth);
     for(const state of geometry.statuses){expect(state.overflow).not.toBe('ellipsis');expect(state.scroll).toBeLessThanOrEqual(state.client);}
     await page.getByRole('heading',{name:'全历史最近运行',exact:true}).evaluate(node=>node.scrollIntoView({block:'start'}));

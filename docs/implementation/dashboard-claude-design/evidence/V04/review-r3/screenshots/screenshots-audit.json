@@ -1,0 +1,2429 @@
+{
+  "tested_files_sha256": {
+    "src/agent_alfred/ops/static/overview.js": "f5985084d98c9ed15f15153105ead7508f00b7b711ba5cf86e499eee80e99bc8",
+    "src/agent_alfred/ops/static/overview.css": "73269c54fa3db6ad1e56b334996d55119b606edb926e087d34048d1b16fea1d4",
+    "tests/browser/overview.spec.js": "29688d9f117575a4f8cb72d669d62f36cd44f1782b6ead3bb7652b1a87faf41e"
+  },
+  "execution": "before_commit; tested file SHA-256 recorded",
+  "costFacts": [
+    {
+      "state": "mixed",
+      "wire": {
+        "process_instance_id": "31fc1314a42f462d87508f1caf9b8302",
+        "computed_at": "2026-10-11T13:54:33Z",
+        "filters": {
+          "range": "7d",
+          "timezone": "Asia/Shanghai",
+          "start": "2026-10-04T16:00:00+00:00",
+          "end": "2026-10-11T16:00:00+00:00"
+        },
+        "expires_at": "2026-10-11T14:09:33Z",
+        "summary": {
+          "run_count": 5,
+          "attempt_count": 12,
+          "unknown_cost_attempts": 1,
+          "exact_attempts": 10,
+          "estimated_attempts": 1,
+          "price_sources": {
+            "catalog": 1
+          },
+          "stale_price_attempts": 1,
+          "tiered_price_attempts": 0,
+          "incomplete_runs": 0,
+          "tool_requests": 0,
+          "confirmed_starts": 0,
+          "not_started": 0,
+          "unconfirmed_starts": 0,
+          "tokens": {
+            "total_input_tokens": {
+              "known": 0,
+              "missing_attempts": 12
+            },
+            "uncached_input_tokens": {
+              "known": 1000,
+              "missing_attempts": 11
+            },
+            "cache_read_tokens": {
+              "known": 0,
+              "missing_attempts": 12
+            },
+            "cache_write_tokens": {
+              "known": 0,
+              "missing_attempts": 12
+            },
+            "output_tokens": {
+              "known": 2000,
+              "missing_attempts": 11
+            },
+            "reasoning_tokens": {
+              "known": 0,
+              "missing_attempts": 12
+            }
+          },
+          "tool_cost_states": {
+            "not_billable": 0,
+            "reported": 0,
+            "unknown": 0,
+            "unrecorded": 0
+          },
+          "exact_usd": "1.750",
+          "estimated_usd": "0.003",
+          "tool_costs": []
+        },
+        "history_boundary": "Persistent Runs only; legacy messages excluded.",
+        "price_version": "dac08245330a9d08fc698c0350119532b56e9fafc44788a93ea0ef7904514043",
+        "observation_id": "2cbacd1356b840e19f02cb0f8a6e5ce7",
+        "unresolved_membership_count": 0,
+        "ops_filters": {
+          "range": "custom",
+          "timezone": "Asia/Shanghai",
+          "start": "2026-10-05",
+          "end": "2026-10-12"
+        },
+        "coverage": {
+          "incomplete_runs": 0,
+          "reasons": {}
+        },
+        "model_coverage": {
+          "complete": true,
+          "incomplete_runs": 0,
+          "reasons": {}
+        },
+        "schema_version": 1,
+        "observed_at": "2026-10-11T13:54:33Z"
+      },
+      "evidence": {
+        "dom": [
+          {
+            "tag": "H3",
+            "text": "模型费用",
+            "y": 347.703125
+          },
+          {
+            "tag": "DIV",
+            "text": "精确 USD 1.750估算 USD 0.003",
+            "y": 228.953125
+          },
+          {
+            "tag": "P",
+            "text": "已记录 Attempt 12 次 · 费用未知 1 次",
+            "y": 283.890625
+          },
+          {
+            "tag": "P",
+            "text": "模型账目完整",
+            "y": 323.765625
+          }
+        ],
+        "snapshot": "模型费用精确 USD 1.750估算 USD 0.003已记录 Attempt 12 次 · 费用未知 1 次模型账目完整"
+      },
+      "accessibility": "- article:\n  - heading \"模型费用\" [level=3]\n  - paragraph: 精确 USD 1.750\n  - paragraph: 估算 USD 0.003\n  - paragraph: 已记录 Attempt 12 次 · 费用未知 1 次\n  - paragraph: 模型账目完整"
+    },
+    {
+      "state": "interrupted",
+      "wire": {
+        "process_instance_id": "31fc1314a42f462d87508f1caf9b8302",
+        "computed_at": "2026-10-11T13:54:35Z",
+        "filters": {
+          "range": "7d",
+          "timezone": "Asia/Shanghai",
+          "start": "2026-10-04T16:00:00+00:00",
+          "end": "2026-10-11T16:00:00+00:00"
+        },
+        "expires_at": "2026-10-11T14:09:35Z",
+        "summary": {
+          "run_count": 5,
+          "attempt_count": 0,
+          "unknown_cost_attempts": 0,
+          "exact_attempts": 0,
+          "estimated_attempts": 0,
+          "price_sources": {},
+          "stale_price_attempts": 0,
+          "tiered_price_attempts": 0,
+          "incomplete_runs": 5,
+          "tool_requests": 0,
+          "confirmed_starts": 0,
+          "not_started": 0,
+          "unconfirmed_starts": 0,
+          "tokens": {
+            "total_input_tokens": {
+              "known": 0,
+              "missing_attempts": 0
+            },
+            "uncached_input_tokens": {
+              "known": 0,
+              "missing_attempts": 0
+            },
+            "cache_read_tokens": {
+              "known": 0,
+              "missing_attempts": 0
+            },
+            "cache_write_tokens": {
+              "known": 0,
+              "missing_attempts": 0
+            },
+            "output_tokens": {
+              "known": 0,
+              "missing_attempts": 0
+            },
+            "reasoning_tokens": {
+              "known": 0,
+              "missing_attempts": 0
+            }
+          },
+          "tool_cost_states": {
+            "not_billable": 0,
+            "reported": 0,
+            "unknown": 0,
+            "unrecorded": 0
+          },
+          "exact_usd": "0",
+          "estimated_usd": "0",
+          "tool_costs": []
+        },
+        "history_boundary": "Persistent Runs only; legacy messages excluded.",
+        "price_version": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "observation_id": "0741e5d39eac42829818c8c7ab3dfd6e",
+        "unresolved_membership_count": 0,
+        "ops_filters": {
+          "range": "custom",
+          "timezone": "Asia/Shanghai",
+          "start": "2026-10-05",
+          "end": "2026-10-12"
+        },
+        "coverage": {
+          "incomplete_runs": 5,
+          "reasons": {
+            "attempt_count_unconfirmed": 5,
+            "historic_tool_metering_unrecorded": 5,
+            "telemetry_unreadable_or_missing": 5
+          }
+        },
+        "model_coverage": {
+          "complete": false,
+          "incomplete_runs": 5,
+          "reasons": {
+            "attempt_count_unconfirmed": 5,
+            "telemetry_unreadable_or_missing": 5
+          }
+        },
+        "schema_version": 1,
+        "observed_at": "2026-10-11T13:54:35Z"
+      },
+      "evidence": {
+        "dom": [
+          {
+            "tag": "H3",
+            "text": "模型费用",
+            "y": 290.65625
+          },
+          {
+            "tag": "P",
+            "text": "— 费用未知；尚无可确认的完整范围金额",
+            "y": 171.90625
+          },
+          {
+            "tag": "P",
+            "text": "已记录 Attempt 0 次 · 费用未知 0 次",
+            "y": 226.84375
+          },
+          {
+            "tag": "P",
+            "text": "模型账目覆盖不足 5 条 Run：调用数量未确认 5 条 Run；模型收尾账目缺失／不可读 5 条 Run",
+            "y": 250.78125
+          }
+        ],
+        "snapshot": "模型费用— 费用未知；尚无可确认的完整范围金额已记录 Attempt 0 次 · 费用未知 0 次模型账目覆盖不足 5 条 Run：调用数量未确认 5 条 Run；模型收尾账目缺失／不可读 5 条 Run"
+      },
+      "accessibility": "- article:\n  - heading \"模型费用\" [level=3]\n  - paragraph: — 费用未知；尚无可确认的完整范围金额\n  - paragraph: 已记录 Attempt 0 次 · 费用未知 0 次\n  - paragraph: 模型账目覆盖不足 5 条 Run：调用数量未确认 5 条 Run；模型收尾账目缺失／不可读 5 条 Run"
+    },
+    {
+      "state": "bad-time",
+      "wire": {
+        "process_instance_id": "31fc1314a42f462d87508f1caf9b8302",
+        "computed_at": "2026-10-11T13:54:35Z",
+        "filters": {
+          "range": "7d",
+          "timezone": "Asia/Shanghai",
+          "start": "2026-10-04T16:00:00+00:00",
+          "end": "2026-10-11T16:00:00+00:00"
+        },
+        "expires_at": "2026-10-11T14:09:35Z",
+        "summary": {
+          "run_count": 0,
+          "attempt_count": 0,
+          "unknown_cost_attempts": 0,
+          "exact_attempts": 0,
+          "estimated_attempts": 0,
+          "price_sources": {},
+          "stale_price_attempts": 0,
+          "tiered_price_attempts": 0,
+          "incomplete_runs": 0,
+          "tool_requests": 0,
+          "confirmed_starts": 0,
+          "not_started": 0,
+          "unconfirmed_starts": 0,
+          "tokens": {
+            "total_input_tokens": {
+              "known": 0,
+              "missing_attempts": 0
+            },
+            "uncached_input_tokens": {
+              "known": 0,
+              "missing_attempts": 0
+            },
+            "cache_read_tokens": {
+              "known": 0,
+              "missing_attempts": 0
+            },
+            "cache_write_tokens": {
+              "known": 0,
+              "missing_attempts": 0
+            },
+            "output_tokens": {
+              "known": 0,
+              "missing_attempts": 0
+            },
+            "reasoning_tokens": {
+              "known": 0,
+              "missing_attempts": 0
+            }
+          },
+          "tool_cost_states": {
+            "not_billable": 0,
+            "reported": 0,
+            "unknown": 0,
+            "unrecorded": 0
+          },
+          "exact_usd": "0",
+          "estimated_usd": "0",
+          "tool_costs": []
+        },
+        "history_boundary": "Persistent Runs only; legacy messages excluded.",
+        "price_version": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "observation_id": "6c3c5af4cb17491780c976ed292efb36",
+        "unresolved_membership_count": 5,
+        "ops_filters": {
+          "range": "custom",
+          "timezone": "Asia/Shanghai",
+          "start": "2026-10-05",
+          "end": "2026-10-12"
+        },
+        "coverage": {
+          "incomplete_runs": 0,
+          "reasons": {}
+        },
+        "model_coverage": {
+          "complete": true,
+          "incomplete_runs": 0,
+          "reasons": {}
+        },
+        "schema_version": 1,
+        "observed_at": "2026-10-11T13:54:35Z"
+      },
+      "evidence": {
+        "dom": [
+          {
+            "tag": "H3",
+            "text": "模型费用",
+            "y": 298.65625
+          },
+          {
+            "tag": "P",
+            "text": "— 费用未知；尚无可确认的完整范围金额",
+            "y": 171.90625
+          },
+          {
+            "tag": "P",
+            "text": "已记录 Attempt 0 次 · 费用未知 0 次",
+            "y": 226.84375
+          },
+          {
+            "tag": "P",
+            "text": "模型账目完整",
+            "y": 250.78125
+          },
+          {
+            "tag": "P",
+            "text": "另 5 条期间无法判定",
+            "y": 274.71875
+          }
+        ],
+        "snapshot": "模型费用— 费用未知；尚无可确认的完整范围金额已记录 Attempt 0 次 · 费用未知 0 次模型账目完整另 5 条期间无法判定"
+      },
+      "accessibility": "- article:\n  - heading \"模型费用\" [level=3]\n  - paragraph: — 费用未知；尚无可确认的完整范围金额\n  - paragraph: 已记录 Attempt 0 次 · 费用未知 0 次\n  - paragraph: 模型账目完整\n  - paragraph: 另 5 条期间无法判定"
+    },
+    {
+      "state": "known-and-unresolved",
+      "wire": {
+        "process_instance_id": "31fc1314a42f462d87508f1caf9b8302",
+        "computed_at": "2026-10-11T13:54:35Z",
+        "filters": {
+          "range": "7d",
+          "timezone": "Asia/Shanghai",
+          "start": "2026-10-04T16:00:00+00:00",
+          "end": "2026-10-11T16:00:00+00:00"
+        },
+        "expires_at": "2026-10-11T14:09:35Z",
+        "summary": {
+          "run_count": 1,
+          "attempt_count": 2,
+          "unknown_cost_attempts": 0,
+          "exact_attempts": 2,
+          "estimated_attempts": 0,
+          "price_sources": {},
+          "stale_price_attempts": 0,
+          "tiered_price_attempts": 0,
+          "incomplete_runs": 0,
+          "tool_requests": 0,
+          "confirmed_starts": 0,
+          "not_started": 0,
+          "unconfirmed_starts": 0,
+          "tokens": {
+            "total_input_tokens": {
+              "known": 0,
+              "missing_attempts": 2
+            },
+            "uncached_input_tokens": {
+              "known": 0,
+              "missing_attempts": 2
+            },
+            "cache_read_tokens": {
+              "known": 0,
+              "missing_attempts": 2
+            },
+            "cache_write_tokens": {
+              "known": 0,
+              "missing_attempts": 2
+            },
+            "output_tokens": {
+              "known": 0,
+              "missing_attempts": 2
+            },
+            "reasoning_tokens": {
+              "known": 0,
+              "missing_attempts": 2
+            }
+          },
+          "tool_cost_states": {
+            "not_billable": 0,
+            "reported": 0,
+            "unknown": 0,
+            "unrecorded": 0
+          },
+          "exact_usd": "0.125",
+          "estimated_usd": "0",
+          "tool_costs": []
+        },
+        "history_boundary": "Persistent Runs only; legacy messages excluded.",
+        "price_version": "dac08245330a9d08fc698c0350119532b56e9fafc44788a93ea0ef7904514043",
+        "observation_id": "38cdcf86975f4ee185bbdb15eba6c01b",
+        "unresolved_membership_count": 5,
+        "ops_filters": {
+          "range": "custom",
+          "timezone": "Asia/Shanghai",
+          "start": "2026-10-05",
+          "end": "2026-10-12"
+        },
+        "coverage": {
+          "incomplete_runs": 0,
+          "reasons": {}
+        },
+        "model_coverage": {
+          "complete": true,
+          "incomplete_runs": 0,
+          "reasons": {}
+        },
+        "schema_version": 1,
+        "observed_at": "2026-10-11T13:54:35Z"
+      },
+      "evidence": {
+        "dom": [
+          {
+            "tag": "H3",
+            "text": "模型费用",
+            "y": 338.046875
+          },
+          {
+            "tag": "DIV",
+            "text": "精确 USD 0.125",
+            "y": 211.296875
+          },
+          {
+            "tag": "P",
+            "text": "已记录 Attempt 2 次 · 费用未知 0 次",
+            "y": 266.234375
+          },
+          {
+            "tag": "P",
+            "text": "模型账目完整",
+            "y": 290.171875
+          },
+          {
+            "tag": "P",
+            "text": "另 5 条期间无法判定",
+            "y": 314.109375
+          }
+        ],
+        "snapshot": "模型费用精确 USD 0.125已记录 Attempt 2 次 · 费用未知 0 次模型账目完整另 5 条期间无法判定"
+      },
+      "accessibility": "- article:\n  - heading \"模型费用\" [level=3]\n  - paragraph: 精确 USD 0.125\n  - paragraph: 已记录 Attempt 2 次 · 费用未知 0 次\n  - paragraph: 模型账目完整\n  - paragraph: 另 5 条期间无法判定"
+    }
+  ],
+  "port": "17910",
+  "origin": "http://127.0.0.1:17914",
+  "browser": "153.0.8010.12",
+  "captured_at": "2026-10-11T13:54:33.451Z",
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 900,
+      "scroll": {
+        "scrollLeft": 0,
+        "clientWidth": 783,
+        "scrollWidth": 783,
+        "outline": "3px"
+      },
+      "geometry": {
+        "body": 1440,
+        "viewport": 1440,
+        "page": 879,
+        "pageScroll": 879,
+        "nodeTitleFont": "13px",
+        "animation": 0,
+        "inlineStyleAttributes": 1,
+        "inlineStyles": 0,
+        "cards": [
+          {
+            "width": 266.328125,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          },
+          {
+            "width": 266.34375,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          },
+          {
+            "width": 266.328125,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          }
+        ],
+        "statuses": [
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          }
+        ],
+        "costColors": [
+          "rgb(76, 195, 138)",
+          "rgb(76, 195, 138)"
+        ],
+        "success": "#4cc38a"
+      },
+      "svg": {
+        "viewBoxWidth": 780,
+        "renderedWidth": 780,
+        "texts": [
+          {
+            "text": "ALFRED · 本机组件关系",
+            "x": 20,
+            "y": 8,
+            "width": 152.609375,
+            "height": 13
+          },
+          {
+            "text": "RUNTIME · 共享宿主",
+            "x": 294,
+            "y": 44,
+            "width": 135.4375,
+            "height": 13
+          },
+          {
+            "text": "CAPABILITIES · 按需使用",
+            "x": 542,
+            "y": 184,
+            "width": 177.546875,
+            "height": 13
+          },
+          {
+            "text": "提交请求",
+            "x": 220,
+            "y": 106,
+            "width": 42,
+            "height": 12
+          },
+          {
+            "text": "收尾与持久事实",
+            "x": 508,
+            "y": 106,
+            "width": 73.5,
+            "height": 12
+          },
+          {
+            "text": "对话请求",
+            "x": 404,
+            "y": 189,
+            "width": 42,
+            "height": 12
+          },
+          {
+            "text": "显式发起",
+            "x": 262,
+            "y": 315,
+            "width": 42,
+            "height": 12
+          },
+          {
+            "text": "按需使用",
+            "x": 524,
+            "y": 242,
+            "width": 42,
+            "height": 12
+          },
+          {
+            "text": "按选择使用",
+            "x": 498,
+            "y": 368,
+            "width": 52.5,
+            "height": 12
+          },
+          {
+            "text": "CLI 入口／Web 入口",
+            "x": 36,
+            "y": 109,
+            "width": 120.578125,
+            "height": 16
+          },
+          {
+            "text": "共享宿主的两个入口",
+            "x": 36,
+            "y": 134,
+            "width": 94.5,
+            "height": 12
+          },
+          {
+            "text": "共享运行宿主与准入",
+            "x": 314,
+            "y": 109,
+            "width": 117,
+            "height": 16
+          },
+          {
+            "text": "接收请求 · 管理运行",
+            "x": 314,
+            "y": 134,
+            "width": 102.96875,
+            "height": 12
+          },
+          {
+            "text": "对话处理",
+            "x": 314,
+            "y": 245,
+            "width": 52,
+            "height": 16
+          },
+          {
+            "text": "可选消息分流",
+            "x": 314,
+            "y": 270,
+            "width": 63,
+            "height": 12
+          },
+          {
+            "text": "手动聚合",
+            "x": 314,
+            "y": 371,
+            "width": 52,
+            "height": 16
+          },
+          {
+            "text": "由用户显式发起",
+            "x": 314,
+            "y": 396,
+            "width": 73.5,
+            "height": 12
+          },
+          {
+            "text": "模型 · 工具 · 记忆",
+            "x": 630,
+            "y": 245,
+            "width": 99.953125,
+            "height": 16
+          },
+          {
+            "text": "按需／按选择使用",
+            "x": 630,
+            "y": 270,
+            "width": 84,
+            "height": 12
+          },
+          {
+            "text": "本地记录与账目",
+            "x": 630,
+            "y": 109,
+            "width": 91,
+            "height": 16
+          },
+          {
+            "text": "持久事实 · 各自核验",
+            "x": 630,
+            "y": 134,
+            "width": 102.96875,
+            "height": 12
+          }
+        ],
+        "nodes": [
+          {
+            "x": 22,
+            "y": 96,
+            "width": 174,
+            "height": 64
+          },
+          {
+            "x": 300,
+            "y": 96,
+            "width": 188,
+            "height": 64
+          },
+          {
+            "x": 300,
+            "y": 232,
+            "width": 188,
+            "height": 64
+          },
+          {
+            "x": 300,
+            "y": 358,
+            "width": 188,
+            "height": 64
+          },
+          {
+            "x": 616,
+            "y": 232,
+            "width": 144,
+            "height": 64
+          },
+          {
+            "x": 616,
+            "y": 96,
+            "width": 144,
+            "height": 64
+          }
+        ],
+        "overlaps": [],
+        "borders": [],
+        "outside": [],
+        "edges": [
+          {
+            "path": "M196 128 H300",
+            "label": "提交请求",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": false,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          },
+          {
+            "path": "M488 128 H616",
+            "label": "收尾与持久事实",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": false,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          },
+          {
+            "path": "M394 160 V232",
+            "label": "对话请求",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": false,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          },
+          {
+            "path": "M348 160 V180 H252 V390 H300",
+            "label": "显式发起",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": true,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          },
+          {
+            "path": "M488 264 H616",
+            "label": "按需使用",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": true,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          },
+          {
+            "path": "M488 390 H574 V284 H616",
+            "label": "按选择使用",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": true,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          }
+        ],
+        "partitions": 3
+      }
+    },
+    {
+      "width": 1280,
+      "height": 800,
+      "scroll": {
+        "scrollLeft": 32,
+        "clientWidth": 623,
+        "scrollWidth": 780,
+        "outline": "3px"
+      },
+      "geometry": {
+        "body": 1280,
+        "viewport": 1280,
+        "page": 719,
+        "pageScroll": 719,
+        "nodeTitleFont": "13px",
+        "animation": 0,
+        "inlineStyleAttributes": 1,
+        "inlineStyles": 0,
+        "cards": [
+          {
+            "width": 213,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          },
+          {
+            "width": 213,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          },
+          {
+            "width": 213,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          }
+        ],
+        "statuses": [
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          }
+        ],
+        "costColors": [
+          "rgb(76, 195, 138)",
+          "rgb(76, 195, 138)"
+        ],
+        "success": "#4cc38a"
+      },
+      "svg": {
+        "viewBoxWidth": 780,
+        "renderedWidth": 780,
+        "texts": [
+          {
+            "text": "ALFRED · 本机组件关系",
+            "x": 20,
+            "y": 8,
+            "width": 152.609375,
+            "height": 13
+          },
+          {
+            "text": "RUNTIME · 共享宿主",
+            "x": 294,
+            "y": 44,
+            "width": 135.4375,
+            "height": 13
+          },
+          {
+            "text": "CAPABILITIES · 按需使用",
+            "x": 542,
+            "y": 184,
+            "width": 177.546875,
+            "height": 13
+          },
+          {
+            "text": "提交请求",
+            "x": 220,
+            "y": 106,
+            "width": 42,
+            "height": 12
+          },
+          {
+            "text": "收尾与持久事实",
+            "x": 508,
+            "y": 106,
+            "width": 73.5,
+            "height": 12
+          },
+          {
+            "text": "对话请求",
+            "x": 404,
+            "y": 189,
+            "width": 42,
+            "height": 12
+          },
+          {
+            "text": "显式发起",
+            "x": 262,
+            "y": 315,
+            "width": 42,
+            "height": 12
+          },
+          {
+            "text": "按需使用",
+            "x": 524,
+            "y": 242,
+            "width": 42,
+            "height": 12
+          },
+          {
+            "text": "按选择使用",
+            "x": 498,
+            "y": 368,
+            "width": 52.5,
+            "height": 12
+          },
+          {
+            "text": "CLI 入口／Web 入口",
+            "x": 36,
+            "y": 109,
+            "width": 120.578125,
+            "height": 16
+          },
+          {
+            "text": "共享宿主的两个入口",
+            "x": 36,
+            "y": 134,
+            "width": 94.5,
+            "height": 12
+          },
+          {
+            "text": "共享运行宿主与准入",
+            "x": 314,
+            "y": 109,
+            "width": 117,
+            "height": 16
+          },
+          {
+            "text": "接收请求 · 管理运行",
+            "x": 314,
+            "y": 134,
+            "width": 102.96875,
+            "height": 12
+          },
+          {
+            "text": "对话处理",
+            "x": 314,
+            "y": 245,
+            "width": 52,
+            "height": 16
+          },
+          {
+            "text": "可选消息分流",
+            "x": 314,
+            "y": 270,
+            "width": 63,
+            "height": 12
+          },
+          {
+            "text": "手动聚合",
+            "x": 314,
+            "y": 371,
+            "width": 52,
+            "height": 16
+          },
+          {
+            "text": "由用户显式发起",
+            "x": 314,
+            "y": 396,
+            "width": 73.5,
+            "height": 12
+          },
+          {
+            "text": "模型 · 工具 · 记忆",
+            "x": 630,
+            "y": 245,
+            "width": 99.953125,
+            "height": 16
+          },
+          {
+            "text": "按需／按选择使用",
+            "x": 630,
+            "y": 270,
+            "width": 84,
+            "height": 12
+          },
+          {
+            "text": "本地记录与账目",
+            "x": 630,
+            "y": 109,
+            "width": 91,
+            "height": 16
+          },
+          {
+            "text": "持久事实 · 各自核验",
+            "x": 630,
+            "y": 134,
+            "width": 102.96875,
+            "height": 12
+          }
+        ],
+        "nodes": [
+          {
+            "x": 22,
+            "y": 96,
+            "width": 174,
+            "height": 64
+          },
+          {
+            "x": 300,
+            "y": 96,
+            "width": 188,
+            "height": 64
+          },
+          {
+            "x": 300,
+            "y": 232,
+            "width": 188,
+            "height": 64
+          },
+          {
+            "x": 300,
+            "y": 358,
+            "width": 188,
+            "height": 64
+          },
+          {
+            "x": 616,
+            "y": 232,
+            "width": 144,
+            "height": 64
+          },
+          {
+            "x": 616,
+            "y": 96,
+            "width": 144,
+            "height": 64
+          }
+        ],
+        "overlaps": [],
+        "borders": [],
+        "outside": [],
+        "edges": [
+          {
+            "path": "M196 128 H300",
+            "label": "提交请求",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": false,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          },
+          {
+            "path": "M488 128 H616",
+            "label": "收尾与持久事实",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": false,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          },
+          {
+            "path": "M394 160 V232",
+            "label": "对话请求",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": false,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          },
+          {
+            "path": "M348 160 V180 H252 V390 H300",
+            "label": "显式发起",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": true,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          },
+          {
+            "path": "M488 264 H616",
+            "label": "按需使用",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": true,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          },
+          {
+            "path": "M488 390 H574 V284 H616",
+            "label": "按选择使用",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": true,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          }
+        ],
+        "partitions": 3
+      }
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "scroll": {
+        "scrollLeft": 31,
+        "clientWidth": 309,
+        "scrollWidth": 780,
+        "outline": "3px"
+      },
+      "geometry": {
+        "body": 390,
+        "viewport": 390,
+        "page": 381,
+        "pageScroll": 381,
+        "nodeTitleFont": "13px",
+        "animation": 0,
+        "inlineStyleAttributes": 1,
+        "inlineStyles": 0,
+        "cards": [
+          {
+            "width": 168.5,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          },
+          {
+            "width": 168.5,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          },
+          {
+            "width": 349,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          }
+        ],
+        "statuses": [
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          }
+        ],
+        "costColors": [
+          "rgb(76, 195, 138)",
+          "rgb(76, 195, 138)"
+        ],
+        "success": "#4cc38a"
+      },
+      "svg": {
+        "viewBoxWidth": 780,
+        "renderedWidth": 780,
+        "texts": [
+          {
+            "text": "ALFRED · 本机组件关系",
+            "x": 20,
+            "y": 8,
+            "width": 152.609375,
+            "height": 13
+          },
+          {
+            "text": "RUNTIME · 共享宿主",
+            "x": 294,
+            "y": 44,
+            "width": 135.4375,
+            "height": 13
+          },
+          {
+            "text": "CAPABILITIES · 按需使用",
+            "x": 542,
+            "y": 184,
+            "width": 177.546875,
+            "height": 13
+          },
+          {
+            "text": "提交请求",
+            "x": 220,
+            "y": 106,
+            "width": 42,
+            "height": 12
+          },
+          {
+            "text": "收尾与持久事实",
+            "x": 508,
+            "y": 106,
+            "width": 73.5,
+            "height": 12
+          },
+          {
+            "text": "对话请求",
+            "x": 404,
+            "y": 189,
+            "width": 42,
+            "height": 12
+          },
+          {
+            "text": "显式发起",
+            "x": 262,
+            "y": 315,
+            "width": 42,
+            "height": 12
+          },
+          {
+            "text": "按需使用",
+            "x": 524,
+            "y": 242,
+            "width": 42,
+            "height": 12
+          },
+          {
+            "text": "按选择使用",
+            "x": 498,
+            "y": 368,
+            "width": 52.5,
+            "height": 12
+          },
+          {
+            "text": "CLI 入口／Web 入口",
+            "x": 36,
+            "y": 109,
+            "width": 120.578125,
+            "height": 16
+          },
+          {
+            "text": "共享宿主的两个入口",
+            "x": 36,
+            "y": 134,
+            "width": 94.5,
+            "height": 12
+          },
+          {
+            "text": "共享运行宿主与准入",
+            "x": 314,
+            "y": 109,
+            "width": 117,
+            "height": 16
+          },
+          {
+            "text": "接收请求 · 管理运行",
+            "x": 314,
+            "y": 134,
+            "width": 102.96875,
+            "height": 12
+          },
+          {
+            "text": "对话处理",
+            "x": 314,
+            "y": 245,
+            "width": 52,
+            "height": 16
+          },
+          {
+            "text": "可选消息分流",
+            "x": 314,
+            "y": 270,
+            "width": 63,
+            "height": 12
+          },
+          {
+            "text": "手动聚合",
+            "x": 314,
+            "y": 371,
+            "width": 52,
+            "height": 16
+          },
+          {
+            "text": "由用户显式发起",
+            "x": 314,
+            "y": 396,
+            "width": 73.5,
+            "height": 12
+          },
+          {
+            "text": "模型 · 工具 · 记忆",
+            "x": 630,
+            "y": 245,
+            "width": 99.953125,
+            "height": 16
+          },
+          {
+            "text": "按需／按选择使用",
+            "x": 630,
+            "y": 270,
+            "width": 84,
+            "height": 12
+          },
+          {
+            "text": "本地记录与账目",
+            "x": 630,
+            "y": 109,
+            "width": 91,
+            "height": 16
+          },
+          {
+            "text": "持久事实 · 各自核验",
+            "x": 630,
+            "y": 134,
+            "width": 102.96875,
+            "height": 12
+          }
+        ],
+        "nodes": [
+          {
+            "x": 22,
+            "y": 96,
+            "width": 174,
+            "height": 64
+          },
+          {
+            "x": 300,
+            "y": 96,
+            "width": 188,
+            "height": 64
+          },
+          {
+            "x": 300,
+            "y": 232,
+            "width": 188,
+            "height": 64
+          },
+          {
+            "x": 300,
+            "y": 358,
+            "width": 188,
+            "height": 64
+          },
+          {
+            "x": 616,
+            "y": 232,
+            "width": 144,
+            "height": 64
+          },
+          {
+            "x": 616,
+            "y": 96,
+            "width": 144,
+            "height": 64
+          }
+        ],
+        "overlaps": [],
+        "borders": [],
+        "outside": [],
+        "edges": [
+          {
+            "path": "M196 128 H300",
+            "label": "提交请求",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": false,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          },
+          {
+            "path": "M488 128 H616",
+            "label": "收尾与持久事实",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": false,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          },
+          {
+            "path": "M394 160 V232",
+            "label": "对话请求",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": false,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          },
+          {
+            "path": "M348 160 V180 H252 V390 H300",
+            "label": "显式发起",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": true,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          },
+          {
+            "path": "M488 264 H616",
+            "label": "按需使用",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": true,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          },
+          {
+            "path": "M488 390 H574 V284 H616",
+            "label": "按选择使用",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": true,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          }
+        ],
+        "partitions": 3
+      }
+    },
+    {
+      "width": 320,
+      "height": 800,
+      "scroll": {
+        "scrollLeft": 32,
+        "clientWidth": 239,
+        "scrollWidth": 780,
+        "outline": "3px"
+      },
+      "geometry": {
+        "body": 320,
+        "viewport": 320,
+        "page": 311,
+        "pageScroll": 311,
+        "nodeTitleFont": "13px",
+        "animation": 0,
+        "inlineStyleAttributes": 1,
+        "inlineStyles": 0,
+        "cards": [
+          {
+            "width": 279,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          },
+          {
+            "width": 279,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          },
+          {
+            "width": 279,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          }
+        ],
+        "statuses": [
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          }
+        ],
+        "costColors": [
+          "rgb(76, 195, 138)",
+          "rgb(76, 195, 138)"
+        ],
+        "success": "#4cc38a"
+      },
+      "svg": {
+        "viewBoxWidth": 780,
+        "renderedWidth": 780,
+        "texts": [
+          {
+            "text": "ALFRED · 本机组件关系",
+            "x": 20,
+            "y": 8,
+            "width": 152.609375,
+            "height": 13
+          },
+          {
+            "text": "RUNTIME · 共享宿主",
+            "x": 294,
+            "y": 44,
+            "width": 135.4375,
+            "height": 13
+          },
+          {
+            "text": "CAPABILITIES · 按需使用",
+            "x": 542,
+            "y": 184,
+            "width": 177.546875,
+            "height": 13
+          },
+          {
+            "text": "提交请求",
+            "x": 220,
+            "y": 106,
+            "width": 42,
+            "height": 12
+          },
+          {
+            "text": "收尾与持久事实",
+            "x": 508,
+            "y": 106,
+            "width": 73.5,
+            "height": 12
+          },
+          {
+            "text": "对话请求",
+            "x": 404,
+            "y": 189,
+            "width": 42,
+            "height": 12
+          },
+          {
+            "text": "显式发起",
+            "x": 262,
+            "y": 315,
+            "width": 42,
+            "height": 12
+          },
+          {
+            "text": "按需使用",
+            "x": 524,
+            "y": 242,
+            "width": 42,
+            "height": 12
+          },
+          {
+            "text": "按选择使用",
+            "x": 498,
+            "y": 368,
+            "width": 52.5,
+            "height": 12
+          },
+          {
+            "text": "CLI 入口／Web 入口",
+            "x": 36,
+            "y": 109,
+            "width": 120.578125,
+            "height": 16
+          },
+          {
+            "text": "共享宿主的两个入口",
+            "x": 36,
+            "y": 134,
+            "width": 94.5,
+            "height": 12
+          },
+          {
+            "text": "共享运行宿主与准入",
+            "x": 314,
+            "y": 109,
+            "width": 117,
+            "height": 16
+          },
+          {
+            "text": "接收请求 · 管理运行",
+            "x": 314,
+            "y": 134,
+            "width": 102.96875,
+            "height": 12
+          },
+          {
+            "text": "对话处理",
+            "x": 314,
+            "y": 245,
+            "width": 52,
+            "height": 16
+          },
+          {
+            "text": "可选消息分流",
+            "x": 314,
+            "y": 270,
+            "width": 63,
+            "height": 12
+          },
+          {
+            "text": "手动聚合",
+            "x": 314,
+            "y": 371,
+            "width": 52,
+            "height": 16
+          },
+          {
+            "text": "由用户显式发起",
+            "x": 314,
+            "y": 396,
+            "width": 73.5,
+            "height": 12
+          },
+          {
+            "text": "模型 · 工具 · 记忆",
+            "x": 630,
+            "y": 245,
+            "width": 99.953125,
+            "height": 16
+          },
+          {
+            "text": "按需／按选择使用",
+            "x": 630,
+            "y": 270,
+            "width": 84,
+            "height": 12
+          },
+          {
+            "text": "本地记录与账目",
+            "x": 630,
+            "y": 109,
+            "width": 91,
+            "height": 16
+          },
+          {
+            "text": "持久事实 · 各自核验",
+            "x": 630,
+            "y": 134,
+            "width": 102.96875,
+            "height": 12
+          }
+        ],
+        "nodes": [
+          {
+            "x": 22,
+            "y": 96,
+            "width": 174,
+            "height": 64
+          },
+          {
+            "x": 300,
+            "y": 96,
+            "width": 188,
+            "height": 64
+          },
+          {
+            "x": 300,
+            "y": 232,
+            "width": 188,
+            "height": 64
+          },
+          {
+            "x": 300,
+            "y": 358,
+            "width": 188,
+            "height": 64
+          },
+          {
+            "x": 616,
+            "y": 232,
+            "width": 144,
+            "height": 64
+          },
+          {
+            "x": 616,
+            "y": 96,
+            "width": 144,
+            "height": 64
+          }
+        ],
+        "overlaps": [],
+        "borders": [],
+        "outside": [],
+        "edges": [
+          {
+            "path": "M196 128 H300",
+            "label": "提交请求",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": false,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          },
+          {
+            "path": "M488 128 H616",
+            "label": "收尾与持久事实",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": false,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          },
+          {
+            "path": "M394 160 V232",
+            "label": "对话请求",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": false,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          },
+          {
+            "path": "M348 160 V180 H252 V390 H300",
+            "label": "显式发起",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": true,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          },
+          {
+            "path": "M488 264 H616",
+            "label": "按需使用",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": true,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          },
+          {
+            "path": "M488 390 H574 V284 H616",
+            "label": "按选择使用",
+            "distance": 10,
+            "alongBorders": [],
+            "optional": true,
+            "markerAttribute": "url(#overview-arrow)",
+            "computedMarker": "url(\"#overview-arrow\")",
+            "markerSameDocument": true,
+            "markerInSvg": true
+          }
+        ],
+        "partitions": 3
+      }
+    }
+  ],
+  "console": [],
+  "pageErrors": [],
+  "initialInlineStyleAttributes": 0,
+  "current": {
+    "width": 320,
+    "height": 800,
+    "scroll": {
+      "scrollLeft": 32,
+      "clientWidth": 239,
+      "scrollWidth": 780,
+      "outline": "3px"
+    },
+    "geometry": {
+      "body": 320,
+      "viewport": 320,
+      "page": 311,
+      "pageScroll": 311,
+      "nodeTitleFont": "13px",
+      "animation": 0,
+      "inlineStyleAttributes": 1,
+      "inlineStyles": 0,
+      "cards": [
+        {
+          "width": 279,
+          "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+        },
+        {
+          "width": 279,
+          "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+        },
+        {
+          "width": 279,
+          "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+        }
+      ],
+      "statuses": [
+        {
+          "text": "已完成",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已保存",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已完成",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已保存",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已完成",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已保存",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已完成",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已保存",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已完成",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已保存",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        }
+      ],
+      "costColors": [
+        "rgb(76, 195, 138)",
+        "rgb(76, 195, 138)"
+      ],
+      "success": "#4cc38a"
+    },
+    "inlineStyles": [
+      "<input aria-label=\"IANA 时区\" style=\"\">"
+    ],
+    "svg": {
+      "viewBoxWidth": 780,
+      "renderedWidth": 780,
+      "texts": [
+        {
+          "text": "ALFRED · 本机组件关系",
+          "x": 20,
+          "y": 8,
+          "width": 152.609375,
+          "height": 13
+        },
+        {
+          "text": "RUNTIME · 共享宿主",
+          "x": 294,
+          "y": 44,
+          "width": 135.4375,
+          "height": 13
+        },
+        {
+          "text": "CAPABILITIES · 按需使用",
+          "x": 542,
+          "y": 184,
+          "width": 177.546875,
+          "height": 13
+        },
+        {
+          "text": "提交请求",
+          "x": 220,
+          "y": 106,
+          "width": 42,
+          "height": 12
+        },
+        {
+          "text": "收尾与持久事实",
+          "x": 508,
+          "y": 106,
+          "width": 73.5,
+          "height": 12
+        },
+        {
+          "text": "对话请求",
+          "x": 404,
+          "y": 189,
+          "width": 42,
+          "height": 12
+        },
+        {
+          "text": "显式发起",
+          "x": 262,
+          "y": 315,
+          "width": 42,
+          "height": 12
+        },
+        {
+          "text": "按需使用",
+          "x": 524,
+          "y": 242,
+          "width": 42,
+          "height": 12
+        },
+        {
+          "text": "按选择使用",
+          "x": 498,
+          "y": 368,
+          "width": 52.5,
+          "height": 12
+        },
+        {
+          "text": "CLI 入口／Web 入口",
+          "x": 36,
+          "y": 109,
+          "width": 120.578125,
+          "height": 16
+        },
+        {
+          "text": "共享宿主的两个入口",
+          "x": 36,
+          "y": 134,
+          "width": 94.5,
+          "height": 12
+        },
+        {
+          "text": "共享运行宿主与准入",
+          "x": 314,
+          "y": 109,
+          "width": 117,
+          "height": 16
+        },
+        {
+          "text": "接收请求 · 管理运行",
+          "x": 314,
+          "y": 134,
+          "width": 102.96875,
+          "height": 12
+        },
+        {
+          "text": "对话处理",
+          "x": 314,
+          "y": 245,
+          "width": 52,
+          "height": 16
+        },
+        {
+          "text": "可选消息分流",
+          "x": 314,
+          "y": 270,
+          "width": 63,
+          "height": 12
+        },
+        {
+          "text": "手动聚合",
+          "x": 314,
+          "y": 371,
+          "width": 52,
+          "height": 16
+        },
+        {
+          "text": "由用户显式发起",
+          "x": 314,
+          "y": 396,
+          "width": 73.5,
+          "height": 12
+        },
+        {
+          "text": "模型 · 工具 · 记忆",
+          "x": 630,
+          "y": 245,
+          "width": 99.953125,
+          "height": 16
+        },
+        {
+          "text": "按需／按选择使用",
+          "x": 630,
+          "y": 270,
+          "width": 84,
+          "height": 12
+        },
+        {
+          "text": "本地记录与账目",
+          "x": 630,
+          "y": 109,
+          "width": 91,
+          "height": 16
+        },
+        {
+          "text": "持久事实 · 各自核验",
+          "x": 630,
+          "y": 134,
+          "width": 102.96875,
+          "height": 12
+        }
+      ],
+      "nodes": [
+        {
+          "x": 22,
+          "y": 96,
+          "width": 174,
+          "height": 64
+        },
+        {
+          "x": 300,
+          "y": 96,
+          "width": 188,
+          "height": 64
+        },
+        {
+          "x": 300,
+          "y": 232,
+          "width": 188,
+          "height": 64
+        },
+        {
+          "x": 300,
+          "y": 358,
+          "width": 188,
+          "height": 64
+        },
+        {
+          "x": 616,
+          "y": 232,
+          "width": 144,
+          "height": 64
+        },
+        {
+          "x": 616,
+          "y": 96,
+          "width": 144,
+          "height": 64
+        }
+      ],
+      "overlaps": [],
+      "borders": [],
+      "outside": [],
+      "edges": [
+        {
+          "path": "M196 128 H300",
+          "label": "提交请求",
+          "distance": 10,
+          "alongBorders": [],
+          "optional": false,
+          "markerAttribute": "url(#overview-arrow)",
+          "computedMarker": "url(\"#overview-arrow\")",
+          "markerSameDocument": true,
+          "markerInSvg": true
+        },
+        {
+          "path": "M488 128 H616",
+          "label": "收尾与持久事实",
+          "distance": 10,
+          "alongBorders": [],
+          "optional": false,
+          "markerAttribute": "url(#overview-arrow)",
+          "computedMarker": "url(\"#overview-arrow\")",
+          "markerSameDocument": true,
+          "markerInSvg": true
+        },
+        {
+          "path": "M394 160 V232",
+          "label": "对话请求",
+          "distance": 10,
+          "alongBorders": [],
+          "optional": false,
+          "markerAttribute": "url(#overview-arrow)",
+          "computedMarker": "url(\"#overview-arrow\")",
+          "markerSameDocument": true,
+          "markerInSvg": true
+        },
+        {
+          "path": "M348 160 V180 H252 V390 H300",
+          "label": "显式发起",
+          "distance": 10,
+          "alongBorders": [],
+          "optional": true,
+          "markerAttribute": "url(#overview-arrow)",
+          "computedMarker": "url(\"#overview-arrow\")",
+          "markerSameDocument": true,
+          "markerInSvg": true
+        },
+        {
+          "path": "M488 264 H616",
+          "label": "按需使用",
+          "distance": 10,
+          "alongBorders": [],
+          "optional": true,
+          "markerAttribute": "url(#overview-arrow)",
+          "computedMarker": "url(\"#overview-arrow\")",
+          "markerSameDocument": true,
+          "markerInSvg": true
+        },
+        {
+          "path": "M488 390 H574 V284 H616",
+          "label": "按选择使用",
+          "distance": 10,
+          "alongBorders": [],
+          "optional": true,
+          "markerAttribute": "url(#overview-arrow)",
+          "computedMarker": "url(\"#overview-arrow\")",
+          "markerSameDocument": true,
+          "markerInSvg": true
+        }
+      ],
+      "partitions": 3
+    }
+  },
+  "stress": [
+    {
+      "identity": "Run collision-id-长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#4",
+      "preview": "普通聊天",
+      "previewOverflow": "clip",
+      "previewWhiteSpace": "normal",
+      "previewOverflowX": "visible",
+      "states": [
+        {
+          "text": "终态无法确认",
+          "width": 66,
+          "overflow": "clip"
+        },
+        {
+          "text": "记录状态未知",
+          "width": 66,
+          "overflow": "clip"
+        }
+      ],
+      "scroll": 277,
+      "width": 277
+    },
+    {
+      "identity": "Run collision-id-长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#3",
+      "preview": "普通聊天",
+      "previewOverflow": "clip",
+      "previewWhiteSpace": "normal",
+      "previewOverflowX": "visible",
+      "states": [
+        {
+          "text": "终态无法确认",
+          "width": 66,
+          "overflow": "clip"
+        },
+        {
+          "text": "记录状态未知",
+          "width": 66,
+          "overflow": "clip"
+        }
+      ],
+      "scroll": 277,
+      "width": 277
+    },
+    {
+      "identity": "Run collision-id-长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#2",
+      "preview": "普通聊天",
+      "previewOverflow": "clip",
+      "previewWhiteSpace": "normal",
+      "previewOverflowX": "visible",
+      "states": [
+        {
+          "text": "终态无法确认",
+          "width": 66,
+          "overflow": "clip"
+        },
+        {
+          "text": "记录状态未知",
+          "width": 66,
+          "overflow": "clip"
+        }
+      ],
+      "scroll": 277,
+      "width": 277
+    },
+    {
+      "identity": "Run collision-id-长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#1",
+      "preview": "普通聊天",
+      "previewOverflow": "clip",
+      "previewWhiteSpace": "normal",
+      "previewOverflowX": "visible",
+      "states": [
+        {
+          "text": "终态无法确认",
+          "width": 66,
+          "overflow": "clip"
+        },
+        {
+          "text": "记录状态未知",
+          "width": 66,
+          "overflow": "clip"
+        }
+      ],
+      "scroll": 277,
+      "width": 277
+    },
+    {
+      "identity": "Run collision-id-长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#0",
+      "preview": "未知用途：future-purpose",
+      "previewOverflow": "clip",
+      "previewWhiteSpace": "normal",
+      "previewOverflowX": "visible",
+      "states": [
+        {
+          "text": "终态无法确认",
+          "width": 66,
+          "overflow": "clip"
+        },
+        {
+          "text": "记录状态未知",
+          "width": 66,
+          "overflow": "clip"
+        }
+      ],
+      "scroll": 277,
+      "width": 277
+    }
+  ],
+  "unknownPurpose": {
+    "text": "未知用途：future-purpose",
+    "lines": 2,
+    "height": 34,
+    "scrollHeight": 34,
+    "width": 91,
+    "scrollWidth": 91,
+    "overflow": "visible",
+    "whiteSpace": "normal"
+  },
+  "exit_code": 0,
+  "candidate_sha256": {
+    "src/agent_alfred/ops/static/overview.js": "f5985084d98c9ed15f15153105ead7508f00b7b711ba5cf86e499eee80e99bc8",
+    "src/agent_alfred/ops/static/overview.css": "73269c54fa3db6ad1e56b334996d55119b606edb926e087d34048d1b16fea1d4",
+    "tests/browser/overview.spec.js": "29688d9f117575a4f8cb72d669d62f36cd44f1782b6ead3bb7652b1a87faf41e"
+  },
+  "tested_files_unchanged": true
+}

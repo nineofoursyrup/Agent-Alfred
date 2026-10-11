@@ -1,0 +1,8 @@
+import runpy, subprocess, sys
+sys.argv=["scripts/check_mcp_installations.py",*sys.argv[1:]]
+try:
+ runpy.run_path("scripts/check_mcp_installations.py",run_name="__main__")
+except subprocess.CalledProcessError as error:
+ if error.stdout:sys.stdout.write(error.stdout)
+ if error.stderr:sys.stderr.write(error.stderr)
+ raise

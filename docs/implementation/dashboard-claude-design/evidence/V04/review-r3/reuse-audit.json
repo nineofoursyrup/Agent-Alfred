@@ -1,0 +1,11 @@
+{
+  "python_input_file_count": 623,
+  "python_inputs_changed": [],
+  "scope": "Only page-owned frontend and V04 evidence changed. Rebase changes frontend only. Python, Skill, environment samples, configurations and dependencies unchanged; installed-package closure and static asset reads rerun.",
+  "rebased_base": "76c16bd873707f00281c874dc15153b24be363bf",
+  "historical_full_pytest": "gates/09-pytest-output.json: 6445 passed, 1 deselected, 14 warnings",
+  "tested_assets": [
+    "src/agent_alfred/ops/static/overview.js",
+    "src/agent_alfred/ops/static/overview.css"
+  ]
+}

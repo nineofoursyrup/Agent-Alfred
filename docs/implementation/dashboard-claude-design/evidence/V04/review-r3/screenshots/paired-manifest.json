@@ -1,0 +1,197 @@
+{
+  "reference_reuse": "Same archived original, version 1786950414092924, unchanged viewport and screenshot bytes. Product captures refreshed after marker fix and rebase.",
+  "comparisons": [
+    {
+      "file": "compare-overview-1440x900.png",
+      "sha256": "3783d594ce97a331c498e23dcfc4f9fc3348e4423657e2a3a50f184ba60d39bc",
+      "size": [
+        2880,
+        900
+      ],
+      "left": {
+        "file": "overview-1440x900.png",
+        "sha256": "f81d6b4b15e1f0f6975af4a0bad70807e37e45a69cc82efc7dbb45072276e941"
+      },
+      "right_reused_reference": {
+        "file": "docs/implementation/dashboard-claude-design/evidence/V04/reference-1440x900.png",
+        "sha256": "7bd9fb7e0f5ea7fb70c7a5ec72c2e77946e140fb9088c4322356c67a803599f1"
+      }
+    },
+    {
+      "file": "compare-architecture-1440x900.png",
+      "sha256": "29d768274f5fa791b0753576485ab94d568f3d4a80a7613fcbaea14542fb86fb",
+      "size": [
+        2880,
+        900
+      ],
+      "left": {
+        "file": "architecture-1440x900.png",
+        "sha256": "c8c4160bd6d4a3d9484ece988bb62f6495ee7e51e8bfe4cc9f236c6b75402c68"
+      },
+      "right_reused_reference": {
+        "file": "docs/implementation/dashboard-claude-design/evidence/V04/reference-architecture-1440x900.png",
+        "sha256": "da58d5f2405e7766180234bdb9ae655d3d29863b4849768083a81a1e6cad42f5"
+      }
+    },
+    {
+      "file": "compare-recent-1440x900.png",
+      "sha256": "3eeecd4c2804648a057c26d03a4cfbefd72ca4915caede465c2b912b72e06473",
+      "size": [
+        2880,
+        900
+      ],
+      "left": {
+        "file": "recent-1440x900.png",
+        "sha256": "dbc6355a9e8f6b840a48225d017b66ba88cc1e4b959791c2da122d886893b0eb"
+      },
+      "right_reused_reference": {
+        "file": "docs/implementation/dashboard-claude-design/evidence/V04/reference-recent-1440x900.png",
+        "sha256": "1dca8f9b964343f6fbfc6da4808cdd5a1bf3b04ec9f5a239f9c3188af2d5a67c"
+      }
+    },
+    {
+      "file": "compare-overview-1280x800.png",
+      "sha256": "188dd903513f92fa9e4254a3c9937d62ac9d518b40eb1c1576e7c544d83b05bd",
+      "size": [
+        2560,
+        800
+      ],
+      "left": {
+        "file": "overview-1280x800.png",
+        "sha256": "f00aa617f602e9cd68621adbb79c32ef1a9e8652f518d25a2b186e51e4843db0"
+      },
+      "right_reused_reference": {
+        "file": "docs/implementation/dashboard-claude-design/evidence/V04/reference-1280x800.png",
+        "sha256": "a7c1bf89d09d25011c0bf9a700961018c014a3bc9fce5cb47ad8527588973a29"
+      }
+    },
+    {
+      "file": "compare-architecture-1280x800.png",
+      "sha256": "3deaa75b9ff8621e124c803e72b4d693fd6b7f0696a861ed2f3b1647c3aff09b",
+      "size": [
+        2560,
+        800
+      ],
+      "left": {
+        "file": "architecture-1280x800.png",
+        "sha256": "08ad6ff6b180ddbb53f68425cdd88473b99a98d42ae13b58290f24e8c4fa3dfa"
+      },
+      "right_reused_reference": {
+        "file": "docs/implementation/dashboard-claude-design/evidence/V04/reference-architecture-1280x800.png",
+        "sha256": "3f15639caef76dbfe8b25b48c4e62e1a6df48860e81001710b9171dc5a03e768"
+      }
+    },
+    {
+      "file": "compare-recent-1280x800.png",
+      "sha256": "952eb9c83955d41875ef88ba7e1133f64505d7be8a01e95fde233627f34e4fe8",
+      "size": [
+        2560,
+        800
+      ],
+      "left": {
+        "file": "recent-1280x800.png",
+        "sha256": "b150c2386840c65eaae68b23e52502d9da8057d101eabf5f621dbe819b9b9ef6"
+      },
+      "right_reused_reference": {
+        "file": "docs/implementation/dashboard-claude-design/evidence/V04/reference-recent-1280x800.png",
+        "sha256": "cce4862c43855db2690ac19138dbff291d6a2a300ca10d997fb7b758c5f4eeeb"
+      }
+    },
+    {
+      "file": "compare-overview-390x844.png",
+      "sha256": "a1712a9e833f24924d5dc12bde0517d99daefe4aae70a57cabdfcbd8ac84ea23",
+      "size": [
+        780,
+        844
+      ],
+      "left": {
+        "file": "overview-390x844.png",
+        "sha256": "c018e40d646081d22060fa7a27dabee787d4b2dd3ea91605750064d6b3e49ac4"
+      },
+      "right_reused_reference": {
+        "file": "docs/implementation/dashboard-claude-design/evidence/V04/reference-390x844.png",
+        "sha256": "c57d4e337c68eab7616d307218756c6898e7ef294bd184133eeb2cfa9901da39"
+      }
+    },
+    {
+      "file": "compare-architecture-390x844.png",
+      "sha256": "e2bb0b07bb604558c68b1c1782e78e4ce7b95b8572113df4e9c82de6ecf257d2",
+      "size": [
+        780,
+        844
+      ],
+      "left": {
+        "file": "architecture-390x844.png",
+        "sha256": "2c75021e9539e7b53f7c6b53d61b042408bf53d848acbc36da2139d3f9631248"
+      },
+      "right_reused_reference": {
+        "file": "docs/implementation/dashboard-claude-design/evidence/V04/reference-architecture-390x844.png",
+        "sha256": "c57d4e337c68eab7616d307218756c6898e7ef294bd184133eeb2cfa9901da39"
+      }
+    },
+    {
+      "file": "compare-recent-390x844.png",
+      "sha256": "31b3914e693126654059f5dec644c9cd1abb44b4b4d86a6017a1f2e85517f4a4",
+      "size": [
+        780,
+        844
+      ],
+      "left": {
+        "file": "recent-390x844.png",
+        "sha256": "c1de0903a7c5a172f0fab5745ab4de64247edec363ce0806e089bbc43b677adc"
+      },
+      "right_reused_reference": {
+        "file": "docs/implementation/dashboard-claude-design/evidence/V04/reference-recent-390x844.png",
+        "sha256": "c57d4e337c68eab7616d307218756c6898e7ef294bd184133eeb2cfa9901da39"
+      }
+    },
+    {
+      "file": "compare-overview-320x800.png",
+      "sha256": "980d731f6351c7fea28a91efd9c5264c4221a31ab1577ad68adf3eb8da0dc57f",
+      "size": [
+        640,
+        800
+      ],
+      "left": {
+        "file": "overview-320x800.png",
+        "sha256": "9d25a2086078f0920c6047bb56948f71005029be7d68d029bf051854913ae704"
+      },
+      "right_reused_reference": {
+        "file": "docs/implementation/dashboard-claude-design/evidence/V04/reference-320x800.png",
+        "sha256": "c77808ff780bfa52785dc73f63e029d25bce1c278c18bfe70090e4b01fd1db5c"
+      }
+    },
+    {
+      "file": "compare-architecture-320x800.png",
+      "sha256": "2cef315940ebf31392f7c83d8739139d215522eaa53d1939973be7ac5de0ed09",
+      "size": [
+        640,
+        800
+      ],
+      "left": {
+        "file": "architecture-320x800.png",
+        "sha256": "67794fe1acd9130c023b861de6ef263dfb120dd9c2a1a87c0d973367f0e73cd9"
+      },
+      "right_reused_reference": {
+        "file": "docs/implementation/dashboard-claude-design/evidence/V04/reference-architecture-320x800.png",
+        "sha256": "c77808ff780bfa52785dc73f63e029d25bce1c278c18bfe70090e4b01fd1db5c"
+      }
+    },
+    {
+      "file": "compare-recent-320x800.png",
+      "sha256": "e326b6157b882b0aba3f9402f1799f26a0bc15014787adbbb857e3474abb41c7",
+      "size": [
+        640,
+        800
+      ],
+      "left": {
+        "file": "recent-320x800.png",
+        "sha256": "f80e82d729276758ab68b17af9aafb392da88f34e64cc3abb19d04ce0fc9e0f7"
+      },
+      "right_reused_reference": {
+        "file": "docs/implementation/dashboard-claude-design/evidence/V04/reference-recent-320x800.png",
+        "sha256": "c77808ff780bfa52785dc73f63e029d25bce1c278c18bfe70090e4b01fd1db5c"
+      }
+    }
+  ]
+}

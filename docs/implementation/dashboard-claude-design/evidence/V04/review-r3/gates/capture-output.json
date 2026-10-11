@@ -1,0 +1,41 @@
+{
+  "command": [
+    "node",
+    "output/playwright/v04-capture-r3.mjs"
+  ],
+  "started_at": "2026-10-11T13:54:32.581519+00:00",
+  "head_at_start": "9485dee521b1101619f1392572b4fc2c0202003c",
+  "tested_files_sha256": {
+    "src/agent_alfred/ops/static/overview.js": "f5985084d98c9ed15f15153105ead7508f00b7b711ba5cf86e499eee80e99bc8",
+    "src/agent_alfred/ops/static/overview.css": "73269c54fa3db6ad1e56b334996d55119b606edb926e087d34048d1b16fea1d4",
+    "tests/browser/overview.spec.js": "29688d9f117575a4f8cb72d669d62f36cd44f1782b6ead3bb7652b1a87faf41e",
+    "scripts/dashboard_installation_probe.py": "3798a760900c1f9c6013f7790f7a8ffa49a373238e944b90979b5e8f30beeaa5",
+    "scripts/check_mcp_installations.py": "22d569289d9555e5aa5aee9f20ec16e66b113d70de29e21fe17aa63071dc308e",
+    "playwright.config.js": "ee0d64ce222e3c6f5f8cf90b9be9e7ceb160fddefc375b17d9e8ccb92fabf4e5",
+    "package.json": "f3e4bb5814ef3913c90d8152433d4b116c7dd33359bc88544dc412287f7c05f3",
+    "package-lock.json": "d964ea8313a3dfb83a72e230ee61f0b166c524548fa80514319e081d30d7e896",
+    "uv.lock": "b0445c57d4cdb22a7c816fe27fa8a0c7ddd39962aea69df367e3b1c27a275bb9",
+    "pyproject.toml": "0b3ebe230f399935af91723dd9b9d02a2064edd526a822dfd3b502d4373a2afb",
+    "tsconfig.json": "a78d757679f409ade4ca65bb77405839506fa4756a6f2669d179055141115bee"
+  },
+  "execution": "before_commit; tested file SHA-256 recorded",
+  "worktree_status_at_start": " M docs/implementation/dashboard-claude-design/evidence/V04/capture.mjs\n M src/agent_alfred/ops/static/overview.css\n M src/agent_alfred/ops/static/overview.js\n",
+  "exit_code": 0,
+  "duration_seconds": 3.3143783749546856,
+  "output": "",
+  "tested_files_sha256_after": {
+    "src/agent_alfred/ops/static/overview.js": "f5985084d98c9ed15f15153105ead7508f00b7b711ba5cf86e499eee80e99bc8",
+    "src/agent_alfred/ops/static/overview.css": "73269c54fa3db6ad1e56b334996d55119b606edb926e087d34048d1b16fea1d4",
+    "tests/browser/overview.spec.js": "29688d9f117575a4f8cb72d669d62f36cd44f1782b6ead3bb7652b1a87faf41e",
+    "scripts/dashboard_installation_probe.py": "3798a760900c1f9c6013f7790f7a8ffa49a373238e944b90979b5e8f30beeaa5",
+    "scripts/check_mcp_installations.py": "22d569289d9555e5aa5aee9f20ec16e66b113d70de29e21fe17aa63071dc308e",
+    "playwright.config.js": "ee0d64ce222e3c6f5f8cf90b9be9e7ceb160fddefc375b17d9e8ccb92fabf4e5",
+    "package.json": "f3e4bb5814ef3913c90d8152433d4b116c7dd33359bc88544dc412287f7c05f3",
+    "package-lock.json": "d964ea8313a3dfb83a72e230ee61f0b166c524548fa80514319e081d30d7e896",
+    "uv.lock": "b0445c57d4cdb22a7c816fe27fa8a0c7ddd39962aea69df367e3b1c27a275bb9",
+    "pyproject.toml": "0b3ebe230f399935af91723dd9b9d02a2064edd526a822dfd3b502d4373a2afb",
+    "tsconfig.json": "a78d757679f409ade4ca65bb77405839506fa4756a6f2669d179055141115bee"
+  },
+  "head_at_end": "9485dee521b1101619f1392572b4fc2c0202003c",
+  "tested_files_unchanged": true
+}

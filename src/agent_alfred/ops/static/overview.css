@@ -33,7 +33,7 @@
 .overview .overview-diagram {display:block;width:780px;height:auto}
 .overview .overview-partition {fill:none;stroke:var(--border);stroke-width:1px;stroke-dasharray:6px;rx:var(--radius-panel)}
 .overview .overview-diagram-eyebrow {font:600 var(--font-size-panel-eyebrow)/1 var(--font-mono);letter-spacing:1.8px;fill:var(--metadata)}
-.overview .overview-edge {fill:none;stroke:var(--diagram-line);stroke-width:1.4px;marker-end:url(#overview-arrow)}
+.overview .overview-edge {fill:none;stroke:var(--diagram-line);stroke-width:1.4px}
 .overview .overview-edge-optional {stroke-dasharray:6px}
 .overview .overview-arrow {fill:var(--diagram-arrow)}
 .overview .overview-edge-label {font:400 var(--font-size-meta-small)/1 var(--font-mono);fill:var(--weak)}
