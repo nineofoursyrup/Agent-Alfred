@@ -1,0 +1,28 @@
+{
+  "command": [
+    "npm",
+    "run",
+    "test:browser",
+    "--",
+    "tests/browser/models-migration.spec.js:347",
+    "tests/browser/overview.spec.js:155",
+    "tests/browser/overview.spec.js:339",
+    "tests/browser/read-retirement.spec.js:114"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v09",
+  "browser_port": 17960,
+  "head_at_start": "a4f3b99f5cc8ea0be9adc7c1d771e0df6bf406b6",
+  "inputs": {
+    "src/agent_alfred/ops/static/tools.js": "3edbb1ab7822e27f1fbdd742561659a11ee2082a137b64f56f9e89b0ad53efe5",
+    "src/agent_alfred/ops/static/tools.css": "56412274954849ffe7b6fd69aa12ad4800ce035e81d3bf244924764703dcbefe",
+    "tests/browser/tools-visual.spec.js": "40b19a73f51fbf54b00182980dc791baa3b8cbfe79c38b89252587449ae22509",
+    "uv.lock": "b0445c57d4cdb22a7c816fe27fa8a0c7ddd39962aea69df367e3b1c27a275bb9",
+    "package-lock.json": "d964ea8313a3dfb83a72e230ee61f0b166c524548fa80514319e081d30d7e896",
+    "playwright.config.js": "ee0d64ce222e3c6f5f8cf90b9be9e7ceb160fddefc375b17d9e8ccb92fabf4e5"
+  },
+  "started_utc": "2026-10-11T03:00:10.210377+00:00",
+  "elapsed_seconds": 7.94,
+  "exit_code": 0,
+  "stdout_stderr": "\n> test:browser\n> playwright test tests/browser/models-migration.spec.js:347 tests/browser/overview.spec.js:155 tests/browser/overview.spec.js:339 tests/browser/read-retirement.spec.js:114\n\n\nRunning 5 tests using 1 worker\n\n(node:20590) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✓  1 tests/browser/models-migration.spec.js:347:1 › S08 STD01 retired save cannot clear a successor request after real Stream reconnect (1.1s)\n  ✓  2 tests/browser/overview.spec.js:155:1 › Disconnect, same-instance reconnect and restart cannot renew or resurrect observations (2.5s)\n  ✓  3 tests/browser/overview.spec.js:339:1 › Gap and disconnect retire slow real reads even after a same-instance reconnect (1.0s)\n  ✓  4 tests/browser/read-retirement.spec.js:114:3 › real Session response is retired across disconnect and same-instance reconnect (951ms)\n  ✓  5 tests/browser/read-retirement.spec.js:114:3 › real Session response is retired across broker replay gap and same-instance reconnect (1.0s)\n\n  5 passed (7.5s)\n",
+  "output_sha256": "f1d8bf0b83379a38bd863bc94724596765a618b21080144ab6930419323b313c"
+}

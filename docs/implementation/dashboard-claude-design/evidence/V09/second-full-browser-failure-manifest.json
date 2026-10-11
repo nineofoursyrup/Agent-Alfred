@@ -1,0 +1,123 @@
+{
+  "source_head": "a4f3b99f5cc8ea0be9adc7c1d771e0df6bf406b6",
+  "gate": "05-browser.json",
+  "selected_failed_cases_only": true,
+  "files": [
+    {
+      "path": "models-migration-S08-STD01-93d72-after-real-Stream-reconnect/error-context.md",
+      "stored_as": "models-migration-S08-STD01-93d72-after-real-Stream-reconnect/error-context.md.json",
+      "bytes": 25013,
+      "sha256": "4a142c59a6342b5888fd18b6c2d44d217360afed475c9268852861b5e2b4d7b5",
+      "trailing_whitespace_lines": [
+        230,
+        276,
+        299,
+        339,
+        373,
+        374,
+        416
+      ]
+    },
+    {
+      "path": "models-migration-S08-STD01-93d72-after-real-Stream-reconnect/test-failed-1.png",
+      "stored_as": "models-migration-S08-STD01-93d72-after-real-Stream-reconnect/test-failed-1.png",
+      "bytes": 78331,
+      "sha256": "6e0e5f89627805238bb5358e9391ccfa809fad60bc01905b7e84f68b2e8a7219",
+      "trailing_whitespace_lines": []
+    },
+    {
+      "path": "models-migration-S08-STD01-93d72-after-real-Stream-reconnect/trace.zip",
+      "stored_as": "models-migration-S08-STD01-93d72-after-real-Stream-reconnect/trace.zip",
+      "bytes": 263285,
+      "sha256": "a404357865c79cf9df1adb1bd6fde4838722f69161b331b27cdc15f63d03f14f",
+      "trailing_whitespace_lines": []
+    },
+    {
+      "path": "overview-Disconnect-same-i-9408c-w-or-resurrect-observations/error-context.md",
+      "stored_as": "overview-Disconnect-same-i-9408c-w-or-resurrect-observations/error-context.md.json",
+      "bytes": 18759,
+      "sha256": "aed5e5aab7c23347df098c6f4cb4df3a15c05f1cb4b0b0052f9a9aad237f60e2",
+      "trailing_whitespace_lines": [
+        66,
+        102,
+        130,
+        153,
+        177,
+        203,
+        233,
+        251
+      ]
+    },
+    {
+      "path": "overview-Disconnect-same-i-9408c-w-or-resurrect-observations/test-failed-1.png",
+      "stored_as": "overview-Disconnect-same-i-9408c-w-or-resurrect-observations/test-failed-1.png",
+      "bytes": 95584,
+      "sha256": "f09eb0c67b5ff9bae3bec3b8885f184bb6396cdf22d928136837b7db162e0284",
+      "trailing_whitespace_lines": []
+    },
+    {
+      "path": "overview-Disconnect-same-i-9408c-w-or-resurrect-observations/trace.zip",
+      "stored_as": "overview-Disconnect-same-i-9408c-w-or-resurrect-observations/trace.zip",
+      "bytes": 286229,
+      "sha256": "ae079dc4a223671e10f24559dc5b80ab29825c9cad775f75d85175c2f5b75a89",
+      "trailing_whitespace_lines": []
+    },
+    {
+      "path": "overview-Gap-and-disconnec-f3ed7-r-a-same-instance-reconnect/error-context.md",
+      "stored_as": "overview-Gap-and-disconnec-f3ed7-r-a-same-instance-reconnect/error-context.md.json",
+      "bytes": 21274,
+      "sha256": "a6e00584685fb391f4c74f0f2d71ab4c5babb82191607e1c17e14e1b6ef87d95",
+      "trailing_whitespace_lines": [
+        63,
+        82,
+        116,
+        127,
+        150,
+        174,
+        211,
+        212
+      ]
+    },
+    {
+      "path": "overview-Gap-and-disconnec-f3ed7-r-a-same-instance-reconnect/test-failed-1.png",
+      "stored_as": "overview-Gap-and-disconnec-f3ed7-r-a-same-instance-reconnect/test-failed-1.png",
+      "bytes": 101838,
+      "sha256": "01108f60819010a65b1b70e32f7d19aec9331d87bb1af11a183a4ec4ed508e5c",
+      "trailing_whitespace_lines": []
+    },
+    {
+      "path": "overview-Gap-and-disconnec-f3ed7-r-a-same-instance-reconnect/trace.zip",
+      "stored_as": "overview-Gap-and-disconnec-f3ed7-r-a-same-instance-reconnect/trace.zip",
+      "bytes": 540674,
+      "sha256": "59732d7d42183b915dbcbc2e27efb71c104b3e3df20fbe20b759f39da2b0b51e",
+      "trailing_whitespace_lines": []
+    },
+    {
+      "path": "read-retirement-real-Sessi-c940f-and-same-instance-reconnect/error-context.md",
+      "stored_as": "read-retirement-real-Sessi-c940f-and-same-instance-reconnect/error-context.md.json",
+      "bytes": 9056,
+      "sha256": "272d5dd9c2eea2793dfce8d3dacfed8d7502b20f75b2db0d8c2065c5324e3751",
+      "trailing_whitespace_lines": [
+        50,
+        83,
+        105,
+        159,
+        206
+      ]
+    },
+    {
+      "path": "read-retirement-real-Sessi-c940f-and-same-instance-reconnect/test-failed-1.png",
+      "stored_as": "read-retirement-real-Sessi-c940f-and-same-instance-reconnect/test-failed-1.png",
+      "bytes": 81999,
+      "sha256": "e582de4cf294fc094fdad46b54984abda7d816eaf6d38b797b723e7a3bbdcc2c",
+      "trailing_whitespace_lines": []
+    },
+    {
+      "path": "read-retirement-real-Sessi-c940f-and-same-instance-reconnect/trace.zip",
+      "stored_as": "read-retirement-real-Sessi-c940f-and-same-instance-reconnect/trace.zip",
+      "bytes": 255608,
+      "sha256": "23e5f5bccfb1326d96b813d2a5fcdd86e16d772a060b0b504b6515fda4acb6e6",
+      "trailing_whitespace_lines": []
+    }
+  ]
+}

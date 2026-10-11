@@ -1,0 +1,27 @@
+{
+  "command": [
+    "npm",
+    "run",
+    "test:browser",
+    "--",
+    "tests/browser/database.spec.js:221",
+    "tests/browser/integrations.spec.js:372",
+    "tests/browser/memory.spec.js:128"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v09",
+  "browser_port": 17960,
+  "head_at_start": "a4f3b99f5cc8ea0be9adc7c1d771e0df6bf406b6",
+  "inputs": {
+    "src/agent_alfred/ops/static/tools.js": "3edbb1ab7822e27f1fbdd742561659a11ee2082a137b64f56f9e89b0ad53efe5",
+    "src/agent_alfred/ops/static/tools.css": "56412274954849ffe7b6fd69aa12ad4800ce035e81d3bf244924764703dcbefe",
+    "tests/browser/tools-visual.spec.js": "40b19a73f51fbf54b00182980dc791baa3b8cbfe79c38b89252587449ae22509",
+    "uv.lock": "b0445c57d4cdb22a7c816fe27fa8a0c7ddd39962aea69df367e3b1c27a275bb9",
+    "package-lock.json": "d964ea8313a3dfb83a72e230ee61f0b166c524548fa80514319e081d30d7e896",
+    "playwright.config.js": "ee0d64ce222e3c6f5f8cf90b9be9e7ceb160fddefc375b17d9e8ccb92fabf4e5"
+  },
+  "started_utc": "2026-10-11T02:16:31.588771+00:00",
+  "elapsed_seconds": 12.98,
+  "exit_code": 0,
+  "stdout_stderr": "\n> test:browser\n> playwright test tests/browser/database.spec.js:221 tests/browser/integrations.spec.js:372 tests/browser/memory.spec.js:128\n\n\nRunning 3 tests using 1 worker\n\n(node:54931) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✓  1 tests/browser/database.spec.js:221:1 › real SSE recovery clears results, verifies versions and never reruns SQL (5.6s)\n  ✓  2 tests/browser/integrations.spec.js:372:1 › S08 STD01 Connections already isolates retired probe cleanup from a successor (1.1s)\n  ✓  3 tests/browser/memory.spec.js:128:1 › A52: explicit save, next-Run hit, source, edit conflict, delete and requery (4.4s)\n\n  3 passed (12.4s)\n",
+  "output_sha256": "c8e7d89dd6badcc2005a9b77aab36260a82e5211ff84d796a80eb6932faadcdb"
+}

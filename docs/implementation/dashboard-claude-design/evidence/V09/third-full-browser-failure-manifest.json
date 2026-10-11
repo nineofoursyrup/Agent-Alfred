@@ -1,0 +1,34 @@
+{
+  "source_head": "a4f3b99f5cc8ea0be9adc7c1d771e0df6bf406b6",
+  "gate": "07-browser.json",
+  "selected_failed_cases_only": true,
+  "files": [
+    {
+      "path": "run-path-CE-08-latest-requ-dfbfb-s-reopen-and-Run-navigation/error-context.md",
+      "stored_as": "run-path-CE-08-latest-requ-dfbfb-s-reopen-and-Run-navigation/error-context.md.json",
+      "bytes": 9122,
+      "sha256": "cb0445c277832ace9aab28ac5e4f88265b2a657eb53ceaf09e5bb4e86ce041b3",
+      "trailing_whitespace_lines": [
+        43,
+        67,
+        85,
+        97,
+        135
+      ]
+    },
+    {
+      "path": "run-path-CE-08-latest-requ-dfbfb-s-reopen-and-Run-navigation/test-failed-1.png",
+      "stored_as": "run-path-CE-08-latest-requ-dfbfb-s-reopen-and-Run-navigation/test-failed-1.png",
+      "bytes": 105131,
+      "sha256": "0b9379bcf47a7fd1a78afdea729a48eaee2e5f15ecc2406a79d0efd437d9c64b",
+      "trailing_whitespace_lines": []
+    },
+    {
+      "path": "run-path-CE-08-latest-requ-dfbfb-s-reopen-and-Run-navigation/trace.zip",
+      "stored_as": "run-path-CE-08-latest-requ-dfbfb-s-reopen-and-Run-navigation/trace.zip",
+      "bytes": 741924,
+      "sha256": "9d4542d8a52529721f010adb4bae1ee6d26fbc3b87a59518b5731295683b5e09",
+      "trailing_whitespace_lines": []
+    }
+  ]
+}

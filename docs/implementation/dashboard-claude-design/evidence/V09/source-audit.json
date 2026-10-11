@@ -1,0 +1,52 @@
+{
+  "base": "645c4549bb5bea9f79ddb4625f17c5a8a6af58c8",
+  "implementation_head": "a4f3b99f5cc8ea0be9adc7c1d771e0df6bf406b6",
+  "changed_files": [
+    "src/agent_alfred/ops/static/tools.css",
+    "src/agent_alfred/ops/static/tools.js",
+    "tests/browser/tools-visual.spec.js"
+  ],
+  "sha256": {
+    "src/agent_alfred/ops/static/tools.css": "56412274954849ffe7b6fd69aa12ad4800ce035e81d3bf244924764703dcbefe",
+    "src/agent_alfred/ops/static/tools.js": "3edbb1ab7822e27f1fbdd742561659a11ee2082a137b64f56f9e89b0ad53efe5",
+    "tests/browser/tools-visual.spec.js": "40b19a73f51fbf54b00182980dc791baa3b8cbfe79c38b89252587449ae22509"
+  },
+  "exports": [
+    "export async function request(path, body, csrf, signal) {",
+    "export function toolsPage(root, csrf) {"
+  ],
+  "request_implementation_unchanged": true,
+  "css_selectors": [
+    ".tools-page",
+    ".tools-page .tools-catalog",
+    ".tools-page .tools-history-body",
+    ".tools-page>.tools-configuration-panel",
+    ".tools-page>.tools-history",
+    ".tools-page .tools-controls",
+    ".tools-page .tools-metadata",
+    ".tools-page .tools-configuration-body",
+    ".tools-page .tools-configuration-body>p",
+    ".tools-page .tools-configuration-panel .tools-controls",
+    ".tools-page .tools-grid",
+    ".tools-page .tools-source-status",
+    ".tools-page .tool-row",
+    ".tools-page .tool-row h3",
+    ".tools-page .tool-row p",
+    ".tools-page .tool-identity",
+    ".tools-page .tool-summary",
+    ".tools-page .tool-brief",
+    ".tools-page .tool-status",
+    ".tools-page .tool-status>p",
+    ".tools-page .tool-status>.tool-exposure",
+    ".tools-page .tool-attention",
+    ".tools-page .tool-attention:empty",
+    ".tools-page .tool-row .tools-controls",
+    ".tools-page .tool-detail-body",
+    ".tools-page .tool-description",
+    ".tools-page .tool-detail label",
+    ".tools-page .tool-detail .tools-controls"
+  ],
+  "css_all_scoped_to_tools_page": true,
+  "css_literal_colors_or_dimensions": false,
+  "public_files_unchanged": true
+}

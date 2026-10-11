@@ -1,0 +1,82 @@
+{
+  "source_head": "a4f3b99f5cc8ea0be9adc7c1d771e0df6bf406b6",
+  "selected_failed_cases_only": true,
+  "files": [
+    {
+      "path": "database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/error-context.md",
+      "bytes": 16527,
+      "sha256": "aaf3cf940178fd681f12041e617fef3b988b14b2f774745ac5066b65cca15d6a",
+      "trailing_whitespace_lines": [
+        127,
+        155,
+        178,
+        198,
+        238,
+        295,
+        296,
+        325
+      ],
+      "stored_as": "database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/error-context.md.json"
+    },
+    {
+      "path": "database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/test-failed-1.png",
+      "bytes": 99951,
+      "sha256": "f7af00f294099040793633ba2b4c7d96b1ffee8bd87d0d2e747ed0da0b0c1b83",
+      "trailing_whitespace_lines": [],
+      "stored_as": "database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/test-failed-1.png"
+    },
+    {
+      "path": "database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/trace.zip",
+      "bytes": 471492,
+      "sha256": "a400e59092c210b2502790378310f8118545c679da870dbdc3ea38c1d0bbe51f",
+      "trailing_whitespace_lines": [],
+      "stored_as": "database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/trace.zip"
+    },
+    {
+      "path": "integrations-S08-STD01-Con-2054e-be-cleanup-from-a-successor/error-context.md",
+      "bytes": 12291,
+      "sha256": "704013f9c0a62bf953e397c0e7d3e295e61767973bd0081edaa177c4a9d2a503",
+      "trailing_whitespace_lines": [
+        176,
+        195,
+        218
+      ],
+      "stored_as": "integrations-S08-STD01-Con-2054e-be-cleanup-from-a-successor/error-context.md.json"
+    },
+    {
+      "path": "integrations-S08-STD01-Con-2054e-be-cleanup-from-a-successor/test-failed-1.png",
+      "bytes": 105723,
+      "sha256": "16413e13555952c260f62c9fd4b63a59dd38acfe5539ddfbf85776d266ed1a56",
+      "trailing_whitespace_lines": [],
+      "stored_as": "integrations-S08-STD01-Con-2054e-be-cleanup-from-a-successor/test-failed-1.png"
+    },
+    {
+      "path": "integrations-S08-STD01-Con-2054e-be-cleanup-from-a-successor/trace.zip",
+      "bytes": 230817,
+      "sha256": "a694ee13e79d3bb42772a14c6f7beb514450c450b9371118fb8063c698be0a49",
+      "trailing_whitespace_lines": [],
+      "stored_as": "integrations-S08-STD01-Con-2054e-be-cleanup-from-a-successor/trace.zip"
+    },
+    {
+      "path": "memory-A52-explicit-save-n-a2055-conflict-delete-and-requery/error-context.md",
+      "bytes": 7401,
+      "sha256": "17187f67f6688573d4f0a03e990ae2100b579f28c2b58b6ea4bcfe21e104583e",
+      "trailing_whitespace_lines": [],
+      "stored_as": "memory-A52-explicit-save-n-a2055-conflict-delete-and-requery/error-context.md"
+    },
+    {
+      "path": "memory-A52-explicit-save-n-a2055-conflict-delete-and-requery/test-failed-1.png",
+      "bytes": 122258,
+      "sha256": "50bb0a7f701b57d5b5afa9f835a433ddc50248364bbb8314fd0cb07327c08b4a",
+      "trailing_whitespace_lines": [],
+      "stored_as": "memory-A52-explicit-save-n-a2055-conflict-delete-and-requery/test-failed-1.png"
+    },
+    {
+      "path": "memory-A52-explicit-save-n-a2055-conflict-delete-and-requery/trace.zip",
+      "bytes": 993163,
+      "sha256": "92187b696613a7f74b25131bdb74e3ebf041821fa90f2104aa5a3cf5ce41560b",
+      "trailing_whitespace_lines": [],
+      "stored_as": "memory-A52-explicit-save-n-a2055-conflict-delete-and-requery/trace.zip"
+    }
+  ]
+}

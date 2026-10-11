@@ -1,0 +1,25 @@
+{
+  "installation": [
+    "uv sync --extra dev --extra mcp --locked",
+    "npm ci --ignore-scripts",
+    "npx playwright install chromium"
+  ],
+  "python": "3.14.7",
+  "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+  "node": "v26.8.2",
+  "npm": "11.19.1",
+  "uv": "uv 0.11.7 (9d177269e 2026-04-15 aarch64-apple-darwin)",
+  "playwright": "1.63.0",
+  "typescript": "7.0.2",
+  "python_packages": {
+    "pytest": "9.1.1",
+    "ruff": "0.16.4",
+    "jsonschema": "4.26.0",
+    "referencing": "0.37.0"
+  },
+  "browser_test_env": "ALFRED_BROWSER_TEST_PORT=17960",
+  "browser_retry_config": 0,
+  "test_timeout_ms": 15000,
+  "expect_timeout_ms": 4000,
+  "product_runtime_assets": "Same-origin package assets only; React/ReactDOM used only for archived reference preview."
+}

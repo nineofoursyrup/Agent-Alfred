@@ -1,0 +1,184 @@
+- button "打开导航"
+- button "打开主对话"
+- region "运行与连接摘要":
+  - paragraph: 尚未选择会话
+- main:
+  - heading "工具" [level=1]
+  - heading "目录与授权" [level=2]
+  - status: 当前目录已核对；连接观测、保存与生效分别显示。
+  - paragraph: 配置：ok · 保存版本 0 · 生效：applied
+  - paragraph: MCP 目录：未配置服务器
+  - button "核对当前授权"
+  - button "重新应用已保存授权"
+  - link "连接、凭据与 MCP 维护":
+    - /url: /connections
+  - paragraph: 从 MainBar 明确提出工具请求；本页查看来源、能力和授权。人格 read_persona / update_persona 保留完整版本、覆盖限制与冲突，修改从下一 Run 生效。
+  - region "内置工具":
+    - heading "内置工具" [level=2]
+    - paragraph: builtin
+    - article:
+      - heading "create_event" [level=3]
+      - paragraph: 来源 builtin · 能力 create_event
+      - paragraph: Create a local calendar entry; time requires UTC offset.
+      - paragraph: 模型暴露：real
+      - paragraph: 副作用：local_write · 可用性：configured
+      - paragraph: 本地工具，不需要外部授权
+      - paragraph: 授权：不适用
+      - paragraph: 阻止原因：无已报告阻止原因
+      - button "展开详情"
+      - link "查看包含该工具的运行":
+        - /url: /ops?tool=%5B%22builtin%22%2C%22create_event%22%5D
+    - article:
+      - heading "create_skill" [level=3]
+      - paragraph: 来源 builtin · 能力 create_skill
+      - paragraph: Create a new user Skill; requires restart to load. Existing user names are protected; builtin overrides need user confirmation.
+      - paragraph: 模型暴露：real
+      - paragraph: 副作用：local_write · 可用性：configured
+      - paragraph: 本地工具，不需要外部授权
+      - paragraph: 授权：不适用
+      - paragraph: 阻止原因：无已报告阻止原因
+      - button "展开详情"
+      - link "查看包含该工具的运行":
+        - /url: /ops?tool=%5B%22builtin%22%2C%22create_skill%22%5D
+    - article:
+      - heading "delete_memory" [level=3]
+      - paragraph: 来源 builtin · 能力 delete_memory
+      - paragraph: Delete one explicit memory ID and version.
+      - paragraph: 模型暴露：real
+      - paragraph: 副作用：local_write · 可用性：configured
+      - paragraph: 本地工具，不需要外部授权
+      - paragraph: 授权：不适用
+      - paragraph: 阻止原因：无已报告阻止原因
+      - button "展开详情"
+      - link "查看包含该工具的运行":
+        - /url: /ops?tool=%5B%22builtin%22%2C%22delete_memory%22%5D
+    - article:
+      - heading "draft_message" [level=3]
+      - paragraph: 来源 builtin · 能力 draft_message
+      - paragraph: Create a local Markdown draft; never send it.
+      - paragraph: 模型暴露：real
+      - paragraph: 副作用：local_write · 可用性：configured
+      - paragraph: 本地工具，不需要外部授权
+      - paragraph: 授权：不适用
+      - paragraph: 阻止原因：无已报告阻止原因
+      - button "展开详情"
+      - link "查看包含该工具的运行":
+        - /url: /ops?tool=%5B%22builtin%22%2C%22draft_message%22%5D
+    - article:
+      - heading "get_memory" [level=3]
+      - paragraph: 来源 builtin · 能力 get_memory
+      - paragraph: Read one memory and its current version.
+      - paragraph: 模型暴露：real
+      - paragraph: 副作用：local_read · 可用性：configured
+      - paragraph: 本地工具，不需要外部授权
+      - paragraph: 授权：不适用
+      - paragraph: 阻止原因：无已报告阻止原因
+      - button "展开详情"
+      - link "查看包含该工具的运行":
+        - /url: /ops?tool=%5B%22builtin%22%2C%22get_memory%22%5D
+    - article:
+      - heading "query_events" [level=3]
+      - paragraph: 来源 builtin · 能力 query_events
+      - paragraph: Query local calendar entries by absolute time.
+      - paragraph: 模型暴露：real
+      - paragraph: 副作用：local_read · 可用性：configured
+      - paragraph: 本地工具，不需要外部授权
+      - paragraph: 授权：不适用
+      - paragraph: 阻止原因：无已报告阻止原因
+      - button "展开详情"
+      - link "查看包含该工具的运行":
+        - /url: /ops?tool=%5B%22builtin%22%2C%22query_events%22%5D
+    - article:
+      - heading "query_memory" [level=3]
+      - paragraph: 来源 builtin · 能力 query_memory
+      - paragraph: Find explicit memory targets; clarify ambiguous matches.
+      - paragraph: 模型暴露：real
+      - paragraph: 副作用：local_read · 可用性：configured
+      - paragraph: 本地工具，不需要外部授权
+      - paragraph: 授权：不适用
+      - paragraph: 阻止原因：无已报告阻止原因
+      - button "展开详情"
+      - link "查看包含该工具的运行":
+        - /url: /ops?tool=%5B%22builtin%22%2C%22query_memory%22%5D
+    - article:
+      - heading "read_persona" [level=3]
+      - paragraph: 来源 builtin · 能力 read_persona
+      - paragraph: Read the complete effective persona and its version.
+      - paragraph: 模型暴露：real
+      - paragraph: 副作用：local_read · 可用性：configured
+      - paragraph: 本地工具，不需要外部授权
+      - paragraph: 授权：不适用
+      - paragraph: 阻止原因：无已报告阻止原因
+      - button "展开详情"
+      - link "查看包含该工具的运行":
+        - /url: /ops?tool=%5B%22builtin%22%2C%22read_persona%22%5D
+    - article:
+      - heading "save_fact" [level=3]
+      - paragraph: 来源 builtin · 能力 save_fact
+      - paragraph: Save a fact only when the user explicitly asks to save it.
+      - paragraph: 模型暴露：real
+      - paragraph: 副作用：local_write · 可用性：configured
+      - paragraph: 本地工具，不需要外部授权
+      - paragraph: 授权：不适用
+      - paragraph: 阻止原因：无已报告阻止原因
+      - button "展开详情"
+      - link "查看包含该工具的运行":
+        - /url: /ops?tool=%5B%22builtin%22%2C%22save_fact%22%5D
+    - article:
+      - heading "update_memory" [level=3]
+      - paragraph: 来源 builtin · 能力 update_memory
+      - paragraph: Update one memory using its observed version.
+      - paragraph: 模型暴露：real
+      - paragraph: 副作用：local_write · 可用性：configured
+      - paragraph: 本地工具，不需要外部授权
+      - paragraph: 授权：不适用
+      - paragraph: 阻止原因：无已报告阻止原因
+      - button "展开详情"
+      - link "查看包含该工具的运行":
+        - /url: /ops?tool=%5B%22builtin%22%2C%22update_memory%22%5D
+    - article:
+      - heading "update_persona" [level=3]
+      - paragraph: 来源 builtin · 能力 update_persona
+      - paragraph: Replace the managed persona using the read version. Preserve instructions the user did not ask to change. Next Run applies it.
+      - paragraph: 模型暴露：real
+      - paragraph: 副作用：local_write · 可用性：configured
+      - paragraph: 本地工具，不需要外部授权
+      - paragraph: 授权：不适用
+      - paragraph: 阻止原因：无已报告阻止原因
+      - button "展开详情"
+      - link "查看包含该工具的运行":
+        - /url: /ops?tool=%5B%22builtin%22%2C%22update_persona%22%5D
+  - region "集成 · tavily":
+    - heading "集成 · tavily" [level=2]
+    - paragraph: tavily
+    - article:
+      - heading "web_search" [level=3]
+      - paragraph: 来源 tavily · 能力 web_search
+      - paragraph: 搜索网络并返回外部来源标题、链接与片段。
+      - paragraph: 模型暴露：guidance
+      - paragraph: 副作用：external · 可用性：unconfigured
+      - paragraph: 连接观测：unconfigured
+      - paragraph: 已保存授权：unset · 实际应用：applied
+      - paragraph: 阻止原因：configuration_required
+      - button "展开详情"
+      - link "查看包含该工具的运行":
+        - /url: /ops?tool=%5B%22tavily%22%2C%22web_search%22%5D
+      - link "连接维护":
+        - /url: /connections
+  - region "未知来源 · unregistered/source/长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源":
+    - heading "未知来源 · unregistered/source/长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源" [level=2]
+    - paragraph: unregistered/source/长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源
+    - article:
+      - heading "read_persona_looks_builtin" [level=3]
+      - paragraph: 来源 unregistered/source/长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源 · 能力 capability/同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀同名前缀
+      - paragraph: 长描述前段。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。这是必须可以完整阅读的中文说明，不能只剩三行摘要。完整描述结束标识。
+      - paragraph: 模型暴露：real
+      - paragraph: 副作用：local_read · 可用性：configured
+      - paragraph: 本地工具，不需要外部授权
+      - paragraph: 授权：不适用
+      - paragraph: 阻止原因：无已报告阻止原因
+      - button "展开详情"
+      - link "查看包含该工具的运行":
+        - /url: /ops?tool=%5B%22unregistered%2Fsource%2F%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%5Cu957f%5Cu6765%5Cu6e90%22%2C%22capability%2F%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%5Cu540c%5Cu540d%5Cu524d%5Cu7f00%22%5D
+- status
+- alert
