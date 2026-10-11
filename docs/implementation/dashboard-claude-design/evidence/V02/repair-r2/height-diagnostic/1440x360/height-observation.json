@@ -1,0 +1,62 @@
+{
+  "viewport": {
+    "width": 1440,
+    "height": 360
+  },
+  "visibility": {
+    "status": {
+      "clientHeight": 48,
+      "scrollHeight": 86,
+      "scrollTop": 0,
+      "maxHeight": "48px"
+    },
+    "targets": {
+      "receipt": {
+        "ratio": 0.5599708557128906,
+        "top": 113.828125,
+        "bottom": 199.546875,
+        "height": 85.71875
+      },
+      "text": {
+        "ratio": 1,
+        "top": 113.828125,
+        "bottom": 131.421875,
+        "height": 17.59375
+      },
+      "open": {
+        "ratio": 0,
+        "top": 166.609375,
+        "bottom": 199.546875,
+        "height": 32.9375
+      },
+      "inspect": {
+        "ratio": 0,
+        "top": 176.609375,
+        "bottom": 189.609375,
+        "height": 13
+      },
+      "live": {
+        "ratio": 0.6640119552612305,
+        "top": 140.984375,
+        "bottom": 172.375,
+        "height": 31.390625
+      }
+    }
+  },
+  "scroll": {
+    "scroller": "shell-status",
+    "beforePageScroll": 3,
+    "observation": {
+      "page": {
+        "clientHeight": 360,
+        "scrollHeight": 602,
+        "scrollTop": 3
+      },
+      "shell-status": {
+        "clientHeight": 48,
+        "scrollHeight": 86,
+        "scrollTop": 38
+      }
+    }
+  }
+}

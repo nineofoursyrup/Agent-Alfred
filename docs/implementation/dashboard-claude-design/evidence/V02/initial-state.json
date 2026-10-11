@@ -1,0 +1,16 @@
+{
+  "base": "645c4549bb5bea9f79ddb4625f17c5a8a6af58c8",
+  "worktree": "/Users/nineofour/Agent-Alfred-v02",
+  "branch": "dashboard-visual/v02-shell",
+  "initial_status": [],
+  "initial_diff": "",
+  "primary_workspace_status": [
+    " M docs/dashboard.md",
+    "?? README.md",
+    "?? tmp/"
+  ],
+  "primary_workspace_head": "6a262ff37cac835777982e75d3a8950d6dbefd3c",
+  "primary_workspace_modified": false,
+  "reserved_browser_ports": "17900-17908",
+  "issue_assignee": "nineofoursyrup"
+}

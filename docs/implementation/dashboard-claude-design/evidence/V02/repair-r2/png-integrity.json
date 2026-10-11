@@ -1,0 +1,44 @@
+[
+  {
+    "file": "repair-r2/first-failure/session-create-race-a-dela-63fd9-trols-reachable-at-1440x900/receipt-before-scroll.png",
+    "width": 1440,
+    "height": 900,
+    "sha256": "d85a4f4ca5fcd8823a85b4b77e086fe93aef9c38bdf4e9b210695f8dc735462f"
+  },
+  {
+    "file": "repair-r2/first-failure/session-create-race-a-dela-63fd9-trols-reachable-at-1440x900/test-failed-1.png",
+    "width": 1440,
+    "height": 900,
+    "sha256": "0b8a6d26a9d6db0703e9403cf12efd3fd115d2a6bad7714143d2d59ae9339e91"
+  },
+  {
+    "file": "repair-r2/full-first-failure/database_migration-390x844-08fca-remain-reachable-at-390x844/test-failed-1.png",
+    "width": 390,
+    "height": 844,
+    "sha256": "96b8f445617cdfc94cd0e1b4f20e63847f24e5e4535eb81ef641cf68c803d445"
+  },
+  {
+    "file": "repair-r2/height-diagnostic/1280x800/receipt-desktop-complete.png",
+    "width": 1280,
+    "height": 800,
+    "sha256": "e67916ad0e6ab75e91837d59e83ae32ca99e7133f1ddc86a3003d7b75e0f7946"
+  },
+  {
+    "file": "repair-r2/height-diagnostic/1440x360/receipt-after-native-scroll.png",
+    "width": 1440,
+    "height": 360,
+    "sha256": "7d80047ddb66155e26810cecfc11973f3e751a6232e82835fd3943f1ddb4feb4"
+  },
+  {
+    "file": "repair-r2/height-diagnostic/1440x360/receipt-before-scroll.png",
+    "width": 1440,
+    "height": 360,
+    "sha256": "b259c416d99b8c7c2082c4d358d0b68ba8bca5098e719008a69d2df24f2d6ecf"
+  },
+  {
+    "file": "repair-r2/height-diagnostic/1440x900/receipt-desktop-complete.png",
+    "width": 1440,
+    "height": 900,
+    "sha256": "ba634bda93b49e438b4a5f6dcff1e3d19e6347e4d619481a003bbc94d7f426cb"
+  }
+]

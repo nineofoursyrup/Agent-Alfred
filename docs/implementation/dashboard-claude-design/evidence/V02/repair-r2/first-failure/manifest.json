@@ -1,0 +1,25 @@
+{
+  "source_head": "1b378535990710043577dde9fa22511f49591dac",
+  "test_change": "Added requested desktop viewport and pre-wheel assertions only",
+  "result": "3 passed; 1440x900 failed before wheel with open viewport ratio 0",
+  "archived_case": "session-create-race-a-dela-63fd9-trols-reachable-at-1440x900",
+  "files": [
+    {
+      "file": "session-create-race-a-dela-63fd9-trols-reachable-at-1440x900/error-context.json",
+      "sha256": "4ee7ec7a2c034516ccbe69d59a6428dd8b2e991dbb339c2049f66827e1187cac"
+    },
+    {
+      "file": "session-create-race-a-dela-63fd9-trols-reachable-at-1440x900/receipt-before-scroll.png",
+      "sha256": "d85a4f4ca5fcd8823a85b4b77e086fe93aef9c38bdf4e9b210695f8dc735462f"
+    },
+    {
+      "file": "session-create-race-a-dela-63fd9-trols-reachable-at-1440x900/test-failed-1.png",
+      "sha256": "0b8a6d26a9d6db0703e9403cf12efd3fd115d2a6bad7714143d2d59ae9339e91"
+    },
+    {
+      "file": "session-create-race-a-dela-63fd9-trols-reachable-at-1440x900/trace.zip",
+      "sha256": "404e19d674510948c372191956896fb42d45847e3cf1dde5bc3d02b96cc116a1"
+    }
+  ],
+  "scope": "Only failed case files and command output. Error context is losslessly stored as JSON; original text is recoverable without whitespace changes."
+}

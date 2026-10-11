@@ -1,0 +1,22 @@
+{
+  "source_head": "067f483c7629c36c5ac18ce82be4de4796498158",
+  "main": "de019439c41d20ab445a73eb1af75ea506aa1c4c",
+  "result": "544 passed; 1 failed (12.4m)",
+  "case": "database_migration-390x844-08fca-remain-reachable-at-390x844",
+  "failure": "database_migration.spec.js:82: elements not found for query-result last td after opening MainBar at390x844",
+  "files": [
+    {
+      "file": "database_migration-390x844-08fca-remain-reachable-at-390x844/error-context.json",
+      "sha256": "3c5d9aadbb5b0c0a2f04cbbdc5a672722597246ecef2b408e8dc6aa604ab768d"
+    },
+    {
+      "file": "database_migration-390x844-08fca-remain-reachable-at-390x844/test-failed-1.png",
+      "sha256": "96b8f445617cdfc94cd0e1b4f20e63847f24e5e4535eb81ef641cf68c803d445"
+    },
+    {
+      "file": "database_migration-390x844-08fca-remain-reachable-at-390x844/trace.zip",
+      "sha256": "c814630be9dafa8d5f2ef0ba94dfd246f6fb216fe1f96245c7570c0e9330bce5"
+    }
+  ],
+  "scope": "Only failed case own screenshot/trace/error context and full command output; no suite artifact."
+}

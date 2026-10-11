@@ -246,6 +246,20 @@ function updateReadStatus() {
 }
 function renderShellStatus() {
   const container=element('shell-status');
+  const running=!!busySummary;
+  const tone=!connected?'sy-tone-muted':unavailable?'sy-tone-error':running?'sy-tone-accent':'sy-tone-success';
+  const pulse=connected;
+  const dotClass=`sy-status-dot ${tone}${pulse?' sy-pulse':''}`;
+  const brandStatus=/** @type {HTMLElement} */(element('brand-status'));
+  brandStatus.hidden=!instance;
+  brandStatus.replaceChildren();
+  if(instance){
+    const dot=node('span');dot.className=dotClass;dot.dataset.shellDot='connection';dot.setAttribute('aria-hidden','true');
+    brandStatus.append(dot,node('span',!connected?'连接中断或正在同步':unavailable?'记录服务不可用':running?'当前有运行':'已同步'));
+  }
+  const address=/** @type {HTMLElement} */(element('brand-address'));
+  address.hidden=!instance;
+  address.textContent=instance?location.host:'';
   // Keep deferred receipt controls attached: ordinary Host updates must not
   // discard their focus while their availability changes.
   for(const child of Array.from(container.children)){
@@ -268,7 +282,10 @@ function renderShellStatus() {
   if(unread&&!unread.seen)facts.push(messageNodes.get('run:'+unread.run_id)?.element.dataset.replyComplete==='true'?'有新回复':'有新回复 · 结果需核对');
   if(element('storage-warning').textContent)facts.push('本页临时保留，刷新恢复受限');
   if(!facts.length)facts.push(session===null?'尚未选择会话':'已同步');
-  status.append(node('p',facts.join(' · ')));
+  const summary=node('p');summary.className='shell-live';
+  const dot=node('span');dot.className=dotClass;dot.dataset.shellDot=running?'run':'connection';dot.setAttribute('aria-hidden','true');
+  summary.append(dot);
+  summary.append(node('span',facts.join(' · ')));status.append(summary);
   if(busySummary?.navigation?.href){const link=node('a','查看当前运行');link.href=busySummary.navigation.href;status.append(link);}
   if(terminalStatus && !busySummary){const link=node('a','查看最近运行结果');link.href='/runs/'+encodeURIComponent(terminalStatus.run_id);status.append(link);}
   if(processGap && typeof processGap.run_id==='string'){const link=node('a','查看过程缺口');link.href='/runs/'+encodeURIComponent(processGap.run_id);status.append(link);}
@@ -522,6 +539,9 @@ const stream = new Stream(
         accountingView?.sync(instance);
         connectionsView?.sync(instance);
         databaseView?.sync();
+        // Reconnection can carry the same Host revision: connection facts and
+        // their header pulse still changed even when no Run patch is reapplied.
+        renderShellStatus();
       }
       if (body.state_revision <= revision) {
         // Matching credentials may have arrived while disconnected. Recheck
@@ -783,10 +803,16 @@ function restoreDraft() {
 /** @param {URL} url */
 function mountPage(url) {
   const path=url.pathname;
-  const heading=node("h1", pageDefinition(url)?.title || "页面未找到");
+  const definition=pageDefinition(url);
+  const heading=node("h1", definition?.title || "页面未找到");
   heading.tabIndex=-1;
+  const header=node('header');header.id='page-header';
+  const intro=node('div');intro.className='page-heading';
+  const eyebrow=node('p',definition?.english.toUpperCase() || '');eyebrow.className='page-eyebrow';
+  const subtitle=node('p',definition?.subtitle || '');subtitle.className='page-subtitle';
+  intro.append(eyebrow,heading,subtitle);header.append(intro);
   const root=node("div");root.className="page-body";
-  element("page").replaceChildren(heading,root);
+  element("page").replaceChildren(header,root);
   runPage=null;connectionsView=null;databaseView=null;behaviourView=null;accountingView=null;
   let owner=/** @type {any} */(null);
   if(path==='/overview')owner=overviewPage(root,{url,replaceSource:(target)=>shell.replaceSource(target)});

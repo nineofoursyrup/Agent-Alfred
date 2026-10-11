@@ -1,0 +1,12 @@
+{
+  "repair_base": "6b5769583617714ca36e9676d0a2c3c990155735",
+  "scope": "Std-1 and CI receipt scroll boundary fix; immutable source/test copy",
+  "files": {
+    "src/agent_alfred/ops/static/app.css": "9fe02014005d3e731f81cfe24bf83b176d213043677be5032f63161ec2d12d51",
+    "src/agent_alfred/ops/static/app.js": "87cf98ab70e8bdf4fd3d5de37ef6df125ab624487b522e72b50362144c249d35",
+    "src/agent_alfred/ops/static/index.html": "1806bc790c4abb172d848ba04c5054d0e20341657e90111a1696574785835c7a",
+    "src/agent_alfred/ops/static/shell.js": "c71dfdaae24d2349cd78d36ff96fb89daf4842df823fd021d407d87565bff03b",
+    "tests/browser/shell.spec.js": "6aa58f582093c77fbc5355f24ebbe7737167588fec59f52c53a49a6622d65558",
+    "tests/browser/tools-visual.spec.js": "5a3daa645d5abe0536a1cfbdb7572f593fbbb51832349fd1df6dd28d5317222d"
+  }
+}

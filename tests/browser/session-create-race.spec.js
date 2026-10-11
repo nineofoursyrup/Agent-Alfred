@@ -162,7 +162,7 @@ for(const intent of ['unchanged','navigate','focus','close','reading','opener-fo
   } finally {releaseSSE?.();if(held)await held.release();await server.close();}
 });
 
-for(const viewport of [{width:320,height:360},{width:320,height:800},{width:1440,height:360}])test(`a delayed receipt keeps the editing controls reachable at ${viewport.width}x${viewport.height}`,async({page},testInfo)=>{
+for(const viewport of [{width:320,height:360},{width:320,height:800},{width:1440,height:360},{width:1440,height:900}])test(`a delayed receipt keeps the editing controls reachable at ${viewport.width}x${viewport.height}`,async({page},testInfo)=>{
   const server=await memoryServer({script:'tests/browser/overview_server.py'});let held;
   try {
     await page.setViewportSize(viewport);await observeStream(page);await page.goto(server.origin+'/inbox');
@@ -183,6 +183,7 @@ for(const viewport of [{width:320,height:360},{width:320,height:800},{width:1440
     await expect(send).toBeEnabled();await expect(page.getByRole('button',{name:'收起主对话',exact:true})).toBeInViewport({ratio:1});
     await page.screenshot({path:testInfo.outputPath('receipt-before-scroll.png')});
     const status=page.locator('#shell-status'),open=receipt.getByRole('button',{name:'打开已创建会话',exact:true}),inspect=receipt.getByRole('link',{name:'查看已创建会话',exact:true});
+    if(viewport.width>=1100&&viewport.height>=800){await expect(open).toBeInViewport({ratio:1});await expect(inspect).toBeInViewport({ratio:1});}
     const statusBox=await status.boundingBox();await page.mouse.move(statusBox.x+statusBox.width/2,statusBox.y+statusBox.height/2);await page.mouse.wheel(0,1200);
     await expect(open).toBeInViewport({ratio:1});await expect(inspect).toBeInViewport({ratio:1});
     await expect(input).toBeFocused();expect(await input.evaluate(element=>[element.selectionStart,element.selectionEnd])).toEqual([2,8]);

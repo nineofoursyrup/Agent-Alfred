@@ -1,0 +1,20 @@
+{
+  "recorded_at": "2026-10-11T10:43:15.730137+00:00",
+  "source_head": "067f483c7629c36c5ac18ce82be4de4796498158",
+  "main": "de019439c41d20ab445a73eb1af75ea506aa1c4c",
+  "source_test_sha256": {
+    "src/agent_alfred/ops/static/app.css": "caaec9cf2e5e6f69798a8f222dc4bdb143636b21ddb5af84a33e7ab0a239f194",
+    "src/agent_alfred/ops/static/app.js": "87cf98ab70e8bdf4fd3d5de37ef6df125ab624487b522e72b50362144c249d35",
+    "src/agent_alfred/ops/static/index.html": "1806bc790c4abb172d848ba04c5054d0e20341657e90111a1696574785835c7a",
+    "src/agent_alfred/ops/static/shell.js": "c71dfdaae24d2349cd78d36ff96fb89daf4842df823fd021d407d87565bff03b",
+    "tests/browser/shell.spec.js": "6aa58f582093c77fbc5355f24ebbe7737167588fec59f52c53a49a6622d65558",
+    "tests/browser/tools-visual.spec.js": "e1c83b4baec3ef3b4768f00ffbe58b50b12c8d905ed0cf46837cd9641374887a",
+    "tests/browser/session-create-race.spec.js": "f371b06d066d011dfe6c0932ad11899a0fe45fa7a1ee47c7c366d67fc230d2d7"
+  },
+  "rebase": {
+    "from": "1b378535990710043577dde9fa22511f49591dac",
+    "onto": "de019439c41d20ab445a73eb1af75ea506aa1c4c",
+    "conflicts": false,
+    "force_with_lease_required": true
+  }
+}

@@ -1,5 +1,5 @@
 import {test, expect} from '@playwright/test';
-import {controlledTransport,emit,state} from './transport.js';
+import {controlledTransport,emit,state,run,controlledEventSource} from './transport.js';
 
 test('one shell retains SQL and consumes one mutually exclusive panel history layer', async ({page}) => {
   await page.setViewportSize({width:390,height:844});
@@ -115,6 +115,9 @@ test('all ten pages keep one native EventSource and the selected Session draft',
   for(const path of ['overview','runs','memory','models','connections','behaviour','tools','ops','database','inbox']){
     await page.locator(`nav a[href="/${path}"]`).click();
     await expect(page.locator(`nav a[href="/${path}"]`)).toHaveAttribute('aria-current','page');
+    await expect(page.locator('#page-header h1')).toBeFocused();
+    await expect(page.locator('#page-header .page-eyebrow')).toHaveText(path.toUpperCase());
+    await expect(page.locator('#page-header .page-subtitle')).not.toBeEmpty();
     await expect(page.getByRole('textbox',{name:'消息'})).toHaveValue('九页共享且不发送的草稿');
     expect(await page.evaluate(()=>sessionStorage.getItem('alfred.session'))).toBe(identity);
     expect(await page.evaluate(()=>window.observedSources.length)).toBe(connections);
@@ -122,6 +125,42 @@ test('all ten pages keep one native EventSource and the selected Session draft',
   }
   expect(posts.filter(url=>url.endsWith('/api/sessions'))).toHaveLength(1);
   expect(posts.filter(url=>url.endsWith('/api/runs'))).toHaveLength(0);
+  await expect(page).toHaveTitle('Alfred');
+  await expect(page.locator('.brand')).toHaveText('Alfred本地助手');
+});
+
+test('V02 shell dots follow connection and current Run facts and stop animation with reduced motion',async({page})=>{
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await controlledEventSource(page);await page.goto('/');
+  const connection=page.locator('#shell-status .shell-live .sy-status-dot');
+  const currentRun=page.locator('#shell-status [data-shell-dot="run"]');
+  const animation=dot=>dot.evaluate(node=>getComputedStyle(node).animationName);
+  await expect(connection).toBeAttached();expect(await animation(connection)).toBe('none');
+  await expect(page.locator('#brand-status')).toBeHidden();
+  const entry=await (await page.request.get('/api/entry')).json();
+  await emit(page,'state_patch',state(null,0,{process_instance_id:entry.instance_id,session_valid:false}));
+  await expect(connection).toHaveClass(/sy-pulse/);expect(await animation(connection)).toBe('sy-pulse');
+  await expect(page.locator('#brand-status')).toHaveText('已同步');
+  await expect(page.locator('#brand-address')).toHaveText(new URL(page.url()).host);
+  await expect(currentRun).toHaveCount(0);
+  await emit(page,'state_patch',state(null,1,{process_instance_id:entry.instance_id,session_valid:false,coordinator_state:'running',active_run:run(null)}));
+  await expect(currentRun).toHaveClass(/sy-pulse/);expect(await animation(currentRun)).toBe('sy-pulse');
+  await expect(page.locator('#shell-status')).toContainText('运行中 · CLI');
+  await emit(page,'error',{});
+  await expect(connection).not.toHaveClass(/sy-pulse/);expect(await animation(connection)).toBe('none');
+  await expect(currentRun).not.toHaveClass(/sy-pulse/);expect(await animation(currentRun)).toBe('none');
+  await expect(page.locator('#brand-status')).toHaveText('连接中断或正在同步');
+  await page.evaluate(()=>window.sources.at(-1).dispatchEvent(new Event('open')));
+  await emit(page,'state_patch',state(null,1,{process_instance_id:entry.instance_id,session_valid:false,coordinator_state:'running',active_run:run(null)}));
+  await expect(connection).toHaveClass(/sy-pulse/);await expect(currentRun).toHaveClass(/sy-pulse/);
+  await emit(page,'state_patch',state(null,2,{process_instance_id:entry.instance_id,session_valid:false}));
+  await expect(connection).toHaveClass(/sy-pulse/);await expect(currentRun).toHaveCount(0);
+  await page.emulateMedia({reducedMotion:'reduce'});
+  expect(await animation(connection)).toBe('none');
+  await emit(page,'state_patch',state(null,3,{process_instance_id:entry.instance_id,session_valid:false,coordinator_state:'running',active_run:run(null)}));
+  await expect(currentRun).toHaveClass(/sy-pulse/);expect(await animation(currentRun)).toBe('none');
+  expect(await page.locator('#shell-status').evaluate(host=>host.getAnimations({subtree:true}).length)).toBe(0);
+  expect(await page.locator('.brand-block').evaluate(host=>host.getAnimations({subtree:true}).length)).toBe(0);
 });
 
 test('default Overview replaces the root history entry and brand navigation respects unsaved input',async({page})=>{

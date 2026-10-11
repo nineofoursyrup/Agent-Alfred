@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Agent-Alfred</title>
+    <title>Alfred</title>
     <link rel="stylesheet" href="/assets/app.css" />
     <link rel="stylesheet" href="/assets/inbox-runs.css" />
     <link rel="stylesheet" href="/assets/settings.css" />
@@ -17,7 +17,11 @@
   </head>
   <body>
     <header class="site-header" aria-label="导航面板">
-      <a class="brand" href="/overview">Agent-Alfred<span>本地助手</span></a>
+      <div class="brand-block">
+        <a class="brand" href="/overview">Alfred<span>本地助手</span></a>
+        <p id="brand-status" hidden></p>
+        <p class="brand-address" id="brand-address" hidden></p>
+      </div>
       <div class="panel-actions"><button data-close-panel>关闭导航</button><button data-open-panel="mainbar">打开主对话</button></div>
       <nav aria-label="主导航"></nav>
       <p class="rail-note">本地优先 · 共享运行宿主</p>

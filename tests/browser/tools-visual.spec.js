@@ -35,12 +35,14 @@ test('S07 four viewports, shell and measured central boundaries retain full text
         const metrics=await page.evaluate(()=>({
           viewport:[innerWidth,innerHeight],touch:navigator.maxTouchPoints,bodyOverflow:document.documentElement.scrollWidth-innerWidth,
           central:document.querySelector('.page-body').getBoundingClientRect().width,
+          shell:{nav:document.querySelector('.site-header').getBoundingClientRect().width,headerStatus:!!document.querySelector('#page-header #shell-status'),selectionInset:getComputedStyle(document.querySelector('nav [aria-current]'),'::before').boxShadow.split(')')[1].trim(),selectionOpacity:getComputedStyle(document.querySelector('nav [aria-current]'),'::before').opacity},
           focusOutline:getComputedStyle(document.activeElement).outlineWidth,
           fonts:Object.fromEntries([['name','.tool-row h3'],['identity','.tool-identity'],['body','.tool-description'],['button','.tool-row button']].map(([role,selector])=>[role,getComputedStyle(document.querySelector(selector)).fontSize])),
           color:getComputedStyle(document.querySelector('.tools-page')).color,background:getComputedStyle(document.body).backgroundColor,
           transitions:[...document.querySelectorAll('.tools-page *')].flatMap(n=>[null,'::before','::after'].map(pseudo=>getComputedStyle(n,pseudo))).filter(style=>style.transitionDuration!=='0s').map(style=>({duration:style.transitionDuration,property:style.transitionProperty})),
         }));
         expect(metrics.bodyOverflow).toBeLessThanOrEqual(0);
+        expect(metrics.shell).toEqual({nav:width>=1100?232:0,headerStatus:width>=1100,selectionInset:'2px 0px 0px 0px inset',selectionOpacity:'1'});
         expect(metrics.fonts).toEqual({name:'12.5px',identity:'11px',body:'13px',button:'11.5px'});
         for(const transition of metrics.transitions){expect(transition.property).toBe('opacity');expect(Number.parseFloat(transition.duration)).toBeLessThanOrEqual(.18);}
         expect(metrics.focusOutline).toBe('3px');expect(failed).toEqual([]);

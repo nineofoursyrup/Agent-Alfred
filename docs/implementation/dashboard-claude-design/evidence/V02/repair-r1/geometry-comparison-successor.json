@@ -1,0 +1,38 @@
+{
+  "candidate": "receipt scroll-boundary successor",
+  "pairs": [
+    {
+      "before": "before-03-1440x900.png",
+      "after": "after-receipt-02-1440x900.png",
+      "viewport": [
+        1440,
+        900
+      ],
+      "differences": [],
+      "png_bytes_equal": true,
+      "png_sha256": "6d9bcc18e34092a1d15e0feca59fa20edf575e6cc59b6fad4260aa2056ba4dfd"
+    },
+    {
+      "before": "before-03-390x844.png",
+      "after": "after-receipt-02-390x844.png",
+      "viewport": [
+        390,
+        844
+      ],
+      "differences": [],
+      "png_bytes_equal": true,
+      "png_sha256": "41f061b9b012da2888a28d552ae823fc135ee1b58a3009777163ff93b3c5b09d"
+    },
+    {
+      "before": "before-03-navigation-390x844.png",
+      "after": "after-receipt-02-navigation-390x844.png",
+      "viewport": [
+        390,
+        844
+      ],
+      "differences": [],
+      "png_bytes_equal": true,
+      "png_sha256": "1e5600d25f7b576e9cf0a865571f8ae7c4855673b69e93182428faf43c0282be"
+    }
+  ]
+}

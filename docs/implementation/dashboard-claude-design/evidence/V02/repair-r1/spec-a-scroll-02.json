@@ -1,0 +1,48 @@
+{
+  "before": {
+    "viewport": [
+      1440,
+      900
+    ],
+    "scrollTop": 0,
+    "scrollHeight": 3641,
+    "clientHeight": 900,
+    "toolbarParent": "page-header",
+    "header": {
+      "x": 232,
+      "y": 0,
+      "width": 1199,
+      "height": 119.828125
+    },
+    "button": {
+      "x": 1209.5,
+      "y": 67.890625,
+      "width": 79.5,
+      "height": 32.9375
+    },
+    "buttonIntersectsViewport": true
+  },
+  "after": {
+    "viewport": [
+      1440,
+      900
+    ],
+    "scrollTop": 2741,
+    "scrollHeight": 3641,
+    "clientHeight": 900,
+    "toolbarParent": "page-header",
+    "header": {
+      "x": 232,
+      "y": -2741,
+      "width": 1199,
+      "height": 119.828125
+    },
+    "button": {
+      "x": 1209.5,
+      "y": -2673.109375,
+      "width": 79.5,
+      "height": 32.9375
+    },
+    "buttonIntersectsViewport": false
+  }
+}

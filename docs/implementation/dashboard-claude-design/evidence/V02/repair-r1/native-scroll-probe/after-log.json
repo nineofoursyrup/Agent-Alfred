@@ -1,0 +1,6 @@
+{
+  "exit_code": 0,
+  "status": "PASS",
+  "raw_sha256": "f604ebed55376608181689ab1fe077f6242e15dc0e53d6d1d9d96b7659c1e1ab",
+  "raw_text": "\n> test:browser\n> playwright test tests/browser/shell-v02-native-scroll-diagnostic.spec.js --output output/playwright/v02-review-repair/probe-after-results-04\n\n\nRunning 1 test using 1 worker\n\n(node:55344) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\nv02-native-scroll {\"scroller\":\"shell-status\",\"beforePageScroll\":3,\"observation\":{\"page\":{\"clientHeight\":360,\"scrollHeight\":602,\"scrollTop\":3},\"shell-status\":{\"clientHeight\":48,\"scrollHeight\":86,\"scrollTop\":38}}}\n  ✓  1 tests/browser/shell-v02-native-scroll-diagnostic.spec.js:45:49 › V02 native scroll completion probe at 1440x360 (1.7s)\n\n  1 passed (2.6s)\n"
+}
