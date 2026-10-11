@@ -1,0 +1,19 @@
+{
+  "base": "645c4549bb5bea9f79ddb4625f17c5a8a6af58c8",
+  "modified_files": {
+    "src/agent_alfred/ops/static/app.css": "3945beabb0b777882317c45818c2cee41c1a9a95574e3bc78f2d9f2bbfb11e2b",
+    "src/agent_alfred/ops/static/app.js": "87cf98ab70e8bdf4fd3d5de37ef6df125ab624487b522e72b50362144c249d35",
+    "src/agent_alfred/ops/static/index.html": "1806bc790c4abb172d848ba04c5054d0e20341657e90111a1696574785835c7a",
+    "src/agent_alfred/ops/static/shell.js": "f20d63d1540a824051dbb3ce003b0b03350ea2e8d9f1c312ac7d2a8b65357afd",
+    "tests/browser/shell.spec.js": "6aa58f582093c77fbc5355f24ebbe7737167588fec59f52c53a49a6622d65558",
+    "tests/browser/tools-visual.spec.js": "5a3daa645d5abe0536a1cfbdb7572f593fbbb51832349fd1df6dd28d5317222d"
+  },
+  "frozen_root_tokens_equal": true,
+  "frozen_topology_routing_and_public_recipes_equal": true,
+  "reference_html_sha256": "54807adb38541fa2966e5b0c334b9d0e8d71c60b814245601bc4f35b8ec54b84",
+  "browser_port": 17900,
+  "python_environment": "Python 3.14.7",
+  "node": "v26.8.2",
+  "browser_model": "tests/browser/server.py BrowserModel; ephemeral state directory; offline",
+  "no_source_edits_after_capture": true
+}

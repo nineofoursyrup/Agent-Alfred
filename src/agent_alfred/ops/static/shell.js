@@ -2,16 +2,16 @@ import {node} from './dom.js';
 
 /** The only source of route, navigation and title identities. */
 export const PAGES = [
-  {path:'/overview', title:'总览', english:'Overview', group:'工作区'},
-  {path:'/inbox', title:'收件箱', english:'Inbox', group:'工作区'},
-  {path:'/runs', title:'运行', english:'Runs', group:'工作区'},
-  {path:'/memory', title:'记忆', english:'Memory', group:'工作区'},
-  {path:'/models', title:'模型', english:'Models', group:'Agent 配置'},
-  {path:'/connections', title:'连接', english:'Connections', group:'Agent 配置'},
-  {path:'/behaviour', title:'行为', english:'Behaviour', group:'Agent 配置'},
-  {path:'/tools', title:'工具', english:'Tools', group:'Agent 配置'},
-  {path:'/ops', title:'用量账本', english:'Ops', group:'诊断'},
-  {path:'/database', title:'数据库', english:'Database', group:'诊断'},
+  {path:'/overview', title:'总览', english:'Overview', group:'工作区', subtitle:'查看当前实例的指标摘要、静态架构说明与最近运行。'},
+  {path:'/inbox', title:'收件箱', english:'Inbox', group:'工作区', subtitle:'按 Session 查看会话记录及运行入口，继续会话由你明确选择。'},
+  {path:'/runs', title:'运行', english:'Runs', group:'工作区', subtitle:'查看会话运行与系统运行的过程、来源和用量证据。'},
+  {path:'/memory', title:'记忆', english:'Memory', group:'工作区', subtitle:'维护已保存的语义记忆与情景记忆，查看只读 Skill 目录。'},
+  {path:'/models', title:'模型', english:'Models', group:'Agent 配置', subtitle:'管理钉选模型与主、辅助模型指派，支持依据与连接观测分别呈现。'},
+  {path:'/connections', title:'连接', english:'Connections', group:'Agent 配置', subtitle:'查看模型端点与可选集成，显式测试连接并配置接入条件。'},
+  {path:'/behaviour', title:'行为', english:'Behaviour', group:'Agent 配置', subtitle:'查看与配置消息分流，区分流程拓扑、路由决策与执行事实。'},
+  {path:'/tools', title:'工具', english:'Tools', group:'Agent 配置', subtitle:'按来源查看工具能力，可用性、授权和生效状态分别呈现。'},
+  {path:'/ops', title:'用量账本', english:'Ops', group:'诊断', subtitle:'按 Run 查看真实模型用量与费用，保留统计范围和核验依据。'},
+  {path:'/database', title:'数据库', english:'Database', group:'诊断', subtitle:'只读查询当前实例的诊断数据，结果遵守脱敏与遗忘边界。'},
 ];
 /** @typedef {{dirty:boolean, summary?:string, pending?:boolean}} LeaveState */
 /** @typedef {{getLeaveState?:()=>LeaveState, setVisible?:(visible:boolean)=>void, captureSource?:()=>Object, restoreSource?:(source:any)=>void, dispose?:()=>void}} PageController */
@@ -71,6 +71,7 @@ export function createShell(options) {
   const rail=/** @type {HTMLElement} */(document.querySelector('.site-header'));
   const mainbar=/** @type {HTMLElement} */(document.getElementById('mainbar'));
   const toolbar=/** @type {HTMLElement} */(document.getElementById('shell-toolbar'));
+  const status=document.getElementById('shell-status');
   const nav=/** @type {HTMLElement} */(rail.querySelector('nav'));
   const narrow=matchMedia('(max-width:1099px)');
   const documentId=crypto.randomUUID();
@@ -123,8 +124,8 @@ export function createShell(options) {
   }
   let lastGroup='';
   for(const definition of PAGES) {
-    if(definition.group!==lastGroup){nav.append(node('p',definition.group));lastGroup=definition.group;}
-    const link=node('a',definition.title);link.href=definition.path;link.title=definition.english;nav.append(link);
+    if(definition.group!==lastGroup){const group=node('p',definition.group);group.className='nav-group';nav.append(group);lastGroup=definition.group;}
+    const link=node('a',definition.title);link.className='sy-row';link.href=definition.path;link.title=definition.english;nav.append(link);
   }
   function titleFocus() {page.querySelector('h1')?.focus({preventScroll:true});}
   function visibleMainbar() {return narrow.matches ? panel==='mainbar' : wideOpen || temporaryWide;}
@@ -143,8 +144,11 @@ export function createShell(options) {
     toolbar.hidden=false;
     toolbar.inert=modal;
     toolbar.setAttribute('aria-hidden',String(modal));
-    const status=document.getElementById('shell-status');
     if(status){if(modal && panel==='navigation')rail.insertBefore(status,nav);else if(modal && panel==='mainbar')mainbar.insertBefore(status,mainbar.querySelector('#connection'));else toolbar.append(status);}
+    // One toolbar and summary survive page mounts; narrow panels retain their
+    // existing ownership while wide pages present these controls in the header.
+    const header=page.querySelector('#page-header');
+    if(narrow.matches || !header)page.parentElement?.insertBefore(toolbar,page);else header.append(toolbar);
     for(const box of [rail,mainbar]) {
       if(modal && ((box===rail && panel==='navigation') || (box===mainbar && panel==='mainbar'))) {box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');}
       else {box.removeAttribute('role');box.removeAttribute('aria-modal');}

@@ -1,0 +1,512 @@
+{
+  "desktop": {
+    "browser": "155.0.8059.39",
+    "observations": [
+      {
+        "path": "/overview",
+        "title": "Alfred",
+        "eyebrow": "OVERVIEW",
+        "heading": "总览",
+        "subtitle": "查看当前实例的指标摘要、静态架构说明与最近运行。",
+        "focused": false,
+        "viewport": [
+          1440,
+          900
+        ],
+        "overflow": 0,
+        "nav": 232,
+        "mainbar": 320,
+        "header": {
+          "x": 232,
+          "y": 0,
+          "width": 879,
+          "height": 119.84375,
+          "top": 0,
+          "right": 1111,
+          "bottom": 119.84375,
+          "left": 232
+        },
+        "padding": "24px 28px 18px",
+        "headingStyle": {
+          "fontSize": "27px",
+          "lineHeight": "29.7px"
+        },
+        "statusInHeader": true,
+        "inlineStyles": 2,
+        "resources": []
+      },
+      {
+        "path": "/inbox",
+        "title": "Alfred",
+        "eyebrow": "INBOX",
+        "heading": "收件箱",
+        "subtitle": "按 Session 查看会话记录及运行入口，继续会话由你明确选择。",
+        "focused": true,
+        "viewport": [
+          1440,
+          900
+        ],
+        "overflow": 0,
+        "nav": 232,
+        "mainbar": 320,
+        "header": {
+          "x": 232,
+          "y": 0,
+          "width": 879,
+          "height": 119.84375,
+          "top": 0,
+          "right": 1111,
+          "bottom": 119.84375,
+          "left": 232
+        },
+        "padding": "24px 28px 18px",
+        "headingStyle": {
+          "fontSize": "27px",
+          "lineHeight": "29.7px"
+        },
+        "statusInHeader": true,
+        "inlineStyles": 1,
+        "resources": []
+      },
+      {
+        "path": "/runs",
+        "title": "Alfred",
+        "eyebrow": "RUNS",
+        "heading": "运行",
+        "subtitle": "查看会话运行与系统运行的过程、来源和用量证据。",
+        "focused": true,
+        "viewport": [
+          1440,
+          900
+        ],
+        "overflow": 0,
+        "nav": 232,
+        "mainbar": 320,
+        "header": {
+          "x": 232,
+          "y": 0,
+          "width": 879,
+          "height": 119.84375,
+          "top": 0,
+          "right": 1111,
+          "bottom": 119.84375,
+          "left": 232
+        },
+        "padding": "24px 28px 18px",
+        "headingStyle": {
+          "fontSize": "27px",
+          "lineHeight": "29.7px"
+        },
+        "statusInHeader": true,
+        "inlineStyles": 1,
+        "resources": []
+      },
+      {
+        "path": "/memory",
+        "title": "Alfred",
+        "eyebrow": "MEMORY",
+        "heading": "记忆",
+        "subtitle": "查看与维护已保存的语义记忆、情景记忆及 Skill 目录。",
+        "focused": true,
+        "viewport": [
+          1440,
+          900
+        ],
+        "overflow": 0,
+        "nav": 232,
+        "mainbar": 320,
+        "header": {
+          "x": 232,
+          "y": 0,
+          "width": 879,
+          "height": 119.84375,
+          "top": 0,
+          "right": 1111,
+          "bottom": 119.84375,
+          "left": 232
+        },
+        "padding": "24px 28px 18px",
+        "headingStyle": {
+          "fontSize": "27px",
+          "lineHeight": "29.7px"
+        },
+        "statusInHeader": true,
+        "inlineStyles": 18,
+        "resources": []
+      },
+      {
+        "path": "/models",
+        "title": "Alfred",
+        "eyebrow": "MODELS",
+        "heading": "模型",
+        "subtitle": "管理钉选模型与主、辅助模型指派，支持依据与连接观测分别呈现。",
+        "focused": true,
+        "viewport": [
+          1440,
+          900
+        ],
+        "overflow": 0,
+        "nav": 232,
+        "mainbar": 320,
+        "header": {
+          "x": 232,
+          "y": 0,
+          "width": 879,
+          "height": 119.84375,
+          "top": 0,
+          "right": 1111,
+          "bottom": 119.84375,
+          "left": 232
+        },
+        "padding": "24px 28px 18px",
+        "headingStyle": {
+          "fontSize": "27px",
+          "lineHeight": "29.7px"
+        },
+        "statusInHeader": true,
+        "inlineStyles": 6,
+        "resources": []
+      },
+      {
+        "path": "/connections",
+        "title": "Alfred",
+        "eyebrow": "CONNECTIONS",
+        "heading": "连接",
+        "subtitle": "查看模型端点与可选集成，显式测试连接并配置接入条件。",
+        "focused": true,
+        "viewport": [
+          1440,
+          900
+        ],
+        "overflow": 0,
+        "nav": 232,
+        "mainbar": 320,
+        "header": {
+          "x": 232,
+          "y": 0,
+          "width": 879,
+          "height": 119.84375,
+          "top": 0,
+          "right": 1111,
+          "bottom": 119.84375,
+          "left": 232
+        },
+        "padding": "24px 28px 18px",
+        "headingStyle": {
+          "fontSize": "27px",
+          "lineHeight": "29.7px"
+        },
+        "statusInHeader": true,
+        "inlineStyles": 1,
+        "resources": []
+      },
+      {
+        "path": "/behaviour",
+        "title": "Alfred",
+        "eyebrow": "BEHAVIOUR",
+        "heading": "行为",
+        "subtitle": "查看与配置消息分流，区分流程拓扑、路由决策与执行事实。",
+        "focused": true,
+        "viewport": [
+          1440,
+          900
+        ],
+        "overflow": 0,
+        "nav": 232,
+        "mainbar": 320,
+        "header": {
+          "x": 232,
+          "y": 0,
+          "width": 879,
+          "height": 119.84375,
+          "top": 0,
+          "right": 1111,
+          "bottom": 119.84375,
+          "left": 232
+        },
+        "padding": "24px 28px 18px",
+        "headingStyle": {
+          "fontSize": "27px",
+          "lineHeight": "29.7px"
+        },
+        "statusInHeader": true,
+        "inlineStyles": 7,
+        "resources": []
+      },
+      {
+        "path": "/tools",
+        "title": "Alfred",
+        "eyebrow": "TOOLS",
+        "heading": "工具",
+        "subtitle": "按来源查看工具能力，可用性、授权和生效状态分别呈现。",
+        "focused": true,
+        "viewport": [
+          1440,
+          900
+        ],
+        "overflow": 0,
+        "nav": 232,
+        "mainbar": 320,
+        "header": {
+          "x": 232,
+          "y": 0,
+          "width": 879,
+          "height": 119.84375,
+          "top": 0,
+          "right": 1111,
+          "bottom": 119.84375,
+          "left": 232
+        },
+        "padding": "24px 28px 18px",
+        "headingStyle": {
+          "fontSize": "27px",
+          "lineHeight": "29.7px"
+        },
+        "statusInHeader": true,
+        "inlineStyles": 1,
+        "resources": []
+      },
+      {
+        "path": "/ops",
+        "title": "Alfred",
+        "eyebrow": "OPS",
+        "heading": "用量账本",
+        "subtitle": "按 Run 查看真实模型用量与费用，保留统计范围和核验依据。",
+        "focused": true,
+        "viewport": [
+          1440,
+          900
+        ],
+        "overflow": 0,
+        "nav": 232,
+        "mainbar": 320,
+        "header": {
+          "x": 232,
+          "y": 0,
+          "width": 879,
+          "height": 119.84375,
+          "top": 0,
+          "right": 1111,
+          "bottom": 119.84375,
+          "left": 232
+        },
+        "padding": "24px 28px 18px",
+        "headingStyle": {
+          "fontSize": "27px",
+          "lineHeight": "29.7px"
+        },
+        "statusInHeader": true,
+        "inlineStyles": 7,
+        "resources": []
+      },
+      {
+        "path": "/database",
+        "title": "Alfred",
+        "eyebrow": "DATABASE",
+        "heading": "数据库",
+        "subtitle": "只读查询当前实例的诊断数据，结果遵守脱敏与遗忘边界。",
+        "focused": true,
+        "viewport": [
+          1440,
+          900
+        ],
+        "overflow": 0,
+        "nav": 232,
+        "mainbar": 320,
+        "header": {
+          "x": 232,
+          "y": 0,
+          "width": 879,
+          "height": 119.84375,
+          "top": 0,
+          "right": 1111,
+          "bottom": 119.84375,
+          "left": 232
+        },
+        "padding": "24px 28px 18px",
+        "headingStyle": {
+          "fontSize": "27px",
+          "lineHeight": "29.7px"
+        },
+        "statusInHeader": true,
+        "inlineStyles": 2,
+        "resources": []
+      }
+    ]
+  },
+  "responsive": [
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "overflow": 0,
+      "layout": "wide",
+      "panel": "",
+      "nav": 232,
+      "mainbar": 320,
+      "header": {
+        "x": 232,
+        "y": 0,
+        "width": 879,
+        "height": 119.84375,
+        "top": 0,
+        "right": 1111,
+        "bottom": 119.84375,
+        "left": 232
+      },
+      "statusInHeader": true,
+      "shellInlineStyles": []
+    },
+    {
+      "viewport": [
+        1280,
+        800
+      ],
+      "overflow": 0,
+      "layout": "wide",
+      "panel": "",
+      "nav": 232,
+      "mainbar": 320,
+      "header": {
+        "x": 232,
+        "y": 0,
+        "width": 719,
+        "height": 119.84375,
+        "top": 0,
+        "right": 951,
+        "bottom": 119.84375,
+        "left": 232
+      },
+      "statusInHeader": true,
+      "shellInlineStyles": []
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "overflow": 0,
+      "layout": "narrow",
+      "panel": "",
+      "nav": 0,
+      "mainbar": 0,
+      "header": {
+        "x": 0,
+        "y": 53.9453125,
+        "width": 381,
+        "height": 119.84375,
+        "top": 53.9453125,
+        "right": 381,
+        "bottom": 173.7890625,
+        "left": 0
+      },
+      "statusInHeader": false,
+      "shellInlineStyles": []
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "panel": "navigation",
+      "overflow": 0,
+      "statusOwner": "site-header",
+      "mainInert": true
+    },
+    {
+      "viewport": [
+        320,
+        800
+      ],
+      "overflow": 0,
+      "layout": "narrow",
+      "panel": "",
+      "nav": 0,
+      "mainbar": 0,
+      "header": {
+        "x": 0,
+        "y": 53.9453125,
+        "width": 311,
+        "height": 139.9921875,
+        "top": 53.9453125,
+        "right": 311,
+        "bottom": 193.9375,
+        "left": 0
+      },
+      "statusInHeader": false,
+      "shellInlineStyles": []
+    },
+    {
+      "viewport": [
+        320,
+        800
+      ],
+      "panel": "navigation",
+      "overflow": 0,
+      "statusOwner": "site-header",
+      "mainInert": true
+    }
+  ],
+  "reference": {
+    "navWidth": 233,
+    "mainbarWidth": 321,
+    "titleFont": "700 32px -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+    "brandFont": "16px -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+    "headerHeight": 130.5
+  },
+  "reference_runtime_resources": [
+    "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+    "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"
+  ],
+  "scope": "Chromium CSS viewports; no native zoom, Chinese IME or actual provider acceptance claimed",
+  "png_sha256": {
+    "behaviour-1440x900.png": "2f5b64ff779e641f99be7ea210d3ad1040cc968476e12c0af922e970d7ce5b64",
+    "behaviour-header.png": "7c1291ce5479c9fedea875fd72c6badd4799dd20e21fb8ad72e1712f1e49f4ec",
+    "connections-1440x900.png": "38216520a0948bf7873b373c1977a85dfc3a4a21991255f374cc587f6028c7a8",
+    "connections-header.png": "fd981744c0b81257a40c3ec5db4834daea31e57285ed69ddd570a5fb9146c128",
+    "database-1440x900.png": "8aa90f28a512d1bd9d220b4fa67b0e2cfac8fa6a654800f3333c9272d7f0af8a",
+    "database-header.png": "52792ba61ced3347f3b77890e97ea09b56af63e1fb6b358c8d5f277141750882",
+    "inbox-1440x900.png": "ab90d6216949712c4490094041cd195de01458b32d62c0cbd144c52283ac586a",
+    "inbox-header.png": "981e37e415074787e222f981db6e2b168b5a25da975455031ef475902cbfc7a7",
+    "memory-1440x900.png": "f5f8b87bfa2b0c56bf62806f752776c7cc9c10b215593ef2e738d84a39f172ad",
+    "memory-header.png": "5f036e6cd7cbd66c47ef077c06da505c2d3051dbfc89882595577cb0ff1849a4",
+    "memory-successor-1440x900.png": "da262bbf51ed63e59472948659459aa671dfa8bd725b2eaa413b5d2465349b70",
+    "memory-successor-header.png": "6a859ebc9c27f4be11ea97bfcb7ef94d16bcd34e7b893e529e30a8d109e18342",
+    "models-1440x900.png": "8ca9863bcebbd63e3a8af522fe94dee47c2affd2161bb661093a51a513ec358c",
+    "models-header.png": "405f1259297cdcc3e23415a5b3d82e05e096ad973a13b7069e957fa478a5852a",
+    "ops-1440x900.png": "61fa7b98c89e333ab3ff4cd49c97bd7b05bae1f488274fc039106d8758261ff2",
+    "ops-header.png": "23e70d11ba6e015d2343416755886cd6c87a5f25010814c418961ae713fb68b1",
+    "overview-1440x900.png": "353727ba08d3cbcb014a1ead8bf1cd3656fe2435b1553cd79f6ccff4dc45e311",
+    "overview-header.png": "fd491e35fad06caf804c160300fcda36c3c11f4ac62c28c989a2740be4954942",
+    "reference-1440x900.png": "0bab7aa6372ef6754d698ba1413f9b38ab0a387d1e408b21e200aca46ab5c20b",
+    "reference-header.png": "a41c0c5e5a557405cb8e5561e43e97ce3cac5a3199e21d32a18bec55979e11cb",
+    "reference-nav.png": "3b23d4bb5ff3795760839f720e06ed86eed0a7386361718102430ed9411169a5",
+    "runs-1440x900.png": "1c62ffbf0f56d6ce9b3ed2bf89496c9d3ac31c5c3096c669ba487da2c9c18d12",
+    "runs-header.png": "040d599b5c5821a7b6a994142233428efab3ad4f13eddef8091df816d28003ec",
+    "tools-1440x900.png": "44a78e06fbbd7bd8d293f7b8512a233cbb46d7e84f2ccf3a3aa0903358d64c0d",
+    "tools-header.png": "de37d9c2960555ce955cfb43f8b66f7025724a79c64c0c5c1c80dd3f7ef66fb2",
+    "tools-navigation-320x800.png": "9106caa48c7287a0da29c42fa833d03b4b43bd2f4b81374fffaad065d963fe1b",
+    "tools-navigation-390x844.png": "5180807a9d3d5ae58c5a121c2cf64257a57369c8968ef2c3b8cfe8dfb21ec1e9",
+    "tools-shell-1280x800.png": "5fd6ce8c6000fd8bff8b8e063851a4a25f6376a13e260730abd9cd6b080a713b",
+    "tools-shell-1440x900.png": "f05af1461b97cf39beaf5eb49a38e133dfe24f3f176f17409fc05e347fe7331b",
+    "tools-shell-320x800.png": "d6d197602e5c97620de2de8aa7774b106576813011b281b83b30bd24b79a20ff",
+    "tools-shell-390x844.png": "969b7845f6e81653318b19c822ad2908935e032b07474663245c44fb1b7e9ec9"
+  },
+  "successor": {
+    "path": "/memory",
+    "heading": "记忆",
+    "subtitle": "维护已保存的语义记忆与情景记忆，查看只读 Skill 目录。",
+    "overflow": 0,
+    "nav": 232,
+    "mainbar": 320,
+    "resolvedDimensions": {
+      "shellRule": "1px",
+      "navGap": "2px",
+      "navTracking": "2.2px",
+      "eyebrowTracking": "2.6px",
+      "subtitleMax": "660px"
+    }
+  },
+  "successor_notes": "Only memory subtitle changed. Local CSS dimensions were replaced with identical token-derived values; measured resolved dimensions confirm geometry equivalence. Other screenshots reused."
+}

@@ -1,0 +1,7 @@
+{
+  "command": "ALFRED_BROWSER_TEST_PORT=17900 npm run typecheck",
+  "exit_code": 1,
+  "stage": "initial implementation",
+  "stdout_stderr": "\n> typecheck\n> tsc --noEmit\n\nsrc/agent_alfred/ops/static/app.js(254,15): error TS2339: Property 'hidden' does not exist on type 'Element'.\nsrc/agent_alfred/ops/static/app.js(261,11): error TS2339: Property 'hidden' does not exist on type 'Element'.\n",
+  "resolution": "Added HTMLElement type casts for two shell status nodes."
+}
