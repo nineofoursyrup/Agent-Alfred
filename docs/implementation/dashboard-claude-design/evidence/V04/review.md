@@ -1,15 +1,15 @@
-# V04 最终本地复核
+# V04 本轮修复自审
 
-固定候选 `70b6faea2e13d7254a62836c3e1becd3129cb7b9`，完整差异与三个文件 SHA-256 见 `candidate-source.json`。本次是实现者的本地自审，不是独立评审。
+这是实现者自审，不替代独立评审。产品源文件 SHA-256 见 [candidate-source.json](candidate-source.json)。本轮没有改永久测试、公共层、配置或依赖。
 
-## Standards
+| 评审项 | 处理与证据 |
+| --- | --- |
+| 费用完整性事实 | Attempt／费用未知、模型覆盖与 U > 0 的三类事实都在费用卡，金额之后、视觉标题之前；mixed／interrupted／bad-time 的实际 API 与快照见 screenshots-audit.json。 |
+| 架构图完整显示 | 780×480，1:1；1440 滚动区 783/783，其余三视口 ArrowRight 生效；6 节点、6 边、3 分区；文字 bbox 不相交、不压节点边框，连线标签距所属线不超过 12px，连线不沿边框走。 |
+| 用途完整换行 | opaque-runs 在 320px 的 future-purpose 完整占两行，91×34px，没有裁剪；结局和记录状态完整。 |
+| 节点标题 token | var(--font-size-body)，实测 13px；原稿 14.5px 的刻意偏离与公共 token 建议写入 V04.md。 |
+| 几何值 | 明确页内尺寸与描边用字面值；间距 token、padding 和期间 flex-basis 未动。 |
+| 重复模板 | 记忆分项模板一处；费用用 metricValue 的 caption/success 参数，caption 移到金额前，保持「精确 USD 8.125」文本顺序。 |
+| 面板转换命名 | asPanel 负责面板类、头部构造和 h2 移动，保留其余 section 子节点。 |
 
-依据用户文件归属／并行约束、AGENTS.md、RECIPES-v1、ADR-0045～0049、code-review 的 smell baseline。变更只在两个本页产品文件及唯一几何测试 hunk。公共配方复用；页内所有 CSS 限定 `.overview`。公共 token／sy- 定义、app.css、RECIPES.md、页头／导航／title、读取协议和 gitattributes 均不变。未发现阻塞的文档标准违背或新增 smell。
-
-## Spec
-
-初版对照追加发现节点标题 13px 与原稿 14.5px 的 1 项字级差异。已用现有 token 计算还原，原候选和评审记录在 `initial-candidate/` 保留。最终四视口实际 Dashboard 审计验证标题 14.5px、等宽说明 10.5px，无动画、具名局部键盘滚动与 3px 焦点；大数字、费用成功色、来源独立状态、无省略的结局与记录事实通过。用途预览受既有 API 事实范围限制。
-
-所有业务、错误／恢复／来源身份逻辑保留。几何测试仍精确检查 307／308px 一／两列，其他行为断言不变。完整浏览器初轮 3 项账本测试失败，原流单列保留；相同断言／超时的定向复测 3 passed，未修改共享代码或这些测试。固定候选完整浏览器 06：543 passed；Python 09：6445 passed、1 deselected、14 warnings，开始／结束全部 1630 文件一致。02 的候选变化失败与检查安排修正单独记录，不覆盖原始失败。其余门禁均已通过，见 V04.md 与 gates/。
-
-Standards: 0 项；Spec: 1 项已修复、0 项剩余；各轴无阻塞发现。
+临时探针与截图由 capture.mjs 采集；全部永久浏览器测试与 typecheck、静态资产测试结果见 review-r2/gates/。两个本轮采集定位错误原样保留，各自单独归档，没有修改既存首次失败。

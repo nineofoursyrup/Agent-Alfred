@@ -1,19 +1,36 @@
 {
-  "base": "645c4549bb5bea9f79ddb4625f17c5a8a6af58c8",
-  "candidate": "70b6faea2e13d7254a62836c3e1becd3129cb7b9",
-  "changed_paths": [
-    "src/agent_alfred/ops/static/overview.css",
-    "src/agent_alfred/ops/static/overview.js",
-    "tests/browser/overview.spec.js"
-  ],
+  "baseline": "0b09998849a516f4d6b8f08229fa2fc6cba883f4",
   "source_sha256": {
-    "src/agent_alfred/ops/static/overview.js": "f5a94ae5c2f618bed14c3f4924854c33f0ecc678279e77ee03720bc3df187c6f",
-    "src/agent_alfred/ops/static/overview.css": "39e9423f54db702749ad66eb770d1274511acb7d283b7e7352094292ff75c24b",
-    "tests/browser/overview.spec.js": "29688d9f117575a4f8cb72d669d62f36cd44f1782b6ead3bb7652b1a87faf41e"
+    "src/agent_alfred/ops/static/overview.js": "b6a0a529937c36b11b6c45dd3d6bab7092e24770a689ee239954a8d7969df3ce",
+    "src/agent_alfred/ops/static/overview.css": "367ffc42b8335cd29406ddcd61ba20a1cb33bee86d2c0545f888decfc55c49a2"
+  },
+  "frozen_paths_unchanged": {
+    "src/agent_alfred/ops/static/app.css": true,
+    "docs/design/issue-122/RECIPES.md": true,
+    "tests/browser/overview.spec.js": true,
+    "playwright.config.js": true,
+    "package.json": true,
+    "package-lock.json": true,
+    "pyproject.toml": true,
+    "uv.lock": true
   },
   "selectors_outside_overview": [],
-  "literal_css_color_or_dimension": [],
-  "root_token_override": false,
+  "literal_colors_or_font_sizes": [],
+  "allowed_literal_geometry": [
+    "1px",
+    "148px",
+    "780px",
+    "1.8px",
+    "-3px",
+    "1.4px",
+    "6px"
+  ],
   "public_sy_class_definitions": false,
-  "frozen_paths_diff": ""
+  "root_token_override": false,
+  "new_product_helpers": false,
+  "remote_product_resources": false,
+  "inline_product_styles": false,
+  "new_gitattributes": false,
+  "selector_count": 54,
+  "literal_font_sizes": []
 }

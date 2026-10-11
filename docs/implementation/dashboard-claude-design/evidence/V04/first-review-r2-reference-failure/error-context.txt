@@ -1,0 +1,30 @@
+- navigation:
+  - text: Syrup v0.9 · 本地 claude-sonnet-4-5 127.0.0.1:9049 SYSTEM
+  - link "Overview":
+    - /url: "#"
+  - link "Loop 48":
+    - /url: "#"
+  - link "Memory 126":
+    - /url: "#"
+  - link "Graph on":
+    - /url: "#"
+  - link "Ops pass":
+    - /url: "#"
+  - text: DATA
+  - link "Tools 14":
+    - /url: "#"
+  - link "Database state.db":
+    - /url: "#"
+  - button "中文"
+  - button "EN"
+  - text: ~/.syrup/state.db · 1.4 MB traces/2026-08-17.jsonl
+- main:
+  - text: 看着它思考
+  - heading "Overview" [level=1]
+  - text: "一条消息在四根支柱之间流动的全过程，逐段点亮。 live · turn #48 48 今日轮次 $0.87 累计花费 2.6s 平均耗时 · p95 6.1s 61% 闸门跳过检索的比例 126 已存事实 ARCHITECTURE 图里每个方框都是仓库里真实存在的一个目录。 当前 working memory soul + tail"
+  - img: HARNESS — 跑在你自己的机器上 · 这一轮本身是短暂的 HARNESS — runs on your laptop · the turn inside is ephemeral Gateway cli · voice · web Working memory 每一轮重新组装 assembled per turn LOOP LLM agent reason Tools create_event… act reply Reply → 回到你手里 → back to you 回复从进来的那扇 gateway 出去 reply, out the same gateway 存下对话 save chats Retrieval gate 29 skip · 19 retrieve 只在需要时 only if needed MEMORY — 三根支柱 MEMORY — three pillars 闸门读这三种 the gate reads all three Procedural 怎么做 · SKILL.md · 3 skills SKILL.md · 3 skills Semantic · FTS5 持久事实 · 126 facts durable facts · 126 facts Episodic 34 episodes 34 episodes Consolidation · 每 6 轮一次 Consolidation · every 6 exchanges 0/12 排队中 → 沉淀成事实 0/12 queued → distilled into facts 沉淀 distill LLM OPS 观察每一次运行 · 改进这个 agent observes each run · improves the agent 每一轮 each turn Trace 5 个文件 · 一直开着 5 file(s) · always on Eval deterministic + judge Release gate det pass · judge pass Release new prompt · model · config 更好的提示词 + 配置 improved prompt + config
+  - text: RETRIEVAL GATE · 48 turns 61% 的轮次跳过了检索 —— 省下的是延迟，避开的是被无关记忆带偏。 skip 29 retrieve 19 you › 12 乘 8 等于几？ gate · skip — 纯数学，不需要记忆 you › 我什么时候见 Alex？ gate · retrieve — 提到了用户自己的安排 RECENT TURNS 搜一下世界杯还没打的比赛，都加进日历 retrieve 8 iter 11.4s 周六安排个游泳 retrieve 3 iter 4.1s 记住 Alex 更喜欢上午开会 skip 2 iter 1.9s 谢谢！ quick 0 iter 0.4s 我今天日历上有什么？ retrieve 2 iter 2.2s
+- complementary:
+  - text: CHAT working memory 记住 Alex 更喜欢上午开会 好，记下了。以后给你和 Alex 排会我会默认放在上午。 skip 2 iter 1.9s +1 fact 周五和 Alex 约个碰头 已排在周五 09:00 —— 用的是你之前告诉我的偏好。 retrieve 3 iter 3.4s create_event 正在流式输出… 事件同时写进 trace
+  - textbox "跟 Syrup 说点什么…"
+  - button "发送"

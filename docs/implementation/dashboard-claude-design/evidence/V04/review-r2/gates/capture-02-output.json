@@ -1,0 +1,20 @@
+{
+  "command": "ALFRED_BROWSER_TEST_PORT=17910 node output/playwright/v04-capture.mjs",
+  "started_at": "2026-10-11T04:57:59.311630+00:00",
+  "head_at_start": "0b09998849a516f4d6b8f08229fa2fc6cba883f4",
+  "tested_files_sha256": {
+    "src/agent_alfred/ops/static/overview.js": "b6a0a529937c36b11b6c45dd3d6bab7092e24770a689ee239954a8d7969df3ce",
+    "src/agent_alfred/ops/static/overview.css": "367ffc42b8335cd29406ddcd61ba20a1cb33bee86d2c0545f888decfc55c49a2",
+    "tests/browser/overview.spec.js": "29688d9f117575a4f8cb72d669d62f36cd44f1782b6ead3bb7652b1a87faf41e",
+    "playwright.config.js": "ee0d64ce222e3c6f5f8cf90b9be9e7ceb160fddefc375b17d9e8ccb92fabf4e5",
+    "package.json": "f3e4bb5814ef3913c90d8152433d4b116c7dd33359bc88544dc412287f7c05f3",
+    "package-lock.json": "d964ea8313a3dfb83a72e230ee61f0b166c524548fa80514319e081d30d7e896",
+    "tsconfig.json": "a78d757679f409ade4ca65bb77405839506fa4756a6f2669d179055141115bee"
+  },
+  "worktree_status_at_start": " M docs/implementation/dashboard-claude-design/evidence/V04/capture.mjs\n M docs/implementation/dashboard-claude-design/evidence/V04/screenshots-audit.json\n M src/agent_alfred/ops/static/overview.css\n M src/agent_alfred/ops/static/overview.js\n?? docs/implementation/dashboard-claude-design/evidence/V04/first-review-r2-capture-failure/\n",
+  "execution": "before_commit; tested file SHA-256 recorded",
+  "exit_code": 0,
+  "duration_seconds": 2.480154041957576,
+  "output": "",
+  "tested_files_unchanged": true
+}

@@ -1,8 +1,8 @@
 /* Page-owned geometry. Public recipes and tokens stay in app.css. */
 .overview {
-  --overview-line:calc(var(--gap-small) / 12);
-  /* 148px until a shared metric minimum token is available. */
-  --overview-metric-min:calc(var(--gap-small) * 11 + var(--gap-large));
+  --overview-line:1px;
+  /* Page-local metric minimum specified by #126. */
+  --overview-metric-min:148px;
   display:flex;flex-direction:column;gap:var(--gap-large);min-width:0;
 }
 .overview>button {align-self:flex-start}
@@ -29,16 +29,16 @@
 .overview summary {cursor:pointer;padding-block:calc(var(--gap-small) / 2)}
 .overview .overview-links {display:flex;gap:var(--gap-small);flex-wrap:wrap}
 .overview .overview-architecture .sy-panel-body>p {font-size:var(--font-size-meta);color:var(--muted)}
-.overview .overview-diagram-scroll {max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;outline-offset:calc(var(--overview-line) * -3)}
-.overview .overview-diagram {display:block;width:100%;min-width:calc(var(--overview-metric-min) * 6);height:auto}
-.overview .overview-partition {fill:none;stroke:var(--border);stroke-width:var(--overview-line);stroke-dasharray:calc(var(--gap-small) / 2);rx:var(--radius-panel)}
-.overview .overview-diagram-eyebrow {font:600 var(--font-size-panel-eyebrow)/1 var(--font-mono);letter-spacing:calc(var(--overview-line) * 1.8);fill:var(--metadata)}
-.overview .overview-edge {fill:none;stroke:var(--diagram-line);stroke-width:calc(var(--overview-line) * 1.4);marker-end:url(#overview-arrow)}
-.overview .overview-edge-optional {stroke-dasharray:calc(var(--gap-small) / 2)}
+.overview .overview-diagram-scroll {max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;outline-offset:-3px}
+.overview .overview-diagram {display:block;width:780px;height:auto}
+.overview .overview-partition {fill:none;stroke:var(--border);stroke-width:1px;stroke-dasharray:6px;rx:var(--radius-panel)}
+.overview .overview-diagram-eyebrow {font:600 var(--font-size-panel-eyebrow)/1 var(--font-mono);letter-spacing:1.8px;fill:var(--metadata)}
+.overview .overview-edge {fill:none;stroke:var(--diagram-line);stroke-width:1.4px;marker-end:url(#overview-arrow)}
+.overview .overview-edge-optional {stroke-dasharray:6px}
 .overview .overview-arrow {fill:var(--diagram-arrow)}
 .overview .overview-edge-label {font:400 var(--font-size-meta-small)/1 var(--font-mono);fill:var(--weak)}
-.overview .overview-diagram-node rect {fill:var(--raised);stroke:var(--control);stroke-width:var(--overview-line);rx:var(--radius-console)}
-.overview .overview-diagram-node text {font:600 calc(var(--font-size-body) + var(--gap-small) / 8)/1 var(--font-sans);fill:var(--text)}
+.overview .overview-diagram-node rect {fill:var(--raised);stroke:var(--control);stroke-width:1px;rx:var(--radius-console)}
+.overview .overview-diagram-node text {font:600 var(--font-size-body)/1 var(--font-sans);fill:var(--text)}
 .overview .overview-diagram-node .overview-node-note {font:400 var(--font-size-meta-small)/1 var(--font-mono);fill:var(--muted)}
 .overview .overview-recent-status>p {margin:0}
 .overview .overview-recent-status>p:empty {display:none}
@@ -48,7 +48,7 @@
 .overview .overview-current {border-bottom:var(--overview-line) solid var(--panel-divider)}
 .overview .overview-run {display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:calc(var(--gap-small) / 2) var(--gap-small)}
 .overview .overview-run-id {grid-column:1/-1;font:400 var(--font-size-meta)/1.5 var(--font-mono)}
-.overview .overview-run-preview {margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.35}
+.overview .overview-run-preview {margin:0;line-height:1.35}
 .overview .overview-run-states {justify-content:flex-end}
 .overview .overview-run-states>span {white-space:nowrap}
 .overview .overview-run-facts,.overview .overview-run-detail {grid-column:1/-1;margin:0}

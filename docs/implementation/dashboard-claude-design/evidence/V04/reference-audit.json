@@ -3,34 +3,55 @@
   "support_js_sha256": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe",
   "source_version": "1786950414092924",
   "view": "Overview",
-  "origin": "http://127.0.0.1:17918/Syrup%20Dashboard.dc.html",
+  "origin": "http://127.0.0.1:17918",
+  "browser": "153.0.8010.12",
   "viewports": [
-    [
-      1440,
-      900
-    ],
-    [
-      1280,
-      800
-    ],
-    [
-      390,
-      844
-    ],
-    [
-      320,
-      800
-    ]
+    {
+      "width": 1440,
+      "height": 900,
+      "geometry": {
+        "viewport": 1440,
+        "bodyScroll": 1440
+      }
+    },
+    {
+      "width": 1280,
+      "height": 800,
+      "geometry": {
+        "viewport": 1280,
+        "bodyScroll": 1280
+      }
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "geometry": {
+        "viewport": 390,
+        "bodyScroll": 390
+      }
+    },
+    {
+      "width": 320,
+      "height": 800,
+      "geometry": {
+        "viewport": 320,
+        "bodyScroll": 320
+      }
+    }
   ],
-  "browser": "Chromium via playwright-cli",
-  "animations": "CSS animations disabled for capture; original stage timer left running",
+  "console": [],
+  "pageErrors": [],
   "network_dependencies": [
-    "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
-    "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
-    "https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"
+    {
+      "url": "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+      "status": 200
+    },
+    {
+      "url": "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
+      "status": 200
+    }
   ],
-  "console": [
-    "favicon.ico returned 404; reference rendering succeeded"
-  ],
-  "narrow_behavior": "original main content collapses between nav and aside; captured unchanged"
+  "captured_at": "2026-10-11T05:01:07.149Z",
+  "animations": "Disabled for screenshot only; original timers remain",
+  "exit_code": 0
 }

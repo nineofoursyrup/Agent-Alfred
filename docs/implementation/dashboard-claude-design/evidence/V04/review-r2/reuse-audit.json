@@ -1,0 +1,12 @@
+{
+  "python_input_file_count": 623,
+  "python_inputs_changed": [],
+  "scope": "No Python, Skill, environment sample, configuration or dependency changes. Frontend DOM, CSS and evidence only.",
+  "static_assets_rerun": "20 passed; actual GET and HEAD for overview.js and overview.css",
+  "historical_full_pytest": "gates/09-pytest-output.json: 6445 passed, 1 deselected, 14 warnings",
+  "source_sha256": {
+    "src/agent_alfred/ops/static/overview.js": "b6a0a529937c36b11b6c45dd3d6bab7092e24770a689ee239954a8d7969df3ce",
+    "src/agent_alfred/ops/static/overview.css": "367ffc42b8335cd29406ddcd61ba20a1cb33bee86d2c0545f888decfc55c49a2"
+  },
+  "historical_first_failure_paths_unchanged": true
+}

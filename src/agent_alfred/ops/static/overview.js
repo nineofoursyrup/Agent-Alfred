@@ -7,11 +7,12 @@ function link(label, href) { const a=node('a',label); a.href=href; return a; }
 /** @param {string} title */
 function section(title) {const box=node('section');box.setAttribute('aria-label',title);const heading=node('h2',title);heading.className='sy-panel-eyebrow';box.append(heading);return box;}
 /** @param {HTMLElement} box @param {string} description */
-function panelHeader(box,description) {
+function asPanel(box,description) {
   box.classList.add('sy-panel');
   const header=node('header'),titles=node('div'),note=node('p',description);
   header.className='sy-panel-header';note.className='sy-panel-description';
-  titles.append(...box.children,note);header.append(titles);box.append(header);
+  const heading=box.querySelector('h2');if(heading)titles.append(heading);
+  titles.append(note);header.append(titles);box.append(header);
   return header;
 }
 /** @param {string} title */
@@ -131,7 +132,7 @@ export function overviewPage(root,options) {
   memory.append(memoryEvidence,node('p','当前存量；不随期间变化。不等同于可自动输入的条目，删除计数不证明遗忘清理完成。'),link('查看当前记忆（重新读取）','/memory'));
   renderArchitecture(root);
   const recent=section('全历史最近运行');recent.classList.add('overview-recent');root.append(recent);
-  const recentHeader=panelHeader(recent,'最多五条已结束 Run，与期间指标范围不同；当前槽来自共享宿主状态。');
+  const recentHeader=asPanel(recent,'最多五条已结束 Run，与期间指标范围不同；当前槽来自共享宿主状态。');
   const recentBody=node('div'),current=node('div'),notice=node('p');
   recentBody.className='overview-history sy-row-list';current.className='overview-current sy-row-list';current.setAttribute('aria-label','当前运行槽');
   notice.setAttribute('role','status');
@@ -161,15 +162,16 @@ export function overviewPage(root,options) {
       const amounts=node('div');amounts.className='overview-cost-values';
       for(const [label,amount,count] of [['精确',s.exact_usd,s.exact_attempts],['估算',s.estimated_usd,s.estimated_attempts]]) {
         if(!count)continue;
-        const text=metricValue('');const caption=node('span',`${label} USD `);caption.className='overview-metric-caption sy-metric-label';
-        text.replaceChildren(caption,node('span',money(amount)));text.classList.add('sy-tone-success');amounts.append(text);
+        const text=metricValue(money(amount),`${label} USD `,true);
+        if(text.lastChild)text.prepend(text.lastChild);amounts.append(text);
       }
       cost.append(amounts);
     }
-    periodEvidence.append(node('p',`已记录 Attempt ${s.attempt_count} 次 · 费用未知 ${s.unknown_cost_attempts} 次`));
+    const costFacts=[`已记录 Attempt ${s.attempt_count} 次 · 费用未知 ${s.unknown_cost_attempts} 次`,value.model_coverage.complete?'模型账目完整':`模型账目覆盖不足 ${value.model_coverage.incomplete_runs} 条 Run：${coverageReasons(value.model_coverage.reasons)}`];
+    if(u)costFacts.push(`另 ${u} 条期间无法判定`);
+    for(const fact of costFacts){const text=node('p',fact);text.className='sy-metric-label';cost.append(text);}
     if(s.exact_attempts)periodEvidence.append(node('p','精确金额来自端点报告，未经外部账单核对。'));
     if(s.estimated_attempts)periodEvidence.append(node('p',`估算价格来源：${Object.keys(s.price_sources).join('、')||'未知'}${Object.keys(s.price_sources).length>1?'（混合来源）':''} · 过期价格 ${s.stale_price_attempts} 次 · 档位价格 ${s.tiered_price_attempts} 次`));
-    periodEvidence.append(node('p',value.model_coverage.complete?'模型账目完整':`模型账目覆盖不足 ${value.model_coverage.incomplete_runs} 条 Run：${coverageReasons(value.model_coverage.reasons)}`));
     if(value.coverage.incomplete_runs)periodEvidence.append(node('p',`其他账目覆盖不足／总体缺口 ${value.coverage.incomplete_runs} 条 Run：${coverageReasons(value.coverage.reasons)}。原因可重叠，不相加。`));
     periodEvidence.append(node('p','模型 USD 分项不相加称总费用；工具计量另在用量账本按服务／单位查看。'));
     const detail=node('details');detail.append(node('summary','本次期间与来源'));
@@ -190,8 +192,8 @@ export function overviewPage(root,options) {
     const c=value.counts;
     const total=metricValue(''),prefix=node('span','共 '),suffix=node('span',' 条');
     prefix.className='overview-metric-unit';suffix.className='overview-metric-unit';total.append(prefix,node('span',String(c.total)),suffix);card.append(total);
-    memoryEvidence.append(node('p',c.total===0?'尚无已保存的语义／情景记忆':`语义 ${c.semantic} 条 · 情景 ${c.episodic} 条`));
-    if(c.total===0)memoryEvidence.append(node('p',`语义 ${c.semantic} 条 · 情景 ${c.episodic} 条`));
+    if(c.total===0)memoryEvidence.append(node('p','尚无已保存的语义／情景记忆'));
+    memoryEvidence.append(node('p',`语义 ${c.semantic} 条 · 情景 ${c.episodic} 条`));
     const details=node('details');details.append(node('summary','本次记忆来源'),node('p',`当前 Store · 修订 ${value.memory_revision} · 实例 ${value.process_instance_id}`),node('p',`读取 ${time(value.observed_at)} · 有效至 ${time(value.expires_at)}`),node('p','同修订完整计数，包含现存受保护条目，不含候选、镜像、旧版本、消息或 Skill 文件。'));
     memoryEvidence.append(details);
   }
@@ -323,39 +325,39 @@ function runCard(run,current,peers) {
 /** @param {HTMLElement} root */
 function renderArchitecture(root) {
   const box=section('静态架构说明');box.classList.add('overview-architecture');
-  panelHeader(box,'本版本的组件关系；不表示当前配置可用性或某次运行的执行路径');
+  asPanel(box,'本版本的组件关系；不表示当前配置可用性或某次运行的执行路径');
   const body=node('div');body.className='sy-panel-body';
-  const scroll=node('div');scroll.className='overview-diagram-scroll';scroll.tabIndex=0;scroll.setAttribute('role','region');scroll.setAttribute('aria-label','静态架构说明图示（可横向滚动）');
-  const relations=document.createElementNS('http://www.w3.org/2000/svg','svg');relations.classList.add('overview-diagram');relations.setAttribute('viewBox','0 0 912 480');relations.setAttribute('role','img');relations.setAttribute('aria-label','CLI 与 Web 入口提交到共享宿主。宿主连接对话处理、显式手动聚合与持久账目；对话和聚合按需使用模型、工具、记忆。');
+  const scroll=node('div');scroll.className='overview-diagram-scroll';scroll.tabIndex=0;scroll.setAttribute('role','region');scroll.setAttribute('aria-label','静态架构说明图示（宽度不足时可横向滚动）');
+  const relations=document.createElementNS('http://www.w3.org/2000/svg','svg');relations.classList.add('overview-diagram');relations.setAttribute('viewBox','0 0 780 480');relations.setAttribute('role','img');relations.setAttribute('aria-label','CLI 与 Web 入口提交到共享宿主。宿主连接对话处理、显式手动聚合与持久账目；对话和聚合按需使用模型、工具、记忆。');
   // Coordinates are SVG presentation geometry; all visual roles live in scoped CSS.
   relations.innerHTML=`
     <defs><marker id="overview-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="overview-arrow" d="M0 0 L10 5 L0 10 Z"/></marker></defs>
-    <rect class="overview-partition" x="8" y="30" width="896" height="434"/>
+    <rect class="overview-partition" x="8" y="30" width="764" height="434"/>
     <text class="overview-diagram-eyebrow" x="20" y="18">ALFRED · 本机组件关系</text>
-    <rect class="overview-partition" x="244" y="66" width="236" height="370"/>
-    <text class="overview-diagram-eyebrow" x="254" y="54">RUNTIME · 共享宿主</text>
-    <rect class="overview-partition" x="612" y="206" width="278" height="230"/>
-    <text class="overview-diagram-eyebrow" x="624" y="194">CAPABILITIES · 按需使用</text>
-    <path class="overview-edge" d="M210 116 H260"/>
-    <text class="overview-edge-label" x="28" y="166">提交请求 →</text>
-    <path class="overview-edge" d="M464 116 H628"/>
-    <text class="overview-edge-label" x="490" y="104">收尾与持久事实</text>
-    <path class="overview-edge" d="M360 148 V232"/>
-    <text class="overview-edge-label" x="370" y="192">对话请求</text>
-    <path class="overview-edge overview-edge-optional" d="M300 148 H226 V390 H260"/>
-    <text class="overview-edge-label" x="134" y="324">显式发起</text>
-    <path class="overview-edge overview-edge-optional" d="M464 264 H628"/>
-    <text class="overview-edge-label" x="498" y="252">按需使用</text>
-    <path class="overview-edge overview-edge-optional" d="M464 390 H542 V284 H628"/>
-    <text class="overview-edge-label" x="490" y="418">按选择使用</text>
-    <g class="overview-diagram-node"><rect x="30" y="84" width="180" height="64"/><text x="44" y="110">CLI 入口／Web 入口</text><text class="overview-node-note" x="44" y="132">共享宿主的两个入口</text></g>
-    <g class="overview-diagram-node"><rect x="260" y="84" width="204" height="64"/><text x="274" y="110">共享运行宿主与准入</text><text class="overview-node-note" x="274" y="132">接收请求 · 管理运行</text></g>
-    <g class="overview-diagram-node"><rect x="260" y="232" width="204" height="64"/><text x="274" y="258">对话处理</text><text class="overview-node-note" x="274" y="280">可选消息分流</text></g>
-    <g class="overview-diagram-node"><rect x="260" y="358" width="204" height="64"/><text x="274" y="384">手动聚合</text><text class="overview-node-note" x="274" y="406">由用户显式发起</text></g>
-    <g class="overview-diagram-node"><rect x="628" y="232" width="246" height="64"/><text x="642" y="258">模型 · 工具 · 记忆</text><text class="overview-node-note" x="642" y="280">按需／按选择使用</text></g>
-    <g class="overview-diagram-node"><rect x="628" y="84" width="246" height="64"/><text x="642" y="110">本地记录与账目</text><text class="overview-node-note" x="642" y="132">持久事实 · 各自核验</text></g>`;
+    <rect class="overview-partition" x="284" y="66" width="220" height="370"/>
+    <text class="overview-diagram-eyebrow" x="294" y="54">RUNTIME · 共享宿主</text>
+    <rect class="overview-partition" x="530" y="206" width="242" height="230"/>
+    <text class="overview-diagram-eyebrow" x="542" y="194">CAPABILITIES · 按需使用</text>
+    <path class="overview-edge" d="M196 128 H300"/>
+    <text class="overview-edge-label" x="220" y="116">提交请求</text>
+    <path class="overview-edge" d="M488 128 H616"/>
+    <text class="overview-edge-label" x="508" y="116">收尾与持久事实</text>
+    <path class="overview-edge" d="M394 160 V232"/>
+    <text class="overview-edge-label" x="404" y="199">对话请求</text>
+    <path class="overview-edge overview-edge-optional" d="M348 160 V180 H252 V390 H300"/>
+    <text class="overview-edge-label" x="262" y="325">显式发起</text>
+    <path class="overview-edge overview-edge-optional" d="M488 264 H616"/>
+    <text class="overview-edge-label" x="524" y="252">按需使用</text>
+    <path class="overview-edge overview-edge-optional" d="M488 390 H574 V284 H616"/>
+    <text class="overview-edge-label" x="498" y="378">按选择使用</text>
+    <g class="overview-diagram-node"><rect x="22" y="96" width="174" height="64"/><text x="36" y="122">CLI 入口／Web 入口</text><text class="overview-node-note" x="36" y="144">共享宿主的两个入口</text></g>
+    <g class="overview-diagram-node"><rect x="300" y="96" width="188" height="64"/><text x="314" y="122">共享运行宿主与准入</text><text class="overview-node-note" x="314" y="144">接收请求 · 管理运行</text></g>
+    <g class="overview-diagram-node"><rect x="300" y="232" width="188" height="64"/><text x="314" y="258">对话处理</text><text class="overview-node-note" x="314" y="280">可选消息分流</text></g>
+    <g class="overview-diagram-node"><rect x="300" y="358" width="188" height="64"/><text x="314" y="384">手动聚合</text><text class="overview-node-note" x="314" y="406">由用户显式发起</text></g>
+    <g class="overview-diagram-node"><rect x="616" y="232" width="144" height="64"/><text x="630" y="258">模型 · 工具 · 记忆</text><text class="overview-node-note" x="630" y="280">按需／按选择使用</text></g>
+    <g class="overview-diagram-node"><rect x="616" y="96" width="144" height="64"/><text x="630" y="122">本地记录与账目</text><text class="overview-node-note" x="630" y="144">持久事实 · 各自核验</text></g>`;
   scroll.append(relations);
-  body.append(scroll,node('p','图示可左右滚动；聚焦后使用左右方向键。'),node('p','可选分流、检索门与工具不是每次运行的必经路径；记忆准备可能在图调用之前。Skill 文件与语义／情景条目分开计量。'));
+  body.append(scroll,node('p','宽度不足时图示可左右滚动；聚焦后使用左右方向键。'),node('p','可选分流、检索门与工具不是每次运行的必经路径；记忆准备可能在图调用之前。Skill 文件与语义／情景条目分开计量。'));
   const links=node('div');links.className='overview-links';
   for(const [label,href] of [['流程与手动聚合','/behaviour'],['模型','/models'],['端点连接','/connections'],['工具','/tools'],['记忆','/memory'],['运行活动','/runs?filter=all'],['用量账本','/ops'],['数据库诊断','/database']])links.append(link(label,href));
   body.append(links);box.append(body);root.append(box);
