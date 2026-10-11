@@ -1,0 +1,77 @@
+{
+  "recorded_at": "2026-10-11T10:50:51.474741+00:00",
+  "baseline": "1b378535990710043577dde9fa22511f49591dac",
+  "current_source_head": "067f483c7629c36c5ac18ce82be4de4796498158",
+  "synced_main": "de019439c41d20ab445a73eb1af75ea506aa1c4c",
+  "manifest_encoding": "SHA-256 of sorted unique paths, encoded path + NUL + SHA-256(file bytes) + LF",
+  "checks": {
+    "legacy_python_manifest": {
+      "baseline_count": 622,
+      "current_count": 624,
+      "baseline_manifest_sha256": "7d3451be94a5dafa9d8514be3e7c1122f8b9a034e9640a166ca5f06be8ff4660",
+      "current_manifest_sha256": "3544cb0baf0966cae63abb3714a0649176707b2a917ba24b2e8c929bf66987b2",
+      "changed_inputs": [
+        "docs/implementation/dashboard-claude-design/evidence/V05/scripts/v05-check.py",
+        "docs/implementation/dashboard-claude-design/evidence/V05/scripts/v05-compare-pixels.py"
+      ]
+    },
+    "effective_python_config": {
+      "baseline_count": 614,
+      "current_count": 614,
+      "baseline_manifest_sha256": "030e32ca88d916c0bd9613cc432ef492ef9596c771fdfd76bdb539689f8d8abe",
+      "current_manifest_sha256": "030e32ca88d916c0bd9613cc432ef492ef9596c771fdfd76bdb539689f8d8abe",
+      "changed_inputs": []
+    },
+    "deterministic_test_fixtures": {
+      "baseline_count": 288,
+      "current_count": 288,
+      "baseline_manifest_sha256": "e3cd0fa4c6da58929a2f7bb407607cd55d17a7f2fc410a05b1ebff541dc05594",
+      "current_manifest_sha256": "e3cd0fa4c6da58929a2f7bb407607cd55d17a7f2fc410a05b1ebff541dc05594",
+      "changed_inputs": []
+    },
+    "env_scan": {
+      "baseline_count": 580,
+      "current_count": 580,
+      "baseline_manifest_sha256": "b23f2795e504811075b51dc180a12d95eff2af96859971a3b1cde163bb6e42fb",
+      "current_manifest_sha256": "b23f2795e504811075b51dc180a12d95eff2af96859971a3b1cde163bb6e42fb",
+      "changed_inputs": []
+    },
+    "skills": {
+      "baseline_count": 5,
+      "current_count": 5,
+      "baseline_manifest_sha256": "a2f2393c9a351853e28b813ced2dec99dce364a2fe09d198925d46970f7902e0",
+      "current_manifest_sha256": "a2f2393c9a351853e28b813ced2dec99dce364a2fe09d198925d46970f7902e0",
+      "changed_inputs": []
+    },
+    "env_contract": {
+      "baseline_count": 5,
+      "current_count": 5,
+      "baseline_manifest_sha256": "17cefd1d8f380d912a817c9e5f5323487e9bee4649ce35b02f78afd4222cfe20",
+      "current_manifest_sha256": "17cefd1d8f380d912a817c9e5f5323487e9bee4649ce35b02f78afd4222cfe20",
+      "changed_inputs": []
+    },
+    "check_configuration": {
+      "baseline_count": 7,
+      "current_count": 7,
+      "baseline_manifest_sha256": "184309ff04c8e38e8f784dc3d2697d8fdf0aca9921aaa0ade1cd5b61889fc267",
+      "current_manifest_sha256": "184309ff04c8e38e8f784dc3d2697d8fdf0aca9921aaa0ade1cd5b61889fc267",
+      "changed_inputs": []
+    }
+  },
+  "local_environment": {
+    "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]",
+    "packages": {
+      "ruff": "0.16.4",
+      "pytest": "9.1.1",
+      "pluggy": "1.6.0",
+      "anyio": "4.14.2",
+      "jsonschema": "4.26.0",
+      "referencing": "0.37.0"
+    }
+  },
+  "invalid_diagnostic_attempt": {
+    "result": "NOT USED",
+    "reason": "Initial environment metadata probe incorrectly assumed an external mcp distribution. The project mcp extra uses jsonschema/referencing and stdlib transport; corrected probe checks the actual declared dependencies. No gate or product failure."
+  },
+  "conclusion": "Reuse four passing Python/static checks. Effective Python/config inputs, deterministic fixtures, env scan and skill inputs unchanged. Two newly merged docs evidence Python scripts are excluded by Ruff docs configuration and outside pytest/env/skills inputs. Static JS/CSS and browser-test changes require typecheck/full browser reruns, performed on rebased source."
+}

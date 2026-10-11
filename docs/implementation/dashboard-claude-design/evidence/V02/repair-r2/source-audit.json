@@ -1,0 +1,21 @@
+{
+  "source_head": "067f483c7629c36c5ac18ce82be4de4796498158",
+  "base": "de019439c41d20ab445a73eb1af75ea506aa1c4c",
+  "root_unchanged": true,
+  "protected_topology_routing_and_public_recipe_tail_unchanged": true,
+  "protected_tail_sha256": "c6e2b5b729210f27a5e7a253ca61879d1bc5d53d8dc6eabd69ae2f77b94466b5",
+  "receipt_role_token_definitions": 1,
+  "task_owned_source_test_paths": [
+    "src/agent_alfred/ops/static/app.css",
+    "src/agent_alfred/ops/static/app.js",
+    "src/agent_alfred/ops/static/index.html",
+    "src/agent_alfred/ops/static/shell.js",
+    "tests/browser/session-create-race.spec.js",
+    "tests/browser/shell.spec.js",
+    "tests/browser/tools-visual.spec.js"
+  ],
+  "unowned_source_paths": [],
+  "gitattributes_changed": false,
+  "receipt_rule": "Only wide min-width:1100px and short max-height:480px receives max-height:var(--shell-receipt-short-height)",
+  "main_business_changes_preserved_by_rebase": true
+}
