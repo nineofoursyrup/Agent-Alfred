@@ -17,7 +17,7 @@ function panelHeader(box,description) {
 /** @param {string} title */
 function metric(title) {
   const card=node('article'),label=node('h3',title);
-  card.className='sy-metric-card';label.className='sy-metric-label';card.append(label);
+  card.className='sy-metric-card overview-metric';label.className='sy-metric-label';card.append(label);
   return card;
 }
 /** @param {string} value @param {string} caption @param {boolean} [success] */
@@ -147,16 +147,16 @@ export function overviewPage(root,options) {
   function renderPeriod(value) {
     periodBody.replaceChildren();periodEvidence.replaceChildren();
     const runs=metric('运行记录数'),cost=metric('模型费用');periodBody.append(runs,cost);
-    if(!value){runs.prepend(metricValue('—'));cost.prepend(metricValue('—'));return;}
+    if(!value){runs.append(metricValue('—'));cost.append(metricValue('—'));return;}
     const s=value.summary,u=value.unresolved_membership_count;
-    runs.prepend(metricValue(String(s.run_count),u?` 已定位 ${s.run_count} 条；另 ${u} 条期间无法判定`:s.run_count?' 条 Run 记录':' 暂无运行记录'));
+    runs.append(metricValue(u?'—':String(s.run_count),u?` 已定位 ${s.run_count} 条；另 ${u} 条期间无法判定`:s.run_count?' 条 Run 记录':' 暂无运行记录'));
     const exactPositive=/[1-9]/.test(s.exact_usd),estimatedPositive=/[1-9]/.test(s.estimated_usd);
     const proven=value.model_coverage.complete&&u===0&&s.unknown_cost_attempts===0;
     const empty=s.run_count===0&&u===0;
-    if(empty)cost.prepend(metricValue('—',' 暂无运行记录'));
-    else if(proven&&s.attempt_count===0)cost.prepend(metricValue('—',' 该范围无模型消耗'));
-    else if(proven&&!exactPositive&&!estimatedPositive)cost.prepend(metricValue('0',' 该范围零费用',true));
-    else if(!s.exact_attempts&&!s.estimated_attempts)cost.prepend(metricValue('—',' 费用未知；尚无可确认的完整范围金额'));
+    if(empty)cost.append(metricValue('—',' 暂无运行记录'));
+    else if(proven&&s.attempt_count===0)cost.append(metricValue('—',' 该范围无模型消耗'));
+    else if(proven&&!exactPositive&&!estimatedPositive)cost.append(metricValue('0',' 该范围零费用',true));
+    else if(!s.exact_attempts&&!s.estimated_attempts)cost.append(metricValue('—',' 费用未知；尚无可确认的完整范围金额'));
     else {
       const amounts=node('div');amounts.className='overview-cost-values';
       for(const [label,amount,count] of [['精确',s.exact_usd,s.exact_attempts],['估算',s.estimated_usd,s.estimated_attempts]]) {
@@ -164,7 +164,7 @@ export function overviewPage(root,options) {
         const text=metricValue('');const caption=node('span',`${label} USD `);caption.className='overview-metric-caption sy-metric-label';
         text.replaceChildren(caption,node('span',money(amount)));text.classList.add('sy-tone-success');amounts.append(text);
       }
-      cost.prepend(amounts);
+      cost.append(amounts);
     }
     periodEvidence.append(node('p',`已记录 Attempt ${s.attempt_count} 次 · 费用未知 ${s.unknown_cost_attempts} 次`));
     if(s.exact_attempts)periodEvidence.append(node('p','精确金额来自端点报告，未经外部账单核对。'));
@@ -186,10 +186,10 @@ export function overviewPage(root,options) {
   function renderMemory(value) {
     memoryBody.replaceChildren();memoryEvidence.replaceChildren();
     const card=metric('已保存的语义／情景条目');memoryBody.append(card);
-    if(!value){card.prepend(metricValue('—'));return;}
+    if(!value){card.append(metricValue('—'));return;}
     const c=value.counts;
     const total=metricValue(''),prefix=node('span','共 '),suffix=node('span',' 条');
-    prefix.className='overview-metric-unit';suffix.className='overview-metric-unit';total.append(prefix,node('span',String(c.total)),suffix);card.prepend(total);
+    prefix.className='overview-metric-unit';suffix.className='overview-metric-unit';total.append(prefix,node('span',String(c.total)),suffix);card.append(total);
     memoryEvidence.append(node('p',c.total===0?'尚无已保存的语义／情景记忆':`语义 ${c.semantic} 条 · 情景 ${c.episodic} 条`));
     if(c.total===0)memoryEvidence.append(node('p',`语义 ${c.semantic} 条 · 情景 ${c.episodic} 条`));
     const details=node('details');details.append(node('summary','本次记忆来源'),node('p',`当前 Store · 修订 ${value.memory_revision} · 实例 ${value.process_instance_id}`),node('p',`读取 ${time(value.observed_at)} · 有效至 ${time(value.expires_at)}`),node('p','同修订完整计数，包含现存受保护条目，不含候选、镜像、旧版本、消息或 Skill 文件。'));
