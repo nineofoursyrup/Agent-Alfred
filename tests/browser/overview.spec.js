@@ -385,12 +385,12 @@ test('Overview keeps opaque colliding identities and reference layouts readable'
         await page.getByRole('heading',{name:'全历史最近运行',exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:testInfo.outputPath(`recent-${width}.png`)});
       }
     }
-    await page.setViewportSize({width:1440,height:900});
-    for(const wanted of [679,680]) {
+    await page.setViewportSize({width:390,height:900});
+    for(const wanted of [307,308]) {
       const actual=await page.locator('.page-body').evaluate(node=>node.getBoundingClientRect().width);
       const previous=page.viewportSize();await page.setViewportSize({width:previous.width+wanted-actual,height:900});
       const widths=await page.locator('.overview-period-cards').evaluate(node=>({page:document.querySelector('.page-body').getBoundingClientRect().width,columns:getComputedStyle(node).gridTemplateColumns.split(' ').length}));
-      expect(widths.page).toBe(wanted);expect(widths.columns).toBe(wanted===679?1:2);
+      expect(widths.page).toBe(wanted);expect(widths.columns).toBe(wanted===307?1:2);
     }
     await page.getByRole('button',{name:'刷新期间指标'}).focus();await expect(page.getByRole('button',{name:'刷新期间指标'})).toBeFocused();
   } finally {await server.close();}
