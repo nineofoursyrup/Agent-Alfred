@@ -7,14 +7,17 @@ native isolation or calibration result is established by this fixture.
 
 import json
 import os
-from datetime import UTC, datetime, timedelta
-from time import monotonic
+import subprocess
+import sys
+from datetime import datetime, timedelta
+from pathlib import Path
 
 import httpx2 as httpx
 import pytest
 
 from agent_alfred.clock import SystemClock
-from agent_alfred.evals.acceptance.controlled import local_runtime, native
+from agent_alfred.evals.acceptance import controlled_execution
+from agent_alfred.evals.acceptance.controlled import local_runner, local_runtime, native
 from agent_alfred.evals.acceptance.controlled.contract import (
     ADVISORY_BUDGET,
     CAP_UNITS,
@@ -29,7 +32,6 @@ from agent_alfred.evals.acceptance.controlled.local_persistence import (
     LocalExecutionStore,
     LocalExecutionWitness,
 )
-from agent_alfred.evals.acceptance.controlled.local_runner import _synthetic_launch
 from agent_alfred.evals.acceptance.controlled.local_runtime import LocalInstalledRuntime
 from agent_alfred.evals.acceptance.controlled_calibration import CalibrationDriver
 from agent_alfred.evals.acceptance.controlled_diagnostics import DiagnosticDriver
@@ -52,8 +54,8 @@ from .test_local_advisory_contract import _terms
 class OfflineSlot:
     """Only substitutes the external native launch; no Seatbelt claim."""
 
-    def __init__(self, root):
-        self.root = root
+    def __init__(self, root, clock):
+        self.root, self.clock = root, clock
 
     def __enter__(self):
         return self
@@ -62,19 +64,39 @@ class OfflineSlot:
         return False
 
     def launch(self):
-        return _synthetic_launch(self.root)
+        source = str(Path(local_runner.__file__).resolve().parents[4])
+        script = (
+            f"import runpy,sys;sys.path.insert(0,{source!r});"
+            "from datetime import datetime;"
+            "from agent_alfred.clock import SystemClock;"
+            "SystemClock.wall_utc=lambda self: datetime.fromisoformat("
+            f"{self.clock().isoformat()!r});"
+            f"runpy.run_module({local_runner.__name__!r},run_name='__main__')"
+        )
+        return subprocess.Popen(
+            [sys.executable, "-s", "-c", script],
+            cwd=self.root,
+            env={"PYTHONNOUSERSITE": "1"},
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            close_fds=True,
+        )
 
     def cleanup_observation(self):
         return {"scope": "OFFLINE_SUBPROCESS_NO_NATIVE_ISOLATION"}
 
 
 class OfflineClock:
-    """Portable orchestration clock; real sleep detection is tested separately."""
+    """Paired fixture time; real sleep detection is tested separately."""
+
+    def __init__(self, clock):
+        self.clock = clock
 
     def sample(self):
         return {
-            "wall": datetime.now(UTC).timestamp(),
-            "awake": monotonic(),
+            "wall": self.clock.wall_utc().timestamp(),
+            "awake": self.clock.monotonic(),
             "sleep_interval": [0, 0],
         }
 
@@ -86,11 +108,20 @@ def test_v3_public_diagnostics_checkpoint_restore_and_flash_grading(
     tmp_path, monkeypatch, usage_overrun
 ):
     f = pipeline_fixture(tmp_path, prepare_checkpoint=False)
-    old, source = f["authority"], f["source"]
+    old, source, clock = f["authority"], f["source"], f["clock"]
     assert f["batch"]["simulation"] is True
     # SimulationAuthority remains the source; it can never authorize real material.
-    source.clock = SystemClock()
-    source._last_time = source.clock.monotonic()
+    # Keep source events, authority deadlines, prices and handoff samples on the
+    # same fixture clock. Only this synthetic test replaces the UTC boundary.
+    monkeypatch.setattr(controlled_execution, "utc_now", clock)
+    monkeypatch.setattr(SystemClock, "wall_utc", lambda self: clock.wall_utc())
+
+    class OfflineDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls.fromtimestamp(clock().timestamp(), tz=tz)
+
+    monkeypatch.setattr(local_runner, "datetime", OfflineDateTime)
     monkeypatch.setattr(
         source, "verify_owner_record", lambda *args: None, raising=False
     )
@@ -102,7 +133,7 @@ def test_v3_public_diagnostics_checkpoint_restore_and_flash_grading(
     runtime = object.__new__(LocalInstalledRuntime)
     runtime._directory = directory
     runtime._cleanup = RollbackSlot()
-    runtime._continuity, runtime._clock = ContinuityGuard(), OfflineClock()
+    runtime._continuity, runtime._clock = ContinuityGuard(), OfflineClock(clock)
     runtime._last_readiness = None
     runtime._bundle_manifest, runtime._bundle_verifier = {}, None
     runtime._decision_source = source
@@ -130,8 +161,8 @@ def test_v3_public_diagnostics_checkpoint_restore_and_flash_grading(
     )
     terms = _terms("deepseek-flash", advisory=True)
     terms.update(
-        valid_from=(datetime.now(UTC) - timedelta(minutes=1)).isoformat(),
-        valid_until=(datetime.now(UTC) + timedelta(hours=1)).isoformat(),
+        valid_from=(clock() - timedelta(minutes=1)).isoformat(),
+        valid_until=(clock() + timedelta(hours=1)).isoformat(),
     )
     plan = execution_plan(
         binding=binding,
@@ -146,7 +177,7 @@ def test_v3_public_diagnostics_checkpoint_restore_and_flash_grading(
     )
     # No new production escape hatch: real LocalInstalledRuntime.check rejects this.
     with pytest.raises(ValueError, match="runtime_candidate_mismatch"):
-        runtime.check(plan, binding, f["batch"], datetime.now(UTC))
+        runtime.check(plan, binding, f["batch"], clock())
     monkeypatch.setattr(
         runtime,
         "check",
@@ -196,7 +227,7 @@ def test_v3_public_diagnostics_checkpoint_restore_and_flash_grading(
         native,
         "prepare_runner_slot",
         lambda *args, **kwargs: OfflineSlot(
-            root / ("case-" + str(kwargs["slot_index"]))
+            root / ("case-" + str(kwargs["slot_index"])), clock
         ),
     )
 
@@ -212,6 +243,7 @@ def test_v3_public_diagnostics_checkpoint_restore_and_flash_grading(
             worker=old.worker,
             controller=old.controller,
             subject=old.subject,
+            now=clock,
         )
 
     try:
