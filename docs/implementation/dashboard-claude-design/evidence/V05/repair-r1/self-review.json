@@ -1,0 +1,26 @@
+{
+  "reviewed_at": "2026-10-11T05:05:21.965965+00:00",
+  "scope": "seven requested fixes only",
+  "source_delta": "four presentation files, 31 insertions / 23 deletions",
+  "permanent_tests": "unchanged from parent candidate; no assertions/locators/timeouts/retries/ports modified",
+  "checks": {
+    "trace_partial_precedence": true,
+    "missing_ledger_vs_cost_state": true,
+    "unsupported_list_count_removed": true,
+    "unreachable_step_count_removed": true,
+    "duration_precision_matches_source": true,
+    "three_padding_fixes": true,
+    "reuse_public_sr_only": true
+  },
+  "controlled_boundary_result": {
+    "snapshots": 18,
+    "checks": 68,
+    "all_pass": true
+  },
+  "visual_review": [
+    "list/detail pairs at 1440x900,1280x800,390x844,320x800",
+    "320px trace, no-reply and unplaced ledger; 1440px empty list"
+  ],
+  "optional_review_suggestions_implemented": false,
+  "review_type": "main agent task-scope self-review; previous independent reviews remain bound to the parent, not relabelled for this repair"
+}

@@ -11,7 +11,8 @@
     },
     "left": "reference-loop-1440x900.png",
     "right": "runs-1440x900.png",
-    "scale": 1
+    "scale": 1,
+    "reference": "reuse unchanged authoritative reference PNG; repair final production recaptured"
   },
   {
     "file": "comparison-detail-1440x900.png",
@@ -25,7 +26,8 @@
     },
     "left": "reference-loop-1440x900.png",
     "right": "detail-1440x900.png",
-    "scale": 1
+    "scale": 1,
+    "reference": "reuse unchanged authoritative reference PNG; repair final production recaptured"
   },
   {
     "file": "comparison-runs-1280x800.png",
@@ -39,7 +41,8 @@
     },
     "left": "reference-loop-1280x800.png",
     "right": "runs-1280x800.png",
-    "scale": 1
+    "scale": 1,
+    "reference": "reuse unchanged authoritative reference PNG; repair final production recaptured"
   },
   {
     "file": "comparison-detail-1280x800.png",
@@ -53,7 +56,8 @@
     },
     "left": "reference-loop-1280x800.png",
     "right": "detail-1280x800.png",
-    "scale": 1
+    "scale": 1,
+    "reference": "reuse unchanged authoritative reference PNG; repair final production recaptured"
   },
   {
     "file": "comparison-runs-390x844.png",
@@ -67,7 +71,8 @@
     },
     "left": "reference-loop-390x844.png",
     "right": "runs-390x844.png",
-    "scale": 1
+    "scale": 1,
+    "reference": "reuse unchanged authoritative reference PNG; repair final production recaptured"
   },
   {
     "file": "comparison-detail-390x844.png",
@@ -81,7 +86,8 @@
     },
     "left": "reference-loop-390x844.png",
     "right": "detail-390x844.png",
-    "scale": 1
+    "scale": 1,
+    "reference": "reuse unchanged authoritative reference PNG; repair final production recaptured"
   },
   {
     "file": "comparison-runs-320x800.png",
@@ -95,7 +101,8 @@
     },
     "left": "reference-loop-320x800.png",
     "right": "runs-320x800.png",
-    "scale": 1
+    "scale": 1,
+    "reference": "reuse unchanged authoritative reference PNG; repair final production recaptured"
   },
   {
     "file": "comparison-detail-320x800.png",
@@ -109,6 +116,7 @@
     },
     "left": "reference-loop-320x800.png",
     "right": "detail-320x800.png",
-    "scale": 1
+    "scale": 1,
+    "reference": "reuse unchanged authoritative reference PNG; repair final production recaptured"
   }
 ]

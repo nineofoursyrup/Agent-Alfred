@@ -1,0 +1,10 @@
+{
+  "original_name": "error-context.md",
+  "original_sha256": "2ad2b29c9d60dc892d53f0a75fd0fbf5e5948881e133c2cac9a64b0a5c70f3bb",
+  "original_bytes": 2016,
+  "archived_as": "error-context.md.gz",
+  "gzip_sha256": "54e4849eabe65d270bdedc25520683fbd47e419c365e71865f327b839892dce0",
+  "origin": "ariaSnapshot of the failed held-read page, captured before closing only that owned context",
+  "failure_png": "NOT PRODUCED: failure before screenshot",
+  "trace_zip": "NOT PRODUCED: auxiliary probe did not start trace"
+}

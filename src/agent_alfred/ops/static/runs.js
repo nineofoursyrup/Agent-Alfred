@@ -250,6 +250,8 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
       if (!seen.size && !live) {
         const empty = node("tr"),
           cell = node("td", "此筛选下暂无运行。");
+        empty.className = "run-list-row sy-row";
+        cell.className = "run-list-content sy-row-content";
         cell.colSpan = 7;
         empty.append(cell);
         finished.append(empty);
@@ -332,7 +334,7 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
             session_id: selectedRun?.session_id,
             view: "messages",
           });
-        summary.append(link);
+        summary.querySelector(".run-read-controls")?.append(link);
       }
     }
     mainbar.textContent =
@@ -642,7 +644,7 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
       return;
     }
     if (evidence?.trace_incomplete) processBody.append(node("p", "追踪不完整"));
-    if (evidence?.trace_status === "available")
+    if (evidence?.trace_status === "available" && evidence.trace_incomplete !== true)
       processBody.append(node("p", "过程记录可用 · available"));
     if (evidence && evidence.trace_status !== "available")
       processBody.append(

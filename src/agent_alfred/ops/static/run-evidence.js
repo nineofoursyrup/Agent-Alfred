@@ -179,6 +179,7 @@ export function renderEvidence(root, events, ledger, run, confirmed, purposes) {
   );
   if (unplaced.length) {
     const accounting = node("section");
+    accounting.className = "sy-panel-body";
     accounting.append(node("h3", "调用账目 · 过程顺序不可用"));
     for (const attempt of unplaced) {
       const row = node("article");

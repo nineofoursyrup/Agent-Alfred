@@ -1,0 +1,60 @@
+{
+  "checked_at": "2026-10-11T04:03:49.020037+00:00",
+  "deterministic_input_count": 619,
+  "deterministic_input_changes": [],
+  "checks": {
+    "01-ruff": {
+      "exit_code": 0,
+      "source_changes_since_start": [
+        "src/agent_alfred/ops/static/inbox-runs.css",
+        "src/agent_alfred/ops/static/run-evidence.js",
+        "src/agent_alfred/ops/static/runs.js",
+        "src/agent_alfred/ops/static/run-fields.js"
+      ]
+    },
+    "01-skills": {
+      "exit_code": 0,
+      "source_changes_since_start": [
+        "src/agent_alfred/ops/static/inbox-runs.css",
+        "src/agent_alfred/ops/static/run-evidence.js",
+        "src/agent_alfred/ops/static/runs.js",
+        "src/agent_alfred/ops/static/run-fields.js"
+      ]
+    },
+    "01-env": {
+      "exit_code": 0,
+      "source_changes_since_start": [
+        "src/agent_alfred/ops/static/inbox-runs.css",
+        "src/agent_alfred/ops/static/run-evidence.js",
+        "src/agent_alfred/ops/static/runs.js",
+        "src/agent_alfred/ops/static/run-fields.js"
+      ]
+    },
+    "01-pytest": {
+      "exit_code": 0,
+      "source_changes_since_start": [
+        "src/agent_alfred/ops/static/inbox-runs.css",
+        "src/agent_alfred/ops/static/run-evidence.js",
+        "src/agent_alfred/ops/static/runs.js",
+        "src/agent_alfred/ops/static/run-fields.js"
+      ]
+    },
+    "09-typecheck": {
+      "exit_code": 0,
+      "source_changes_since_start": []
+    },
+    "10-python-static": {
+      "exit_code": 0,
+      "source_changes_since_start": []
+    },
+    "18-browser": {
+      "exit_code": 0,
+      "source_changes_since_start": [],
+      "result": "543 passed (11.5m)"
+    }
+  },
+  "rationale": "Python / scripts / dependencies / configuration unchanged. The full Python run was started before final presentation edits; the two frontend-sensitive static/protocol files were rerun on the final seven-file candidate (10-python-static). Ruff/skills/env inputs unchanged. Final typecheck candidate is unchanged.",
+  "frontend_sensitive_python_check": "A repository search finds the static JS source projection guard in test_tool_protocol.py; it is covered by 10-python-static along with static response/assets tests.",
+  "final_candidate_changes": [],
+  "environment_restored": "Same locked versions/extras and V05 editable import root verified before 18-browser; HTTP source readback matches r4."
+}

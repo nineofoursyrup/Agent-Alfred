@@ -402,14 +402,6 @@
   font: inherit;
   color: inherit;
 }
-.runs-page .run-list-preview dt {
-  position: absolute;
-  width: var(--run-line);
-  height: var(--run-line);
-  clip-path: inset(50%);
-  overflow: hidden;
-  white-space: nowrap;
-}
 .runs-page .run-preview:not(.expanded) {
   white-space: nowrap;
   text-overflow: ellipsis;

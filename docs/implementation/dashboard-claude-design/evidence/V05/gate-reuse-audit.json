@@ -1,60 +1,58 @@
 {
-  "checked_at": "2026-10-11T04:03:49.020037+00:00",
+  "checked_at": "2026-10-11T04:59:36.032282+00:00",
   "deterministic_input_count": 619,
   "deterministic_input_changes": [],
-  "checks": {
-    "01-ruff": {
-      "exit_code": 0,
-      "source_changes_since_start": [
-        "src/agent_alfred/ops/static/inbox-runs.css",
-        "src/agent_alfred/ops/static/run-evidence.js",
-        "src/agent_alfred/ops/static/runs.js",
-        "src/agent_alfred/ops/static/run-fields.js"
-      ]
-    },
-    "01-skills": {
-      "exit_code": 0,
-      "source_changes_since_start": [
-        "src/agent_alfred/ops/static/inbox-runs.css",
-        "src/agent_alfred/ops/static/run-evidence.js",
-        "src/agent_alfred/ops/static/runs.js",
-        "src/agent_alfred/ops/static/run-fields.js"
-      ]
-    },
-    "01-env": {
-      "exit_code": 0,
-      "source_changes_since_start": [
-        "src/agent_alfred/ops/static/inbox-runs.css",
-        "src/agent_alfred/ops/static/run-evidence.js",
-        "src/agent_alfred/ops/static/runs.js",
-        "src/agent_alfred/ops/static/run-fields.js"
-      ]
-    },
-    "01-pytest": {
-      "exit_code": 0,
-      "source_changes_since_start": [
-        "src/agent_alfred/ops/static/inbox-runs.css",
-        "src/agent_alfred/ops/static/run-evidence.js",
-        "src/agent_alfred/ops/static/runs.js",
-        "src/agent_alfred/ops/static/run-fields.js"
-      ]
-    },
-    "09-typecheck": {
+  "python_config_dependencies_unchanged": true,
+  "reused_checks": {
+    "ruff": "01-ruff: inputs unchanged; docs evidence is excluded",
+    "skills": "01-skills: skills and script unchanged",
+    "env": "01-env: Python AST, configuration and env example unchanged",
+    "pytest": "01-pytest: 6445 passed / 1 deselected; all Python/config/lock inputs unchanged; frontend-sensitive 29 tests rerun in 22-repair-python-static"
+  },
+  "rerun_checks": {
+    "21-repair-typecheck": {
       "exit_code": 0,
       "source_changes_since_start": []
     },
-    "10-python-static": {
+    "22-repair-python-static": {
       "exit_code": 0,
+      "result": "29 passed",
       "source_changes_since_start": []
     },
-    "18-browser": {
+    "23-repair-browser": {
       "exit_code": 0,
-      "source_changes_since_start": [],
-      "result": "543 passed (11.5m)"
+      "result": "543 passed (11.5m)",
+      "source_changes_since_start": []
+    },
+    "24-repair-diff": {
+      "exit_code": 0
+    },
+    "25-repair-staged-diff": {
+      "exit_code": 0
     }
   },
-  "rationale": "Python / scripts / dependencies / configuration unchanged. The full Python run was started before final presentation edits; the two frontend-sensitive static/protocol files were rerun on the final seven-file candidate (10-python-static). Ruff/skills/env inputs unchanged. Final typecheck candidate is unchanged.",
-  "frontend_sensitive_python_check": "A repository search finds the static JS source projection guard in test_tool_protocol.py; it is covered by 10-python-static along with static response/assets tests.",
+  "tests_unchanged_from_parent": true,
+  "runRow_runFields_and_original_CSS_prefixes_unchanged": true,
+  "frozen_shared_files_unchanged": [
+    "src/agent_alfred/ops/static/app.css",
+    "src/agent_alfred/ops/static/topology.js",
+    "src/agent_alfred/ops/static/aggregation.js",
+    "src/agent_alfred/ops/static/progress.js",
+    "src/agent_alfred/ops/static/source.js",
+    "src/agent_alfred/ops/static/memory.js",
+    "docs/design/issue-122/RECIPES.md",
+    ".gitattributes"
+  ],
+  "repair_changed_files": [
+    "src/agent_alfred/ops/static/runs.js",
+    "src/agent_alfred/ops/static/run-fields.js",
+    "src/agent_alfred/ops/static/run-evidence.js",
+    "src/agent_alfred/ops/static/inbox-runs.css"
+  ],
   "final_candidate_changes": [],
-  "environment_restored": "Same locked versions/extras and V05 editable import root verified before 18-browser; HTTP source readback matches r4."
+  "skill_files_checked_unchanged": {
+    "src/agent_alfred/skills/catalog.py": "ac7523feee28c9505c61a656fe4f02328d997813aba9144270b2c81bfe590a8b",
+    "src/agent_alfred/skills/__init__.py": "60560ac71bc70012978bd3ab4f169ecc8b803b2620e88c58181cf28ccabcef09",
+    "src/agent_alfred/skills/selection.py": "602eac439f004bc6e6b1bd3c6dd3a8d3b1406ac86fe1e2fbb364b86f635ab858"
+  }
 }

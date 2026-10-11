@@ -1,0 +1,1 @@
+首次辅助边界脚本失败，不能作为完整通过证据。用量为原生 details，并非名为“用量与费用”的 region；未读场景因此卡在错误的用量定位，期间挂起的证据 response 等待先超时。保留原脚本、失败页面的原无障碍 context 单文件 gzip 和原 job 日志；失败发生在截图前，未产生失败 PNG，辅助探针未开启 trace。此前四个成功场景的部分捕获保留在 ignored output/playwright/v05-repair-aux-partial-capture，不混入失败归档。修正探针定位与挂起请求的等待顺序，不改变产品、永久测试、超时、重试或端口。

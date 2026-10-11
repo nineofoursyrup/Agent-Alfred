@@ -112,7 +112,7 @@ function runMetrics(run, evidence = null) {
   const finished = evidence?.events?.find(
     (/** @type {Wire} */ event) => event.payload.name === "run.finished",
   );
-  const steps = finished?.payload.step_count;
+  const duration = finished?.payload.duration_ms;
   const observed = new Set(
     (evidence?.events || [])
       .map((/** @type {Wire} */ event) => event.envelope.step_index)
@@ -123,17 +123,17 @@ function runMetrics(run, evidence = null) {
   return [
     [
       "Step 数",
-      Number.isInteger(steps) && steps >= 0
-        ? String(steps)
-        : observed
-          ? `已读 ${observed} · 总数未提供`
-          : "未提供",
+      observed ? `已读 ${observed} · 总数未提供` : "未提供",
     ],
     [
       "耗时",
-      Number.isFinite(started) && Number.isFinite(ended) && ended >= started
-        ? `${((ended - started) / 1000).toFixed(1)} s`
-        : "未提供",
+      typeof duration === "number" && Number.isFinite(duration) && duration >= 0
+        ? `${duration} ms`
+        : Number.isFinite(started) && Number.isFinite(ended) && ended >= started
+          ? ended - started < 1000
+            ? "<1 s"
+            : `${Math.floor((ended - started) / 1000)} s`
+          : "未提供",
     ],
   ];
 }
@@ -185,7 +185,15 @@ export function runSummary(run, evidence) {
     }
     costs.append(charge);
   }
-  if (!costs.childElementCount) costs.append(node("span", "unknown · 费用未知"));
+  if (!costs.childElementCount)
+    costs.append(
+      node(
+        "span",
+        evidence?.snapshot_expired
+          ? "账目快照已失效，尚未核验当前调用账目。"
+          : "暂无可读调用账目；不代表未调用或免费。",
+      ),
+    );
   if (!message.childElementCount) {
     const purpose = [...identity.children].find(
       (field) => field.querySelector("dt")?.textContent === "用途",
@@ -235,11 +243,16 @@ export function runTableRow(run) {
   metadata.className = "run-list-meta sy-row-meta";
   context.className = "run-list-context";
   context.append(node("summary", "运行记录明细"), fields);
-  for (const [label, value] of [...runFields(run), ...runMetrics(run)]) {
+  for (const [label, value] of [
+    ...runFields(run),
+    ...runMetrics(run).filter(([label]) => label !== "Step 数"),
+  ]) {
     const field = node("div"),
+      caption = node("dt", label),
       text = node("dd", value);
-    field.append(node("dt", label), text);
+    field.append(caption, text);
     if (label === "输入预览" || label === "聚合") {
+      caption.className = "sr-only";
       if (label === "输入预览") {
         text.className = "run-preview";
         const button = node("button", "展开预览");
@@ -254,7 +267,7 @@ export function runTableRow(run) {
       }
       preview.append(field);
     } else if (["Run ID", "用途", "所属分组"].includes(label)) identity.append(field);
-    else if (["结果", "记录", "Step 数", "耗时"].includes(label)) metadata.append(field);
+    else if (["结果", "记录", "耗时"].includes(label)) metadata.append(field);
     else fields.append(field);
   }
   if (!preview.childElementCount)
