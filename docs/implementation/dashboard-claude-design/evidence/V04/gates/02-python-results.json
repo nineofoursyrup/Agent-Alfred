@@ -1,0 +1,30 @@
+[
+  {
+    "command": "uv run ruff check",
+    "started_at": "2026-10-11T01:57:13.861671+00:00",
+    "head": "645c4549bb5bea9f79ddb4625f17c5a8a6af58c8",
+    "duration_seconds": 0.88,
+    "exit_code": 0
+  },
+  {
+    "command": "uv run python scripts/check_skills.py",
+    "started_at": "2026-10-11T01:57:14.740235+00:00",
+    "head": "645c4549bb5bea9f79ddb4625f17c5a8a6af58c8",
+    "duration_seconds": 0.16,
+    "exit_code": 0
+  },
+  {
+    "command": "uv run python scripts/check_env_example.py",
+    "started_at": "2026-10-11T01:57:14.902786+00:00",
+    "head": "645c4549bb5bea9f79ddb4625f17c5a8a6af58c8",
+    "duration_seconds": 2.89,
+    "exit_code": 0
+  },
+  {
+    "command": "uv run --extra mcp pytest",
+    "started_at": "2026-10-11T01:57:17.795925+00:00",
+    "head": "70b6faea2e13d7254a62836c3e1becd3129cb7b9",
+    "duration_seconds": 2864.87,
+    "exit_code": 1
+  }
+]

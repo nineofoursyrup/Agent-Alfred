@@ -1,0 +1,8 @@
+{
+  "command": "uv run ruff check",
+  "started_at": "2026-10-11T01:57:13.861671+00:00",
+  "head": "645c4549bb5bea9f79ddb4625f17c5a8a6af58c8",
+  "duration_seconds": 0.88,
+  "exit_code": 0,
+  "output": "All checks passed!\n"
+}

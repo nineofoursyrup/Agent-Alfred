@@ -1,0 +1,12 @@
+{
+  "verified_at": "2026-10-11T03:36:49.015261+00:00",
+  "code_candidate": "70b6faea2e13d7254a62836c3e1becd3129cb7b9",
+  "allowed_changed_path_count": 152,
+  "unowned_changed_paths": [],
+  "screenshot_hashes_verified": 73,
+  "gitattributes_changed": false,
+  "six_non_diff_gates_exit_zero": true,
+  "diff_gate": "gates/10-diff-check-output.json",
+  "python_full_input_stability": "gates/09-python-candidate-stability.json",
+  "review_kind": "bounded implementer self review"
+}

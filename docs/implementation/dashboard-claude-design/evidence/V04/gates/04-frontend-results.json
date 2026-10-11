@@ -1,0 +1,26 @@
+[
+  {
+    "command": "npm run typecheck",
+    "started_at": "2026-10-11T02:03:25.185946+00:00",
+    "head": "645c4549bb5bea9f79ddb4625f17c5a8a6af58c8",
+    "candidate_sha256": {
+      "src/agent_alfred/ops/static/overview.js": "f5a94ae5c2f618bed14c3f4924854c33f0ecc678279e77ee03720bc3df187c6f",
+      "src/agent_alfred/ops/static/overview.css": "b4ec7af964efe9dfd5f174d466a843cb61deb72734aa27fd498786cb5d9ab26d",
+      "tests/browser/overview.spec.js": "29688d9f117575a4f8cb72d669d62f36cd44f1782b6ead3bb7652b1a87faf41e"
+    },
+    "duration_seconds": 0.65,
+    "exit_code": 0
+  },
+  {
+    "command": "ALFRED_BROWSER_TEST_PORT=17910 npm run test:browser",
+    "started_at": "2026-10-11T02:03:25.832122+00:00",
+    "head": "70b6faea2e13d7254a62836c3e1becd3129cb7b9",
+    "candidate_sha256": {
+      "src/agent_alfred/ops/static/overview.js": "f5a94ae5c2f618bed14c3f4924854c33f0ecc678279e77ee03720bc3df187c6f",
+      "src/agent_alfred/ops/static/overview.css": "b4ec7af964efe9dfd5f174d466a843cb61deb72734aa27fd498786cb5d9ab26d",
+      "tests/browser/overview.spec.js": "29688d9f117575a4f8cb72d669d62f36cd44f1782b6ead3bb7652b1a87faf41e"
+    },
+    "duration_seconds": 860.92,
+    "exit_code": 1
+  }
+]

@@ -1,0 +1,118 @@
+{
+  "port": "17910",
+  "origin": "http://127.0.0.1:17914",
+  "browser": "153.0.8010.12",
+  "captured_at": "2026-10-11T02:01:13.250Z",
+  "viewports": [],
+  "console": [],
+  "pageErrors": [],
+  "current": {
+    "width": 1440,
+    "height": 900,
+    "scroll": {
+      "scrollLeft": 36,
+      "clientWidth": 783,
+      "scrollWidth": 888,
+      "outline": "3px"
+    },
+    "geometry": {
+      "body": 1440,
+      "viewport": 1440,
+      "page": 879,
+      "pageScroll": 879,
+      "animation": 0,
+      "inlineStyles": 1,
+      "cards": [
+        {
+          "width": 266.328125,
+          "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+        },
+        {
+          "width": 266.34375,
+          "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+        },
+        {
+          "width": 266.328125,
+          "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+        }
+      ],
+      "statuses": [
+        {
+          "text": "已完成",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已保存",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已完成",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已保存",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已完成",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已保存",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已完成",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已保存",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已完成",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已保存",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        }
+      ],
+      "costColors": [
+        "rgb(76, 195, 138)",
+        "rgb(76, 195, 138)"
+      ],
+      "success": "#4cc38a"
+    },
+    "inlineStyles": [
+      "<input aria-label=\"IANA 时区\" style=\"\">"
+    ]
+  },
+  "exit_code": 1,
+  "error": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: 0\nReceived: 1\n    at captureRawStack (/Users/nineofour/Agent-Alfred-v04/node_modules/playwright-core/lib/coreBundle.js:8588:17)\n    at callMatcherAsStep (/Users/nineofour/Agent-Alfred-v04/node_modules/playwright/lib/matchers/expect.js:13310:57)\n    at Object.toBe (/Users/nineofour/Agent-Alfred-v04/node_modules/playwright/lib/matchers/expect.js:13302:23)\n    at /Users/nineofour/Agent-Alfred-v04/output/playwright/v04-capture.mjs:36:336",
+  "candidate_sha256": {
+    "src/agent_alfred/ops/static/overview.js": "f5a94ae5c2f618bed14c3f4924854c33f0ecc678279e77ee03720bc3df187c6f",
+    "src/agent_alfred/ops/static/overview.css": "b4ec7af964efe9dfd5f174d466a843cb61deb72734aa27fd498786cb5d9ab26d",
+    "tests/browser/overview.spec.js": "29688d9f117575a4f8cb72d669d62f36cd44f1782b6ead3bb7652b1a87faf41e"
+  }
+}

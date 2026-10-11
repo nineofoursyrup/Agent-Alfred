@@ -1,0 +1,10 @@
+{
+  "head": "70b6faea2e13d7254a62836c3e1becd3129cb7b9",
+  "tree": "f1238ef4f85ff21b237a8ba05c9f850cef70db00",
+  "file_count": 1628,
+  "candidate_before_sha256": "4f835621249773609500bee6b0610dda31e58442509de3de642e41c6423c1380",
+  "candidate_after_sha256": "4f835621249773609500bee6b0610dda31e58442509de3de642e41c6423c1380",
+  "candidate_unchanged": true,
+  "first_failures_retested": 3,
+  "exit_code": 0
+}

@@ -1,0 +1,15 @@
+{
+  "kind": "isolated CSS parse diagnostic; full Dashboard capture follows",
+  "result": [
+    {
+      "text": "共享运行宿主与准入",
+      "font": "14.5px",
+      "family": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif"
+    },
+    {
+      "text": "接收请求 · 管理运行",
+      "font": "10.5px",
+      "family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+    }
+  ]
+}

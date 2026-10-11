@@ -1,0 +1,622 @@
+{
+  "port": "17910",
+  "origin": "http://127.0.0.1:17914",
+  "browser": "153.0.8010.12",
+  "captured_at": "2026-10-11T02:19:29.475Z",
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 900,
+      "scroll": {
+        "scrollLeft": 32,
+        "clientWidth": 783,
+        "scrollWidth": 888,
+        "outline": "3px"
+      },
+      "geometry": {
+        "body": 1440,
+        "viewport": 1440,
+        "page": 879,
+        "pageScroll": 879,
+        "nodeTitleFont": "14.5px",
+        "animation": 0,
+        "inlineStyleAttributes": 1,
+        "inlineStyles": 0,
+        "cards": [
+          {
+            "width": 266.328125,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          },
+          {
+            "width": 266.34375,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          },
+          {
+            "width": 266.328125,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          }
+        ],
+        "statuses": [
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          }
+        ],
+        "costColors": [
+          "rgb(76, 195, 138)",
+          "rgb(76, 195, 138)"
+        ],
+        "success": "#4cc38a"
+      }
+    },
+    {
+      "width": 1280,
+      "height": 800,
+      "scroll": {
+        "scrollLeft": 31,
+        "clientWidth": 623,
+        "scrollWidth": 888,
+        "outline": "3px"
+      },
+      "geometry": {
+        "body": 1280,
+        "viewport": 1280,
+        "page": 719,
+        "pageScroll": 719,
+        "nodeTitleFont": "14.5px",
+        "animation": 0,
+        "inlineStyleAttributes": 1,
+        "inlineStyles": 0,
+        "cards": [
+          {
+            "width": 213,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          },
+          {
+            "width": 213,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          },
+          {
+            "width": 213,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          }
+        ],
+        "statuses": [
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          }
+        ],
+        "costColors": [
+          "rgb(76, 195, 138)",
+          "rgb(76, 195, 138)"
+        ],
+        "success": "#4cc38a"
+      }
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "scroll": {
+        "scrollLeft": 35,
+        "clientWidth": 309,
+        "scrollWidth": 888,
+        "outline": "3px"
+      },
+      "geometry": {
+        "body": 390,
+        "viewport": 390,
+        "page": 381,
+        "pageScroll": 381,
+        "nodeTitleFont": "14.5px",
+        "animation": 0,
+        "inlineStyleAttributes": 1,
+        "inlineStyles": 0,
+        "cards": [
+          {
+            "width": 168.5,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          },
+          {
+            "width": 168.5,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          },
+          {
+            "width": 349,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          }
+        ],
+        "statuses": [
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          }
+        ],
+        "costColors": [
+          "rgb(76, 195, 138)",
+          "rgb(76, 195, 138)"
+        ],
+        "success": "#4cc38a"
+      }
+    },
+    {
+      "width": 320,
+      "height": 800,
+      "scroll": {
+        "scrollLeft": 31,
+        "clientWidth": 239,
+        "scrollWidth": 888,
+        "outline": "3px"
+      },
+      "geometry": {
+        "body": 320,
+        "viewport": 320,
+        "page": 311,
+        "pageScroll": 311,
+        "nodeTitleFont": "14.5px",
+        "animation": 0,
+        "inlineStyleAttributes": 1,
+        "inlineStyles": 0,
+        "cards": [
+          {
+            "width": 279,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          },
+          {
+            "width": 279,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          },
+          {
+            "width": 279,
+            "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+          }
+        ],
+        "statuses": [
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已完成",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          },
+          {
+            "text": "已保存",
+            "client": 33,
+            "scroll": 33,
+            "overflow": "clip"
+          }
+        ],
+        "costColors": [
+          "rgb(76, 195, 138)",
+          "rgb(76, 195, 138)"
+        ],
+        "success": "#4cc38a"
+      }
+    }
+  ],
+  "console": [],
+  "pageErrors": [],
+  "initialInlineStyleAttributes": 0,
+  "current": {
+    "width": 320,
+    "height": 800,
+    "scroll": {
+      "scrollLeft": 31,
+      "clientWidth": 239,
+      "scrollWidth": 888,
+      "outline": "3px"
+    },
+    "geometry": {
+      "body": 320,
+      "viewport": 320,
+      "page": 311,
+      "pageScroll": 311,
+      "nodeTitleFont": "14.5px",
+      "animation": 0,
+      "inlineStyleAttributes": 1,
+      "inlineStyles": 0,
+      "cards": [
+        {
+          "width": 279,
+          "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+        },
+        {
+          "width": 279,
+          "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+        },
+        {
+          "width": 279,
+          "valueFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+        }
+      ],
+      "statuses": [
+        {
+          "text": "已完成",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已保存",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已完成",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已保存",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已完成",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已保存",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已完成",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已保存",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已完成",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        },
+        {
+          "text": "已保存",
+          "client": 33,
+          "scroll": 33,
+          "overflow": "clip"
+        }
+      ],
+      "costColors": [
+        "rgb(76, 195, 138)",
+        "rgb(76, 195, 138)"
+      ],
+      "success": "#4cc38a"
+    },
+    "inlineStyles": [
+      "<input aria-label=\"IANA 时区\" style=\"\">"
+    ]
+  },
+  "stress": [
+    {
+      "identity": "Run collision-id-长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#4",
+      "preview": "普通聊天",
+      "previewOverflow": "ellipsis",
+      "states": [
+        {
+          "text": "终态无法确认",
+          "width": 66,
+          "overflow": "clip"
+        },
+        {
+          "text": "记录状态未知",
+          "width": 66,
+          "overflow": "clip"
+        }
+      ],
+      "scroll": 277,
+      "width": 277
+    },
+    {
+      "identity": "Run collision-id-长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#3",
+      "preview": "普通聊天",
+      "previewOverflow": "ellipsis",
+      "states": [
+        {
+          "text": "终态无法确认",
+          "width": 66,
+          "overflow": "clip"
+        },
+        {
+          "text": "记录状态未知",
+          "width": 66,
+          "overflow": "clip"
+        }
+      ],
+      "scroll": 277,
+      "width": 277
+    },
+    {
+      "identity": "Run collision-id-长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#2",
+      "preview": "普通聊天",
+      "previewOverflow": "ellipsis",
+      "states": [
+        {
+          "text": "终态无法确认",
+          "width": 66,
+          "overflow": "clip"
+        },
+        {
+          "text": "记录状态未知",
+          "width": 66,
+          "overflow": "clip"
+        }
+      ],
+      "scroll": 277,
+      "width": 277
+    },
+    {
+      "identity": "Run collision-id-长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#1",
+      "preview": "普通聊天",
+      "previewOverflow": "ellipsis",
+      "states": [
+        {
+          "text": "终态无法确认",
+          "width": 66,
+          "overflow": "clip"
+        },
+        {
+          "text": "记录状态未知",
+          "width": 66,
+          "overflow": "clip"
+        }
+      ],
+      "scroll": 277,
+      "width": 277
+    },
+    {
+      "identity": "Run collision-id-长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#长标识/ ?%#0",
+      "preview": "未知用途：future-purpose",
+      "previewOverflow": "ellipsis",
+      "states": [
+        {
+          "text": "终态无法确认",
+          "width": 66,
+          "overflow": "clip"
+        },
+        {
+          "text": "记录状态未知",
+          "width": 66,
+          "overflow": "clip"
+        }
+      ],
+      "scroll": 277,
+      "width": 277
+    }
+  ],
+  "exit_code": 0,
+  "candidate_sha256": {
+    "src/agent_alfred/ops/static/overview.js": "f5a94ae5c2f618bed14c3f4924854c33f0ecc678279e77ee03720bc3df187c6f",
+    "src/agent_alfred/ops/static/overview.css": "39e9423f54db702749ad66eb770d1274511acb7d283b7e7352094292ff75c24b",
+    "tests/browser/overview.spec.js": "29688d9f117575a4f8cb72d669d62f36cd44f1782b6ead3bb7652b1a87faf41e"
+  }
+}

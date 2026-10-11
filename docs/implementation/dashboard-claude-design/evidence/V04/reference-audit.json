@@ -1,0 +1,36 @@
+{
+  "source_html_sha256": "54807adb38541fa2966e5b0c334b9d0e8d71c60b814245601bc4f35b8ec54b84",
+  "support_js_sha256": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe",
+  "source_version": "1786950414092924",
+  "view": "Overview",
+  "origin": "http://127.0.0.1:17918/Syrup%20Dashboard.dc.html",
+  "viewports": [
+    [
+      1440,
+      900
+    ],
+    [
+      1280,
+      800
+    ],
+    [
+      390,
+      844
+    ],
+    [
+      320,
+      800
+    ]
+  ],
+  "browser": "Chromium via playwright-cli",
+  "animations": "CSS animations disabled for capture; original stage timer left running",
+  "network_dependencies": [
+    "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+    "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
+    "https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"
+  ],
+  "console": [
+    "favicon.ico returned 404; reference rendering succeeded"
+  ],
+  "narrow_behavior": "original main content collapses between nav and aside; captured unchanged"
+}

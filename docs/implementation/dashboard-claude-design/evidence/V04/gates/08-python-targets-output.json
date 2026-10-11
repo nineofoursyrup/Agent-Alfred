@@ -1,0 +1,18 @@
+{
+  "command_argv": [
+    "uv",
+    "run",
+    "--extra",
+    "mcp",
+    "pytest",
+    "src/agent_alfred/evals/deterministic/test_acceptance_execution_policy.py::test_public_execute_and_grade_never_retry_a_failed_sdk_dispatch[timeout]",
+    "src/agent_alfred/evals/deterministic/test_acceptance_supplement_boundaries.py::test_schema4_dispatch_only_uses_bound_mock_transport",
+    "src/agent_alfred/evals/deterministic/test_acceptance_supplement_boundaries.py::test_formal_execute_rejects_empty_approved_policy_before_mock_call"
+  ],
+  "started_at": "2026-10-11T02:48:49.029651+00:00",
+  "head": "70b6faea2e13d7254a62836c3e1becd3129cb7b9",
+  "duration_seconds": 10.31,
+  "exit_code": 0,
+  "candidate_unchanged": true,
+  "output": "============================= test session starts ==============================\nplatform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0\nrootdir: /Users/nineofour/Agent-Alfred-v04\nconfigfile: pyproject.toml\nplugins: anyio-4.14.2\ncollected 3 items\n\nsrc/agent_alfred/evals/deterministic/test_acceptance_execution_policy.py . [ 33%]\n                                                                         [ 33%]\nsrc/agent_alfred/evals/deterministic/test_acceptance_supplement_boundaries.py . [ 66%]\n.                                                                        [100%]\n\n============================== 3 passed in 9.49s ===============================\n"
+}
