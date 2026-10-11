@@ -1,0 +1,491 @@
+[
+  {
+    "name": "after-01-navigation-390x844",
+    "geometry": {
+      "viewport": [
+        390,
+        844
+      ],
+      "scrollTop": 0,
+      "panel": "navigation",
+      "nodes": {
+        ".site-header": {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 300,
+            "height": 844
+          },
+          "styles": {
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "marginTop": "0px",
+            "marginRight": "0px",
+            "marginBottom": "0px",
+            "marginLeft": "0px",
+            "gap": "normal",
+            "letterSpacing": "normal",
+            "maxWidth": "none",
+            "borderRightWidth": "1px",
+            "borderBottomWidth": "0px",
+            "fontSize": "13px",
+            "lineHeight": "20.8px"
+          }
+        },
+        ".brand-block": {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 299,
+            "height": 99.78125
+          },
+          "styles": {
+            "paddingTop": "20px",
+            "paddingRight": "18px",
+            "paddingBottom": "15px",
+            "paddingLeft": "18px",
+            "marginTop": "0px",
+            "marginRight": "0px",
+            "marginBottom": "0px",
+            "marginLeft": "0px",
+            "gap": "normal",
+            "letterSpacing": "normal",
+            "maxWidth": "none",
+            "borderRightWidth": "0px",
+            "borderBottomWidth": "1px",
+            "fontSize": "13px",
+            "lineHeight": "20.8px"
+          }
+        },
+        ".brand": {
+          "rect": {
+            "x": 18,
+            "y": 20,
+            "width": 263,
+            "height": 19
+          },
+          "styles": {
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "marginTop": "0px",
+            "marginRight": "0px",
+            "marginBottom": "0px",
+            "marginLeft": "0px",
+            "gap": "8px",
+            "letterSpacing": "normal",
+            "maxWidth": "none",
+            "borderRightWidth": "0px",
+            "borderBottomWidth": "0px",
+            "fontSize": "19px",
+            "lineHeight": "19px"
+          }
+        },
+        "#brand-status": {
+          "rect": {
+            "x": 18,
+            "y": 48,
+            "width": 263,
+            "height": 15.390625
+          },
+          "styles": {
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "marginTop": "9px",
+            "marginRight": "0px",
+            "marginBottom": "0px",
+            "marginLeft": "0px",
+            "gap": "6px",
+            "letterSpacing": "normal",
+            "maxWidth": "none",
+            "borderRightWidth": "0px",
+            "borderBottomWidth": "0px",
+            "fontSize": "11px",
+            "lineHeight": "15.4px"
+          }
+        },
+        ".brand-address": {
+          "rect": {
+            "x": 18,
+            "y": 68.390625,
+            "width": 263,
+            "height": 15.390625
+          },
+          "styles": {
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "marginTop": "5px",
+            "marginRight": "0px",
+            "marginBottom": "0px",
+            "marginLeft": "0px",
+            "gap": "normal",
+            "letterSpacing": "normal",
+            "maxWidth": "none",
+            "borderRightWidth": "0px",
+            "borderBottomWidth": "0px",
+            "fontSize": "11px",
+            "lineHeight": "15.4px"
+          }
+        },
+        ".site-header nav": {
+          "rect": {
+            "x": 0,
+            "y": 184.109375,
+            "width": 299,
+            "height": 454.5
+          },
+          "styles": {
+            "paddingTop": "0px",
+            "paddingRight": "8px",
+            "paddingBottom": "12px",
+            "paddingLeft": "8px",
+            "marginTop": "0px",
+            "marginRight": "0px",
+            "marginBottom": "0px",
+            "marginLeft": "0px",
+            "gap": "2px",
+            "letterSpacing": "normal",
+            "maxWidth": "none",
+            "borderRightWidth": "0px",
+            "borderBottomWidth": "0px",
+            "fontSize": "13px",
+            "lineHeight": "20.8px"
+          }
+        },
+        ".nav-group": {
+          "rect": {
+            "x": 12,
+            "y": 200.109375,
+            "width": 275,
+            "height": 10
+          },
+          "styles": {
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "marginTop": "16px",
+            "marginRight": "4px",
+            "marginBottom": "6px",
+            "marginLeft": "4px",
+            "gap": "normal",
+            "letterSpacing": "2.2px",
+            "maxWidth": "none",
+            "borderRightWidth": "0px",
+            "borderBottomWidth": "0px",
+            "fontSize": "10px",
+            "lineHeight": "10px"
+          }
+        },
+        ".site-header nav [aria-current]": {
+          "rect": {
+            "x": 8,
+            "y": 491.859375,
+            "width": 283,
+            "height": 32.25
+          },
+          "styles": {
+            "paddingTop": "8px",
+            "paddingRight": "10px",
+            "paddingBottom": "8px",
+            "paddingLeft": "10px",
+            "marginTop": "0px",
+            "marginRight": "0px",
+            "marginBottom": "0px",
+            "marginLeft": "0px",
+            "gap": "8px 16px",
+            "letterSpacing": "normal",
+            "maxWidth": "none",
+            "borderRightWidth": "0px",
+            "borderBottomWidth": "0px",
+            "fontSize": "13px",
+            "lineHeight": "16.25px"
+          }
+        },
+        ".rail-note": {
+          "rect": {
+            "x": 0,
+            "y": 798.203125,
+            "width": 299,
+            "height": 45.796875
+          },
+          "styles": {
+            "paddingTop": "14px",
+            "paddingRight": "16px",
+            "paddingBottom": "14px",
+            "paddingLeft": "16px",
+            "marginTop": "159.594px",
+            "marginRight": "0px",
+            "marginBottom": "0px",
+            "marginLeft": "0px",
+            "gap": "normal",
+            "letterSpacing": "normal",
+            "maxWidth": "none",
+            "borderRightWidth": "0px",
+            "borderBottomWidth": "0px",
+            "fontSize": "10.5px",
+            "lineHeight": "16.8px"
+          }
+        },
+        "#workspace": {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 390,
+            "height": 844
+          },
+          "styles": {
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "marginTop": "0px",
+            "marginRight": "0px",
+            "marginBottom": "0px",
+            "marginLeft": "0px",
+            "gap": "normal",
+            "letterSpacing": "normal",
+            "maxWidth": "none",
+            "borderRightWidth": "0px",
+            "borderBottomWidth": "0px",
+            "fontSize": "13px",
+            "lineHeight": "20.8px"
+          }
+        },
+        "#page": {
+          "rect": {
+            "x": 0,
+            "y": 53.9375,
+            "width": 390,
+            "height": 790.0625
+          },
+          "styles": {
+            "paddingTop": "20px",
+            "paddingRight": "16px",
+            "paddingBottom": "20px",
+            "paddingLeft": "16px",
+            "marginTop": "0px",
+            "marginRight": "0px",
+            "marginBottom": "0px",
+            "marginLeft": "0px",
+            "gap": "normal",
+            "letterSpacing": "normal",
+            "maxWidth": "none",
+            "borderRightWidth": "0px",
+            "borderBottomWidth": "0px",
+            "fontSize": "13px",
+            "lineHeight": "20.8px"
+          }
+        },
+        "#page-header": {
+          "rect": {
+            "x": 0,
+            "y": 53.9375,
+            "width": 381,
+            "height": 119.828125
+          },
+          "styles": {
+            "paddingTop": "24px",
+            "paddingRight": "16px",
+            "paddingBottom": "18px",
+            "paddingLeft": "16px",
+            "marginTop": "-20px",
+            "marginRight": "-16px",
+            "marginBottom": "20px",
+            "marginLeft": "-16px",
+            "gap": "16px 24px",
+            "letterSpacing": "normal",
+            "maxWidth": "none",
+            "borderRightWidth": "0px",
+            "borderBottomWidth": "1px",
+            "fontSize": "13px",
+            "lineHeight": "20.8px"
+          }
+        },
+        ".page-heading": {
+          "rect": {
+            "x": 16,
+            "y": 77.9375,
+            "width": 349,
+            "height": 76.828125
+          },
+          "styles": {
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "marginTop": "0px",
+            "marginRight": "0px",
+            "marginBottom": "0px",
+            "marginLeft": "0px",
+            "gap": "normal",
+            "letterSpacing": "normal",
+            "maxWidth": "none",
+            "borderRightWidth": "0px",
+            "borderBottomWidth": "0px",
+            "fontSize": "13px",
+            "lineHeight": "20.8px"
+          }
+        },
+        ".page-eyebrow": {
+          "rect": {
+            "x": 16,
+            "y": 77.9375,
+            "width": 349,
+            "height": 10
+          },
+          "styles": {
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "marginTop": "0px",
+            "marginRight": "0px",
+            "marginBottom": "0px",
+            "marginLeft": "0px",
+            "gap": "normal",
+            "letterSpacing": "2.6px",
+            "maxWidth": "none",
+            "borderRightWidth": "0px",
+            "borderBottomWidth": "0px",
+            "fontSize": "10px",
+            "lineHeight": "10px"
+          }
+        },
+        "#page-header h1": {
+          "rect": {
+            "x": 16,
+            "y": 98.9375,
+            "width": 349,
+            "height": 29.6875
+          },
+          "styles": {
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "marginTop": "11px",
+            "marginRight": "0px",
+            "marginBottom": "6px",
+            "marginLeft": "0px",
+            "gap": "normal",
+            "letterSpacing": "normal",
+            "maxWidth": "none",
+            "borderRightWidth": "0px",
+            "borderBottomWidth": "0px",
+            "fontSize": "27px",
+            "lineHeight": "29.7px"
+          }
+        },
+        ".page-subtitle": {
+          "rect": {
+            "x": 16,
+            "y": 134.625,
+            "width": 349,
+            "height": 20.140625
+          },
+          "styles": {
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "marginTop": "0px",
+            "marginRight": "0px",
+            "marginBottom": "0px",
+            "marginLeft": "0px",
+            "gap": "normal",
+            "letterSpacing": "normal",
+            "maxWidth": "660px",
+            "borderRightWidth": "0px",
+            "borderBottomWidth": "0px",
+            "fontSize": "13px",
+            "lineHeight": "20.15px"
+          }
+        },
+        "#shell-toolbar": {
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 390,
+            "height": 53.9375
+          },
+          "styles": {
+            "paddingTop": "10px",
+            "paddingRight": "12px",
+            "paddingBottom": "10px",
+            "paddingLeft": "12px",
+            "marginTop": "0px",
+            "marginRight": "0px",
+            "marginBottom": "0px",
+            "marginLeft": "0px",
+            "gap": "8px",
+            "letterSpacing": "normal",
+            "maxWidth": "100%",
+            "borderRightWidth": "0px",
+            "borderBottomWidth": "1px",
+            "fontSize": "13px",
+            "lineHeight": "20.8px"
+          }
+        },
+        "#shell-status": {
+          "rect": {
+            "x": 16,
+            "y": 152.71875,
+            "width": 267,
+            "height": 31.390625
+          },
+          "styles": {
+            "paddingTop": "0px",
+            "paddingRight": "0px",
+            "paddingBottom": "0px",
+            "paddingLeft": "0px",
+            "marginTop": "0px",
+            "marginRight": "16px",
+            "marginBottom": "0px",
+            "marginLeft": "16px",
+            "gap": "8px",
+            "letterSpacing": "normal",
+            "maxWidth": "100%",
+            "borderRightWidth": "0px",
+            "borderBottomWidth": "0px",
+            "fontSize": "11px",
+            "lineHeight": "17.6px"
+          }
+        },
+        ".shell-live": {
+          "rect": {
+            "x": 16,
+            "y": 152.71875,
+            "width": 106,
+            "height": 31.390625
+          },
+          "styles": {
+            "paddingTop": "7px",
+            "paddingRight": "12px",
+            "paddingBottom": "7px",
+            "paddingLeft": "12px",
+            "marginTop": "0px",
+            "marginRight": "0px",
+            "marginBottom": "0px",
+            "marginLeft": "0px",
+            "gap": "8px",
+            "letterSpacing": "normal",
+            "maxWidth": "100%",
+            "borderRightWidth": "1px",
+            "borderBottomWidth": "1px",
+            "fontSize": "11px",
+            "lineHeight": "15.4px"
+          }
+        }
+      },
+      "overflow": 0
+    }
+  }
+]

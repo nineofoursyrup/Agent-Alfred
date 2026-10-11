@@ -1,0 +1,89 @@
+{
+  "scope": "Temporary diagnostic only; real service and real refreshed Inbox rows, native scroll event and two RAFs before original viewport/focus assertions; probe removed from tests.",
+  "browser_port": 17900,
+  "before_css_sha256": "33279b781ec88322cdc4b5cc3d56ad71b574952db7b4825c4d8f5d14fb2126b7",
+  "after_css_sha256": "9fe02014005d3e731f81cfe24bf83b176d213043677be5032f63161ec2d12d51",
+  "files": [
+    {
+      "original_name": "error-context.md",
+      "side": "before",
+      "file": "before/error-context.json",
+      "raw_sha256": "732ca3fc69223091d525cb0a84931d8f2eb186131bb1d81d2a5189bb165340d6"
+    },
+    {
+      "original_name": "receipt-after-native-scroll.png",
+      "side": "before",
+      "file": "before/receipt-after-native-scroll.png",
+      "raw_sha256": "35c21ce034a8874d4a4074730d751e646d9c3b8a7dd2127e5463914d366b45a3"
+    },
+    {
+      "original_name": "receipt-before-scroll.png",
+      "side": "before",
+      "file": "before/receipt-before-scroll.png",
+      "raw_sha256": "cd75e14ccc0dde0b51752329879269d3ba990c3a3b69cf947faccdcf42f36d3c"
+    },
+    {
+      "original_name": "test-failed-1.png",
+      "side": "before",
+      "file": "before/test-failed-1.png",
+      "raw_sha256": "f874cc00822262f758fd35002072803ddc41a49f7a6ddcda8aef3274df853aea"
+    },
+    {
+      "original_name": "trace.zip",
+      "side": "before",
+      "file": "before/trace.zip",
+      "raw_sha256": "f8a30506bd8e2852ea2ad8d74952bcde95499ffdf7c66fec110a79199be28a43"
+    },
+    {
+      "original_name": "receipt-after-native-scroll.png",
+      "side": "after",
+      "file": "after/receipt-after-native-scroll.png",
+      "raw_sha256": "965cf9a6ee65826cb7ad50b055d301b7789de2c41296af52a6d3b76827e5c0fa"
+    },
+    {
+      "original_name": "receipt-after-wheel.png",
+      "side": "after",
+      "file": "after/receipt-after-wheel.png",
+      "raw_sha256": "ba92e384734bcfc33580b3f646937c4d0fbf990a0081947ab0ad76e0b14ce655"
+    },
+    {
+      "original_name": "receipt-before-scroll.png",
+      "side": "after",
+      "file": "after/receipt-before-scroll.png",
+      "raw_sha256": "69b7ac763435da3bd5b796d5953b1a06b2db1f8bcb5dcfb77fceb2b2ced6fcb4"
+    }
+  ],
+  "observations": {
+    "before": {
+      "scroller": "page",
+      "observation": {
+        "page": {
+          "clientHeight": 360,
+          "scrollHeight": 639,
+          "scrollTop": 279
+        },
+        "shell-status": {
+          "clientHeight": 86,
+          "scrollHeight": 86,
+          "scrollTop": 0
+        }
+      }
+    },
+    "after": {
+      "scroller": "shell-status",
+      "beforePageScroll": 3,
+      "observation": {
+        "page": {
+          "clientHeight": 360,
+          "scrollHeight": 602,
+          "scrollTop": 3
+        },
+        "shell-status": {
+          "clientHeight": 48,
+          "scrollHeight": 86,
+          "scrollTop": 38
+        }
+      }
+    }
+  }
+}

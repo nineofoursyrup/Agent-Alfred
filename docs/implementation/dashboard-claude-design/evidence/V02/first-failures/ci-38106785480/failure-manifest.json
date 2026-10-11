@@ -1,0 +1,43 @@
+{
+  "run_id": 38106785480,
+  "head_sha": "6b5769583617714ca36e9676d0a2c3c990155735",
+  "job_id": 114373891057,
+  "conclusion": "failure",
+  "artifact_id": 11691312311,
+  "source_artifact_sha256": "29ff513557e18f73f33f0a8948241ad53c238e390af47779d9e18c86f284f97e",
+  "source_artifact_bytes": 9703275,
+  "extraction_policy": "Only failing case error-context.md, screenshots and trace.zip; full artifact zip deleted after extraction.",
+  "files": [
+    {
+      "path": "session-create-race-a-dela-9c126-trols-reachable-at-1440x360/error-context.md",
+      "sha256": "cd06eadb306c412617d5c027575ac38bac8c1eb9c9bc38c9dfc9dd3ab12917ca",
+      "bytes": 14997,
+      "archived_path": "session-create-race-a-dela-9c126-trols-reachable-at-1440x360/error-context.json"
+    },
+    {
+      "path": "session-create-race-a-dela-9c126-trols-reachable-at-1440x360/test-failed-1.png",
+      "sha256": "012b36043ecec04cb42da0c83fc6f3033ec176c61891246ee66fdfc049583648",
+      "bytes": 64732,
+      "archived_path": "session-create-race-a-dela-9c126-trols-reachable-at-1440x360/test-failed-1.png"
+    },
+    {
+      "path": "session-create-race-a-dela-9c126-trols-reachable-at-1440x360/receipt-before-scroll.png",
+      "sha256": "814e7f5a7841f442f061c1826b00003ab2101f72872c3533032a9ff995350ca9",
+      "bytes": 68538,
+      "archived_path": "session-create-race-a-dela-9c126-trols-reachable-at-1440x360/receipt-before-scroll.png"
+    },
+    {
+      "path": "session-create-race-a-dela-9c126-trols-reachable-at-1440x360/trace.zip",
+      "sha256": "6678bde745c86d47f04a31bb5b47811021fb5924a8c6c95ccc8e669bc9b2b764",
+      "bytes": 1281050,
+      "archived_path": "session-create-race-a-dela-9c126-trols-reachable-at-1440x360/trace.zip"
+    },
+    {
+      "path": "job-114373891057-full.log",
+      "sha256": "a54757c89524d657570b9f1f67cdafa957f65efa609a86e4df37f083e961aeda",
+      "bytes": 686158,
+      "archived_path": "job-114373891057-full.json"
+    }
+  ],
+  "log_representation": "Full job output and error context are losslessly encoded in JSON raw_text with original byte SHA-256; PNG and failing trace are copied unchanged."
+}

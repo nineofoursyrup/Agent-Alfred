@@ -1,0 +1,44 @@
+{
+  "status": "PASS",
+  "comparisons": [
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "panel": null,
+      "before": "before-03-1440x900",
+      "after": "after-01-1440x900",
+      "differences": [],
+      "before_png_sha256": "6d9bcc18e34092a1d15e0feca59fa20edf575e6cc59b6fad4260aa2056ba4dfd",
+      "after_png_sha256": "6d9bcc18e34092a1d15e0feca59fa20edf575e6cc59b6fad4260aa2056ba4dfd",
+      "png_bytes_equal": true
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "panel": null,
+      "before": "before-03-390x844",
+      "after": "after-01-390x844",
+      "differences": [],
+      "before_png_sha256": "41f061b9b012da2888a28d552ae823fc135ee1b58a3009777163ff93b3c5b09d",
+      "after_png_sha256": "41f061b9b012da2888a28d552ae823fc135ee1b58a3009777163ff93b3c5b09d",
+      "png_bytes_equal": true
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "panel": "navigation",
+      "before": "before-03-navigation-390x844",
+      "after": "after-01-navigation-390x844",
+      "differences": [],
+      "before_png_sha256": "1e5600d25f7b576e9cf0a865571f8ae7c4855673b69e93182428faf43c0282be",
+      "after_png_sha256": "1e5600d25f7b576e9cf0a865571f8ae7c4855673b69e93182428faf43c0282be",
+      "png_bytes_equal": true
+    }
+  ]
+}

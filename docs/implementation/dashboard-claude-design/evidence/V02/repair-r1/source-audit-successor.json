@@ -1,0 +1,85 @@
+{
+  "recorded_at": "2026-10-11T04:10:15.940773+00:00",
+  "baseline_head": "6b5769583617714ca36e9676d0a2c3c990155735",
+  "source_test_sha256": {
+    "src/agent_alfred/ops/static/app.css": "9fe02014005d3e731f81cfe24bf83b176d213043677be5032f63161ec2d12d51",
+    "src/agent_alfred/ops/static/app.js": "87cf98ab70e8bdf4fd3d5de37ef6df125ab624487b522e72b50362144c249d35",
+    "src/agent_alfred/ops/static/index.html": "1806bc790c4abb172d848ba04c5054d0e20341657e90111a1696574785835c7a",
+    "src/agent_alfred/ops/static/shell.js": "c71dfdaae24d2349cd78d36ff96fb89daf4842df823fd021d407d87565bff03b",
+    "tests/browser/shell.spec.js": "6aa58f582093c77fbc5355f24ebbe7737167588fec59f52c53a49a6622d65558",
+    "tests/browser/tools-visual.spec.js": "5a3daa645d5abe0536a1cfbdb7572f593fbbb51832349fd1df6dd28d5317222d"
+  },
+  "changed_source_test_files": [
+    "src/agent_alfred/ops/static/app.css"
+  ],
+  "frozen_root_tokens_equal": true,
+  "frozen_topology_routing_and_public_recipes_equal": true,
+  "reference_html_sha256": "54807adb38541fa2966e5b0c334b9d0e8d71c60b814245601bc4f35b8ec54b84",
+  "browser_port": 17900,
+  "python_environment": "Python 3.14.7",
+  "node": "v26.8.2",
+  "screenshots": [
+    {
+      "file": "after-01-1440x900.png",
+      "sha256": "6d9bcc18e34092a1d15e0feca59fa20edf575e6cc59b6fad4260aa2056ba4dfd"
+    },
+    {
+      "file": "after-01-390x844.png",
+      "sha256": "41f061b9b012da2888a28d552ae823fc135ee1b58a3009777163ff93b3c5b09d"
+    },
+    {
+      "file": "after-01-navigation-390x844.png",
+      "sha256": "1e5600d25f7b576e9cf0a865571f8ae7c4855673b69e93182428faf43c0282be"
+    },
+    {
+      "file": "before-03-1440x900.png",
+      "sha256": "6d9bcc18e34092a1d15e0feca59fa20edf575e6cc59b6fad4260aa2056ba4dfd"
+    },
+    {
+      "file": "before-03-390x844.png",
+      "sha256": "41f061b9b012da2888a28d552ae823fc135ee1b58a3009777163ff93b3c5b09d"
+    },
+    {
+      "file": "before-03-navigation-390x844.png",
+      "sha256": "1e5600d25f7b576e9cf0a865571f8ae7c4855673b69e93182428faf43c0282be"
+    },
+    {
+      "file": "spec-a-wide-scrolled-02.png",
+      "sha256": "0fbed539e5a8fa55da20f16c2dd3dfe39d613387359ef1e72176facf5c96d087"
+    },
+    {
+      "file": "after-receipt-02-1440x900.png",
+      "sha256": "6d9bcc18e34092a1d15e0feca59fa20edf575e6cc59b6fad4260aa2056ba4dfd"
+    },
+    {
+      "file": "after-receipt-02-390x844.png",
+      "sha256": "41f061b9b012da2888a28d552ae823fc135ee1b58a3009777163ff93b3c5b09d"
+    },
+    {
+      "file": "after-receipt-02-navigation-390x844.png",
+      "sha256": "1e5600d25f7b576e9cf0a865571f8ae7c4855673b69e93182428faf43c0282be"
+    }
+  ],
+  "original_failure_records": "Preserved verbatim; original_log_integrity in prior-final-results.json remains applicable. No artifact bundle committed.",
+  "invalid_diagnostic_captures": [
+    {
+      "file": "output/playwright/v02-review-repair/before-geometry-result.txt",
+      "status": "INVALID / NOT USED",
+      "reason": "CLI console output did not expose the result JSON."
+    },
+    {
+      "file": "output/playwright/v02-review-repair/before-geometry-result-02.txt",
+      "status": "INVALID / NOT USED",
+      "reason": "Capture ran before matchMedia toolbar ownership settled after resize."
+    },
+    {
+      "file": "output/playwright/v02-review-repair/spec-a-scroll.json",
+      "status": "INVALID / NOT USED",
+      "reason": "An unscoped button selector selected the hidden navigation duplicate. Corrected header-scoped capture is spec-a-scroll-02.json."
+    }
+  ],
+  "geometry_evidence": "Original before-03 versus final after-receipt-02: 19 nodes in three views have equal rectangles/styles and all three PNG pairs are byte-identical. See geometry-comparison-successor.json.",
+  "predecessor_audit": "source-audit.json",
+  "scope": "Std-1 plus the failing wide delayed receipt scroll boundary; ordinary toolbar behavior remains Spec-1(a).",
+  "ci_first_failure": "../first-failures/ci-38106785480/failure-manifest.json"
+}

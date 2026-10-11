@@ -1,0 +1,41 @@
+{
+  "basis": "Tracked Python code, tests, dependency/configuration, skill/env inputs unchanged. Original local environment remains Python 3.14.7. CSS changes preserve ordinary shell geometry and PNG bytes; a receipt-only scroll boundary additionally repairs the prior CI browser failure. Browser suite reruns for the final CSS; static fingerprint implementation/tests unchanged although static bytes differ.",
+  "checks": {
+    "ruff": {
+      "baseline": "6b5769583617714ca36e9676d0a2c3c990155735",
+      "tracked_input_count": 622,
+      "manifest_sha256": "7d3451be94a5dafa9d8514be3e7c1122f8b9a034e9640a166ca5f06be8ff4660",
+      "changed_inputs": []
+    },
+    "skills": {
+      "baseline": "6b5769583617714ca36e9676d0a2c3c990155735",
+      "tracked_input_count": 2,
+      "manifest_sha256": "65b55c1d9c7d2b2f05a9789b09adc545273547339a68b470eb0ac0461c9e025e",
+      "changed_inputs": []
+    },
+    "env_example": {
+      "baseline": "6b5769583617714ca36e9676d0a2c3c990155735",
+      "tracked_input_count": 4,
+      "manifest_sha256": "318204ad2b9337adfff602abf236c2bf680a4c568e85c7a176043ca9d8781a57",
+      "changed_inputs": []
+    },
+    "pytest": {
+      "baseline": "6b5769583617714ca36e9676d0a2c3c990155735",
+      "tracked_input_count": 622,
+      "manifest_sha256": "7d3451be94a5dafa9d8514be3e7c1122f8b9a034e9640a166ca5f06be8ff4660",
+      "changed_inputs": []
+    },
+    "browser_configuration": {
+      "baseline": "6b5769583617714ca36e9676d0a2c3c990155735",
+      "tracked_input_count": 4,
+      "manifest_sha256": "08a7f4804fe6c90e174978691ea032e1678917a4468ae1ca64db33a06c18f58a",
+      "changed_inputs": []
+    }
+  },
+  "manifest_encoding": "SHA-256 of sorted unique tracked paths, each encoded as path + NUL + file SHA-256 + LF. ruff/pytest: all tracked .py plus pyproject.toml and uv.lock; skills: checker plus tracked SKILL.md; env: checker/.env.example/pyproject.toml/uv.lock; browser: playwright.config.js/package.json/package-lock.json/tsconfig.json.",
+  "successor_recheck": {
+    "tracked_python_dependency_inputs": 622,
+    "changed_inputs": [],
+    "css_receipt_fix_requires_browser_rerun": true
+  }
+}
