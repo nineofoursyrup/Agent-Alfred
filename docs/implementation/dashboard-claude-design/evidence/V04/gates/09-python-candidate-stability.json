@@ -1,0 +1,13 @@
+{
+  "candidate": "70b6faea2e13d7254a62836c3e1becd3129cb7b9",
+  "tree": "f1238ef4f85ff21b237a8ba05c9f850cef70db00",
+  "file_count": 1630,
+  "candidate_before_sha256": "7caa373f24c0c0177da064f08140b5c0de3f2a728c6597549a4e6717f8ec954b",
+  "candidate_after_sha256": "7caa373f24c0c0177da064f08140b5c0de3f2a728c6597549a4e6717f8ec954b",
+  "candidate_unchanged": true,
+  "logs_written_to_excluded_output_until_process_exit": true,
+  "result": "6445 passed, 1 deselected, 14 warnings",
+  "pytest_seconds": 2623.57,
+  "process_seconds": 2625.94,
+  "archived_at": "2026-10-11T03:35:33.143437+00:00"
+}

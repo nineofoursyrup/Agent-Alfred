@@ -1,0 +1,5 @@
+{
+  "src/agent_alfred/ops/static/overview.js": "f5a94ae5c2f618bed14c3f4924854c33f0ecc678279e77ee03720bc3df187c6f",
+  "src/agent_alfred/ops/static/overview.css": "b4ec7af964efe9dfd5f174d466a843cb61deb72734aa27fd498786cb5d9ab26d",
+  "tests/browser/overview.spec.js": "29688d9f117575a4f8cb72d669d62f36cd44f1782b6ead3bb7652b1a87faf41e"
+}

@@ -1,0 +1,105 @@
+- main:
+  - heading "总览" [level=1]
+  - button "刷新全部来源"
+  - region "期间指标":
+    - heading "期间指标" [level=2]
+    - article:
+      - paragraph: 5 条 Run 记录
+      - heading "运行记录数" [level=3]
+    - article:
+      - paragraph: 精确 USD 1.750
+      - paragraph: 估算 USD 0.003
+      - heading "模型费用" [level=3]
+    - text: 总览期间
+    - combobox "总览期间":
+      - option "今天"
+      - option "最近七个自然日" [selected]
+      - option "最近三十个自然日"
+    - text: IANA 时区
+    - textbox "IANA 时区": Asia/Shanghai
+    - button "应用时区"
+    - button "刷新期间指标"
+    - status: 来源观察：2026-10-11T02:02:00Z
+    - paragraph: 已记录 Attempt 12 次 · 费用未知 1 次
+    - paragraph: 精确金额来自端点报告，未经外部账单核对。
+    - paragraph: 估算价格来源：catalog · 过期价格 1 次 · 档位价格 0 次
+    - paragraph: 模型账目完整
+    - paragraph: 模型 USD 分项不相加称总费用；工具计量另在用量账本按服务／单位查看。
+    - paragraph: 本次当地日期 [2026-10-05, 2026-10-12) · Asia/Shanghai
+    - group: 本次期间与来源
+    - link "查看本期账目（按原期间重新读取）":
+      - /url: /ops?range=custom&timezone=Asia%2FShanghai&start=2026-10-05&end=2026-10-12
+    - paragraph: 账本会创建新快照；新增记录或价格变化可能改变金额。
+  - region "当前记忆条目数":
+    - heading "当前记忆条目数" [level=2]
+    - article:
+      - paragraph: 共 12 条
+      - heading "已保存的语义／情景条目" [level=3]
+    - button "刷新记忆计数"
+    - status: 来源观察：2026-10-11T02:02:00Z
+    - paragraph: 语义 12 条 · 情景 0 条
+    - group: 本次记忆来源
+    - paragraph: 当前存量；不随期间变化。不等同于可自动输入的条目，删除计数不证明遗忘清理完成。
+    - link "查看当前记忆（重新读取）":
+      - /url: /memory
+  - region "静态架构说明":
+    - heading "静态架构说明" [level=2]
+    - paragraph: 本版本的组件关系；不表示当前配置可用性或某次运行的执行路径
+    - region "静态架构说明图示（可横向滚动）":
+      - img "CLI 与 Web 入口提交到共享宿主。宿主连接对话处理、显式手动聚合与持久账目；对话和聚合按需使用模型、工具、记忆。": ALFRED · 本机组件关系 RUNTIME · 共享宿主 CAPABILITIES · 按需使用 提交请求 → 收尾与持久事实 对话请求 显式发起 按需使用 按选择使用 CLI 入口／Web 入口 共享宿主的两个入口 共享运行宿主与准入 接收请求 · 管理运行 对话处理 可选消息分流 手动聚合 由用户显式发起 模型 · 工具 · 记忆 按需／按选择使用 本地记录与账目 持久事实 · 各自核验
+    - paragraph: 图示可左右滚动；聚焦后使用左右方向键。
+    - paragraph: 可选分流、检索门与工具不是每次运行的必经路径；记忆准备可能在图调用之前。Skill 文件与语义／情景条目分开计量。
+    - link "流程与手动聚合":
+      - /url: /behaviour
+    - link "模型":
+      - /url: /models
+    - link "端点连接":
+      - /url: /connections
+    - link "工具":
+      - /url: /tools
+    - link "记忆":
+      - /url: /memory
+    - link "运行活动":
+      - /url: /runs?filter=all
+    - link "用量账本":
+      - /url: /ops
+    - link "数据库诊断":
+      - /url: /database
+  - region "全历史最近运行":
+    - heading "全历史最近运行" [level=2]
+    - paragraph: 最多五条已结束 Run，与期间指标范围不同；当前槽来自共享宿主状态。
+    - button "刷新最近运行"
+    - status: 来源观察：2026-10-11T02:02:00Z
+    - article:
+      - link "Run dedb32b2a8b8…":
+        - /url: /runs/dedb32b2a8b847118fb69f59edfcb519
+      - paragraph: 普通聊天
+      - text: 已完成 已保存 受理时间：2026-10-11T02:01:59Z 入口：cli · 已获准
+      - group: 完整 Run 标识
+    - article:
+      - link "Run 8b281e408e4e…":
+        - /url: /runs/8b281e408e4e4751bcd85c48ce30c3f8
+      - paragraph: 普通聊天
+      - text: 已完成 已保存 受理时间：2026-10-11T02:01:59Z 入口：cli · 已获准
+      - group: 完整 Run 标识
+    - article:
+      - link "Run 9162034a11c2…":
+        - /url: /runs/9162034a11c24a48a98a5665d8a72218
+      - paragraph: 普通聊天
+      - text: 已完成 已保存 受理时间：2026-10-11T02:01:59Z 入口：cli · 已获准
+      - group: 完整 Run 标识
+    - article:
+      - link "Run 03a0a5be9908…":
+        - /url: /runs/03a0a5be9908450b927ef9d4129d222e
+      - paragraph: 普通聊天
+      - text: 已完成 已保存 受理时间：2026-10-11T02:01:59Z 入口：cli · 已获准
+      - group: 完整 Run 标识
+    - article:
+      - link "Run 2d5755641c35…":
+        - /url: /runs/2d5755641c3545f3972c0f95eefc38d9
+      - paragraph: 普通聊天
+      - text: 已完成 已保存 受理时间：2026-10-11T02:01:59Z 入口：cli · 已获准
+      - group: 完整 Run 标识
+    - group: 本次最近运行来源
+    - link "查看全部运行":
+      - /url: /runs?filter=all

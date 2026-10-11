@@ -1,0 +1,25 @@
+{
+  "initial_base": "645c4549bb5bea9f79ddb4625f17c5a8a6af58c8",
+  "branch": "dashboard-visual/v04-overview",
+  "worktree": "/Users/nineofour/Agent-Alfred-v04",
+  "initial_status": "",
+  "initial_diff": "",
+  "initial_task_untracked": [],
+  "protected_main_status": " M docs/dashboard.md\n?? README.md\n?? tmp/\n",
+  "protected_main_diff": "diff --git a/docs/dashboard.md b/docs/dashboard.md\nindex 47260f8..7a8c527 100644\n--- a/docs/dashboard.md\n+++ b/docs/dashboard.md\n@@ -1,6 +1,8 @@\n # Dashboard 开发与验证\n \n-页面通过现有 Dashboard 服务提供，入口为 `/inbox`，运行页为 `/runs`，记忆页为 `/memory`，只读 SQL 诊断页为 `/database`。\n+日常安装、启动、终端聊天和命令调用见 [Agent-Alfred 使用说明](../README.md)。\n+\n+页面通过现有 Dashboard 服务提供，总览入口为 `/overview`（根路径 `/` 也进入总览），收件箱为 `/inbox`，运行页为 `/runs`，记忆页为 `/memory`，只读 SQL 诊断页为 `/database`。\n MainBar 属于壳层；页面导航不会新建 EventSource。Session 和草稿存放在\n 当前标签页的 sessionStorage；新建和继续会话均需显式操作。\n \n",
+  "protected_main_sha256": {
+    "docs/dashboard.md": "0e37f4d3e3312f67a098e8bd34a071007065a9e4fa2fa439d8ffcdb6143bb7c2",
+    "README.md": "8e411fba9076d97c4569d40b3a36061cf4bc51f003f32976c9e97738405918d2"
+  },
+  "main_checkout": "6a262ff37cac835777982e75d3a8950d6dbefd3c",
+  "worktrees": "/Users/nineofour/Agent-Alfred     6a262ff [main]\n/Users/nineofour/Agent-Alfred-v01 b30ddfa [dashboard-visual/v01-authority]\n/Users/nineofour/Agent-Alfred-v02 645c454 [dashboard-visual/v02-shell]\n/Users/nineofour/Agent-Alfred-v04 645c454 [dashboard-visual/v04-overview]\n/Users/nineofour/Agent-Alfred-v05 645c454 [dashboard-visual/v05-runs]\n/Users/nineofour/Agent-Alfred-v09 645c454 [dashboard-visual/v09-tools]\n",
+  "browser_test_port": 17910,
+  "python": "3.14.7",
+  "node": "v26.8.2",
+  "setup_commands": [
+    "uv sync --extra dev --extra mcp --locked",
+    "npm ci --ignore-scripts",
+    "npx playwright install chromium"
+  ],
+  "setup_exit": 0
+}

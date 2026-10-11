@@ -1,0 +1,24 @@
+{
+  "tested_files_sha256": {
+    "src/agent_alfred/ops/static/overview.js": "b6a0a529937c36b11b6c45dd3d6bab7092e24770a689ee239954a8d7969df3ce",
+    "src/agent_alfred/ops/static/overview.css": "367ffc42b8335cd29406ddcd61ba20a1cb33bee86d2c0545f888decfc55c49a2",
+    "tests/browser/overview.spec.js": "29688d9f117575a4f8cb72d669d62f36cd44f1782b6ead3bb7652b1a87faf41e"
+  },
+  "execution": "before_commit; tested file SHA-256 recorded",
+  "costFacts": [],
+  "port": "17910",
+  "origin": "http://127.0.0.1:17914",
+  "browser": "153.0.8010.12",
+  "captured_at": "2026-10-11T04:56:40.442Z",
+  "viewports": [],
+  "console": [],
+  "pageErrors": [],
+  "exit_code": 1,
+  "error": "Error: expect(locator).not.toContainText(expected) failed\n\nLocator: locator('.overview-period .overview-source-detail')\nExpected substring: not \"已记录 Attempt\"\nReceived string: \"精确金额来自端点报告，未经外部账单核对。估算价格来源：catalog · 过期价格 1 次 · 档位价格 0 次模型 USD 分项不相加称总费用；工具计量另在用量账本按服务／单位查看。本次当地日期 [2026-10-05, 2026-10-12) · Asia/Shanghai本次期间与来源当地日期 [2026-10-05, 2026-10-12)（结束日期不含） · Asia/Shanghai确定时间 [2026-10-04T16:00:00+00:00, 2026-10-11T16:00:00+00:00)；先按 Run 开始时间，无开始时间时按受理时间归属。精确十进制 USD 1.750（10 次） · 估算十进制 USD 0.003（1 次）包含当前库内所有 Session、用途、准入状态和结局；未关联 Run 的旧消息不计入。Run 的全部已记录 Attempt 消耗随 Run 归属，不是供应商按扣费日分摊的账单。持久 Run／Attempt 账目 · 计算 2026-10-11T04:56:40Z · 有效至 2026-10-11T05:11:40Z来源 1a12dd1451544a9cafe19a0b09560b8d · 价格 dac08245330a9d08fc698c0350119532b56e9fafc44788a93ea0ef7904514043 · 实例 0648425cddbd4d2cab0ca890f03c4980查看本期账目（按原期间重新读取）账本会创建新快照；新增记录或价格变化可能改变金额。\"\nTimeout: 5000ms\n\nCall log:\n  - Expect \"not toContainText\" locator('.overview-period .overview-source-detail') with timeout 5000ms\n  - waiting for locator('.overview-period .overview-source-detail')\n    14 × locator resolved to <div class=\"overview-source-detail\">…</div>\n       - unexpected value \"精确金额来自端点报告，未经外部账单核对。估算价格来源：catalog · 过期价格 1 次 · 档位价格 0 次模型 USD 分项不相加称总费用；工具计量另在用量账本按服务／单位查看。本次当地日期 [2026-10-05, 2026-10-12) · Asia/Shanghai本次期间与来源当地日期 [2026-10-05, 2026-10-12)（结束日期不含） · Asia/Shanghai确定时间 [2026-10-04T16:00:00+00:00, 2026-10-11T16:00:00+00:00)；先按 Run 开始时间，无开始时间时按受理时间归属。精确十进制 USD 1.750（10 次） · 估算十进制 USD 0.003（1 次）包含当前库内所有 Session、用途、准入状态和结局；未关联 Run 的旧消息不计入。Run 的全部已记录 Attempt 消耗随 Run 归属，不是供应商按扣费日分摊的账单。持久 Run／Attempt 账目 · 计算 2026-10-11T04:56:40Z · 有效至 2026-10-11T05:11:40Z来源 1a12dd1451544a9cafe19a0b09560b8d · 价格 dac08245330a9d08fc698c0350119532b56e9fafc44788a93ea0ef7904514043 · 实例 0648425cddbd4d2cab0ca890f03c4980查看本期账目（按原期间重新读取）账本会创建新快照；新增记录或价格变化可能改变金额。\"\n\n    at captureRawStack (/Users/nineofour/Agent-Alfred-v04/node_modules/playwright-core/lib/coreBundle.js:8588:17)\n    at callMatcherAsStep (/Users/nineofour/Agent-Alfred-v04/node_modules/playwright/lib/matchers/expect.js:13310:57)\n    at Object.toContainText (/Users/nineofour/Agent-Alfred-v04/node_modules/playwright/lib/matchers/expect.js:13302:23)\n    at inspectCost (/Users/nineofour/Agent-Alfred-v04/output/playwright/v04-capture.mjs:33:38)\n    at async file:///Users/nineofour/Agent-Alfred-v04/output/playwright/v04-capture.mjs:38:3",
+  "candidate_sha256": {
+    "src/agent_alfred/ops/static/overview.js": "b6a0a529937c36b11b6c45dd3d6bab7092e24770a689ee239954a8d7969df3ce",
+    "src/agent_alfred/ops/static/overview.css": "367ffc42b8335cd29406ddcd61ba20a1cb33bee86d2c0545f888decfc55c49a2",
+    "tests/browser/overview.spec.js": "29688d9f117575a4f8cb72d669d62f36cd44f1782b6ead3bb7652b1a87faf41e"
+  },
+  "tested_files_unchanged": true
+}

@@ -1,0 +1,8 @@
+{
+  "command": "ALFRED_BROWSER_TEST_PORT=17910 ['npx', 'playwright', 'test', 'tests/browser/accounting.spec.js', 'tests/browser/accounting-migration.spec.js', '--grep', '(S09 a new process retires|A24 A32 A33: snapshot expiry|A07: reconnect detects)']",
+  "started_at": "2026-10-11T02:19:52.981042+00:00",
+  "head": "70b6faea2e13d7254a62836c3e1becd3129cb7b9",
+  "duration_seconds": 7.62,
+  "exit_code": 0,
+  "output": "\nRunning 3 tests using 1 worker\n\n(node:59669) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✓  1 tests/browser/accounting-migration.spec.js:345:1 › S09 a new process retires a held financial response and clears body without replacing the old ledger (3.7s)\n  ✓  2 tests/browser/accounting.spec.js:112:1 › A24 A32 A33: snapshot expiry, offline body, reconnect prune and page cleanup (1.4s)\n  ✓  3 tests/browser/accounting.spec.js:149:47 › A07: reconnect detects malformed authorization without claiming applied (947ms)\n\n  3 passed (7.0s)\n"
+}

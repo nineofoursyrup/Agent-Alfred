@@ -1,0 +1,9 @@
+{
+  "baseline": "645c4549bb5bea9f79ddb4625f17c5a8a6af58c8",
+  "files_sha256": {
+    "src/agent_alfred/ops/static/overview.js": "f5a94ae5c2f618bed14c3f4924854c33f0ecc678279e77ee03720bc3df187c6f",
+    "src/agent_alfred/ops/static/overview.css": "b4ec7af964efe9dfd5f174d466a843cb61deb72734aa27fd498786cb5d9ab26d",
+    "tests/browser/overview.spec.js": "fc4facc78c00f30ce160781cc9361d7dccd39bf81006aec8f73632da29479c16"
+  },
+  "binding": "Production files equal implementation commit 36bbc26b5e27949223780b959044fec5c411050f; failing test full text preserved with exact SHA-256."
+}

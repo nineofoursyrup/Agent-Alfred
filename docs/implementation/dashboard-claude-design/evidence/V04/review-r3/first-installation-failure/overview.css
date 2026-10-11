@@ -1,0 +1,54 @@
+/* Page-owned geometry. Public recipes and tokens stay in app.css. */
+.overview {
+  --overview-line:1px;
+  /* Page-local metric minimum specified by #126. */
+  --overview-metric-min:148px;
+  display:flex;flex-direction:column;gap:var(--gap-large);min-width:0;
+}
+.overview>button {align-self:flex-start}
+.overview section {min-width:0;margin:0}
+.overview p,.overview li,.overview a {overflow-wrap:anywhere}
+.overview>[role=status]:empty {display:none}
+.overview .overview-metrics {display:flex;flex-wrap:wrap;gap:var(--gap-small);align-items:flex-start}
+.overview .overview-period {flex:2 1 calc(var(--overview-metric-min) * 2 + var(--gap-small))}
+.overview .overview-memory {flex:1 1 var(--overview-metric-min)}
+.overview .overview-metrics h2 {margin:0 0 var(--gap-small)}
+.overview .overview-period-cards {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--overview-metric-min)),1fr));gap:var(--gap-small);align-items:stretch}
+.overview .overview-memory-cards {display:grid}
+.overview .overview-metric {display:flex;flex-direction:column}
+.overview .overview-metric>h3 {order:1}
+.overview .overview-cost-values {display:flex;flex-wrap:wrap;gap:var(--gap-small)}
+.overview .overview-metric-caption {display:block}
+.overview .overview-metric-unit {font-size:var(--font-size-meta);font-weight:400;color:var(--muted)}
+.overview .overview-controls {display:flex;flex-wrap:wrap;align-items:center;gap:var(--gap-small);margin-block:var(--gap-small)}
+.overview .overview-controls label {display:flex;flex-wrap:wrap;align-items:center;gap:calc(var(--gap-large) / 2);margin:0;max-width:100%;font:400 var(--font-size-meta)/1.45 var(--font-mono);color:var(--muted)}
+.overview .overview-controls input {flex:1;min-width:0;max-width:100%}
+.overview .overview-source-status {margin:var(--gap-small) 0;color:var(--tertiary)}
+.overview .overview-source-detail,.overview .overview-memory>p {font:400 var(--font-size-meta)/1.5 var(--font-mono);color:var(--muted)}
+.overview details {overflow-wrap:anywhere;font:400 var(--font-size-meta)/1.5 var(--font-mono);color:var(--muted)}
+.overview summary {cursor:pointer;padding-block:calc(var(--gap-small) / 2)}
+.overview .overview-links {display:flex;gap:var(--gap-small);flex-wrap:wrap}
+.overview .overview-architecture .sy-panel-body>p {font-size:var(--font-size-meta);color:var(--muted)}
+.overview .overview-diagram-scroll {max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;outline-offset:-3px}
+.overview .overview-diagram {display:block;width:780px;height:auto}
+.overview .overview-partition {fill:none;stroke:var(--border);stroke-width:1px;stroke-dasharray:6px;rx:var(--radius-panel)}
+.overview .overview-diagram-eyebrow {font:600 var(--font-size-panel-eyebrow)/1 var(--font-mono);letter-spacing:1.8px;fill:var(--metadata)}
+.overview .overview-edge {fill:none;stroke:var(--diagram-line);stroke-width:1.4px;marker-end:url(#overview-arrow)}
+.overview .overview-edge-optional {stroke-dasharray:6px}
+.overview .overview-arrow {fill:var(--diagram-arrow)}
+.overview .overview-edge-label {font:400 var(--font-size-meta-small)/1 var(--font-mono);fill:var(--weak)}
+.overview .overview-diagram-node rect {fill:var(--raised);stroke:var(--control);stroke-width:1px;rx:var(--radius-console)}
+.overview .overview-diagram-node text {font:600 var(--font-size-body)/1 var(--font-sans);fill:var(--text)}
+.overview .overview-diagram-node .overview-node-note {font:400 var(--font-size-meta-small)/1 var(--font-mono);fill:var(--muted)}
+.overview .overview-recent-status>p {margin:0}
+.overview .overview-recent-status>p:empty {display:none}
+.overview .overview-current:empty {display:none}
+.overview .overview-current>h3 {margin:0}
+.overview .overview-history>details,.overview .overview-history>p,.overview .overview-current>h3 {padding:var(--gap-small) var(--gap-large)}
+.overview .overview-current {border-bottom:var(--overview-line) solid var(--panel-divider)}
+.overview .overview-run {display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:calc(var(--gap-small) / 2) var(--gap-small)}
+.overview .overview-run-id {grid-column:1/-1;font:400 var(--font-size-meta)/1.5 var(--font-mono)}
+.overview .overview-run-preview {margin:0;line-height:1.35}
+.overview .overview-run-states {justify-content:flex-end}
+.overview .overview-run-states>span {white-space:nowrap}
+.overview .overview-run-facts,.overview .overview-run-detail {grid-column:1/-1;margin:0}

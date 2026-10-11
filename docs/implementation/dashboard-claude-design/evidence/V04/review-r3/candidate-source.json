@@ -1,0 +1,12 @@
+{
+  "base": "76c16bd873707f00281c874dc15153b24be363bf",
+  "head_before_fix": "9485dee521b1101619f1392572b4fc2c0202003c",
+  "source_sha256": {
+    "src/agent_alfred/ops/static/overview.js": "f5985084d98c9ed15f15153105ead7508f00b7b711ba5cf86e499eee80e99bc8",
+    "src/agent_alfred/ops/static/overview.css": "73269c54fa3db6ad1e56b334996d55119b606edb926e087d34048d1b16fea1d4"
+  },
+  "scope": "Product only overview.js and overview.css; V04 evidence only; no test or common layer modifications relative to rebased HEAD.",
+  "protected_files_match_rebased_head": true,
+  "protected_files_count": 83,
+  "protected_file_manifest_sha256": "a2f5d730bc9a4cec2bce3824ce816b96910ea137fe9df917a41c243a8a6da4c1"
+}

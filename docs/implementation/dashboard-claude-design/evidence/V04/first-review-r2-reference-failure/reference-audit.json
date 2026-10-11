@@ -1,0 +1,25 @@
+{
+  "source_html_sha256": "54807adb38541fa2966e5b0c334b9d0e8d71c60b814245601bc4f35b8ec54b84",
+  "support_js_sha256": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe",
+  "source_version": "1786950414092924",
+  "view": "Overview",
+  "origin": "http://127.0.0.1:17918",
+  "browser": "153.0.8010.12",
+  "viewports": [],
+  "console": [],
+  "pageErrors": [],
+  "network_dependencies": [
+    {
+      "url": "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
+      "status": 200
+    },
+    {
+      "url": "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+      "status": 200
+    }
+  ],
+  "captured_at": "2026-10-11T04:58:57.112Z",
+  "animations": "Disabled for screenshot only; original timers remain",
+  "exit_code": 1,
+  "error": "locator.evaluate: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('TURNS', { exact: true })\u001b[22m\n\n    at /Users/nineofour/Agent-Alfred-v04/output/playwright/v04-review-r2/reference.mjs:29:46"
+}

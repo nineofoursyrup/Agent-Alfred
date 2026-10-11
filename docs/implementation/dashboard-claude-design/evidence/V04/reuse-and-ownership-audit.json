@@ -1,0 +1,21 @@
+{
+  "verified_at": "2026-10-11T02:34:38.355056+00:00",
+  "candidate": "70b6faea2e13d7254a62836c3e1becd3129cb7b9",
+  "python_manifest": "gates/python-inputs-sha256.json",
+  "python_input_count": 623,
+  "python_inputs_unchanged": true,
+  "protected_main_sha256": {
+    "docs/dashboard.md": "0e37f4d3e3312f67a098e8bd34a071007065a9e4fa2fa439d8ffcdb6143bb7c2",
+    "README.md": "8e411fba9076d97c4569d40b3a36061cf4bc51f003f32976c9e97738405918d2"
+  },
+  "protected_main_status": " M docs/dashboard.md\n?? README.md\n?? tmp/\n",
+  "moved_test_generated_files_to_ignored_output": {
+    ".playwright-cli/page-2026-10-11T01-57-35-010Z.yml": "b2bdf06027a0ceee7231c6a9e8391f466c7bbdbf95c28b0f4b61d94feb30510c",
+    ".playwright-cli/console-2026-10-11T01-57-34-215Z.log": "45dc8c07f208a529a2482d27990144a989e8d4927e4c574ec6ac2d8f102fe4f5",
+    "tmp/agent-work/issue-27/behaviour.png": "162e9b2447292762db3c191d6b2bc49a455d34b994fe38f889d247e00e641a50",
+    "tmp/agent-work/issue-27/aggregation-combinations.png": "855bdf3f1886738eda0f92711773a359143a31b8d421ad183a8ec8975252b071",
+    "tmp/agent-work/issue-76/statistics.png": "143fa85d9bebad57a3c637170a14eb21912ad01c7d9469cf00f8806d20d9bc49",
+    "tmp/agent-work/issue-76/narrow.png": "40cb0b53d7272b831f2793b527e1370616baaac7d81e5da30e1f82e98cc508a3"
+  },
+  "reason": "Existing browser tests generate tmp screenshots; initial V04 worktree was clean. Only these known task-generated files were moved."
+}
