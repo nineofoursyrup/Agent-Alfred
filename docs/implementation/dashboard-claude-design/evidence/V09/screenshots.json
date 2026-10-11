@@ -1,0 +1,212 @@
+{
+  "implementation_head": "a4f3b99f5cc8ea0be9adc7c1d771e0df6bf406b6",
+  "files": [
+    {
+      "path": "reference-first-failure.png",
+      "viewport": [
+        1440,
+        900
+      ],
+      "bytes": 177930,
+      "sha256": "744636a14068dec85384da0943e1c12222b9907bb2f76076784993cb71e5f9f2"
+    },
+    {
+      "path": "reference-tools-1280x800.png",
+      "viewport": [
+        1280,
+        800
+      ],
+      "bytes": 141500,
+      "sha256": "a8ce606c924da7ff846fe55b292c87e06dd41dc972b1e59a3d466a20a54aaff1"
+    },
+    {
+      "path": "reference-tools-1440x900.png",
+      "viewport": [
+        1440,
+        900
+      ],
+      "bytes": 143567,
+      "sha256": "5916e7808893e971d637a3201bb9867b6e42bab9c57e3865d37741e2c7a333e0"
+    },
+    {
+      "path": "reference-tools-320x800.png",
+      "viewport": [
+        320,
+        800
+      ],
+      "bytes": 40073,
+      "sha256": "fa623678a5a076145924cc40d1b8dd4afcd8a564457e6e74eb16e6b798116acf"
+    },
+    {
+      "path": "reference-tools-390x844.png",
+      "viewport": [
+        390,
+        844
+      ],
+      "bytes": 52291,
+      "sha256": "fac16ea341fb505af00aaa6068dad4aad69aa03fe70dd98eee3535cf32eafd36"
+    },
+    {
+      "path": "tools-1280x800.png",
+      "viewport": [
+        1280,
+        800
+      ],
+      "bytes": 145898,
+      "sha256": "57cec4c844432efaebd1c1391d4fe972d619331088c8f23e86447d2ed980f18c"
+    },
+    {
+      "path": "tools-1440x900.png",
+      "viewport": [
+        1440,
+        900
+      ],
+      "bytes": 192449,
+      "sha256": "914dd15aab06d2eacd6642b26312caab11736b7c60910d4d40ef226884469e5c"
+    },
+    {
+      "path": "tools-320x800.png",
+      "viewport": [
+        320,
+        800
+      ],
+      "bytes": 66278,
+      "sha256": "0dd58d370b1e5af190ea556db9335ab56258fbc306b3e26a591aaed38ac71104"
+    },
+    {
+      "path": "tools-390x844.png",
+      "viewport": [
+        390,
+        844
+      ],
+      "bytes": 77894,
+      "sha256": "46429f3a39febd470535f8fbd49be10220f305e24323b3e1de9777618214c508"
+    },
+    {
+      "path": "tools-authorization-1280x800.png",
+      "viewport": [
+        1280,
+        800
+      ],
+      "bytes": 130880,
+      "sha256": "dae691c08f80b539a46810ba01505af10318e631f01a167055ca8fe08aa9c568"
+    },
+    {
+      "path": "tools-authorization-1440x900.png",
+      "viewport": [
+        1440,
+        900
+      ],
+      "bytes": 153567,
+      "sha256": "3027ab909ca3b612e5b5de0b1df5cfc099dfa6b9988a041006e63945709b2b80"
+    },
+    {
+      "path": "tools-authorization-320x800.png",
+      "viewport": [
+        320,
+        800
+      ],
+      "bytes": 56355,
+      "sha256": "4fdc7cad459384ba2a4e98d1ea7495d630546b0b773fccd0f81ac91fcea7d256"
+    },
+    {
+      "path": "tools-authorization-390x844.png",
+      "viewport": [
+        390,
+        844
+      ],
+      "bytes": 89293,
+      "sha256": "5909037ab6b6799d9cafea66c9216564ee55ff0fec84176911518dedde9ce496"
+    },
+    {
+      "path": "tools-central-521.png",
+      "viewport": [
+        1138,
+        900
+      ],
+      "bytes": 132112,
+      "sha256": "9144d7d2d65273d46ea477588c725b863350d5cafe07f4fec2c5ab1e735c6355"
+    },
+    {
+      "path": "tools-central-522.png",
+      "viewport": [
+        1139,
+        900
+      ],
+      "bytes": 133197,
+      "sha256": "74a65d8f8dc7e368f5232da0e38dd9958d9e3c9a290dafbdf1d886b21817e9f9"
+    },
+    {
+      "path": "tools-history-1280x800.png",
+      "viewport": [
+        1280,
+        800
+      ],
+      "bytes": 143461,
+      "sha256": "6ebeb7d167956f7635cfb1fd70fb486846733415b79e06c3060d59534dc3847f"
+    },
+    {
+      "path": "tools-history-1440x900.png",
+      "viewport": [
+        1440,
+        900
+      ],
+      "bytes": 158874,
+      "sha256": "42dfaee51e745a7ef99319e91bec0e68b6ecba5d6d6d758abe6c8b54f3ebdbc8"
+    },
+    {
+      "path": "tools-history-320x800.png",
+      "viewport": [
+        320,
+        800
+      ],
+      "bytes": 71546,
+      "sha256": "54aede3f4ea1f38d8f2c41a729277bd9979f4b8bf1dcf921960f5139980aec7a"
+    },
+    {
+      "path": "tools-history-390x844.png",
+      "viewport": [
+        390,
+        844
+      ],
+      "bytes": 83693,
+      "sha256": "4a73b081f07ead2e7bc9e911bf8c599d387bdadf636bcf4921ecfbe20c26fbc2"
+    },
+    {
+      "path": "tools-long-draft-1280.png",
+      "viewport": [
+        1280,
+        800
+      ],
+      "bytes": 134058,
+      "sha256": "5dc32e3087a8b7e4db8783a6b1de14cb80dc887a3597f104f1166ffad8239075"
+    },
+    {
+      "path": "tools-long-draft-1440.png",
+      "viewport": [
+        1440,
+        900
+      ],
+      "bytes": 167443,
+      "sha256": "1f7d98b0245fcb5cb3f8c575a8cba297884600102e6fb07f4a7949ea9788a66c"
+    },
+    {
+      "path": "tools-long-draft-320.png",
+      "viewport": [
+        320,
+        800
+      ],
+      "bytes": 42016,
+      "sha256": "548fde6e57da544c9e9ae22eecb4594b8dd9c580a54ed7b7cfb454169198d5fc"
+    },
+    {
+      "path": "tools-long-draft-390.png",
+      "viewport": [
+        390,
+        844
+      ],
+      "bytes": 52657,
+      "sha256": "a1873fac7ce799e025f5a3c0b831ddf5c04c6bb86a21ab096281b7f11156636e"
+    }
+  ]
+}

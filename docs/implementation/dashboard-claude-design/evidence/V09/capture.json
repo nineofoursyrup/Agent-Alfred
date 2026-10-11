@@ -1,0 +1,940 @@
+{
+  "browser": "153.0.8010.12",
+  "port": 17960,
+  "source": {
+    "src/agent_alfred/ops/static/tools.js": "3edbb1ab7822e27f1fbdd742561659a11ee2082a137b64f56f9e89b0ad53efe5",
+    "src/agent_alfred/ops/static/tools.css": "56412274954849ffe7b6fd69aa12ad4800ce035e81d3bf244924764703dcbefe",
+    "tests/browser/tools-visual.spec.js": "40b19a73f51fbf54b00182980dc791baa3b8cbfe79c38b89252587449ae22509"
+  },
+  "records": [
+    {
+      "geometry": {
+        "viewport": [
+          1440,
+          900
+        ],
+        "overflow": 0,
+        "central": 823,
+        "inlineStyles": 0,
+        "groups": [
+          {
+            "name": "内置工具",
+            "columns": "273.656px 273.672px 273.656px",
+            "source": "builtin",
+            "tools": 11
+          },
+          {
+            "name": "集成 · tavily",
+            "columns": "821px 0px 0px",
+            "source": "tavily",
+            "tools": 1
+          },
+          {
+            "name": "未知来源 · unregistered/source/长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源",
+            "columns": "821px 0px 0px",
+            "source": "unregistered/source/长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源",
+            "tools": 1
+          }
+        ]
+      },
+      "errors": [],
+      "network": [
+        {
+          "url": "http://127.0.0.1:17964/tools",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/app.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/inbox-runs.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/overview.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/tools.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/database.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/behaviour.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/memory.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/settings.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/accounting.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/app.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/dom.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/aggregation.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/shell.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/tools.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/stream.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/accounting.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/pages.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/progress.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/inbox.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/memory.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/notices.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/models.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/runs.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/database.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/behaviour.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/source.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/overview.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/connections.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/topology.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/trace_export.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/run-evidence.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/settings-focus.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/run-fields.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/routing-statistics.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/api/entry",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/api/events",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/api/memory/state",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/api/tools",
+          "status": 200
+        }
+      ],
+      "focusOutline": "3px"
+    },
+    {
+      "geometry": {
+        "viewport": [
+          1280,
+          800
+        ],
+        "overflow": 0,
+        "central": 663,
+        "inlineStyles": 0,
+        "groups": [
+          {
+            "name": "内置工具",
+            "columns": "330.5px 330.5px",
+            "source": "builtin",
+            "tools": 11
+          },
+          {
+            "name": "集成 · tavily",
+            "columns": "661px 0px",
+            "source": "tavily",
+            "tools": 1
+          },
+          {
+            "name": "未知来源 · unregistered/source/长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源",
+            "columns": "661px 0px",
+            "source": "unregistered/source/长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源",
+            "tools": 1
+          }
+        ]
+      },
+      "errors": [],
+      "network": [
+        {
+          "url": "http://127.0.0.1:17964/tools",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/app.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/settings.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/overview.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/database.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/tools.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/inbox-runs.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/behaviour.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/memory.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/accounting.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/app.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/shell.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/aggregation.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/notices.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/dom.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/progress.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/tools.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/runs.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/inbox.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/stream.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/pages.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/database.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/accounting.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/memory.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/trace_export.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/run-fields.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/run-evidence.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/overview.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/source.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/behaviour.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/topology.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/connections.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/models.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/settings-focus.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/routing-statistics.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/api/entry",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/api/events",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/api/memory/state",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/api/tools",
+          "status": 200
+        }
+      ],
+      "focusOutline": "3px"
+    },
+    {
+      "geometry": {
+        "viewport": [
+          390,
+          844
+        ],
+        "overflow": 0,
+        "central": 349,
+        "inlineStyles": 0,
+        "groups": [
+          {
+            "name": "内置工具",
+            "columns": "347px",
+            "source": "builtin",
+            "tools": 11
+          },
+          {
+            "name": "集成 · tavily",
+            "columns": "347px",
+            "source": "tavily",
+            "tools": 1
+          },
+          {
+            "name": "未知来源 · unregistered/source/长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源",
+            "columns": "347px",
+            "source": "unregistered/source/长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源",
+            "tools": 1
+          }
+        ]
+      },
+      "errors": [],
+      "network": [
+        {
+          "url": "http://127.0.0.1:17964/tools",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/app.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/inbox-runs.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/overview.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/tools.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/settings.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/behaviour.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/database.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/memory.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/accounting.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/app.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/tools.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/stream.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/dom.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/shell.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/aggregation.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/accounting.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/runs.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/inbox.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/pages.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/notices.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/progress.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/memory.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/overview.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/database.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/topology.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/behaviour.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/trace_export.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/run-evidence.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/models.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/source.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/run-fields.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/connections.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/settings-focus.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/routing-statistics.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/api/entry",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/api/events",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/api/memory/state",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/api/tools",
+          "status": 200
+        }
+      ],
+      "focusOutline": "3px"
+    },
+    {
+      "geometry": {
+        "viewport": [
+          320,
+          800
+        ],
+        "overflow": 0,
+        "central": 279,
+        "inlineStyles": 0,
+        "groups": [
+          {
+            "name": "内置工具",
+            "columns": "277px",
+            "source": "builtin",
+            "tools": 11
+          },
+          {
+            "name": "集成 · tavily",
+            "columns": "277px",
+            "source": "tavily",
+            "tools": 1
+          },
+          {
+            "name": "未知来源 · unregistered/source/长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源",
+            "columns": "277px",
+            "source": "unregistered/source/长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源长来源",
+            "tools": 1
+          }
+        ]
+      },
+      "errors": [],
+      "network": [
+        {
+          "url": "http://127.0.0.1:17964/tools",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/app.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/inbox-runs.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/database.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/settings.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/accounting.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/memory.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/app.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/overview.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/accounting.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/tools.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/tools.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/dom.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/aggregation.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/shell.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/stream.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/behaviour.css",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/notices.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/inbox.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/overview.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/source.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/runs.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/pages.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/topology.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/progress.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/memory.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/trace_export.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/run-fields.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/database.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/run-evidence.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/connections.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/behaviour.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/models.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/settings-focus.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/assets/routing-statistics.js",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/api/entry",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/api/events",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/api/memory/state",
+          "status": 200
+        },
+        {
+          "url": "http://127.0.0.1:17964/api/tools",
+          "status": 200
+        }
+      ],
+      "focusOutline": "3px"
+    },
+    {
+      "historical": {
+        "viewport": [
+          1440,
+          900
+        ],
+        "overflow": 0,
+        "current": [
+          {
+            "source": "mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6",
+            "tools": [
+              {
+                "identity": "[\"mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6\",\"v1:c5c494e07656c12a5dbe25b9ba5ce982:59708d71d77c0ab20c0f88ad612b26205dd26a1d41873e9760d93530b40e7d03\"]",
+                "status": "mcp_test_echo来源 mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6 · 能力 v1:c5c494e07656c12a5dbe25b9ba5ce982:59708d71d77c0ab20c0f88ad612b26205dd26a1d41873e9760d93530b40e7d03同名能力已更换模型暴露：hidden副作用：external · 可用性：configured连接观测：connected已保存授权：unset · 实际应用：applied阻止原因：not_authorized"
+              }
+            ]
+          },
+          {
+            "source": "mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:1d739d7da6ff7ebd836140178b7ba305a18bee09b0bad66716bab877fd178549",
+            "tools": [
+              {
+                "identity": "[\"mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:1d739d7da6ff7ebd836140178b7ba305a18bee09b0bad66716bab877fd178549\",\"v1:c5c494e07656c12a5dbe25b9ba5ce982:b7bfe42613f447b436fc65b64146d09b691fa69a52129126c7c0f8dbeee3358e\"]",
+                "status": "mcp_twin_echo来源 mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:1d739d7da6ff7ebd836140178b7ba305a18bee09b0bad66716bab877fd178549 · 能力 v1:c5c494e07656c12a5dbe25b9ba5ce982:b7bfe42613f447b436fc65b64146d09b691fa69a52129126c7c0f8dbeee3358eExternal echo模型暴露：hidden副作用：external · 可用性：configured连接观测：connected已保存授权：unset · 实际应用：applied阻止原因：not_authorized"
+              }
+            ]
+          }
+        ],
+        "retired": [
+          {
+            "source": "mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6",
+            "tools": [
+              {
+                "identity": "[\"mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6\",\"v1:c5c494e07656c12a5dbe25b9ba5ce982:aa971587f4554c1050165d7a58928737003b73ab8af5c51614aed964c8e1fef1\"]",
+                "status": "mcp_test_echo来源 mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6 · 能力 v1:c5c494e07656c12a5dbe25b9ba5ce982:aa971587f4554c1050165d7a58928737003b73ab8af5c51614aed964c8e1fef1External echo模型暴露：hidden副作用：external · 可用性：historical_directory历史连接观测：connected已保存授权：unset · 实际应用：不可调用阻止原因：已不在当前目录，来源已消失或被替换"
+              }
+            ]
+          }
+        ]
+      },
+      "original": "[\"mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6\",\"v1:c5c494e07656c12a5dbe25b9ba5ce982:aa971587f4554c1050165d7a58928737003b73ab8af5c51614aed964c8e1fef1\"]"
+    },
+    {
+      "historical": {
+        "viewport": [
+          1280,
+          800
+        ],
+        "overflow": 0,
+        "current": [
+          {
+            "source": "mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6",
+            "tools": [
+              {
+                "identity": "[\"mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6\",\"v1:c5c494e07656c12a5dbe25b9ba5ce982:59708d71d77c0ab20c0f88ad612b26205dd26a1d41873e9760d93530b40e7d03\"]",
+                "status": "mcp_test_echo来源 mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6 · 能力 v1:c5c494e07656c12a5dbe25b9ba5ce982:59708d71d77c0ab20c0f88ad612b26205dd26a1d41873e9760d93530b40e7d03同名能力已更换模型暴露：hidden副作用：external · 可用性：configured连接观测：connected已保存授权：unset · 实际应用：applied阻止原因：not_authorized"
+              }
+            ]
+          },
+          {
+            "source": "mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:1d739d7da6ff7ebd836140178b7ba305a18bee09b0bad66716bab877fd178549",
+            "tools": [
+              {
+                "identity": "[\"mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:1d739d7da6ff7ebd836140178b7ba305a18bee09b0bad66716bab877fd178549\",\"v1:c5c494e07656c12a5dbe25b9ba5ce982:b7bfe42613f447b436fc65b64146d09b691fa69a52129126c7c0f8dbeee3358e\"]",
+                "status": "mcp_twin_echo来源 mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:1d739d7da6ff7ebd836140178b7ba305a18bee09b0bad66716bab877fd178549 · 能力 v1:c5c494e07656c12a5dbe25b9ba5ce982:b7bfe42613f447b436fc65b64146d09b691fa69a52129126c7c0f8dbeee3358eExternal echo模型暴露：hidden副作用：external · 可用性：configured连接观测：connected已保存授权：unset · 实际应用：applied阻止原因：not_authorized"
+              }
+            ]
+          }
+        ],
+        "retired": [
+          {
+            "source": "mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6",
+            "tools": [
+              {
+                "identity": "[\"mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6\",\"v1:c5c494e07656c12a5dbe25b9ba5ce982:aa971587f4554c1050165d7a58928737003b73ab8af5c51614aed964c8e1fef1\"]",
+                "status": "mcp_test_echo来源 mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6 · 能力 v1:c5c494e07656c12a5dbe25b9ba5ce982:aa971587f4554c1050165d7a58928737003b73ab8af5c51614aed964c8e1fef1External echo模型暴露：hidden副作用：external · 可用性：historical_directory历史连接观测：connected已保存授权：unset · 实际应用：不可调用阻止原因：已不在当前目录，来源已消失或被替换"
+              }
+            ]
+          }
+        ]
+      },
+      "original": "[\"mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6\",\"v1:c5c494e07656c12a5dbe25b9ba5ce982:aa971587f4554c1050165d7a58928737003b73ab8af5c51614aed964c8e1fef1\"]"
+    },
+    {
+      "historical": {
+        "viewport": [
+          390,
+          844
+        ],
+        "overflow": 0,
+        "current": [
+          {
+            "source": "mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6",
+            "tools": [
+              {
+                "identity": "[\"mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6\",\"v1:c5c494e07656c12a5dbe25b9ba5ce982:59708d71d77c0ab20c0f88ad612b26205dd26a1d41873e9760d93530b40e7d03\"]",
+                "status": "mcp_test_echo来源 mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6 · 能力 v1:c5c494e07656c12a5dbe25b9ba5ce982:59708d71d77c0ab20c0f88ad612b26205dd26a1d41873e9760d93530b40e7d03同名能力已更换模型暴露：hidden副作用：external · 可用性：configured连接观测：connected已保存授权：unset · 实际应用：applied阻止原因：not_authorized"
+              }
+            ]
+          },
+          {
+            "source": "mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:1d739d7da6ff7ebd836140178b7ba305a18bee09b0bad66716bab877fd178549",
+            "tools": [
+              {
+                "identity": "[\"mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:1d739d7da6ff7ebd836140178b7ba305a18bee09b0bad66716bab877fd178549\",\"v1:c5c494e07656c12a5dbe25b9ba5ce982:b7bfe42613f447b436fc65b64146d09b691fa69a52129126c7c0f8dbeee3358e\"]",
+                "status": "mcp_twin_echo来源 mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:1d739d7da6ff7ebd836140178b7ba305a18bee09b0bad66716bab877fd178549 · 能力 v1:c5c494e07656c12a5dbe25b9ba5ce982:b7bfe42613f447b436fc65b64146d09b691fa69a52129126c7c0f8dbeee3358eExternal echo模型暴露：hidden副作用：external · 可用性：configured连接观测：connected已保存授权：unset · 实际应用：applied阻止原因：not_authorized"
+              }
+            ]
+          }
+        ],
+        "retired": [
+          {
+            "source": "mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6",
+            "tools": [
+              {
+                "identity": "[\"mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6\",\"v1:c5c494e07656c12a5dbe25b9ba5ce982:aa971587f4554c1050165d7a58928737003b73ab8af5c51614aed964c8e1fef1\"]",
+                "status": "mcp_test_echo来源 mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6 · 能力 v1:c5c494e07656c12a5dbe25b9ba5ce982:aa971587f4554c1050165d7a58928737003b73ab8af5c51614aed964c8e1fef1External echo模型暴露：hidden副作用：external · 可用性：historical_directory历史连接观测：connected已保存授权：unset · 实际应用：不可调用阻止原因：已不在当前目录，来源已消失或被替换"
+              }
+            ]
+          }
+        ]
+      },
+      "original": "[\"mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6\",\"v1:c5c494e07656c12a5dbe25b9ba5ce982:aa971587f4554c1050165d7a58928737003b73ab8af5c51614aed964c8e1fef1\"]"
+    },
+    {
+      "historical": {
+        "viewport": [
+          320,
+          800
+        ],
+        "overflow": 0,
+        "current": [
+          {
+            "source": "mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6",
+            "tools": [
+              {
+                "identity": "[\"mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6\",\"v1:c5c494e07656c12a5dbe25b9ba5ce982:59708d71d77c0ab20c0f88ad612b26205dd26a1d41873e9760d93530b40e7d03\"]",
+                "status": "mcp_test_echo来源 mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6 · 能力 v1:c5c494e07656c12a5dbe25b9ba5ce982:59708d71d77c0ab20c0f88ad612b26205dd26a1d41873e9760d93530b40e7d03同名能力已更换模型暴露：hidden副作用：external · 可用性：configured连接观测：connected已保存授权：unset · 实际应用：applied阻止原因：not_authorized"
+              }
+            ]
+          },
+          {
+            "source": "mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:1d739d7da6ff7ebd836140178b7ba305a18bee09b0bad66716bab877fd178549",
+            "tools": [
+              {
+                "identity": "[\"mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:1d739d7da6ff7ebd836140178b7ba305a18bee09b0bad66716bab877fd178549\",\"v1:c5c494e07656c12a5dbe25b9ba5ce982:b7bfe42613f447b436fc65b64146d09b691fa69a52129126c7c0f8dbeee3358e\"]",
+                "status": "mcp_twin_echo来源 mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:1d739d7da6ff7ebd836140178b7ba305a18bee09b0bad66716bab877fd178549 · 能力 v1:c5c494e07656c12a5dbe25b9ba5ce982:b7bfe42613f447b436fc65b64146d09b691fa69a52129126c7c0f8dbeee3358eExternal echo模型暴露：hidden副作用：external · 可用性：configured连接观测：connected已保存授权：unset · 实际应用：applied阻止原因：not_authorized"
+              }
+            ]
+          }
+        ],
+        "retired": [
+          {
+            "source": "mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6",
+            "tools": [
+              {
+                "identity": "[\"mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6\",\"v1:c5c494e07656c12a5dbe25b9ba5ce982:aa971587f4554c1050165d7a58928737003b73ab8af5c51614aed964c8e1fef1\"]",
+                "status": "mcp_test_echo来源 mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6 · 能力 v1:c5c494e07656c12a5dbe25b9ba5ce982:aa971587f4554c1050165d7a58928737003b73ab8af5c51614aed964c8e1fef1External echo模型暴露：hidden副作用：external · 可用性：historical_directory历史连接观测：connected已保存授权：unset · 实际应用：不可调用阻止原因：已不在当前目录，来源已消失或被替换"
+              }
+            ]
+          }
+        ]
+      },
+      "original": "[\"mcp:v1:c5c494e07656c12a5dbe25b9ba5ce982:f65b9bc88ebcac62c671a426ab590d831175f71ffa09daa78d0e7b2fb4195fe6\",\"v1:c5c494e07656c12a5dbe25b9ba5ce982:aa971587f4554c1050165d7a58928737003b73ab8af5c51614aed964c8e1fef1\"]"
+    }
+  ],
+  "scope": "Real Host/HTTP/SQLite, offline models and loopback MCP fixture. Chromium viewport/touch only; native zoom/IME not run."
+}

@@ -1,0 +1,10 @@
+{
+  "python_helper": {
+    "stderr": "zsh:29: command not found: python",
+    "scope": "auxiliary edit not run; following typecheck passed; corrected to uv run python"
+  },
+  "reference_metrics": {
+    "error": "strict mode violation: exact create_event resolved to main and aside",
+    "scope": "temporary measurement locator; main scope added; production and tests unchanged"
+  }
+}

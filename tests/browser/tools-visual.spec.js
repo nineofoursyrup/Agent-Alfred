@@ -59,12 +59,12 @@ test('S07 four viewports, shell and measured central boundaries retain full text
         await page.screenshot({path:info.outputPath(`tools-shell-${width}.png`)});observations.push(geometry);
       }
       await page.setViewportSize({width:1440,height:900});
-      for(const target of [679,680]) {
+      for(const target of [521,522]) {
         const current=await page.locator('.page-body').boundingBox();
         await page.setViewportSize({width:page.viewportSize().width+target-current.width,height:900});
         const measured=await page.locator('.page-body').boundingBox();expect(measured.width).toBe(target);
-        const columns=await page.locator('.tool-status').first().evaluate(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length);
-        expect(columns).toBe(target===679?1:2);
+        const columns=await page.locator('.tools-source>.tools-grid').first().evaluate(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length);
+        expect(columns).toBe(target===521?1:2);
         await page.screenshot({path:info.outputPath(`tools-central-${target}.png`)});observations.push({central:measured.width,viewport:page.viewportSize(),columns});
       }
     } finally {await context.close();}

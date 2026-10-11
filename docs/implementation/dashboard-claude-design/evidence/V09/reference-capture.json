@@ -1,0 +1,61 @@
+{
+  "source": "Syrup Dashboard.dc.html version 1786950414092924",
+  "browser": "153.0.8010.12",
+  "network": [
+    {
+      "url": "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+      "status": 200
+    },
+    {
+      "url": "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
+      "status": 200
+    }
+  ],
+  "errors": [],
+  "observations": [
+    {
+      "viewport": [
+        1440,
+        900
+      ],
+      "bodyOverflow": 0,
+      "nav": 233,
+      "headings": [
+        "Tools"
+      ]
+    },
+    {
+      "viewport": [
+        1280,
+        800
+      ],
+      "bodyOverflow": 0,
+      "nav": 233,
+      "headings": [
+        "Tools"
+      ]
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "bodyOverflow": 0,
+      "nav": 191,
+      "headings": [
+        "Tools"
+      ]
+    },
+    {
+      "viewport": [
+        320,
+        800
+      ],
+      "bodyOverflow": 0,
+      "nav": 191,
+      "headings": [
+        "Tools"
+      ]
+    }
+  ]
+}

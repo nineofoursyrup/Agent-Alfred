@@ -38,11 +38,22 @@ export function toolsPage(root, csrf) {
   const refresh = node('button','核对当前授权'), reapply = node('button','重新应用已保存授权');
   const connection = node('a','连接、凭据与 MCP 维护'); connection.href='/connections';
   controls.append(refresh,reapply,connection);
+  const configuration=node('section'),configurationHeader=node('header'),configurationTitle=node('h2','目录与授权'),configurationBody=node('div');
+  configuration.className='tools-configuration-panel sy-panel';configurationHeader.className='sy-panel-header';
+  configurationTitle.className='sy-panel-eyebrow';configurationBody.className='tools-configuration-body sy-panel-body';
+  readState.className='tools-metadata';state.classList.add('tools-metadata');
+  configurationHeader.append(configurationTitle,readState);
+  const guidance=node('p','从 MainBar 明确提出工具请求；本页查看来源、能力和授权。人格 read_persona / update_persona 保留完整版本、覆盖限制与冲突，修改从下一 Run 生效。');
+  guidance.className='sy-panel-description';
+  configurationBody.append(state,operation,mcpState,controls,guidance);configuration.append(configurationHeader,configurationBody);
   const list = node('div'), history = node('section');
+  list.className='tools-catalog';history.className='tools-history sy-panel';
   history.setAttribute('aria-label','历史不可调用目录');
-  const historyTitle=node('h2','历史不可调用目录'), historicalList=node('div');
-  history.append(historyTitle,node('p','保留原来源身份供查看调用记录；历史工具不可调用，旧草稿不转移。'),historicalList);
-  root.append(state,readState,operation,mcpState,controls,node('p','从 MainBar 明确提出工具请求；本页查看来源、能力和授权。人格 read_persona / update_persona 保留完整版本、覆盖限制与冲突，修改从下一 Run 生效。'),list,history);
+  const historyTitle=node('h2','历史不可调用目录'), historyHeader=node('header'), historyDescription=node('p','保留原来源身份供查看调用记录；历史工具不可调用，旧草稿不转移。'),historicalList=node('div');
+  historyTitle.className='sy-panel-eyebrow sy-tone-attention';historyHeader.className='sy-panel-header';historyDescription.className='sy-panel-description';historicalList.className='tools-history-body sy-panel-body';
+  const historyHeading=node('div');historyHeading.append(historyTitle,historyDescription);historyHeader.append(historyHeading);
+  history.append(historyHeader,historicalList);
+  root.append(configuration,list,history);
   let generation=0, alive=true, busy=false, online=true, verified=false, expectedInstance='', detailNumber=0;
   /** @type {Wire|null} */ let current=null;
   /** @type {Wire|null} */ let submission=null;
@@ -53,6 +64,7 @@ export function toolsPage(root, csrf) {
   /** @type {Map<string,Wire>} */ const retired=new Map();
   /** @type {Map<string,ReturnType<typeof createRow>>} */ const rows=new Map();
   /** @type {Map<string,{root:HTMLElement, body:HTMLElement, status:HTMLElement}>} */ const groups=new Map();
+  /** @type {Map<string,{root:HTMLElement, body:HTMLElement, status:HTMLElement}>} */ const historicalGroups=new Map();
   const controller=new AbortController();
   /** @param {Wire} tool */
   const saved = tool => current?.authorizations?.[tool.identity] || 'unset';
@@ -61,15 +73,17 @@ export function toolsPage(root, csrf) {
   const canWrite = () => online && verified && !busy && current?.configuration_state==='ok' && !current?.external_change;
   /** @param {Wire} tool @param {boolean} historical */
   function createRow(tool,historical) {
-    const card=node('article'); card.className='tool-row'; card.dataset.toolIdentity=tool.identity||'';
+    const card=node('article'); card.className='tool-row sy-row'; card.dataset.toolIdentity=tool.identity||'';
     const title=node('h3',tool.name), origin=node('p'), brief=node('p'), status=node('div'), feedback=node('p');
     origin.className='tool-identity'; brief.className='tool-brief'; feedback.className='tool-attention';
     status.className='tool-status'; status.setAttribute('aria-label','工具状态摘要');
     const availability=node('p'), connectionState=node('p'), authorization=node('p'), exposure=node('p'), reason=node('p'), draftState=node('p');
-    status.append(availability,connectionState,authorization,exposure,reason,draftState);
+    const summary=node('div');summary.className='tool-summary';summary.append(title,origin,brief);
+    exposure.className='tool-exposure';
+    status.append(summary,exposure,availability,connectionState,authorization,reason,draftState);
     const actions=node('div'); actions.className='tools-controls';
     const toggle=node('button','展开详情'), detail=node('section');
-    detail.id=`tool-detail-${++detailNumber}`; detail.hidden=true; detail.className='tool-detail';
+    detail.id=`tool-detail-${++detailNumber}`; detail.hidden=true; detail.className='tool-detail sy-panel';
     toggle.setAttribute('aria-controls',detail.id); toggle.setAttribute('aria-expanded','false');
     toggle.onclick=()=>{const open=detail.hidden;if(!open&&detail.contains(document.activeElement))toggle.focus({preventScroll:true});detail.hidden=!open;toggle.textContent=open?'收起详情':'展开详情';toggle.setAttribute('aria-expanded',String(open));};
     const calls=node('a','查看包含该工具的运行');
@@ -80,12 +94,15 @@ export function toolsPage(root, csrf) {
     if(tool.effect==='external'||tool.server_key)actions.append(maintenance);
     const identity=node('p'), description=node('p'), provenance=node('p'), observation=node('p'), stored=node('p'), disk=node('p'), baseline=node('p');
     identity.className='tool-identity'; description.className='tool-description';
-    detail.append(identity,description,provenance,observation,stored,disk,baseline);
+    const detailHeader=node('header'),detailBody=node('div');detailHeader.className='sy-panel-header';detailBody.className='tool-detail-body sy-panel-body';
+    detailHeader.append(identity);detailBody.append(description,provenance,observation,stored,disk,baseline);detail.append(detailHeader,detailBody);
     const select=node('select'), label=node('label','授权草稿'), save=node('button','保存授权'), accept=node('button','基于当前版本继续编辑');
     if(tool.effect==='external'&&!historical) {
       select.setAttribute('aria-label',`${tool.name} 授权草稿`);
       for(const [key,text] of [['unset','未决定'],['allowed','允许'],['denied','拒绝']]){const option=node('option',text);option.value=key;select.append(option);}
-      label.append(select);detail.append(label,save,accept);
+      const authorizationPanel=node('div'),authorizationHeader=node('div'),authorizationActions=node('div');
+      authorizationPanel.className='tool-authorization sy-panel';authorizationHeader.className='sy-panel-header';authorizationActions.className='tools-controls sy-panel-body';
+      label.append(select);authorizationHeader.append(label);authorizationActions.append(save,accept);authorizationPanel.append(authorizationHeader,authorizationActions);detailBody.append(authorizationPanel);
       select.onchange=()=>{
         if(!current)return;
         const old=drafts.get(tool.identity);
@@ -107,7 +124,7 @@ export function toolsPage(root, csrf) {
         drafts.set(tool.identity,{value:select.value,revision:current.revision,instance:current.process_instance_id});render();
       };
     }
-    card.append(title,origin,brief,status,feedback,actions,detail);
+    card.append(status,feedback,actions,detail);
     /** @param {Wire} item */
     function update(item) {
       const external=item.effect==='external', draft=drafts.get(item.identity);
@@ -140,6 +157,14 @@ export function toolsPage(root, csrf) {
     }
     return {root:card,update};
   }
+  /** @param {Wire} group @param {boolean} historical */
+  function createGroup(group,historical) {
+    const section=node(historical?'div':'section'),header=node('header'),heading=node(historical?'p':'h2',group.name),source=node('p',group.source),summary=node('p'),body=node('div');
+    section.className=`${historical?'tools-retired-source':'tools-source'} sy-panel`;header.className='sy-panel-header';heading.className='sy-panel-eyebrow';source.className='tool-identity';summary.className='tools-source-status tools-metadata';body.className='tools-grid sy-row-list';
+    if(!historical)section.setAttribute('aria-label',group.order===2?`${group.name} · ${group.source}`:group.name);
+    header.append(heading,source);section.append(header,summary,body);
+    return {root:section,body,status:summary};
+  }
   function render() {
     if(!current||!alive)return;
     const value=current;
@@ -160,21 +185,26 @@ export function toolsPage(root, csrf) {
     const activeKeys=new Set(), groupNodes=[];
     for(const group of [...catalog.values()].sort((a,b)=>a.order-b.order||compare(a.name,b.name)||compare(a.key,b.key))){
       let view=groups.get(group.key);
-      if(!view){const section=node('section'),heading=node('h2',group.name),source=node('p',group.source),summary=node('p'),body=node('div');section.className='tools-source';section.setAttribute('aria-label',group.order===2?`${group.name} · ${group.source}`:group.name);source.className='tool-identity';section.append(heading,source,summary,body);view={root:section,body,status:summary};groups.set(group.key,view);}
+      if(!view){view=createGroup(group,false);groups.set(group.key,view);}
       const server=group.server||(value.mcp?.servers||[]).find(/** @param {Wire} item */item=>item.server_key===group.tools[0]?.server_key);
       view.status.textContent=server?`连接：${verified&&online?server.state:'待核验'} · 启动许可：${server.enabled?'已允许':'未允许'} · 可用工具 ${server.available_tools??'未知'} / ${server.total_tools??'未知'}（不是已授权数） · ${server.reason||'无已报告原因'}${server.cleanup_incomplete?' · 清理未完成':''}${server.directory_changed?' · 目录可能变化':''} · 观测 ${server.observed_at||'未知'}`:'';
+      view.status.hidden=!view.status.textContent;
       const cards=[];
       for(const tool of group.tools.sort(/** @param {Wire} a @param {Wire} b */(a,b)=>compare(a.name,b.name)||compare(a.identity,b.identity))){const key='current:'+tool.identity;activeKeys.add(key);let row=rows.get(key);if(!row){row=createRow(tool,false);rows.set(key,row);}row.update(tool);cards.push(row.root);}
       arrange(view.body,cards);groupNodes.push(view.root);
     }
     arrange(list,groupNodes);
-    const historicalCards=[];
+    /** @type {Map<string,{group:Wire,cards:HTMLElement[]}>} */const historicalCatalog=new Map();
     for(const tool of [...retired.values()].sort((a,b)=>compare(a.server_key||a.source_id,b.server_key||b.source_id)||compare(a.name,b.name)||compare(a.identity||'',b.identity||''))){
-      const key='history:'+(tool.identity||JSON.stringify([tool.source_id,tool.server_key,tool.name]));activeKeys.add(key);let row=rows.get(key);if(!row){row=createRow(tool,true);rows.set(key,row);}row.update(tool);historicalCards.push(row.root);
+      const key='history:'+(tool.identity||JSON.stringify([tool.source_id,tool.server_key,tool.name]));activeKeys.add(key);let row=rows.get(key);if(!row){row=createRow(tool,true);rows.set(key,row);}row.update(tool);
+      const group=sourceGroup(tool);if(!historicalCatalog.has(group.key))historicalCatalog.set(group.key,{group,cards:[]});historicalCatalog.get(group.key)?.cards.push(row.root);
     }
-    arrange(historicalList,historicalCards);history.hidden=historicalCards.length===0;
+    const historicalPanels=[];
+    for(const [key,{group,cards}] of historicalCatalog){let view=historicalGroups.get(key);if(!view){view=createGroup(group,true);view.status.hidden=true;historicalGroups.set(key,view);}arrange(view.body,cards);historicalPanels.push(view.root);}
+    arrange(historicalList,historicalPanels);history.hidden=historicalPanels.length===0;
     for(const [key,row] of rows)if(!activeKeys.has(key)){row.root.remove();rows.delete(key);}
     for(const [key,group] of groups)if(!catalog.has(key)){group.root.remove();groups.delete(key);}
+    for(const [key,group] of historicalGroups)if(!historicalCatalog.has(key)){group.root.remove();historicalGroups.delete(key);}
   }
   /** @param {Wire} value */
   function acceptCatalog(value) {
@@ -249,6 +279,6 @@ export function toolsPage(root, csrf) {
     /** @param {string} [instance] */
     sync(instance){online=true;if(instance){expectedInstance=instance;if(current&&current.process_instance_id!==instance){verified=false;++generation;render();}}focus();},
     disconnect(){online=false;verified=false;++generation;readState.textContent='离线，当前生效状态待核验；草稿保留。';render();},
-    close(){alive=false;++generation;controller.abort();window.removeEventListener('focus',focus);drafts.clear();submittedDrafts.clear();rows.clear();groups.clear();retired.clear();}
+    close(){alive=false;++generation;controller.abort();window.removeEventListener('focus',focus);drafts.clear();submittedDrafts.clear();rows.clear();groups.clear();historicalGroups.clear();retired.clear();}
   };
 }

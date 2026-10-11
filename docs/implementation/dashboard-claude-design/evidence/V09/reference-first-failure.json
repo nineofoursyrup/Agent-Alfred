@@ -1,0 +1,15 @@
+{
+  "error": "Error: expect(locator).toBeVisible() failed\n\nLocator: getByRole('link', { name: 'Tools', exact: true })\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n  - Expect \"toBeVisible\" getByRole('link', { name: 'Tools', exact: true }) with timeout 5000ms\n  - waiting for getByRole('link', { name: 'Tools', exact: true })\n",
+  "network": [
+    {
+      "url": "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+      "status": 200
+    },
+    {
+      "url": "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
+      "status": 200
+    }
+  ],
+  "errors": [],
+  "body": "Syrup\nv0.9 · 本地\nclaude-sonnet-4-5\n127.0.0.1:9049\nSYSTEM\nOverview\nLoop\n48\nMemory\n126\nGraph\non\nOps\npass\nDATA\nTools\n14\nDatabase\nstate.db\n中文\nEN\n~/.syrup/state.db · 1.4 MB\ntraces/2026-08-17.jsonl\n看着它思考\nOverview\n一条消息在四根支柱之间流动的全过程，逐段点亮。\nlive · turn #48\n48\n今日轮次\n$0.87\n累计花费\n2.6s\n平均耗时 · p95 6.1s\n61%\n闸门跳过检索的比例\n126\n已存事实\nARCHITECTURE\n图里每个方框都是仓库里真实存在的一个目录。\n当前\nloop · think\niter 3\nHARNESS — 跑在你自己的机器上 · 这一轮本身是短暂的\nHARNESS — runs on your laptop · the turn inside is ephemeral\nGateway\ncli · voice · web\nWorking memory\n每一轮重新组装\nassembled per turn\nLOOP\nLLM agent\nreason\nTools\ncreate_event…\nact\nreply\nReply\n→ 回到你手里\n→ back to you\n回复从进来的那扇 gateway 出去\nreply, out the same gateway\n存下对话\nsave chats\nRetrieval gate\n29 skip · 19 retrieve\n只在需要时\nonly if needed\nMEMORY — 三根支柱\nMEMORY — three pillars\n闸门读这三种\nthe gate reads all three\nProcedural\n怎么做 · SKILL.md · 3 skills\nSKILL.md · 3 skills\nSemantic · FTS5\n持久事实 · 126 facts\ndurable facts · 126 facts\nEpisodic\n34 episodes\n34 episodes\nConsolidation · 每 6 轮一次\nConsolidation · every 6 exchanges\n0/12 排队中 → 沉淀成事实\n0/12 queued → distilled into facts\n沉淀\ndistill\nLLM OPS\n观察每一次运行 · 改进这个 agent\nobserves each run · improves the agent\n每一轮\neach turn\nTrace\n5 个文件 · 一直开着\n5 file(s) · always on\nEval\ndeterministic + judge\nRelease gate\ndet pass · judge pass\nRelease\nnew prompt · model · config\n更好的提示词 + 配置\nimproved prompt + config\nRETRIEVAL GATE · 48 turns\n61% 的轮次跳过了检索 —— 省下的是延迟，避开的是被无关记忆带偏。\nskip 29\nretrieve 19\nyou › 12 乘 8 等于几？\ngate · skip — 纯数学，不需要记忆\nyou › 我什么时候见 Alex？\ngate · retrieve — 提到了用户自己的安排\nRECENT TURNS\n搜一下世界杯还没打的比赛，都加进日历\nretrieve\n8 iter\n11.4s\n周六安排个游泳\nretrieve\n3 iter\n4.1s\n记住 Alex 更喜欢上午开会\nskip\n2 iter\n1.9s\n谢谢！\nquick\n0 iter\n0.4s\n我今天日历上有什么？\nretrieve\n2 iter\n2.2s\nCHAT\nloop · think\n记住 Alex 更喜欢上午开会\n好，记下了。以后给你和 Alex 排会我会默认放在上午。\nskip\n2 iter\n1.9s\n+1 fact\n周五和 Alex 约个碰头\n已排在周五 09:00 —— 用的是你之前告诉我的偏好。\nretrieve\n3 iter\n3.4s\ncreate_event\n正在流式输出… 事件同时写进 trace\n发送"
+}

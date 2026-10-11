@@ -1,18 +1,29 @@
-.tools-page {min-width:0;overflow-wrap:anywhere}
-.tools-page .tools-controls {display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
-.tools-page .tools-source {margin:24px 0}
-.tools-page .tools-source>h2 {margin-bottom:4px}
-.tools-page .tools-source>p {margin:4px 0;color:var(--muted);font-size:var(--font-size-meta);font-family:var(--font-mono)}
-.tools-page .tool-row {padding:16px 0;border-top:1px solid var(--row-divider);min-width:0}
-.tools-page .tool-row h3 {margin:0;font-size:var(--font-size-row);font-family:var(--font-mono)}
-.tools-page .tool-row p {margin:6px 0}
-.tools-page .tool-identity {font-family:var(--font-mono);font-size:var(--font-size-meta);color:var(--metadata);overflow-wrap:anywhere}
-.tools-page .tool-brief {display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;color:var(--muted);font-size:var(--font-size-meta-large);line-height:1.45}
-.tools-page .tool-status {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 16px;font-size:var(--font-size-body)}
-.tools-page .tool-status p {min-width:0}
+.tools-page {
+ --tools-item-min:calc(var(--font-size-body) * 20);
+ display:grid;gap:var(--gap-medium);min-width:0;overflow-wrap:anywhere;
+}
+.tools-page .tools-catalog,.tools-page .tools-history-body {display:grid;gap:var(--gap-medium);min-width:0}
+.tools-page>.tools-configuration-panel,.tools-page>.tools-history {margin:0}
+.tools-page .tools-controls {display:flex;flex-wrap:wrap;gap:var(--gap-small);align-items:center;margin-block:var(--gap-small);min-width:0}
+.tools-page .tools-metadata {font:400 var(--font-size-meta)/1.5 var(--font-mono);color:var(--metadata);margin:0}
+.tools-page .tools-configuration-body {display:grid;gap:var(--gap-small)}
+.tools-page .tools-configuration-body>p {margin:0}
+.tools-page .tools-configuration-panel .tools-controls {margin:0}
+.tools-page .tools-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--tools-item-min)),1fr));min-width:0}
+.tools-page .tools-source-status {padding:var(--font-size-body) var(--font-size-brand)}
+.tools-page .tool-row {display:flex;flex-direction:column;flex-wrap:nowrap;align-items:stretch;padding:var(--font-size-body) var(--font-size-brand);gap:var(--gap-small);min-width:0}
+.tools-page .tool-row h3 {margin:0;color:var(--text);font:500 var(--font-size-row)/1.45 var(--font-mono)}
+.tools-page .tool-row p {margin:0}
+.tools-page .tool-identity {font-family:var(--font-mono);font-size:var(--font-size-meta);color:var(--metadata);overflow-wrap:anywhere;margin:0}
+.tools-page .tool-summary {display:grid;align-content:start;gap:calc(var(--gap-small) / 2);min-width:0}
+.tools-page .tool-brief {display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;color:var(--muted);font:400 var(--font-size-meta-large)/1.45 var(--font-sans)}
+.tools-page .tool-status {display:grid;grid-template-columns:minmax(0,1fr) fit-content(calc(100% / 3));align-items:start;gap:calc(var(--gap-small) / 2) var(--gap-small);font:400 var(--font-size-meta-small)/1.45 var(--font-mono);color:var(--metadata);min-width:0}
+.tools-page .tool-status>p {grid-column:1/-1;min-width:0}
+.tools-page .tool-status>.tool-exposure {grid-column:2;grid-row:1;text-align:end;color:var(--tertiary)}
 .tools-page .tool-attention {color:var(--attention)}
-.tools-page .tool-detail {background:var(--surface);padding:16px;border:1px solid var(--border);border-radius:var(--radius-panel)}
-.tools-page .tool-description {white-space:pre-wrap}
-.tools-page .tool-detail label {display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.tools-page .tool-detail button {margin:8px 8px 0 0}
-@container(max-width:679px){.tools-page .tool-status {grid-template-columns:minmax(0,1fr)}}
+.tools-page .tool-attention:empty {display:none}
+.tools-page .tool-row .tools-controls {margin:0;font:400 var(--font-size-meta-large)/1.45 var(--font-mono)}
+.tools-page .tool-detail-body {display:grid;gap:var(--gap-small)}
+.tools-page .tool-description {white-space:pre-wrap;font:400 var(--font-size-body)/1.6 var(--font-sans)}
+.tools-page .tool-detail label {display:flex;gap:var(--gap-small);align-items:center;flex-wrap:wrap;margin:0;min-width:0}
+.tools-page .tool-detail .tools-controls {display:flex}
