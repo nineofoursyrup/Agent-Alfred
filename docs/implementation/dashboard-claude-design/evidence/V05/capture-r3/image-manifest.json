@@ -1,0 +1,218 @@
+{
+  "inbox-baseline-1440x900.png": {
+    "sha256": "5c571450a1dc7a92c4da6efcd0273eadb417b3b4e911c359c0a1e5a7023b4baa",
+    "bytes": 70231,
+    "width": 1440,
+    "height": 900
+  },
+  "initial-read-failure-1440x900.png": {
+    "sha256": "5e3c0f78ec78c10cc62d4a7ff37c3e9fd4bc75fd20930b8e3c196b7a1d7ce84e",
+    "bytes": 30294,
+    "width": 320,
+    "height": 800
+  },
+  "boundary-states-320x800.png": {
+    "sha256": "a84f41ae99eb77ab6be256b2771d35659ae752bd5d7db372a7e068a43745dabb",
+    "bytes": 57852,
+    "width": 320,
+    "height": 800
+  },
+  "inbox-current-1440x900.png": {
+    "sha256": "5c571450a1dc7a92c4da6efcd0273eadb417b3b4e911c359c0a1e5a7023b4baa",
+    "bytes": 70231,
+    "width": 1440,
+    "height": 900
+  },
+  "inbox-1440x900.png": {
+    "sha256": "4d3386ebbc765301b7dae30ded7dea7120caf4e21666ec6b9967883e5914e627",
+    "bytes": 70425,
+    "width": 1440,
+    "height": 900
+  },
+  "reference-loop-390x844.png": {
+    "sha256": "c976b4e8035423c0c3a65945f4bb6de956de8924353682f0ebec7c3ceca16698",
+    "bytes": 51564,
+    "width": 390,
+    "height": 844
+  },
+  "runs-390x844.png": {
+    "sha256": "7bd3e78329b81bee7b619e683b646a22783c20618ddb0e006d0708d2b934aeb1",
+    "bytes": 73354,
+    "width": 390,
+    "height": 844
+  },
+  "comparison-detail-320x800.png": {
+    "sha256": "8469eda1e96fb2561a75fef1669609053b272431d4b6a72362a61f42c79aaa8e",
+    "bytes": 96443,
+    "width": 640,
+    "height": 800
+  },
+  "runs-1440x900.png": {
+    "sha256": "db2ea10464108defcdebb659fbfad9b1bb35ca017bb9863756e3ca1c975c620c",
+    "bytes": 118299,
+    "width": 1440,
+    "height": 900
+  },
+  "runs-1280x800.png": {
+    "sha256": "fd9b05d819d3a84e1cee7e744b645cd03911407115f0aec89ff8380d0bff4272",
+    "bytes": 114901,
+    "width": 1280,
+    "height": 800
+  },
+  "comparison-runs-320x800.png": {
+    "sha256": "07520cada509fedd47a0784dcc8099e72d921ac38b2eb0f8468866acf8d940db",
+    "bytes": 103423,
+    "width": 640,
+    "height": 800
+  },
+  "detail-320x800.png": {
+    "sha256": "e1566f0aa1cd434b38a07b27cb31dd9c93d986064fba7b997830468cc96b91d7",
+    "bytes": 49195,
+    "width": 320,
+    "height": 800
+  },
+  "boundary-states-1440x900.png": {
+    "sha256": "4c192f4c31f6fa98458c7bb63b5b191546d0133b9dc40ae7c97cbf0588238e02",
+    "bytes": 122159,
+    "width": 1440,
+    "height": 900
+  },
+  "comparison-detail-1280x800.png": {
+    "sha256": "e0e3e60612e8d7d5efde1fc6fd89f453404f044d729ea4d34733621068cff65e",
+    "bytes": 255113,
+    "width": 2560,
+    "height": 800
+  },
+  "detail-1440x900.png": {
+    "sha256": "f51c542bfcaf9966fd1fd25f6e0f5f4342405bef42d46829de6343dbafee239a",
+    "bytes": 123747,
+    "width": 1440,
+    "height": 900
+  },
+  "detail-1280x800.png": {
+    "sha256": "58dcdaa0e02ace75ed9da72551fb0240253f9b87f382a94cfb1e3a0571508cdd",
+    "bytes": 106156,
+    "width": 1280,
+    "height": 800
+  },
+  "comparison-detail-1440x900.png": {
+    "sha256": "7d12cf509d840bbb1ef61579eaca9041e47275cfd1881261ec46a9abc9098755",
+    "bytes": 302890,
+    "width": 2880,
+    "height": 900
+  },
+  "comparison-runs-1280x800.png": {
+    "sha256": "9362b09e95893ed3d687cdf9434650f71ba847e9e6c5087d1142f30a6e4a2710",
+    "bytes": 264913,
+    "width": 2560,
+    "height": 800
+  },
+  "comparison-runs-1440x900.png": {
+    "sha256": "d226ec4ec0e737149c3fd85a89d11ecbb7a0cf0ed51fcf1cc7c4c60708facfe6",
+    "bytes": 297763,
+    "width": 2880,
+    "height": 900
+  },
+  "detail-390x844.png": {
+    "sha256": "259a64c0227a01bab204032e09a232e84cf7ac52cff5f80d801b9bf1a0dbe374",
+    "bytes": 53268,
+    "width": 390,
+    "height": 844
+  },
+  "comparison-runs-390x844.png": {
+    "sha256": "49a8ab8f4e37e989dfe29c2bd959a9fa6a2d990a608683b95ed1504427bfddd3",
+    "bytes": 127472,
+    "width": 780,
+    "height": 844
+  },
+  "runs-320x800.png": {
+    "sha256": "62e93dfac49719d82f41e5a7b57d0cfa1bc7be81e09eb4f60568a6be1765f06a",
+    "bytes": 61875,
+    "width": 320,
+    "height": 800
+  },
+  "reference-loop-1280x800.png": {
+    "sha256": "fb1b4b9c1d663a202fa15329ffb61e46896491664df20b23e33c0a52631ab51c",
+    "bytes": 144550,
+    "width": 1280,
+    "height": 800
+  },
+  "comparison-detail-390x844.png": {
+    "sha256": "aede68e3059625b6f1418d075acce022ff357a3f4a91bbc821358f9d641351dc",
+    "bytes": 113204,
+    "width": 780,
+    "height": 844
+  },
+  "reference-loop-1440x900.png": {
+    "sha256": "51c4efd7defd5b003e12abaa01fd587988cba674d90b0f1612c701175fc98440",
+    "bytes": 172199,
+    "width": 1440,
+    "height": 900
+  },
+  "reference-loop-320x800.png": {
+    "sha256": "fe19127fde7ce7c32c197bc3c30990dc7a379b328aef6377c749ca95e3168b89",
+    "bytes": 39453,
+    "width": 320,
+    "height": 800
+  },
+  "capture-r1/inbox-1440x900.png": {
+    "sha256": "f6f13b69e51073aaa02b9e27724748fd0d26e72ba619a2380363e40a224d17dd",
+    "bytes": 177552,
+    "width": 1440,
+    "height": 900
+  },
+  "capture-r1/runs-390x844.png": {
+    "sha256": "64317ecb5ebf484d3b121f1dd042ddbde0d50cf7af637e09187d7d331bbd439e",
+    "bytes": 69003,
+    "width": 390,
+    "height": 844
+  },
+  "capture-r1/runs-1440x900.png": {
+    "sha256": "bd1486f167521a57c970de193f0a96d77313ae144206404735ae68362e3a66b8",
+    "bytes": 236109,
+    "width": 1440,
+    "height": 900
+  },
+  "capture-r1/runs-1280x800.png": {
+    "sha256": "4f58d6ff012f2204bb80915667268250b8a09e2a64b89691ec09ba709870b17c",
+    "bytes": 216378,
+    "width": 1280,
+    "height": 800
+  },
+  "capture-r1/detail-320x800.png": {
+    "sha256": "88faf2cc0c7b2b19a18d228e34beb1f15bf746fd92433f451b0aaa3eb9e020ab",
+    "bytes": 58652,
+    "width": 320,
+    "height": 800
+  },
+  "capture-r1/detail-1440x900.png": {
+    "sha256": "4cd774ab2d88034b289239c954ca23b2a6df9e8931b2f43ba79148b824150505",
+    "bytes": 215375,
+    "width": 1440,
+    "height": 900
+  },
+  "capture-r1/detail-1280x800.png": {
+    "sha256": "06551d5fa1d75d9e27e0e156995ef8ee095563e8864afd01e6bb6df0b57b3a88",
+    "bytes": 170804,
+    "width": 1280,
+    "height": 800
+  },
+  "capture-r1/detail-390x844.png": {
+    "sha256": "788e16cbcb2f57c237837893449856c5ab9bdde2cededcb7327877fdeb804e22",
+    "bytes": 66182,
+    "width": 390,
+    "height": 844
+  },
+  "capture-r1/runs-320x800.png": {
+    "sha256": "6f09134a862fa4d861912da366575883a0533ff6bd35635797b8e70996987c11",
+    "bytes": 63184,
+    "width": 320,
+    "height": 800
+  },
+  "failures/01-related/inbox-run-sources-real-det-4b9f5-close-a-disconnected-source/test-failed-1.png": {
+    "sha256": "52c81e02205fd0269b86f5bdb9d778e06de7be8d75ce3309a61b3c99ae9485dd",
+    "bytes": 86771,
+    "width": 1280,
+    "height": 720
+  }
+}

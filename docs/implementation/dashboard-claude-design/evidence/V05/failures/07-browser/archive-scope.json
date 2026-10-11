@@ -1,0 +1,43 @@
+{
+  "failed_case_directories": [
+    "read-retirement-active-Run-618f9-aring-stale-after-reconnect",
+    "read-retirement-active-Run-afc31-ale-after-broker-replay-gap",
+    "read-retirement-active-Run-a59eb-ale-after-broker-replay-gap",
+    "read-retirement-active-Run-ef461-aring-stale-after-reconnect"
+  ],
+  "successful_case_artifact_directories_moved_to_ignored_output": [
+    "accounting-migration-S09-f-c7b10-al-page-and-refresh-retries",
+    "behaviour-S06-CE-28-Behavi-00164-remain-readable-at-1440x900",
+    "aggregation-S06-CE-18-19-a-c7f2c-egation-terminal-projection",
+    "database_status-S10-lost-i-d9d65-xplicit-capability-recovery",
+    "session-create-race-a-dela-9c126-trols-reachable-at-1440x360",
+    "session-create-race-a-dela-7742b-ntrols-reachable-at-320x800",
+    "mcp-S08-lost-MCP-receipt-r-20f19-reserves-connection-details",
+    "database_lifecycle-AC-25-r-13294-ker-and-releases-all-owners",
+    "database_migration-1280x80-e6312-emain-reachable-at-1280x800",
+    "overview-Overview-keeps-op-31537--reference-layouts-readable",
+    "session-create-race-a-dela-fef7f-ntrols-reachable-at-320x360",
+    "models-migration-S08-catal-2e630-in-usable-in-four-viewports",
+    "behaviour-S06-CE-28-Behavi-2199b--remain-readable-at-390x844",
+    "database_migration-Databas-3dd46-ow-actual-worker-boundaries",
+    "accounting-migration-S09-m-7adb7-0px-and-honors-newer-intent",
+    "database_migration-Databas-00669-00-without-clipping-actions",
+    "behaviour-S06-CE-28-Behavi-08557-remain-readable-at-1280x800",
+    "behaviour-S06-CE-27-28-Chr-51e67-s-Behaviour-beneath-MainBar",
+    "routing-statistics-S06-CE--20ba5-main-visible-when-collapsed",
+    "behaviour-S06-CE-28-Behavi-adffe--remain-readable-at-320x800",
+    "topology-S06-CE-15-26-sele-9b709-ailure-retains-its-identity",
+    "shell-startup-a-first-nati-33fd7-ction-across-the-breakpoint",
+    "accounting-migration-S09-r-9f2c7-easing-a-newer-page-request",
+    "accounting-migration-S09-m-3f254-0px-and-honors-newer-intent",
+    "database_status-S10-lost-e-d2eaf-xplicit-capability-recovery",
+    "behaviour-S06-CE-27-28-act-cf710-1100-retain-draft-ownership",
+    "database_migration-390x844-08fca-remain-reachable-at-390x844",
+    "tools-visual-S07-four-view-cd961--text-and-keyboard-controls",
+    "database_lifecycle-AC-25-r-e96fe-ker-and-releases-all-owners",
+    "database_migration-1440x90-b7c6f-emain-reachable-at-1440x900",
+    "accounting-layout-S09-real-a8e7b-ference-and-boundary-widths",
+    "database_migration-320x800-4257f-remain-reachable-at-320x800"
+  ],
+  "whole_artifact_archive_committed": false
+}

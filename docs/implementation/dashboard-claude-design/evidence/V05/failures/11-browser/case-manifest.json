@@ -1,0 +1,222 @@
+[
+  {
+    "case_directory": "models-migration-S08-STD01-93d72-after-real-Stream-reconnect",
+    "error_context": true,
+    "failure_screenshot": false,
+    "trace": true,
+    "files": [
+      "error-context-archive.json",
+      "error-context.md.gz",
+      "trace.zip"
+    ]
+  },
+  {
+    "case_directory": "models-migration-S08-STD02-f6b8e-thout-stealing-a-new-intent",
+    "error_context": true,
+    "failure_screenshot": false,
+    "trace": true,
+    "files": [
+      "error-context-archive.json",
+      "error-context.md.gz",
+      "trace.zip"
+    ]
+  },
+  {
+    "case_directory": "models-migration-S08-a-los-8d39e-replays-on-focus-or-reentry",
+    "error_context": true,
+    "failure_screenshot": false,
+    "trace": true,
+    "files": [
+      "error-context-archive.json",
+      "error-context.md.gz",
+      "trace.zip"
+    ]
+  },
+  {
+    "case_directory": "models-migration-S08-catal-2e630-in-usable-in-four-viewports",
+    "error_context": true,
+    "failure_screenshot": false,
+    "trace": true,
+    "files": [
+      "error-context-archive.json",
+      "error-context.md.gz",
+      "trace.zip"
+    ]
+  },
+  {
+    "case_directory": "models-migration-S08-each--42b18--uses-the-public-HTTP-value",
+    "error_context": true,
+    "failure_screenshot": false,
+    "trace": true,
+    "files": [
+      "error-context-archive.json",
+      "error-context.md.gz",
+      "trace.zip"
+    ]
+  },
+  {
+    "case_directory": "models-migration-S08-rejec-2207f-ps-the-original-dirty-draft",
+    "error_context": true,
+    "failure_screenshot": false,
+    "trace": true,
+    "files": [
+      "error-context-archive.json",
+      "error-context.md.gz",
+      "trace.zip"
+    ]
+  },
+  {
+    "case_directory": "models-migration-S08-saved-04299-s-its-real-Attempt-and-cost",
+    "error_context": true,
+    "failure_screenshot": true,
+    "trace": true,
+    "files": [
+      "error-context-archive.json",
+      "error-context.md.gz",
+      "test-failed-1.png",
+      "trace.zip"
+    ]
+  },
+  {
+    "case_directory": "models-migration-S08-unkno-79bb0--read-and-keeps-its-receipt",
+    "error_context": true,
+    "failure_screenshot": false,
+    "trace": true,
+    "files": [
+      "error-context-archive.json",
+      "error-context.md.gz",
+      "trace.zip"
+    ]
+  },
+  {
+    "case_directory": "models-migration-S11-clear-459a3-he-old-snapshot-stays-fixed",
+    "error_context": true,
+    "failure_screenshot": false,
+    "trace": true,
+    "files": [
+      "error-context-archive.json",
+      "error-context.md.gz",
+      "trace.zip"
+    ]
+  },
+  {
+    "case_directory": "overview-Disconnect-same-i-9408c-w-or-resurrect-observations",
+    "error_context": true,
+    "failure_screenshot": true,
+    "trace": true,
+    "files": [
+      "error-context-archive.json",
+      "error-context.md.gz",
+      "test-failed-1.png",
+      "trace.zip"
+    ]
+  },
+  {
+    "case_directory": "overview-Gap-and-disconnec-f3ed7-r-a-same-instance-reconnect",
+    "error_context": true,
+    "failure_screenshot": true,
+    "trace": true,
+    "files": [
+      "error-context-archive.json",
+      "error-context.md.gz",
+      "test-failed-1.png",
+      "trace.zip"
+    ]
+  },
+  {
+    "case_directory": "read-retirement-active-Run-618f9-aring-stale-after-reconnect",
+    "error_context": true,
+    "failure_screenshot": true,
+    "trace": true,
+    "files": [
+      "error-context-archive.json",
+      "error-context.md.gz",
+      "test-failed-1.png",
+      "trace.zip"
+    ]
+  },
+  {
+    "case_directory": "read-retirement-active-Run-a59eb-ale-after-broker-replay-gap",
+    "error_context": true,
+    "failure_screenshot": true,
+    "trace": true,
+    "files": [
+      "error-context-archive.json",
+      "error-context.md.gz",
+      "test-failed-1.png",
+      "trace.zip"
+    ]
+  },
+  {
+    "case_directory": "read-retirement-active-Run-afc31-ale-after-broker-replay-gap",
+    "error_context": true,
+    "failure_screenshot": true,
+    "trace": true,
+    "files": [
+      "error-context-archive.json",
+      "error-context.md.gz",
+      "test-failed-1.png",
+      "trace.zip"
+    ]
+  },
+  {
+    "case_directory": "read-retirement-active-Run-ef461-aring-stale-after-reconnect",
+    "error_context": true,
+    "failure_screenshot": true,
+    "trace": true,
+    "files": [
+      "error-context-archive.json",
+      "error-context.md.gz",
+      "test-failed-1.png",
+      "trace.zip"
+    ]
+  },
+  {
+    "case_directory": "read-retirement-real-Sessi-3c2b3-and-same-instance-reconnect",
+    "error_context": true,
+    "failure_screenshot": true,
+    "trace": true,
+    "files": [
+      "error-context-archive.json",
+      "error-context.md.gz",
+      "test-failed-1.png",
+      "trace.zip"
+    ]
+  },
+  {
+    "case_directory": "read-retirement-real-Sessi-c940f-and-same-instance-reconnect",
+    "error_context": true,
+    "failure_screenshot": true,
+    "trace": true,
+    "files": [
+      "error-context-archive.json",
+      "error-context.md.gz",
+      "test-failed-1.png",
+      "trace.zip"
+    ]
+  },
+  {
+    "case_directory": "tools-migration-S07-real-M-31086-s-not-revive-an-old-success",
+    "error_context": true,
+    "failure_screenshot": true,
+    "trace": true,
+    "files": [
+      "error-context-archive.json",
+      "error-context.md.gz",
+      "test-failed-1.png",
+      "trace.zip"
+    ]
+  },
+  {
+    "case_directory": "tools-migration-S07-unread-c1fbf-hout-inventing-a-connection",
+    "error_context": true,
+    "failure_screenshot": true,
+    "trace": true,
+    "files": [
+      "error-context-archive.json",
+      "error-context.md.gz",
+      "test-failed-1.png",
+      "trace.zip"
+    ]
+  }
+]

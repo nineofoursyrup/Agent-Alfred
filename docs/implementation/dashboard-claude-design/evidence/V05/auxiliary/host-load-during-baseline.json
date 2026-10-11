@@ -1,0 +1,11 @@
+{
+  "checked_at": "2026-10-11T03:48:24.031184+00:00",
+  "during": "17-baseline-browser",
+  "cpu_count": 10,
+  "load_average_1_5_15": [
+    16.99560546875,
+    17.28564453125,
+    19.05908203125
+  ],
+  "scope_limit": "An instantaneous host load observation, not attribution of any failure."
+}

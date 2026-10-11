@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-11T03:03:08.242162+00:00",
+  "candidate_checks": [
+    {
+      "gate": "09-typecheck",
+      "seven_file_candidate_unchanged": true,
+      "exit_code": 0
+    },
+    {
+      "gate": "10-python-static",
+      "seven_file_candidate_unchanged": true,
+      "exit_code": 0
+    },
+    {
+      "gate": "11-browser",
+      "seven_file_candidate_unchanged": true,
+      "exit_code": 1
+    },
+    {
+      "gate": "12-environment-browser",
+      "seven_file_candidate_unchanged": true,
+      "exit_code": 0
+    }
+  ],
+  "focused_followup": "12-environment-browser: all 51 existing tests in the four affected files pass (65.8s), without source, test, timeout, retry, port or dependency changes.",
+  "cause_limit": "The initial model-page click timeout, Chromium CVDisplayLink errors, subsequent port conflicts, and offline-retirement failures were observed. Exact triggering cause is not proven; transient browser/fixture contamination is the current hypothesis.",
+  "next_gate": "13-browser: full suite, same candidate and reserved ports, no screenshot CLI activity during the run"
+}

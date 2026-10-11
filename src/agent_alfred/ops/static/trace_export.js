@@ -3,6 +3,7 @@ import {node} from './dom.js';
 /** @param {HTMLElement} root @param {string} runId @param {()=>string} csrf @param {import('./memory.js').MemorySync} memory */
 export function traceExport(root, runId, csrf, memory) {
   const section = node('section');
+  section.className = 'sy-panel run-export';
   section.setAttribute('aria-label', '追踪导出');
   const mode = node('select');
   mode.setAttribute('aria-label','导出模式');
@@ -18,7 +19,9 @@ export function traceExport(root, runId, csrf, memory) {
   const actionsTitle=node('summary','追踪导出操作');
   actions.append(actionsTitle,mode,warning,start,cancel,download);
   // Folding is presentation only: the resource owner and task status remain.
-  section.append(node('h2','追踪导出'),status,actions);
+  const header=node('header'),title=node('h2','追踪导出'),body=node('div');
+  header.className='sy-panel-header';title.className='sy-panel-eyebrow';body.className='sy-panel-body';
+  header.append(title);body.append(status,actions);section.append(header,body);
   root.append(section);
   /** @type {Wire|null} */ let task=null;
   let generation=0, disposed=false, downloading=false;

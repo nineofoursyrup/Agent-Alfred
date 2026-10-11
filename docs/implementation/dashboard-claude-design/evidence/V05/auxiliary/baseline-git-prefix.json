@@ -1,0 +1,26 @@
+{
+  "checked_at": "2026-10-11T03:50:46.689945+00:00",
+  "control": "17-baseline-browser",
+  "result": "542 passed / 1 failed",
+  "failure_case": "routing.spec.js:185",
+  "failure_before_browser_assertion": true,
+  "probes": [
+    {
+      "cwd": "/Users/nineofour/Agent-Alfred-v05",
+      "git_prefix": "",
+      "exit_code": 0,
+      "archive_bytes": 7168000,
+      "sha256": "0cce40a6c8047590bc5184e075251b5072544dcc4110f3d2b508efd088c1219d",
+      "stderr": ""
+    },
+    {
+      "cwd": "/Users/nineofour/Agent-Alfred-v05/output/playwright/baseline-645c454",
+      "git_prefix": "output/playwright/baseline-645c454/",
+      "exit_code": 0,
+      "archive_bytes": 10240,
+      "sha256": "55edee2ae6a408326c0261073a6bacf8a63d2f1f90536afe1ab2a83d3a6fa12b",
+      "stderr": ""
+    }
+  ],
+  "scope_limit": "The plain nested control directory inherits the parent checkout Git prefix; the CE-01 historical archive is empty. This is an auxiliary control setup failure, not a candidate gate."
+}

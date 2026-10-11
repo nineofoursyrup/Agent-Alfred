@@ -1,0 +1,72 @@
+[
+  {
+    "file": "comparison-runs-1440x900.png",
+    "width": 2880,
+    "height": 900,
+    "mismatching_rows": 0,
+    "sha256": "260b7f916aaf25431e90ccdced11391e633444e04614b112daa582ccea3db250"
+  },
+  {
+    "file": "comparison-detail-1440x900.png",
+    "width": 2880,
+    "height": 900,
+    "mismatching_rows": 0,
+    "sha256": "464529d5c98df21babec3e8864ea67b46668ad3a87192f24ab3e17633a0b4d7a"
+  },
+  {
+    "file": "comparison-runs-1280x800.png",
+    "width": 2560,
+    "height": 800,
+    "mismatching_rows": 0,
+    "sha256": "771e908ae9e4fad5974fd01d47a54559db430c1a4df89943006d77f32f2d27e1"
+  },
+  {
+    "file": "comparison-detail-1280x800.png",
+    "width": 2560,
+    "height": 800,
+    "mismatching_rows": 0,
+    "sha256": "18b6458314d3eedfdb606cdaa96db70b1063d75cae1c25a63152538fcf87d907"
+  },
+  {
+    "file": "comparison-runs-390x844.png",
+    "width": 780,
+    "height": 844,
+    "mismatching_rows": 0,
+    "sha256": "c81b1773df558bf0fa60840173c817505154f7a1f137898529924981b307974f"
+  },
+  {
+    "file": "comparison-detail-390x844.png",
+    "width": 780,
+    "height": 844,
+    "mismatching_rows": 0,
+    "sha256": "e030d6dcd0887ccb8819a34516fcdcdcd1d754d56f04094e543b4ee5dd536ccc"
+  },
+  {
+    "file": "comparison-runs-320x800.png",
+    "width": 640,
+    "height": 800,
+    "mismatching_rows": 0,
+    "sha256": "71824845612981626b0234b33c359d498dd302338605354f5428b71b3adb7b0b"
+  },
+  {
+    "file": "comparison-detail-320x800.png",
+    "width": 640,
+    "height": 800,
+    "mismatching_rows": 0,
+    "sha256": "c5e671bb9f5c27b3ce11ec1df2bebbaa3ff96b42b56d3491a450c71a9173193a"
+  },
+  {
+    "file": "comparison-process-390x844.png",
+    "width": 780,
+    "height": 844,
+    "mismatching_rows": 0,
+    "sha256": "21f430bcbd6b96dca9498f0278cb4043f615f37cb5a9a28158ac6bf40e2bc764"
+  },
+  {
+    "file": "comparison-process-320x800.png",
+    "width": 640,
+    "height": 800,
+    "mismatching_rows": 0,
+    "sha256": "abd8c1603bcd6fb7f081d3f1a64b582b866a92da3c1216450de9ab2cdab82f34"
+  }
+]

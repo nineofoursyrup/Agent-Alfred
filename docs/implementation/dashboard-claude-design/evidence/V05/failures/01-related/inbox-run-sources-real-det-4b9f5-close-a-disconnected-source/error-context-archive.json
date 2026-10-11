@@ -1,0 +1,8 @@
+{
+  "original_name": "error-context.md",
+  "original_sha256": "1a39bd5bdcc237d146d9eb800b52a613e258408fc9be0a5b7a123ddd2c697c71",
+  "original_bytes": 13265,
+  "archived_as": "error-context.md.gz",
+  "gzip_sha256": "9220e7f0cede435b56f5b71d1eb0bb08248d7a4e44995043d51f1f53380bf52c",
+  "why": "Original Playwright source excerpts have trailing whitespace. Per-file gzip keeps exact bytes while adding no .gitattributes entries. This is only this failing case context, not the whole artifact."
+}

@@ -1,0 +1,7 @@
+{
+  "checked_at": "2026-10-11T03:53:51.173227+00:00",
+  "original_context_files_verified": 32,
+  "individual_trace_zips_verified": 32,
+  "full_artifact_bundle_committed": false,
+  "whole_archive_scope": "Candidate failures: 01-related:1; 07-browser:4; 11-browser:19; 13-browser:2; 15-browser:4. Auxiliary controls: invalid 16 first case only; corrected 17 single Git-prefix failure. Other invalid-control artifacts preserved in ignored output; full raw output and exclusion manifest committed."
+}

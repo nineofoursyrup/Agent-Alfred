@@ -1,0 +1,16 @@
+[
+  {
+    "width": 390,
+    "height": 844,
+    "pageScroll": 738,
+    "overflow": false,
+    "process": "- heading \"过程证据\" [level=2]\n- paragraph: 事件发布顺序\n- button \"刷新过程证据\"\n- paragraph: 过程记录可用 · available\n- heading \"Step 0\" [level=3]\n- paragraph: 主结果 · committed\n- text: 4 ms\n- group: ▸ Attempt · seq 3 · committed skill_selector 0 ms\n- heading \"Step 1\" [level=3]\n- paragraph: 主结果 · committed\n- text: 4 ms\n- group: ▸ Attempt · seq 8 · committed gate 0 ms\n- heading \"Step 2\" [level=3]\n- paragraph: 主结果 · committed\n- text: 28 ms\n- group: ▸ Attempt · seq 13 · committed answer 0 ms\n- heading \"Step 3\" [level=3]\n- paragraph: 主结果 · committed\n- text: 48 ms\n- group: ▸ Attempt · seq 19 · committed answer 0 ms\n- heading \"Step 4\" [level=3]\n- paragraph: 主结果 · committed\n- text: 81 ms\n- group: ▸ Attempt · seq 25 · committed answer 0 ms"
+  },
+  {
+    "width": 320,
+    "height": 800,
+    "pageScroll": 770,
+    "overflow": false,
+    "process": "- heading \"过程证据\" [level=2]\n- paragraph: 事件发布顺序\n- button \"刷新过程证据\"\n- paragraph: 过程记录可用 · available\n- heading \"Step 0\" [level=3]\n- paragraph: 主结果 · committed\n- text: 4 ms\n- group: ▸ Attempt · seq 3 · committed skill_selector 0 ms\n- heading \"Step 1\" [level=3]\n- paragraph: 主结果 · committed\n- text: 4 ms\n- group: ▸ Attempt · seq 8 · committed gate 0 ms\n- heading \"Step 2\" [level=3]\n- paragraph: 主结果 · committed\n- text: 28 ms\n- group: ▸ Attempt · seq 13 · committed answer 0 ms\n- heading \"Step 3\" [level=3]\n- paragraph: 主结果 · committed\n- text: 48 ms\n- group: ▸ Attempt · seq 19 · committed answer 0 ms\n- heading \"Step 4\" [level=3]\n- paragraph: 主结果 · committed\n- text: 81 ms\n- group: ▸ Attempt · seq 25 · committed answer 0 ms"
+  }
+]

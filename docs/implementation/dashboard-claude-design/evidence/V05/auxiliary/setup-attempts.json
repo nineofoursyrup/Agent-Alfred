@@ -1,0 +1,71 @@
+{
+  "attempts": [
+    {
+      "phase": "visual-server",
+      "result": "sqlite unable to open database file",
+      "reason": "explicit /tmp state directory did not yet exist"
+    },
+    {
+      "phase": "visual-server",
+      "result": "ManagedPathSecurityError wrong_type",
+      "reason": "/tmp symlink parent rejected by managed path policy",
+      "repair": "create temporary directory and resolve to /private absolute real path"
+    },
+    {
+      "phase": "browser-open",
+      "result": "ERR_CONNECTION_REFUSED",
+      "reason": "visual server had not started due to state-path setup"
+    },
+    {
+      "phase": "inbox-proof-r1",
+      "record": "inbox-proof-r1.json",
+      "reason": "baseline run-fields.js lacked runSummary while current runs.js imported it",
+      "repair": "serve matching baseline runs.js alongside shared baseline CSS/module"
+    },
+    {
+      "phase": "inbox-proof-r2",
+      "record": "inbox-proof-r2.json",
+      "reason": "a new browser context had not selected a MainBar Session, so the extra MainBar saved-message wait was inapplicable",
+      "repair": "wait for the actual Inbox list only; compare main snapshot and computed styles"
+    },
+    {
+      "phase": "boundary-probe-r1",
+      "record": "boundaries-r1.json",
+      "reason": "probe waited for text not produced by existing fetch-abort error path",
+      "repair": "use existing 已读摘要保留 notice"
+    },
+    {
+      "phase": "boundary-probe-r2",
+      "record": "boundaries-r2.json",
+      "reason": "probe expected focus on the control synchronously disabled by its own click",
+      "repair": "focus the other enabled control while an evidence response is held, then release it"
+    },
+    {
+      "phase": "png-dimension-inspection",
+      "result": "ModuleNotFoundError PIL",
+      "repair": "use PNG header width and height via stdlib struct; no installation or image editing"
+    }
+  ],
+  "capture_attempts": [
+    {
+      "phase": "capture-r3",
+      "result": "320px detail screenshot repeated shell at bottom",
+      "repair": "fresh browser context without Clock"
+    },
+    {
+      "phase": "process-capture-r1",
+      "result": "320px process screenshot repeated shell after viewport change with scroll",
+      "repair": "fresh browser context at one fixed 320x800 viewport"
+    },
+    {
+      "phase": "process-comparison-r2",
+      "result": "composite capture repeated bottom content in reused viewport context",
+      "repair": "fresh about:blank context at one fixed viewport; all ten composites then passed pixel identity verification"
+    }
+  ],
+  "candidate_import_probe": {
+    "stage": "candidate environment import probe",
+    "first_failure": "System python3 does not import the venv editable package: ModuleNotFoundError: agent_alfred.",
+    "correction": "Use .venv/bin/python; import root then matched Agent-Alfred-v05/src. No source or dependency changes."
+  }
+}
