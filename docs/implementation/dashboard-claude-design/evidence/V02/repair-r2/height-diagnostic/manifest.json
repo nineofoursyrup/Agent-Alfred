@@ -1,0 +1,165 @@
+{
+  "source_css_sha256": "caaec9cf2e5e6f69798a8f222dc4bdb143636b21ddb5af84a33e7ab0a239f194",
+  "result": "3 passed (6.2s)",
+  "reports": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 360
+      },
+      "visibility": {
+        "status": {
+          "clientHeight": 48,
+          "scrollHeight": 86,
+          "scrollTop": 0,
+          "maxHeight": "48px"
+        },
+        "targets": {
+          "receipt": {
+            "ratio": 0.5599708557128906,
+            "top": 113.828125,
+            "bottom": 199.546875,
+            "height": 85.71875
+          },
+          "text": {
+            "ratio": 1,
+            "top": 113.828125,
+            "bottom": 131.421875,
+            "height": 17.59375
+          },
+          "open": {
+            "ratio": 0,
+            "top": 166.609375,
+            "bottom": 199.546875,
+            "height": 32.9375
+          },
+          "inspect": {
+            "ratio": 0,
+            "top": 176.609375,
+            "bottom": 189.609375,
+            "height": 13
+          },
+          "live": {
+            "ratio": 0.6640119552612305,
+            "top": 140.984375,
+            "bottom": 172.375,
+            "height": 31.390625
+          }
+        }
+      },
+      "scroll": {
+        "scroller": "shell-status",
+        "beforePageScroll": 3,
+        "observation": {
+          "page": {
+            "clientHeight": 360,
+            "scrollHeight": 602,
+            "scrollTop": 3
+          },
+          "shell-status": {
+            "clientHeight": 48,
+            "scrollHeight": 86,
+            "scrollTop": 38
+          }
+        }
+      }
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "visibility": {
+        "status": {
+          "clientHeight": 86,
+          "scrollHeight": 86,
+          "scrollTop": 0,
+          "maxHeight": "none"
+        },
+        "targets": {
+          "receipt": {
+            "ratio": 1,
+            "top": 116.828125,
+            "bottom": 202.546875,
+            "height": 85.71875
+          },
+          "text": {
+            "ratio": 1,
+            "top": 116.828125,
+            "bottom": 134.421875,
+            "height": 17.59375
+          },
+          "open": {
+            "ratio": 1,
+            "top": 169.609375,
+            "bottom": 202.546875,
+            "height": 32.9375
+          },
+          "inspect": {
+            "ratio": 1,
+            "top": 179.609375,
+            "bottom": 192.609375,
+            "height": 13
+          },
+          "live": {
+            "ratio": 1,
+            "top": 143.984375,
+            "bottom": 175.375,
+            "height": 31.390625
+          }
+        }
+      },
+      "scroll": null
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "visibility": {
+        "status": {
+          "clientHeight": 86,
+          "scrollHeight": 86,
+          "scrollTop": 0,
+          "maxHeight": "none"
+        },
+        "targets": {
+          "receipt": {
+            "ratio": 1,
+            "top": 116.828125,
+            "bottom": 202.546875,
+            "height": 85.71875
+          },
+          "text": {
+            "ratio": 1,
+            "top": 116.828125,
+            "bottom": 134.421875,
+            "height": 17.59375
+          },
+          "open": {
+            "ratio": 1,
+            "top": 169.609375,
+            "bottom": 202.546875,
+            "height": 32.9375
+          },
+          "inspect": {
+            "ratio": 1,
+            "top": 179.609375,
+            "bottom": 192.609375,
+            "height": 13
+          },
+          "live": {
+            "ratio": 1,
+            "top": 143.984375,
+            "bottom": 175.375,
+            "height": 31.390625
+          }
+        }
+      },
+      "scroll": null
+    }
+  ],
+  "permanent_test_changes": "Only requested 1440x900 viewport and two desktop pre-wheel ratio:1 assertions",
+  "temporary_diagnostic_removed": true,
+  "visual_inspection": "1440x900 and 1280x800 PNGs inspected; receipt lines, both actions and entire live capsule visible before scroll. 1440x360 retains native status scrolling with stable page scroll/focus/selection."
+}

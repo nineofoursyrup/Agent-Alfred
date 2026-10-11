@@ -43,6 +43,7 @@ small,.muted,#send-reason,.rail-note {color:var(--muted);font-size:var(--font-si
  --shell-rule:1px;--shell-nav-gap:2px;--shell-group-spacing:2.2px;--shell-eyebrow-spacing:2.6px;--shell-subtitle-width:660px;
  --shell-brand-address-gap:5px;--shell-live-padding-block:7px;--shell-title-gap:11px;--shell-nav-padding-inline:10px;--shell-toolbar-padding-block:10px;
  --shell-page-padding-wide:28px;--shell-page-padding-narrow-block:20px;--shell-page-padding-narrow-inline:var(--gap-large);
+ --shell-receipt-short-height:48px;
  --shell-half-gap:calc(var(--gap-small) / 2);--shell-control-gap:calc(var(--gap-large) / 2);
  --shell-brand-inline:calc(var(--gap-small) + var(--shell-half-gap));
 }
@@ -74,7 +75,7 @@ small,.muted,#send-reason,.rail-note {color:var(--muted);font-size:var(--font-si
 #shell-status .shell-live>span:last-child {min-width:0}
 #shell-status:has(>[data-created-receipt]) {max-width:100%}
 #shell-status>[data-created-receipt] {min-width:0;max-width:100%}
-#workspace #page-header #shell-status:has(>[data-created-receipt]) {max-height:calc(var(--gap-large) * 3);overflow:auto;overscroll-behavior:contain;align-content:flex-start}
+#workspace #page-header #shell-status:has(>[data-created-receipt]) {overflow:auto;overscroll-behavior:contain;align-content:flex-start}
 /* Deferred receipts share finite MainBar height with the focused composer. */
 #mainbar>#shell-status:has(>[data-created-receipt]) {flex-shrink:1;min-height:48px;padding-block:4px;overflow:auto;overscroll-behavior:contain}
 #mainbar:has(>#shell-status>[data-created-receipt])>.bar-session,
@@ -127,6 +128,9 @@ dialog {max-width:min(480px,calc(100vw - 32px));background:var(--surface);color:
 dialog button {margin:8px 8px 0 0}
 dialog::backdrop {background:#000a}
 .sr-only {position:absolute;clip-path:inset(50%);height:1px;width:1px;overflow:hidden}
+@media(min-width:1100px) and (max-height:480px){
+ #workspace #page-header #shell-status:has(>[data-created-receipt]) {max-height:var(--shell-receipt-short-height)}
+}
 @media(max-width:1099px){
  body,body.chat-open {display:block}
  #workspace {--shell-page-padding-block:var(--shell-page-padding-narrow-block);--shell-page-padding-inline:var(--shell-page-padding-narrow-inline);height:100dvh}

@@ -1,0 +1,47 @@
+{
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "visibility": {
+    "status": {
+      "clientHeight": 86,
+      "scrollHeight": 86,
+      "scrollTop": 0,
+      "maxHeight": "none"
+    },
+    "targets": {
+      "receipt": {
+        "ratio": 1,
+        "top": 116.828125,
+        "bottom": 202.546875,
+        "height": 85.71875
+      },
+      "text": {
+        "ratio": 1,
+        "top": 116.828125,
+        "bottom": 134.421875,
+        "height": 17.59375
+      },
+      "open": {
+        "ratio": 1,
+        "top": 169.609375,
+        "bottom": 202.546875,
+        "height": 32.9375
+      },
+      "inspect": {
+        "ratio": 1,
+        "top": 179.609375,
+        "bottom": 192.609375,
+        "height": 13
+      },
+      "live": {
+        "ratio": 1,
+        "top": 143.984375,
+        "bottom": 175.375,
+        "height": 31.390625
+      }
+    }
+  },
+  "scroll": null
+}
