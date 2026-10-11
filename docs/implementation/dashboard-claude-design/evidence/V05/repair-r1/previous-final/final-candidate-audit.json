@@ -1,0 +1,45 @@
+{
+  "checked_at": "2026-10-11T04:03:49.020037+00:00",
+  "baseline": "645c4549bb5bea9f79ddb4625f17c5a8a6af58c8",
+  "branch": "dashboard-visual/v05-runs",
+  "source_files_sha256": {
+    "src/agent_alfred/ops/static/runs.js": "f5e720e9b419444cfdc9808a30d86e4e34d82156b34d7ecc29ae68e8118d7141",
+    "src/agent_alfred/ops/static/run-fields.js": "0f11adbf6d5b9a3fd0f815634b679c5da9b0ce9bd801cfe423d3ec5b0520a642",
+    "src/agent_alfred/ops/static/run-evidence.js": "b844a29511a1cd22dcbed66a620cbe52df6a82a97c1df24b6876185a5650f0c6",
+    "src/agent_alfred/ops/static/trace_export.js": "04d7e7bc89a8765b98b63b79e3c2a8f53f8bf1921fdb6732d28e1d614f463c73",
+    "src/agent_alfred/ops/static/inbox-runs.css": "773f495dee9ce70bf9e08baa3bf91532d53b8e6296a83d311846f1073b71a832",
+    "tests/browser/runs.spec.js": "971a282b7c40b346e812f3bd040494233936652d972d51719107edad0f01bf52",
+    "tests/browser/inbox-run-sources.spec.js": "8872fe7e98b07b42ed16fe8588d4132576272d6e1cc9edd6821a5ca5702c6de1"
+  },
+  "main_protected_files_checked": 150,
+  "main_protected_files_changed": [],
+  "main_diff_sha256": "625d95d8436f7034c754982e57a21eb281931335ac6566868aceddda834e8338",
+  "frozen_files_unchanged": [
+    "src/agent_alfred/ops/static/app.css",
+    "src/agent_alfred/ops/static/topology.js",
+    "src/agent_alfred/ops/static/aggregation.js",
+    "src/agent_alfred/ops/static/progress.js",
+    "src/agent_alfred/ops/static/source.js",
+    "src/agent_alfred/ops/static/memory.js",
+    "docs/design/issue-122/RECIPES.md",
+    ".gitattributes"
+  ],
+  "origin_main": "645c4549bb5bea9f79ddb4625f17c5a8a6af58c8",
+  "deterministic_inputs_unchanged": 619,
+  "applicable_checks_exit_0": [
+    "01-ruff",
+    "01-skills",
+    "01-env",
+    "01-pytest",
+    "09-typecheck",
+    "10-python-static",
+    "18-browser",
+    "19-diff",
+    "20-staged-diff"
+  ],
+  "full_browser_result": "543 passed (11.5m)",
+  "failure_contexts_verified": 32,
+  "individual_traces_verified": 32,
+  "image_count_verified": 79,
+  "documentation_local_links_valid": true
+}

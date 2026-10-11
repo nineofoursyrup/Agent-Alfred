@@ -165,3 +165,245 @@
   overflow-wrap: anywhere;
   max-width: 100%;
 }
+
+/* V05: all additions are scoped to the Run page; Inbox keeps its renderer. */
+.runs-page {
+  --run-line: calc(var(--gap-small) / 12);
+  --run-body-y: calc(var(--gap-large) + var(--run-line));
+  --run-body-x: calc(var(--gap-large) + var(--run-line) * 3);
+}
+.runs-page .run-table thead {
+  display: none;
+}
+.runs-page .run-table tbody {
+  display: block;
+}
+.runs-page .run-table .run-list-row {
+  display: flex;
+  align-items: baseline;
+  border: 0;
+  border-bottom: var(--run-line) solid var(--row-divider);
+  border-radius: 0;
+  margin: 0;
+  padding: calc(var(--gap-small) - var(--run-line)) var(--gap-large);
+}
+.runs-page .run-table .run-list-row:last-child {
+  border-bottom: 0;
+}
+.runs-page .run-table td {
+  display: block;
+  border: 0;
+  padding: 0;
+}
+.runs-page .run-list-row:hover {
+  background: var(--hover);
+}
+.runs-page .run-list-preview {
+  color: var(--secondary);
+}
+.runs-page .run-list-preview dd {
+  font-size: var(--font-size-row);
+}
+.runs-page .run-list-meta,
+.runs-page .run-list-identity {
+  margin-block: calc(var(--gap-small) / 2);
+}
+.runs-page .run-list-meta > div,
+.runs-page .run-list-identity > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--gap-small) / 3);
+  min-width: 0;
+}
+.runs-page .run-list-meta dd,
+.runs-page .run-list-identity dd {
+  margin: 0;
+  color: var(--tertiary);
+}
+.runs-page .run-list-context {
+  color: var(--metadata);
+  font: 400 var(--font-size-meta)/1.5 var(--font-mono);
+}
+.runs-page .run-list-context dl {
+  display: grid;
+  gap: var(--gap-small);
+  margin-block: var(--gap-small);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(var(--gap-large) * 10)), 1fr));
+}
+.runs-page .run-list-context dd {
+  color: var(--tertiary);
+}
+.runs-page .run-list-actions {
+  font: 400 var(--font-size-meta)/1.5 var(--font-mono);
+}
+.runs-page .run-summary {
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  padding: var(--run-body-y) var(--run-body-x);
+}
+.runs-page .run-summary-lead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--gap-large);
+  margin-bottom: var(--gap-medium);
+}
+.runs-page .run-summary-message {
+  flex: 1 1 calc(var(--gap-large) * 15);
+  min-width: 0;
+  margin: 0;
+}
+.runs-page .run-summary-meta {
+  flex: 1 1 calc(var(--gap-large) * 15);
+  min-width: 0;
+}
+.runs-page .run-summary dt {
+  color: var(--metadata);
+  font: 400 var(--font-size-meta)/1.5 var(--font-mono);
+}
+.runs-page .run-summary dd {
+  margin: calc(var(--gap-small) / 3) 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.runs-page .run-summary-meta dd {
+  color: var(--tertiary);
+}
+.runs-page .run-summary-costs {
+  color: var(--attention);
+}
+.runs-page .run-read-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap-small);
+  min-width: 0;
+  font: 400 var(--font-size-meta)/1.5 var(--font-mono);
+  color: var(--metadata);
+}
+.runs-page .run-read-controls p {
+  margin: 0;
+  flex: 1 1 calc(var(--gap-large) * 12);
+}
+.runs-page .run-summary-panel .run-read-controls {
+  justify-content: flex-end;
+}
+.runs-page > .run-read-status {
+  margin-block: var(--gap-small);
+  color: var(--metadata);
+  font: 400 var(--font-size-meta)/1.5 var(--font-mono);
+}
+.runs-page > [role="status"]:empty {
+  display: none;
+}
+.runs-page .run-process-body > p,
+.runs-page .run-process-body > a {
+  margin: var(--gap-small) var(--run-body-x);
+}
+.runs-page .run-step {
+  border-bottom: var(--run-line) solid var(--panel-divider);
+}
+.runs-page .run-step:last-child {
+  border-bottom: 0;
+}
+.runs-page .run-step-heading {
+  align-items: baseline;
+}
+.runs-page .run-step-number {
+  margin: 0;
+  font: 600 var(--font-size-meta)/1.5 var(--font-mono);
+  color: var(--accent);
+}
+.runs-page .run-step-outcome {
+  margin: 0;
+  color: var(--tertiary);
+  font-family: var(--font-mono);
+}
+.runs-page .attempt,
+.runs-page .input-preparation {
+  padding: 0;
+  border: 0;
+  border-top: var(--run-line) solid var(--row-divider);
+  min-width: 0;
+}
+.runs-page .attempt.aborted {
+  background: var(--raised);
+  border-left: var(--run-line) dashed var(--attention);
+}
+.runs-page .attempt.aborted > summary {
+  text-decoration: none;
+}
+.runs-page .attempt.aborted .run-attempt-label {
+  color: var(--attention);
+  text-decoration: line-through;
+}
+.runs-page .run-attempt-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--gap-small);
+  padding: calc(var(--gap-small) - var(--run-line)) var(--run-body-x);
+  color: var(--tertiary);
+  font: 400 var(--font-size-row)/1.5 var(--font-mono);
+  cursor: pointer;
+}
+.runs-page .run-attempt-heading::before {
+  content: "▸";
+  color: var(--faint);
+}
+.runs-page details[open] > .run-attempt-heading::before {
+  content: "▾";
+}
+.runs-page .run-attempt-label {
+  flex: 1 1 calc(var(--gap-large) * 12);
+  min-width: 0;
+}
+.runs-page .run-duration {
+  margin-left: auto;
+}
+.runs-page .run-cost {
+  font: 400 var(--font-size-meta)/1.5 var(--font-mono);
+}
+.runs-page .run-inputs,
+.runs-page .run-aggregation,
+.runs-page .run-routing,
+.runs-page .run-graph,
+.runs-page .run-usage,
+.runs-page .run-export {
+  margin-block: var(--gap-medium);
+}
+.runs-page .run-graph {
+  padding: var(--run-body-y) var(--run-body-x);
+}
+.runs-page .run-summary-identity {
+  margin-bottom: var(--gap-small);
+}
+.runs-page .run-summary-identity > div {
+  min-width: 0;
+}
+.runs-page .run-summary-context {
+  color: var(--metadata);
+  font: 400 var(--font-size-meta)/1.5 var(--font-mono);
+}
+.runs-page .run-summary-context .run-fields {
+  margin-top: var(--gap-small);
+  color: var(--secondary);
+}
+.runs-page .run-list-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-small);
+}
+.runs-page .run-list-title {
+  margin: 0;
+  font: inherit;
+  color: inherit;
+}
+.runs-page .run-preview:not(.expanded) {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-height: none;
+}

@@ -1,0 +1,22 @@
+{
+  "checked_at": "2026-10-11T03:37:58.517721+00:00",
+  "old_control_labels": [
+    "14-baseline-browser",
+    "16-baseline-browser"
+  ],
+  "old_control_valid_as_pristine_baseline": false,
+  "reason": "Shared .venv editable install resolved agent_alfred.ops to the V05 source directory; static assets come from importlib.resources.files(agent_alfred.ops). The focused 14 run passed but is not pristine baseline proof. The 16 full control was interrupted after discovering this.",
+  "observed_import_root": "/Users/nineofour/Agent-Alfred-v05/src/agent_alfred/ops/__init__.py",
+  "corrected_PYTHONPATH": "/Users/nineofour/Agent-Alfred-v05/output/playwright/baseline-645c454/src",
+  "corrected_import_root": "/Users/nineofour/Agent-Alfred-v05/output/playwright/baseline-645c454/src/agent_alfred/ops/__init__.py",
+  "owned_orphan_cleanup": {
+    "pid": 75508,
+    "cwd": "/Users/nineofour/Agent-Alfred-v05/output/playwright/baseline-645c454",
+    "script": "tests/browser/database_server.py",
+    "port": 17924,
+    "parent_pid": 1,
+    "signal": "SIGTERM",
+    "reason": "Timed-out control fixture orphan held the reserved port and caused subsequent bind failures."
+  },
+  "scope_limit": "Does not identify the trigger of the candidate offline state failures."
+}

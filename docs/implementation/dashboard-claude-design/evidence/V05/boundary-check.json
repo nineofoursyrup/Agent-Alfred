@@ -1,0 +1,1692 @@
+{
+  "target": "0fea87cbb46c45b1afce86d9a1b1a9bc",
+  "original": {
+    "run_id": "0fea87cbb46c45b1afce86d9a1b1a9bc",
+    "purpose": "chat",
+    "filter": "chat",
+    "purpose_known": true,
+    "admission_state": "admitted",
+    "admission_label": "已获准",
+    "session_id": "7ea3cd1f00004bb7b248c1d76e997b63",
+    "gateway": "web",
+    "entry_surface_id": "mainbar",
+    "prompt_preview": "创建工具测试日程",
+    "phase": "finished",
+    "outcome": "completed",
+    "accepted_at": "2026-10-11T02:07:38Z",
+    "started_at": "2026-10-11T02:07:38Z",
+    "finished_at": "2026-10-11T02:07:38Z",
+    "activity_revision": 5,
+    "recording_state": "recorded",
+    "recording_source": "durable_finalization",
+    "aggregation": null
+  },
+  "run": {
+    "run_id": "0fea87cbb46c45b1afce86d9a1b1a9bc",
+    "purpose": "chat",
+    "filter": "chat",
+    "purpose_known": true,
+    "admission_state": "admitted",
+    "admission_label": "已获准",
+    "session_id": "7ea3cd1f00004bb7b248c1d76e997b63",
+    "gateway": "web",
+    "entry_surface_id": "mainbar",
+    "prompt_preview": "创建工具测试日程",
+    "phase": "finished",
+    "outcome": "completed",
+    "accepted_at": "2026-10-11T02:07:38Z",
+    "started_at": "2026-10-11T01:00:00Z",
+    "finished_at": "2026-10-11T01:00:00Z",
+    "activity_revision": 5,
+    "recording_state": "recorded",
+    "recording_source": "durable_finalization",
+    "aggregation": null
+  },
+  "evidence": {
+    "run_id": "0fea87cbb46c45b1afce86d9a1b1a9bc",
+    "trace_status": "available",
+    "trace_incomplete": true,
+    "recording_state": "recorded",
+    "attempts": [
+      {
+        "attempt_id": "void",
+        "outcome": "aborted",
+        "usage": {
+          "output_tokens": 3
+        },
+        "cost": {
+          "state": "unknown",
+          "amount": "999"
+        }
+      },
+      {
+        "attempt_id": "estimated",
+        "outcome": "committed",
+        "usage": {
+          "output_tokens": 6
+        },
+        "cost": {
+          "state": "estimated",
+          "amount": "0.006",
+          "price_components": [
+            {
+              "dimension": "output",
+              "price_source": "catalog",
+              "stale": true
+            },
+            {
+              "dimension": "uncached_input",
+              "price_source": "model_static",
+              "tiered": true
+            }
+          ]
+        }
+      },
+      {
+        "attempt_id": "exact",
+        "outcome": "committed",
+        "usage": {
+          "output_tokens": 9
+        },
+        "cost": {
+          "state": "exact",
+          "amount": "0.125"
+        }
+      }
+    ],
+    "events": [
+      {
+        "seq": 1,
+        "envelope": {
+          "run_id": "0fea87cbb46c45b1afce86d9a1b1a9bc",
+          "step_index": 0,
+          "attempt_id": "void",
+          "ts": 1
+        },
+        "payload": {
+          "name": "attempt.started"
+        }
+      },
+      {
+        "seq": 2,
+        "envelope": {
+          "run_id": "0fea87cbb46c45b1afce86d9a1b1a9bc",
+          "step_index": 0,
+          "attempt_id": "void",
+          "ts": 2
+        },
+        "payload": {
+          "name": "attempt.aborted",
+          "blocks": [
+            {
+              "type": "text",
+              "text": "已作废片段"
+            }
+          ]
+        }
+      },
+      {
+        "seq": 3,
+        "envelope": {
+          "run_id": "0fea87cbb46c45b1afce86d9a1b1a9bc",
+          "step_index": 0,
+          "attempt_id": "estimated",
+          "ts": 3
+        },
+        "payload": {
+          "name": "attempt.started"
+        }
+      },
+      {
+        "seq": 4,
+        "envelope": {
+          "run_id": "0fea87cbb46c45b1afce86d9a1b1a9bc",
+          "step_index": 0,
+          "attempt_id": "estimated",
+          "ts": 4
+        },
+        "payload": {
+          "name": "attempt.committed",
+          "blocks": [
+            {
+              "type": "text",
+              "text": "提交快照"
+            }
+          ]
+        }
+      },
+      {
+        "seq": 5,
+        "envelope": {
+          "run_id": "0fea87cbb46c45b1afce86d9a1b1a9bc",
+          "step_index": 0,
+          "attempt_id": "exact",
+          "ts": 5
+        },
+        "payload": {
+          "name": "attempt.started"
+        }
+      },
+      {
+        "seq": 6,
+        "envelope": {
+          "run_id": "0fea87cbb46c45b1afce86d9a1b1a9bc",
+          "step_index": 0,
+          "attempt_id": "exact",
+          "ts": 6
+        },
+        "payload": {
+          "name": "attempt.committed",
+          "blocks": [
+            {
+              "type": "text",
+              "text": "账目核对快照"
+            }
+          ]
+        }
+      },
+      {
+        "seq": 7,
+        "envelope": {
+          "run_id": "0fea87cbb46c45b1afce86d9a1b1a9bc",
+          "step_index": 0,
+          "attempt_id": null,
+          "ts": 7
+        },
+        "payload": {
+          "name": "run.finished",
+          "duration_ms": 137
+        }
+      }
+    ]
+  },
+  "viewports": [
+    [
+      1440,
+      900
+    ],
+    [
+      320,
+      800
+    ]
+  ],
+  "snapshots": [
+    {
+      "name": "trace-incomplete",
+      "width": 1440,
+      "height": 900,
+      "file": "trace-incomplete-1440x900.png",
+      "overflow": false,
+      "geometry": null,
+      "focusAfterRefresh": null,
+      "reads": [
+        "/runs/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/assets/app.css",
+        "/assets/inbox-runs.css",
+        "/assets/settings.css",
+        "/assets/overview.css",
+        "/assets/tools.css",
+        "/assets/behaviour.css",
+        "/assets/database.css",
+        "/assets/memory.css",
+        "/assets/accounting.css",
+        "/assets/app.js",
+        "/assets/shell.js",
+        "/assets/aggregation.js",
+        "/assets/tools.js",
+        "/assets/accounting.js",
+        "/assets/stream.js",
+        "/assets/dom.js",
+        "/assets/progress.js",
+        "/assets/notices.js",
+        "/assets/pages.js",
+        "/assets/inbox.js",
+        "/assets/runs.js",
+        "/assets/memory.js",
+        "/assets/database.js",
+        "/assets/overview.js",
+        "/assets/behaviour.js",
+        "/assets/models.js",
+        "/assets/connections.js",
+        "/assets/source.js",
+        "/assets/run-fields.js",
+        "/assets/topology.js",
+        "/assets/trace_export.js",
+        "/assets/run-evidence.js",
+        "/assets/routing-statistics.js",
+        "/assets/settings-focus.js",
+        "/api/entry",
+        "/api/events",
+        "/api/memory/state",
+        "/api/runs/locate/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/api/run-evidence"
+      ],
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - button \"切换到此会话并在主对话中查看\"\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 已读 1 · 总数未提供\n      - term: 耗时\n      - definition: 137 ms\n      - term: 费用\n      - definition: \"调用 1 · unknown · 费用未知 调用 2 · estimated · USD 0.006 · output: catalog · stale · uncached_input: model_static · 按基础档估算 调用 3 · exact · USD 0.125\"\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n  - status: 运行摘要 · 读取于 12:50:24\n  - status: 过程证据共同来源 · 读取于 12:50:24\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\"\n    - paragraph: 追踪不完整\n    - heading \"Step 0\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 耗时未提供\n    - group: ▸ Attempt · seq 1 · aborted（已撤回） 调用用途未知 耗时未提供\n    - group: ▸ Attempt · seq 3 · committed 调用用途未知 耗时未提供\n    - group: ▸ Attempt · seq 5 · committed 调用用途未知 耗时未提供\n    - group: 本次输入\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group: 用量\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\"",
+      "summary": "运行摘要\n输入预览\n创建工具测试日程\n准入\n已获准\n阶段\n已结束\n结果\n回复完成\n记录\n已保存\nStep 数\n已读 1 · 总数未提供\n耗时\n137 ms\n费用\n调用 1 · unknown · 费用未知\n调用 2 · estimated · USD 0.006 · output: catalog · stale · uncached_input: model_static · 按基础档估算\n调用 3 · exact · USD 0.125\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行摘要明细\n刷新运行摘要",
+      "process": "过程证据\n\n事件发布顺序\n\n刷新过程证据\n\n追踪不完整\n\nStep 0\n\n主结果 · committed\n\n耗时未提供\nAttempt · seq 1 · aborted（已撤回）\n调用用途未知\n耗时未提供\nAttempt · seq 3 · committed\n调用用途未知\n耗时未提供\nAttempt · seq 5 · committed\n调用用途未知\n耗时未提供\n本次输入"
+    },
+    {
+      "name": "no-reply",
+      "width": 1440,
+      "height": 900,
+      "file": "no-reply-1440x900.png",
+      "overflow": false,
+      "geometry": {
+        "insideReadControls": true,
+        "link": {
+          "x": 997,
+          "y": 507.828125,
+          "width": 66,
+          "height": 16.5,
+          "top": 507.828125,
+          "right": 1063,
+          "bottom": 524.328125,
+          "left": 997
+        },
+        "panel": {
+          "x": 260,
+          "y": 188.421875,
+          "width": 823,
+          "height": 362.125,
+          "top": 188.421875,
+          "right": 1083,
+          "bottom": 550.546875,
+          "left": 260
+        }
+      },
+      "focusAfterRefresh": true,
+      "reads": [
+        "/runs/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/assets/app.css",
+        "/assets/inbox-runs.css",
+        "/assets/settings.css",
+        "/assets/overview.css",
+        "/assets/tools.css",
+        "/assets/behaviour.css",
+        "/assets/database.css",
+        "/assets/memory.css",
+        "/assets/accounting.css",
+        "/assets/app.js",
+        "/assets/shell.js",
+        "/assets/aggregation.js",
+        "/assets/tools.js",
+        "/assets/accounting.js",
+        "/assets/stream.js",
+        "/assets/dom.js",
+        "/assets/progress.js",
+        "/assets/notices.js",
+        "/assets/pages.js",
+        "/assets/inbox.js",
+        "/assets/runs.js",
+        "/assets/memory.js",
+        "/assets/database.js",
+        "/assets/overview.js",
+        "/assets/behaviour.js",
+        "/assets/models.js",
+        "/assets/connections.js",
+        "/assets/topology.js",
+        "/assets/trace_export.js",
+        "/assets/source.js",
+        "/assets/run-fields.js",
+        "/assets/run-evidence.js",
+        "/assets/settings-focus.js",
+        "/assets/routing-statistics.js",
+        "/api/entry",
+        "/api/events",
+        "/api/memory/state",
+        "/api/runs/locate/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/api/run-evidence"
+      ],
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 已读 1 · 总数未提供\n      - term: 耗时\n      - definition: 137 ms\n      - term: 费用\n      - definition: \"调用 1 · unknown · 费用未知 调用 2 · estimated · USD 0.006 · output: catalog · stale · uncached_input: model_static · 按基础档估算 调用 3 · exact · USD 0.125\"\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n    - link \"查看所属会话\":\n      - /url: /inbox?session_id=7ea3cd1f00004bb7b248c1d76e997b63&view=messages\n  - status: 运行摘要 · 读取于 12:50:24\n  - status: 过程证据共同来源 · 读取于 12:50:24\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\"\n    - paragraph: 过程记录可用 · available\n    - heading \"Step 0\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 耗时未提供\n    - group: ▸ Attempt · seq 1 · aborted（已撤回） 调用用途未知 耗时未提供\n    - group: ▸ Attempt · seq 3 · committed 调用用途未知 耗时未提供\n    - group: ▸ Attempt · seq 5 · committed 调用用途未知 耗时未提供\n    - group: 本次输入\n    - heading \"消息分流\" [level=3]\n    - paragraph: fallback · 受控未回复\n    - paragraph: 图结果：未执行；代际 无\n    - paragraph: 已结束 · 按要求未回复\n    - paragraph: 普通回退：undefined / undefined\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group: 用量\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\"",
+      "summary": "运行摘要\n输入预览\n创建工具测试日程\n准入\n已获准\n阶段\n已结束\n结果\n回复完成\n记录\n已保存\nStep 数\n已读 1 · 总数未提供\n耗时\n137 ms\n费用\n调用 1 · unknown · 费用未知\n调用 2 · estimated · USD 0.006 · output: catalog · stale · uncached_input: model_static · 按基础档估算\n调用 3 · exact · USD 0.125\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行摘要明细\n刷新运行摘要\n查看所属会话",
+      "process": "过程证据\n\n事件发布顺序\n\n刷新过程证据\n\n过程记录可用 · available\n\nStep 0\n\n主结果 · committed\n\n耗时未提供\nAttempt · seq 1 · aborted（已撤回）\n调用用途未知\n耗时未提供\nAttempt · seq 3 · committed\n调用用途未知\n耗时未提供\nAttempt · seq 5 · committed\n调用用途未知\n耗时未提供\n本次输入\n消息分流\n\nfallback · 受控未回复\n\n图结果：未执行；代际 无\n\n已结束 · 按要求未回复\n\n普通回退：undefined / undefined"
+    },
+    {
+      "name": "unplaced-accounts",
+      "width": 1440,
+      "height": 900,
+      "file": "unplaced-accounts-1440x900.png",
+      "overflow": false,
+      "geometry": {
+        "padded": true,
+        "heading": {
+          "x": 280,
+          "y": 784.796875,
+          "width": 783,
+          "height": 20.796875,
+          "top": 784.796875,
+          "right": 1063,
+          "bottom": 805.59375,
+          "left": 280
+        },
+        "process": {
+          "x": 260,
+          "y": 639.6875,
+          "width": 823,
+          "height": 620.078125,
+          "top": 639.6875,
+          "right": 1083,
+          "bottom": 1259.765625,
+          "left": 260
+        }
+      },
+      "focusAfterRefresh": null,
+      "reads": [
+        "/runs/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/assets/app.css",
+        "/assets/inbox-runs.css",
+        "/assets/settings.css",
+        "/assets/overview.css",
+        "/assets/tools.css",
+        "/assets/behaviour.css",
+        "/assets/database.css",
+        "/assets/memory.css",
+        "/assets/accounting.css",
+        "/assets/app.js",
+        "/assets/shell.js",
+        "/assets/aggregation.js",
+        "/assets/tools.js",
+        "/assets/accounting.js",
+        "/assets/stream.js",
+        "/assets/dom.js",
+        "/assets/progress.js",
+        "/assets/notices.js",
+        "/assets/pages.js",
+        "/assets/inbox.js",
+        "/assets/runs.js",
+        "/assets/memory.js",
+        "/assets/database.js",
+        "/assets/overview.js",
+        "/assets/source.js",
+        "/assets/run-fields.js",
+        "/assets/topology.js",
+        "/assets/trace_export.js",
+        "/assets/run-evidence.js",
+        "/assets/behaviour.js",
+        "/assets/models.js",
+        "/assets/connections.js",
+        "/assets/routing-statistics.js",
+        "/assets/settings-focus.js",
+        "/api/entry",
+        "/api/events",
+        "/api/memory/state",
+        "/api/runs/locate/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/api/run-evidence"
+      ],
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - button \"切换到此会话并在主对话中查看\"\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 未提供\n      - term: 耗时\n      - definition: <1 s\n      - term: 费用\n      - definition: \"调用 1 · unknown · 费用未知 调用 2 · estimated · USD 0.006 · output: catalog · stale · uncached_input: model_static · 按基础档估算 调用 3 · exact · USD 0.125\"\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n  - status: 运行摘要 · 读取于 12:50:24\n  - status: 过程证据共同来源 · 读取于 12:50:24\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\"\n    - paragraph: 过程记录不可用\n    - heading \"调用账目 · 过程顺序不可用\" [level=3]\n    - article:\n      - heading \"Attempt void · aborted\" [level=4]\n      - text: \"total_input_tokens: 未提供 uncached_input_tokens: 未提供 cache_read_tokens: 未提供 cache_write_tokens: 未提供 output_tokens: 3 reasoning_tokens: 未提供\"\n      - paragraph: unknown · 费用未知\n    - article:\n      - heading \"Attempt estimated · committed\" [level=4]\n      - text: \"total_input_tokens: 未提供 uncached_input_tokens: 未提供 cache_read_tokens: 未提供 cache_write_tokens: 未提供 output_tokens: 6 reasoning_tokens: 未提供\"\n      - paragraph: estimated · USD 0.006\n      - text: \"output: catalog · stale uncached_input: model_static\"\n      - paragraph: 按基础档估算\n    - article:\n      - heading \"Attempt exact · committed\" [level=4]\n      - text: \"total_input_tokens: 未提供 uncached_input_tokens: 未提供 cache_read_tokens: 未提供 cache_write_tokens: 未提供 output_tokens: 9 reasoning_tokens: 未提供\"\n      - paragraph: exact · USD 0.125\n    - group: 本次输入\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group: 用量\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\"",
+      "summary": "运行摘要\n输入预览\n创建工具测试日程\n准入\n已获准\n阶段\n已结束\n结果\n回复完成\n记录\n已保存\nStep 数\n未提供\n耗时\n<1 s\n费用\n调用 1 · unknown · 费用未知\n调用 2 · estimated · USD 0.006 · output: catalog · stale · uncached_input: model_static · 按基础档估算\n调用 3 · exact · USD 0.125\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行摘要明细\n刷新运行摘要",
+      "process": "过程证据\n\n事件发布顺序\n\n刷新过程证据\n\n过程记录不可用\n\n调用账目 · 过程顺序不可用\nAttempt void · aborted\ntotal_input_tokens: 未提供\nuncached_input_tokens: 未提供\ncache_read_tokens: 未提供\ncache_write_tokens: 未提供\noutput_tokens: 3\nreasoning_tokens: 未提供\n\nunknown · 费用未知\n\nAttempt estimated · committed\ntotal_input_tokens: 未提供\nuncached_input_tokens: 未提供\ncache_read_tokens: 未提供\ncache_write_tokens: 未提供\noutput_tokens: 6\nreasoning_tokens: 未提供\n\nestimated · USD 0.006\n\noutput: catalog · stale uncached_input: model_static\n\n按基础档估算\n\nAttempt exact · committed\ntotal_input_tokens: 未提供\nuncached_input_tokens: 未提供\ncache_read_tokens: 未提供\ncache_write_tokens: 未提供\noutput_tokens: 9\nreasoning_tokens: 未提供\n\nexact · USD 0.125\n\n本次输入"
+    },
+    {
+      "name": "empty-list",
+      "width": 1440,
+      "height": 900,
+      "file": "empty-list-1440x900.png",
+      "overflow": false,
+      "geometry": {
+        "cell": {
+          "x": 277,
+          "y": 224.625,
+          "width": 789,
+          "height": 20,
+          "top": 224.625,
+          "right": 1066,
+          "bottom": 244.625,
+          "left": 277
+        },
+        "table": {
+          "x": 261,
+          "y": 213.625,
+          "width": 821,
+          "height": 42,
+          "top": 213.625,
+          "right": 1082,
+          "bottom": 255.625,
+          "left": 261
+        },
+        "rowClass": "run-list-row sy-row",
+        "paddingLeft": "16px",
+        "paddingRight": "16px",
+        "borderRadius": "0px"
+      },
+      "focusAfterRefresh": null,
+      "reads": [
+        "/runs",
+        "/assets/app.css",
+        "/assets/inbox-runs.css",
+        "/assets/settings.css",
+        "/assets/overview.css",
+        "/assets/tools.css",
+        "/assets/behaviour.css",
+        "/assets/database.css",
+        "/assets/memory.css",
+        "/assets/accounting.css",
+        "/assets/app.js",
+        "/assets/shell.js",
+        "/assets/aggregation.js",
+        "/assets/tools.js",
+        "/assets/accounting.js",
+        "/assets/stream.js",
+        "/assets/dom.js",
+        "/assets/progress.js",
+        "/assets/notices.js",
+        "/assets/pages.js",
+        "/assets/inbox.js",
+        "/assets/runs.js",
+        "/assets/memory.js",
+        "/assets/database.js",
+        "/assets/overview.js",
+        "/assets/behaviour.js",
+        "/assets/models.js",
+        "/assets/connections.js",
+        "/assets/source.js",
+        "/assets/run-fields.js",
+        "/assets/topology.js",
+        "/assets/trace_export.js",
+        "/assets/run-evidence.js",
+        "/assets/routing-statistics.js",
+        "/assets/settings-focus.js",
+        "/api/entry",
+        "/api/events",
+        "/api/memory/state",
+        "/api/runs"
+      ],
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - region \"运行列表\":\n    - heading \"运行记录\" [level=2]\n    - combobox \"运行筛选\":\n      - option \"全部\" [selected]\n      - option \"会话运行\"\n      - option \"系统运行\"\n    - table \"运行记录\":\n      - rowgroup\n      - rowgroup:\n        - row \"此筛选下暂无运行。\":\n          - cell \"此筛选下暂无运行。\"\n    - status: 读取于 12:50:25\n    - button \"刷新运行\"",
+      "summary": null,
+      "process": null
+    },
+    {
+      "name": "accounts-unread",
+      "width": 1440,
+      "height": 900,
+      "file": "accounts-unread-1440x900.png",
+      "overflow": false,
+      "geometry": null,
+      "focusAfterRefresh": null,
+      "reads": [
+        "/runs/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/assets/app.css",
+        "/assets/inbox-runs.css",
+        "/assets/settings.css",
+        "/assets/overview.css",
+        "/assets/tools.css",
+        "/assets/behaviour.css",
+        "/assets/database.css",
+        "/assets/memory.css",
+        "/assets/accounting.css",
+        "/assets/app.js",
+        "/assets/shell.js",
+        "/assets/aggregation.js",
+        "/assets/tools.js",
+        "/assets/accounting.js",
+        "/assets/stream.js",
+        "/assets/dom.js",
+        "/assets/progress.js",
+        "/assets/notices.js",
+        "/assets/pages.js",
+        "/assets/inbox.js",
+        "/assets/runs.js",
+        "/assets/memory.js",
+        "/assets/database.js",
+        "/assets/overview.js",
+        "/assets/source.js",
+        "/assets/run-fields.js",
+        "/assets/behaviour.js",
+        "/assets/models.js",
+        "/assets/connections.js",
+        "/assets/topology.js",
+        "/assets/trace_export.js",
+        "/assets/run-evidence.js",
+        "/assets/settings-focus.js",
+        "/assets/routing-statistics.js",
+        "/api/entry",
+        "/api/events",
+        "/api/memory/state",
+        "/api/runs/locate/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/api/run-evidence"
+      ],
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - button \"切换到此会话并在主对话中查看\"\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 未提供\n      - term: 耗时\n      - definition: <1 s\n      - term: 费用\n      - definition: 暂无可读调用账目；不代表未调用或免费。\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n  - status: 运行摘要 · 读取于 12:50:25\n  - status: 过程证据共同来源 · 尚未读取\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\" [disabled]\n    - group: 本次输入\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group:\n    - text: 用量\n    - paragraph: 与过程证据使用同一读取来源；缺失值不视为零，作废调用仍计入记录。\n    - paragraph: 暂无可读调用账目；不代表未调用或免费。\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\"",
+      "summary": "运行摘要\n输入预览\n创建工具测试日程\n准入\n已获准\n阶段\n已结束\n结果\n回复完成\n记录\n已保存\nStep 数\n未提供\n耗时\n<1 s\n费用\n暂无可读调用账目；不代表未调用或免费。\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行摘要明细\n刷新运行摘要",
+      "process": "过程证据\n\n事件发布顺序\n\n刷新过程证据\n本次输入"
+    },
+    {
+      "name": "accounts-failed",
+      "width": 1440,
+      "height": 900,
+      "file": "accounts-failed-1440x900.png",
+      "overflow": false,
+      "geometry": null,
+      "focusAfterRefresh": null,
+      "reads": [
+        "/runs/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/assets/app.css",
+        "/assets/inbox-runs.css",
+        "/assets/settings.css",
+        "/assets/overview.css",
+        "/assets/tools.css",
+        "/assets/behaviour.css",
+        "/assets/database.css",
+        "/assets/memory.css",
+        "/assets/accounting.css",
+        "/assets/app.js",
+        "/assets/shell.js",
+        "/assets/aggregation.js",
+        "/assets/tools.js",
+        "/assets/accounting.js",
+        "/assets/stream.js",
+        "/assets/dom.js",
+        "/assets/progress.js",
+        "/assets/notices.js",
+        "/assets/pages.js",
+        "/assets/inbox.js",
+        "/assets/runs.js",
+        "/assets/memory.js",
+        "/assets/database.js",
+        "/assets/overview.js",
+        "/assets/topology.js",
+        "/assets/trace_export.js",
+        "/assets/source.js",
+        "/assets/run-fields.js",
+        "/assets/run-evidence.js",
+        "/assets/behaviour.js",
+        "/assets/models.js",
+        "/assets/connections.js",
+        "/assets/routing-statistics.js",
+        "/assets/settings-focus.js",
+        "/api/entry",
+        "/api/events",
+        "/api/memory/state",
+        "/api/runs/locate/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/api/run-evidence"
+      ],
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - button \"切换到此会话并在主对话中查看\"\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 未提供\n      - term: 耗时\n      - definition: <1 s\n      - term: 费用\n      - definition: 暂无可读调用账目；不代表未调用或免费。\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n  - status: 运行摘要 · 读取于 12:50:26\n  - status: 过程证据共同来源 · 尚未读取 · 过程证据读取失败；保留上次快照，不能据此确认当前状态。\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\"\n    - paragraph: 过程证据读取失败；保留上次快照，不能据此确认当前状态。\n    - group: 本次输入\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group:\n    - text: 用量\n    - paragraph: 与过程证据使用同一读取来源；缺失值不视为零，作废调用仍计入记录。\n    - paragraph: 暂无可读调用账目；不代表未调用或免费。\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\"",
+      "summary": "运行摘要\n输入预览\n创建工具测试日程\n准入\n已获准\n阶段\n已结束\n结果\n回复完成\n记录\n已保存\nStep 数\n未提供\n耗时\n<1 s\n费用\n暂无可读调用账目；不代表未调用或免费。\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行摘要明细\n刷新运行摘要",
+      "process": "过程证据\n\n事件发布顺序\n\n刷新过程证据\n\n过程证据读取失败；保留上次快照，不能据此确认当前状态。\n\n本次输入"
+    },
+    {
+      "name": "accounts-empty",
+      "width": 1440,
+      "height": 900,
+      "file": "accounts-empty-1440x900.png",
+      "overflow": false,
+      "geometry": null,
+      "focusAfterRefresh": null,
+      "reads": [
+        "/runs/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/assets/app.css",
+        "/assets/inbox-runs.css",
+        "/assets/settings.css",
+        "/assets/overview.css",
+        "/assets/tools.css",
+        "/assets/behaviour.css",
+        "/assets/database.css",
+        "/assets/memory.css",
+        "/assets/accounting.css",
+        "/assets/app.js",
+        "/assets/shell.js",
+        "/assets/aggregation.js",
+        "/assets/tools.js",
+        "/assets/accounting.js",
+        "/assets/stream.js",
+        "/assets/dom.js",
+        "/assets/progress.js",
+        "/assets/notices.js",
+        "/assets/pages.js",
+        "/assets/inbox.js",
+        "/assets/runs.js",
+        "/assets/memory.js",
+        "/assets/database.js",
+        "/assets/overview.js",
+        "/assets/behaviour.js",
+        "/assets/models.js",
+        "/assets/connections.js",
+        "/assets/source.js",
+        "/assets/run-fields.js",
+        "/assets/topology.js",
+        "/assets/trace_export.js",
+        "/assets/run-evidence.js",
+        "/assets/settings-focus.js",
+        "/assets/routing-statistics.js",
+        "/api/entry",
+        "/api/events",
+        "/api/memory/state",
+        "/api/runs/locate/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/api/run-evidence"
+      ],
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - button \"切换到此会话并在主对话中查看\"\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 未提供\n      - term: 耗时\n      - definition: <1 s\n      - term: 费用\n      - definition: 暂无可读调用账目；不代表未调用或免费。\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n  - status: 运行摘要 · 读取于 12:50:26\n  - status: 过程证据共同来源 · 读取于 12:50:26\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\"\n    - paragraph: 过程记录不可用\n    - group: 本次输入\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group:\n    - text: 用量\n    - paragraph: 与过程证据使用同一读取来源；缺失值不视为零，作废调用仍计入记录。\n    - paragraph: 暂无可读调用账目；不代表未调用或免费。\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\"",
+      "summary": "运行摘要\n输入预览\n创建工具测试日程\n准入\n已获准\n阶段\n已结束\n结果\n回复完成\n记录\n已保存\nStep 数\n未提供\n耗时\n<1 s\n费用\n暂无可读调用账目；不代表未调用或免费。\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行摘要明细\n刷新运行摘要",
+      "process": "过程证据\n\n事件发布顺序\n\n刷新过程证据\n\n过程记录不可用\n\n本次输入"
+    },
+    {
+      "name": "accounts-expired",
+      "width": 1440,
+      "height": 900,
+      "file": "accounts-expired-1440x900.png",
+      "overflow": false,
+      "geometry": null,
+      "focusAfterRefresh": null,
+      "reads": [
+        "/runs/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/assets/app.css",
+        "/assets/inbox-runs.css",
+        "/assets/settings.css",
+        "/assets/overview.css",
+        "/assets/tools.css",
+        "/assets/behaviour.css",
+        "/assets/database.css",
+        "/assets/memory.css",
+        "/assets/accounting.css",
+        "/assets/app.js",
+        "/assets/shell.js",
+        "/assets/aggregation.js",
+        "/assets/tools.js",
+        "/assets/accounting.js",
+        "/assets/stream.js",
+        "/assets/dom.js",
+        "/assets/progress.js",
+        "/assets/notices.js",
+        "/assets/pages.js",
+        "/assets/inbox.js",
+        "/assets/runs.js",
+        "/assets/memory.js",
+        "/assets/database.js",
+        "/assets/overview.js",
+        "/assets/source.js",
+        "/assets/run-fields.js",
+        "/assets/topology.js",
+        "/assets/trace_export.js",
+        "/assets/run-evidence.js",
+        "/assets/behaviour.js",
+        "/assets/models.js",
+        "/assets/connections.js",
+        "/assets/routing-statistics.js",
+        "/assets/settings-focus.js",
+        "/api/entry",
+        "/api/events",
+        "/api/memory/state",
+        "/api/runs/locate/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/api/run-evidence"
+      ],
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - button \"切换到此会话并在主对话中查看\"\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 未提供\n      - term: 耗时\n      - definition: <1 s\n      - term: 费用\n      - definition: 账目快照已失效，尚未核验当前调用账目。\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n  - status: 运行摘要 · 读取于 12:50:26\n  - status: 过程证据共同来源 · 尚未读取\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\"\n    - paragraph: 账目快照已失效；尚未核验当前过程记录。\n    - link \"返回账本核对筛选并刷新\":\n      - /url: /ops?snapshot_context=missing\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group:\n    - text: 用量\n    - paragraph: 账目快照已失效，尚未核验当前调用账目。\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\"",
+      "summary": "运行摘要\n输入预览\n创建工具测试日程\n准入\n已获准\n阶段\n已结束\n结果\n回复完成\n记录\n已保存\nStep 数\n未提供\n耗时\n<1 s\n费用\n账目快照已失效，尚未核验当前调用账目。\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行摘要明细\n刷新运行摘要",
+      "process": "过程证据\n\n事件发布顺序\n\n刷新过程证据\n\n账目快照已失效；尚未核验当前过程记录。\n\n返回账本核对筛选并刷新"
+    },
+    {
+      "name": "duration-fallback",
+      "width": 1440,
+      "height": 900,
+      "file": "duration-fallback-1440x900.png",
+      "overflow": false,
+      "geometry": null,
+      "focusAfterRefresh": null,
+      "reads": [
+        "/runs/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/assets/app.css",
+        "/assets/inbox-runs.css",
+        "/assets/settings.css",
+        "/assets/overview.css",
+        "/assets/tools.css",
+        "/assets/behaviour.css",
+        "/assets/database.css",
+        "/assets/memory.css",
+        "/assets/accounting.css",
+        "/assets/app.js",
+        "/assets/shell.js",
+        "/assets/aggregation.js",
+        "/assets/tools.js",
+        "/assets/accounting.js",
+        "/assets/stream.js",
+        "/assets/dom.js",
+        "/assets/progress.js",
+        "/assets/notices.js",
+        "/assets/pages.js",
+        "/assets/inbox.js",
+        "/assets/runs.js",
+        "/assets/memory.js",
+        "/assets/database.js",
+        "/assets/overview.js",
+        "/assets/behaviour.js",
+        "/assets/models.js",
+        "/assets/connections.js",
+        "/assets/topology.js",
+        "/assets/trace_export.js",
+        "/assets/source.js",
+        "/assets/run-fields.js",
+        "/assets/run-evidence.js",
+        "/assets/settings-focus.js",
+        "/assets/routing-statistics.js",
+        "/api/entry",
+        "/api/events",
+        "/api/memory/state",
+        "/api/runs/locate/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/api/run-evidence"
+      ],
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - button \"切换到此会话并在主对话中查看\"\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 未提供\n      - term: 耗时\n      - definition: 3 s\n      - term: 费用\n      - definition: 暂无可读调用账目；不代表未调用或免费。\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n  - status: 运行摘要 · 读取于 12:50:27\n  - status: 过程证据共同来源 · 读取于 12:50:27\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\"\n    - paragraph: 过程记录不可用\n    - group: 本次输入\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group: 用量\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\"",
+      "summary": "运行摘要\n输入预览\n创建工具测试日程\n准入\n已获准\n阶段\n已结束\n结果\n回复完成\n记录\n已保存\nStep 数\n未提供\n耗时\n3 s\n费用\n暂无可读调用账目；不代表未调用或免费。\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行摘要明细\n刷新运行摘要",
+      "process": "过程证据\n\n事件发布顺序\n\n刷新过程证据\n\n过程记录不可用\n\n本次输入"
+    },
+    {
+      "name": "trace-incomplete",
+      "width": 320,
+      "height": 800,
+      "file": "trace-incomplete-320x800.png",
+      "overflow": false,
+      "geometry": null,
+      "focusAfterRefresh": null,
+      "reads": [
+        "/runs/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/assets/app.css",
+        "/assets/inbox-runs.css",
+        "/assets/settings.css",
+        "/assets/overview.css",
+        "/assets/tools.css",
+        "/assets/behaviour.css",
+        "/assets/database.css",
+        "/assets/memory.css",
+        "/assets/accounting.css",
+        "/assets/app.js",
+        "/assets/shell.js",
+        "/assets/aggregation.js",
+        "/assets/tools.js",
+        "/assets/accounting.js",
+        "/assets/stream.js",
+        "/assets/dom.js",
+        "/assets/progress.js",
+        "/assets/notices.js",
+        "/assets/pages.js",
+        "/assets/inbox.js",
+        "/assets/runs.js",
+        "/assets/memory.js",
+        "/assets/database.js",
+        "/assets/overview.js",
+        "/assets/behaviour.js",
+        "/assets/models.js",
+        "/assets/connections.js",
+        "/assets/topology.js",
+        "/assets/trace_export.js",
+        "/assets/source.js",
+        "/assets/run-fields.js",
+        "/assets/run-evidence.js",
+        "/assets/routing-statistics.js",
+        "/assets/settings-focus.js",
+        "/api/entry",
+        "/api/events",
+        "/api/memory/state",
+        "/api/runs/locate/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/api/run-evidence"
+      ],
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - button \"切换到此会话并在主对话中查看\"\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 已读 1 · 总数未提供\n      - term: 耗时\n      - definition: 137 ms\n      - term: 费用\n      - definition: \"调用 1 · unknown · 费用未知 调用 2 · estimated · USD 0.006 · output: catalog · stale · uncached_input: model_static · 按基础档估算 调用 3 · exact · USD 0.125\"\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n  - status: 运行摘要 · 读取于 12:50:27\n  - status: 过程证据共同来源 · 读取于 12:50:27\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\"\n    - paragraph: 追踪不完整\n    - heading \"Step 0\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 耗时未提供\n    - group: ▸ Attempt · seq 1 · aborted（已撤回） 调用用途未知 耗时未提供\n    - group: ▸ Attempt · seq 3 · committed 调用用途未知 耗时未提供\n    - group: ▸ Attempt · seq 5 · committed 调用用途未知 耗时未提供\n    - group: 本次输入\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group: 用量\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\"",
+      "summary": "运行摘要\n输入预览\n创建工具测试日程\n准入\n已获准\n阶段\n已结束\n结果\n回复完成\n记录\n已保存\nStep 数\n已读 1 · 总数未提供\n耗时\n137 ms\n费用\n调用 1 · unknown · 费用未知\n调用 2 · estimated · USD 0.006 · output: catalog · stale · uncached_input: model_static · 按基础档估算\n调用 3 · exact · USD 0.125\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行摘要明细\n刷新运行摘要",
+      "process": "过程证据\n\n事件发布顺序\n\n刷新过程证据\n\n追踪不完整\n\nStep 0\n\n主结果 · committed\n\n耗时未提供\nAttempt · seq 1 · aborted（已撤回）\n调用用途未知\n耗时未提供\nAttempt · seq 3 · committed\n调用用途未知\n耗时未提供\nAttempt · seq 5 · committed\n调用用途未知\n耗时未提供\n本次输入"
+    },
+    {
+      "name": "no-reply",
+      "width": 320,
+      "height": 800,
+      "file": "no-reply-320x800.png",
+      "overflow": false,
+      "geometry": {
+        "insideReadControls": true,
+        "link": {
+          "x": 209,
+          "y": 668.125,
+          "width": 66,
+          "height": 16.5,
+          "top": 668.125,
+          "right": 275,
+          "bottom": 684.625,
+          "left": 209
+        },
+        "panel": {
+          "x": 16,
+          "y": 176.421875,
+          "width": 279,
+          "height": 534.421875,
+          "top": 176.421875,
+          "right": 295,
+          "bottom": 710.84375,
+          "left": 16
+        }
+      },
+      "focusAfterRefresh": true,
+      "reads": [
+        "/runs/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/assets/app.css",
+        "/assets/inbox-runs.css",
+        "/assets/settings.css",
+        "/assets/overview.css",
+        "/assets/tools.css",
+        "/assets/behaviour.css",
+        "/assets/database.css",
+        "/assets/memory.css",
+        "/assets/accounting.css",
+        "/assets/app.js",
+        "/assets/shell.js",
+        "/assets/aggregation.js",
+        "/assets/tools.js",
+        "/assets/accounting.js",
+        "/assets/stream.js",
+        "/assets/dom.js",
+        "/assets/progress.js",
+        "/assets/notices.js",
+        "/assets/pages.js",
+        "/assets/inbox.js",
+        "/assets/runs.js",
+        "/assets/memory.js",
+        "/assets/database.js",
+        "/assets/overview.js",
+        "/assets/behaviour.js",
+        "/assets/models.js",
+        "/assets/connections.js",
+        "/assets/source.js",
+        "/assets/run-fields.js",
+        "/assets/topology.js",
+        "/assets/trace_export.js",
+        "/assets/run-evidence.js",
+        "/assets/routing-statistics.js",
+        "/assets/settings-focus.js",
+        "/api/entry",
+        "/api/events",
+        "/api/memory/state",
+        "/api/runs/locate/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/api/run-evidence"
+      ],
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 已读 1 · 总数未提供\n      - term: 耗时\n      - definition: 137 ms\n      - term: 费用\n      - definition: \"调用 1 · unknown · 费用未知 调用 2 · estimated · USD 0.006 · output: catalog · stale · uncached_input: model_static · 按基础档估算 调用 3 · exact · USD 0.125\"\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n    - link \"查看所属会话\":\n      - /url: /inbox?session_id=7ea3cd1f00004bb7b248c1d76e997b63&view=messages\n  - status: 运行摘要 · 读取于 12:50:27\n  - status: 过程证据共同来源 · 读取于 12:50:27\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\"\n    - paragraph: 过程记录可用 · available\n    - heading \"Step 0\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 耗时未提供\n    - group: ▸ Attempt · seq 1 · aborted（已撤回） 调用用途未知 耗时未提供\n    - group: ▸ Attempt · seq 3 · committed 调用用途未知 耗时未提供\n    - group: ▸ Attempt · seq 5 · committed 调用用途未知 耗时未提供\n    - group: 本次输入\n    - heading \"消息分流\" [level=3]\n    - paragraph: fallback · 受控未回复\n    - paragraph: 图结果：未执行；代际 无\n    - paragraph: 已结束 · 按要求未回复\n    - paragraph: 普通回退：undefined / undefined\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group: 用量\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\"",
+      "summary": "运行摘要\n输入预览\n创建工具测试日程\n准入\n已获准\n阶段\n已结束\n结果\n回复完成\n记录\n已保存\nStep 数\n已读 1 · 总数未提供\n耗时\n137 ms\n费用\n调用 1 · unknown · 费用未知\n调用 2 · estimated · USD 0.006 · output: catalog · stale · uncached_input: model_static · 按基础档估算\n调用 3 · exact · USD 0.125\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行摘要明细\n刷新运行摘要\n查看所属会话",
+      "process": "过程证据\n\n事件发布顺序\n\n刷新过程证据\n\n过程记录可用 · available\n\nStep 0\n\n主结果 · committed\n\n耗时未提供\nAttempt · seq 1 · aborted（已撤回）\n调用用途未知\n耗时未提供\nAttempt · seq 3 · committed\n调用用途未知\n耗时未提供\nAttempt · seq 5 · committed\n调用用途未知\n耗时未提供\n本次输入\n消息分流\n\nfallback · 受控未回复\n\n图结果：未执行；代际 无\n\n已结束 · 按要求未回复\n\n普通回退：undefined / undefined"
+    },
+    {
+      "name": "unplaced-accounts",
+      "width": 320,
+      "height": 800,
+      "file": "unplaced-accounts-320x800.png",
+      "overflow": false,
+      "geometry": {
+        "padded": true,
+        "heading": {
+          "x": 36,
+          "y": 977.890625,
+          "width": 239,
+          "height": 20.796875,
+          "top": 977.890625,
+          "right": 275,
+          "bottom": 998.6875,
+          "left": 36
+        },
+        "process": {
+          "x": 16,
+          "y": 832.78125,
+          "width": 279,
+          "height": 886.875,
+          "top": 832.78125,
+          "right": 295,
+          "bottom": 1719.65625,
+          "left": 16
+        }
+      },
+      "focusAfterRefresh": null,
+      "reads": [
+        "/runs/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/assets/app.css",
+        "/assets/inbox-runs.css",
+        "/assets/settings.css",
+        "/assets/overview.css",
+        "/assets/tools.css",
+        "/assets/behaviour.css",
+        "/assets/database.css",
+        "/assets/memory.css",
+        "/assets/accounting.css",
+        "/assets/app.js",
+        "/assets/shell.js",
+        "/assets/aggregation.js",
+        "/assets/tools.js",
+        "/assets/accounting.js",
+        "/assets/stream.js",
+        "/assets/dom.js",
+        "/assets/progress.js",
+        "/assets/notices.js",
+        "/assets/pages.js",
+        "/assets/inbox.js",
+        "/assets/runs.js",
+        "/assets/memory.js",
+        "/assets/database.js",
+        "/assets/overview.js",
+        "/assets/source.js",
+        "/assets/run-fields.js",
+        "/assets/behaviour.js",
+        "/assets/models.js",
+        "/assets/connections.js",
+        "/assets/topology.js",
+        "/assets/trace_export.js",
+        "/assets/run-evidence.js",
+        "/assets/routing-statistics.js",
+        "/assets/settings-focus.js",
+        "/api/entry",
+        "/api/events",
+        "/api/memory/state",
+        "/api/runs/locate/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/api/run-evidence"
+      ],
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - button \"切换到此会话并在主对话中查看\"\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 未提供\n      - term: 耗时\n      - definition: <1 s\n      - term: 费用\n      - definition: \"调用 1 · unknown · 费用未知 调用 2 · estimated · USD 0.006 · output: catalog · stale · uncached_input: model_static · 按基础档估算 调用 3 · exact · USD 0.125\"\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n  - status: 运行摘要 · 读取于 12:50:28\n  - status: 过程证据共同来源 · 读取于 12:50:28\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\"\n    - paragraph: 过程记录不可用\n    - heading \"调用账目 · 过程顺序不可用\" [level=3]\n    - article:\n      - heading \"Attempt void · aborted\" [level=4]\n      - text: \"total_input_tokens: 未提供 uncached_input_tokens: 未提供 cache_read_tokens: 未提供 cache_write_tokens: 未提供 output_tokens: 3 reasoning_tokens: 未提供\"\n      - paragraph: unknown · 费用未知\n    - article:\n      - heading \"Attempt estimated · committed\" [level=4]\n      - text: \"total_input_tokens: 未提供 uncached_input_tokens: 未提供 cache_read_tokens: 未提供 cache_write_tokens: 未提供 output_tokens: 6 reasoning_tokens: 未提供\"\n      - paragraph: estimated · USD 0.006\n      - text: \"output: catalog · stale uncached_input: model_static\"\n      - paragraph: 按基础档估算\n    - article:\n      - heading \"Attempt exact · committed\" [level=4]\n      - text: \"total_input_tokens: 未提供 uncached_input_tokens: 未提供 cache_read_tokens: 未提供 cache_write_tokens: 未提供 output_tokens: 9 reasoning_tokens: 未提供\"\n      - paragraph: exact · USD 0.125\n    - group: 本次输入\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group: 用量\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\"",
+      "summary": "运行摘要\n输入预览\n创建工具测试日程\n准入\n已获准\n阶段\n已结束\n结果\n回复完成\n记录\n已保存\nStep 数\n未提供\n耗时\n<1 s\n费用\n调用 1 · unknown · 费用未知\n调用 2 · estimated · USD 0.006 · output: catalog · stale · uncached_input: model_static · 按基础档估算\n调用 3 · exact · USD 0.125\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行摘要明细\n刷新运行摘要",
+      "process": "过程证据\n\n事件发布顺序\n\n刷新过程证据\n\n过程记录不可用\n\n调用账目 · 过程顺序不可用\nAttempt void · aborted\ntotal_input_tokens: 未提供\nuncached_input_tokens: 未提供\ncache_read_tokens: 未提供\ncache_write_tokens: 未提供\noutput_tokens: 3\nreasoning_tokens: 未提供\n\nunknown · 费用未知\n\nAttempt estimated · committed\ntotal_input_tokens: 未提供\nuncached_input_tokens: 未提供\ncache_read_tokens: 未提供\ncache_write_tokens: 未提供\noutput_tokens: 6\nreasoning_tokens: 未提供\n\nestimated · USD 0.006\n\noutput: catalog · stale uncached_input: model_static\n\n按基础档估算\n\nAttempt exact · committed\ntotal_input_tokens: 未提供\nuncached_input_tokens: 未提供\ncache_read_tokens: 未提供\ncache_write_tokens: 未提供\noutput_tokens: 9\nreasoning_tokens: 未提供\n\nexact · USD 0.125\n\n本次输入"
+    },
+    {
+      "name": "empty-list",
+      "width": 320,
+      "height": 800,
+      "file": "empty-list-320x800.png",
+      "overflow": false,
+      "geometry": {
+        "cell": {
+          "x": 33,
+          "y": 212.625,
+          "width": 245,
+          "height": 20,
+          "top": 212.625,
+          "right": 278,
+          "bottom": 232.625,
+          "left": 33
+        },
+        "table": {
+          "x": 17,
+          "y": 201.625,
+          "width": 277,
+          "height": 42,
+          "top": 201.625,
+          "right": 294,
+          "bottom": 243.625,
+          "left": 17
+        },
+        "rowClass": "run-list-row sy-row",
+        "paddingLeft": "16px",
+        "paddingRight": "16px",
+        "borderRadius": "0px"
+      },
+      "focusAfterRefresh": null,
+      "reads": [
+        "/runs",
+        "/assets/app.css",
+        "/assets/inbox-runs.css",
+        "/assets/settings.css",
+        "/assets/overview.css",
+        "/assets/tools.css",
+        "/assets/behaviour.css",
+        "/assets/database.css",
+        "/assets/memory.css",
+        "/assets/accounting.css",
+        "/assets/app.js",
+        "/assets/shell.js",
+        "/assets/aggregation.js",
+        "/assets/tools.js",
+        "/assets/accounting.js",
+        "/assets/stream.js",
+        "/assets/dom.js",
+        "/assets/progress.js",
+        "/assets/notices.js",
+        "/assets/pages.js",
+        "/assets/inbox.js",
+        "/assets/runs.js",
+        "/assets/memory.js",
+        "/assets/database.js",
+        "/assets/overview.js",
+        "/assets/topology.js",
+        "/assets/trace_export.js",
+        "/assets/source.js",
+        "/assets/run-fields.js",
+        "/assets/run-evidence.js",
+        "/assets/behaviour.js",
+        "/assets/models.js",
+        "/assets/connections.js",
+        "/assets/routing-statistics.js",
+        "/assets/settings-focus.js",
+        "/api/entry",
+        "/api/events",
+        "/api/memory/state",
+        "/api/runs"
+      ],
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - region \"运行列表\":\n    - heading \"运行记录\" [level=2]\n    - combobox \"运行筛选\":\n      - option \"全部\" [selected]\n      - option \"会话运行\"\n      - option \"系统运行\"\n    - table \"运行记录\":\n      - rowgroup\n      - rowgroup:\n        - row \"此筛选下暂无运行。\":\n          - cell \"此筛选下暂无运行。\"\n    - status: 读取于 12:50:28\n    - button \"刷新运行\"",
+      "summary": null,
+      "process": null
+    },
+    {
+      "name": "accounts-unread",
+      "width": 320,
+      "height": 800,
+      "file": "accounts-unread-320x800.png",
+      "overflow": false,
+      "geometry": null,
+      "focusAfterRefresh": null,
+      "reads": [
+        "/runs/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/assets/app.css",
+        "/assets/inbox-runs.css",
+        "/assets/settings.css",
+        "/assets/overview.css",
+        "/assets/tools.css",
+        "/assets/behaviour.css",
+        "/assets/database.css",
+        "/assets/memory.css",
+        "/assets/accounting.css",
+        "/assets/app.js",
+        "/assets/shell.js",
+        "/assets/aggregation.js",
+        "/assets/tools.js",
+        "/assets/accounting.js",
+        "/assets/stream.js",
+        "/assets/dom.js",
+        "/assets/progress.js",
+        "/assets/notices.js",
+        "/assets/pages.js",
+        "/assets/inbox.js",
+        "/assets/runs.js",
+        "/assets/memory.js",
+        "/assets/database.js",
+        "/assets/overview.js",
+        "/assets/behaviour.js",
+        "/assets/models.js",
+        "/assets/connections.js",
+        "/assets/source.js",
+        "/assets/run-fields.js",
+        "/assets/topology.js",
+        "/assets/trace_export.js",
+        "/assets/run-evidence.js",
+        "/assets/routing-statistics.js",
+        "/assets/settings-focus.js",
+        "/api/entry",
+        "/api/events",
+        "/api/memory/state",
+        "/api/runs/locate/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/api/run-evidence"
+      ],
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - button \"切换到此会话并在主对话中查看\"\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 未提供\n      - term: 耗时\n      - definition: <1 s\n      - term: 费用\n      - definition: 暂无可读调用账目；不代表未调用或免费。\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n  - status: 运行摘要 · 读取于 12:50:28\n  - status: 过程证据共同来源 · 尚未读取\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\" [disabled]\n    - group: 本次输入\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group:\n    - text: 用量\n    - paragraph: 与过程证据使用同一读取来源；缺失值不视为零，作废调用仍计入记录。\n    - paragraph: 暂无可读调用账目；不代表未调用或免费。\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\"",
+      "summary": "运行摘要\n输入预览\n创建工具测试日程\n准入\n已获准\n阶段\n已结束\n结果\n回复完成\n记录\n已保存\nStep 数\n未提供\n耗时\n<1 s\n费用\n暂无可读调用账目；不代表未调用或免费。\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行摘要明细\n刷新运行摘要",
+      "process": "过程证据\n\n事件发布顺序\n\n刷新过程证据\n本次输入"
+    },
+    {
+      "name": "accounts-failed",
+      "width": 320,
+      "height": 800,
+      "file": "accounts-failed-320x800.png",
+      "overflow": false,
+      "geometry": null,
+      "focusAfterRefresh": null,
+      "reads": [
+        "/runs/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/assets/app.css",
+        "/assets/inbox-runs.css",
+        "/assets/settings.css",
+        "/assets/overview.css",
+        "/assets/tools.css",
+        "/assets/behaviour.css",
+        "/assets/database.css",
+        "/assets/memory.css",
+        "/assets/accounting.css",
+        "/assets/app.js",
+        "/assets/shell.js",
+        "/assets/aggregation.js",
+        "/assets/tools.js",
+        "/assets/accounting.js",
+        "/assets/stream.js",
+        "/assets/dom.js",
+        "/assets/progress.js",
+        "/assets/notices.js",
+        "/assets/pages.js",
+        "/assets/inbox.js",
+        "/assets/runs.js",
+        "/assets/memory.js",
+        "/assets/database.js",
+        "/assets/overview.js",
+        "/assets/topology.js",
+        "/assets/trace_export.js",
+        "/assets/source.js",
+        "/assets/run-fields.js",
+        "/assets/run-evidence.js",
+        "/assets/behaviour.js",
+        "/assets/models.js",
+        "/assets/connections.js",
+        "/assets/routing-statistics.js",
+        "/assets/settings-focus.js",
+        "/api/entry",
+        "/api/events",
+        "/api/memory/state",
+        "/api/runs/locate/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/api/run-evidence"
+      ],
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - button \"切换到此会话并在主对话中查看\"\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 未提供\n      - term: 耗时\n      - definition: <1 s\n      - term: 费用\n      - definition: 暂无可读调用账目；不代表未调用或免费。\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n  - status: 运行摘要 · 读取于 12:50:29\n  - status: 过程证据共同来源 · 尚未读取 · 过程证据读取失败；保留上次快照，不能据此确认当前状态。\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\"\n    - paragraph: 过程证据读取失败；保留上次快照，不能据此确认当前状态。\n    - group: 本次输入\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group:\n    - text: 用量\n    - paragraph: 与过程证据使用同一读取来源；缺失值不视为零，作废调用仍计入记录。\n    - paragraph: 暂无可读调用账目；不代表未调用或免费。\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\"",
+      "summary": "运行摘要\n输入预览\n创建工具测试日程\n准入\n已获准\n阶段\n已结束\n结果\n回复完成\n记录\n已保存\nStep 数\n未提供\n耗时\n<1 s\n费用\n暂无可读调用账目；不代表未调用或免费。\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行摘要明细\n刷新运行摘要",
+      "process": "过程证据\n\n事件发布顺序\n\n刷新过程证据\n\n过程证据读取失败；保留上次快照，不能据此确认当前状态。\n\n本次输入"
+    },
+    {
+      "name": "accounts-empty",
+      "width": 320,
+      "height": 800,
+      "file": "accounts-empty-320x800.png",
+      "overflow": false,
+      "geometry": null,
+      "focusAfterRefresh": null,
+      "reads": [
+        "/runs/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/assets/app.css",
+        "/assets/inbox-runs.css",
+        "/assets/settings.css",
+        "/assets/overview.css",
+        "/assets/tools.css",
+        "/assets/behaviour.css",
+        "/assets/database.css",
+        "/assets/memory.css",
+        "/assets/accounting.css",
+        "/assets/app.js",
+        "/assets/shell.js",
+        "/assets/aggregation.js",
+        "/assets/tools.js",
+        "/assets/accounting.js",
+        "/assets/stream.js",
+        "/assets/dom.js",
+        "/assets/progress.js",
+        "/assets/notices.js",
+        "/assets/pages.js",
+        "/assets/inbox.js",
+        "/assets/runs.js",
+        "/assets/memory.js",
+        "/assets/database.js",
+        "/assets/overview.js",
+        "/assets/source.js",
+        "/assets/run-fields.js",
+        "/assets/behaviour.js",
+        "/assets/models.js",
+        "/assets/connections.js",
+        "/assets/topology.js",
+        "/assets/trace_export.js",
+        "/assets/run-evidence.js",
+        "/assets/routing-statistics.js",
+        "/assets/settings-focus.js",
+        "/api/entry",
+        "/api/events",
+        "/api/memory/state",
+        "/api/runs/locate/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/api/run-evidence"
+      ],
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - button \"切换到此会话并在主对话中查看\"\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 未提供\n      - term: 耗时\n      - definition: <1 s\n      - term: 费用\n      - definition: 暂无可读调用账目；不代表未调用或免费。\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n  - status: 运行摘要 · 读取于 12:50:29\n  - status: 过程证据共同来源 · 读取于 12:50:29\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\"\n    - paragraph: 过程记录不可用\n    - group: 本次输入\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group:\n    - text: 用量\n    - paragraph: 与过程证据使用同一读取来源；缺失值不视为零，作废调用仍计入记录。\n    - paragraph: 暂无可读调用账目；不代表未调用或免费。\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\"",
+      "summary": "运行摘要\n输入预览\n创建工具测试日程\n准入\n已获准\n阶段\n已结束\n结果\n回复完成\n记录\n已保存\nStep 数\n未提供\n耗时\n<1 s\n费用\n暂无可读调用账目；不代表未调用或免费。\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行摘要明细\n刷新运行摘要",
+      "process": "过程证据\n\n事件发布顺序\n\n刷新过程证据\n\n过程记录不可用\n\n本次输入"
+    },
+    {
+      "name": "accounts-expired",
+      "width": 320,
+      "height": 800,
+      "file": "accounts-expired-320x800.png",
+      "overflow": false,
+      "geometry": null,
+      "focusAfterRefresh": null,
+      "reads": [
+        "/runs/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/assets/app.css",
+        "/assets/inbox-runs.css",
+        "/assets/settings.css",
+        "/assets/overview.css",
+        "/assets/tools.css",
+        "/assets/behaviour.css",
+        "/assets/database.css",
+        "/assets/memory.css",
+        "/assets/accounting.css",
+        "/assets/app.js",
+        "/assets/shell.js",
+        "/assets/aggregation.js",
+        "/assets/tools.js",
+        "/assets/accounting.js",
+        "/assets/stream.js",
+        "/assets/dom.js",
+        "/assets/progress.js",
+        "/assets/notices.js",
+        "/assets/pages.js",
+        "/assets/inbox.js",
+        "/assets/runs.js",
+        "/assets/memory.js",
+        "/assets/database.js",
+        "/assets/overview.js",
+        "/assets/source.js",
+        "/assets/run-fields.js",
+        "/assets/topology.js",
+        "/assets/trace_export.js",
+        "/assets/run-evidence.js",
+        "/assets/behaviour.js",
+        "/assets/models.js",
+        "/assets/connections.js",
+        "/assets/routing-statistics.js",
+        "/assets/settings-focus.js",
+        "/api/entry",
+        "/api/events",
+        "/api/memory/state",
+        "/api/runs/locate/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/api/run-evidence"
+      ],
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - button \"切换到此会话并在主对话中查看\"\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 未提供\n      - term: 耗时\n      - definition: <1 s\n      - term: 费用\n      - definition: 账目快照已失效，尚未核验当前调用账目。\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n  - status: 运行摘要 · 读取于 12:50:29\n  - status: 过程证据共同来源 · 尚未读取\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\"\n    - paragraph: 账目快照已失效；尚未核验当前过程记录。\n    - link \"返回账本核对筛选并刷新\":\n      - /url: /ops?snapshot_context=missing\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group:\n    - text: 用量\n    - paragraph: 账目快照已失效，尚未核验当前调用账目。\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\"",
+      "summary": "运行摘要\n输入预览\n创建工具测试日程\n准入\n已获准\n阶段\n已结束\n结果\n回复完成\n记录\n已保存\nStep 数\n未提供\n耗时\n<1 s\n费用\n账目快照已失效，尚未核验当前调用账目。\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行摘要明细\n刷新运行摘要",
+      "process": "过程证据\n\n事件发布顺序\n\n刷新过程证据\n\n账目快照已失效；尚未核验当前过程记录。\n\n返回账本核对筛选并刷新"
+    },
+    {
+      "name": "duration-fallback",
+      "width": 320,
+      "height": 800,
+      "file": "duration-fallback-320x800.png",
+      "overflow": false,
+      "geometry": null,
+      "focusAfterRefresh": null,
+      "reads": [
+        "/runs/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/assets/app.css",
+        "/assets/inbox-runs.css",
+        "/assets/settings.css",
+        "/assets/overview.css",
+        "/assets/tools.css",
+        "/assets/behaviour.css",
+        "/assets/database.css",
+        "/assets/memory.css",
+        "/assets/accounting.css",
+        "/assets/app.js",
+        "/assets/shell.js",
+        "/assets/aggregation.js",
+        "/assets/tools.js",
+        "/assets/accounting.js",
+        "/assets/stream.js",
+        "/assets/dom.js",
+        "/assets/progress.js",
+        "/assets/notices.js",
+        "/assets/pages.js",
+        "/assets/inbox.js",
+        "/assets/runs.js",
+        "/assets/memory.js",
+        "/assets/database.js",
+        "/assets/overview.js",
+        "/assets/behaviour.js",
+        "/assets/models.js",
+        "/assets/connections.js",
+        "/assets/source.js",
+        "/assets/run-fields.js",
+        "/assets/topology.js",
+        "/assets/trace_export.js",
+        "/assets/run-evidence.js",
+        "/assets/routing-statistics.js",
+        "/assets/settings-focus.js",
+        "/api/entry",
+        "/api/events",
+        "/api/memory/state",
+        "/api/runs/locate/0fea87cbb46c45b1afce86d9a1b1a9bc",
+        "/api/run-evidence"
+      ],
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - button \"切换到此会话并在主对话中查看\"\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 未提供\n      - term: 耗时\n      - definition: 3 s\n      - term: 费用\n      - definition: 暂无可读调用账目；不代表未调用或免费。\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n  - status: 运行摘要 · 读取于 12:50:30\n  - status: 过程证据共同来源 · 读取于 12:50:30\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\"\n    - paragraph: 过程记录不可用\n    - group: 本次输入\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group: 用量\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\"",
+      "summary": "运行摘要\n输入预览\n创建工具测试日程\n准入\n已获准\n阶段\n已结束\n结果\n回复完成\n记录\n已保存\nStep 数\n未提供\n耗时\n3 s\n费用\n暂无可读调用账目；不代表未调用或免费。\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行摘要明细\n刷新运行摘要",
+      "process": "过程证据\n\n事件发布顺序\n\n刷新过程证据\n\n过程记录不可用\n\n本次输入"
+    }
+  ],
+  "checks": [
+    {
+      "name": "partial trace never also claims available",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "real millisecond duration and observed Step count",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "readable per-call costs retained",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "no horizontal overflow: trace-incomplete",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "detail has no Run list read: trace-incomplete",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "no-reply link has panel padding and follows refresh in keyboard order",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "no horizontal overflow: no-reply",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "detail has no Run list read: no-reply",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "unplaced ledger has process-panel indentation",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "unplaced ledger facts visible",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "no horizontal overflow: unplaced-accounts",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "detail has no Run list read: unplaced-accounts",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "empty row uses padded row recipe",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "no horizontal overflow: empty-list",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "accounts-unread distinguishes missing evidence from call cost state",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "accounts-unread agrees with usage wording",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "no horizontal overflow: accounts-unread",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "detail has no Run list read: accounts-unread",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "accounts-failed distinguishes missing evidence from call cost state",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "accounts-failed agrees with usage wording",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "no horizontal overflow: accounts-failed",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "detail has no Run list read: accounts-failed",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "accounts-empty distinguishes missing evidence from call cost state",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "accounts-empty agrees with usage wording",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "no horizontal overflow: accounts-empty",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "detail has no Run list read: accounts-empty",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "accounts-expired distinguishes missing evidence from call cost state",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "accounts-expired agrees with usage wording",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "no horizontal overflow: accounts-expired",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "detail has no Run list read: accounts-expired",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "timestamp fallback has whole-second precision",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "no horizontal overflow: duration-fallback",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "detail has no Run list read: duration-fallback",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "partial trace never also claims available",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "real millisecond duration and observed Step count",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "readable per-call costs retained",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "no horizontal overflow: trace-incomplete",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "detail has no Run list read: trace-incomplete",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "no-reply link has panel padding and follows refresh in keyboard order",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "no horizontal overflow: no-reply",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "detail has no Run list read: no-reply",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "unplaced ledger has process-panel indentation",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "unplaced ledger facts visible",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "no horizontal overflow: unplaced-accounts",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "detail has no Run list read: unplaced-accounts",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "empty row uses padded row recipe",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "no horizontal overflow: empty-list",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "accounts-unread distinguishes missing evidence from call cost state",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "accounts-unread agrees with usage wording",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "no horizontal overflow: accounts-unread",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "detail has no Run list read: accounts-unread",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "accounts-failed distinguishes missing evidence from call cost state",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "accounts-failed agrees with usage wording",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "no horizontal overflow: accounts-failed",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "detail has no Run list read: accounts-failed",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "accounts-empty distinguishes missing evidence from call cost state",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "accounts-empty agrees with usage wording",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "no horizontal overflow: accounts-empty",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "detail has no Run list read: accounts-empty",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "accounts-expired distinguishes missing evidence from call cost state",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "accounts-expired agrees with usage wording",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "no horizontal overflow: accounts-expired",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "detail has no Run list read: accounts-expired",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "timestamp fallback has whole-second precision",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "no horizontal overflow: duration-fallback",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "detail has no Run list read: duration-fallback",
+      "width": 320,
+      "pass": true
+    },
+    {
+      "name": "list omits unsupported Step count and subsecond timestamp precision",
+      "width": 1440,
+      "pass": true
+    },
+    {
+      "name": "shared sr-only preserves preview accessible term",
+      "width": 1440,
+      "pass": true
+    }
+  ],
+  "console": [
+    {
+      "name": "accounts-failed",
+      "width": 1440,
+      "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "name": "accounts-expired",
+      "width": 1440,
+      "text": "Failed to load resource: the server responded with a status of 410 (Gone)"
+    },
+    {
+      "name": "accounts-failed",
+      "width": 320,
+      "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    },
+    {
+      "name": "accounts-expired",
+      "width": 320,
+      "text": "Failed to load resource: the server responded with a status of 410 (Gone)"
+    }
+  ],
+  "listBoundary": {
+    "text": "输入预览\n创建工具测试日程\n展开预览\n结果\n回复完成\n记录\n已保存\n耗时\n<1 s\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行记录明细\n查看运行",
+    "accessibility": "- row \"输入预览 创建工具测试日程 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 0fea87cbb46c45b1afce86d9a1b1a9bc 用途 普通聊天（chat） 所属分组 会话运行 查看运行\":\n  - cell \"输入预览 创建工具测试日程 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 0fea87cbb46c45b1afce86d9a1b1a9bc 用途 普通聊天（chat） 所属分组 会话运行\":\n    - term: 输入预览\n    - definition: 创建工具测试日程\n    - button \"展开预览\"\n    - term: 结果\n    - definition: 回复完成\n    - term: 记录\n    - definition: 已保存\n    - term: 耗时\n    - definition: <1 s\n    - term: Run ID\n    - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n    - term: 用途\n    - definition: 普通聊天（chat）\n    - term: 所属分组\n    - definition: 会话运行\n    - group: 运行记录明细\n  - cell \"查看运行\":\n    - link \"查看运行\":\n      - /url: /runs/0fea87cbb46c45b1afce86d9a1b1a9bc?filter=all"
+  },
+  "ok": true
+}

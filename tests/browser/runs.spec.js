@@ -329,7 +329,7 @@ test("aborted attempts stay in publication position and unknown cost never has a
   await expect(page.getByRole("region", { name: "运行摘要" })).toContainText("系统运行");
   await expect(page.getByRole("main")).toContainText("<future-purpose>");
   const detail = page.getByRole("region", { name: "运行过程" });
-  const summaries = detail.locator("details.attempt > summary");
+  const summaries = detail.locator("details.attempt > summary .run-attempt-label");
   await expect(summaries).toHaveText([
     "Attempt · seq 4 · aborted（已撤回）",
     "Attempt · seq 6 · committed",

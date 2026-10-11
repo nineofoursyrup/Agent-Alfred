@@ -1,0 +1,20 @@
+{
+  "checked_at": "2026-10-11T03:51:57.975551+00:00",
+  "gate": "18-browser",
+  "readback": [
+    {
+      "url": "http://127.0.0.1:17920/assets/runs.js",
+      "status": 200,
+      "sha256": "f5e720e9b419444cfdc9808a30d86e4e34d82156b34d7ecc29ae68e8118d7141",
+      "matches_final_candidate": true,
+      "differs_from_baseline": true
+    },
+    {
+      "url": "http://127.0.0.1:17920/assets/inbox-runs.css",
+      "status": 200,
+      "sha256": "773f495dee9ce70bf9e08baa3bf91532d53b8e6296a83d311846f1073b71a832",
+      "matches_final_candidate": true,
+      "differs_from_baseline": true
+    }
+  ]
+}

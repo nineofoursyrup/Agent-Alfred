@@ -1,0 +1,21 @@
+{
+  "baseline": "645c4549bb5bea9f79ddb4625f17c5a8a6af58c8",
+  "copied_paths": [
+    "src",
+    "tests",
+    "scripts",
+    "package.json",
+    "package-lock.json",
+    "playwright.config.js",
+    "pyproject.toml",
+    "uv.lock",
+    ".env.example",
+    "tsconfig.json"
+  ],
+  "copied_directory": "/Users/nineofour/Agent-Alfred-v05/output/playwright/baseline-645c454",
+  "venv_and_node_modules": "symlinked to unchanged V05 dependencies",
+  "browser_port": "17920",
+  "source_tests_unmodified": true,
+  "purpose": "Compare untouched models/overview failures against the exact initial main baseline",
+  "initial_setup_failure": "exec working directory was selected before the copy existed; no process ran. Corrected by creating the copy first from the worktree."
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "file": "comparison-process-390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "composite": {
+      "width": 780,
+      "height": 844
+    },
+    "left": "reference-loop-390x844.png",
+    "right": "process-390x844.png",
+    "scale": 1,
+    "reference": "reuse unchanged authoritative reference PNG; repair final production recaptured"
+  },
+  {
+    "file": "comparison-process-320x800.png",
+    "viewport": {
+      "width": 320,
+      "height": 800
+    },
+    "composite": {
+      "width": 640,
+      "height": 800
+    },
+    "left": "reference-loop-320x800.png",
+    "right": "process-320x800.png",
+    "scale": 1,
+    "reference": "reuse unchanged authoritative reference PNG; repair final production recaptured"
+  }
+]

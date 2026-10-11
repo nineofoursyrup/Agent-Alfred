@@ -1,0 +1,1087 @@
+{
+  "snapshots": [
+    {
+      "page": "list",
+      "width": 1440,
+      "height": 900,
+      "overflow": false,
+      "inlineStyles": 0,
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - region \"运行列表\":\n    - heading \"运行记录\" [level=2]\n    - combobox \"运行筛选\":\n      - option \"全部\" [selected]\n      - option \"会话运行\"\n      - option \"系统运行\"\n    - table \"运行记录\":\n      - rowgroup\n      - rowgroup:\n        - row \"输入预览 长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行… 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 2837ca50fe6941c09ce1b7e5d3a9b4f6 用途 普通聊天（chat） 所属分组 会话运行 查看运行\":\n          - cell \"输入预览 长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行… 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 2837ca50fe6941c09ce1b7e5d3a9b4f6 用途 普通聊天（chat） 所属分组 会话运行\":\n            - term: 输入预览\n            - definition: 长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行…\n            - button \"展开预览\"\n            - term: 结果\n            - definition: 回复完成\n            - term: 记录\n            - definition: 已保存\n            - term: 耗时\n            - definition: <1 s\n            - term: Run ID\n            - definition: 2837ca50fe6941c09ce1b7e5d3a9b4f6\n            - term: 用途\n            - definition: 普通聊天（chat）\n            - term: 所属分组\n            - definition: 会话运行\n            - group: 运行记录明细\n          - cell \"查看运行\":\n            - link \"查看运行\":\n              - /url: /runs/2837ca50fe6941c09ce1b7e5d3a9b4f6?filter=all\n        - row \"输入预览 浏览器证据：核对运行列表与过程证据。 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 549c9ad7d54d4b80a7632b14909ad0d2 用途 普通聊天（chat） 所属分组 会话运行 查看运行\":\n          - cell \"输入预览 浏览器证据：核对运行列表与过程证据。 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 549c9ad7d54d4b80a7632b14909ad0d2 用途 普通聊天（chat） 所属分组 会话运行\":\n            - term: 输入预览\n            - definition: 浏览器证据：核对运行列表与过程证据。\n            - button \"展开预览\"\n            - term: 结果\n            - definition: 回复完成\n            - term: 记录\n            - definition: 已保存\n            - term: 耗时\n            - definition: <1 s\n            - term: Run ID\n            - definition: 549c9ad7d54d4b80a7632b14909ad0d2\n            - term: 用途\n            - definition: 普通聊天（chat）\n            - term: 所属分组\n            - definition: 会话运行\n            - group: 运行记录明细\n          - cell \"查看运行\":\n            - link \"查看运行\":\n              - /url: /runs/549c9ad7d54d4b80a7632b14909ad0d2?filter=all\n        - row \"输入预览 创建工具测试日程 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 0fea87cbb46c45b1afce86d9a1b1a9bc 用途 普通聊天（chat） 所属分组 会话运行 查看运行\":\n          - cell \"输入预览 创建工具测试日程 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 0fea87cbb46c45b1afce86d9a1b1a9bc 用途 普通聊天（chat） 所属分组 会话运行\":\n            - term: 输入预览\n            - definition: 创建工具测试日程\n            - button \"展开预览\"\n            - term: 结果\n            - definition: 回复完成\n            - term: 记录\n            - definition: 已保存\n            - term: 耗时\n            - definition: <1 s\n            - term: Run ID\n            - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n            - term: 用途\n            - definition: 普通聊天（chat）\n            - term: 所属分组\n            - definition: 会话运行\n            - group: 运行记录明细\n          - cell \"查看运行\":\n            - link \"查看运行\":\n              - /url: /runs/0fea87cbb46c45b1afce86d9a1b1a9bc?filter=all\n    - status: 读取于 12:53:34\n    - button \"刷新运行\"",
+      "stepLabels": [
+        "输入预览",
+        "结果",
+        "记录",
+        "耗时",
+        "Run ID",
+        "用途",
+        "所属分组",
+        "来源",
+        "入口",
+        "会话",
+        "接受时间",
+        "开始时间",
+        "结束时间",
+        "准入",
+        "阶段",
+        "记录来源",
+        "输入预览",
+        "结果",
+        "记录",
+        "耗时",
+        "Run ID",
+        "用途",
+        "所属分组",
+        "来源",
+        "入口",
+        "会话",
+        "接受时间",
+        "开始时间",
+        "结束时间",
+        "准入",
+        "阶段",
+        "记录来源",
+        "输入预览",
+        "结果",
+        "记录",
+        "耗时",
+        "Run ID",
+        "用途",
+        "所属分组",
+        "来源",
+        "入口",
+        "会话",
+        "接受时间",
+        "开始时间",
+        "结束时间",
+        "准入",
+        "阶段",
+        "记录来源"
+      ],
+      "geometry": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "page": {
+          "x": 232,
+          "y": 57.9375,
+          "width": 888,
+          "height": 842.0625,
+          "top": 57.9375,
+          "right": 1120,
+          "bottom": 900,
+          "left": 232
+        }
+      }
+    },
+    {
+      "page": "detail",
+      "width": 1440,
+      "height": 900,
+      "overflow": false,
+      "inlineStyles": 0,
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - button \"在主对话中查看\"\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 已读 5 · 总数未提供\n      - term: 耗时\n      - definition: 81 ms\n      - term: 费用\n      - definition: 调用 1 · exact · USD 0.125 调用 2 · exact · USD 0.125 调用 3 · exact · USD 0.125 调用 4 · exact · USD 0.125 调用 5 · exact · USD 0.125\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n  - status: 运行摘要 · 读取于 12:53:34\n  - status: 过程证据共同来源 · 读取于 12:53:34\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\"\n    - paragraph: 过程记录可用 · available\n    - heading \"Step 0\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 4 ms\n    - group: ▸ Attempt · seq 3 · committed skill_selector 0 ms\n    - heading \"Step 1\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 4 ms\n    - group: ▸ Attempt · seq 8 · committed gate 0 ms\n    - heading \"Step 2\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 28 ms\n    - group: ▸ Attempt · seq 13 · committed answer 0 ms\n    - heading \"Step 3\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 48 ms\n    - group: ▸ Attempt · seq 19 · committed answer 0 ms\n    - heading \"Step 4\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 81 ms\n    - group: ▸ Attempt · seq 25 · committed answer 0 ms\n    - group: 本次输入\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group: 用量\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\"",
+      "summary": "运行摘要\n输入预览\n创建工具测试日程\n准入\n已获准\n阶段\n已结束\n结果\n回复完成\n记录\n已保存\nStep 数\n已读 5 · 总数未提供\n耗时\n81 ms\n费用\n调用 1 · exact · USD 0.125\n调用 2 · exact · USD 0.125\n调用 3 · exact · USD 0.125\n调用 4 · exact · USD 0.125\n调用 5 · exact · USD 0.125\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行摘要明细\n刷新运行摘要",
+      "geometry": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "page": {
+          "x": 232,
+          "y": 57.9375,
+          "width": 888,
+          "height": 842.0625,
+          "top": 57.9375,
+          "right": 1120,
+          "bottom": 900,
+          "left": 232
+        }
+      }
+    },
+    {
+      "page": "list",
+      "width": 1280,
+      "height": 800,
+      "overflow": false,
+      "inlineStyles": 0,
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - region \"运行列表\":\n    - heading \"运行记录\" [level=2]\n    - combobox \"运行筛选\":\n      - option \"全部\" [selected]\n      - option \"会话运行\"\n      - option \"系统运行\"\n    - table \"运行记录\":\n      - rowgroup\n      - rowgroup:\n        - row \"输入预览 长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行… 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 2837ca50fe6941c09ce1b7e5d3a9b4f6 用途 普通聊天（chat） 所属分组 会话运行 查看运行\":\n          - cell \"输入预览 长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行… 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 2837ca50fe6941c09ce1b7e5d3a9b4f6 用途 普通聊天（chat） 所属分组 会话运行\":\n            - term: 输入预览\n            - definition: 长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行…\n            - button \"展开预览\"\n            - term: 结果\n            - definition: 回复完成\n            - term: 记录\n            - definition: 已保存\n            - term: 耗时\n            - definition: <1 s\n            - term: Run ID\n            - definition: 2837ca50fe6941c09ce1b7e5d3a9b4f6\n            - term: 用途\n            - definition: 普通聊天（chat）\n            - term: 所属分组\n            - definition: 会话运行\n            - group: 运行记录明细\n          - cell \"查看运行\":\n            - link \"查看运行\":\n              - /url: /runs/2837ca50fe6941c09ce1b7e5d3a9b4f6?filter=all\n        - row \"输入预览 浏览器证据：核对运行列表与过程证据。 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 549c9ad7d54d4b80a7632b14909ad0d2 用途 普通聊天（chat） 所属分组 会话运行 查看运行\":\n          - cell \"输入预览 浏览器证据：核对运行列表与过程证据。 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 549c9ad7d54d4b80a7632b14909ad0d2 用途 普通聊天（chat） 所属分组 会话运行\":\n            - term: 输入预览\n            - definition: 浏览器证据：核对运行列表与过程证据。\n            - button \"展开预览\"\n            - term: 结果\n            - definition: 回复完成\n            - term: 记录\n            - definition: 已保存\n            - term: 耗时\n            - definition: <1 s\n            - term: Run ID\n            - definition: 549c9ad7d54d4b80a7632b14909ad0d2\n            - term: 用途\n            - definition: 普通聊天（chat）\n            - term: 所属分组\n            - definition: 会话运行\n            - group: 运行记录明细\n          - cell \"查看运行\":\n            - link \"查看运行\":\n              - /url: /runs/549c9ad7d54d4b80a7632b14909ad0d2?filter=all\n        - row \"输入预览 创建工具测试日程 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 0fea87cbb46c45b1afce86d9a1b1a9bc 用途 普通聊天（chat） 所属分组 会话运行 查看运行\":\n          - cell \"输入预览 创建工具测试日程 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 0fea87cbb46c45b1afce86d9a1b1a9bc 用途 普通聊天（chat） 所属分组 会话运行\":\n            - term: 输入预览\n            - definition: 创建工具测试日程\n            - button \"展开预览\"\n            - term: 结果\n            - definition: 回复完成\n            - term: 记录\n            - definition: 已保存\n            - term: 耗时\n            - definition: <1 s\n            - term: Run ID\n            - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n            - term: 用途\n            - definition: 普通聊天（chat）\n            - term: 所属分组\n            - definition: 会话运行\n            - group: 运行记录明细\n          - cell \"查看运行\":\n            - link \"查看运行\":\n              - /url: /runs/0fea87cbb46c45b1afce86d9a1b1a9bc?filter=all\n    - status: 读取于 12:53:34\n    - button \"刷新运行\"",
+      "stepLabels": [
+        "输入预览",
+        "结果",
+        "记录",
+        "耗时",
+        "Run ID",
+        "用途",
+        "所属分组",
+        "来源",
+        "入口",
+        "会话",
+        "接受时间",
+        "开始时间",
+        "结束时间",
+        "准入",
+        "阶段",
+        "记录来源",
+        "输入预览",
+        "结果",
+        "记录",
+        "耗时",
+        "Run ID",
+        "用途",
+        "所属分组",
+        "来源",
+        "入口",
+        "会话",
+        "接受时间",
+        "开始时间",
+        "结束时间",
+        "准入",
+        "阶段",
+        "记录来源",
+        "输入预览",
+        "结果",
+        "记录",
+        "耗时",
+        "Run ID",
+        "用途",
+        "所属分组",
+        "来源",
+        "入口",
+        "会话",
+        "接受时间",
+        "开始时间",
+        "结束时间",
+        "准入",
+        "阶段",
+        "记录来源"
+      ],
+      "geometry": {
+        "viewport": {
+          "width": 1280,
+          "height": 800
+        },
+        "page": {
+          "x": 232,
+          "y": 57.9375,
+          "width": 728,
+          "height": 742.0625,
+          "top": 57.9375,
+          "right": 960,
+          "bottom": 800,
+          "left": 232
+        }
+      }
+    },
+    {
+      "page": "detail",
+      "width": 1280,
+      "height": 800,
+      "overflow": false,
+      "inlineStyles": 0,
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - button \"在主对话中查看\"\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 已读 5 · 总数未提供\n      - term: 耗时\n      - definition: 81 ms\n      - term: 费用\n      - definition: 调用 1 · exact · USD 0.125 调用 2 · exact · USD 0.125 调用 3 · exact · USD 0.125 调用 4 · exact · USD 0.125 调用 5 · exact · USD 0.125\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n  - status: 运行摘要 · 读取于 12:53:35\n  - status: 过程证据共同来源 · 读取于 12:53:35\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\"\n    - paragraph: 过程记录可用 · available\n    - heading \"Step 0\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 4 ms\n    - group: ▸ Attempt · seq 3 · committed skill_selector 0 ms\n    - heading \"Step 1\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 4 ms\n    - group: ▸ Attempt · seq 8 · committed gate 0 ms\n    - heading \"Step 2\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 28 ms\n    - group: ▸ Attempt · seq 13 · committed answer 0 ms\n    - heading \"Step 3\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 48 ms\n    - group: ▸ Attempt · seq 19 · committed answer 0 ms\n    - heading \"Step 4\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 81 ms\n    - group: ▸ Attempt · seq 25 · committed answer 0 ms\n    - group: 本次输入\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group: 用量\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\"",
+      "summary": "运行摘要\n输入预览\n创建工具测试日程\n准入\n已获准\n阶段\n已结束\n结果\n回复完成\n记录\n已保存\nStep 数\n已读 5 · 总数未提供\n耗时\n81 ms\n费用\n调用 1 · exact · USD 0.125\n调用 2 · exact · USD 0.125\n调用 3 · exact · USD 0.125\n调用 4 · exact · USD 0.125\n调用 5 · exact · USD 0.125\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行摘要明细\n刷新运行摘要",
+      "geometry": {
+        "viewport": {
+          "width": 1280,
+          "height": 800
+        },
+        "page": {
+          "x": 232,
+          "y": 57.9375,
+          "width": 728,
+          "height": 742.0625,
+          "top": 57.9375,
+          "right": 960,
+          "bottom": 800,
+          "left": 232
+        }
+      }
+    },
+    {
+      "page": "list",
+      "width": 390,
+      "height": 844,
+      "overflow": false,
+      "inlineStyles": 0,
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - region \"运行列表\":\n    - heading \"运行记录\" [level=2]\n    - combobox \"运行筛选\":\n      - option \"全部\" [selected]\n      - option \"会话运行\"\n      - option \"系统运行\"\n    - table \"运行记录\":\n      - rowgroup\n      - rowgroup:\n        - row \"输入预览 长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行… 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 2837ca50fe6941c09ce1b7e5d3a9b4f6 用途 普通聊天（chat） 所属分组 会话运行 查看运行\":\n          - cell \"输入预览 长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行… 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 2837ca50fe6941c09ce1b7e5d3a9b4f6 用途 普通聊天（chat） 所属分组 会话运行\":\n            - term: 输入预览\n            - definition: 长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行…\n            - button \"展开预览\"\n            - term: 结果\n            - definition: 回复完成\n            - term: 记录\n            - definition: 已保存\n            - term: 耗时\n            - definition: <1 s\n            - term: Run ID\n            - definition: 2837ca50fe6941c09ce1b7e5d3a9b4f6\n            - term: 用途\n            - definition: 普通聊天（chat）\n            - term: 所属分组\n            - definition: 会话运行\n            - group: 运行记录明细\n          - cell \"查看运行\":\n            - link \"查看运行\":\n              - /url: /runs/2837ca50fe6941c09ce1b7e5d3a9b4f6?filter=all\n        - row \"输入预览 浏览器证据：核对运行列表与过程证据。 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 549c9ad7d54d4b80a7632b14909ad0d2 用途 普通聊天（chat） 所属分组 会话运行 查看运行\":\n          - cell \"输入预览 浏览器证据：核对运行列表与过程证据。 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 549c9ad7d54d4b80a7632b14909ad0d2 用途 普通聊天（chat） 所属分组 会话运行\":\n            - term: 输入预览\n            - definition: 浏览器证据：核对运行列表与过程证据。\n            - button \"展开预览\"\n            - term: 结果\n            - definition: 回复完成\n            - term: 记录\n            - definition: 已保存\n            - term: 耗时\n            - definition: <1 s\n            - term: Run ID\n            - definition: 549c9ad7d54d4b80a7632b14909ad0d2\n            - term: 用途\n            - definition: 普通聊天（chat）\n            - term: 所属分组\n            - definition: 会话运行\n            - group: 运行记录明细\n          - cell \"查看运行\":\n            - link \"查看运行\":\n              - /url: /runs/549c9ad7d54d4b80a7632b14909ad0d2?filter=all\n        - row \"输入预览 创建工具测试日程 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 0fea87cbb46c45b1afce86d9a1b1a9bc 用途 普通聊天（chat） 所属分组 会话运行 查看运行\":\n          - cell \"输入预览 创建工具测试日程 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 0fea87cbb46c45b1afce86d9a1b1a9bc 用途 普通聊天（chat） 所属分组 会话运行\":\n            - term: 输入预览\n            - definition: 创建工具测试日程\n            - button \"展开预览\"\n            - term: 结果\n            - definition: 回复完成\n            - term: 记录\n            - definition: 已保存\n            - term: 耗时\n            - definition: <1 s\n            - term: Run ID\n            - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n            - term: 用途\n            - definition: 普通聊天（chat）\n            - term: 所属分组\n            - definition: 会话运行\n            - group: 运行记录明细\n          - cell \"查看运行\":\n            - link \"查看运行\":\n              - /url: /runs/0fea87cbb46c45b1afce86d9a1b1a9bc?filter=all\n    - status: 读取于 12:53:35\n    - button \"刷新运行\"",
+      "stepLabels": [
+        "输入预览",
+        "结果",
+        "记录",
+        "耗时",
+        "Run ID",
+        "用途",
+        "所属分组",
+        "来源",
+        "入口",
+        "会话",
+        "接受时间",
+        "开始时间",
+        "结束时间",
+        "准入",
+        "阶段",
+        "记录来源",
+        "输入预览",
+        "结果",
+        "记录",
+        "耗时",
+        "Run ID",
+        "用途",
+        "所属分组",
+        "来源",
+        "入口",
+        "会话",
+        "接受时间",
+        "开始时间",
+        "结束时间",
+        "准入",
+        "阶段",
+        "记录来源",
+        "输入预览",
+        "结果",
+        "记录",
+        "耗时",
+        "Run ID",
+        "用途",
+        "所属分组",
+        "来源",
+        "入口",
+        "会话",
+        "接受时间",
+        "开始时间",
+        "结束时间",
+        "准入",
+        "阶段",
+        "记录来源"
+      ],
+      "geometry": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "page": {
+          "x": 0,
+          "y": 53.9375,
+          "width": 390,
+          "height": 790.0625,
+          "top": 53.9375,
+          "right": 390,
+          "bottom": 844,
+          "left": 0
+        }
+      }
+    },
+    {
+      "page": "detail",
+      "width": 390,
+      "height": 844,
+      "overflow": false,
+      "inlineStyles": 0,
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - button \"在主对话中查看\"\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 已读 5 · 总数未提供\n      - term: 耗时\n      - definition: 81 ms\n      - term: 费用\n      - definition: 调用 1 · exact · USD 0.125 调用 2 · exact · USD 0.125 调用 3 · exact · USD 0.125 调用 4 · exact · USD 0.125 调用 5 · exact · USD 0.125\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n  - status: 运行摘要 · 读取于 12:53:35\n  - status: 过程证据共同来源 · 读取于 12:53:35\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\"\n    - paragraph: 过程记录可用 · available\n    - heading \"Step 0\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 4 ms\n    - group: ▸ Attempt · seq 3 · committed skill_selector 0 ms\n    - heading \"Step 1\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 4 ms\n    - group: ▸ Attempt · seq 8 · committed gate 0 ms\n    - heading \"Step 2\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 28 ms\n    - group: ▸ Attempt · seq 13 · committed answer 0 ms\n    - heading \"Step 3\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 48 ms\n    - group: ▸ Attempt · seq 19 · committed answer 0 ms\n    - heading \"Step 4\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 81 ms\n    - group: ▸ Attempt · seq 25 · committed answer 0 ms\n    - group: 本次输入\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group: 用量\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\"",
+      "summary": "运行摘要\n输入预览\n创建工具测试日程\n准入\n已获准\n阶段\n已结束\n结果\n回复完成\n记录\n已保存\nStep 数\n已读 5 · 总数未提供\n耗时\n81 ms\n费用\n调用 1 · exact · USD 0.125\n调用 2 · exact · USD 0.125\n调用 3 · exact · USD 0.125\n调用 4 · exact · USD 0.125\n调用 5 · exact · USD 0.125\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行摘要明细\n刷新运行摘要",
+      "geometry": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "page": {
+          "x": 0,
+          "y": 53.9375,
+          "width": 390,
+          "height": 790.0625,
+          "top": 53.9375,
+          "right": 390,
+          "bottom": 844,
+          "left": 0
+        }
+      }
+    },
+    {
+      "page": "list",
+      "width": 320,
+      "height": 800,
+      "overflow": false,
+      "inlineStyles": 0,
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - region \"运行列表\":\n    - heading \"运行记录\" [level=2]\n    - combobox \"运行筛选\":\n      - option \"全部\" [selected]\n      - option \"会话运行\"\n      - option \"系统运行\"\n    - table \"运行记录\":\n      - rowgroup\n      - rowgroup:\n        - row \"输入预览 长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行… 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 2837ca50fe6941c09ce1b7e5d3a9b4f6 用途 普通聊天（chat） 所属分组 会话运行 查看运行\":\n          - cell \"输入预览 长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行… 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 2837ca50fe6941c09ce1b7e5d3a9b4f6 用途 普通聊天（chat） 所属分组 会话运行\":\n            - term: 输入预览\n            - definition: 长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行。长输入用于核对预览展开、完整来源身份和窄屏换行…\n            - button \"展开预览\"\n            - term: 结果\n            - definition: 回复完成\n            - term: 记录\n            - definition: 已保存\n            - term: 耗时\n            - definition: <1 s\n            - term: Run ID\n            - definition: 2837ca50fe6941c09ce1b7e5d3a9b4f6\n            - term: 用途\n            - definition: 普通聊天（chat）\n            - term: 所属分组\n            - definition: 会话运行\n            - group: 运行记录明细\n          - cell \"查看运行\":\n            - link \"查看运行\":\n              - /url: /runs/2837ca50fe6941c09ce1b7e5d3a9b4f6?filter=all\n        - row \"输入预览 浏览器证据：核对运行列表与过程证据。 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 549c9ad7d54d4b80a7632b14909ad0d2 用途 普通聊天（chat） 所属分组 会话运行 查看运行\":\n          - cell \"输入预览 浏览器证据：核对运行列表与过程证据。 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 549c9ad7d54d4b80a7632b14909ad0d2 用途 普通聊天（chat） 所属分组 会话运行\":\n            - term: 输入预览\n            - definition: 浏览器证据：核对运行列表与过程证据。\n            - button \"展开预览\"\n            - term: 结果\n            - definition: 回复完成\n            - term: 记录\n            - definition: 已保存\n            - term: 耗时\n            - definition: <1 s\n            - term: Run ID\n            - definition: 549c9ad7d54d4b80a7632b14909ad0d2\n            - term: 用途\n            - definition: 普通聊天（chat）\n            - term: 所属分组\n            - definition: 会话运行\n            - group: 运行记录明细\n          - cell \"查看运行\":\n            - link \"查看运行\":\n              - /url: /runs/549c9ad7d54d4b80a7632b14909ad0d2?filter=all\n        - row \"输入预览 创建工具测试日程 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 0fea87cbb46c45b1afce86d9a1b1a9bc 用途 普通聊天（chat） 所属分组 会话运行 查看运行\":\n          - cell \"输入预览 创建工具测试日程 展开预览 结果 回复完成 记录 已保存 耗时 <1 s Run ID 0fea87cbb46c45b1afce86d9a1b1a9bc 用途 普通聊天（chat） 所属分组 会话运行\":\n            - term: 输入预览\n            - definition: 创建工具测试日程\n            - button \"展开预览\"\n            - term: 结果\n            - definition: 回复完成\n            - term: 记录\n            - definition: 已保存\n            - term: 耗时\n            - definition: <1 s\n            - term: Run ID\n            - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n            - term: 用途\n            - definition: 普通聊天（chat）\n            - term: 所属分组\n            - definition: 会话运行\n            - group: 运行记录明细\n          - cell \"查看运行\":\n            - link \"查看运行\":\n              - /url: /runs/0fea87cbb46c45b1afce86d9a1b1a9bc?filter=all\n    - status: 读取于 12:53:36\n    - button \"刷新运行\"",
+      "stepLabels": [
+        "输入预览",
+        "结果",
+        "记录",
+        "耗时",
+        "Run ID",
+        "用途",
+        "所属分组",
+        "来源",
+        "入口",
+        "会话",
+        "接受时间",
+        "开始时间",
+        "结束时间",
+        "准入",
+        "阶段",
+        "记录来源",
+        "输入预览",
+        "结果",
+        "记录",
+        "耗时",
+        "Run ID",
+        "用途",
+        "所属分组",
+        "来源",
+        "入口",
+        "会话",
+        "接受时间",
+        "开始时间",
+        "结束时间",
+        "准入",
+        "阶段",
+        "记录来源",
+        "输入预览",
+        "结果",
+        "记录",
+        "耗时",
+        "Run ID",
+        "用途",
+        "所属分组",
+        "来源",
+        "入口",
+        "会话",
+        "接受时间",
+        "开始时间",
+        "结束时间",
+        "准入",
+        "阶段",
+        "记录来源"
+      ],
+      "geometry": {
+        "viewport": {
+          "width": 320,
+          "height": 800
+        },
+        "page": {
+          "x": 0,
+          "y": 53.9375,
+          "width": 320,
+          "height": 746.0625,
+          "top": 53.9375,
+          "right": 320,
+          "bottom": 800,
+          "left": 0
+        }
+      }
+    },
+    {
+      "page": "detail",
+      "width": 320,
+      "height": 800,
+      "overflow": false,
+      "inlineStyles": 0,
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - button \"在主对话中查看\"\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 已读 5 · 总数未提供\n      - term: 耗时\n      - definition: 81 ms\n      - term: 费用\n      - definition: 调用 1 · exact · USD 0.125 调用 2 · exact · USD 0.125 调用 3 · exact · USD 0.125 调用 4 · exact · USD 0.125 调用 5 · exact · USD 0.125\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n  - status: 运行摘要 · 读取于 12:53:36\n  - status: 过程证据共同来源 · 读取于 12:53:36\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\"\n    - paragraph: 过程记录可用 · available\n    - heading \"Step 0\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 4 ms\n    - group: ▸ Attempt · seq 3 · committed skill_selector 0 ms\n    - heading \"Step 1\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 4 ms\n    - group: ▸ Attempt · seq 8 · committed gate 0 ms\n    - heading \"Step 2\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 28 ms\n    - group: ▸ Attempt · seq 13 · committed answer 0 ms\n    - heading \"Step 3\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 48 ms\n    - group: ▸ Attempt · seq 19 · committed answer 0 ms\n    - heading \"Step 4\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 81 ms\n    - group: ▸ Attempt · seq 25 · committed answer 0 ms\n    - group: 本次输入\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group: 用量\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\"",
+      "summary": "运行摘要\n输入预览\n创建工具测试日程\n准入\n已获准\n阶段\n已结束\n结果\n回复完成\n记录\n已保存\nStep 数\n已读 5 · 总数未提供\n耗时\n81 ms\n费用\n调用 1 · exact · USD 0.125\n调用 2 · exact · USD 0.125\n调用 3 · exact · USD 0.125\n调用 4 · exact · USD 0.125\n调用 5 · exact · USD 0.125\nRun ID\n0fea87cbb46c45b1afce86d9a1b1a9bc\n用途\n普通聊天（chat）\n所属分组\n会话运行\n运行摘要明细\n刷新运行摘要",
+      "geometry": {
+        "viewport": {
+          "width": 320,
+          "height": 800
+        },
+        "page": {
+          "x": 0,
+          "y": 53.9375,
+          "width": 320,
+          "height": 746.0625,
+          "top": 53.9375,
+          "right": 320,
+          "bottom": 800,
+          "left": 0
+        }
+      }
+    }
+  ],
+  "processScreens": [
+    {
+      "width": 390,
+      "height": 844,
+      "overflow": false,
+      "scroll": {
+        "top": 686,
+        "height": 2089,
+        "client": 790
+      },
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - button \"在主对话中查看\"\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 已读 5 · 总数未提供\n      - term: 耗时\n      - definition: 81 ms\n      - term: 费用\n      - definition: 调用 1 · exact · USD 0.125 调用 2 · exact · USD 0.125 调用 3 · exact · USD 0.125 调用 4 · exact · USD 0.125 调用 5 · exact · USD 0.125\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n  - status: 运行摘要 · 读取于 12:53:35\n  - status: 过程证据共同来源 · 读取于 12:53:35\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\"\n    - paragraph: 过程记录可用 · available\n    - heading \"Step 0\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 4 ms\n    - group: ▸ Attempt · seq 3 · committed skill_selector 0 ms\n    - heading \"Step 1\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 4 ms\n    - group: ▸ Attempt · seq 8 · committed gate 0 ms\n    - heading \"Step 2\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 28 ms\n    - group: ▸ Attempt · seq 13 · committed answer 0 ms\n    - heading \"Step 3\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 48 ms\n    - group: ▸ Attempt · seq 19 · committed answer 0 ms\n    - heading \"Step 4\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 81 ms\n    - group: ▸ Attempt · seq 25 · committed answer 0 ms\n    - group: 本次输入\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group: 用量\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\""
+    },
+    {
+      "width": 320,
+      "height": 800,
+      "overflow": false,
+      "scroll": {
+        "top": 869,
+        "height": 2368,
+        "client": 746
+      },
+      "accessibility": "- main:\n  - heading \"运行\" [level=1]\n  - link \"返回运行列表\":\n    - /url: /runs?filter=all\n  - button \"在主对话中查看\"\n  - link \"查看追踪导出\":\n    - /url: \"#trace-export\"\n  - region \"运行摘要\":\n    - heading \"运行摘要\" [level=2]\n    - article:\n      - term: 输入预览\n      - definition: 创建工具测试日程\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 已保存\n      - term: Step 数\n      - definition: 已读 5 · 总数未提供\n      - term: 耗时\n      - definition: 81 ms\n      - term: 费用\n      - definition: 调用 1 · exact · USD 0.125 调用 2 · exact · USD 0.125 调用 3 · exact · USD 0.125 调用 4 · exact · USD 0.125 调用 5 · exact · USD 0.125\n      - term: Run ID\n      - definition: 0fea87cbb46c45b1afce86d9a1b1a9bc\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - group: 运行摘要明细\n    - button \"刷新运行摘要\"\n  - status: 运行摘要 · 读取于 12:53:36\n  - status: 过程证据共同来源 · 读取于 12:53:36\n  - region \"运行过程\":\n    - heading \"过程证据\" [level=2]\n    - paragraph: 事件发布顺序\n    - button \"刷新过程证据\"\n    - paragraph: 过程记录可用 · available\n    - heading \"Step 0\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 4 ms\n    - group: ▸ Attempt · seq 3 · committed skill_selector 0 ms\n    - heading \"Step 1\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 4 ms\n    - group: ▸ Attempt · seq 8 · committed gate 0 ms\n    - heading \"Step 2\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 28 ms\n    - group: ▸ Attempt · seq 13 · committed answer 0 ms\n    - heading \"Step 3\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 48 ms\n    - group: ▸ Attempt · seq 19 · committed answer 0 ms\n    - heading \"Step 4\" [level=3]\n    - paragraph: 主结果 · committed\n    - text: 81 ms\n    - group: ▸ Attempt · seq 25 · committed answer 0 ms\n    - group: 本次输入\n  - region \"本次执行路径\":\n    - button \"本次执行路径\"\n    - status: 服务已连接；结构仅在手动读取时更新。\n    - status: 尚未读取；展开后读取。\n  - group: 用量\n  - region \"追踪导出\":\n    - heading \"追踪导出\" [level=2]\n    - status\n    - group:\n      - text: 追踪导出操作\n      - combobox \"导出模式\":\n        - option \"分享净化\" [selected]\n        - option \"保留诊断正文\"\n      - paragraph: 默认移除自由正文；净化与源追踪完整性分别说明。\n      - button \"生成追踪导出\""
+    }
+  ],
+  "reads": [
+    {
+      "width": 1440,
+      "path": "/runs/0fea87cbb46c45b1afce86d9a1b1a9bc"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/app.css"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/inbox-runs.css"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/settings.css"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/overview.css"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/tools.css"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/behaviour.css"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/database.css"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/memory.css"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/accounting.css"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/app.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/shell.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/aggregation.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/tools.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/accounting.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/stream.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/dom.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/progress.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/notices.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/pages.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/inbox.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/runs.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/memory.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/database.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/overview.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/behaviour.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/models.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/connections.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/topology.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/trace_export.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/source.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/run-fields.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/run-evidence.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/settings-focus.js"
+    },
+    {
+      "width": 1440,
+      "path": "/assets/routing-statistics.js"
+    },
+    {
+      "width": 1440,
+      "path": "/api/entry"
+    },
+    {
+      "width": 1440,
+      "path": "/api/mainbar"
+    },
+    {
+      "width": 1440,
+      "path": "/api/events"
+    },
+    {
+      "width": 1440,
+      "path": "/api/memory/state"
+    },
+    {
+      "width": 1440,
+      "path": "/api/runs/locate/0fea87cbb46c45b1afce86d9a1b1a9bc"
+    },
+    {
+      "width": 1440,
+      "path": "/api/run-evidence"
+    },
+    {
+      "width": 1280,
+      "path": "/runs/0fea87cbb46c45b1afce86d9a1b1a9bc"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/app.css"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/inbox-runs.css"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/settings.css"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/overview.css"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/tools.css"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/behaviour.css"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/database.css"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/memory.css"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/accounting.css"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/app.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/shell.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/aggregation.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/tools.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/accounting.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/stream.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/dom.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/progress.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/notices.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/pages.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/inbox.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/runs.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/memory.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/database.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/overview.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/source.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/run-fields.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/behaviour.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/models.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/connections.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/topology.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/trace_export.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/run-evidence.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/settings-focus.js"
+    },
+    {
+      "width": 1280,
+      "path": "/assets/routing-statistics.js"
+    },
+    {
+      "width": 1280,
+      "path": "/api/entry"
+    },
+    {
+      "width": 1280,
+      "path": "/api/mainbar"
+    },
+    {
+      "width": 1280,
+      "path": "/api/events"
+    },
+    {
+      "width": 1280,
+      "path": "/api/memory/state"
+    },
+    {
+      "width": 1280,
+      "path": "/api/runs/locate/0fea87cbb46c45b1afce86d9a1b1a9bc"
+    },
+    {
+      "width": 1280,
+      "path": "/api/run-evidence"
+    },
+    {
+      "width": 390,
+      "path": "/runs/0fea87cbb46c45b1afce86d9a1b1a9bc"
+    },
+    {
+      "width": 390,
+      "path": "/assets/app.css"
+    },
+    {
+      "width": 390,
+      "path": "/assets/inbox-runs.css"
+    },
+    {
+      "width": 390,
+      "path": "/assets/settings.css"
+    },
+    {
+      "width": 390,
+      "path": "/assets/overview.css"
+    },
+    {
+      "width": 390,
+      "path": "/assets/tools.css"
+    },
+    {
+      "width": 390,
+      "path": "/assets/behaviour.css"
+    },
+    {
+      "width": 390,
+      "path": "/assets/database.css"
+    },
+    {
+      "width": 390,
+      "path": "/assets/memory.css"
+    },
+    {
+      "width": 390,
+      "path": "/assets/accounting.css"
+    },
+    {
+      "width": 390,
+      "path": "/assets/app.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/shell.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/aggregation.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/tools.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/accounting.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/stream.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/dom.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/progress.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/notices.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/pages.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/inbox.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/runs.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/memory.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/database.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/overview.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/behaviour.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/models.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/connections.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/source.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/run-fields.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/topology.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/trace_export.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/run-evidence.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/settings-focus.js"
+    },
+    {
+      "width": 390,
+      "path": "/assets/routing-statistics.js"
+    },
+    {
+      "width": 390,
+      "path": "/api/entry"
+    },
+    {
+      "width": 390,
+      "path": "/api/mainbar"
+    },
+    {
+      "width": 390,
+      "path": "/api/events"
+    },
+    {
+      "width": 390,
+      "path": "/api/memory/state"
+    },
+    {
+      "width": 390,
+      "path": "/api/runs/locate/0fea87cbb46c45b1afce86d9a1b1a9bc"
+    },
+    {
+      "width": 390,
+      "path": "/api/run-evidence"
+    },
+    {
+      "width": 320,
+      "path": "/runs/0fea87cbb46c45b1afce86d9a1b1a9bc"
+    },
+    {
+      "width": 320,
+      "path": "/assets/app.css"
+    },
+    {
+      "width": 320,
+      "path": "/assets/inbox-runs.css"
+    },
+    {
+      "width": 320,
+      "path": "/assets/settings.css"
+    },
+    {
+      "width": 320,
+      "path": "/assets/overview.css"
+    },
+    {
+      "width": 320,
+      "path": "/assets/tools.css"
+    },
+    {
+      "width": 320,
+      "path": "/assets/behaviour.css"
+    },
+    {
+      "width": 320,
+      "path": "/assets/database.css"
+    },
+    {
+      "width": 320,
+      "path": "/assets/memory.css"
+    },
+    {
+      "width": 320,
+      "path": "/assets/accounting.css"
+    },
+    {
+      "width": 320,
+      "path": "/assets/app.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/shell.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/aggregation.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/tools.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/accounting.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/stream.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/dom.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/progress.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/notices.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/pages.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/inbox.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/runs.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/memory.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/database.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/overview.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/behaviour.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/models.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/connections.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/topology.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/trace_export.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/source.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/run-fields.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/run-evidence.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/routing-statistics.js"
+    },
+    {
+      "width": 320,
+      "path": "/assets/settings-focus.js"
+    },
+    {
+      "width": 320,
+      "path": "/api/entry"
+    },
+    {
+      "width": 320,
+      "path": "/api/mainbar"
+    },
+    {
+      "width": 320,
+      "path": "/api/events"
+    },
+    {
+      "width": 320,
+      "path": "/api/memory/state"
+    },
+    {
+      "width": 320,
+      "path": "/api/runs/locate/0fea87cbb46c45b1afce86d9a1b1a9bc"
+    },
+    {
+      "width": 320,
+      "path": "/api/run-evidence"
+    }
+  ],
+  "console": [],
+  "inbox": "- main:\n  - heading \"收件箱\" [level=1]\n  - region \"会话列表\":\n    - heading \"最近会话\" [level=2]\n    - button \"新建会话并打开主对话\"\n    - status\n    - article:\n      - link \"创建工具测试日程\":\n        - /url: /inbox?session_id=7ea3cd1f00004bb7b248c1d76e997b63&view=messages\n      - paragraph: 7ea3cd1f00004bb7b248c1d76e997b63\n      - paragraph: 2026-10-11T02:07:04Z\n    - article:\n      - link \"升级前消息 01\":\n        - /url: /inbox?session_id=legacy+%2F%E4%BC%9A%E8%AF%9D%3F&view=messages\n      - paragraph: legacy /会话?\n      - paragraph: 非规范旧时间\n    - status: 读取于 12:53:37\n    - button \"刷新会话\"",
+  "target": "0fea87cbb46c45b1afce86d9a1b1a9bc",
+  "context": "independent fresh Playwright context per viewport, no Clock installed",
+  "ok": true
+}

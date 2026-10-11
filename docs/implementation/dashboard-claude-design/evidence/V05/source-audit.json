@@ -1,0 +1,82 @@
+{
+  "checked_at": "2026-10-11T04:59:36.032282+00:00",
+  "baseline": "645c4549bb5bea9f79ddb4625f17c5a8a6af58c8",
+  "branch": "dashboard-visual/v05-runs",
+  "owned_files": {
+    "src/agent_alfred/ops/static/runs.js": "ae901cae89a6847a2c2408dd06b9cee73f1eb54b7032a03c5a260fce1e4c3303",
+    "src/agent_alfred/ops/static/run-fields.js": "3e5303c27123a2c5b7ced5c27d758fb9c074da187e611b10174b6f75bb53e638",
+    "src/agent_alfred/ops/static/run-evidence.js": "35bf713c63decb0a78ded26e470eec83d61c39a31a62844ae8782fe5d31a4906",
+    "src/agent_alfred/ops/static/trace_export.js": "04d7e7bc89a8765b98b63b79e3c2a8f53f8bf1921fdb6732d28e1d614f463c73",
+    "src/agent_alfred/ops/static/inbox-runs.css": "c906ec0212aebe3f8fa56f1116114328fb175558fe3f1637bdecc9fc8c7fe50f",
+    "tests/browser/runs.spec.js": "971a282b7c40b346e812f3bd040494233936652d972d51719107edad0f01bf52",
+    "tests/browser/inbox-run-sources.spec.js": "8872fe7e98b07b42ed16fe8588d4132576272d6e1cc9edd6821a5ca5702c6de1"
+  },
+  "main_protected_files_checked": 150,
+  "main_protected_files_changed": [],
+  "main_diff_sha256": "625d95d8436f7034c754982e57a21eb281931335ac6566868aceddda834e8338",
+  "main_diff_unchanged": true,
+  "main_status": " M docs/dashboard.md\n?? README.md\n?? tmp/\n",
+  "frozen_files": [
+    "src/agent_alfred/ops/static/app.css",
+    "src/agent_alfred/ops/static/topology.js",
+    "src/agent_alfred/ops/static/aggregation.js",
+    "src/agent_alfred/ops/static/progress.js",
+    "src/agent_alfred/ops/static/source.js",
+    "src/agent_alfred/ops/static/memory.js",
+    "docs/design/issue-122/RECIPES.md",
+    ".gitattributes"
+  ],
+  "frozen_diff_empty": true,
+  "allowed_changes": [
+    "src/agent_alfred/ops/static/inbox-runs.css",
+    "src/agent_alfred/ops/static/run-evidence.js",
+    "src/agent_alfred/ops/static/run-fields.js",
+    "src/agent_alfred/ops/static/runs.js",
+    "src/agent_alfred/ops/static/trace_export.js",
+    "tests/browser/inbox-run-sources.spec.js",
+    "tests/browser/runs.spec.js"
+  ],
+  "reference_sha256": {
+    "docs/design/issue-122/reference/Syrup Dashboard.dc.html": "54807adb38541fa2966e5b0c334b9d0e8d71c60b814245601bc4f35b8ec54b84",
+    "docs/design/issue-122/reference/support.js": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe"
+  },
+  "gate_input_reuse": {
+    "ruff": "All Python sources, pyproject.toml and check inputs unchanged; evidence Python under docs is excluded by Ruff config.",
+    "skills": "src/agent_alfred/skills, root skills and check scripts unchanged.",
+    "env": "Only Python AST is scanned; Python source, scripts and .env.example unchanged.",
+    "pytest": "Python source, tests, dependencies and configuration unchanged. Frontend-sensitive static/projection checks rerun on final sources: 10-python-static, 29 passed."
+  },
+  "checks_of_frozen_shared_files": {
+    "src/agent_alfred/ops/static/app.css": "0f6ce16ae564e762bb4d5db6d0055a05329e27f62df50d6d8140cb8a020fd5d8",
+    "src/agent_alfred/ops/static/topology.js": "da3c1dda2d0ab85dee05eaf1c19e4974c12c405fe65422601571d32363cd1c08",
+    "src/agent_alfred/ops/static/aggregation.js": "2ed4534a18114be56b0df33850040828305d316e794b52ec62e49103384e5ebb",
+    "src/agent_alfred/ops/static/progress.js": "45820eddec8a0313c0e4ee7181b4e9fffe1d36fe4591dece3c184cd504e2a7a4",
+    "src/agent_alfred/ops/static/source.js": "9fb3c5c2c1892ac576dd7905d35988126458c6f884ad5c5f7db7fe375865e368",
+    "src/agent_alfred/ops/static/memory.js": "9129f17ae69d5e854bc2084e2d18be1afcc4ca53a1484a4ea8e247d2523bc9a0",
+    "docs/design/issue-122/RECIPES.md": "e98a228252a21a3752df7e59c4eda8b35bb928f61944c12dc25b02dbc047a35c",
+    ".gitattributes": "d5343a905893d25b866ea0921443de86a315abf45c085584318e3813d95f890d"
+  },
+  "owned_git_blobs": {
+    "src/agent_alfred/ops/static/runs.js": "91b2641dffc37afa3a41a6088bfb8a186df9db5a",
+    "src/agent_alfred/ops/static/run-fields.js": "d503fd89370a254fe8d7be72523d38b8f1598057",
+    "src/agent_alfred/ops/static/run-evidence.js": "719a5078232aa99734719d98920de1f4ff4ac4ce",
+    "src/agent_alfred/ops/static/trace_export.js": "83216c18eaf7a7744bbc643d825cf7d7ae292c37",
+    "src/agent_alfred/ops/static/inbox-runs.css": "54399bd0caa9d934dda5a0d08e05eddd05c01bec",
+    "tests/browser/runs.spec.js": "b5a215b1943cad21a4eb88c07139e5f7a171c8ac",
+    "tests/browser/inbox-run-sources.spec.js": "6fe62d4e89122f5513417ff9efacaf71d3cd9050"
+  },
+  "candidate_subtrees": {
+    "src": "6271983afce446e178ee03554020a1fe2f802c75",
+    "tests": "9939523cc82c723e0e958ca586e16deb2d47141e",
+    "scripts": "739d01f2d6ec3d62acabfedb786bdcc10bb011f9"
+  },
+  "subtree_note": "Source/test/script subtrees from the staged candidate; independent of evidence additions. Verify these against the final commit.",
+  "parent_candidate": "30add8f1e6299839a4ea4b7048deae589a44110d",
+  "repair_changed_files": [
+    "src/agent_alfred/ops/static/runs.js",
+    "src/agent_alfred/ops/static/run-fields.js",
+    "src/agent_alfred/ops/static/run-evidence.js",
+    "src/agent_alfred/ops/static/inbox-runs.css"
+  ],
+  "repair_note": "Only the seven requested review fixes; four presentation files changed, tests/runRow/runFields/shared tokens/backend unchanged. Prior candidate audit preserved in repair-r1/previous-final."
+}

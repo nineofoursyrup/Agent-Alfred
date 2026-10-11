@@ -209,12 +209,12 @@ test("real summary privacy gates and container 679/680 use one equivalent table/
       );
     await page.getByRole("button", { name: "收起主对话", exact: true }).click();
     for (const width of [679, 680]) {
-      await list.evaluate((element, width) => {
+      await list.locator(".run-list-body").evaluate((element, width) => {
         element.style.width = width + "px";
         element.style.maxWidth = "none";
       }, width);
       expect(
-        await list.evaluate((element) => element.getBoundingClientRect().width),
+        await list.locator(".run-list-body").evaluate((element) => element.getBoundingClientRect().width),
       ).toBe(width);
       expect(
         await list
@@ -235,7 +235,7 @@ test("real summary privacy gates and container 679/680 use one equivalent table/
         keys.length,
       );
     }
-    await list.evaluate((element) => element.removeAttribute("style"));
+    await list.locator(".run-list-body").evaluate((element) => element.removeAttribute("style"));
     for (const width of [390, 320]) {
       await page.setViewportSize({ width, height: 844 });
       expect(

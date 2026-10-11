@@ -107,6 +107,114 @@ export function runRow(run) {
   return row;
 }
 
+/** @param {Wire} run @param {Wire|null} [evidence] */
+function runMetrics(run, evidence = null) {
+  const finished = evidence?.events?.find(
+    (/** @type {Wire} */ event) => event.payload.name === "run.finished",
+  );
+  const duration = finished?.payload.duration_ms;
+  const observed = new Set(
+    (evidence?.events || [])
+      .map((/** @type {Wire} */ event) => event.envelope.step_index)
+      .filter((/** @type {any} */ index) => Number.isInteger(index) && index >= 0),
+  ).size;
+  const started = Date.parse(run.started_at),
+    ended = Date.parse(run.finished_at);
+  return [
+    [
+      "Step 数",
+      observed ? `已读 ${observed} · 总数未提供` : "未提供",
+    ],
+    [
+      "耗时",
+      typeof duration === "number" && Number.isFinite(duration) && duration >= 0
+        ? `${duration} ms`
+        : Number.isFinite(started) && Number.isFinite(ended) && ended >= started
+          ? ended - started < 1000
+            ? "<1 s"
+            : `${Math.floor((ended - started) / 1000)} s`
+          : "未提供",
+    ],
+  ];
+}
+
+/** @param {Wire} run @param {Wire|null} evidence */
+export function runSummary(run, evidence) {
+  const row = runRow(run);
+  row.classList.add("run-summary");
+  const lead = node("div"),
+    message = node("dl"),
+    identity = node("dl"),
+    metadata = node("dl");
+  lead.className = "run-summary-lead";
+  message.className = "run-summary-message";
+  identity.className = "run-summary-identity sy-row-meta";
+  metadata.className = "run-summary-meta sy-row-meta";
+  for (const field of row.querySelectorAll(".run-fields > div")) {
+    const label = field.querySelector("dt")?.textContent;
+    if (label === "输入预览") {
+      message.append(field);
+    } else if (["结果", "记录", "准入", "阶段"].includes(label || "")) metadata.append(field);
+    else if (["Run ID", "用途", "所属分组"].includes(label || "")) identity.append(field);
+  }
+  for (const [label, value] of runMetrics(run, evidence)) {
+    const field = node("div");
+    field.append(node("dt", label), node("dd", value));
+    metadata.append(field);
+  }
+  const costs = node("div");
+  costs.className = "run-summary-costs sy-row-meta";
+  for (const [index, attempt] of (evidence?.attempts || []).entries()) {
+    const cost = attempt.cost || { state: "unknown" };
+    const charge = node(
+      "span",
+      `调用 ${index + 1} · ${cost.state === "unknown" ? "unknown · 费用未知" : `${cost.state} · USD ${cost.amount}`}`,
+    );
+    charge.title = `Attempt ${attempt.attempt_id}`;
+    charge.className = cost.state === "unknown" ? "sy-tone-attention" : "sy-tone-success";
+    if (cost.state === "estimated") {
+      for (const component of cost.price_components || [])
+        charge.append(
+          node(
+            "small",
+            ` · ${component.dimension}: ${component.price_source || component.source}${component.stale ? " · stale" : ""}`,
+          ),
+        );
+      if (cost.price_components?.some((/** @type {Wire} */ component) => component.tiered))
+        charge.append(node("small", " · 按基础档估算"));
+    }
+    costs.append(charge);
+  }
+  if (!costs.childElementCount)
+    costs.append(
+      node(
+        "span",
+        evidence?.snapshot_expired
+          ? "账目快照已失效，尚未核验当前调用账目。"
+          : "暂无可读调用账目；不代表未调用或免费。",
+      ),
+    );
+  if (!message.childElementCount) {
+    const purpose = [...identity.children].find(
+      (field) => field.querySelector("dt")?.textContent === "用途",
+    );
+    if (purpose) message.append(purpose);
+  }
+  const charges = node("div"),
+    values = node("dd");
+  values.append(costs);
+  charges.append(node("dt", "费用"), values);
+  metadata.append(charges);
+  lead.append(message, metadata);
+  const context = node("details"),
+    fields = row.querySelector(".run-fields");
+  context.className = "run-summary-context";
+  context.append(node("summary", "运行摘要明细"));
+  if (fields) context.append(fields);
+  row.replaceChildren(lead, identity, context);
+  return row;
+}
+
 export const RUN_COLUMNS = [
   "Run / 用途",
   "请求摘要",
@@ -119,27 +227,32 @@ export const RUN_COLUMNS = [
 /** @param {Wire} run */
 export function runTableRow(run) {
   const row = node("tr");
+  row.className = "run-list-row sy-row";
   row.dataset.sourceKey = "run";
   row.dataset.sourceId = run.run_id;
-  const fields = runFields(run),
-    groups = [
-      ["Run ID", "用途", "所属分组", "会话"],
-      ["输入预览", "聚合"],
-      ["来源", "入口", "接受时间", "开始时间", "结束时间"],
-      ["准入"],
-      ["阶段", "结果"],
-      ["记录", "记录来源"],
-    ];
-  for (const [index, labels] of groups.entries()) {
-    const cell = node("td");
-    cell.dataset.column = RUN_COLUMNS[index];
-    const values = node("dl");
-    for (const [label, value] of fields.filter(([label]) =>
-      labels.includes(label),
-    )) {
-      const field = node("div");
-      field.append(node("dt", label));
-      const text = node("dd", value);
+  const cell = node("td"),
+    preview = node("dl"),
+    identity = node("dl"),
+    metadata = node("dl"),
+    context = node("details"),
+    fields = node("dl");
+  cell.colSpan = RUN_COLUMNS.length - 1;
+  cell.className = "run-list-content sy-row-content";
+  preview.className = "run-list-preview";
+  identity.className = "run-list-identity sy-row-meta";
+  metadata.className = "run-list-meta sy-row-meta";
+  context.className = "run-list-context";
+  context.append(node("summary", "运行记录明细"), fields);
+  for (const [label, value] of [
+    ...runFields(run),
+    ...runMetrics(run).filter(([label]) => label !== "Step 数"),
+  ]) {
+    const field = node("div"),
+      caption = node("dt", label),
+      text = node("dd", value);
+    field.append(caption, text);
+    if (label === "输入预览" || label === "聚合") {
+      caption.className = "sr-only";
       if (label === "输入预览") {
         text.className = "run-preview";
         const button = node("button", "展开预览");
@@ -150,15 +263,18 @@ export function runTableRow(run) {
           button.textContent = open ? "收起预览" : "展开预览";
           text.classList.toggle("expanded", open);
         });
-        field.append(text, button);
-      } else field.append(text);
-      values.append(field);
-    }
-    if (!values.childElementCount)
-      values.append(node("dd", "按用途与 Run ID 识别"));
-    cell.append(values);
-    row.append(cell);
+        field.append(button);
+      }
+      preview.append(field);
+    } else if (["Run ID", "用途", "所属分组"].includes(label)) identity.append(field);
+    else if (["结果", "记录", "耗时"].includes(label)) metadata.append(field);
+    else fields.append(field);
   }
-  row.append(node("td"));
+  if (!preview.childElementCount)
+    preview.append(node("dd", "按用途与 Run ID 识别"));
+  cell.append(preview, metadata, identity, context);
+  const actions = node("td");
+  actions.className = "run-list-actions";
+  row.append(cell, actions);
   return row;
 }

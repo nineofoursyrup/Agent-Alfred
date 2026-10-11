@@ -1,0 +1,86 @@
+{
+  "checked_at": "2026-10-11T03:43:20.262Z",
+  "node_version": "v26.8.2",
+  "source_sha256": {
+    "stream": "c81a6ce6a75a2a7c6ba060a1a014fa794ff386e95aa64869f926850ee36267a1",
+    "app": "fe7eb5ffb33490e85284f653bba74dd678ba7fff4ba0a85c3efcb34eee39b930"
+  },
+  "experiment": "Unmodified Stream module with controlled EventSource and a held real SHA-256 digest. Callback models the same-instance newer revision acceptance in app.js. No HTTP/browser/provider interaction.",
+  "scope_limit": "This proves a possible pre-existing close/queue path. It does not prove that any recorded browser failure followed this ordering, and does not replace any gate.",
+  "records": [
+    {
+      "mode": "native_close_only",
+      "atClose": {
+        "connected": false,
+        "revision": 1,
+        "sourceState": 2
+      },
+      "afterQueuedWork": {
+        "connected": true,
+        "revision": 2,
+        "sourceState": 2
+      },
+      "events": [
+        {
+          "kind": "state_patch",
+          "first": true,
+          "sourceState": 1,
+          "revision": 1
+        },
+        {
+          "kind": "domain_event",
+          "first": false,
+          "sourceState": 2
+        },
+        {
+          "kind": "state_patch",
+          "first": false,
+          "sourceState": 2,
+          "revision": 2
+        }
+      ]
+    },
+    {
+      "mode": "error_epoch_control",
+      "atClose": {
+        "connected": false,
+        "revision": 1,
+        "sourceState": 2
+      },
+      "afterQueuedWork": {
+        "connected": false,
+        "revision": 1,
+        "sourceState": 2
+      },
+      "events": [
+        {
+          "kind": "state_patch",
+          "first": true,
+          "sourceState": 1,
+          "revision": 1
+        }
+      ]
+    },
+    {
+      "mode": "generation_control",
+      "atClose": {
+        "connected": false,
+        "revision": 1,
+        "sourceState": 2
+      },
+      "afterQueuedWork": {
+        "connected": false,
+        "revision": 1,
+        "sourceState": 2
+      },
+      "events": [
+        {
+          "kind": "state_patch",
+          "first": true,
+          "sourceState": 1,
+          "revision": 1
+        }
+      ]
+    }
+  ]
+}

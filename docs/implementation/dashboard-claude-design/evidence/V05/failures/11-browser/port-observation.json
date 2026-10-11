@@ -1,0 +1,7 @@
+{
+  "at": "2026-10-11T03:02:40.062414+00:00",
+  "listener_output": "",
+  "listener_exit_code": 1,
+  "processes_not_terminated": true,
+  "test_phase": "12-environment-browser; no screenshot servers or CLI browsers running"
+}

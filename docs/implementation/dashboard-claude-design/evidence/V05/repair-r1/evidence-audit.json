@@ -1,0 +1,9 @@
+{
+  "checked_at": "2026-10-11T05:00:50.411992+00:00",
+  "immutable_gate_output_hashes_valid": true,
+  "failure_contexts_verified": 33,
+  "individual_traces_verified": 32,
+  "image_manifest_count": 119,
+  "source_changes_since_typecheck": [],
+  "current_full_run_failure_contexts": 0
+}

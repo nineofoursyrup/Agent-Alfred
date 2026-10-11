@@ -1,0 +1,12 @@
+{
+  "base": "645c4549bb5bea9f79ddb4625f17c5a8a6af58c8",
+  "files": {
+    "src/agent_alfred/ops/static/inbox-runs.css": "03e09c08f5b44d84d4da84b54526920c5179f34296d9625647ad9b71d4918337",
+    "src/agent_alfred/ops/static/run-evidence.js": "b844a29511a1cd22dcbed66a620cbe52df6a82a97c1df24b6876185a5650f0c6",
+    "src/agent_alfred/ops/static/run-fields.js": "063f2a086d06ebf0c4964eda114c70dc28971550748dcd6cafffe11d91d9e380",
+    "src/agent_alfred/ops/static/runs.js": "ddff63ca6b2026f86c2dc84b72fce190d121a1ddfa37a7f470e26577dd66f041",
+    "src/agent_alfred/ops/static/trace_export.js": "04d7e7bc89a8765b98b63b79e3c2a8f53f8bf1921fdb6732d28e1d614f463c73",
+    "tests/browser/inbox-run-sources.spec.js": "572cefc46e269c1ffcd5d728e7f6564a53a2f3f3fa6486548b071ee4f330caf2",
+    "tests/browser/runs.spec.js": "971a282b7c40b346e812f3bd040494233936652d972d51719107edad0f01bf52"
+  }
+}

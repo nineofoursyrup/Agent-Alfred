@@ -1,0 +1,4 @@
+{
+  "isError": true,
+  "error": "TimeoutError: locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('region', { name: '主对话', exact: true }).getByText('已保存', { exact: true }).last() to be visible\u001b[22m\n"
+}

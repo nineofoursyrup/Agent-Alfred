@@ -8,7 +8,7 @@ import {
   highlightSource,
   captureReading,
 } from "./source.js";
-import { runRow, runTableRow, RUN_COLUMNS } from "./run-fields.js";
+import { runSummary, runTableRow, RUN_COLUMNS } from "./run-fields.js";
 import {
   renderEvidence,
   renderInputs,
@@ -19,6 +19,7 @@ export { outcomeLabel } from "./run-fields.js";
 
 /** @param {HTMLElement} root @param {import('./progress.js').Progress} progress @param {Wire} dashboard @param {import('./memory.js').MemorySync} memory @param {()=>string} csrf */
 export function runsPage(root, progress, dashboard, memory, csrf) {
+  root.classList.add("runs-page");
   const runtime = dashboard.runtime,
     url = new URL(location.href),
     context = url.searchParams;
@@ -51,16 +52,24 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
   root.append(notice);
   const summary = node("section");
   summary.setAttribute("aria-label", "运行摘要");
+  summary.className = "sy-panel run-summary-panel";
   const detail = node("section");
   detail.setAttribute("aria-label", "运行过程");
   const list = node("section");
   list.setAttribute("aria-label", "运行列表");
-  list.className = "run-source";
+  list.className = "sy-panel run-list-panel";
+  const listBody = node("div");
+  listBody.className = "run-source run-list-body";
+  const listHeader = node("header");
+  listHeader.className = "sy-list-header run-list-header";
+  const listTitle = node("h2", "运行记录");
+  listTitle.className = "run-list-title";
+  listHeader.append(listTitle);
   const pinned = node("tbody"),
     finished = node("tbody"),
     controls = node("div");
   const table = node("table");
-  table.className = "run-table";
+  table.className = "run-table sy-row-list";
   table.setAttribute("aria-label", "运行记录");
   const head = node("thead"),
     header = node("tr");
@@ -71,7 +80,9 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
   }
   head.append(header);
   table.append(head, pinned, finished);
-  list.append(table, controls);
+  controls.className = "sy-panel-body run-list-controls";
+  listBody.append(table);
+  list.append(listHeader, listBody, controls);
   const seen = new Set();
   const back = node("a", "返回运行列表");
   back.href = "/runs?" + new URLSearchParams({ filter });
@@ -90,6 +101,7 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
     evidenceStatus = node("p");
   metadataStatus.setAttribute("role", "status");
   evidenceStatus.setAttribute("role", "status");
+  metadataStatus.className = evidenceStatus.className = "run-read-status";
   let exportView = /** @type {ReturnType<typeof traceExport>|null} */ (null),
     pathView = /** @type {ReturnType<typeof topologyView>|null} */ (null);
   let closeAggregation = () => {};
@@ -98,6 +110,9 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
     exportMount = node("div");
   usage.append(node("summary", "用量"), usageBody);
   usage.id = "run-usage";
+  usage.className = "sy-panel run-usage";
+  usage.firstElementChild?.classList.add("sy-panel-header", "sy-panel-eyebrow");
+  usageBody.className = "sy-panel-body";
   exportMount.id = "trace-export";
   if (selected === null) {
     const select = node("select");
@@ -119,7 +134,8 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
           "/runs?" + new URLSearchParams({ filter: select.value }),
         ),
     );
-    root.append(select, list);
+    listHeader.append(select);
+    root.append(list);
   } else {
     const actions = node("div");
     actions.className = "run-actions";
@@ -137,7 +153,10 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
       refreshEvidence,
       detail,
     );
-    pathView = topologyView(root, "run-path", runtime, memory, selected);
+    const graph = node("div");
+    graph.className = "sy-panel run-graph";
+    root.append(graph);
+    pathView = topologyView(graph, "run-path", runtime, memory, selected);
     root.append(usage, exportMount);
     follow(
       back,
@@ -184,6 +203,7 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
   function row(run) {
     const result = runTableRow(run),
       link = node("a", "查看运行");
+    result.dataset.selected = String(run.run_id === anchor);
     link.href =
       "/runs/" +
       encodeURIComponent(run.run_id) +
@@ -230,6 +250,8 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
       if (!seen.size && !live) {
         const empty = node("tr"),
           cell = node("td", "此筛选下暂无运行。");
+        empty.className = "run-list-row sy-row";
+        cell.className = "run-list-content sy-row-content";
         cell.colSpan = 7;
         empty.append(cell);
         finished.append(empty);
@@ -312,7 +334,7 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
             session_id: selectedRun?.session_id,
             view: "messages",
           });
-        summary.append(link);
+        summary.querySelector(".run-read-controls")?.append(link);
       }
     }
     mainbar.textContent =
@@ -492,11 +514,28 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
       return;
     }
     lastRender = signature;
+    const focusedRead =
+      document.activeElement === refreshRun
+        ? refreshRun
+        : document.activeElement === refreshEvidence
+          ? refreshEvidence
+          : null;
     if (!exportView && selected !== null)
       exportView = traceExport(exportMount, selected, csrf, memory);
+    const summaryHeader = node("header"),
+      summaryTitle = node("h2", "运行摘要"),
+      summaryReads = node("div");
+    summaryHeader.className = "sy-panel-header";
+    summaryTitle.className = "sy-panel-eyebrow";
+    summaryReads.className = "run-read-controls sy-panel-body";
+    summaryHeader.append(summaryTitle);
+    summaryReads.append(refreshRun);
+    const disclosure = summary.querySelector("details"),
+      contextOpen = disclosure?.open || false,
+      contextFocused = disclosure?.querySelector("summary") === document.activeElement;
     summary.replaceChildren(
-      node("h2", "运行摘要"),
-      runRow({
+      summaryHeader,
+      runSummary({
         ...selectedRun,
         recording_state: [
           selectedRun.recording_state,
@@ -508,8 +547,14 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
               )
             ? "failed"
             : evidence?.recording_state || selectedRun.recording_state,
-      }),
+      }, evidence),
+      summaryReads,
     );
+    const nextContext = summary.querySelector("details");
+    if (nextContext) {
+      nextContext.open = contextOpen;
+      if (contextFocused) nextContext.querySelector("summary")?.focus({ preventScroll: true });
+    }
     summary.dataset.highlighted = "true";
     paintTimes();
     const prior = new Map(
@@ -539,21 +584,38 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
     const restoreReading = captureReading(detail);
     closeAggregation();
     closeAggregation = () => {};
-    detail.replaceChildren(node("h2", "过程证据"), node("p", "事件发布顺序"));
-    if (evidenceError) detail.append(node("p", evidenceError));
+    const process = node("section"),
+      processHeader = node("header"),
+      processTitle = node("h2", "过程证据"),
+      processBody = node("div"),
+      processReads = node("div");
+    process.className = "sy-panel run-process";
+    processHeader.className = "sy-panel-header";
+    processTitle.className = "sy-panel-eyebrow";
+    const processHeading = node("div"),
+      order = node("p", "事件发布顺序");
+    order.className = "sy-panel-description";
+    processHeading.append(processTitle, order);
+    processReads.className = "run-read-controls";
+    processReads.append(refreshEvidence);
+    processHeader.append(processHeading, processReads);
+    processBody.className = "run-process-body";
+    process.append(processHeader, processBody);
+    detail.replaceChildren(process);
+    if (evidenceError) processBody.append(node("p", evidenceError));
     const memoryFacts = evidence?.memory;
     if (
       memoryFacts?.input_evidence_error ||
       memoryFacts?.input_failure ||
       memoryFacts?.input_preparation?.status === "failed"
     )
-      detail.append(
+      processBody.append(
         node("p", "输入准备失败或来源登记失败；该请求未发送，详情见本次输入。"),
       );
     if (memoryFacts?.input_unconfirmed?.length)
-      detail.append(node("p", "输入登记待恢复；发送事实尚未确认。"));
+      processBody.append(node("p", "输入登记待恢复；发送事实尚未确认。"));
     if (memoryFacts?.skills?.status === "failed")
-      detail.append(node("p", "Skill 准备失败，详情见本次输入。"));
+      processBody.append(node("p", "Skill 准备失败，详情见本次输入。"));
     if (evidence?.snapshot_expired) {
       usageBody.replaceChildren(
         node("p", "账目快照已失效，尚未核验当前调用账目。"),
@@ -575,14 +637,17 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
           filters.set(key, context.get("ops_" + key) || "");
       const link = node("a", "返回账本核对筛选并刷新");
       link.href = "/ops?" + filters;
-      detail.append(node("p", "账目快照已失效；尚未核验当前过程记录。"), link);
+      processBody.append(node("p", "账目快照已失效；尚未核验当前过程记录。"), link);
       pathView?.syncReferences();
       paintAction();
+      focusedRead?.focus({ preventScroll: true });
       return;
     }
-    if (evidence?.trace_incomplete) detail.append(node("p", "追踪不完整"));
+    if (evidence?.trace_incomplete) processBody.append(node("p", "追踪不完整"));
+    if (evidence?.trace_status === "available" && evidence.trace_incomplete !== true)
+      processBody.append(node("p", "过程记录可用 · available"));
     if (evidence && evidence.trace_status !== "available")
-      detail.append(
+      processBody.append(
         node(
           "p",
           /** @type {Record<string,string>} */ ({
@@ -625,7 +690,7 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
       evidence.trace_status !== "live" &&
       runFinished;
     renderEvidence(
-      detail,
+      processBody,
       [...events.values()].filter(
         (event) =>
           !authoritative ||
@@ -666,17 +731,32 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
       references,
       evidence?.trace_incomplete ? "partial" : evidence?.trace_status,
     );
-    if (evidence?.memory?.aggregation)
+    if (evidence?.memory?.aggregation) {
+      const aggregation = node("section"),
+        body = node("div");
+      aggregation.className = "sy-panel run-aggregation";
+      body.className = "sy-panel-body";
+      aggregation.append(body);
+      detail.append(aggregation);
       closeAggregation = aggregationFacts(
-        detail,
+        body,
         evidence.memory.aggregation,
         memory,
       );
+    }
     if (evidence?.memory?.routing) {
       const routing = evidence.memory.routing,
-        section = node("section");
-      section.append(
-        node("h3", "消息分流"),
+        section = node("section"),
+        heading = node("h3", "消息分流"),
+        header = node("header"),
+        body = node("div");
+      section.className = "sy-panel run-routing";
+      heading.className = "sy-panel-eyebrow";
+      header.className = "sy-panel-header";
+      body.className = "sy-panel-body";
+      header.append(heading);
+      section.append(header, body);
+      body.append(
         node(
           "p",
           `${routing.route || "未执行图"} · ${routing.decision_reason || routing.fallback?.reason || ""}`,
@@ -687,11 +767,11 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
         ),
       );
       if (routing.reply_disposition === "no_reply")
-        section.append(node("p", "已结束 · 按要求未回复"));
+        body.append(node("p", "已结束 · 按要求未回复"));
       if (routing.recoveries?.length) {
-        section.append(node("p", "上下文准备失败，已降级处理。"));
+        body.append(node("p", "上下文准备失败，已降级处理。"));
         for (const recovery of routing.recoveries)
-          section.append(
+          body.append(
             node(
               "p",
               `${recovery.node_id} · ${recovery.code} · ${recovery.message} · ${recovery.side_effect_state}`,
@@ -699,14 +779,14 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
           );
       }
       if (routing.classification?.actual_model)
-        section.append(
+        body.append(
           node(
             "p",
             `分类模型：${routing.classification.actual_model.endpoint_id} / ${routing.classification.actual_model.model_id}`,
           ),
         );
       if (routing.fallback?.decision !== "not_needed")
-        section.append(
+        body.append(
           node(
             "p",
             `普通回退：${routing.fallback?.decision} / ${routing.fallback?.reason}`,
@@ -736,6 +816,7 @@ export function runsPage(root, progress, dashboard, memory, csrf) {
     restoreReading();
     pathView?.syncReferences();
     paintAction();
+    focusedRead?.focus({ preventScroll: true });
   }
   function paintTimes() {
     const time = (/** @type {number} */ at) =>

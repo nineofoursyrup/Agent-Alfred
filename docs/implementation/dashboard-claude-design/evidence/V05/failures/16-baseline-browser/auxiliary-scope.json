@@ -1,0 +1,601 @@
+{
+  "classification": "INVALID_CONTROL / INTERRUPTED",
+  "reason": "Editable install served V05 assets instead of the pristine baseline. SIGINT stopped this invalid comparison after source resolution was verified.",
+  "first_failure_preserved": "database_status-STD-06-SPE-d95bf--failure-is-cleanup-failure",
+  "full_original_output": "../../gates/16-baseline-browser.json",
+  "excluded_from_commit": [
+    {
+      "case": "database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "6080af4beb1ccc76d4fde29edb38dde6f319b43eede0fed861535e368602fc90",
+        "error-context.md": "e8b2eb9d7b043058d608ce1adc89c2a75dec520e8dfaca705a956f6f29909be4"
+      }
+    },
+    {
+      "case": "database-real-deletion-rej-ce7bb-yed-at-the-browser-boundary",
+      "files": {
+        "test-failed-1.png": "fb32313e11bc8ffbd5310a1660e630b64cedb4622f8462a5eae2d5464ac8279e",
+        "trace.zip": "ac09067296e049e877021da26470a22106eae4ce24dc3dad137e978a6eebe7c6",
+        "error-context.md": "9250bfeb7b92ce151e3efbcbba240e82583db54adfbd032b4a0ba16806b619a4"
+      }
+    },
+    {
+      "case": "database_status-S10-failed-27f05-and-capability-are-verified",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "6a18bbe51123dc6d3afbbe63ad3a63fa9ca4a5ad412467845cc636243a87dd1c",
+        "error-context.md": "762260c451d2787721658d0679d7684feb899fd31ee18f11fb123dcabf55c938"
+      }
+    },
+    {
+      "case": "database_status-S10-lost-e-d2eaf-xplicit-capability-recovery",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "cfe2e5b5a0cb52c24841c9ad45736429588aad915e0037e71de30f74afff5561",
+        "error-context.md": "759444b203fa090c49e40bdd478bce5f6864f9b9125fc3c71af2664c8a068793"
+      }
+    },
+    {
+      "case": "database_status-S10-lost-i-d9d65-xplicit-capability-recovery",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "5086f8ca9012f67132d256363bfc23aa03f0e2a3bd1efe55acce71571d72e94e",
+        "error-context.md": "896c1c23089b4f8cfa430b1f11024cf3ae522e919090f0040328d4aeb9150a21"
+      }
+    },
+    {
+      "case": "inbox-run-navigation-Inbox-36675-out-replacing-a-read-window",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "141937fe9b34fd39737bb8f19e2b9e0d32a3ae01b1b4f59e404b3818528f485e",
+        "error-context.md": "10b06f25b1fcff19a7ec585a7b017f0ff7162c5679daaa8db40d09ad9b54be9a"
+      }
+    },
+    {
+      "case": "inbox-run-navigation-Inbox-45770-out-replacing-a-read-window",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "c38eeb4c6ca8d1b96bf0152ef43b355cc54bc0ef69ca527f299fe3d99419f0b3",
+        "error-context.md": "7a28dfc2c11776c79f31704d2b52dd88f6f5e88841abd994684f49a7dd5236d9"
+      }
+    },
+    {
+      "case": "inbox-run-navigation-Inbox-d6b2e-out-replacing-a-read-window",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "7b9b7c459ef45a6c8fb9ff9ae47b060f92f0b1e4f865c9c64c2547f7a1550abf",
+        "error-context.md": "7b2f7c6a64a67fdb4c7a2e9fc7c9c6f89835d1dfcf082e5fb0d8a2c46277a745"
+      }
+    },
+    {
+      "case": "inbox-run-navigation-Inbox-e87de--opening-the-hidden-MainBar",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "ea0443ab832537e641e826db93b2425e7a575fcf4676e1eabfc62c4688669b51",
+        "error-context.md": "69d28062ff3757b2f5ac088cc25bb0c4176aca5f9e84b79a2ba4e7b870d06b93"
+      }
+    },
+    {
+      "case": "inbox-run-navigation-real--47e0c-ng-cursor-without-a-refresh",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "02fbd702c4657a32cdf06ab409dc69b6bc0f00d1c7a45893aa0f879105f105e5",
+        "error-context.md": "c6a13cba007e0f415ad5c8fa937baae930e8f9459ba74e23c72e0a4e3e6c6f6b"
+      }
+    },
+    {
+      "case": "inbox-run-navigation-real--56cac-ng-cursor-without-a-refresh",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "30a91167fb28d749f2a9d94a7c0588c8f866ded76c6d1aa14096b14b8bf2b8ef",
+        "error-context.md": "77ff9885e667225dfcac6899b561873179c041961bbf9e0ebce407a8166ac87d"
+      }
+    },
+    {
+      "case": "mainbar-empty-identity-res-5d14e-reserves-its-draft-navigate",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "41319715dddf09c909f6776fff498fbad6cf7335e29b14482cb129425141381e",
+        "error-context.md": "1a7e1fcdaeb8a63c90bc257aa3087f469c1e7bdd49ec6e94620fdabb38446d31"
+      }
+    },
+    {
+      "case": "mainbar-empty-identity-res-6b8ba-eserves-its-draft-same-page",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "ec1a512f87c273149b43f52c096f4200a2e7821bad198898e3552e71cc41eacb",
+        "error-context.md": "45006d3b5fbf878d5a06c6814a98cd9fd6fb11423a05038a379b406fa69f4c85"
+      }
+    },
+    {
+      "case": "memory-A35-a-delete-in-one-19229-eads-never-restore-the-body",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "0202f334e394bf2f0bd8cb722650175c97d3b7d86399e0815a8514beac01a9b9",
+        "error-context.md": "c737d29e9a86897cb07812c14b3dfc4aa68b0c4c7d9168197b4dfcb65e1aa21e"
+      }
+    },
+    {
+      "case": "memory-A36-A55-disconnect--862f0--foreign-frames-are-ignored",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "ce14f185de00fc8b893533bb2f2c5fe40df07d027101f5da48d4c4735daaeed3",
+        "error-context.md": "c9b7e5cc12672e8ef2bcd064cfb77984e006daafdaaf715331c4906e707c02bc"
+      }
+    },
+    {
+      "case": "memory-A37-expanded-gate-r-6e410--and-read-faults-distinctly",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "e36d93b94258a1331f3870d23f24420f09abda2f0e713f5ee9c7d21ec119a392",
+        "error-context.md": "32c483a7ba1aee391c0ee6136d47423278c2d08160e2afe85b144a5cfa34025c"
+      }
+    },
+    {
+      "case": "memory-A38-equal-creation--bd79e-tale-cursors-force-a-reread",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "f8983d5482b0f390c1b215331873923708f07fce09f074c7acf4b7ff6c4dfce2",
+        "error-context.md": "cb7608bbdaf052ed9c1bfdab6c88e969af6bfc76af9b8fccddb41b034e962a3e"
+      }
+    },
+    {
+      "case": "memory-A40-empty-no-match--64310-and-conflicts-stay-distinct",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "22e67643446fb2f21c13a64a77955f1338d1b1e69006a6e77c4ef0ce3b6a4f41",
+        "error-context.md": "1275d0bcd8c3ff369b5329a8fec882594a064d57dde2ad5de8f745ff7dbebd51"
+      }
+    },
+    {
+      "case": "memory-A41-A42-the-read-on-de7a3--reloads-only-after-restart",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "9f021b1c3c58b01ff8e8fc44373035a4bd03333cc6c3819ef6af18d7851a8cad",
+        "error-context.md": "bd410436f86d6378102094247bc0fc4f5790fd8081770e7ca7a9d98d8f166492"
+      }
+    },
+    {
+      "case": "memory-A47-queue-states-an-d3120-hing-bypasses-the-threshold",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "e6fafd186d49f0ab1fd2b38d32b0dc60a6c8d8f6eef635cb721907be52d1db37",
+        "error-context.md": "793365e999865ac5d7de38fc4797b46fc2b8ab8204b4655a84f69da380f6b477"
+      }
+    },
+    {
+      "case": "memory-A52-explicit-save-n-a2055-conflict-delete-and-requery",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "c6932e8b60f7209e7703a55821ca4c200438aea2f96e03610354a7dbe0a02153",
+        "error-context.md": "8629a27cdd035ac64e7c9c10466151387307c625a1ee59784b6b2736a919a900"
+      }
+    },
+    {
+      "case": "memory-A55-an-undeliverabl-a1749-ream-and-reconnect-verifies",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "ce3c96b7601e70b69d42ea2b4afe2037e22de3102b361a2185b39fa68251acc0",
+        "error-context.md": "ba9de7d4ad0a937e8f9c4d80ca784ac450f05bce4fbf0d55b95d8fc593b8feae"
+      }
+    },
+    {
+      "case": "memory-G2-D09-a-late-old-p-53b36-ase-a-newer-action-identity",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "68b3ea646ce790cd515979bf3b46e3ddd7957c0105b19b3494efcee78979e128",
+        "error-context.md": "c4157e31822d5466145a9a1087b35b148f90dca983aee095b45eb14608e502ef"
+      }
+    },
+    {
+      "case": "memory-G2-D09-a-queried-du-e7e00-ilure-not-undefined-success",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "510ba7acdd4cad99d80f0263ede9e1bfd37633419a0ad511eecda1d0533c30ad",
+        "error-context.md": "483456af059eecb12ff749c27e3976a57b4f1b19cebd8a76b546d0b6bb872075"
+      }
+    },
+    {
+      "case": "memory-G2-D09-all-unanswer-97198-rvive-navigation-and-reload",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "b983b95be5c2b1be2cde520679fc5791b52de1d6281ed9098ff7472488a11568",
+        "error-context.md": "c04a005e30a4d59fb6050a4ec0a86ebcc138ebc2bda279f934d2cc05857db983"
+      }
+    },
+    {
+      "case": "memory-G2-D09-mirror-missi-d8678-eryable-action-after-reload",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "a18c5319b5f6b6aa8527e3bcaa881fb2307d61a6e88e394ebaf3ef1fd7d3e118",
+        "error-context.md": "3fec91859a244c55c5fa9d1819b56a678c0c7bd16377d32678e532d878c929dc"
+      }
+    },
+    {
+      "case": "memory-G2-D09-mirror-sendi-af721-l-operation-committed-true-",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "1c531b5e014cec38401f351a105742f3af0513d2f04055deb11d04ae7dfc949b",
+        "error-context.md": "85f9cb84a1e44e9f7b7aebb4b38c5cd807a4ba78bb6b6a11db506ed1eabc9456"
+      }
+    },
+    {
+      "case": "memory-G2-D09-mirror-sendi-f8b25--operation-committed-false-",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "402e32b51331b38e98a41ba67c5014fb18c79b69a26d312533c93993998d8e70",
+        "error-context.md": "a7a4e774e9b75d7e300e21e983b4e86e98b4f273fbde7101be134c532a49aec1"
+      }
+    },
+    {
+      "case": "memory-G2-D09-mirror-trunc-6508b-eryable-action-after-reload",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "2a3a946232bfb22dd998d3fb362747ddd5d03c4c66d523ae40a96dea57911ada",
+        "error-context.md": "1c5b3387926480f0fff5fa5ce494b29ea6670e783f4f073aff38685e82aeb1aa"
+      }
+    },
+    {
+      "case": "memory-G2-D09-queue-missin-69ee8-eryable-action-after-reload",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "6cddc1ee04509d43f73880c3ab001abaddc9d6b34275463e9e67de7c821d5d4a",
+        "error-context.md": "c3fedd254daed9342509dc8d72248e758525de3179afc74c869f4af6a6067ea1"
+      }
+    },
+    {
+      "case": "memory-G2-D09-queue-sendin-3277c--operation-committed-false-",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "b313795a9afe3d3f8ff140056b85b140cb32ee0bdb7928837b2542fffc17c961",
+        "error-context.md": "478036beca16e2f2154a6eaaeddd3b6faf6363c53ef5c13af03f81a2eb637b75"
+      }
+    },
+    {
+      "case": "memory-G2-D09-queue-sendin-cd8d3-l-operation-committed-true-",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "539946afe1a5fca2caf8a99d10a5f31ff98080956c1a45c8f91acc5644af6c11",
+        "error-context.md": "09bc7a82fd7e56db5066f6d6a7dc7c6df2a0e0d154068120c2161f1318ce6ef3"
+      }
+    },
+    {
+      "case": "memory-G2-D09-queue-trunca-3b1b2-eryable-action-after-reload",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "26a66c19f0fe563a7e4f2f0aad8a4ef535f36ff19d0f658ff1b307ba572fe5db",
+        "error-context.md": "d8dd0cecaa16f107de1faf37c0778795ddad065cbc74e4e0a78146f77dc87590"
+      }
+    },
+    {
+      "case": "memory-G2-D09-restored-con-5d495-rizes-a-newer-external-file",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "366485fed1d17214a99889c7d12f3e954e65e099c2b9783085f27964f67ae867",
+        "error-context.md": "c02f1b2fbea93ba1498aafec5524fa04c0b8e19a2da85bb2e0cebcbffa9c3c2a"
+      }
+    },
+    {
+      "case": "memory-G2-R08-delete-keeps-34600--json-under-success-headers",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "ee56b2f3d6cef004cb2f4ff4926a1054f4b45bdeb5fd34eb879e002f67bdf04a",
+        "error-context.md": "c162a22fd932b52301be9bbb6018bd81971ff742ba7f081073c6607f8779f501"
+      }
+    },
+    {
+      "case": "memory-G2-R08-delete-keeps-e40c2--body-under-success-headers",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "cfb5bf7c8725b858b80c565889836be97ae2635bf9ad056974a85bc53c668fb2",
+        "error-context.md": "341b59d5a276ba5674b55d1227775db6912da7f1d877a5eb4a3a31b04722ce7f"
+      }
+    },
+    {
+      "case": "memory-G2-R08-delete-keeps-ef155-field-under-success-headers",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "e82beecaf5ab58d7cb5bd43f55a9c232b0e4819e3773ee25fc70e08023643696",
+        "error-context.md": "38a4fabed1b2412bc206163381ff84c7a9daab32a9d532ca52525a0dcc4e3b45"
+      }
+    },
+    {
+      "case": "memory-G2-R08-save-keeps-i-41f94--body-under-success-headers",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "9a7320e334af1ec01d9479591f671fb63a24ed7c3281d8524043f96502a36b41",
+        "error-context.md": "44aeff750fa5bd96df66b0d1995c3b111b287a0f89a4139ec826272852f81779"
+      }
+    },
+    {
+      "case": "memory-G2-R08-save-keeps-i-ddd05--json-under-success-headers",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "9d1c24755bbe2a8e9d9a29d5388daaffc4c765ece048ded78c5961b68484735c",
+        "error-context.md": "a4a56dd9b0e396692831363b3ef8e73ea51b73d1e77c0e182efee000fbee5cd5"
+      }
+    },
+    {
+      "case": "memory-G2-R08-save-keeps-i-ef7d4-field-under-success-headers",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "d73b66ef4149104e9b18e9a557f3959de7fb0e82b7816a85cfe92bd1dfe0971f",
+        "error-context.md": "217af397dc661753cf86610964f92607ee57b1150f00caf8b366564624a5cdfb"
+      }
+    },
+    {
+      "case": "memory-G2-R08-update-keeps-7d187-field-under-success-headers",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "38b1a5b58d72cd69fc99cd23938c9b15a3765af41bce890507010c2b31959085",
+        "error-context.md": "4a35a4ea34090584b6440092fb56988cc03834ba76a607a2a015c03e95139ea4"
+      }
+    },
+    {
+      "case": "memory-G2-R08-update-keeps-bb086--body-under-success-headers",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "c01727f49c57167515ac736ad09ab6bb901723347f75f63e69ef81946279e856",
+        "error-context.md": "dc13186768a345f570620209ad11229a1b6e26baa70d225edbd5a2a237d78fdc"
+      }
+    },
+    {
+      "case": "memory-G2-R08-update-keeps-c41a1--json-under-success-headers",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "c9b8cb45e77c9fb186aa272dfd9e5ce763a799e61543d442c69e66519b2e1b88",
+        "error-context.md": "dd7630f7327aed1b961ada5d284fc98b78940eedfdf39ab72a9322c426d87875"
+      }
+    },
+    {
+      "case": "memory-G2-R10-a-late-missi-45932-later-commit-and-forgetting",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "eaf024b7aaeacf93df8bff5c4fbade77d92d3bd609b2cb0f43d026cb960c0a58",
+        "error-context.md": "a720d20d6414605fc1eebe4255500db8895e3e89b96f94373ec9de772a76aacc"
+      }
+    },
+    {
+      "case": "memory-G2-R10-forgotten-sa-16134-dies-while-response-is-lost",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "a06796c7e7889a87b4939e9a5d819d7ea6d430fc4a040a88c6f455ae986b558c",
+        "error-context.md": "f7fb781f4e3072b60f57308731c87234fa40f8a0a40815120e5c33595146e8d3"
+      }
+    },
+    {
+      "case": "memory-G2-R10-forgotten-sa-bb93c--while-response-is-inflight",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "bc75591524686a7ca64ef53f08dd08d2d9ee8437a6ee2834b3696accefecee9a",
+        "error-context.md": "539d0c1ca442c15b92dc24ba1f0571d71f4423600c5db87cdd97caabe8095f1c"
+      }
+    },
+    {
+      "case": "memory-G2-R10-forgotten-up-0b87d-dies-while-response-is-lost",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "02ef7a72286acc59c148f75efefb63eca5a2e5bb9ad29923583b66c32055f11c",
+        "error-context.md": "e25aec401e115dfd54a58fdad01c051be5461097adcadf5cd5d414c04eb18493"
+      }
+    },
+    {
+      "case": "memory-G2-R10-forgotten-up-ccb2c--while-response-is-inflight",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "7e4b0099663fa96d6a2bff387fbf50302c429c87d0d8a01820f0604cf2185c58",
+        "error-context.md": "e013999f9aaf8db0909af4e3b6acc46374b95d104b3d75fdc848c4619eb8e057"
+      }
+    },
+    {
+      "case": "memory-G2-R10-save-read-fa-0d2bb-connect-verifies-forgetting",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "ae78ca749565cf708d06ce47e26c215d6ec6f433e9ccadaa962ab45f16adc03e",
+        "error-context.md": "88e39f96c0d9ecbed73b0121ea3f3b31c795bd66d81934a6cac85afef58dbea7"
+      }
+    },
+    {
+      "case": "memory-G2-R10-update-read--af5d8-connect-verifies-forgetting",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "7e1a54eb5772a7b8956050c74b1edea98b7c23e15d2cab83fd4c83b4ee4dbeb3",
+        "error-context.md": "55325c9811eacec14d3c6e0f67762bebb85a5331907a0429462029f52a1780e0"
+      }
+    },
+    {
+      "case": "memory-G2-v2-an-older-bloc-54a23-ins-reachable-and-skippable",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "e1563c4e257e68d4d4be817922a1c2141d39e3ae93ead1d10e7b253a6d09d767",
+        "error-context.md": "f93770b6a743c847ddc9df39e083cfdc4e736ba0f7fd56f782d55d515c9f4833"
+      }
+    },
+    {
+      "case": "memory-G2-v2-older-batches-e8669-through-bounded-queue-pages",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "f4e78a066dd1caebd38d38bdbbfb94859bab63144b514d8134eea2c40a6df6fe"
+      }
+    },
+    {
+      "case": "memory-G2-v2-save-recovery-35b4a-while-away-and-after-reload",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "9fcd77f5a5b3dd64fc663640b7991f5fa03389b319ed0b7838908c9f95846ed9",
+        "error-context.md": "a7ade2e281bab275b11dbc176003e1089269d1ed8f754bc3676d1e61f1368101"
+      }
+    },
+    {
+      "case": "memory-G2-v2-update-recove-cb96a-while-away-and-after-reload",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "2a74862a5a6cfffb5608a5c5ecb9e6e9f101e13e016a50606fdf906f9dc6c7d6",
+        "error-context.md": "eb2c0044eaa10d7ff096b107528abb9e8f5a7873d172375eb2b1c770948f6711"
+      }
+    },
+    {
+      "case": "memory-R08-a-lost-response-58722--or-resent-with-the-same-id",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "a8d7bc02d1896d1b524a11c3ef6ec8b837288d7cc258283b37ba305efe021a01",
+        "error-context.md": "f806924ad1dc79016b46e90e3a58338c7da3e797d0646d85be2605b6a8727074"
+      }
+    },
+    {
+      "case": "memory-R08-more-than-twent-dfd4b-in-recoverable-after-reload",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "d1faac1e5ed8d0e5fb5cd5f390c353802ac4577002f902686ceebad7687da8dc",
+        "error-context.md": "98a6bb5fbd18d5bd1d019d0a84772d2a0ba2d133f2d7e934186ec1e751349761"
+      }
+    },
+    {
+      "case": "memory-R08-reload-during-a-3ba95-s-identity-committed-false-",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "37cd300d7d8c597cfd3563e351b70882c3967efafb99a5c7be2dcc5a9a70e9c1",
+        "error-context.md": "ae9fc87a646ec7a45aca8b0f3486e889f329d3da8f72d8f2dad9913fca6ebbdf"
+      }
+    },
+    {
+      "case": "memory-R08-reload-during-a-88371-ts-identity-committed-true-",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "8b5a72bbaaabf7975b3e5d507a42e9faa629bbcb02702e51476bb456aebc3dd8",
+        "error-context.md": "4a30afb2710f5c71533be176acd4e4310dddd7cd4c76e4377268b3277b3f7515"
+      }
+    },
+    {
+      "case": "memory-R09-unknown-legacy--3ae1d-before-forgetting-completes",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "a6ecfb28e81f4d2be4f26f1deda16119d15a75dc5faf70db9358d32ddf567f90",
+        "error-context.md": "15be248f485c1342f273a9808c80aa3cb22becf98f3b3aade95243c40b620101"
+      }
+    },
+    {
+      "case": "memory-R10-R14-an-external-fc1fe-l-regeneration-is-confirmed",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "8ec3eab3d11df01017a64ae5d4d5f354af855ffc9097085c63ee36a24d813bd7",
+        "error-context.md": "eef7d29c0b233c27901e1598fdb416818465f46a91bc1b1fee7fa40a56d7c09a"
+      }
+    },
+    {
+      "case": "memory-R13-an-oversized-so-715b3-he-user-explicitly-skips-it",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "ef56669c90ba7528a6b6002f16ec38d4de4bf5a6f14b7118de50995a156d40be",
+        "error-context.md": "72ae1094df41a3060aeda0a2b37683ae2ce2c0f9428021ea4027ac915def87df"
+      }
+    },
+    {
+      "case": "memory-R14-a-mirror-write--ed355-cord-and-retried-explicitly",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "242bb5a0b04816cacbbd510d7757c1c7514068628d294d59ce095d1835beee76",
+        "error-context.md": "a907d344823bf17ba60f7143c74bf0021c1509ff11aa80f346c9713f93176a82"
+      }
+    },
+    {
+      "case": "memory-episodic-time-R11-a-aa48c-display-and-boundary-search",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "feb33f9f47d670cc01e1d8a5b563c33d91b2ee683224c1e0d66d355099289630",
+        "error-context.md": "919575f46f4b82ac6e4002e1bd553d1016b48a2f3a5c345dfe8f503c84de42f2"
+      }
+    },
+    {
+      "case": "memory-migration-S05-ST-01-6888e--it-only-after-verification",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "555a0b8933929393346ef9f33123c4511d433de6f9f0f45b54cea831b4182bb8",
+        "error-context.md": "f52c8d4072b91da40552bfdf1fb0a6cee38ef3d915d497621e9624ff5e43e36b"
+      }
+    },
+    {
+      "case": "memory-migration-S05-Spec--1f69f-til-a-current-read-succeeds",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "91f696951828c8778fa388edf0f5cf1e5735945e3d6b25e9f12d7021cdce7686",
+        "error-context.md": "9ee366e77bf23531176dcaec6cf127cfaeaed1825a969cba4379e76638d80213"
+      }
+    },
+    {
+      "case": "memory-migration-S05-Spec--230c5-til-a-current-read-succeeds",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "1f2e3221470b98ddacf9c2efec23b73ac91b523e53ac24fd64cd98a68b45adde",
+        "error-context.md": "b362351bdba4668780c1cb2832f90833b120104d9dc01e9a750bd007c2557b63"
+      }
+    },
+    {
+      "case": "memory-migration-S05-a-con-3e48c-xt-draft-or-steal-its-focus",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "e130ff7a86d74ef344eea43ace2669b1317ae644c2b06839e6e6ebf4f054a517",
+        "error-context.md": "673100ef45e027c2f40c4249a0f0b384d3f81ef0527cd39987f49f7081832653"
+      }
+    },
+    {
+      "case": "memory-migration-S05-a-fol-ed9aa-expansion-or-focus-movement",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "a9f4d2d0eecce3c9ff2ef54e553237a9a55b78fb364d0249f2880454079ef9f1",
+        "error-context.md": "4c824598097725e73173e33e535be24a4774411af18a2d88c40d3d8b3a255a34"
+      }
+    },
+    {
+      "case": "memory-migration-S05-colla-41350-ance-exposes-bounded-status",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "6e13ffdf4a1cbe70b4bcab51ef00340d08a0b8ac55ea7820eb3a5f7085c9a10f",
+        "error-context.md": "f73c9d133d3e0c24485210d7df322a67b8c5a52507d0600838ac0e10b5fb2879"
+      }
+    },
+    {
+      "case": "memory-migration-S05-editi-3dcfc-dependently-filtered-detail",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "8220ed435ce9b6ca9338d9fee03b2773809101ee9d540904739869a22d349f1d",
+        "error-context.md": "67abd1789bbd9daebfebd405d898bcead59f00c7627480843e639ff4713ad88a"
+      }
+    },
+    {
+      "case": "memory-migration-S05-keybo-43502-y-primary-control-reachable",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "a263b20231f5ef15217c69f25b3b81a012302e5cd0fda1841603ddea8a072a35",
+        "error-context.md": "dfc06b0af8afd15d8f6fb948f5bce9b0acf550028f1c7adb235551333d19be0e"
+      }
+    },
+    {
+      "case": "memory-migration-S05-leavi-89437--keeps-the-original-receipt",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "ad5ee3d9c73aca1745f406e4c564e2f6daa54bdd9c2c9a3e5148b3dcbc938869",
+        "error-context.md": "eda1d1c771257f7ba2ddfcd6daeef2d77a70ded083054b35952bed2dacaa8756"
+      }
+    },
+    {
+      "case": "memory-migration-S05-real--dd241-ws-before-late-reads-return",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "b6c92e724fd3827cbe16bdce244ae62f860cd96ec5dc8e911a78c5b4e5f1591b",
+        "error-context.md": "0879dcb3bfc6a57ce799be3b1e5f0ac08227d077c66499aa530b78a6462c88d6"
+      }
+    },
+    {
+      "case": "memory-migration-S05-switc-ebb34-ancellation-preserves-focus",
+      "files": {
+        "test-failed-1.png": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+        "trace.zip": "08ef537ca391044ae435a7e19ac30ecd0b898da32dd44fbbe68be698607e00d5",
+        "error-context.md": "300d7872d3f1796027797c5028adf8f6c741e281d7fc5c37d620b3c9eed1017f"
+      }
+    }
+  ],
+  "excluded_files_preserved_locally": "output/playwright/invalid-baseline-control-16",
+  "exclusion_reason": "Invalid-control cascades and interrupted case; full original stdout and the first failure directory remain in evidence."
+}

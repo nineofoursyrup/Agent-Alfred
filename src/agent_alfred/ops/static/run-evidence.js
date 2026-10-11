@@ -15,9 +15,14 @@ export function renderEvidence(root, events, ledger, run, confirmed, purposes) {
   }
   for (const [index, facts] of [...steps].sort((a, b) => a[0] - b[0])) {
     const section = node("section");
-    section.className = "card";
+    section.className = "run-step";
     section.id = `step-${index}`;
-    section.append(node("h3", `Step ${index}`));
+    const heading = node("div"),
+      title = node("h3", `Step ${index}`);
+    heading.className = "run-step-heading sy-row";
+    title.className = "run-step-number";
+    heading.append(title);
+    section.append(heading);
     const preparation = facts.find(
       (fact) => fact.payload.name === "step.started",
     );
@@ -42,16 +47,22 @@ export function renderEvidence(root, events, ledger, run, confirmed, purposes) {
     const committed = facts.find(
       (fact) => fact.payload.name === "attempt.committed",
     );
-    section.append(
-      node(
-        "p",
-        committed
-          ? "主结果 · committed"
-          : run.phase === "finished"
-            ? "现有过程证据未见已提交尝试"
-            : "等待尝试收尾",
-      ),
+    const outcome = node(
+      "p",
+      committed
+        ? "主结果 · committed"
+        : run.phase === "finished"
+          ? "现有过程证据未见已提交尝试"
+          : "等待尝试收尾",
     );
+    outcome.className = "run-step-outcome sy-row-content";
+    const end = facts.find((fact) => fact.payload.name === "step.finished"),
+      duration = node(
+        "span",
+        end?.payload.duration_ms === undefined ? "耗时未提供" : `${end.payload.duration_ms} ms`,
+      );
+    duration.className = "run-duration sy-row-meta";
+    heading.append(outcome, duration);
     // The committed content appears once, in its Attempt below.
     const anchors = facts.filter(
       (fact) => fact.payload.name === "attempt.started",
@@ -88,16 +99,26 @@ export function renderEvidence(root, events, ledger, run, confirmed, purposes) {
           ? "attempt aborted"
           : "attempt";
       details.open = false;
-      details.append(
-        node(
-          "summary",
-          actual
-            ? `Attempt · seq ${anchor.seq} · ${aborted ? "aborted（已撤回）" : terminal ? "committed" : run.phase === "finished" ? "结果未知" : "运行中"}`
-            : `输入准备 · seq ${anchor.seq} · 发送待确认`,
-        ),
-      );
+      const label =
+        actual
+          ? `Attempt · seq ${anchor.seq} · ${aborted ? "aborted（已撤回）" : terminal ? "committed" : run.phase === "finished" ? "结果未知" : "运行中"}`
+          : `输入准备 · seq ${anchor.seq} · 发送待确认`;
+      const summary = node("summary"),
+        caption = node("span", label),
+        purpose = purposes.get(id),
+        kind = node("span", purpose || "调用用途未知"),
+        timing = node(
+          "span",
+          terminal?.payload.duration_ms === undefined ? "耗时未提供" : `${terminal.payload.duration_ms} ms`,
+        );
+      summary.className = "run-attempt-heading";
+      summary.setAttribute("aria-label", label);
+      caption.className = "run-attempt-label";
+      kind.className = "run-attempt-purpose sy-chip";
+      timing.className = "run-duration sy-row-meta";
+      summary.append(caption, kind, timing);
+      details.append(summary);
       if (aborted) details.append(node("p", "未进入回答但已产生 Token／费用"));
-      const purpose = purposes.get(id);
       details.append(
         node(
           "p",
@@ -143,6 +164,11 @@ export function renderEvidence(root, events, ledger, run, confirmed, purposes) {
           details.append(node("p", `${type} × ${count}`));
       }
       if (actual) renderAccounting(details, accounting);
+      const body = node("div");
+      body.className = "sy-panel-body";
+      for (const child of [...details.children])
+        if (child !== summary) body.append(child);
+      details.append(body);
       if (accounting) shownAccounts.add(id);
       section.append(details);
     }
@@ -153,6 +179,7 @@ export function renderEvidence(root, events, ledger, run, confirmed, purposes) {
   );
   if (unplaced.length) {
     const accounting = node("section");
+    accounting.className = "sy-panel-body";
     accounting.append(node("h3", "调用账目 · 过程顺序不可用"));
     for (const attempt of unplaced) {
       const row = node("article");
@@ -168,6 +195,8 @@ export function renderEvidence(root, events, ledger, run, confirmed, purposes) {
 /** @param {HTMLElement} root @param {Wire|undefined} accounting */
 export function renderAccounting(root, accounting) {
   const usage = accounting?.usage || {};
+  const tokens = node("div");
+  tokens.className = "run-usage-tokens sy-row-meta";
   for (const key of [
     "total_input_tokens",
     "uncached_input_tokens",
@@ -176,16 +205,21 @@ export function renderAccounting(root, accounting) {
     "output_tokens",
     "reasoning_tokens",
   ])
-    root.append(node("small", `${key}: ${usage[key] ?? "未提供"} `));
+    tokens.append(node("small", `${key}: ${usage[key] ?? "未提供"} `));
+  root.append(tokens);
   renderCost(root, accounting?.cost || { state: "unknown" });
 }
 /** @param {HTMLElement} root @param {Wire} charge */
 function renderCost(root, charge) {
   if (charge.state === "unknown") {
-    root.append(node("p", "unknown · 费用未知"));
+    const cost = node("p", "unknown · 费用未知");
+    cost.className = "run-cost sy-tone-attention";
+    root.append(cost);
     return;
   }
-  root.append(node("p", `${charge.state} · USD ${charge.amount}`));
+  const cost = node("p", `${charge.state} · USD ${charge.amount}`);
+  cost.className = "run-cost sy-tone-success";
+  root.append(cost);
   if (charge.state === "estimated") {
     const components = charge.price_components || [];
     let tiered = false;
@@ -295,8 +329,11 @@ function renderGate(root, gate, references) {
 /** @param {HTMLElement} root @param {Wire|undefined} memory @param {References} references @param {string|undefined} traceStatus */
 export function renderInputs(root, memory, references, traceStatus) {
   const details = node("details");
+  details.className = "sy-panel run-inputs";
   details.dataset.attempt = "input-explanation";
-  details.append(node("summary", "本次输入"));
+  const title = node("summary", "本次输入");
+  title.className = "sy-panel-header sy-panel-eyebrow";
+  details.append(title);
   details.append(
     node("p", "字符限额是本地输入检查，不保证供应商 Token 容量。"),
   );
@@ -475,5 +512,10 @@ export function renderInputs(root, memory, references, traceStatus) {
       );
     details.append(section);
   }
+  const body = node("div");
+  body.className = "sy-panel-body";
+  for (const child of [...details.children])
+    if (child !== title) body.append(child);
+  details.append(body);
   root.append(details);
 }

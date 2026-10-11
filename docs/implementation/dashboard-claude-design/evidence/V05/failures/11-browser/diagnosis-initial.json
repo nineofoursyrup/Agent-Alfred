@@ -1,0 +1,97 @@
+[
+  {
+    "case": "1) tests/browser/models-migration.spec.js:192:1 › S08 saved model probe preserves drafts and links its real Attempt and cost ",
+    "address_in_use": false,
+    "primary_error": "Test timeout of 15000ms exceeded."
+  },
+  {
+    "case": "2) tests/browser/models-migration.spec.js:219:1 › S08 a lost real accepted probe response never replays on focus or reentry ",
+    "address_in_use": true,
+    "primary_error": "Error: Traceback (most recent call last):"
+  },
+  {
+    "case": "3) tests/browser/models-migration.spec.js:239:1 › S08 catalog refresh stays one request and settings remain usable in four viewports ",
+    "address_in_use": true,
+    "primary_error": "Error: Traceback (most recent call last):"
+  },
+  {
+    "case": "4) tests/browser/models-migration.spec.js:262:1 › S08 rejected unpin keeps the original dirty draft ",
+    "address_in_use": true,
+    "primary_error": "Error: Traceback (most recent call last):"
+  },
+  {
+    "case": "5) tests/browser/models-migration.spec.js:278:1 › S08 unknown unpin unlocks fields only after a connected current read and keeps its receipt ",
+    "address_in_use": true,
+    "primary_error": "Error: Traceback (most recent call last):"
+  },
+  {
+    "case": "6) tests/browser/models-migration.spec.js:324:1 › S08 each saved field is independent and uses the public HTTP value ",
+    "address_in_use": true,
+    "primary_error": "Error: Traceback (most recent call last):"
+  },
+  {
+    "case": "7) tests/browser/models-migration.spec.js:347:1 › S08 STD01 retired save cannot clear a successor request after real Stream reconnect ",
+    "address_in_use": true,
+    "primary_error": "Error: Traceback (most recent call last):"
+  },
+  {
+    "case": "8) tests/browser/models-migration.spec.js:386:1 › S08 STD02 model action focus survives refresh and completion without stealing a new intent ",
+    "address_in_use": true,
+    "primary_error": "Error: Traceback (most recent call last):"
+  },
+  {
+    "case": "9) tests/browser/models-migration.spec.js:421:1 › S11 clear final price changes the next probe and Ops while the old snapshot stays fixed ",
+    "address_in_use": true,
+    "primary_error": "Error: Traceback (most recent call last):"
+  },
+  {
+    "case": "10) tests/browser/overview.spec.js:155:1 › Disconnect, same-instance reconnect and restart cannot renew or resurrect observations ",
+    "address_in_use": false,
+    "primary_error": "Error: expect(locator).toContainText(expected) failed"
+  },
+  {
+    "case": "11) tests/browser/overview.spec.js:339:1 › Gap and disconnect retire slow real reads even after a same-instance reconnect ",
+    "address_in_use": false,
+    "primary_error": "Error: expect(locator).toContainText(expected) failed"
+  },
+  {
+    "case": "12) tests/browser/read-retirement.spec.js:114:3 › real Session response is retired across disconnect and same-instance reconnect ",
+    "address_in_use": false,
+    "primary_error": "Error: expect(locator).toContainText(expected) failed"
+  },
+  {
+    "case": "13) tests/browser/read-retirement.spec.js:114:3 › real Session response is retired across broker replay gap and same-instance reconnect ",
+    "address_in_use": false,
+    "primary_error": "Error: expect(locator).toContainText(expected) failed"
+  },
+  {
+    "case": "14) tests/browser/read-retirement.spec.js:162:5 › active Run summary retires its response without clearing stale after reconnect ",
+    "address_in_use": false,
+    "primary_error": "Error: expect(locator).toContainText(expected) failed"
+  },
+  {
+    "case": "15) tests/browser/read-retirement.spec.js:162:5 › active Run evidence retires its response without clearing stale after reconnect ",
+    "address_in_use": false,
+    "primary_error": "Error: expect(locator).toContainText(expected) failed"
+  },
+  {
+    "case": "16) tests/browser/read-retirement.spec.js:162:5 › active Run summary retires its response without clearing stale after broker replay gap ",
+    "address_in_use": false,
+    "primary_error": "Error: expect(locator).toContainText(expected) failed"
+  },
+  {
+    "case": "17) tests/browser/read-retirement.spec.js:162:5 › active Run evidence retires its response without clearing stale after broker replay gap ",
+    "address_in_use": false,
+    "primary_error": "Error: expect(locator).toContainText(expected) failed"
+  },
+  {
+    "case": "18) tests/browser/tools-migration.spec.js:44:1 › S07 real MCP same-name replacement retires permission and draft; restored identity does not revive an old success ",
+    "address_in_use": true,
+    "primary_error": "Error: Traceback (most recent call last):"
+  },
+  {
+    "case": "19) tests/browser/tools-migration.spec.js:378:1 › S07 unreadable catalog keeps draft and local status; unavailable MCP is visible without inventing a connection ",
+    "address_in_use": true,
+    "primary_error": "Error: Traceback (most recent call last):"
+  }
+]

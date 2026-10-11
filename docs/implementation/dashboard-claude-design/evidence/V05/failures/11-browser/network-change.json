@@ -1,0 +1,40 @@
+{
+  "facts": [
+    {
+      "entry": "1-trace.trace",
+      "type": "console",
+      "message": "Failed to load resource: net::ERR_NETWORK_CHANGED"
+    },
+    {
+      "entry": "1-trace.trace",
+      "type": "console",
+      "message": "Failed to load resource: net::ERR_NETWORK_CHANGED"
+    },
+    {
+      "entry": "1-trace.network",
+      "type": "resource-snapshot",
+      "url": "http://127.0.0.1:17928/assets/models.js",
+      "response_status": -1,
+      "error_signals": [
+        {
+          "field": ".snapshot.response._failureText",
+          "value": "net::ERR_NETWORK_CHANGED"
+        }
+      ]
+    },
+    {
+      "entry": "1-trace.network",
+      "type": "resource-snapshot",
+      "url": "http://127.0.0.1:17928/assets/connections.js",
+      "response_status": -1,
+      "error_signals": [
+        {
+          "field": ".snapshot.response._failureText",
+          "value": "net::ERR_NETWORK_CHANGED"
+        }
+      ]
+    }
+  ],
+  "source": "first failing model-page trace.zip, filtered only ERR_NETWORK_CHANGED signals; no auth headers copied",
+  "interpretation": "Unchanged frontend module imports were interrupted before any Run assertion. Exact external trigger and relation to CVDisplayLink are not proven."
+}

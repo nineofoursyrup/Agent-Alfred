@@ -1,0 +1,47 @@
+{
+  "checked_at": "2026-10-11T05:11:48.783030+00:00",
+  "baseline": "645c4549bb5bea9f79ddb4625f17c5a8a6af58c8",
+  "parent_candidate": "30add8f1e6299839a4ea4b7048deae589a44110d",
+  "branch": "dashboard-visual/v05-runs",
+  "source_files_sha256": {
+    "src/agent_alfred/ops/static/runs.js": "ae901cae89a6847a2c2408dd06b9cee73f1eb54b7032a03c5a260fce1e4c3303",
+    "src/agent_alfred/ops/static/run-fields.js": "3e5303c27123a2c5b7ced5c27d758fb9c074da187e611b10174b6f75bb53e638",
+    "src/agent_alfred/ops/static/run-evidence.js": "35bf713c63decb0a78ded26e470eec83d61c39a31a62844ae8782fe5d31a4906",
+    "src/agent_alfred/ops/static/trace_export.js": "04d7e7bc89a8765b98b63b79e3c2a8f53f8bf1921fdb6732d28e1d614f463c73",
+    "src/agent_alfred/ops/static/inbox-runs.css": "c906ec0212aebe3f8fa56f1116114328fb175558fe3f1637bdecc9fc8c7fe50f",
+    "tests/browser/runs.spec.js": "971a282b7c40b346e812f3bd040494233936652d972d51719107edad0f01bf52",
+    "tests/browser/inbox-run-sources.spec.js": "8872fe7e98b07b42ed16fe8588d4132576272d6e1cc9edd6821a5ca5702c6de1"
+  },
+  "candidate_subtrees": {
+    "src": "6271983afce446e178ee03554020a1fe2f802c75",
+    "tests": "9939523cc82c723e0e958ca586e16deb2d47141e",
+    "scripts": "739d01f2d6ec3d62acabfedb786bdcc10bb011f9"
+  },
+  "main_protected_files_checked": 150,
+  "main_protected_files_changed": [],
+  "main_diff_sha256": "625d95d8436f7034c754982e57a21eb281931335ac6566868aceddda834e8338",
+  "frozen_files_unchanged": [
+    "src/agent_alfred/ops/static/app.css",
+    "src/agent_alfred/ops/static/topology.js",
+    "src/agent_alfred/ops/static/aggregation.js",
+    "src/agent_alfred/ops/static/progress.js",
+    "src/agent_alfred/ops/static/source.js",
+    "src/agent_alfred/ops/static/memory.js",
+    "docs/design/issue-122/RECIPES.md",
+    ".gitattributes"
+  ],
+  "origin_main": "645c4549bb5bea9f79ddb4625f17c5a8a6af58c8",
+  "deterministic_inputs_unchanged": 619,
+  "rerun_checks_pass": [
+    "21-repair-typecheck",
+    "22-repair-python-static",
+    "23-repair-browser",
+    "24-repair-diff",
+    "25-repair-staged-diff"
+  ],
+  "full_browser_result": "543 passed (11.5m)",
+  "permanent_tests_unchanged_from_parent": true,
+  "image_count_verified": 119,
+  "boundary_checks_passed": 68,
+  "diff_check": "24-repair-diff PASS, 25-repair-staged-diff PASS; final post-document staged whitespace check required before commit"
+}

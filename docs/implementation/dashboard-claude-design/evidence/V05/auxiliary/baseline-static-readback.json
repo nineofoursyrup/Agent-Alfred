@@ -1,0 +1,26 @@
+{
+  "checked_at": "2026-10-11T03:39:52.977221+00:00",
+  "control": "17-baseline-browser",
+  "baseline": "645c4549bb5bea9f79ddb4625f17c5a8a6af58c8",
+  "initial_readback_failure": {
+    "wrong_path": "/static/runs.js",
+    "status": 404,
+    "correction": "Use the existing /assets/ route from gateway/web/assets.py."
+  },
+  "readback": [
+    {
+      "url": "http://127.0.0.1:17920/assets/runs.js",
+      "status": 200,
+      "sha256": "86bc882a38c32044b975b93f44b9ce5547847e15dd8187480579853c76d38e0f",
+      "matches_baseline": true,
+      "differs_from_V05": true
+    },
+    {
+      "url": "http://127.0.0.1:17920/assets/inbox-runs.css",
+      "status": 200,
+      "sha256": "c124cb85714229d74757c62066c9a9f8505293f55a5e72fb6c0ab3e061e1384a",
+      "matches_baseline": true,
+      "differs_from_V05": true
+    }
+  ]
+}

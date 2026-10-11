@@ -1,0 +1,74 @@
+{
+  "checked_at": "2026-10-11T02:49:10.868416+00:00",
+  "baseline": "645c4549bb5bea9f79ddb4625f17c5a8a6af58c8",
+  "branch": "dashboard-visual/v05-runs",
+  "owned_files": {
+    "src/agent_alfred/ops/static/runs.js": "f5e720e9b419444cfdc9808a30d86e4e34d82156b34d7ecc29ae68e8118d7141",
+    "src/agent_alfred/ops/static/run-fields.js": "0f11adbf6d5b9a3fd0f815634b679c5da9b0ce9bd801cfe423d3ec5b0520a642",
+    "src/agent_alfred/ops/static/run-evidence.js": "b844a29511a1cd22dcbed66a620cbe52df6a82a97c1df24b6876185a5650f0c6",
+    "src/agent_alfred/ops/static/trace_export.js": "04d7e7bc89a8765b98b63b79e3c2a8f53f8bf1921fdb6732d28e1d614f463c73",
+    "src/agent_alfred/ops/static/inbox-runs.css": "773f495dee9ce70bf9e08baa3bf91532d53b8e6296a83d311846f1073b71a832",
+    "tests/browser/runs.spec.js": "971a282b7c40b346e812f3bd040494233936652d972d51719107edad0f01bf52",
+    "tests/browser/inbox-run-sources.spec.js": "8872fe7e98b07b42ed16fe8588d4132576272d6e1cc9edd6821a5ca5702c6de1"
+  },
+  "main_protected_files_checked": 150,
+  "main_protected_files_changed": [],
+  "main_diff_sha256": "625d95d8436f7034c754982e57a21eb281931335ac6566868aceddda834e8338",
+  "main_diff_unchanged": true,
+  "main_status": " M docs/dashboard.md\n?? README.md\n?? tmp/\n",
+  "frozen_files": [
+    "src/agent_alfred/ops/static/app.css",
+    "src/agent_alfred/ops/static/topology.js",
+    "src/agent_alfred/ops/static/aggregation.js",
+    "src/agent_alfred/ops/static/progress.js",
+    "src/agent_alfred/ops/static/source.js",
+    "src/agent_alfred/ops/static/memory.js",
+    "docs/design/issue-122/RECIPES.md",
+    ".gitattributes"
+  ],
+  "frozen_diff_empty": true,
+  "allowed_changes": [
+    "src/agent_alfred/ops/static/inbox-runs.css",
+    "src/agent_alfred/ops/static/run-evidence.js",
+    "src/agent_alfred/ops/static/run-fields.js",
+    "src/agent_alfred/ops/static/runs.js",
+    "src/agent_alfred/ops/static/trace_export.js",
+    "tests/browser/inbox-run-sources.spec.js",
+    "tests/browser/runs.spec.js"
+  ],
+  "reference_sha256": {
+    "docs/design/issue-122/reference/Syrup Dashboard.dc.html": "54807adb38541fa2966e5b0c334b9d0e8d71c60b814245601bc4f35b8ec54b84",
+    "docs/design/issue-122/reference/support.js": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe"
+  },
+  "gate_input_reuse": {
+    "ruff": "All Python sources, pyproject.toml and check inputs unchanged; evidence Python under docs is excluded by Ruff config.",
+    "skills": "src/agent_alfred/skills, root skills and check scripts unchanged.",
+    "env": "Only Python AST is scanned; Python source, scripts and .env.example unchanged.",
+    "pytest": "Python source, tests, dependencies and configuration unchanged. Frontend-sensitive static/projection checks rerun on final sources: 10-python-static, 29 passed."
+  },
+  "checks_of_frozen_shared_files": {
+    "src/agent_alfred/ops/static/app.css": "0f6ce16ae564e762bb4d5db6d0055a05329e27f62df50d6d8140cb8a020fd5d8",
+    "src/agent_alfred/ops/static/topology.js": "da3c1dda2d0ab85dee05eaf1c19e4974c12c405fe65422601571d32363cd1c08",
+    "src/agent_alfred/ops/static/aggregation.js": "2ed4534a18114be56b0df33850040828305d316e794b52ec62e49103384e5ebb",
+    "src/agent_alfred/ops/static/progress.js": "45820eddec8a0313c0e4ee7181b4e9fffe1d36fe4591dece3c184cd504e2a7a4",
+    "src/agent_alfred/ops/static/source.js": "9fb3c5c2c1892ac576dd7905d35988126458c6f884ad5c5f7db7fe375865e368",
+    "src/agent_alfred/ops/static/memory.js": "9129f17ae69d5e854bc2084e2d18be1afcc4ca53a1484a4ea8e247d2523bc9a0",
+    "docs/design/issue-122/RECIPES.md": "e98a228252a21a3752df7e59c4eda8b35bb928f61944c12dc25b02dbc047a35c",
+    ".gitattributes": "d5343a905893d25b866ea0921443de86a315abf45c085584318e3813d95f890d"
+  },
+  "owned_git_blobs": {
+    "src/agent_alfred/ops/static/runs.js": "cd607d6c578d17c06613bbd415d7312a85367ade",
+    "src/agent_alfred/ops/static/run-fields.js": "14df9d2bcf01b20821818ef1e9dd21bcdbd5d9b9",
+    "src/agent_alfred/ops/static/run-evidence.js": "dfce4e873b51f730e4c75f4a72b1458f1fffef75",
+    "src/agent_alfred/ops/static/trace_export.js": "83216c18eaf7a7744bbc643d825cf7d7ae292c37",
+    "src/agent_alfred/ops/static/inbox-runs.css": "7b5da780c45fb69f073a4d185d7792bf1f65826e",
+    "tests/browser/runs.spec.js": "b5a215b1943cad21a4eb88c07139e5f7a171c8ac",
+    "tests/browser/inbox-run-sources.spec.js": "6fe62d4e89122f5513417ff9efacaf71d3cd9050"
+  },
+  "candidate_subtrees": {
+    "src": "0a1175a9d7ee63864b5abec73ae42170556c102c",
+    "tests": "9939523cc82c723e0e958ca586e16deb2d47141e",
+    "scripts": "739d01f2d6ec3d62acabfedb786bdcc10bb011f9"
+  },
+  "subtree_note": "Source/test/script subtrees from the staged candidate; independent of evidence additions. Verify these against the final commit."
+}

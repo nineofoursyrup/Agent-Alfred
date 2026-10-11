@@ -1,0 +1,122 @@
+[
+  {
+    "file": "comparison-runs-1440x900.png",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "composite": {
+      "width": 2880,
+      "height": 900
+    },
+    "left": "reference-loop-1440x900.png",
+    "right": "runs-1440x900.png",
+    "scale": 1,
+    "reference": "reuse unchanged authoritative reference PNG; repair final production recaptured"
+  },
+  {
+    "file": "comparison-detail-1440x900.png",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "composite": {
+      "width": 2880,
+      "height": 900
+    },
+    "left": "reference-loop-1440x900.png",
+    "right": "detail-1440x900.png",
+    "scale": 1,
+    "reference": "reuse unchanged authoritative reference PNG; repair final production recaptured"
+  },
+  {
+    "file": "comparison-runs-1280x800.png",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "composite": {
+      "width": 2560,
+      "height": 800
+    },
+    "left": "reference-loop-1280x800.png",
+    "right": "runs-1280x800.png",
+    "scale": 1,
+    "reference": "reuse unchanged authoritative reference PNG; repair final production recaptured"
+  },
+  {
+    "file": "comparison-detail-1280x800.png",
+    "viewport": {
+      "width": 1280,
+      "height": 800
+    },
+    "composite": {
+      "width": 2560,
+      "height": 800
+    },
+    "left": "reference-loop-1280x800.png",
+    "right": "detail-1280x800.png",
+    "scale": 1,
+    "reference": "reuse unchanged authoritative reference PNG; repair final production recaptured"
+  },
+  {
+    "file": "comparison-runs-390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "composite": {
+      "width": 780,
+      "height": 844
+    },
+    "left": "reference-loop-390x844.png",
+    "right": "runs-390x844.png",
+    "scale": 1,
+    "reference": "reuse unchanged authoritative reference PNG; repair final production recaptured"
+  },
+  {
+    "file": "comparison-detail-390x844.png",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "composite": {
+      "width": 780,
+      "height": 844
+    },
+    "left": "reference-loop-390x844.png",
+    "right": "detail-390x844.png",
+    "scale": 1,
+    "reference": "reuse unchanged authoritative reference PNG; repair final production recaptured"
+  },
+  {
+    "file": "comparison-runs-320x800.png",
+    "viewport": {
+      "width": 320,
+      "height": 800
+    },
+    "composite": {
+      "width": 640,
+      "height": 800
+    },
+    "left": "reference-loop-320x800.png",
+    "right": "runs-320x800.png",
+    "scale": 1,
+    "reference": "reuse unchanged authoritative reference PNG; repair final production recaptured"
+  },
+  {
+    "file": "comparison-detail-320x800.png",
+    "viewport": {
+      "width": 320,
+      "height": 800
+    },
+    "composite": {
+      "width": 640,
+      "height": 800
+    },
+    "left": "reference-loop-320x800.png",
+    "right": "detail-320x800.png",
+    "scale": 1,
+    "reference": "reuse unchanged authoritative reference PNG; repair final production recaptured"
+  }
+]
