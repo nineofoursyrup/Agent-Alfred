@@ -230,7 +230,7 @@ export function modelsPage(root, csrf) {
     if (draft.conflict || (draft.value!==draft.baseline && draft.revision!==current?.revision)) baseline.textContent=`编辑基线：${shown(draft.baseline)} · revision ${draft.revision}；当前 revision ${current?.revision}`;
     const feedback=node('p',draft.message || (unsubmitted(draft)?'未保存':'')); feedback.setAttribute('role','status');
     const save=node('button',field==='display'?'保存显示名':field==='style'?'保存线路':`保存 ${field}`);
-    save.className='sy-button-accent';
+    save.className='setting-save sy-button-accent';
     save.dataset.focusKey=JSON.stringify([model.endpoint_id,model.model_id,'save',field]);
     const update=()=>{
       const receipt=receipts.get(modelKey(model));
