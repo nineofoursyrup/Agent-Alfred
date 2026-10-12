@@ -1,0 +1,6 @@
+{
+  "command": "playwright-cli -s=v11-product --raw run-code --filename runs-proof.js",
+  "exit_code": 1,
+  "output": "### Error\nTimeoutError: locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('region', { name: '主对话' }).getByText('已保存', { exact: true }).first() to be visible\u001b[22m\n\n",
+  "reason": "Temporary capture awaited a visible MainBar in narrow viewport; MainBar is intentionally closed. Use the existing hidden region with attached-state wait."
+}

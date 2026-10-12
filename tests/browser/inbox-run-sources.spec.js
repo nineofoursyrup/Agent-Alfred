@@ -103,6 +103,9 @@ for (const length of [4, 60])
           preview.locator('[data-source-highlighted="true"]'),
         ).toHaveCount(1);
         await expect(
+          preview.locator('[data-source-highlighted="true"]'),
+        ).toHaveAttribute("data-selected", "true");
+        await expect(
           preview
             .locator('[data-source-highlighted="true"]')
             .getByRole("link", { name: "查看运行", exact: true }),

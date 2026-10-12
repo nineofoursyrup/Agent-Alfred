@@ -1,0 +1,16 @@
+{
+  "worktree": "/Users/nineofour/Agent-Alfred-v11",
+  "branch": "dashboard-visual/v11-inbox",
+  "initial_head": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "initial_status": "clean",
+  "initial_task_untracked": [],
+  "main_checkout_read_only_status": [
+    " M docs/dashboard.md",
+    "?? README.md",
+    "?? tmp/"
+  ],
+  "port_range": [
+    18110,
+    18119
+  ]
+}

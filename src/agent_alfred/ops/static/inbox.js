@@ -10,6 +10,7 @@ import { runRow } from "./run-fields.js";
 
 /** @param {HTMLElement} root @param {Wire} dashboard */
 export function inbox(root, dashboard) {
+  root.classList.add("inbox-page");
   const url = new URL(location.href),
     session = url.searchParams.get("session_id");
   const partition = url.searchParams.get("view") ?? "messages";
@@ -20,8 +21,10 @@ export function inbox(root, dashboard) {
     origin = /** @type {Wire|null} */ (null);
   const rows = node("div"),
     controls = node("div");
-  rows.className = "inbox-rows";
+  rows.className = "inbox-rows sy-row-list";
+  controls.className = "inbox-read-controls sy-panel-body";
   const preview = node("section");
+  preview.className = "inbox-preview sy-panel";
   preview.setAttribute(
     "aria-label",
     session === null ? "会话列表" : "会话只读预览",
@@ -29,16 +32,19 @@ export function inbox(root, dashboard) {
   root.append(preview);
   const seen = new Set();
   const heading = node("h2", session === null ? "最近会话" : `会话 ${session}`);
+  heading.className = "sy-list-header";
   preview.append(heading);
   const actions = node("div");
-  actions.className = "inbox-actions";
+  actions.className = "inbox-actions sy-panel-body";
   const createButton = node("button", "新建会话并打开主对话");
+  createButton.className = "sy-button-accent";
   const createReason = node("p"),
     continueReason = node("p"),
     restoreNotice = node("p");
   for (const status of [createReason, continueReason, restoreNotice])
     status.setAttribute("role", "status");
   const continueButton = node("button", "继续此会话");
+  continueButton.className = "sy-button-accent";
   let targetVerified = false,
     targetFailure = "",
     actionFailure = "";
@@ -46,6 +52,13 @@ export function inbox(root, dashboard) {
     const createState = dashboard.sessionActionState("create");
     createButton.disabled = !createState.allowed;
     createReason.textContent = createState.reason || actionFailure;
+    for (const row of rows.querySelectorAll('[data-source-key="session"]')) {
+      if (row instanceof HTMLElement)
+        row.dataset.selected = String(
+          row.dataset.sourceHighlighted === "true" ||
+            row.dataset.sourceId === dashboard.runtime().session,
+        );
+    }
     if (session !== null) {
       const state = dashboard.sessionActionState("continue", session);
       const reason =
@@ -96,19 +109,23 @@ export function inbox(root, dashboard) {
       if (result.status !== "applied")
         continueReason.textContent = result.reason;
     });
-    preview.append(
+    const context = node("div");
+    context.className = "inbox-context sy-panel-body";
+    context.append(
       back,
       node("p", "只读预览；继续此会话将切换主对话。"),
       continueButton,
       continueReason,
     );
     const nav = node("nav");
+    nav.className = "inbox-partitions sy-row-list";
     nav.setAttribute("aria-label", "会话预览分区");
     for (const [value, label] of [
       ["messages", "消息"],
       ["runs", "运行"],
     ]) {
       const link = node("a", label);
+      link.className = "inbox-partition sy-row";
       link.href =
         "/inbox?" + new URLSearchParams({ session_id: session, view: value });
       if (value === partition) link.setAttribute("aria-current", "page");
@@ -121,7 +138,7 @@ export function inbox(root, dashboard) {
       );
       nav.append(link);
     }
-    preview.append(nav);
+    preview.append(context, nav);
   }
   if (session !== null && !["messages", "runs"].includes(partition)) {
     targetFailure = "无效的会话预览分区。";
@@ -233,7 +250,7 @@ export function inbox(root, dashboard) {
         if (seen.has(id)) continue;
         seen.add(id);
         let row = node("article");
-        row.className = "card";
+        row.className = "inbox-row sy-row";
         row.dataset.sourceKey =
           session === null
             ? "session"
@@ -241,8 +258,14 @@ export function inbox(root, dashboard) {
               ? "message"
               : "run";
         row.dataset.sourceId = id;
+        const content = node("div");
+        content.className = "sy-row-content";
         if (session === null) {
+          row.dataset.selected = String(
+            item.session_id === dashboard.runtime().session,
+          );
           const link = node("a", item.title || "未命名会话");
+          link.className = "inbox-session-title";
           link.href =
             "/inbox?" +
             new URLSearchParams({
@@ -250,16 +273,22 @@ export function inbox(root, dashboard) {
               view: "messages",
             });
           open(link, id, "session");
-          row.append(
-            link,
+          const metadata = node("div");
+          metadata.className = "sy-row-meta inbox-session-meta";
+          metadata.append(
             node("p", item.session_id),
             node("p", item.created_at),
           );
+          content.append(link);
+          row.append(content, metadata);
         } else if (partition === "messages") {
-          row.append(
-            node("p", `${item.role} · ${item.source} · ${item.created_at}`),
+          const metadata = node(
+            "p",
+            `${item.role} · ${item.source} · ${item.created_at}`,
           );
-          clampedText(row, textBlocks(item.blocks), id);
+          metadata.className = "sy-row-meta inbox-message-meta";
+          clampedText(content, textBlocks(item.blocks), id);
+          row.append(content, metadata);
           if (typeof item.run_id === "string") {
             const link = node("a", "查看运行");
             link.href =
@@ -269,8 +298,23 @@ export function inbox(root, dashboard) {
           } else row.append(node("small", "历史消息 · 无 Run 关联"));
         } else {
           row = runRow(item);
+          row.classList.add("inbox-row", "sy-row");
+          const fields = row.querySelector(".run-fields");
+          if (fields) {
+            fields.classList.add("sy-row-meta", "inbox-run-meta");
+            for (const field of fields.children) {
+              if (field.querySelector("dt")?.textContent === "输入预览") {
+                const prompt = node("dl");
+                prompt.className = "inbox-run-preview";
+                prompt.append(field);
+                content.append(prompt);
+                break;
+              }
+            }
+          }
           if (typeof item.reply_preview === "string")
-            clampedText(row, item.reply_preview, "reply-" + item.run_id);
+            clampedText(content, item.reply_preview, "reply-" + item.run_id);
+          row.prepend(content);
           const link = node("a", "查看运行");
           link.href =
             "/runs/" + encodeURIComponent(item.run_id) + "?filter=chat";
@@ -306,6 +350,11 @@ export function inbox(root, dashboard) {
               anchor?.trigger || null,
               heading,
             );
+            const selected = rows.querySelector(
+              '[data-source-highlighted="true"]',
+            );
+            if (selected instanceof HTMLElement)
+              selected.dataset.selected = "true";
             restoreNotice.textContent = focused
               ? "已重新核验来源并恢复原入口。"
               : "原入口已不可用，已恢复列表标题。";
