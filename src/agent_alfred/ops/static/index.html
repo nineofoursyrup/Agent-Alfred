@@ -38,6 +38,7 @@
     <section id="mainbar" aria-label="MainBar">
       <div class="bar-heading">
         <h2 id="mainbar-title" tabindex="-1">主对话</h2>
+        <span class="mainbar-stage"><span id="mainbar-dot" class="sy-status-dot sy-tone-muted" aria-hidden="true"></span><span id="mainbar-stage">未同步</span></span>
         <button id="toggle" data-close-panel aria-controls="mainbar">收起主对话</button>
       </div>
       <div class="panel-actions"><button data-open-panel="navigation">打开导航</button></div>
@@ -54,7 +55,7 @@
       </section>
       <p id="error" role="status"></p>
       <form id="compose">
-        <label for="message">消息</label>
+        <label for="message" class="sr-only">消息</label>
         <textarea id="message" rows="3" placeholder="写下消息；/skills 指定流程…" disabled></textarea>
         <button id="send" disabled>发送</button>
       </form>
