@@ -1,6 +1,6 @@
 {
   "baseline": "449e77fd0ff814fb63f97a009c2435139a68686d",
-  "head": "b9c2f3fe5cc937eabff7873761a899d73def76b2",
+  "head": "6e1914f01cd77ade8c749074bc964ce98fd17dc5",
   "files": [
     "docs/implementation/dashboard-claude-design/V11.md",
     "docs/implementation/dashboard-claude-design/evidence/V11/affected-browser.json",
@@ -16,6 +16,18 @@
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-first-failure/session-create-race-a-dela-9c126-trols-reachable-at-1440x360/error-context.md.json",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-first-failure/session-create-race-a-dela-9c126-trols-reachable-at-1440x360/test-failed-1.png",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-first-failure/session-create-race-a-dela-9c126-trols-reachable-at-1440x360/trace.zip",
+    "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/capture-archive-first-error.json",
+    "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/capture-collection-first-failure/capture-previous.json",
+    "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/capture-collection-first-failure/comparison-1/runs-1440x900.png",
+    "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/capture-collection-first-failure/comparison-1/runs-before-1440x900.png",
+    "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/capture-collection-first-failure/comparison-2/runs-1440x900.png",
+    "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/capture-collection-first-failure/comparison-2/runs-before-1440x900.png",
+    "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/capture-collection-first-failure/image-manifest-previous.json",
+    "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/capture-collection-first-failure/inbox-1280x800.png",
+    "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/capture-collection-first-failure/record.json",
+    "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/capture-collection-first-failure/reference-capture-previous.json",
+    "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/capture-collection-first-failure/reference-loop-320x800.png",
+    "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/capture-collection-first-failure/runs-proof-previous.json",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/capture.json",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/ci-trace-summary.json",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/diagnostic-resources.json",
@@ -28,6 +40,7 @@
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/gates/ci-repair-06-browser.json",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/gates/ci-repair-07-diff-ci-replay.json",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/gates/ci-repair-07-diff-closeout.json",
+    "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/gates/ci-repair-07-diff-recapture.json",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/gates/ci-repair-07-diff.json",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/gates/ci-repair-08-install.json",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/gates/ci-repair-ci-browser-r2.json",
@@ -59,12 +72,16 @@
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/screenshots-before/inbox-runs-1440x900.png",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/screenshots-before/inbox-runs-320x800.png",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/screenshots-before/inbox-runs-390x844.png",
+    "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/scripts/archive-recapture.py",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/scripts/fixture.js",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/scripts/layout.spec.js",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/scripts/prepare-probe.py",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/scripts/probe.config.js",
+    "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/scripts/recapture.mjs",
+    "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/scripts/reference-recapture.mjs",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/source-audit.json",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/source-scope-probe-first-error.json",
+    "docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/superseded-ci.json",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-second-failure/job-114864875344.log.json",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-second-failure/mainbar-integration-real-S-d239a-ge-and-cross-Session-drafts/error-context.md.json",
     "docs/implementation/dashboard-claude-design/evidence/V11/ci-second-failure/mainbar-integration-real-S-d239a-ge-and-cross-Session-drafts/test-failed-1.png",
@@ -207,5 +224,8 @@
   "ci_repair_production_files": [
     "src/agent_alfred/ops/static/inbox-runs.css"
   ],
-  "ci_repair_test_changes": false
+  "ci_repair_test_changes": false,
+  "files_count": 211,
+  "ci_repair_test_files": [],
+  "fixed_viewport_capture_inputs_unchanged": true
 }

@@ -8,32 +8,33 @@
       "height": 900,
       "same_accessibility": true,
       "png_bytes_equal": true,
-      "before_sha256": "d84cf55a89b7efb58bbab6bbad5ab15ae80e1147f2cb09078a4a41572956a2e0",
-      "after_sha256": "d84cf55a89b7efb58bbab6bbad5ab15ae80e1147f2cb09078a4a41572956a2e0"
+      "before_sha256": "78c57340083158fc04d47b5b2cda2533729a3b0587d1e24301f63b1ea5ad9dc6",
+      "after_sha256": "78c57340083158fc04d47b5b2cda2533729a3b0587d1e24301f63b1ea5ad9dc6"
     },
     {
       "width": 1280,
       "height": 800,
       "same_accessibility": true,
       "png_bytes_equal": true,
-      "before_sha256": "274e669a8931cc68883377a01dedc1301b7611f765a971e2319d473399d44545",
-      "after_sha256": "274e669a8931cc68883377a01dedc1301b7611f765a971e2319d473399d44545"
+      "before_sha256": "c05fa3af95aea9315adc79520e6a224006959a51902e5bd5bfd364d9a415a9d1",
+      "after_sha256": "c05fa3af95aea9315adc79520e6a224006959a51902e5bd5bfd364d9a415a9d1"
     },
     {
       "width": 390,
       "height": 844,
       "same_accessibility": true,
       "png_bytes_equal": true,
-      "before_sha256": "b09a6e99ca87a28e255919a8f72254fa79bb0b90db561f65c575dc6df7b4c9e2",
-      "after_sha256": "b09a6e99ca87a28e255919a8f72254fa79bb0b90db561f65c575dc6df7b4c9e2"
+      "before_sha256": "5c22023b35d7c31b777a03f3df3d08207dedaf132d27b6e238aeac4aacba0a61",
+      "after_sha256": "5c22023b35d7c31b777a03f3df3d08207dedaf132d27b6e238aeac4aacba0a61"
     },
     {
       "width": 320,
       "height": 800,
       "same_accessibility": true,
       "png_bytes_equal": true,
-      "before_sha256": "6b13f3f1bed0cfc6392fbfe0ba5a119a5ac40e8725d6aa5796b6a8fba679a7ff",
-      "after_sha256": "6b13f3f1bed0cfc6392fbfe0ba5a119a5ac40e8725d6aa5796b6a8fba679a7ff"
+      "before_sha256": "64d827580eaa50e1f0dc0b9674cfe9d2bc84f7c8272e0d62283c02a34dbc49f6",
+      "after_sha256": "64d827580eaa50e1f0dc0b9674cfe9d2bc84f7c8272e0d62283c02a34dbc49f6"
     }
-  ]
+  ],
+  "method": "Replace only the linked inbox-runs.css in the same /runs document; await stylesheet load. MainBar DOM and focus remain stable."
 }

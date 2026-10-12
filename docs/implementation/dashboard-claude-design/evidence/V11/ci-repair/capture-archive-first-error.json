@@ -1,0 +1,7 @@
+{
+  "command": "/Users/nineofour/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 .scratch/v11/ci-repair/archive-recapture.py",
+  "exit_code": 1,
+  "output": "Traceback (most recent call last):\n  File \"/Users/nineofour/Agent-Alfred-v11/.scratch/v11/ci-repair/archive-recapture.py\", line 91, in <module>\n    assert all(hashlib.sha256((root / name).read_bytes()).hexdigest() == value for name, value in gate['inputs'].items()), path\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: /Users/nineofour/Agent-Alfred-v11/docs/implementation/dashboard-claude-design/evidence/V11/ci-repair/gates/ci-repair-layout-main.json\n",
+  "reason": "The diagnostic main/before runs intentionally precede the two padding changes; they are not the final candidate gates.",
+  "remedy": "Exclude only those two pre-repair diagnostics from final-input identity checks. All eight final gates and the targeted/replay inputs still match. No production or formal test edits."
+}

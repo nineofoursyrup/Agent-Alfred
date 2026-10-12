@@ -48,7 +48,12 @@
       "elapsed_seconds": 0.26,
       "tested_head": "3c14a17af1647824c5f36c32526ec6d49971dcde",
       "input_manifest_sha256": "13b3578c5238be4323ec5166f0a9812777f37724b8953466e839a7a17dfb9ec8",
-      "log": "gates/ci-repair-07-diff.json"
+      "log": "gates/ci-repair-07-diff.json",
+      "final_fixed_viewport_archive_check": {
+        "elapsed_seconds": 0.68,
+        "log": "gates/ci-repair-07-diff-recapture.json",
+        "exit_code": 0
+      }
     },
     "08-install": {
       "exit_code": 0,
@@ -75,5 +80,14 @@
     "full_replay_failed": 0,
     "full_replay_seconds": 705.9,
     "source_inputs_unchanged": true
+  },
+  "fixed_viewport_capture": {
+    "script": "scripts/recapture.mjs",
+    "reference_script": "scripts/reference-recapture.mjs",
+    "previous_record": "capture-collection-first-failure/record.json",
+    "source_changed": false,
+    "formal_tests_changed": false,
+    "snapshots": 12,
+    "all_four_runs_png_pairs_equal": true
   }
 }

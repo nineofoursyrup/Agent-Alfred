@@ -1,10 +1,52 @@
 {
+  "clock": "2026-10-12T01:15:00Z",
+  "method": "Separate headless context per fixed viewport; original archive unchanged",
   "responses": [
     {
+      "width": 1440,
+      "height": 900,
+      "url": "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
+      "status": 200
+    },
+    {
+      "width": 1440,
+      "height": 900,
       "url": "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
       "status": 200
     },
     {
+      "width": 1280,
+      "height": 800,
+      "url": "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+      "status": 200
+    },
+    {
+      "width": 1280,
+      "height": 800,
+      "url": "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
+      "status": 200
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "url": "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+      "status": 200
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "url": "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
+      "status": 200
+    },
+    {
+      "width": 320,
+      "height": 800,
+      "url": "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+      "status": 200
+    },
+    {
+      "width": 320,
+      "height": 800,
       "url": "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
       "status": 200
     }
@@ -14,27 +56,47 @@
     {
       "width": 1440,
       "height": 900,
+      "actual_viewport": {
+        "width": 1440,
+        "height": 900,
+        "clientHeight": 900
+      },
       "main_width": 886,
       "accessibility": "- main:\n  - text: SYRUP/LOOP/AGENT.PY · 约 95 行\n  - heading \"Loop\" [level=1]\n  - text: \"一轮对话里的每一次迭代，按顺序摊开：think、act、observe。 live · turn #48 TURNS · 48 搜一下世界杯还没打的比赛，都加进日历 retrieve 8 iter 11.4s 周六安排个游泳 retrieve 3 iter 4.1s 记住 Alex 更喜欢上午开会 skip 2 iter 1.9s 谢谢！ quick 0 iter 0.4s 我今天日历上有什么？ retrieve 2 iter 2.2s 搜一下世界杯还没打的比赛，每一场都加进我的日历 retrieve 8 iter 11.4s $0.041 八次迭代：搜索、推理、逐场创建日程 —— 直到模型不再要工具，自然结束。 ITERATIONS 停止原因：模型不再要工具 01 THINK 「先看看有哪些还没打的比赛」 620 ms 02 ACT search_web(query=\\\"world cup remaining fixtures\\\") 1.9 s 03 OBSERVE 6 results · 4 fixtures parsed 12 ms 04 THINK 「时区要按本地算，再逐场建日程」 540 ms 05 ACT create_event(title=\\\"QF · ARG vs NED\\\", start=\\\"2026-06-27T21:00\\\") 180 ms 06 ACT create_event(title=\\\"QF · BRA vs FRA\\\", start=\\\"2026-06-28T21:00\\\") 160 ms 07 OBSERVE 4 events written · calendar.ics + state.db 24 ms 08 THINK no tool call — 自然结束，回复人类 410 ms\""
     },
     {
       "width": 1280,
       "height": 800,
+      "actual_viewport": {
+        "width": 1280,
+        "height": 800,
+        "clientHeight": 800
+      },
       "main_width": 726,
       "accessibility": "- main:\n  - text: SYRUP/LOOP/AGENT.PY · 约 95 行\n  - heading \"Loop\" [level=1]\n  - text: \"一轮对话里的每一次迭代，按顺序摊开：think、act、observe。 live · turn #48 TURNS · 48 搜一下世界杯还没打的比赛，都加进日历 retrieve 8 iter 11.4s 周六安排个游泳 retrieve 3 iter 4.1s 记住 Alex 更喜欢上午开会 skip 2 iter 1.9s 谢谢！ quick 0 iter 0.4s 我今天日历上有什么？ retrieve 2 iter 2.2s 搜一下世界杯还没打的比赛，每一场都加进我的日历 retrieve 8 iter 11.4s $0.041 八次迭代：搜索、推理、逐场创建日程 —— 直到模型不再要工具，自然结束。 ITERATIONS 停止原因：模型不再要工具 01 THINK 「先看看有哪些还没打的比赛」 620 ms 02 ACT search_web(query=\\\"world cup remaining fixtures\\\") 1.9 s 03 OBSERVE 6 results · 4 fixtures parsed 12 ms 04 THINK 「时区要按本地算，再逐场建日程」 540 ms 05 ACT create_event(title=\\\"QF · ARG vs NED\\\", start=\\\"2026-06-27T21:00\\\") 180 ms 06 ACT create_event(title=\\\"QF · BRA vs FRA\\\", start=\\\"2026-06-28T21:00\\\") 160 ms 07 OBSERVE 4 events written · calendar.ics + state.db 24 ms 08 THINK no tool call — 自然结束，回复人类 410 ms\""
     },
     {
       "width": 390,
       "height": 844,
+      "actual_viewport": {
+        "width": 390,
+        "height": 844,
+        "clientHeight": 844
+      },
       "main_width": 0,
       "accessibility": "- main:\n  - text: SYRUP/LOOP/AGENT.PY · 约 95 行\n  - heading \"Loop\" [level=1]\n  - text: \"一轮对话里的每一次迭代，按顺序摊开：think、act、observe。 live · turn #48 TURNS · 48 搜一下世界杯还没打的比赛，都加进日历 retrieve 8 iter 11.4s 周六安排个游泳 retrieve 3 iter 4.1s 记住 Alex 更喜欢上午开会 skip 2 iter 1.9s 谢谢！ quick 0 iter 0.4s 我今天日历上有什么？ retrieve 2 iter 2.2s 搜一下世界杯还没打的比赛，每一场都加进我的日历 retrieve 8 iter 11.4s $0.041 八次迭代：搜索、推理、逐场创建日程 —— 直到模型不再要工具，自然结束。 ITERATIONS 停止原因：模型不再要工具 01 THINK 「先看看有哪些还没打的比赛」 620 ms 02 ACT search_web(query=\\\"world cup remaining fixtures\\\") 1.9 s 03 OBSERVE 6 results · 4 fixtures parsed 12 ms 04 THINK 「时区要按本地算，再逐场建日程」 540 ms 05 ACT create_event(title=\\\"QF · ARG vs NED\\\", start=\\\"2026-06-27T21:00\\\") 180 ms 06 ACT create_event(title=\\\"QF · BRA vs FRA\\\", start=\\\"2026-06-28T21:00\\\") 160 ms 07 OBSERVE 4 events written · calendar.ics + state.db 24 ms 08 THINK no tool call — 自然结束，回复人类 410 ms\""
     },
     {
       "width": 320,
       "height": 800,
+      "actual_viewport": {
+        "width": 320,
+        "height": 800,
+        "clientHeight": 800
+      },
       "main_width": 0,
       "accessibility": "- main:\n  - text: SYRUP/LOOP/AGENT.PY · 约 95 行\n  - heading \"Loop\" [level=1]\n  - text: \"一轮对话里的每一次迭代，按顺序摊开：think、act、observe。 live · turn #48 TURNS · 48 搜一下世界杯还没打的比赛，都加进日历 retrieve 8 iter 11.4s 周六安排个游泳 retrieve 3 iter 4.1s 记住 Alex 更喜欢上午开会 skip 2 iter 1.9s 谢谢！ quick 0 iter 0.4s 我今天日历上有什么？ retrieve 2 iter 2.2s 搜一下世界杯还没打的比赛，每一场都加进我的日历 retrieve 8 iter 11.4s $0.041 八次迭代：搜索、推理、逐场创建日程 —— 直到模型不再要工具，自然结束。 ITERATIONS 停止原因：模型不再要工具 01 THINK 「先看看有哪些还没打的比赛」 620 ms 02 ACT search_web(query=\\\"world cup remaining fixtures\\\") 1.9 s 03 OBSERVE 6 results · 4 fixtures parsed 12 ms 04 THINK 「时区要按本地算，再逐场建日程」 540 ms 05 ACT create_event(title=\\\"QF · ARG vs NED\\\", start=\\\"2026-06-27T21:00\\\") 180 ms 06 ACT create_event(title=\\\"QF · BRA vs FRA\\\", start=\\\"2026-06-28T21:00\\\") 160 ms 07 OBSERVE 4 events written · calendar.ics + state.db 24 ms 08 THINK no tool call — 自然结束，回复人类 410 ms\""
     }
   ],
-  "navigation_name": "Loop\n48"
+  "navigation_name": "Loop 48"
 }
