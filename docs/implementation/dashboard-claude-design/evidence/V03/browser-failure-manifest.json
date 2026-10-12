@@ -1,0 +1,109 @@
+{
+  "first-browser-failure/integrations-CE-08-rotated-e6954-ed-before-real-SSE-delivery/trace.zip": {
+    "original_sha256": "32287e87efd68202ebc4d4b8b675d31ec211f10a0e44eaf75cf5b02813e6ade7"
+  },
+  "first-browser-failure/integrations-CE-08-rotated-e6954-ed-before-real-SSE-delivery/error-context.md": {
+    "original_sha256": "d636844d5bff407acbd4a57e1cca4421d143e7260e49e47b466dd86dc4b9b1d8",
+    "reading_copy_sha256": "7d2df8c41df09451c160a245d6cbe247d4e7197c14be795156b9c8ea51e315e1",
+    "original_bytes_in": "error-context.raw.json"
+  },
+  "first-browser-failure/routing-CE-01-disabled-rea-5ccaf--exact-pre-routing-baseline/test-failed-2.png": {
+    "original_sha256": "4c4b09debbef4fb5321a97df9ac75f3cb7994376c9eb2dc683c90e36149f67b9"
+  },
+  "first-browser-failure/routing-CE-01-disabled-rea-5ccaf--exact-pre-routing-baseline/test-failed-1.png": {
+    "original_sha256": "5ef96eaf62cd1d646fca711a75f0b103051c8337f6328b3d4121e9bc3e0721ce"
+  },
+  "first-browser-failure/routing-CE-01-disabled-rea-5ccaf--exact-pre-routing-baseline/trace.zip": {
+    "original_sha256": "1b73f2ebf84d89e6c538f1c25306da76427a085155bb44df47ab1a59d757fe4f"
+  },
+  "first-browser-failure/routing-CE-01-disabled-rea-5ccaf--exact-pre-routing-baseline/error-context.md": {
+    "original_sha256": "4e8475b0277831501016fc3b984d40e00676acfa4abc10384e57e6bdcb81e917",
+    "reading_copy_sha256": "4317edd871a68282ded18e0eefad0976c55e1b99699dd29320f0c5b54769bbc3",
+    "original_bytes_in": "error-context.raw.json"
+  },
+  "first-browser-failure/routing-CE-09-10-failed-re-3bfdc-ection-and-rejects-next-Run/test-failed-1.png": {
+    "original_sha256": "a4d14e9466635afa37943c6d51bf1f797e5f01381c68bec33cf956e927980ff2"
+  },
+  "first-browser-failure/routing-CE-09-10-failed-re-3bfdc-ection-and-rejects-next-Run/trace.zip": {
+    "original_sha256": "a47a58f68cfe9dfd5102ab41f6b74f4249f7fb2de2c3de5558d2e91aa226c310"
+  },
+  "first-browser-failure/routing-CE-09-10-failed-re-3bfdc-ection-and-rejects-next-Run/error-context.md": {
+    "original_sha256": "73c8d33736b5d7e7f75670b284eb6312b14a53127e9216ca942f65334a7b52f4",
+    "reading_copy_sha256": "c1c55e76f77eb2da035fbfc05c3271d8f83c3ee9ba1449eb393fcd14f8be7b4b",
+    "original_bytes_in": "error-context.raw.json"
+  },
+  "first-browser-failure/routing-statistics-CE-03-0-85b72-rt-and-late-range-responses/test-failed-1.png": {
+    "original_sha256": "dff9dfa9254329963711d7ab6b06e4a15ab1ce43c7908daf81b5d453a1741f1a"
+  },
+  "first-browser-failure/routing-statistics-CE-03-0-85b72-rt-and-late-range-responses/trace.zip": {
+    "original_sha256": "d3357a6ad1997c904ef8ba2492076591cf06d956db838f05a62e9a46f44f1ca3"
+  },
+  "first-browser-failure/routing-statistics-CE-03-0-85b72-rt-and-late-range-responses/error-context.md": {
+    "original_sha256": "af5e6acb69d6c2f01abdf24f86ae99889e7f75febe0e04855a8a6e32a7967c2f",
+    "reading_copy_sha256": "0fca2fb8cd6e838cfee99f94f9c7936cfecaee7b727c12d82522d5bc92bdf4a4",
+    "original_bytes_in": "error-context.raw.json"
+  },
+  "first-browser-failure/routing-statistics-SPEC-03-b2e50-cs-and-real-bad-data-errors/test-failed-1.png": {
+    "original_sha256": "e500dcf21de75af86145b33c05393999769d30fbd1a30683bd51c5e552a414ab"
+  },
+  "first-browser-failure/routing-statistics-SPEC-03-b2e50-cs-and-real-bad-data-errors/trace.zip": {
+    "original_sha256": "ac9ef038aa70cab915849d5f12b798afa5ead94fa5f0c61c6a765e43a81689b7"
+  },
+  "first-browser-failure/routing-statistics-SPEC-03-b2e50-cs-and-real-bad-data-errors/error-context.md": {
+    "original_sha256": "fde6b76213f3e15e8f3cd32c6148d8a0d8432e62c4ed77133dfa2af64fa69a53",
+    "reading_copy_sha256": "d5ea81923969f8d6f73aaff91989174a1cbd8e28abf39cf1b464a3d5c208be15",
+    "original_bytes_in": "error-context.raw.json"
+  },
+  "first-browser-failure/run-path-CE-06-real-SIGKILL-restart-browser-complete/test-failed-1.png": {
+    "original_sha256": "dce6ae67325df9944881dd3ffb778e9cbe476cf4243374486adce7ad9de96d55"
+  },
+  "first-browser-failure/run-path-CE-06-real-SIGKILL-restart-browser-complete/trace.zip": {
+    "original_sha256": "e8c136aefc21193add1692e23e58e8992d071476c04d020af06fff2c0776383e"
+  },
+  "first-browser-failure/run-path-CE-06-real-SIGKILL-restart-browser-complete/error-context.md": {
+    "original_sha256": "2316b0acd3f93bd245b8ae8040cf752b0c16a4cb5d4816282df01aa71236fe18",
+    "reading_copy_sha256": "c29aff0b4a77f2ec587f3fbeedf6d8be34005e06d7607171430bb4d79e30bc72",
+    "original_bytes_in": "error-context.raw.json"
+  },
+  "first-browser-failure/run-path-CE-07-real-trace--f4236-too-large-replaces-old-path/trace.zip": {
+    "original_sha256": "b14af839372ca889c1778d001365a82308e9af1b671b6dd9f60c7488dca131dc"
+  },
+  "first-browser-failure/run-path-CE-07-real-trace--f4236-too-large-replaces-old-path/error-context.md": {
+    "original_sha256": "53d8a75abbef85a7b2c8626645db0bf5364f6b22485780d54bdc72cc2f15f643",
+    "reading_copy_sha256": "eb5408733f69939158029ce5ba4ce8b30244aa4a703e585966e64a667d08a8dd",
+    "original_bytes_in": "error-context.raw.json"
+  },
+  "first-browser-failure/skills-CE-23-a-late-real-e-b42f9-cannot-replace-the-next-Run/test-failed-1.png": {
+    "original_sha256": "b3aa9ef8701376f787a83d2d6e7aae19da12badb8139f98dc5170a7e16db6a62"
+  },
+  "first-browser-failure/skills-CE-23-a-late-real-e-b42f9-cannot-replace-the-next-Run/trace.zip": {
+    "original_sha256": "5fcdf61ad6860d807e7ba104d1609a9b12f552a9b6c7f5de952abb13af706aae"
+  },
+  "first-browser-failure/skills-CE-23-a-late-real-e-b42f9-cannot-replace-the-next-Run/error-context.md": {
+    "original_sha256": "c153184716922fc657d4e61590eb40d99f97c7085645b15784fad53d9ac1e20a",
+    "reading_copy_sha256": "63c942221df274f5da1c05e3c706b951cdb52efb56f8f3ba2bbed49a39617def",
+    "original_bytes_in": "error-context.raw.json"
+  },
+  "first-browser-failure/topology-CE-08-keyboard-and-complete-text-at-1280px/trace.zip": {
+    "original_sha256": "0c18a73d116d060f4660bc8a1cedde896c595fa6e1a6ad5f4f190b83bdcc6b6b"
+  },
+  "first-browser-failure/topology-CE-08-keyboard-and-complete-text-at-1280px/error-context.md": {
+    "original_sha256": "54423bbfcc584a5ae4ade81a542d6e121d5bed88b2e5ee5f7463189172a97383",
+    "reading_copy_sha256": "3cf35ecf8c5d6b6d0f5aa0870ca886f84d41b296ce2c8a1301706999f5a27a25",
+    "original_bytes_in": "error-context.raw.json"
+  },
+  "retest-browser-failure/routing-CE-01-disabled-rea-5ccaf--exact-pre-routing-baseline/test-failed-2.png": {
+    "original_sha256": "e44be4da462a8596349023f1bbcb46edb416d3b15d700a8def1b7af9227e94ea"
+  },
+  "retest-browser-failure/routing-CE-01-disabled-rea-5ccaf--exact-pre-routing-baseline/test-failed-1.png": {
+    "original_sha256": "cf1fc063e242bf681b7a3c9e19347fe7343bcc7e778001dbbeb562ec2b4daa04"
+  },
+  "retest-browser-failure/routing-CE-01-disabled-rea-5ccaf--exact-pre-routing-baseline/trace.zip": {
+    "original_sha256": "051154fec6bde8fa21ac82e0475528fe1a50f012a4fa8a8aff6064070eb08a11"
+  },
+  "retest-browser-failure/routing-CE-01-disabled-rea-5ccaf--exact-pre-routing-baseline/error-context.md": {
+    "original_sha256": "4e8475b0277831501016fc3b984d40e00676acfa4abc10384e57e6bdcb81e917",
+    "reading_copy_sha256": "4317edd871a68282ded18e0eefad0976c55e1b99699dd29320f0c5b54769bbc3",
+    "original_bytes_in": "error-context.raw.json"
+  }
+}

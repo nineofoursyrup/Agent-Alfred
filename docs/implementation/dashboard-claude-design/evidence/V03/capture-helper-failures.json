@@ -1,0 +1,1837 @@
+{
+  "first": {
+    "browser": "153.0.8010.12",
+    "port": 18030,
+    "deviceScaleFactor": 1,
+    "viewports": [
+      {
+        "width": 1440,
+        "height": 900,
+        "root": {
+          "x": 1120,
+          "y": 0,
+          "width": 320,
+          "height": 900,
+          "top": 0,
+          "right": 1440,
+          "bottom": 900,
+          "left": 1120
+        },
+        "main": {
+          "x": 232,
+          "y": 0,
+          "width": 888,
+          "height": 900,
+          "top": 0,
+          "right": 1120,
+          "bottom": 900,
+          "left": 232
+        },
+        "documentOverflow": 0,
+        "rootOverflow": 0,
+        "inlineStyles": 0,
+        "user": {
+          "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+          "fontSize": "13px",
+          "lineHeight": "20.15px",
+          "backgroundColor": "rgb(32, 34, 58)",
+          "borderColor": "rgb(47, 50, 82)",
+          "borderStyle": "solid",
+          "borderRadius": "12px 12px 4px",
+          "maxWidth": "88%",
+          "animationName": "none",
+          "padding": "10px 13px"
+        },
+        "assistant": {
+          "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+          "fontSize": "13px",
+          "lineHeight": "20.8px",
+          "backgroundColor": "rgb(24, 24, 27)",
+          "borderColor": "rgb(38, 38, 43)",
+          "borderStyle": "solid",
+          "borderRadius": "12px 12px 12px 4px",
+          "maxWidth": "92%",
+          "animationName": "none",
+          "padding": "10px 13px"
+        },
+        "composer": {
+          "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+          "fontSize": "12.5px",
+          "lineHeight": "16.25px",
+          "backgroundColor": "rgb(20, 20, 22)",
+          "borderColor": "rgb(124, 138, 236)",
+          "borderStyle": "solid",
+          "borderRadius": "9px",
+          "maxWidth": "100%",
+          "animationName": "none",
+          "padding": "9px 12px"
+        },
+        "dot": {
+          "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "fontSize": "10.5px",
+          "lineHeight": "13.65px",
+          "backgroundColor": "rgb(76, 195, 138)",
+          "borderColor": "rgb(76, 195, 138)",
+          "borderStyle": "none",
+          "borderRadius": "50%",
+          "maxWidth": "none",
+          "animationName": "none",
+          "padding": "0px"
+        },
+        "stage": "已同步",
+        "conversation": {
+          "x": 1137,
+          "y": 134.875,
+          "width": 287,
+          "height": 618.53125,
+          "top": 134.875,
+          "right": 1424,
+          "bottom": 753.40625,
+          "left": 1137
+        },
+        "bubbles": [
+          {
+            "class": "message-bubble message-user",
+            "text": "请检查主对话的正式回复、保存状态和运行入口。",
+            "box": {
+              "x": 1172.203125,
+              "y": 149.875,
+              "width": 250.796875,
+              "height": 62.28125,
+              "top": 149.875,
+              "right": 1423,
+              "bottom": 212.15625,
+              "left": 1172.203125
+            },
+            "overflow": 0
+          },
+          {
+            "class": "message-bubble message-assistant",
+            "text": "离线模型回复",
+            "box": {
+              "x": 1138,
+              "y": 219.15625,
+              "width": 106,
+              "height": 42.796875,
+              "top": 219.15625,
+              "right": 1244,
+              "bottom": 261.953125,
+              "left": 1138
+            },
+            "overflow": 0
+          },
+          {
+            "class": "message-bubble message-user",
+            "text": "长消息换行验证：中文正文仍然完整可读。\n/very-long-path/mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-\n这个请求包含换行；状态文字和草稿继续保留。",
+            "box": {
+              "x": 1172.203125,
+              "y": 347.1875,
+              "width": 250.796875,
+              "height": 243.546875,
+              "top": 347.1875,
+              "right": 1423,
+              "bottom": 590.734375,
+              "left": 1172.203125
+            },
+            "overflow": 0
+          },
+          {
+            "class": "message-bubble message-assistant",
+            "text": "离线模型回复",
+            "box": {
+              "x": 1138,
+              "y": 597.734375,
+              "width": 106,
+              "height": 42.796875,
+              "top": 597.734375,
+              "right": 1244,
+              "bottom": 640.53125,
+              "left": 1138
+            },
+            "overflow": 0
+          }
+        ],
+        "messageStructure": [
+          {
+            "run": "c0a2185fc16d42f798cee8549d84e757",
+            "children": [
+              {
+                "tag": "P",
+                "class": "message-bubble message-user",
+                "text": "请检查主对话的正式回复、保存状态和运行入口。",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "message-bubble message-assistant",
+                "text": "离线模型回复",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "",
+                "text": "Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。",
+                "href": null
+              },
+              {
+                "tag": "SMALL",
+                "class": "",
+                "text": "已保存",
+                "href": null
+              },
+              {
+                "tag": "A",
+                "class": "message-run-link",
+                "text": "查看运行",
+                "href": "/runs/c0a2185fc16d42f798cee8549d84e757"
+              }
+            ]
+          },
+          {
+            "run": "eb15f94bdd7442989d4b1485846b985b",
+            "children": [
+              {
+                "tag": "P",
+                "class": "message-bubble message-user",
+                "text": "长消息换行验证：中文正文仍然完整可读。\n/very-long-path/mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-\n这个请求包含换行；状态文字和草稿继续保留。",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "message-bubble message-assistant",
+                "text": "离线模型回复",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "",
+                "text": "Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。",
+                "href": null
+              },
+              {
+                "tag": "SMALL",
+                "class": "",
+                "text": "已保存",
+                "href": null
+              },
+              {
+                "tag": "A",
+                "class": "message-run-link",
+                "text": "查看运行",
+                "href": "/runs/eb15f94bdd7442989d4b1485846b985b"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "width": 1280,
+        "height": 800,
+        "root": {
+          "x": 960,
+          "y": 0,
+          "width": 320,
+          "height": 800,
+          "top": 0,
+          "right": 1280,
+          "bottom": 800,
+          "left": 960
+        },
+        "main": {
+          "x": 232,
+          "y": 0,
+          "width": 728,
+          "height": 800,
+          "top": 0,
+          "right": 960,
+          "bottom": 800,
+          "left": 232
+        },
+        "documentOverflow": 0,
+        "rootOverflow": 0,
+        "inlineStyles": 2,
+        "user": {
+          "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+          "fontSize": "13px",
+          "lineHeight": "20.15px",
+          "backgroundColor": "rgb(32, 34, 58)",
+          "borderColor": "rgb(47, 50, 82)",
+          "borderStyle": "solid",
+          "borderRadius": "12px 12px 4px",
+          "maxWidth": "88%",
+          "animationName": "none",
+          "padding": "10px 13px"
+        },
+        "assistant": {
+          "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+          "fontSize": "13px",
+          "lineHeight": "20.8px",
+          "backgroundColor": "rgb(24, 24, 27)",
+          "borderColor": "rgb(38, 38, 43)",
+          "borderStyle": "solid",
+          "borderRadius": "12px 12px 12px 4px",
+          "maxWidth": "92%",
+          "animationName": "none",
+          "padding": "10px 13px"
+        },
+        "composer": {
+          "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+          "fontSize": "12.5px",
+          "lineHeight": "16.25px",
+          "backgroundColor": "rgb(20, 20, 22)",
+          "borderColor": "rgb(124, 138, 236)",
+          "borderStyle": "solid",
+          "borderRadius": "9px",
+          "maxWidth": "100%",
+          "animationName": "none",
+          "padding": "9px 12px"
+        },
+        "dot": {
+          "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "fontSize": "10.5px",
+          "lineHeight": "13.65px",
+          "backgroundColor": "rgb(76, 195, 138)",
+          "borderColor": "rgb(76, 195, 138)",
+          "borderStyle": "none",
+          "borderRadius": "50%",
+          "maxWidth": "none",
+          "animationName": "none",
+          "padding": "0px"
+        },
+        "stage": "已同步",
+        "conversation": {
+          "x": 977,
+          "y": 134.875,
+          "width": 287,
+          "height": 518.53125,
+          "top": 134.875,
+          "right": 1264,
+          "bottom": 653.40625,
+          "left": 977
+        },
+        "bubbles": [
+          {
+            "class": "message-bubble message-user",
+            "text": "请检查主对话的正式回复、保存状态和运行入口。",
+            "box": {
+              "x": 1012.203125,
+              "y": 78.875,
+              "width": 250.796875,
+              "height": 62.28125,
+              "top": 78.875,
+              "right": 1263,
+              "bottom": 141.15625,
+              "left": 1012.203125
+            },
+            "overflow": 0
+          },
+          {
+            "class": "message-bubble message-assistant",
+            "text": "离线模型回复",
+            "box": {
+              "x": 978,
+              "y": 148.15625,
+              "width": 106,
+              "height": 42.796875,
+              "top": 148.15625,
+              "right": 1084,
+              "bottom": 190.953125,
+              "left": 978
+            },
+            "overflow": 0
+          },
+          {
+            "class": "message-bubble message-user",
+            "text": "长消息换行验证：中文正文仍然完整可读。\n/very-long-path/mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-\n这个请求包含换行；状态文字和草稿继续保留。",
+            "box": {
+              "x": 1012.203125,
+              "y": 276.1875,
+              "width": 250.796875,
+              "height": 243.546875,
+              "top": 276.1875,
+              "right": 1263,
+              "bottom": 519.734375,
+              "left": 1012.203125
+            },
+            "overflow": 0
+          },
+          {
+            "class": "message-bubble message-assistant",
+            "text": "离线模型回复",
+            "box": {
+              "x": 978,
+              "y": 526.734375,
+              "width": 106,
+              "height": 42.796875,
+              "top": 526.734375,
+              "right": 1084,
+              "bottom": 569.53125,
+              "left": 978
+            },
+            "overflow": 0
+          }
+        ],
+        "messageStructure": [
+          {
+            "run": "c0a2185fc16d42f798cee8549d84e757",
+            "children": [
+              {
+                "tag": "P",
+                "class": "message-bubble message-user",
+                "text": "请检查主对话的正式回复、保存状态和运行入口。",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "message-bubble message-assistant",
+                "text": "离线模型回复",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "",
+                "text": "Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。",
+                "href": null
+              },
+              {
+                "tag": "SMALL",
+                "class": "",
+                "text": "已保存",
+                "href": null
+              },
+              {
+                "tag": "A",
+                "class": "message-run-link",
+                "text": "查看运行",
+                "href": "/runs/c0a2185fc16d42f798cee8549d84e757"
+              }
+            ]
+          },
+          {
+            "run": "eb15f94bdd7442989d4b1485846b985b",
+            "children": [
+              {
+                "tag": "P",
+                "class": "message-bubble message-user",
+                "text": "长消息换行验证：中文正文仍然完整可读。\n/very-long-path/mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-\n这个请求包含换行；状态文字和草稿继续保留。",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "message-bubble message-assistant",
+                "text": "离线模型回复",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "",
+                "text": "Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。",
+                "href": null
+              },
+              {
+                "tag": "SMALL",
+                "class": "",
+                "text": "已保存",
+                "href": null
+              },
+              {
+                "tag": "A",
+                "class": "message-run-link",
+                "text": "查看运行",
+                "href": "/runs/eb15f94bdd7442989d4b1485846b985b"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "reference": [],
+    "checks": {},
+    "errors": [
+      {
+        "kind": "requestfailed",
+        "url": "http://127.0.0.1:18030/api/events",
+        "failure": {
+          "errorText": "net::ERR_ABORTED"
+        }
+      },
+      {
+        "kind": "capture-failure",
+        "message": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: 0\nReceived: 2"
+      }
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/overview"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/app.css"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/inbox-runs.css"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/settings.css"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/overview.css"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/tools.css"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/behaviour.css"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/database.css"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/memory.css"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/accounting.css"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/app.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/shell.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/aggregation.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/tools.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/accounting.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/stream.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/dom.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/progress.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/notices.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/pages.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/inbox.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/runs.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/memory.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/database.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/overview.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/behaviour.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/models.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/connections.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/source.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/run-fields.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/topology.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/trace_export.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/run-evidence.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/settings-focus.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/routing-statistics.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/entry"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/events"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/memory/state"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/overview/period?process_instance_id=b4900f5100854b6898cb353608cd5b7b&range=7d&timezone=Asia%2FShanghai"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/overview/recent-runs?process_instance_id=b4900f5100854b6898cb353608cd5b7b"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/overview/memory-counts?process_instance_id=b4900f5100854b6898cb353608cd5b7b&expected_memory_revision=11"
+      },
+      {
+        "method": "POST",
+        "url": "http://127.0.0.1:18030/api/sessions"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/mainbar?session_id=e3fef7c61305463db7ca2e624b535611"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/events?session_id=e3fef7c61305463db7ca2e624b535611"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/memory/state"
+      },
+      {
+        "method": "POST",
+        "url": "http://127.0.0.1:18030/api/runs"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/mainbar?session_id=e3fef7c61305463db7ca2e624b535611"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/mainbar?session_id=e3fef7c61305463db7ca2e624b535611"
+      },
+      {
+        "method": "POST",
+        "url": "http://127.0.0.1:18030/api/runs"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/mainbar?session_id=e3fef7c61305463db7ca2e624b535611"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/mainbar?session_id=e3fef7c61305463db7ca2e624b535611"
+      }
+    ],
+    "session": "e3fef7c61305463db7ca2e624b535611",
+    "runs": [
+      "c0a2185fc16d42f798cee8549d84e757",
+      "eb15f94bdd7442989d4b1485846b985b"
+    ]
+  },
+  "second": {
+    "browser": "153.0.8010.12",
+    "port": 18030,
+    "deviceScaleFactor": 1,
+    "viewports": [
+      {
+        "width": 1440,
+        "height": 900,
+        "root": {
+          "x": 1120,
+          "y": 0,
+          "width": 320,
+          "height": 900,
+          "top": 0,
+          "right": 1440,
+          "bottom": 900,
+          "left": 1120
+        },
+        "main": {
+          "x": 232,
+          "y": 0,
+          "width": 888,
+          "height": 900,
+          "top": 0,
+          "right": 1120,
+          "bottom": 900,
+          "left": 232
+        },
+        "documentOverflow": 0,
+        "rootOverflow": 0,
+        "inlineStyles": 0,
+        "emptyStyleAttributes": [],
+        "user": {
+          "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+          "fontSize": "13px",
+          "lineHeight": "20.15px",
+          "backgroundColor": "rgb(32, 34, 58)",
+          "borderColor": "rgb(47, 50, 82)",
+          "borderStyle": "solid",
+          "borderRadius": "12px 12px 4px",
+          "maxWidth": "88%",
+          "animationName": "none",
+          "padding": "10px 13px"
+        },
+        "assistant": {
+          "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+          "fontSize": "13px",
+          "lineHeight": "20.8px",
+          "backgroundColor": "rgb(24, 24, 27)",
+          "borderColor": "rgb(38, 38, 43)",
+          "borderStyle": "solid",
+          "borderRadius": "12px 12px 12px 4px",
+          "maxWidth": "92%",
+          "animationName": "none",
+          "padding": "10px 13px"
+        },
+        "composer": {
+          "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+          "fontSize": "12.5px",
+          "lineHeight": "16.25px",
+          "backgroundColor": "rgb(20, 20, 22)",
+          "borderColor": "rgb(124, 138, 236)",
+          "borderStyle": "solid",
+          "borderRadius": "9px",
+          "maxWidth": "100%",
+          "animationName": "none",
+          "padding": "9px 12px"
+        },
+        "dot": {
+          "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "fontSize": "10.5px",
+          "lineHeight": "13.65px",
+          "backgroundColor": "rgb(76, 195, 138)",
+          "borderColor": "rgb(76, 195, 138)",
+          "borderStyle": "none",
+          "borderRadius": "50%",
+          "maxWidth": "none",
+          "animationName": "none",
+          "padding": "0px"
+        },
+        "stage": "已同步",
+        "conversation": {
+          "x": 1137,
+          "y": 134.875,
+          "width": 287,
+          "height": 618.53125,
+          "top": 134.875,
+          "right": 1424,
+          "bottom": 753.40625,
+          "left": 1137
+        },
+        "bubbles": [
+          {
+            "class": "message-bubble message-user",
+            "text": "请检查主对话的正式回复、保存状态和运行入口。",
+            "box": {
+              "x": 1172.203125,
+              "y": 149.875,
+              "width": 250.796875,
+              "height": 62.28125,
+              "top": 149.875,
+              "right": 1423,
+              "bottom": 212.15625,
+              "left": 1172.203125
+            },
+            "overflow": 0
+          },
+          {
+            "class": "message-bubble message-assistant",
+            "text": "离线模型回复",
+            "box": {
+              "x": 1138,
+              "y": 219.15625,
+              "width": 106,
+              "height": 42.796875,
+              "top": 219.15625,
+              "right": 1244,
+              "bottom": 261.953125,
+              "left": 1138
+            },
+            "overflow": 0
+          },
+          {
+            "class": "message-bubble message-user",
+            "text": "长消息换行验证：中文正文仍然完整可读。\n/very-long-path/mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-\n这个请求包含换行；状态文字和草稿继续保留。",
+            "box": {
+              "x": 1172.203125,
+              "y": 347.1875,
+              "width": 250.796875,
+              "height": 243.546875,
+              "top": 347.1875,
+              "right": 1423,
+              "bottom": 590.734375,
+              "left": 1172.203125
+            },
+            "overflow": 0
+          },
+          {
+            "class": "message-bubble message-assistant",
+            "text": "离线模型回复",
+            "box": {
+              "x": 1138,
+              "y": 597.734375,
+              "width": 106,
+              "height": 42.796875,
+              "top": 597.734375,
+              "right": 1244,
+              "bottom": 640.53125,
+              "left": 1138
+            },
+            "overflow": 0
+          }
+        ],
+        "messageStructure": [
+          {
+            "run": "677790a9124f44a0939d612a41b75fa4",
+            "children": [
+              {
+                "tag": "P",
+                "class": "message-bubble message-user",
+                "text": "请检查主对话的正式回复、保存状态和运行入口。",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "message-bubble message-assistant",
+                "text": "离线模型回复",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "",
+                "text": "Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。",
+                "href": null
+              },
+              {
+                "tag": "SMALL",
+                "class": "",
+                "text": "已保存",
+                "href": null
+              },
+              {
+                "tag": "A",
+                "class": "message-run-link",
+                "text": "查看运行",
+                "href": "/runs/677790a9124f44a0939d612a41b75fa4"
+              }
+            ]
+          },
+          {
+            "run": "5e6dd92de9cf4c4d8fc2e7055e761380",
+            "children": [
+              {
+                "tag": "P",
+                "class": "message-bubble message-user",
+                "text": "长消息换行验证：中文正文仍然完整可读。\n/very-long-path/mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-\n这个请求包含换行；状态文字和草稿继续保留。",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "message-bubble message-assistant",
+                "text": "离线模型回复",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "",
+                "text": "Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。",
+                "href": null
+              },
+              {
+                "tag": "SMALL",
+                "class": "",
+                "text": "已保存",
+                "href": null
+              },
+              {
+                "tag": "A",
+                "class": "message-run-link",
+                "text": "查看运行",
+                "href": "/runs/5e6dd92de9cf4c4d8fc2e7055e761380"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "width": 1280,
+        "height": 800,
+        "root": {
+          "x": 960,
+          "y": 0,
+          "width": 320,
+          "height": 800,
+          "top": 0,
+          "right": 1280,
+          "bottom": 800,
+          "left": 960
+        },
+        "main": {
+          "x": 232,
+          "y": 0,
+          "width": 728,
+          "height": 800,
+          "top": 0,
+          "right": 960,
+          "bottom": 800,
+          "left": 232
+        },
+        "documentOverflow": 0,
+        "rootOverflow": 0,
+        "inlineStyles": 0,
+        "emptyStyleAttributes": [
+          {
+            "tag": "INPUT",
+            "id": ""
+          },
+          {
+            "tag": "TEXTAREA",
+            "id": "message"
+          }
+        ],
+        "user": {
+          "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+          "fontSize": "13px",
+          "lineHeight": "20.15px",
+          "backgroundColor": "rgb(32, 34, 58)",
+          "borderColor": "rgb(47, 50, 82)",
+          "borderStyle": "solid",
+          "borderRadius": "12px 12px 4px",
+          "maxWidth": "88%",
+          "animationName": "none",
+          "padding": "10px 13px"
+        },
+        "assistant": {
+          "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+          "fontSize": "13px",
+          "lineHeight": "20.8px",
+          "backgroundColor": "rgb(24, 24, 27)",
+          "borderColor": "rgb(38, 38, 43)",
+          "borderStyle": "solid",
+          "borderRadius": "12px 12px 12px 4px",
+          "maxWidth": "92%",
+          "animationName": "none",
+          "padding": "10px 13px"
+        },
+        "composer": {
+          "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+          "fontSize": "12.5px",
+          "lineHeight": "16.25px",
+          "backgroundColor": "rgb(20, 20, 22)",
+          "borderColor": "rgb(124, 138, 236)",
+          "borderStyle": "solid",
+          "borderRadius": "9px",
+          "maxWidth": "100%",
+          "animationName": "none",
+          "padding": "9px 12px"
+        },
+        "dot": {
+          "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "fontSize": "10.5px",
+          "lineHeight": "13.65px",
+          "backgroundColor": "rgb(76, 195, 138)",
+          "borderColor": "rgb(76, 195, 138)",
+          "borderStyle": "none",
+          "borderRadius": "50%",
+          "maxWidth": "none",
+          "animationName": "none",
+          "padding": "0px"
+        },
+        "stage": "已同步",
+        "conversation": {
+          "x": 977,
+          "y": 134.875,
+          "width": 287,
+          "height": 518.53125,
+          "top": 134.875,
+          "right": 1264,
+          "bottom": 653.40625,
+          "left": 977
+        },
+        "bubbles": [
+          {
+            "class": "message-bubble message-user",
+            "text": "请检查主对话的正式回复、保存状态和运行入口。",
+            "box": {
+              "x": 1012.203125,
+              "y": 78.875,
+              "width": 250.796875,
+              "height": 62.28125,
+              "top": 78.875,
+              "right": 1263,
+              "bottom": 141.15625,
+              "left": 1012.203125
+            },
+            "overflow": 0
+          },
+          {
+            "class": "message-bubble message-assistant",
+            "text": "离线模型回复",
+            "box": {
+              "x": 978,
+              "y": 148.15625,
+              "width": 106,
+              "height": 42.796875,
+              "top": 148.15625,
+              "right": 1084,
+              "bottom": 190.953125,
+              "left": 978
+            },
+            "overflow": 0
+          },
+          {
+            "class": "message-bubble message-user",
+            "text": "长消息换行验证：中文正文仍然完整可读。\n/very-long-path/mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-\n这个请求包含换行；状态文字和草稿继续保留。",
+            "box": {
+              "x": 1012.203125,
+              "y": 276.1875,
+              "width": 250.796875,
+              "height": 243.546875,
+              "top": 276.1875,
+              "right": 1263,
+              "bottom": 519.734375,
+              "left": 1012.203125
+            },
+            "overflow": 0
+          },
+          {
+            "class": "message-bubble message-assistant",
+            "text": "离线模型回复",
+            "box": {
+              "x": 978,
+              "y": 526.734375,
+              "width": 106,
+              "height": 42.796875,
+              "top": 526.734375,
+              "right": 1084,
+              "bottom": 569.53125,
+              "left": 978
+            },
+            "overflow": 0
+          }
+        ],
+        "messageStructure": [
+          {
+            "run": "677790a9124f44a0939d612a41b75fa4",
+            "children": [
+              {
+                "tag": "P",
+                "class": "message-bubble message-user",
+                "text": "请检查主对话的正式回复、保存状态和运行入口。",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "message-bubble message-assistant",
+                "text": "离线模型回复",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "",
+                "text": "Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。",
+                "href": null
+              },
+              {
+                "tag": "SMALL",
+                "class": "",
+                "text": "已保存",
+                "href": null
+              },
+              {
+                "tag": "A",
+                "class": "message-run-link",
+                "text": "查看运行",
+                "href": "/runs/677790a9124f44a0939d612a41b75fa4"
+              }
+            ]
+          },
+          {
+            "run": "5e6dd92de9cf4c4d8fc2e7055e761380",
+            "children": [
+              {
+                "tag": "P",
+                "class": "message-bubble message-user",
+                "text": "长消息换行验证：中文正文仍然完整可读。\n/very-long-path/mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-\n这个请求包含换行；状态文字和草稿继续保留。",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "message-bubble message-assistant",
+                "text": "离线模型回复",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "",
+                "text": "Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。",
+                "href": null
+              },
+              {
+                "tag": "SMALL",
+                "class": "",
+                "text": "已保存",
+                "href": null
+              },
+              {
+                "tag": "A",
+                "class": "message-run-link",
+                "text": "查看运行",
+                "href": "/runs/5e6dd92de9cf4c4d8fc2e7055e761380"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "width": 390,
+        "height": 844,
+        "root": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844,
+          "top": 0,
+          "right": 390,
+          "bottom": 844,
+          "left": 0
+        },
+        "main": {
+          "x": 0,
+          "y": 53.9375,
+          "width": 390,
+          "height": 790.0625,
+          "top": 53.9375,
+          "right": 390,
+          "bottom": 844,
+          "left": 0
+        },
+        "documentOverflow": 0,
+        "rootOverflow": 0,
+        "inlineStyles": 0,
+        "emptyStyleAttributes": [
+          {
+            "tag": "INPUT",
+            "id": ""
+          },
+          {
+            "tag": "TEXTAREA",
+            "id": "message"
+          }
+        ],
+        "user": {
+          "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+          "fontSize": "13px",
+          "lineHeight": "20.15px",
+          "backgroundColor": "rgb(32, 34, 58)",
+          "borderColor": "rgb(47, 50, 82)",
+          "borderStyle": "solid",
+          "borderRadius": "12px 12px 4px",
+          "maxWidth": "88%",
+          "animationName": "none",
+          "padding": "10px 13px"
+        },
+        "assistant": {
+          "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+          "fontSize": "13px",
+          "lineHeight": "20.8px",
+          "backgroundColor": "rgb(24, 24, 27)",
+          "borderColor": "rgb(38, 38, 43)",
+          "borderStyle": "solid",
+          "borderRadius": "12px 12px 12px 4px",
+          "maxWidth": "92%",
+          "animationName": "none",
+          "padding": "10px 13px"
+        },
+        "composer": {
+          "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+          "fontSize": "12.5px",
+          "lineHeight": "16.25px",
+          "backgroundColor": "rgb(20, 20, 22)",
+          "borderColor": "rgb(124, 138, 236)",
+          "borderStyle": "solid",
+          "borderRadius": "9px",
+          "maxWidth": "100%",
+          "animationName": "none",
+          "padding": "9px 12px"
+        },
+        "dot": {
+          "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "fontSize": "10.5px",
+          "lineHeight": "13.65px",
+          "backgroundColor": "rgb(76, 195, 138)",
+          "borderColor": "rgb(76, 195, 138)",
+          "borderStyle": "none",
+          "borderRadius": "50%",
+          "maxWidth": "none",
+          "animationName": "none",
+          "padding": "0px"
+        },
+        "stage": "已同步",
+        "conversation": {
+          "x": 16,
+          "y": 219.203125,
+          "width": 358,
+          "height": 478.203125,
+          "top": 219.203125,
+          "right": 374,
+          "bottom": 697.40625,
+          "left": 16
+        },
+        "bubbles": [
+          {
+            "class": "message-bubble message-user",
+            "text": "请检查主对话的正式回复、保存状态和运行入口。",
+            "box": {
+              "x": 59.734375,
+              "y": 203.203125,
+              "width": 313.265625,
+              "height": 62.28125,
+              "top": 203.203125,
+              "right": 373,
+              "bottom": 265.484375,
+              "left": 59.734375
+            },
+            "overflow": 0
+          },
+          {
+            "class": "message-bubble message-assistant",
+            "text": "离线模型回复",
+            "box": {
+              "x": 17,
+              "y": 272.484375,
+              "width": 106,
+              "height": 42.796875,
+              "top": 272.484375,
+              "right": 123,
+              "bottom": 315.28125,
+              "left": 17
+            },
+            "overflow": 0
+          },
+          {
+            "class": "message-bubble message-user",
+            "text": "长消息换行验证：中文正文仍然完整可读。\n/very-long-path/mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-\n这个请求包含换行；状态文字和草稿继续保留。",
+            "box": {
+              "x": 59.734375,
+              "y": 400.515625,
+              "width": 313.265625,
+              "height": 162.984375,
+              "top": 400.515625,
+              "right": 373,
+              "bottom": 563.5,
+              "left": 59.734375
+            },
+            "overflow": 0
+          },
+          {
+            "class": "message-bubble message-assistant",
+            "text": "离线模型回复",
+            "box": {
+              "x": 17,
+              "y": 570.5,
+              "width": 106,
+              "height": 42.796875,
+              "top": 570.5,
+              "right": 123,
+              "bottom": 613.296875,
+              "left": 17
+            },
+            "overflow": 0
+          }
+        ],
+        "messageStructure": [
+          {
+            "run": "677790a9124f44a0939d612a41b75fa4",
+            "children": [
+              {
+                "tag": "P",
+                "class": "message-bubble message-user",
+                "text": "请检查主对话的正式回复、保存状态和运行入口。",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "message-bubble message-assistant",
+                "text": "离线模型回复",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "",
+                "text": "Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。",
+                "href": null
+              },
+              {
+                "tag": "SMALL",
+                "class": "",
+                "text": "已保存",
+                "href": null
+              },
+              {
+                "tag": "A",
+                "class": "message-run-link",
+                "text": "查看运行",
+                "href": "/runs/677790a9124f44a0939d612a41b75fa4"
+              }
+            ]
+          },
+          {
+            "run": "5e6dd92de9cf4c4d8fc2e7055e761380",
+            "children": [
+              {
+                "tag": "P",
+                "class": "message-bubble message-user",
+                "text": "长消息换行验证：中文正文仍然完整可读。\n/very-long-path/mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-\n这个请求包含换行；状态文字和草稿继续保留。",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "message-bubble message-assistant",
+                "text": "离线模型回复",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "",
+                "text": "Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。",
+                "href": null
+              },
+              {
+                "tag": "SMALL",
+                "class": "",
+                "text": "已保存",
+                "href": null
+              },
+              {
+                "tag": "A",
+                "class": "message-run-link",
+                "text": "查看运行",
+                "href": "/runs/5e6dd92de9cf4c4d8fc2e7055e761380"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "width": 320,
+        "height": 800,
+        "root": {
+          "x": 0,
+          "y": 0,
+          "width": 320,
+          "height": 800,
+          "top": 0,
+          "right": 320,
+          "bottom": 800,
+          "left": 0
+        },
+        "main": {
+          "x": 0,
+          "y": 53.9375,
+          "width": 320,
+          "height": 746.0625,
+          "top": 53.9375,
+          "right": 320,
+          "bottom": 800,
+          "left": 0
+        },
+        "documentOverflow": 0,
+        "rootOverflow": 0,
+        "inlineStyles": 0,
+        "emptyStyleAttributes": [
+          {
+            "tag": "INPUT",
+            "id": ""
+          },
+          {
+            "tag": "TEXTAREA",
+            "id": "message"
+          }
+        ],
+        "user": {
+          "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+          "fontSize": "13px",
+          "lineHeight": "20.15px",
+          "backgroundColor": "rgb(32, 34, 58)",
+          "borderColor": "rgb(47, 50, 82)",
+          "borderStyle": "solid",
+          "borderRadius": "12px 12px 4px",
+          "maxWidth": "88%",
+          "animationName": "none",
+          "padding": "10px 13px"
+        },
+        "assistant": {
+          "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+          "fontSize": "13px",
+          "lineHeight": "20.8px",
+          "backgroundColor": "rgb(24, 24, 27)",
+          "borderColor": "rgb(38, 38, 43)",
+          "borderStyle": "solid",
+          "borderRadius": "12px 12px 12px 4px",
+          "maxWidth": "92%",
+          "animationName": "none",
+          "padding": "10px 13px"
+        },
+        "composer": {
+          "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+          "fontSize": "12.5px",
+          "lineHeight": "16.25px",
+          "backgroundColor": "rgb(20, 20, 22)",
+          "borderColor": "rgb(124, 138, 236)",
+          "borderStyle": "solid",
+          "borderRadius": "9px",
+          "maxWidth": "100%",
+          "animationName": "none",
+          "padding": "9px 12px"
+        },
+        "dot": {
+          "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "fontSize": "10.5px",
+          "lineHeight": "13.65px",
+          "backgroundColor": "rgb(76, 195, 138)",
+          "borderColor": "rgb(76, 195, 138)",
+          "borderStyle": "none",
+          "borderRadius": "50%",
+          "maxWidth": "none",
+          "animationName": "none",
+          "padding": "0px"
+        },
+        "stage": "已同步",
+        "conversation": {
+          "x": 16,
+          "y": 219.203125,
+          "width": 288,
+          "height": 434.203125,
+          "top": 219.203125,
+          "right": 304,
+          "bottom": 653.40625,
+          "left": 16
+        },
+        "bubbles": [
+          {
+            "class": "message-bubble message-user",
+            "text": "请检查主对话的正式回复、保存状态和运行入口。",
+            "box": {
+              "x": 51.328125,
+              "y": 78.203125,
+              "width": 251.671875,
+              "height": 62.28125,
+              "top": 78.203125,
+              "right": 303,
+              "bottom": 140.484375,
+              "left": 51.328125
+            },
+            "overflow": 0
+          },
+          {
+            "class": "message-bubble message-assistant",
+            "text": "离线模型回复",
+            "box": {
+              "x": 17,
+              "y": 147.484375,
+              "width": 106,
+              "height": 42.796875,
+              "top": 147.484375,
+              "right": 123,
+              "bottom": 190.28125,
+              "left": 17
+            },
+            "overflow": 0
+          },
+          {
+            "class": "message-bubble message-user",
+            "text": "长消息换行验证：中文正文仍然完整可读。\n/very-long-path/mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-\n这个请求包含换行；状态文字和草稿继续保留。",
+            "box": {
+              "x": 51.328125,
+              "y": 275.515625,
+              "width": 251.671875,
+              "height": 243.546875,
+              "top": 275.515625,
+              "right": 303,
+              "bottom": 519.0625,
+              "left": 51.328125
+            },
+            "overflow": 0
+          },
+          {
+            "class": "message-bubble message-assistant",
+            "text": "离线模型回复",
+            "box": {
+              "x": 17,
+              "y": 526.0625,
+              "width": 106,
+              "height": 42.796875,
+              "top": 526.0625,
+              "right": 123,
+              "bottom": 568.859375,
+              "left": 17
+            },
+            "overflow": 0
+          }
+        ],
+        "messageStructure": [
+          {
+            "run": "677790a9124f44a0939d612a41b75fa4",
+            "children": [
+              {
+                "tag": "P",
+                "class": "message-bubble message-user",
+                "text": "请检查主对话的正式回复、保存状态和运行入口。",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "message-bubble message-assistant",
+                "text": "离线模型回复",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "",
+                "text": "Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。",
+                "href": null
+              },
+              {
+                "tag": "SMALL",
+                "class": "",
+                "text": "已保存",
+                "href": null
+              },
+              {
+                "tag": "A",
+                "class": "message-run-link",
+                "text": "查看运行",
+                "href": "/runs/677790a9124f44a0939d612a41b75fa4"
+              }
+            ]
+          },
+          {
+            "run": "5e6dd92de9cf4c4d8fc2e7055e761380",
+            "children": [
+              {
+                "tag": "P",
+                "class": "message-bubble message-user",
+                "text": "长消息换行验证：中文正文仍然完整可读。\n/very-long-path/mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-\n这个请求包含换行；状态文字和草稿继续保留。",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "message-bubble message-assistant",
+                "text": "离线模型回复",
+                "href": null
+              },
+              {
+                "tag": "P",
+                "class": "",
+                "text": "Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。",
+                "href": null
+              },
+              {
+                "tag": "SMALL",
+                "class": "",
+                "text": "已保存",
+                "href": null
+              },
+              {
+                "tag": "A",
+                "class": "message-run-link",
+                "text": "查看运行",
+                "href": "/runs/5e6dd92de9cf4c4d8fc2e7055e761380"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "reference": [],
+    "checks": {
+      "location": {
+        "result": {
+          "status": "applied"
+        },
+        "border": "rgb(124, 138, 236)",
+        "reading": "已定位历史回复；相邻历史尚未读取。"
+      }
+    },
+    "errors": [
+      {
+        "kind": "capture-failure",
+        "message": "Error: page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"/\", waiting until \"load\"\u001b[22m\n"
+      }
+    ],
+    "expectedStreamCancellations": [
+      {
+        "kind": "requestfailed",
+        "url": "http://127.0.0.1:18030/api/events",
+        "failure": {
+          "errorText": "net::ERR_ABORTED"
+        }
+      }
+    ],
+    "requests": [
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/overview"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/app.css"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/inbox-runs.css"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/settings.css"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/overview.css"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/tools.css"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/behaviour.css"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/database.css"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/memory.css"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/accounting.css"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/app.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/shell.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/aggregation.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/tools.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/accounting.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/stream.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/dom.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/progress.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/notices.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/pages.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/inbox.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/runs.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/memory.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/database.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/overview.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/behaviour.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/models.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/connections.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/topology.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/trace_export.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/source.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/run-fields.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/run-evidence.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/routing-statistics.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/assets/settings-focus.js"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/entry"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/events"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/memory/state"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/overview/period?process_instance_id=b4900f5100854b6898cb353608cd5b7b&range=7d&timezone=Asia%2FShanghai"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/overview/recent-runs?process_instance_id=b4900f5100854b6898cb353608cd5b7b"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/overview/memory-counts?process_instance_id=b4900f5100854b6898cb353608cd5b7b&expected_memory_revision=29"
+      },
+      {
+        "method": "POST",
+        "url": "http://127.0.0.1:18030/api/sessions"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/mainbar?session_id=e27b7279a8d841d499cab95694e9c396"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/events?session_id=e27b7279a8d841d499cab95694e9c396"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/memory/state"
+      },
+      {
+        "method": "POST",
+        "url": "http://127.0.0.1:18030/api/runs"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/mainbar?session_id=e27b7279a8d841d499cab95694e9c396"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/mainbar?session_id=e27b7279a8d841d499cab95694e9c396"
+      },
+      {
+        "method": "POST",
+        "url": "http://127.0.0.1:18030/api/runs"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/mainbar?session_id=e27b7279a8d841d499cab95694e9c396"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/mainbar?session_id=e27b7279a8d841d499cab95694e9c396"
+      },
+      {
+        "method": "GET",
+        "url": "http://127.0.0.1:18030/api/mainbar/locate?process_instance_id=b4900f5100854b6898cb353608cd5b7b&session_id=e27b7279a8d841d499cab95694e9c396&run_id=5e6dd92de9cf4c4d8fc2e7055e761380"
+      }
+    ],
+    "session": "e27b7279a8d841d499cab95694e9c396",
+    "runs": [
+      "677790a9124f44a0939d612a41b75fa4",
+      "5e6dd92de9cf4c4d8fc2e7055e761380"
+    ]
+  },
+  "first_helper_source": "import {chromium, expect} from '../../node_modules/@playwright/test/index.mjs';\nimport {controlledTransport, emit, state, run, domain} from '../../tests/browser/transport.js';\nimport {pathToFileURL} from 'node:url';\nimport {mkdir,writeFile,readFile} from 'node:fs/promises';\nimport {createHash} from 'node:crypto';\nconst out='.scratch/v03/captures';await mkdir(out,{recursive:true});\nconst browser=await chromium.launch();\nconst report={browser:browser.version(),port:18030,deviceScaleFactor:1,viewports:[],reference:[],checks:{},errors:[],requests:[]};\nconst write=async(name,value)=>writeFile(out+'/'+name,JSON.stringify(value,null,2)+'\\n');\nconst measure=async(page,reference=false)=>page.evaluate(reference=>{\n  const box=node=>node?.getBoundingClientRect().toJSON();\n  const css=node=>{if(!node)return null;const s=getComputedStyle(node);return Object.fromEntries(['fontFamily','fontSize','lineHeight','backgroundColor','borderColor','borderStyle','borderRadius','maxWidth','animationName','padding'].map(key=>[key,s[key]]));};\n  const root=document.querySelector(reference?'aside':'#mainbar');\n  return {root:box(root),main:box(document.querySelector('main')),documentOverflow:document.documentElement.scrollWidth-innerWidth,rootOverflow:root.scrollWidth-root.clientWidth,inlineStyles:document.querySelectorAll('[style]').length,user:css(document.querySelector(reference?'aside>div:nth-child(2)>div':'#messages .message-user')),assistant:css(document.querySelector(reference?'aside>div:nth-child(2)>div:nth-child(2)>div':'#messages .message-assistant')),composer:css(document.querySelector(reference?'aside input':'#message')),dot:css(document.querySelector('#mainbar-dot')),stage:document.querySelector('#mainbar-stage')?.textContent,conversation:box(document.querySelector('#conversation')),bubbles:[...document.querySelectorAll('#messages .message-bubble')].map(node=>({class:node.className,text:node.textContent,box:box(node),overflow:node.scrollWidth-node.clientWidth})),messageStructure:[...document.querySelectorAll('#messages article')].map(node=>({run:node.dataset.runId,children:[...node.children].map(child=>({tag:child.tagName,class:child.className,text:child.textContent,href:child.getAttribute('href')}))}))};\n},reference);\ntry {\n  const context=await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1,reducedMotion:'reduce'});\n  const page=await context.newPage();\n  page.on('pageerror',error=>report.errors.push({kind:'pageerror',message:String(error)}));\n  page.on('requestfailed',request=>report.errors.push({kind:'requestfailed',url:request.url(),failure:request.failure()}));\n  page.on('request',request=>report.requests.push({method:request.method(),url:request.url()}));\n  await page.goto('http://127.0.0.1:18030/overview');\n  await expect(page.getByRole('heading',{name:'总览',exact:true})).toBeVisible();\n  await writeFile(out+'/alfred-initial-aria.txt',await page.locator('body').ariaSnapshot());\n  await page.getByRole('button',{name:'新建会话',exact:true}).click();\n  const input=page.getByRole('textbox',{name:'消息',exact:true});\n  const ids=[];\n  for(const text of ['请检查主对话的正式回复、保存状态和运行入口。','长消息换行验证：中文正文仍然完整可读。\\n/very-long-path/'+('mainbar-message-'.repeat(9))+'\\n这个请求包含换行；状态文字和草稿继续保留。']){\n    await input.fill(text);await expect(page.getByRole('button',{name:'发送',exact:true})).toBeEnabled();\n    const response=page.waitForResponse(response=>response.url().endsWith('/api/runs')&&response.request().method()==='POST');\n    await page.getByRole('button',{name:'发送',exact:true}).click();const accepted=await response;expect(accepted.status()).toBe(202);\n    const {run_id}=await accepted.json();ids.push(run_id);\n    await expect(page.locator('#messages [data-run-id=\"'+run_id+'\"]')).toContainText('已保存');\n  }\n  await input.fill('这份未发送草稿在四个视口里保持不变。');\n  report.session=await page.evaluate(()=>sessionStorage.getItem('alfred.session'));report.runs=ids;\n  for(const [width,height] of [[1440,900],[1280,800],[390,844],[320,800]]){\n    await page.setViewportSize({width,height});\n    if(width<1100 && !await page.locator('#mainbar').isVisible())await page.locator('#shell-toolbar [data-open-panel=\"mainbar\"]').click();\n    await expect(page.locator('#mainbar')).toBeVisible();\n    await expect(input).toHaveValue('这份未发送草稿在四个视口里保持不变。');\n    await page.locator('#conversation').evaluate(node=>node.scrollTop=node.scrollHeight);\n    const data=await measure(page);report.viewports.push({width,height,...data});\n    expect(data.documentOverflow).toBe(0);expect(data.rootOverflow).toBe(0);expect(data.inlineStyles).toBe(0);\n    for(const bubble of data.bubbles)expect(bubble.overflow).toBe(0);\n    await page.screenshot({path:out+'/mainbar-'+width+'x'+height+'.png'});\n    await writeFile(out+'/mainbar-'+width+'x'+height+'-aria.txt',await page.locator('body').ariaSnapshot());\n  }\n  await page.setViewportSize({width:1440,height:900});\n  const located=await page.evaluate(async({session,run_id})=>{const {dashboard}=await import('/assets/app.js');return dashboard.locateReply({session_id:session,run_id,process_instance_id:dashboard.runtime().instance,action_id:crypto.randomUUID()});},{session:report.session,run_id:ids[1]});\n  expect(located.status).toBe('applied');await expect(page.locator('#messages article.located')).toBeVisible();\n  await page.screenshot({path:out+'/mainbar-located-1440x900.png'});\n  report.checks.location={result:located,border:await page.locator('#messages article.located').evaluate(node=>getComputedStyle(node).borderColor),reading:await page.locator('#reading-status').textContent()};\n  const streamPage=await context.newPage();const session=await controlledTransport(streamPage);\n  await emit(streamPage,'state_patch',state(session,1,{coordinator_state:'running',active_run:run(session)}));\n  await domain(streamPage,1,session,{name:'attempt.started',attempt_id:'capture-stream',model:'offline-capture',streamed:true},{attempt:'capture-stream',step:0});\n  await domain(streamPage,2,session,{name:'block.started',index:0,block_type:'text'},{attempt:'capture-stream',step:0});\n  await domain(streamPage,3,session,{name:'block.delta',index:0,text:'暂态过程输出：正式回复、结局和保存仍需分别核对。'},{attempt:'capture-stream',step:0});\n  await expect(streamPage.locator('#messages .message-streaming')).toContainText('暂态过程输出');\n  report.checks.streaming=await streamPage.locator('#messages .message-streaming .message-bubble').evaluate(node=>({text:node.textContent,borderStyle:getComputedStyle(node).borderStyle}));\n  expect(report.checks.streaming.borderStyle).toBe('dashed');\n  await streamPage.screenshot({path:out+'/mainbar-streaming-1440x900.png'});await streamPage.close();\n  const reference=await context.newPage();report.referenceNetwork=[];\n  reference.on('response',response=>{if(response.url().startsWith('https://unpkg.com/'))report.referenceNetwork.push({url:response.url(),status:response.status()});});\n  reference.on('pageerror',error=>report.errors.push({kind:'reference-pageerror',message:String(error)}));\n  await reference.goto(pathToFileURL(process.cwd()+'/docs/design/issue-122/reference/Syrup Dashboard.dc.html').href);\n  await reference.getByText('CHAT',{exact:true}).waitFor();\n  await writeFile(out+'/reference-initial-aria.txt',await reference.locator('body').ariaSnapshot());\n  const overview=reference.getByRole('link',{name:/^Overview/});report.referenceAccessibleName=await overview.innerText();await overview.click();\n  for(const [width,height] of [[1440,900],[1280,800],[390,844],[320,800]]){\n    await reference.setViewportSize({width,height});await expect(reference.getByRole('heading',{name:'Overview',exact:true})).toBeAttached();\n    report.reference.push({width,height,...await measure(reference,true)});\n    await reference.screenshot({path:out+'/reference-overview-'+width+'x'+height+'.png'});\n    await writeFile(out+'/reference-overview-'+width+'x'+height+'-aria.txt',await reference.locator('body').ariaSnapshot());\n  }\n  report.sourceSha256={};\n  for(const file of ['src/agent_alfred/ops/static/app.js','src/agent_alfred/ops/static/app.css','src/agent_alfred/ops/static/index.html','docs/design/issue-122/reference/Syrup Dashboard.dc.html','docs/design/issue-122/reference/support.js'])report.sourceSha256[file]=createHash('sha256').update(await readFile(file)).digest('hex');\n  expect(report.errors).toEqual([]);await write('capture.json',report);\n  console.log(JSON.stringify({viewports:report.viewports.map(({width,height,documentOverflow,rootOverflow})=>({width,height,documentOverflow,rootOverflow})),reference:report.reference.map(({width,height,main,root})=>({width,height,main,root})),network:report.referenceNetwork,checks:report.checks},null,2));\n} catch(error) {report.errors.push({kind:'capture-failure',message:String(error)});await write('capture.json',report);throw error;}\nfinally {await browser.close();}\n",
+  "second_helper_source": "import {chromium, expect} from '../../node_modules/@playwright/test/index.mjs';\nimport {controlledTransport, emit, state, run, domain} from '../../tests/browser/transport.js';\nimport {pathToFileURL} from 'node:url';\nimport {mkdir,writeFile,readFile} from 'node:fs/promises';\nimport {createHash} from 'node:crypto';\nconst out='.scratch/v03/captures';await mkdir(out,{recursive:true});\nconst browser=await chromium.launch();\nconst report={browser:browser.version(),port:18030,deviceScaleFactor:1,viewports:[],reference:[],checks:{},errors:[],expectedStreamCancellations:[],requests:[]};\nconst write=async(name,value)=>writeFile(out+'/'+name,JSON.stringify(value,null,2)+'\\n');\nconst measure=async(page,reference=false)=>page.evaluate(reference=>{\n  const box=node=>node?.getBoundingClientRect().toJSON();\n  const css=node=>{if(!node)return null;const s=getComputedStyle(node);return Object.fromEntries(['fontFamily','fontSize','lineHeight','backgroundColor','borderColor','borderStyle','borderRadius','maxWidth','animationName','padding'].map(key=>[key,s[key]]));};\n  const root=document.querySelector(reference?'aside':'#mainbar');\n  return {root:box(root),main:box(document.querySelector('main')),documentOverflow:document.documentElement.scrollWidth-innerWidth,rootOverflow:root.scrollWidth-root.clientWidth,inlineStyles:[...document.querySelectorAll('[style]')].filter(node=>node.getAttribute('style').trim()).length,emptyStyleAttributes:[...document.querySelectorAll('[style]')].filter(node=>!node.getAttribute('style').trim()).map(node=>({tag:node.tagName,id:node.id})),user:css(document.querySelector(reference?'aside>div:nth-child(2)>div':'#messages .message-user')),assistant:css(document.querySelector(reference?'aside>div:nth-child(2)>div:nth-child(2)>div':'#messages .message-assistant')),composer:css(document.querySelector(reference?'aside input':'#message')),dot:css(document.querySelector('#mainbar-dot')),stage:document.querySelector('#mainbar-stage')?.textContent,conversation:box(document.querySelector('#conversation')),bubbles:[...document.querySelectorAll('#messages .message-bubble')].map(node=>({class:node.className,text:node.textContent,box:box(node),overflow:node.scrollWidth-node.clientWidth})),messageStructure:[...document.querySelectorAll('#messages article')].map(node=>({run:node.dataset.runId,children:[...node.children].map(child=>({tag:child.tagName,class:child.className,text:child.textContent,href:child.getAttribute('href')}))}))};\n},reference);\ntry {\n  const context=await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1,reducedMotion:'reduce'});\n  const page=await context.newPage();\n  page.on('pageerror',error=>report.errors.push({kind:'pageerror',message:String(error)}));\n  page.on('requestfailed',request=>{const failure={kind:'requestfailed',url:request.url(),failure:request.failure()};if(new URL(request.url()).pathname==='/api/events'&&request.failure()?.errorText==='net::ERR_ABORTED')report.expectedStreamCancellations.push(failure);else report.errors.push(failure);});\n  page.on('request',request=>report.requests.push({method:request.method(),url:request.url()}));\n  await page.goto('http://127.0.0.1:18030/overview');\n  await expect(page.getByRole('heading',{name:'总览',exact:true})).toBeVisible();\n  await writeFile(out+'/alfred-initial-aria.txt',await page.locator('body').ariaSnapshot());\n  await page.getByRole('button',{name:'新建会话',exact:true}).click();\n  const input=page.getByRole('textbox',{name:'消息',exact:true});\n  const ids=[];\n  for(const text of ['请检查主对话的正式回复、保存状态和运行入口。','长消息换行验证：中文正文仍然完整可读。\\n/very-long-path/'+('mainbar-message-'.repeat(9))+'\\n这个请求包含换行；状态文字和草稿继续保留。']){\n    await input.fill(text);await expect(page.getByRole('button',{name:'发送',exact:true})).toBeEnabled();\n    const response=page.waitForResponse(response=>response.url().endsWith('/api/runs')&&response.request().method()==='POST');\n    await page.getByRole('button',{name:'发送',exact:true}).click();const accepted=await response;expect(accepted.status()).toBe(202);\n    const {run_id}=await accepted.json();ids.push(run_id);\n    await expect(page.locator('#messages [data-run-id=\"'+run_id+'\"]')).toContainText('已保存');\n  }\n  await input.fill('这份未发送草稿在四个视口里保持不变。');\n  report.session=await page.evaluate(()=>sessionStorage.getItem('alfred.session'));report.runs=ids;\n  for(const [width,height] of [[1440,900],[1280,800],[390,844],[320,800]]){\n    await page.setViewportSize({width,height});\n    if(width<1100 && !await page.locator('#mainbar').isVisible())await page.locator('#shell-toolbar [data-open-panel=\"mainbar\"]').click();\n    await expect(page.locator('#mainbar')).toBeVisible();\n    await expect(input).toHaveValue('这份未发送草稿在四个视口里保持不变。');\n    await page.locator('#conversation').evaluate(node=>node.scrollTop=node.scrollHeight);\n    const data=await measure(page);report.viewports.push({width,height,...data});\n    expect(data.documentOverflow).toBe(0);expect(data.rootOverflow).toBe(0);expect(data.inlineStyles).toBe(0);\n    for(const bubble of data.bubbles)expect(bubble.overflow).toBe(0);\n    await page.screenshot({path:out+'/mainbar-'+width+'x'+height+'.png'});\n    await writeFile(out+'/mainbar-'+width+'x'+height+'-aria.txt',await page.locator('body').ariaSnapshot());\n  }\n  await page.setViewportSize({width:1440,height:900});\n  const located=await page.evaluate(async({session,run_id})=>{const {dashboard}=await import('/assets/app.js');return dashboard.locateReply({session_id:session,run_id,process_instance_id:dashboard.runtime().instance,action_id:crypto.randomUUID()});},{session:report.session,run_id:ids[1]});\n  expect(located.status).toBe('applied');await expect(page.locator('#messages article.located')).toBeVisible();\n  await page.screenshot({path:out+'/mainbar-located-1440x900.png'});\n  report.checks.location={result:located,border:await page.locator('#messages article.located').evaluate(node=>getComputedStyle(node).borderColor),reading:await page.locator('#reading-status').textContent()};\n  const streamPage=await context.newPage();const session=await controlledTransport(streamPage);\n  await emit(streamPage,'state_patch',state(session,1,{coordinator_state:'running',active_run:run(session)}));\n  await domain(streamPage,1,session,{name:'attempt.started',attempt_id:'capture-stream',model:'offline-capture',streamed:true},{attempt:'capture-stream',step:0});\n  await domain(streamPage,2,session,{name:'block.started',index:0,block_type:'text'},{attempt:'capture-stream',step:0});\n  await domain(streamPage,3,session,{name:'block.delta',index:0,text:'暂态过程输出：正式回复、结局和保存仍需分别核对。'},{attempt:'capture-stream',step:0});\n  await expect(streamPage.locator('#messages .message-streaming')).toContainText('暂态过程输出');\n  report.checks.streaming=await streamPage.locator('#messages .message-streaming .message-bubble').evaluate(node=>({text:node.textContent,borderStyle:getComputedStyle(node).borderStyle}));\n  expect(report.checks.streaming.borderStyle).toBe('dashed');\n  await streamPage.screenshot({path:out+'/mainbar-streaming-1440x900.png'});await streamPage.close();\n  const reference=await context.newPage();report.referenceNetwork=[];\n  reference.on('response',response=>{if(response.url().startsWith('https://unpkg.com/'))report.referenceNetwork.push({url:response.url(),status:response.status()});});\n  reference.on('pageerror',error=>report.errors.push({kind:'reference-pageerror',message:String(error)}));\n  await reference.goto(pathToFileURL(process.cwd()+'/docs/design/issue-122/reference/Syrup Dashboard.dc.html').href);\n  await reference.getByText('CHAT',{exact:true}).waitFor();\n  await writeFile(out+'/reference-initial-aria.txt',await reference.locator('body').ariaSnapshot());\n  const overview=reference.getByRole('link',{name:/^Overview/});report.referenceAccessibleName=await overview.innerText();await overview.click();\n  for(const [width,height] of [[1440,900],[1280,800],[390,844],[320,800]]){\n    await reference.setViewportSize({width,height});await expect(reference.getByRole('heading',{name:'Overview',exact:true})).toBeAttached();\n    report.reference.push({width,height,...await measure(reference,true)});\n    await reference.screenshot({path:out+'/reference-overview-'+width+'x'+height+'.png'});\n    await writeFile(out+'/reference-overview-'+width+'x'+height+'-aria.txt',await reference.locator('body').ariaSnapshot());\n  }\n  report.sourceSha256={};\n  for(const file of ['src/agent_alfred/ops/static/app.js','src/agent_alfred/ops/static/app.css','src/agent_alfred/ops/static/index.html','docs/design/issue-122/reference/Syrup Dashboard.dc.html','docs/design/issue-122/reference/support.js'])report.sourceSha256[file]=createHash('sha256').update(await readFile(file)).digest('hex');\n  expect(report.errors).toEqual([]);await write('capture.json',report);\n  console.log(JSON.stringify({viewports:report.viewports.map(({width,height,documentOverflow,rootOverflow})=>({width,height,documentOverflow,rootOverflow})),reference:report.reference.map(({width,height,main,root})=>({width,height,main,root})),network:report.referenceNetwork,checks:report.checks},null,2));\n} catch(error) {report.errors.push({kind:'capture-failure',message:String(error)});await write('capture.json',report);throw error;}\nfinally {await browser.close();}\n",
+  "final_helper_source": "import {chromium, expect} from '../../node_modules/@playwright/test/index.mjs';\nimport {controlledTransport, emit, state, run, domain} from '../../tests/browser/transport.js';\nimport {pathToFileURL} from 'node:url';\nimport {mkdir,writeFile,readFile} from 'node:fs/promises';\nimport {createHash} from 'node:crypto';\nconst out='.scratch/v03/captures';await mkdir(out,{recursive:true});\nconst browser=await chromium.launch();\nconst report={browser:browser.version(),port:18030,deviceScaleFactor:1,viewports:[],reference:[],checks:{},errors:[],expectedStreamCancellations:[],requests:[]};\nconst write=async(name,value)=>writeFile(out+'/'+name,JSON.stringify(value,null,2)+'\\n');\nconst measure=async(page,reference=false)=>page.evaluate(reference=>{\n  const box=node=>node?.getBoundingClientRect().toJSON();\n  const css=node=>{if(!node)return null;const s=getComputedStyle(node);return Object.fromEntries(['fontFamily','fontSize','lineHeight','backgroundColor','borderColor','borderStyle','borderRadius','maxWidth','animationName','padding'].map(key=>[key,s[key]]));};\n  const root=document.querySelector(reference?'aside':'#mainbar');\n  return {root:box(root),main:box(document.querySelector('main')),documentOverflow:document.documentElement.scrollWidth-innerWidth,rootOverflow:root.scrollWidth-root.clientWidth,inlineStyles:[...document.querySelectorAll('[style]')].filter(node=>node.getAttribute('style').trim()).length,emptyStyleAttributes:[...document.querySelectorAll('[style]')].filter(node=>!node.getAttribute('style').trim()).map(node=>({tag:node.tagName,id:node.id})),user:css(document.querySelector(reference?'aside>div:nth-child(2)>div':'#messages .message-user')),assistant:css(document.querySelector(reference?'aside>div:nth-child(2)>div:nth-child(2)>div':'#messages .message-assistant')),composer:css(document.querySelector(reference?'aside input':'#message')),dot:css(document.querySelector('#mainbar-dot')),stage:document.querySelector('#mainbar-stage')?.textContent,conversation:box(document.querySelector('#conversation')),bubbles:[...document.querySelectorAll('#messages .message-bubble')].map(node=>({class:node.className,text:node.textContent,box:box(node),overflow:node.scrollWidth-node.clientWidth})),messageStructure:[...document.querySelectorAll('#messages article')].map(node=>({run:node.dataset.runId,children:[...node.children].map(child=>({tag:child.tagName,class:child.className,text:child.textContent,href:child.getAttribute('href')}))}))};\n},reference);\ntry {\n  const context=await browser.newContext({baseURL:'http://127.0.0.1:18030',viewport:{width:1440,height:900},deviceScaleFactor:1,reducedMotion:'reduce'});\n  const page=await context.newPage();\n  page.on('pageerror',error=>report.errors.push({kind:'pageerror',message:String(error)}));\n  page.on('requestfailed',request=>{const failure={kind:'requestfailed',url:request.url(),failure:request.failure()};if(new URL(request.url()).pathname==='/api/events'&&request.failure()?.errorText==='net::ERR_ABORTED')report.expectedStreamCancellations.push(failure);else report.errors.push(failure);});\n  page.on('request',request=>report.requests.push({method:request.method(),url:request.url()}));\n  await page.goto('http://127.0.0.1:18030/overview');\n  await expect(page.getByRole('heading',{name:'总览',exact:true})).toBeVisible();\n  await writeFile(out+'/alfred-initial-aria.txt',await page.locator('body').ariaSnapshot());\n  await page.getByRole('button',{name:'新建会话',exact:true}).click();\n  const input=page.getByRole('textbox',{name:'消息',exact:true});\n  const ids=[];\n  for(const text of ['请检查主对话的正式回复、保存状态和运行入口。','长消息换行验证：中文正文仍然完整可读。\\n/very-long-path/'+('mainbar-message-'.repeat(9))+'\\n这个请求包含换行；状态文字和草稿继续保留。']){\n    await input.fill(text);await expect(page.getByRole('button',{name:'发送',exact:true})).toBeEnabled();\n    const response=page.waitForResponse(response=>response.url().endsWith('/api/runs')&&response.request().method()==='POST');\n    await page.getByRole('button',{name:'发送',exact:true}).click();const accepted=await response;expect(accepted.status()).toBe(202);\n    const {run_id}=await accepted.json();ids.push(run_id);\n    await expect(page.locator('#messages [data-run-id=\"'+run_id+'\"]')).toContainText('已保存');\n  }\n  await input.fill('这份未发送草稿在四个视口里保持不变。');\n  report.session=await page.evaluate(()=>sessionStorage.getItem('alfred.session'));report.runs=ids;\n  for(const [width,height] of [[1440,900],[1280,800],[390,844],[320,800]]){\n    await page.setViewportSize({width,height});\n    if(width<1100 && !await page.locator('#mainbar').isVisible())await page.locator('#shell-toolbar [data-open-panel=\"mainbar\"]').click();\n    await expect(page.locator('#mainbar')).toBeVisible();\n    await expect(input).toHaveValue('这份未发送草稿在四个视口里保持不变。');\n    await page.locator('#conversation').evaluate(node=>node.scrollTop=node.scrollHeight);\n    const data=await measure(page);report.viewports.push({width,height,...data});\n    expect(data.documentOverflow).toBe(0);expect(data.rootOverflow).toBe(0);expect(data.inlineStyles).toBe(0);\n    for(const bubble of data.bubbles)expect(bubble.overflow).toBe(0);\n    await page.screenshot({path:out+'/mainbar-'+width+'x'+height+'.png'});\n    await writeFile(out+'/mainbar-'+width+'x'+height+'-aria.txt',await page.locator('body').ariaSnapshot());\n  }\n  await page.setViewportSize({width:1440,height:900});\n  const located=await page.evaluate(async({session,run_id})=>{const {dashboard}=await import('/assets/app.js');return dashboard.locateReply({session_id:session,run_id,process_instance_id:dashboard.runtime().instance,action_id:crypto.randomUUID()});},{session:report.session,run_id:ids[1]});\n  expect(located.status).toBe('applied');await expect(page.locator('#messages article.located')).toBeVisible();\n  await page.screenshot({path:out+'/mainbar-located-1440x900.png'});\n  report.checks.location={result:located,border:await page.locator('#messages article.located').evaluate(node=>getComputedStyle(node).borderColor),reading:await page.locator('#reading-status').textContent()};\n  const streamPage=await context.newPage();const session=await controlledTransport(streamPage);\n  await emit(streamPage,'state_patch',state(session,1,{coordinator_state:'running',active_run:run(session)}));\n  await domain(streamPage,1,session,{name:'attempt.started',attempt_id:'capture-stream',model:'offline-capture',streamed:true},{attempt:'capture-stream',step:0});\n  await domain(streamPage,2,session,{name:'block.started',index:0,block_type:'text'},{attempt:'capture-stream',step:0});\n  await domain(streamPage,3,session,{name:'block.delta',index:0,text:'暂态过程输出：正式回复、结局和保存仍需分别核对。'},{attempt:'capture-stream',step:0});\n  await expect(streamPage.locator('#messages .message-streaming')).toContainText('暂态过程输出');\n  report.checks.streaming=await streamPage.locator('#messages .message-streaming .message-bubble').evaluate(node=>({text:node.textContent,borderStyle:getComputedStyle(node).borderStyle}));\n  expect(report.checks.streaming.borderStyle).toBe('dashed');\n  await streamPage.screenshot({path:out+'/mainbar-streaming-1440x900.png'});await streamPage.close();\n  const reference=await context.newPage();report.referenceNetwork=[];\n  reference.on('response',response=>{if(response.url().startsWith('https://unpkg.com/'))report.referenceNetwork.push({url:response.url(),status:response.status()});});\n  reference.on('pageerror',error=>report.errors.push({kind:'reference-pageerror',message:String(error)}));\n  await reference.goto(pathToFileURL(process.cwd()+'/docs/design/issue-122/reference/Syrup Dashboard.dc.html').href);\n  await reference.getByText('CHAT',{exact:true}).waitFor();\n  await writeFile(out+'/reference-initial-aria.txt',await reference.locator('body').ariaSnapshot());\n  const overview=reference.getByRole('link',{name:/^Overview/});report.referenceAccessibleName=await overview.innerText();await overview.click();\n  for(const [width,height] of [[1440,900],[1280,800],[390,844],[320,800]]){\n    await reference.setViewportSize({width,height});await expect(reference.getByRole('heading',{name:'Overview',exact:true})).toBeAttached();\n    report.reference.push({width,height,...await measure(reference,true)});\n    await reference.screenshot({path:out+'/reference-overview-'+width+'x'+height+'.png'});\n    await writeFile(out+'/reference-overview-'+width+'x'+height+'-aria.txt',await reference.locator('body').ariaSnapshot());\n  }\n  report.sourceSha256={};\n  for(const file of ['src/agent_alfred/ops/static/app.js','src/agent_alfred/ops/static/app.css','src/agent_alfred/ops/static/index.html','docs/design/issue-122/reference/Syrup Dashboard.dc.html','docs/design/issue-122/reference/support.js'])report.sourceSha256[file]=createHash('sha256').update(await readFile(file)).digest('hex');\n  expect(report.errors).toEqual([]);await write('capture.json',report);\n  console.log(JSON.stringify({viewports:report.viewports.map(({width,height,documentOverflow,rootOverflow})=>({width,height,documentOverflow,rootOverflow})),reference:report.reference.map(({width,height,main,root})=>({width,height,main,root})),network:report.referenceNetwork,checks:report.checks},null,2));\n} catch(error) {report.errors.push({kind:'capture-failure',message:String(error)});await write('capture.json',report);throw error;}\nfinally {await browser.close();}\n",
+  "resolution": "Empty style attributes are generated by screenshot caret restoration; validate actual nonempty CSS declarations and record empty attributes. Add missing baseURL for reused controlledTransport helper. No production change for these helper errors."
+}
