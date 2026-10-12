@@ -26,7 +26,7 @@
 .accounting .ops-summary-notes {margin-top:var(--gap-medium);font:400 var(--font-size-meta-large)/1.5 var(--font-mono);color:var(--muted)}
 .accounting .ops-runs {margin:0;overflow:visible}
 .accounting .ops-runs table,.accounting .ops-runs thead,.accounting .ops-runs tbody {display:block;min-width:0;width:100%}
-.accounting .ops-runs caption {display:block;width:100%;text-align:left;margin:0;padding:var(--gap-medium) var(--ops-row-inline)}
+.accounting .ops-runs caption {display:block;width:100%;text-align:left;margin:0;padding:var(--gap-medium) var(--ops-row-inline);color:var(--metadata)}
 .accounting .ops-runs tr {display:flex;flex-wrap:wrap;align-items:flex-start;gap:calc(var(--gap-small) / 2) var(--gap-medium);padding:var(--gap-small) var(--ops-row-inline);min-width:0}
 .accounting .ops-runs thead tr {border-bottom:var(--ops-rule) solid var(--panel-divider)}
 .accounting .ops-runs th,.accounting .ops-runs td {padding:0;border:0;min-width:0;max-width:100%;font-family:var(--font-mono);line-height:1.5}
