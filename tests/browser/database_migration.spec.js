@@ -91,6 +91,7 @@ for (const [width,height] of [[1440,900],[1280,800],[390,844],[320,800]]) {
       return {viewport:[innerWidth,innerHeight], dpr:devicePixelRatio,
         central:document.querySelector('.page-body').getBoundingClientRect().width,
         body:style('.db-console'), table:style('.db-console table'), meta:style('.db-result-meta'),
+        facts:style('.db-facts'),
         activeAnimations:document.getAnimations().length, browser:navigator.userAgent,
         maxTouchPoints:navigator.maxTouchPoints,
         scope:innerWidth<1100?'Chromium viewport simulation, no real mobile keyboard':'Chromium desktop viewport'};
@@ -99,6 +100,7 @@ for (const [width,height] of [[1440,900],[1280,800],[390,844],[320,800]]) {
     expect(metrics.body.fontSize).toBe('13px');
     expect(metrics.table.fontSize).toBe('13px');
     expect(metrics.meta.fontSize).toBe('11px');
+    expect(metrics.facts.fontSize).toBe('11px');
     expect(metrics.activeAnimations).toBe(0);
     const metricFile = testInfo.outputPath('geometry-and-environment.json');
     await writeFile(metricFile,JSON.stringify(metrics,null,2));
@@ -150,7 +152,7 @@ test('Database failed clipboard writes give local feedback and unavailable resul
   await expect(page.getByText('复制失败；请检查剪贴板权限后重试。',{exact:true})).toBeVisible();
 });
 
-test('Database measures central 679/680 and shell 1099/1100 without clipping actions', async ({page},testInfo) => {
+test('Database status lines stay stacked at central 679/680 and shell 1099/1100 without clipping actions', async ({page},testInfo) => {
   await open(page);
   const evidence = [];
   for (const target of [679,680]) {
@@ -160,7 +162,7 @@ test('Database measures central 679/680 and shell 1099/1100 without clipping act
     const central = await page.locator('.page-body').evaluate(el=>el.getBoundingClientRect().width);
     expect(central).toBe(target);
     const columns = await page.locator('.db-facts').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length);
-    expect(columns).toBe(target<680?1:3);
+    expect(columns).toBe(1);
     evidence.push({target,central,columns,viewport:page.viewportSize()});
     await page.screenshot({path:testInfo.outputPath(`database-central-${target}.png`)});
   }
