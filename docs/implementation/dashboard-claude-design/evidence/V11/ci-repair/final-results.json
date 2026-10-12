@@ -61,5 +61,19 @@
   "passed": 8,
   "failed": 0,
   "source_sha256": "3315d2ee6e513cafc674a5df03f4e9a1452d2be208228a2ebfd3da615e6829fa",
-  "after_gate_changes": "Only evidence, documentation and gate result archival; production/test inputs unchanged."
+  "after_gate_changes": "Only evidence, documentation and gate result archival; production/test inputs unchanged.",
+  "ci_unrelated_failure": {
+    "run": 38265016136,
+    "head": "b9c2f3fe5cc937eabff7873761a899d73def76b2",
+    "browser_passed": 544,
+    "browser_failed": 1,
+    "original_receipt_case_passed": true,
+    "failure": "mainbar-integration.spec.js:55",
+    "isolated_passed": 1,
+    "isolated_seconds": 2.58,
+    "full_replay_passed": 545,
+    "full_replay_failed": 0,
+    "full_replay_seconds": 705.9,
+    "source_inputs_unchanged": true
+  }
 }

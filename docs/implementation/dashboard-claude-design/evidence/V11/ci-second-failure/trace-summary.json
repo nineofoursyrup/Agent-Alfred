@@ -1,0 +1,85 @@
+{
+  "calls": [
+    {
+      "type": "before",
+      "callId": "expect@84",
+      "stepId": "expect@84",
+      "startTime": 323544.317,
+      "class": "Test",
+      "method": "expect",
+      "title": "Expect \"toHaveLength\"",
+      "params": {
+        "expected": "2"
+      },
+      "stack": [
+        {
+          "file": "/home/runner/work/Agent-Alfred/Agent-Alfred/tests/browser/mainbar-integration.spec.js",
+          "line": 53,
+          "column": 51
+        }
+      ]
+    },
+    {
+      "type": "before",
+      "callId": "pw:api@85",
+      "stepId": "pw:api@85",
+      "startTime": 323544.572,
+      "class": "Test",
+      "method": "pw:api",
+      "title": "Evaluate",
+      "params": {},
+      "stack": [
+        {
+          "file": "/home/runner/work/Agent-Alfred/Agent-Alfred/tests/browser/mainbar-integration.spec.js",
+          "line": 54,
+          "column": 14
+        }
+      ]
+    },
+    {
+      "type": "before",
+      "callId": "expect@86",
+      "stepId": "expect@86",
+      "startTime": 323549.002,
+      "class": "Test",
+      "method": "expect",
+      "title": "Expect \"toHaveValue\"",
+      "subtitle": "getByRole('textbox', { name: '消息', exact: true })",
+      "params": {
+        "locator": "getByRole('textbox', { name: '消息', exact: true })",
+        "expected": "B独立草稿"
+      },
+      "stack": [
+        {
+          "file": "/home/runner/work/Agent-Alfred/Agent-Alfred/tests/browser/mainbar-integration.spec.js",
+          "line": 55,
+          "column": 66
+        }
+      ]
+    }
+  ],
+  "streams": [
+    {
+      "monotonic_start_ms": 322903.25,
+      "duration_ms": 0.893,
+      "http": 200
+    },
+    {
+      "monotonic_start_ms": 322970.986,
+      "duration_ms": 1.976,
+      "http": 200
+    },
+    {
+      "monotonic_start_ms": 323482.707,
+      "duration_ms": 2.147,
+      "http": 200
+    },
+    {
+      "monotonic_start_ms": 323515.642,
+      "duration_ms": 4.12,
+      "http": 200
+    }
+  ],
+  "root_cause": "UNKNOWN",
+  "observations": "Four short SSE responses; failure screenshot shows connection unverified. Final selection is a programmatic dashboard.selectSession call, not a layout click."
+}
