@@ -1,0 +1,17 @@
+[
+  {
+    "source": "output/playwright/results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/error-context.md",
+    "saved": "error-context.md.json",
+    "original_sha256": "90bc73ab0083f39f2420ceebf145a8fd3255e9e1da09b6ed684ab62dbe35d67a"
+  },
+  {
+    "source": "output/playwright/results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/test-failed-1.png",
+    "saved": "test-failed-1.png",
+    "original_sha256": "96fe27091661a50bed3888e36135f3f85bd36ea15266b59dfbf7f2030feb50a3"
+  },
+  {
+    "source": "output/playwright/results/accounting-layout-S09-real-a8e7b-ference-and-boundary-widths/trace.zip",
+    "saved": "trace.zip",
+    "original_sha256": "55a20c01db3518f8bf6ab56b4b69c436fd2d1a0c5c505539c0e1187cd7d070bd"
+  }
+]

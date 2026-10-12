@@ -1,0 +1,23 @@
+{
+  "worktree": "/Users/nineofour/Agent-Alfred-v08",
+  "branch": "dashboard-visual/v08-ops",
+  "baseline": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "initial_worktree_status": "clean",
+  "initial_worktree_diff": "",
+  "initial_task_untracked_files": [],
+  "primary_checkout_observed": {
+    "head": "6a262ff37cac835777982e75d3a8950d6dbefd3c",
+    "status": " M docs/dashboard.md\n?? README.md\n?? tmp/\n",
+    "diff_stat": "docs/dashboard.md | 4 +++-",
+    "action": "read-only inventory; user edits preserved"
+  },
+  "initialization": [
+    "uv sync --extra dev --extra mcp --locked",
+    "npm ci --ignore-scripts",
+    "npx playwright install chromium"
+  ],
+  "reference_hashes_verified": {
+    "Syrup Dashboard.dc.html": "54807adb38541fa2966e5b0c334b9d0e8d71c60b814245601bc4f35b8ec54b84",
+    "support.js": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe"
+  }
+}

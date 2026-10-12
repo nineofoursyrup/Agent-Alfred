@@ -1,0 +1,27 @@
+[
+  {
+    "source": "output/playwright/results/accounting-A04-A05-A06-A08-00bd0-st-receipt-from-application/error-context.md",
+    "saved": "accounting-A04-A05-A06-A08-00bd0-st-receipt-from-application/error-context.md.json",
+    "original_sha256": "558be0647cd6288c662dd7baf11ddf1309165f3d2654a6006a21df56af8abf5b"
+  },
+  {
+    "source": "output/playwright/results/accounting-A04-A05-A06-A08-00bd0-st-receipt-from-application/test-failed-1.png",
+    "saved": "accounting-A04-A05-A06-A08-00bd0-st-receipt-from-application/test-failed-1.png",
+    "original_sha256": "979da12a5490f90e57a9b15b244c064c2bdbb379e6e78ac6f04d8f976a2f2f5f"
+  },
+  {
+    "source": "output/playwright/results/accounting-A04-A05-A06-A08-00bd0-st-receipt-from-application/trace.zip",
+    "saved": "accounting-A04-A05-A06-A08-00bd0-st-receipt-from-application/trace.zip",
+    "original_sha256": "36bbc9758e1ea10bc2bf596b343ddac7fdfdf89ea382b7acd21a2f32753868d4"
+  },
+  {
+    "source": "output/playwright/results/memory-G2-v5-receipt-refre-76f68-selected-exact-legacy-scope/test-failed-1.png",
+    "saved": "memory-G2-v5-receipt-refre-76f68-selected-exact-legacy-scope/test-failed-1.png",
+    "original_sha256": "4009fd599ca6696a7dbcebad6244b158bfe3d1600e0ef33e7cc9d9175070d7c9"
+  },
+  {
+    "source": "output/playwright/results/memory-G2-v5-receipt-refre-76f68-selected-exact-legacy-scope/trace.zip",
+    "saved": "memory-G2-v5-receipt-refre-76f68-selected-exact-legacy-scope/trace.zip",
+    "original_sha256": "1c16142c89a24eed98f4099dfc1b15c619baa645f62d0c2451422ffa5df63d45"
+  }
+]

@@ -1,0 +1,310 @@
+{
+  "view": "ops",
+  "actual_accessible_navigation_name": "Ops pass",
+  "responses": [
+    {
+      "url": "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+      "status": 200
+    },
+    {
+      "url": "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
+      "status": 200
+    }
+  ],
+  "errors": [],
+  "failed": [],
+  "observations": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "main": {
+        "x": 233,
+        "y": 0,
+        "width": 886,
+        "height": 900,
+        "scrollWidth": 886,
+        "clientWidth": 886
+      },
+      "nav": {
+        "x": 0,
+        "y": 0,
+        "width": 233,
+        "height": 900,
+        "scrollWidth": 232,
+        "clientWidth": 232
+      },
+      "aside": {
+        "x": 1119,
+        "y": 0,
+        "width": 321,
+        "height": 900,
+        "scrollWidth": 320,
+        "clientWidth": 320
+      },
+      "slowest": {
+        "x": 261,
+        "y": 294.5,
+        "width": 830,
+        "height": 261,
+        "scrollWidth": 828,
+        "clientWidth": 828
+      },
+      "rowChildren": [
+        {
+          "x": 281,
+          "y": 345,
+          "width": 454,
+          "height": 10.5,
+          "scrollWidth": 454,
+          "clientWidth": 454
+        },
+        {
+          "x": 749,
+          "y": 345,
+          "width": 62,
+          "height": 10.5,
+          "scrollWidth": 62,
+          "clientWidth": 62
+        },
+        {
+          "x": 825,
+          "y": 345,
+          "width": 62,
+          "height": 10.5,
+          "scrollWidth": 62,
+          "clientWidth": 62
+        },
+        {
+          "x": 901,
+          "y": 345,
+          "width": 170,
+          "height": 10.5,
+          "scrollWidth": 170,
+          "clientWidth": 170
+        }
+      ],
+      "snapshot": "- navigation:\n  - text: Syrup v0.9 · 本地 claude-sonnet-4-5 127.0.0.1:9049 SYSTEM\n  - link \"Overview\":\n    - /url: \"#\"\n  - link \"Loop 48\":\n    - /url: \"#\"\n  - link \"Memory 126\":\n    - /url: \"#\"\n  - link \"Graph on\":\n    - /url: \"#\"\n  - link \"Ops pass\":\n    - /url: \"#\"\n  - text: DATA\n  - link \"Tools 14\":\n    - /url: \"#\"\n  - link \"Database state.db\":\n    - /url: \"#\"\n  - button \"中文\"\n  - button \"EN\"\n  - text: ~/.syrup/state.db · 1.4 MB traces/2026-08-17.jsonl\n- main:\n  - text: 拿证据，不拿感觉\n  - heading \"Ops\" [level=1]\n  - text: \"确定性测试和 LLM 裁判分开跑，release gate 守在上线之前。 live · turn #48 DETERMINISTIC 100% 68 / 68 该调的工具调了吗 —— 0 或 1，没有模型打分 JUDGE threshold 7.0 8.4 / 10 回复好不好 —— 由裁判模型打分 RELEASE GATE pass make gate 两套测试都必须过，才能发布 SLOWEST TURNS 轮次 latency cost tools 搜一下世界杯还没打的比赛，都加进日历 11.4s $0.041 search_web, create_event ×4 帮我梳理这一周 7.8s $0.028 read_calendar, read_mail 把上周的复盘写成技能 6.1s $0.019 create_skill 周六安排个游泳 4.1s $0.007 create_event COST · usage.jsonl 近 14 天 · 由 token 估算 04 05 06 07 08 09 10 11 12 13 14 15 16 17\"\n- complementary:\n  - text: CHAT gateway 记住 Alex 更喜欢上午开会 好，记下了。以后给你和 Alex 排会我会默认放在上午。 skip 2 iter 1.9s +1 fact 周五和 Alex 约个碰头 已排在周五 09:00 —— 用的是你之前告诉我的偏好。 retrieve 3 iter 3.4s create_event 正在流式输出… 事件同时写进 trace\n  - textbox \"跟 Syrup 说点什么…\"\n  - button \"发送\""
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "main": {
+        "x": 233,
+        "y": 0,
+        "width": 726,
+        "height": 800,
+        "scrollWidth": 726,
+        "clientWidth": 726
+      },
+      "nav": {
+        "x": 0,
+        "y": 0,
+        "width": 233,
+        "height": 800,
+        "scrollWidth": 232,
+        "clientWidth": 232
+      },
+      "aside": {
+        "x": 959,
+        "y": 0,
+        "width": 321,
+        "height": 800,
+        "scrollWidth": 320,
+        "clientWidth": 320
+      },
+      "slowest": {
+        "x": 261,
+        "y": 415,
+        "width": 670,
+        "height": 261,
+        "scrollWidth": 668,
+        "clientWidth": 668
+      },
+      "rowChildren": [
+        {
+          "x": 281,
+          "y": 465.5,
+          "width": 294,
+          "height": 10.5,
+          "scrollWidth": 294,
+          "clientWidth": 294
+        },
+        {
+          "x": 589,
+          "y": 465.5,
+          "width": 62,
+          "height": 10.5,
+          "scrollWidth": 62,
+          "clientWidth": 62
+        },
+        {
+          "x": 665,
+          "y": 465.5,
+          "width": 62,
+          "height": 10.5,
+          "scrollWidth": 62,
+          "clientWidth": 62
+        },
+        {
+          "x": 741,
+          "y": 465.5,
+          "width": 170,
+          "height": 10.5,
+          "scrollWidth": 170,
+          "clientWidth": 170
+        }
+      ],
+      "snapshot": "- navigation:\n  - text: Syrup v0.9 · 本地 claude-sonnet-4-5 127.0.0.1:9049 SYSTEM\n  - link \"Overview\":\n    - /url: \"#\"\n  - link \"Loop 48\":\n    - /url: \"#\"\n  - link \"Memory 126\":\n    - /url: \"#\"\n  - link \"Graph on\":\n    - /url: \"#\"\n  - link \"Ops pass\":\n    - /url: \"#\"\n  - text: DATA\n  - link \"Tools 14\":\n    - /url: \"#\"\n  - link \"Database state.db\":\n    - /url: \"#\"\n  - button \"中文\"\n  - button \"EN\"\n  - text: ~/.syrup/state.db · 1.4 MB traces/2026-08-17.jsonl\n- main:\n  - text: 拿证据，不拿感觉\n  - heading \"Ops\" [level=1]\n  - text: \"确定性测试和 LLM 裁判分开跑，release gate 守在上线之前。 live · turn #48 DETERMINISTIC 100% 68 / 68 该调的工具调了吗 —— 0 或 1，没有模型打分 JUDGE threshold 7.0 8.4 / 10 回复好不好 —— 由裁判模型打分 RELEASE GATE pass make gate 两套测试都必须过，才能发布 SLOWEST TURNS 轮次 latency cost tools 搜一下世界杯还没打的比赛，都加进日历 11.4s $0.041 search_web, create_event ×4 帮我梳理这一周 7.8s $0.028 read_calendar, read_mail 把上周的复盘写成技能 6.1s $0.019 create_skill 周六安排个游泳 4.1s $0.007 create_event COST · usage.jsonl 近 14 天 · 由 token 估算 04 05 06 07 08 09 10 11 12 13 14 15 16 17\"\n- complementary:\n  - text: CHAT gateway 记住 Alex 更喜欢上午开会 好，记下了。以后给你和 Alex 排会我会默认放在上午。 skip 2 iter 1.9s +1 fact 周五和 Alex 约个碰头 已排在周五 09:00 —— 用的是你之前告诉我的偏好。 retrieve 3 iter 3.4s create_event 正在流式输出… 事件同时写进 trace\n  - textbox \"跟 Syrup 说点什么…\"\n  - button \"发送\""
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "main": {
+        "x": 191,
+        "y": 0,
+        "width": 0,
+        "height": 844,
+        "scrollWidth": 299,
+        "clientWidth": 0
+      },
+      "nav": {
+        "x": 0,
+        "y": 0,
+        "width": 191,
+        "height": 844,
+        "scrollWidth": 190,
+        "clientWidth": 190
+      },
+      "aside": {
+        "x": 191,
+        "y": 0,
+        "width": 293,
+        "height": 844,
+        "scrollWidth": 292,
+        "clientWidth": 292
+      },
+      "slowest": {
+        "x": 219,
+        "y": 804.5,
+        "width": 2,
+        "height": 541.5,
+        "scrollWidth": 189,
+        "clientWidth": 0
+      },
+      "rowChildren": [
+        {
+          "x": 239,
+          "y": 865.5,
+          "width": 0,
+          "height": 21,
+          "scrollWidth": 11,
+          "clientWidth": 0
+        },
+        {
+          "x": 239,
+          "y": 892.5,
+          "width": 62,
+          "height": 10.5,
+          "scrollWidth": 62,
+          "clientWidth": 62
+        },
+        {
+          "x": 239,
+          "y": 909,
+          "width": 62,
+          "height": 10.5,
+          "scrollWidth": 62,
+          "clientWidth": 62
+        },
+        {
+          "x": 239,
+          "y": 925.5,
+          "width": 170,
+          "height": 10.5,
+          "scrollWidth": 170,
+          "clientWidth": 170
+        }
+      ],
+      "snapshot": "- navigation:\n  - text: Syrup v0.9 · 本地 claude-sonnet-4-5 127.0.0.1:9049 SYSTEM\n  - link \"Overview\":\n    - /url: \"#\"\n  - link \"Loop 48\":\n    - /url: \"#\"\n  - link \"Memory 126\":\n    - /url: \"#\"\n  - link \"Graph on\":\n    - /url: \"#\"\n  - link \"Ops pass\":\n    - /url: \"#\"\n  - text: DATA\n  - link \"Tools 14\":\n    - /url: \"#\"\n  - link \"Database state.db\":\n    - /url: \"#\"\n  - button \"中文\"\n  - button \"EN\"\n  - text: ~/.syrup/state.db · 1.4 MB traces/2026-08-17.jsonl\n- main:\n  - text: 拿证据，不拿感觉\n  - heading \"Ops\" [level=1]\n  - text: \"确定性测试和 LLM 裁判分开跑，release gate 守在上线之前。 live · turn #48 DETERMINISTIC 100% 68 / 68 该调的工具调了吗 —— 0 或 1，没有模型打分 JUDGE threshold 7.0 8.4 / 10 回复好不好 —— 由裁判模型打分 RELEASE GATE pass make gate 两套测试都必须过，才能发布 SLOWEST TURNS 轮次 latency cost tools 搜一下世界杯还没打的比赛，都加进日历 11.4s $0.041 search_web, create_event ×4 帮我梳理这一周 7.8s $0.028 read_calendar, read_mail 把上周的复盘写成技能 6.1s $0.019 create_skill 周六安排个游泳 4.1s $0.007 create_event COST · usage.jsonl 近 14 天 · 由 token 估算 04 05 06 07 08 09 10 11 12 13 14 15 16 17\"\n- complementary:\n  - text: CHAT gateway 记住 Alex 更喜欢上午开会 好，记下了。以后给你和 Alex 排会我会默认放在上午。 skip 2 iter 1.9s +1 fact 周五和 Alex 约个碰头 已排在周五 09:00 —— 用的是你之前告诉我的偏好。 retrieve 3 iter 3.4s create_event 正在流式输出… 事件同时写进 trace\n  - textbox \"跟 Syrup 说点什么…\"\n  - button \"发送\""
+    },
+    {
+      "viewport": {
+        "width": 320,
+        "height": 800
+      },
+      "main": {
+        "x": 191,
+        "y": 0,
+        "width": 0,
+        "height": 800,
+        "scrollWidth": 299,
+        "clientWidth": 0
+      },
+      "nav": {
+        "x": 0,
+        "y": 0,
+        "width": 191,
+        "height": 800,
+        "scrollWidth": 190,
+        "clientWidth": 190
+      },
+      "aside": {
+        "x": 191,
+        "y": 0,
+        "width": 293,
+        "height": 800,
+        "scrollWidth": 292,
+        "clientWidth": 292
+      },
+      "slowest": {
+        "x": 219,
+        "y": 804.5,
+        "width": 2,
+        "height": 541.5,
+        "scrollWidth": 189,
+        "clientWidth": 0
+      },
+      "rowChildren": [
+        {
+          "x": 239,
+          "y": 865.5,
+          "width": 0,
+          "height": 21,
+          "scrollWidth": 11,
+          "clientWidth": 0
+        },
+        {
+          "x": 239,
+          "y": 892.5,
+          "width": 62,
+          "height": 10.5,
+          "scrollWidth": 62,
+          "clientWidth": 62
+        },
+        {
+          "x": 239,
+          "y": 909,
+          "width": 62,
+          "height": 10.5,
+          "scrollWidth": 62,
+          "clientWidth": 62
+        },
+        {
+          "x": 239,
+          "y": 925.5,
+          "width": 170,
+          "height": 10.5,
+          "scrollWidth": 170,
+          "clientWidth": 170
+        }
+      ],
+      "snapshot": "- navigation:\n  - text: Syrup v0.9 · 本地 claude-sonnet-4-5 127.0.0.1:9049 SYSTEM\n  - link \"Overview\":\n    - /url: \"#\"\n  - link \"Loop 48\":\n    - /url: \"#\"\n  - link \"Memory 126\":\n    - /url: \"#\"\n  - link \"Graph on\":\n    - /url: \"#\"\n  - link \"Ops pass\":\n    - /url: \"#\"\n  - text: DATA\n  - link \"Tools 14\":\n    - /url: \"#\"\n  - link \"Database state.db\":\n    - /url: \"#\"\n  - button \"中文\"\n  - button \"EN\"\n  - text: ~/.syrup/state.db · 1.4 MB traces/2026-08-17.jsonl\n- main:\n  - text: 拿证据，不拿感觉\n  - heading \"Ops\" [level=1]\n  - text: \"确定性测试和 LLM 裁判分开跑，release gate 守在上线之前。 live · turn #48 DETERMINISTIC 100% 68 / 68 该调的工具调了吗 —— 0 或 1，没有模型打分 JUDGE threshold 7.0 8.4 / 10 回复好不好 —— 由裁判模型打分 RELEASE GATE pass make gate 两套测试都必须过，才能发布 SLOWEST TURNS 轮次 latency cost tools 搜一下世界杯还没打的比赛，都加进日历 11.4s $0.041 search_web, create_event ×4 帮我梳理这一周 7.8s $0.028 read_calendar, read_mail 把上周的复盘写成技能 6.1s $0.019 create_skill 周六安排个游泳 4.1s $0.007 create_event COST · usage.jsonl 近 14 天 · 由 token 估算 04 05 06 07 08 09 10 11 12 13 14 15 16 17\"\n- complementary:\n  - text: CHAT gateway 记住 Alex 更喜欢上午开会 好，记下了。以后给你和 Alex 排会我会默认放在上午。 skip 2 iter 1.9s +1 fact 周五和 Alex 约个碰头 已排在周五 09:00 —— 用的是你之前告诉我的偏好。 retrieve 3 iter 3.4s create_event 正在流式输出… 事件同时写进 trace\n  - textbox \"跟 Syrup 说点什么…\"\n  - button \"发送\""
+    }
+  ]
+}
