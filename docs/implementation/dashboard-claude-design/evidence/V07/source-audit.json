@@ -87,5 +87,64 @@
     "Chinese IME",
     "iPhone / iOS / real soft keyboard",
     "real provider / user daily acceptance / issue 135 visual acceptance"
-  ]
+  ],
+  "implementation_gate_head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+  "final_full_pytest_log": "16-pytest-full.json",
+  "final_full_browser_log": "15-browser-full.json",
+  "evidence_archival_changes_tested_source_dependencies_or_configuration": false,
+  "gate_inputs_reused": {
+    "02-ruff": {
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "inputs_match": true,
+      "exit_code": 0
+    },
+    "03-skills": {
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "inputs_match": true,
+      "exit_code": 0
+    },
+    "04-env": {
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "inputs_match": true,
+      "exit_code": 0
+    },
+    "16-pytest-full": {
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "inputs_match": true,
+      "exit_code": 0
+    },
+    "06-typecheck": {
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "inputs_match": true,
+      "exit_code": 0
+    },
+    "15-browser-full": {
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "inputs_match": true,
+      "exit_code": 0
+    },
+    "08-diff": {
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "inputs_match": true,
+      "exit_code": 0
+    },
+    "09-install": {
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "inputs_match": true,
+      "exit_code": 0
+    }
+  },
+  "pre_push_fetch": {
+    "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+    "origin_main": "449e77fd0ff814fb63f97a009c2435139a68686d",
+    "branch_base": "449e77fd0ff814fb63f97a009c2435139a68686d",
+    "rebase_required": false
+  },
+  "rebase_required": false,
+  "final_archival_diff_check": {
+    "file": "17-diff-final-stage.json",
+    "exit_code": 0,
+    "includes_staged": true,
+    "elapsed_seconds": 0.106
+  }
 }

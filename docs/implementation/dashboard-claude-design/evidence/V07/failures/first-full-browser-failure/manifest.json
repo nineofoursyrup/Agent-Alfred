@@ -1,0 +1,468 @@
+{
+  "folders": 22,
+  "members": [
+    {
+      "source": "output/playwright/results/aggregation-STD-01-SPEC-01-b4079--and-opened-reads-on-delete/error-context.md",
+      "file": "aggregation-STD-01-SPEC-01-b4079--and-opened-reads-on-delete/error-context.md",
+      "bytes": 399,
+      "sha256": "a0b46de1caa3aac7f5f621164d746dd80e0f05f57eecbbfacf0451f441435b03",
+      "archive_file": "aggregation-STD-01-SPEC-01-b4079--and-opened-reads-on-delete/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/aggregation-STD-01-SPEC-01-b4079--and-opened-reads-on-delete/trace.zip",
+      "file": "aggregation-STD-01-SPEC-01-b4079--and-opened-reads-on-delete/trace.zip",
+      "bytes": 2504982,
+      "sha256": "6a878e5c6432e4534e571063787bc152fcd0ea5e61958ae9e5b383cb921bd380",
+      "archive_file": "aggregation-STD-01-SPEC-01-b4079--and-opened-reads-on-delete/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/error-context.md",
+      "file": "database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/error-context.md",
+      "bytes": 8448,
+      "sha256": "34be85b9b3f2b9410e7928103d28b09e789b8a132949b08350d4629a7f223285",
+      "archive_file": "database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/test-failed-1.png",
+      "file": "database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/test-failed-1.png",
+      "bytes": 4254,
+      "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+      "archive_file": "database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/trace.zip",
+      "file": "database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/trace.zip",
+      "bytes": 8189,
+      "sha256": "0c1c8d3c9ff8f5b808249e20825c4ffbd62dd03601ff5b2583bb3d59199b4f20",
+      "archive_file": "database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/database-real-deletion-rej-ce7bb-yed-at-the-browser-boundary/error-context.md",
+      "file": "database-real-deletion-rej-ce7bb-yed-at-the-browser-boundary/error-context.md",
+      "bytes": 8450,
+      "sha256": "2f214ccf1eb4f0b5668f0810ab42be764f2ff57ff996bcbff2a666c32724aa48",
+      "archive_file": "database-real-deletion-rej-ce7bb-yed-at-the-browser-boundary/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/database-real-deletion-rej-ce7bb-yed-at-the-browser-boundary/test-failed-1.png",
+      "file": "database-real-deletion-rej-ce7bb-yed-at-the-browser-boundary/test-failed-1.png",
+      "bytes": 2740,
+      "sha256": "fb32313e11bc8ffbd5310a1660e630b64cedb4622f8462a5eae2d5464ac8279e",
+      "archive_file": "database-real-deletion-rej-ce7bb-yed-at-the-browser-boundary/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/database-real-deletion-rej-ce7bb-yed-at-the-browser-boundary/trace.zip",
+      "file": "database-real-deletion-rej-ce7bb-yed-at-the-browser-boundary/trace.zip",
+      "bytes": 13749,
+      "sha256": "8be429af2160f767285e29fc20c4e6dffdceff60ceddf14625617a53dad3512c",
+      "archive_file": "database-real-deletion-rej-ce7bb-yed-at-the-browser-boundary/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/database_lifecycle-AC-25-r-13294-ker-and-releases-all-owners/error-context.md",
+      "file": "database_lifecycle-AC-25-r-13294-ker-and-releases-all-owners/error-context.md",
+      "bytes": 8463,
+      "sha256": "aab7e6f9df4c8a8d54fa2812efa9f82162587464dc511a401fcd7875939bd47a",
+      "archive_file": "database_lifecycle-AC-25-r-13294-ker-and-releases-all-owners/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/database_lifecycle-AC-25-r-13294-ker-and-releases-all-owners/test-failed-1.png",
+      "file": "database_lifecycle-AC-25-r-13294-ker-and-releases-all-owners/test-failed-1.png",
+      "bytes": 4254,
+      "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+      "archive_file": "database_lifecycle-AC-25-r-13294-ker-and-releases-all-owners/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/database_lifecycle-AC-25-r-13294-ker-and-releases-all-owners/trace.zip",
+      "file": "database_lifecycle-AC-25-r-13294-ker-and-releases-all-owners/trace.zip",
+      "bytes": 8262,
+      "sha256": "032f92a44051b267da190043e2239b4b0fbe233ce39c705cfaf5bcf8cd001670",
+      "archive_file": "database_lifecycle-AC-25-r-13294-ker-and-releases-all-owners/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/database_lifecycle-AC-25-r-e96fe-ker-and-releases-all-owners/error-context.md",
+      "file": "database_lifecycle-AC-25-r-e96fe-ker-and-releases-all-owners/error-context.md",
+      "bytes": 5116,
+      "sha256": "185bfa50b9a68fcecceab65bc7a8df3439f68b935f7859dd4ce78d0b43696df3",
+      "archive_file": "database_lifecycle-AC-25-r-e96fe-ker-and-releases-all-owners/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/database_lifecycle-AC-25-r-e96fe-ker-and-releases-all-owners/test-failed-1.png",
+      "file": "database_lifecycle-AC-25-r-e96fe-ker-and-releases-all-owners/test-failed-1.png",
+      "bytes": 101177,
+      "sha256": "704292dfc41efe93ed7ad2934ed5541f54e9985cbce46f1a163fc0645d9d2080",
+      "archive_file": "database_lifecycle-AC-25-r-e96fe-ker-and-releases-all-owners/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/database_lifecycle-AC-25-r-e96fe-ker-and-releases-all-owners/trace.zip",
+      "file": "database_lifecycle-AC-25-r-e96fe-ker-and-releases-all-owners/trace.zip",
+      "bytes": 3456670,
+      "sha256": "242999a05867030def001d53489fe3214ffd29c86384b31e61e068c02bbb70a3",
+      "archive_file": "database_lifecycle-AC-25-r-e96fe-ker-and-releases-all-owners/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/database_lifecycle-S10-a-n-62f83-apability-without-rerunning/error-context.md",
+      "file": "database_lifecycle-S10-a-n-62f83-apability-without-rerunning/error-context.md",
+      "bytes": 8484,
+      "sha256": "75433f0cf6538ff82fd509e8e2493edf1b208c98e3bb2af1100d9cdd71b340c8",
+      "archive_file": "database_lifecycle-S10-a-n-62f83-apability-without-rerunning/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/database_lifecycle-S10-a-n-62f83-apability-without-rerunning/test-failed-1.png",
+      "file": "database_lifecycle-S10-a-n-62f83-apability-without-rerunning/test-failed-1.png",
+      "bytes": 4254,
+      "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+      "archive_file": "database_lifecycle-S10-a-n-62f83-apability-without-rerunning/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/database_lifecycle-S10-a-n-62f83-apability-without-rerunning/trace.zip",
+      "file": "database_lifecycle-S10-a-n-62f83-apability-without-rerunning/trace.zip",
+      "bytes": 8236,
+      "sha256": "d0428f8b6e00a146a851c7054e2b49a20782b76f5cc2e0cbe51e237f4b67a37d",
+      "archive_file": "database_lifecycle-S10-a-n-62f83-apability-without-rerunning/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/database_status-S10-failed-27f05-and-capability-are-verified/error-context.md",
+      "file": "database_status-S10-failed-27f05-and-capability-are-verified/error-context.md",
+      "bytes": 8473,
+      "sha256": "0528391f7b06901d0101ad7dafb619b5dd8ccd66e1b94f83bca4cfab41e8894d",
+      "archive_file": "database_status-S10-failed-27f05-and-capability-are-verified/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/database_status-S10-failed-27f05-and-capability-are-verified/test-failed-1.png",
+      "file": "database_status-S10-failed-27f05-and-capability-are-verified/test-failed-1.png",
+      "bytes": 4254,
+      "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+      "archive_file": "database_status-S10-failed-27f05-and-capability-are-verified/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/database_status-S10-failed-27f05-and-capability-are-verified/trace.zip",
+      "file": "database_status-S10-failed-27f05-and-capability-are-verified/trace.zip",
+      "bytes": 8320,
+      "sha256": "2d641a7749111547625b5c9797ec379b66d8100891d4bb568c33ead84dfb9337",
+      "archive_file": "database_status-S10-failed-27f05-and-capability-are-verified/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/database_status-S10-lost-e-d2eaf-xplicit-capability-recovery/error-context.md",
+      "file": "database_status-S10-lost-e-d2eaf-xplicit-capability-recovery/error-context.md",
+      "bytes": 8470,
+      "sha256": "e24f0621cff41c3cdb99f017569c91d7c02f49ec7159a7037ea70a94359ae876",
+      "archive_file": "database_status-S10-lost-e-d2eaf-xplicit-capability-recovery/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/database_status-S10-lost-e-d2eaf-xplicit-capability-recovery/test-failed-1.png",
+      "file": "database_status-S10-lost-e-d2eaf-xplicit-capability-recovery/test-failed-1.png",
+      "bytes": 4254,
+      "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+      "archive_file": "database_status-S10-lost-e-d2eaf-xplicit-capability-recovery/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/database_status-S10-lost-e-d2eaf-xplicit-capability-recovery/trace.zip",
+      "file": "database_status-S10-lost-e-d2eaf-xplicit-capability-recovery/trace.zip",
+      "bytes": 8307,
+      "sha256": "e6169ef43f18d9f7185cec7f49fbf007b1e2ade73993417b870f2394064646de",
+      "archive_file": "database_status-S10-lost-e-d2eaf-xplicit-capability-recovery/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/database_status-S10-lost-i-d9d65-xplicit-capability-recovery/error-context.md",
+      "file": "database_status-S10-lost-i-d9d65-xplicit-capability-recovery/error-context.md",
+      "bytes": 8471,
+      "sha256": "fd0f9a6c9cd9745ff05bd5d73dc9e5cba484afa1ca21be886e3f21dab54f023c",
+      "archive_file": "database_status-S10-lost-i-d9d65-xplicit-capability-recovery/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/database_status-S10-lost-i-d9d65-xplicit-capability-recovery/test-failed-1.png",
+      "file": "database_status-S10-lost-i-d9d65-xplicit-capability-recovery/test-failed-1.png",
+      "bytes": 4254,
+      "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+      "archive_file": "database_status-S10-lost-i-d9d65-xplicit-capability-recovery/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/database_status-S10-lost-i-d9d65-xplicit-capability-recovery/trace.zip",
+      "file": "database_status-S10-lost-i-d9d65-xplicit-capability-recovery/trace.zip",
+      "bytes": 8298,
+      "sha256": "b0ab648e78ba21c9acd3d93de12e06238a43696427c9adceaee1a4c3383ae162",
+      "archive_file": "database_status-S10-lost-i-d9d65-xplicit-capability-recovery/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/database_status-STD-06-SPE-450cf-response-timed-out-released/error-context.md",
+      "file": "database_status-STD-06-SPE-450cf-response-timed-out-released/error-context.md",
+      "bytes": 8452,
+      "sha256": "89fe6014e18b676bbc7a9cea789bf223eae1484532f2687825076826dac966e4",
+      "archive_file": "database_status-STD-06-SPE-450cf-response-timed-out-released/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/database_status-STD-06-SPE-450cf-response-timed-out-released/test-failed-1.png",
+      "file": "database_status-STD-06-SPE-450cf-response-timed-out-released/test-failed-1.png",
+      "bytes": 4254,
+      "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+      "archive_file": "database_status-STD-06-SPE-450cf-response-timed-out-released/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/database_status-STD-06-SPE-450cf-response-timed-out-released/trace.zip",
+      "file": "database_status-STD-06-SPE-450cf-response-timed-out-released/trace.zip",
+      "bytes": 8281,
+      "sha256": "884950ec1ba4df6817c1cb711f2c00fdc1c9d23aacc51750d7b92c485d285900",
+      "archive_file": "database_status-STD-06-SPE-450cf-response-timed-out-released/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/database_status-STD-06-SPE-6887e-te-response-failed-released/error-context.md",
+      "file": "database_status-STD-06-SPE-6887e-te-response-failed-released/error-context.md",
+      "bytes": 8449,
+      "sha256": "92ad541df01e018e7ea4e3cf1eeec857be3bdb08e95ca68f252d86d1ac59de31",
+      "archive_file": "database_status-STD-06-SPE-6887e-te-response-failed-released/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/database_status-STD-06-SPE-6887e-te-response-failed-released/test-failed-1.png",
+      "file": "database_status-STD-06-SPE-6887e-te-response-failed-released/test-failed-1.png",
+      "bytes": 4254,
+      "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+      "archive_file": "database_status-STD-06-SPE-6887e-te-response-failed-released/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/database_status-STD-06-SPE-6887e-te-response-failed-released/trace.zip",
+      "file": "database_status-STD-06-SPE-6887e-te-response-failed-released/trace.zip",
+      "bytes": 8193,
+      "sha256": "316ec673ec16efd68c37cd1c5cc63d10ec1fc03b35727aab74ac761480c19eab",
+      "archive_file": "database_status-STD-06-SPE-6887e-te-response-failed-released/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/database_status-STD-06-SPE-9389b-response-completed-released/error-context.md",
+      "file": "database_status-STD-06-SPE-9389b-response-completed-released/error-context.md",
+      "bytes": 8452,
+      "sha256": "d17c16648b3a08abae084d1baefb33b5c1fd3e2bd52d5aabe709f53c28003c74",
+      "archive_file": "database_status-STD-06-SPE-9389b-response-completed-released/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/database_status-STD-06-SPE-9389b-response-completed-released/test-failed-1.png",
+      "file": "database_status-STD-06-SPE-9389b-response-completed-released/test-failed-1.png",
+      "bytes": 4254,
+      "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+      "archive_file": "database_status-STD-06-SPE-9389b-response-completed-released/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/database_status-STD-06-SPE-9389b-response-completed-released/trace.zip",
+      "file": "database_status-STD-06-SPE-9389b-response-completed-released/trace.zip",
+      "bytes": 8268,
+      "sha256": "2bdf447039141f1a01bb7527bd67f09d140d82eaa993f7bb731ef65f04b8ca1b",
+      "archive_file": "database_status-STD-06-SPE-9389b-response-completed-released/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/database_status-STD-06-SPE-d95bf--failure-is-cleanup-failure/error-context.md",
+      "file": "database_status-STD-06-SPE-d95bf--failure-is-cleanup-failure/error-context.md",
+      "bytes": 8453,
+      "sha256": "c24cd44278c6de07b6a1c00d3ebea5423e42454a4402fad7e1d4c612be7f91bd",
+      "archive_file": "database_status-STD-06-SPE-d95bf--failure-is-cleanup-failure/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/database_status-STD-06-SPE-d95bf--failure-is-cleanup-failure/test-failed-1.png",
+      "file": "database_status-STD-06-SPE-d95bf--failure-is-cleanup-failure/test-failed-1.png",
+      "bytes": 4254,
+      "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+      "archive_file": "database_status-STD-06-SPE-d95bf--failure-is-cleanup-failure/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/database_status-STD-06-SPE-d95bf--failure-is-cleanup-failure/trace.zip",
+      "file": "database_status-STD-06-SPE-d95bf--failure-is-cleanup-failure/trace.zip",
+      "bytes": 8179,
+      "sha256": "19a1e233e28cef20b16d6f603b36cebb68861f8432a2e7fc7dacf35b890e27f9",
+      "archive_file": "database_status-STD-06-SPE-d95bf--failure-is-cleanup-failure/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/database_status-status-cleanup-presentation-matrix-pending/error-context.md",
+      "file": "database_status-status-cleanup-presentation-matrix-pending/error-context.md",
+      "bytes": 13761,
+      "sha256": "69c15353bf52e17c42d90e0a94eb8fd1bf66f81631df6352205d25a6a8c7f6f3",
+      "archive_file": "database_status-status-cleanup-presentation-matrix-pending/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/database_status-status-cleanup-presentation-matrix-pending/test-failed-1.png",
+      "file": "database_status-status-cleanup-presentation-matrix-pending/test-failed-1.png",
+      "bytes": 105207,
+      "sha256": "8fecfd41c52a0c882f811f609aa8f28a2be9c3d698bbde0765eee62563ee00ff",
+      "archive_file": "database_status-status-cleanup-presentation-matrix-pending/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/database_status-status-cleanup-presentation-matrix-pending/trace.zip",
+      "file": "database_status-status-cleanup-presentation-matrix-pending/trace.zip",
+      "bytes": 3852221,
+      "sha256": "228163729def0f4da18ce6dd82c75562b60f75f14887ed4d9540ef2c57619714",
+      "archive_file": "database_status-status-cleanup-presentation-matrix-pending/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/inbox-run-navigation-Inbox-36675-out-replacing-a-read-window/error-context.md",
+      "file": "inbox-run-navigation-Inbox-36675-out-replacing-a-read-window/error-context.md",
+      "bytes": 8477,
+      "sha256": "1fd9ee3f8708dd383e71dd1e5e09ccb8d34218d8f61fe97378a1712b5ad3d532",
+      "archive_file": "inbox-run-navigation-Inbox-36675-out-replacing-a-read-window/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/inbox-run-navigation-Inbox-36675-out-replacing-a-read-window/test-failed-1.png",
+      "file": "inbox-run-navigation-Inbox-36675-out-replacing-a-read-window/test-failed-1.png",
+      "bytes": 4254,
+      "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+      "archive_file": "inbox-run-navigation-Inbox-36675-out-replacing-a-read-window/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/inbox-run-navigation-Inbox-36675-out-replacing-a-read-window/trace.zip",
+      "file": "inbox-run-navigation-Inbox-36675-out-replacing-a-read-window/trace.zip",
+      "bytes": 8362,
+      "sha256": "79f16603cb6e06a203e705bf355cfab051980691471fdc0c262be5c238ab7902",
+      "archive_file": "inbox-run-navigation-Inbox-36675-out-replacing-a-read-window/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/inbox-run-navigation-Inbox-45770-out-replacing-a-read-window/error-context.md",
+      "file": "inbox-run-navigation-Inbox-45770-out-replacing-a-read-window/error-context.md",
+      "bytes": 8481,
+      "sha256": "6242c3245b7267a0d3501600c403b8deb45a4feaf3f4cecfa22011ef46ed55db",
+      "archive_file": "inbox-run-navigation-Inbox-45770-out-replacing-a-read-window/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/inbox-run-navigation-Inbox-45770-out-replacing-a-read-window/test-failed-1.png",
+      "file": "inbox-run-navigation-Inbox-45770-out-replacing-a-read-window/test-failed-1.png",
+      "bytes": 4254,
+      "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+      "archive_file": "inbox-run-navigation-Inbox-45770-out-replacing-a-read-window/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/inbox-run-navigation-Inbox-45770-out-replacing-a-read-window/trace.zip",
+      "file": "inbox-run-navigation-Inbox-45770-out-replacing-a-read-window/trace.zip",
+      "bytes": 8361,
+      "sha256": "1d626f234b61bb434ae327d25c2d463cfc7895c231f0a980fa35931e7fcc1c51",
+      "archive_file": "inbox-run-navigation-Inbox-45770-out-replacing-a-read-window/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/inbox-run-navigation-Inbox-d6b2e-out-replacing-a-read-window/error-context.md",
+      "file": "inbox-run-navigation-Inbox-d6b2e-out-replacing-a-read-window/error-context.md",
+      "bytes": 8481,
+      "sha256": "ebe948f748f33c72b261541d1a08fc7523cf8a99a278c5427dffaddd80bbaed7",
+      "archive_file": "inbox-run-navigation-Inbox-d6b2e-out-replacing-a-read-window/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/inbox-run-navigation-Inbox-d6b2e-out-replacing-a-read-window/test-failed-1.png",
+      "file": "inbox-run-navigation-Inbox-d6b2e-out-replacing-a-read-window/test-failed-1.png",
+      "bytes": 4254,
+      "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+      "archive_file": "inbox-run-navigation-Inbox-d6b2e-out-replacing-a-read-window/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/inbox-run-navigation-Inbox-d6b2e-out-replacing-a-read-window/trace.zip",
+      "file": "inbox-run-navigation-Inbox-d6b2e-out-replacing-a-read-window/trace.zip",
+      "bytes": 8360,
+      "sha256": "e90dde8945ac975c711da0c6cbd6f2112ae813c9e2f390b2e61c82601d03716d",
+      "archive_file": "inbox-run-navigation-Inbox-d6b2e-out-replacing-a-read-window/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/inbox-run-navigation-Inbox-e87de--opening-the-hidden-MainBar/error-context.md",
+      "file": "inbox-run-navigation-Inbox-e87de--opening-the-hidden-MainBar/error-context.md",
+      "bytes": 8490,
+      "sha256": "ce5a7a91979a064c1af12ff29da97cf600611f7a17e85ce74248ef36987e75aa",
+      "archive_file": "inbox-run-navigation-Inbox-e87de--opening-the-hidden-MainBar/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/inbox-run-navigation-Inbox-e87de--opening-the-hidden-MainBar/test-failed-1.png",
+      "file": "inbox-run-navigation-Inbox-e87de--opening-the-hidden-MainBar/test-failed-1.png",
+      "bytes": 4254,
+      "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+      "archive_file": "inbox-run-navigation-Inbox-e87de--opening-the-hidden-MainBar/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/inbox-run-navigation-Inbox-e87de--opening-the-hidden-MainBar/trace.zip",
+      "file": "inbox-run-navigation-Inbox-e87de--opening-the-hidden-MainBar/trace.zip",
+      "bytes": 8268,
+      "sha256": "85079f42ef6b72fb8b00d32fb843e9c204896037f0f5db672b49333b4b261bde",
+      "archive_file": "inbox-run-navigation-Inbox-e87de--opening-the-hidden-MainBar/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/inbox-run-navigation-real--47e0c-ng-cursor-without-a-refresh/error-context.md",
+      "file": "inbox-run-navigation-real--47e0c-ng-cursor-without-a-refresh/error-context.md",
+      "bytes": 8488,
+      "sha256": "e65dd894d5b65a9b56bfdd815a1b242ecff0da5fa905402df89813483b19e5d8",
+      "archive_file": "inbox-run-navigation-real--47e0c-ng-cursor-without-a-refresh/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/inbox-run-navigation-real--47e0c-ng-cursor-without-a-refresh/test-failed-1.png",
+      "file": "inbox-run-navigation-real--47e0c-ng-cursor-without-a-refresh/test-failed-1.png",
+      "bytes": 4254,
+      "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+      "archive_file": "inbox-run-navigation-real--47e0c-ng-cursor-without-a-refresh/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/inbox-run-navigation-real--47e0c-ng-cursor-without-a-refresh/trace.zip",
+      "file": "inbox-run-navigation-real--47e0c-ng-cursor-without-a-refresh/trace.zip",
+      "bytes": 8358,
+      "sha256": "056ffc594008a54c6a49fdab59bea0ffd0a8e7887d3f5b3e21e63638a954f999",
+      "archive_file": "inbox-run-navigation-real--47e0c-ng-cursor-without-a-refresh/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/inbox-run-navigation-real--56cac-ng-cursor-without-a-refresh/error-context.md",
+      "file": "inbox-run-navigation-real--56cac-ng-cursor-without-a-refresh/error-context.md",
+      "bytes": 8490,
+      "sha256": "5a09bf49ba5c6d7cf7b61849f4a0aeffbb912ff19d0aefa887075b01f1de1644",
+      "archive_file": "inbox-run-navigation-real--56cac-ng-cursor-without-a-refresh/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/inbox-run-navigation-real--56cac-ng-cursor-without-a-refresh/test-failed-1.png",
+      "file": "inbox-run-navigation-real--56cac-ng-cursor-without-a-refresh/test-failed-1.png",
+      "bytes": 4254,
+      "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+      "archive_file": "inbox-run-navigation-real--56cac-ng-cursor-without-a-refresh/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/inbox-run-navigation-real--56cac-ng-cursor-without-a-refresh/trace.zip",
+      "file": "inbox-run-navigation-real--56cac-ng-cursor-without-a-refresh/trace.zip",
+      "bytes": 8287,
+      "sha256": "154e5f87cc0727e4085c2817768b502d5bdfad7b8a7e72167e0e1e0d0863baf6",
+      "archive_file": "inbox-run-navigation-real--56cac-ng-cursor-without-a-refresh/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/memory-R08-more-than-twent-dfd4b-in-recoverable-after-reload/error-context.md",
+      "file": "memory-R08-more-than-twent-dfd4b-in-recoverable-after-reload/error-context.md",
+      "bytes": 390,
+      "sha256": "2f91703046d98a0b122258722a674b6036de35494c5c131102a0cb1d9a2fb860",
+      "archive_file": "memory-R08-more-than-twent-dfd4b-in-recoverable-after-reload/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/memory-R08-more-than-twent-dfd4b-in-recoverable-after-reload/trace.zip",
+      "file": "memory-R08-more-than-twent-dfd4b-in-recoverable-after-reload/trace.zip",
+      "bytes": 6055646,
+      "sha256": "6356a18853a59a563516c786aaca02c54e429457d5aab395485d867d9710d0fe",
+      "archive_file": "memory-R08-more-than-twent-dfd4b-in-recoverable-after-reload/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/topology-CE-06-restart-invalidates-captured-real-P1-response/error-context.md",
+      "file": "topology-CE-06-restart-invalidates-captured-real-P1-response/error-context.md",
+      "bytes": 372,
+      "sha256": "e2001fcd2cacbccb159147daf414fccb59a5197b15cbc35d75631769ba6c90e8",
+      "archive_file": "topology-CE-06-restart-invalidates-captured-real-P1-response/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/topology-CE-06-restart-invalidates-captured-real-P1-response/trace.zip",
+      "file": "topology-CE-06-restart-invalidates-captured-real-P1-response/trace.zip",
+      "bytes": 3683220,
+      "sha256": "89ba12c4d62f8ca206c1de9f8bc2c72604d8dae28ae110ae00187aed32246fe1",
+      "archive_file": "topology-CE-06-restart-invalidates-captured-real-P1-response/trace.zip"
+    }
+  ]
+}

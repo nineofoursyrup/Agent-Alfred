@@ -1,0 +1,28 @@
+{
+  "command": [
+    "npm",
+    "run",
+    "typecheck"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v07",
+  "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+  "started_at": "2026-10-12T06:01:27.970981+00:00",
+  "elapsed_seconds": 1.219,
+  "exit_code": 0,
+  "env": {
+    "ALFRED_BROWSER_TEST_PORT": "18070"
+  },
+  "inputs": {
+    "src/agent_alfred/ops/static/behaviour.js": "b2b79bde8e4b9b257e273eac6f4211322dd29e3d7e03832b4725c277d2fa7b52",
+    "src/agent_alfred/ops/static/behaviour.css": "7d2da2365bcb7e0f4a490120c545650a717575a7661ae8e67ee2306ce331b64e",
+    "src/agent_alfred/ops/static/routing-statistics.js": "68665e58e0da89eb750060f571bb018dba183dff8d5259f05bee693318e9e281",
+    "tests/browser/routing-statistics.spec.js": "e382df4894d498cbe48af21afc20dd364d3bc59e9f1f5a2cfbbbdf332b58a719",
+    "package.json": "f3e4bb5814ef3913c90d8152433d4b116c7dd33359bc88544dc412287f7c05f3",
+    "package-lock.json": "d964ea8313a3dfb83a72e230ee61f0b166c524548fa80514319e081d30d7e896",
+    "playwright.config.js": "ee0d64ce222e3c6f5f8cf90b9be9e7ceb160fddefc375b17d9e8ccb92fabf4e5",
+    "pyproject.toml": "0b3ebe230f399935af91723dd9b9d02a2064edd526a822dfd3b502d4373a2afb",
+    "uv.lock": "b0445c57d4cdb22a7c816fe27fa8a0c7ddd39962aea69df367e3b1c27a275bb9"
+  },
+  "stdout_stderr": "\n> typecheck\n> tsc --noEmit\n\n",
+  "stdout_stderr_sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f"
+}
