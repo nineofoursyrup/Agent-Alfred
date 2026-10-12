@@ -25,6 +25,7 @@ test('S09 real Ops layout keeps filter, price and history controls reachable at 
       await page.screenshot({path:testInfo.outputPath(`ops-${width}-filters.png`)});
       const rowRegion=page.getByRole('region',{name:'Run 账目索引',exact:true});
       const runTable=rowRegion.getByRole('table',{name:'Run 账目索引',exact:true});
+      await expect(runTable).toHaveAttribute('aria-label','Run 账目索引');
       await expect(runTable.getByRole('columnheader')).toHaveText(['Run / Session','用途与状态','归属时间','账目与过程覆盖','操作']);
       const runCells=runTable.getByRole('row').nth(1).getByRole('cell');
       await expect(runCells).toHaveCount(5);
