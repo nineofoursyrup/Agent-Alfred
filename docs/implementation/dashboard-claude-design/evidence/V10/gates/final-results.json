@@ -1,0 +1,81 @@
+{
+  "source_sha256": {
+    "src/agent_alfred/ops/static/database.js": "6311a4492ddb84fa49837dac2e66b9ebd4e0ddb2a327640f2b108e99658753f7",
+    "src/agent_alfred/ops/static/database.css": "2d03c77cd64452f31413b45b366d76863ca5e9e19a365c034a90f0688f2f1432",
+    "tests/browser/database_migration.spec.js": "5fa5609478e695184ad6193f78f2e2225c19b965c35de28a1ca2f034e4d7f5a2"
+  },
+  "gates": {
+    "ruff": {
+      "label": "03-ruff",
+      "command": "uv run ruff check",
+      "head": "449e77fd0ff814fb63f97a009c2435139a68686d",
+      "started_at": "2026-10-12T05:55:17.846410+00:00",
+      "duration_seconds": 0.715,
+      "exit_code": 0,
+      "output_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    "skills": {
+      "label": "03-skills",
+      "command": "uv run python scripts/check_skills.py",
+      "head": "449e77fd0ff814fb63f97a009c2435139a68686d",
+      "started_at": "2026-10-12T05:55:17.846191+00:00",
+      "duration_seconds": 0.181,
+      "exit_code": 0,
+      "output_sha256": "fd7f151ef9c20676183c52051dc38436a8de140577cf552f4bfb470d5c8058b6"
+    },
+    "env": {
+      "label": "03-env",
+      "command": "uv run python scripts/check_env_example.py",
+      "head": "449e77fd0ff814fb63f97a009c2435139a68686d",
+      "started_at": "2026-10-12T05:55:17.846227+00:00",
+      "duration_seconds": 2.47,
+      "exit_code": 0,
+      "output_sha256": "bc243523b805cfaeb64daf1540da71749c485a41d8aed112495ab3f052f28a97"
+    },
+    "pytest": {
+      "label": "10-pytest",
+      "command": "uv run --extra mcp pytest",
+      "head": "93f7a384796e0b274fc521c5dba75f0994d2ee81",
+      "started_at": "2026-10-12T07:35:58.360791+00:00",
+      "duration_seconds": 2759.471,
+      "exit_code": 0,
+      "output_sha256": "1cfb77542378539979581d95b8203ef8ccf2b88aa93ea22f5550e7feb9268e0d"
+    },
+    "typecheck": {
+      "label": "03-typecheck",
+      "command": "npm run typecheck",
+      "head": "449e77fd0ff814fb63f97a009c2435139a68686d",
+      "started_at": "2026-10-12T05:55:17.846271+00:00",
+      "duration_seconds": 0.691,
+      "exit_code": 0,
+      "output_sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f"
+    },
+    "browser": {
+      "label": "12-browser",
+      "command": "ALFRED_BROWSER_TEST_PORT=18100 npm run test:browser",
+      "head": "93f7a384796e0b274fc521c5dba75f0994d2ee81",
+      "started_at": "2026-10-12T08:23:51.792796+00:00",
+      "duration_seconds": 701.361,
+      "exit_code": 0,
+      "output_sha256": "679ff0579a8136b103b15ad7fc083526e456148bb49ade745211f44172d595b8"
+    },
+    "diff": {
+      "label": "11-diff",
+      "command": "git diff --check && git diff --check origin/main...HEAD",
+      "head": "93f7a384796e0b274fc521c5dba75f0994d2ee81",
+      "started_at": "2026-10-12T07:45:58.565419+00:00",
+      "duration_seconds": 0.083,
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "install": {
+      "label": "13-build-install",
+      "command": "uv build && uv run python scripts/check_mcp_installations.py --output .scratch/v10/mcp-artifacts.json",
+      "head": "93f7a384796e0b274fc521c5dba75f0994d2ee81",
+      "started_at": "2026-10-12T08:36:48.153959+00:00",
+      "duration_seconds": 26.557,
+      "exit_code": 0,
+      "output_sha256": "db45434d600c856fdf177076a3058beec05482a04846586f2f099bf98d12c9dd"
+    }
+  }
+}

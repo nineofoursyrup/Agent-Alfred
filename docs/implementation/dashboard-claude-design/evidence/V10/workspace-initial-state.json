@@ -1,0 +1,22 @@
+{
+  "worktree": "/Users/nineofour/Agent-Alfred-v10",
+  "branch": "dashboard-visual/v10-database",
+  "baseline": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "initial_worktree_status": "",
+  "initial_worktree_diff": "",
+  "initial_worktree_untracked": "",
+  "main_checkout_observed_status": [
+    " M docs/dashboard.md",
+    "?? README.md",
+    "?? tmp/"
+  ],
+  "main_checkout_write_operations": "git fetch / git worktree add only; no main checkout file edits",
+  "ownership": [
+    "src/agent_alfred/ops/static/database.js",
+    "src/agent_alfred/ops/static/database.css",
+    "tests/browser/database_migration.spec.js",
+    "docs/implementation/dashboard-claude-design/V10.md",
+    "docs/implementation/dashboard-claude-design/evidence/V10/"
+  ],
+  "runtime_untracked_artifacts": "Two screenshots from unchanged aggregation tests moved from this worktree tmp/ to ignored .scratch/v10/target-generated-tmp/"
+}

@@ -1,0 +1,7 @@
+{
+  "pid": 62587,
+  "process": "  PID  PPID  ELAPSED COMMAND\n62587 62585 01:32:06 /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python /Users/nineofour/Agent-Alfred-v10/.venv/bin/pytest\n",
+  "summary_completed": true,
+  "reason": "Process retained threads after full failed test summary; no output/progress for several minutes",
+  "action": "SIGINT to this task pytest PID, preserve first summary and shutdown output"
+}

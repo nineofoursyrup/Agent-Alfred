@@ -1,0 +1,17 @@
+{
+  "captured_at": "2026-10-12T05:55:17.266Z",
+  "browser": "153.0.8010.12",
+  "origin": "http://127.0.0.1:18104",
+  "fixture": "existing memory_server.py, real Host/HTTP/SQLite, temporary state, offline model",
+  "viewports": [],
+  "source_sha256": {
+    "src/agent_alfred/ops/static/database.js": "6311a4492ddb84fa49837dac2e66b9ebd4e0ddb2a327640f2b108e99658753f7",
+    "src/agent_alfred/ops/static/database.css": "2d03c77cd64452f31413b45b366d76863ca5e9e19a365c034a90f0688f2f1432",
+    "tests/browser/database_migration.spec.js": "5fa5609478e695184ad6193f78f2e2225c19b965c35de28a1ca2f034e4d7f5a2"
+  },
+  "page_errors": [],
+  "request_failures": [],
+  "external_requests": [],
+  "exit_code": 1,
+  "error": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: 0\nReceived: 2\n    at captureRawStack (/Users/nineofour/Agent-Alfred-v10/node_modules/playwright-core/lib/coreBundle.js:8588:17)\n    at callMatcherAsStep (/Users/nineofour/Agent-Alfred-v10/node_modules/playwright/lib/matchers/expect.js:13310:57)\n    at Object.toBe (/Users/nineofour/Agent-Alfred-v10/node_modules/playwright/lib/matchers/expect.js:13302:23)\n    at /Users/nineofour/Agent-Alfred-v10/.scratch/v10/capture-product.mjs:43:111"
+}

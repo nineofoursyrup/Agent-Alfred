@@ -1,0 +1,1147 @@
+{
+  "runs": [
+    {
+      "title": "real SSE recovery clears results, verifies versions and never reruns SQL",
+      "repeat": 0,
+      "status": "passed",
+      "variant": "baseline",
+      "events": [
+        {
+          "kind": "DOM",
+          "received_at": 1791787088814,
+          "detail": {
+            "timestamp": 140.4000000357628,
+            "state": "checking",
+            "status": "核验中",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787088825,
+          "detail": {
+            "timestamp": 275.60000002384186,
+            "state": "ready",
+            "status": "可执行",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787088841,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "d445923a6aaa4a64b2e12b02306f575f",
+            "memory_revision": "24",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787088843,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "d445923a6aaa4a64b2e12b02306f575f",
+            "memory_revision": "24",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787088843,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "d445923a6aaa4a64b2e12b02306f575f",
+            "memory_revision": "24",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787089023,
+          "detail": {
+            "timestamp": 468.9000000357628,
+            "state": "working",
+            "status": "准备／执行中",
+            "cells": 0,
+            "submitted": "已提交查询查看本次提交的 SQLSELECT fact FROM diag_facts",
+            "table": false
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787089080,
+          "detail": {
+            "timestamp": 531.3000000119209,
+            "state": "working",
+            "status": "准备／执行中",
+            "cells": 0,
+            "submitted": "查询 XXDIYPrchY7L_gvUuMaIziI0已提交查询查看本次提交的 SQLSELECT fact FROM diag_facts",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787089091,
+          "path": "/api/database/queries",
+          "status": 200,
+          "body": {
+            "instance_id": "d445923a6aaa4a64b2e12b02306f575f"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787089463,
+          "detail": {
+            "timestamp": 916.3000000119209,
+            "state": "complete",
+            "status": "结果完整",
+            "meta": "第 1–1 行本次返回 1 行（非源库总量）返回完整：未截断读取 2026-10-12T06:38:09.443723Z查询 XXDIYPrchY7L_gvUuMaIziI0来源 diag_facts保护 5 · 记忆修订 24覆盖 缺行不证明未发生请求attempts recorded=0 empty=0 unrecorded=0 in_progress=0",
+            "cells": 1,
+            "submitted": "查询 XXDIYPrchY7L_gvUuMaIziI0已提交查询查看本次提交的 SQLSELECT fact FROM diag_facts",
+            "table": true
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787089464,
+          "path": "/api/database/queries/XXDIYPrchY7L_gvUuMaIziI0/execute",
+          "status": 200,
+          "body": {
+            "returned_rows": 1,
+            "instance_id": "d445923a6aaa4a64b2e12b02306f575f",
+            "memory_revision": "24",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787089471,
+          "path": "/api/database/queries/XXDIYPrchY7L_gvUuMaIziI0",
+          "status": 200,
+          "body": {
+            "status": "completed",
+            "cleanup": "released",
+            "instance_id": "d445923a6aaa4a64b2e12b02306f575f"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787089490,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "d445923a6aaa4a64b2e12b02306f575f",
+            "memory_revision": "24",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787089503,
+          "detail": {
+            "timestamp": 955.5,
+            "state": "unavailable",
+            "status": "不可用 · 连接中断",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787089509,
+          "path": "/api/database/queries/XXDIYPrchY7L_gvUuMaIziI0/cancel",
+          "status": 200,
+          "body": {
+            "status": "completed",
+            "cleanup": "released"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787092521,
+          "detail": {
+            "timestamp": 3965.5,
+            "state": "checking",
+            "status": "核验中",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787092521,
+          "detail": {
+            "timestamp": 3965.800000011921,
+            "state": "invalidated",
+            "status": "失效",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787092536,
+          "detail": {
+            "timestamp": 3981.100000023842,
+            "state": "checking",
+            "status": "核验中",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787092538,
+          "path": "/api/database/queries/XXDIYPrchY7L_gvUuMaIziI0",
+          "status": 200,
+          "body": {
+            "status": "completed",
+            "cleanup": "released",
+            "instance_id": "d445923a6aaa4a64b2e12b02306f575f"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787092539,
+          "path": "/api/database/queries/XXDIYPrchY7L_gvUuMaIziI0",
+          "status": 200,
+          "body": {
+            "status": "completed",
+            "cleanup": "released",
+            "instance_id": "d445923a6aaa4a64b2e12b02306f575f"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787092543,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "d445923a6aaa4a64b2e12b02306f575f",
+            "memory_revision": "46",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787092553,
+          "detail": {
+            "timestamp": 4000.199999988079,
+            "state": "ready",
+            "status": "可执行",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787092554,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "d445923a6aaa4a64b2e12b02306f575f",
+            "memory_revision": "46",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787093558,
+          "detail": {
+            "timestamp": 4938.900000035763,
+            "state": "working",
+            "status": "准备／执行中",
+            "cells": 0,
+            "submitted": "已提交查询查看本次提交的 SQLSELECT fact FROM diag_facts",
+            "table": false
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787093619,
+          "detail": {
+            "timestamp": 4975.100000023842,
+            "state": "working",
+            "status": "准备／执行中",
+            "cells": 0,
+            "submitted": "查询 3gwK9x-7Llw6rxG7K2ioA5hn已提交查询查看本次提交的 SQLSELECT fact FROM diag_facts",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787093621,
+          "path": "/api/database/queries",
+          "status": 200,
+          "body": {
+            "instance_id": "d445923a6aaa4a64b2e12b02306f575f"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787093913,
+          "detail": {
+            "timestamp": 5366.300000011921,
+            "state": "empty",
+            "status": "空结果",
+            "meta": "0 行本次返回 0 行（非源库总量）返回完整：未截断读取 2026-10-12T06:38:13.874987Z查询 3gwK9x-7Llw6rxG7K2ioA5hn来源 diag_facts保护 5 · 记忆修订 46覆盖 缺行不证明未发生请求attempts recorded=0 empty=0 unrecorded=0 in_progress=0",
+            "cells": 0,
+            "submitted": "查询 3gwK9x-7Llw6rxG7K2ioA5hn已提交查询查看本次提交的 SQLSELECT fact FROM diag_facts",
+            "table": true
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787093914,
+          "path": "/api/database/queries/3gwK9x-7Llw6rxG7K2ioA5hn/execute",
+          "status": 200,
+          "body": {
+            "returned_rows": 0,
+            "instance_id": "d445923a6aaa4a64b2e12b02306f575f",
+            "memory_revision": "46",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787093919,
+          "path": "/api/database/queries/3gwK9x-7Llw6rxG7K2ioA5hn",
+          "status": 200,
+          "body": {
+            "status": "completed",
+            "cleanup": "released",
+            "instance_id": "d445923a6aaa4a64b2e12b02306f575f"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787093928,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "d445923a6aaa4a64b2e12b02306f575f",
+            "memory_revision": "46",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787093971,
+          "detail": {
+            "timestamp": 5423.600000023842,
+            "state": "invalidated",
+            "status": "失效",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787093974,
+          "path": "/api/database/queries/3gwK9x-7Llw6rxG7K2ioA5hn/cancel",
+          "status": 503,
+          "body": {
+            "code": "shutting_down"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787093978,
+          "path": "/api/database/queries/3gwK9x-7Llw6rxG7K2ioA5hn",
+          "status": 503,
+          "body": {
+            "code": "shutting_down"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787094151,
+          "detail": {
+            "timestamp": 5577,
+            "state": "unavailable",
+            "status": "不可用 · 连接中断",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        }
+      ]
+    },
+    {
+      "title": "real SSE recovery clears results, verifies versions and never reruns SQL",
+      "repeat": 1,
+      "status": "passed",
+      "variant": "baseline",
+      "events": [
+        {
+          "kind": "DOM",
+          "received_at": 1791787096417,
+          "detail": {
+            "timestamp": 228.89999997615814,
+            "state": "checking",
+            "status": "核验中",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787096452,
+          "detail": {
+            "timestamp": 262.89999997615814,
+            "state": "ready",
+            "status": "可执行",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787096457,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "aa1cfa1abd1c447183a2be414dfed28e",
+            "memory_revision": "24",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787096458,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "aa1cfa1abd1c447183a2be414dfed28e",
+            "memory_revision": "24",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787096459,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "aa1cfa1abd1c447183a2be414dfed28e",
+            "memory_revision": "24",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787096609,
+          "detail": {
+            "timestamp": 432.7999999523163,
+            "state": "working",
+            "status": "准备／执行中",
+            "cells": 0,
+            "submitted": "已提交查询查看本次提交的 SQLSELECT fact FROM diag_facts",
+            "table": false
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787096673,
+          "detail": {
+            "timestamp": 487.39999997615814,
+            "state": "working",
+            "status": "准备／执行中",
+            "cells": 0,
+            "submitted": "查询 62iiB2RYJLjS-4983ByeQ7zF已提交查询查看本次提交的 SQLSELECT fact FROM diag_facts",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787096674,
+          "path": "/api/database/queries",
+          "status": 200,
+          "body": {
+            "instance_id": "aa1cfa1abd1c447183a2be414dfed28e"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787096916,
+          "detail": {
+            "timestamp": 738.8999999761581,
+            "state": "complete",
+            "status": "结果完整",
+            "meta": "第 1–1 行本次返回 1 行（非源库总量）返回完整：未截断读取 2026-10-12T06:38:16.880329Z查询 62iiB2RYJLjS-4983ByeQ7zF来源 diag_facts保护 5 · 记忆修订 24覆盖 缺行不证明未发生请求attempts recorded=0 empty=0 unrecorded=0 in_progress=0",
+            "cells": 1,
+            "submitted": "查询 62iiB2RYJLjS-4983ByeQ7zF已提交查询查看本次提交的 SQLSELECT fact FROM diag_facts",
+            "table": true
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787096918,
+          "path": "/api/database/queries/62iiB2RYJLjS-4983ByeQ7zF/execute",
+          "status": 200,
+          "body": {
+            "returned_rows": 1,
+            "instance_id": "aa1cfa1abd1c447183a2be414dfed28e",
+            "memory_revision": "24",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787096921,
+          "path": "/api/database/queries/62iiB2RYJLjS-4983ByeQ7zF",
+          "status": 200,
+          "body": {
+            "status": "completed",
+            "cleanup": "released",
+            "instance_id": "aa1cfa1abd1c447183a2be414dfed28e"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787096935,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "aa1cfa1abd1c447183a2be414dfed28e",
+            "memory_revision": "24",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787097025,
+          "detail": {
+            "timestamp": 848.7999999523163,
+            "state": "unavailable",
+            "status": "不可用 · 连接中断",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787097033,
+          "path": "/api/database/queries/62iiB2RYJLjS-4983ByeQ7zF/cancel",
+          "status": 200,
+          "body": {
+            "status": "completed",
+            "cleanup": "released"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787100044,
+          "detail": {
+            "timestamp": 3866.7999999523163,
+            "state": "checking",
+            "status": "核验中",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787100044,
+          "detail": {
+            "timestamp": 3867,
+            "state": "invalidated",
+            "status": "失效",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787100076,
+          "path": "/api/database/queries/62iiB2RYJLjS-4983ByeQ7zF",
+          "status": 200,
+          "body": {
+            "status": "completed",
+            "cleanup": "released",
+            "instance_id": "aa1cfa1abd1c447183a2be414dfed28e"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787100080,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "aa1cfa1abd1c447183a2be414dfed28e",
+            "memory_revision": "46",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787100080,
+          "detail": {
+            "timestamp": 3898.599999964237,
+            "state": "checking",
+            "status": "核验中",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787100081,
+          "path": "/api/database/queries/62iiB2RYJLjS-4983ByeQ7zF",
+          "status": 200,
+          "body": {
+            "status": "completed",
+            "cleanup": "released",
+            "instance_id": "aa1cfa1abd1c447183a2be414dfed28e"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787100090,
+          "detail": {
+            "timestamp": 3914.599999964237,
+            "state": "ready",
+            "status": "可执行",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787100100,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "aa1cfa1abd1c447183a2be414dfed28e",
+            "memory_revision": "46",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787101017,
+          "detail": {
+            "timestamp": 4842.699999988079,
+            "state": "working",
+            "status": "准备／执行中",
+            "cells": 0,
+            "submitted": "已提交查询查看本次提交的 SQLSELECT fact FROM diag_facts",
+            "table": false
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787101033,
+          "detail": {
+            "timestamp": 4854.5,
+            "state": "working",
+            "status": "准备／执行中",
+            "cells": 0,
+            "submitted": "查询 lNDbhCqM7VsrQ2pq8MVjZfSK已提交查询查看本次提交的 SQLSELECT fact FROM diag_facts",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787101035,
+          "path": "/api/database/queries",
+          "status": 200,
+          "body": {
+            "instance_id": "aa1cfa1abd1c447183a2be414dfed28e"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787101302,
+          "detail": {
+            "timestamp": 5119.799999952316,
+            "state": "empty",
+            "status": "空结果",
+            "meta": "0 行本次返回 0 行（非源库总量）返回完整：未截断读取 2026-10-12T06:38:21.218903Z查询 lNDbhCqM7VsrQ2pq8MVjZfSK来源 diag_facts保护 5 · 记忆修订 46覆盖 缺行不证明未发生请求attempts recorded=0 empty=0 unrecorded=0 in_progress=0",
+            "cells": 0,
+            "submitted": "查询 lNDbhCqM7VsrQ2pq8MVjZfSK已提交查询查看本次提交的 SQLSELECT fact FROM diag_facts",
+            "table": true
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787101302,
+          "path": "/api/database/queries/lNDbhCqM7VsrQ2pq8MVjZfSK/execute",
+          "status": 200,
+          "body": {
+            "returned_rows": 0,
+            "instance_id": "aa1cfa1abd1c447183a2be414dfed28e",
+            "memory_revision": "46",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787101319,
+          "path": "/api/database/queries/lNDbhCqM7VsrQ2pq8MVjZfSK",
+          "status": 200,
+          "body": {
+            "status": "completed",
+            "cleanup": "released",
+            "instance_id": "aa1cfa1abd1c447183a2be414dfed28e"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787101321,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "aa1cfa1abd1c447183a2be414dfed28e",
+            "memory_revision": "46",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787101337,
+          "detail": {
+            "timestamp": 5163.5,
+            "state": "invalidated",
+            "status": "失效",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787101342,
+          "path": "/api/database/queries/lNDbhCqM7VsrQ2pq8MVjZfSK/cancel",
+          "status": 503,
+          "body": {
+            "code": "shutting_down"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787101347,
+          "path": "/api/database/queries/lNDbhCqM7VsrQ2pq8MVjZfSK",
+          "status": 503,
+          "body": {
+            "code": "shutting_down"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787101805,
+          "detail": {
+            "timestamp": 5630.399999976158,
+            "state": "unavailable",
+            "status": "不可用 · 连接中断",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        }
+      ]
+    },
+    {
+      "title": "real SSE recovery clears results, verifies versions and never reruns SQL",
+      "repeat": 2,
+      "status": "passed",
+      "variant": "baseline",
+      "events": [
+        {
+          "kind": "DOM",
+          "received_at": 1791787104407,
+          "detail": {
+            "timestamp": 159.69999998807907,
+            "state": "checking",
+            "status": "核验中",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787104431,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "190db649d1e54d6e81080a1941e63c38",
+            "memory_revision": "24",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787104448,
+          "detail": {
+            "timestamp": 220.0999999642372,
+            "state": "ready",
+            "status": "可执行",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787104449,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "190db649d1e54d6e81080a1941e63c38",
+            "memory_revision": "24",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787104449,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "190db649d1e54d6e81080a1941e63c38",
+            "memory_revision": "24",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787104597,
+          "detail": {
+            "timestamp": 377.69999998807907,
+            "state": "working",
+            "status": "准备／执行中",
+            "cells": 0,
+            "submitted": "已提交查询查看本次提交的 SQLSELECT fact FROM diag_facts",
+            "table": false
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787104662,
+          "detail": {
+            "timestamp": 429.80000001192093,
+            "state": "working",
+            "status": "准备／执行中",
+            "cells": 0,
+            "submitted": "查询 WqMFVuuMvDEzQbvs7n937b20已提交查询查看本次提交的 SQLSELECT fact FROM diag_facts",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787104666,
+          "path": "/api/database/queries",
+          "status": 200,
+          "body": {
+            "instance_id": "190db649d1e54d6e81080a1941e63c38"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787105038,
+          "detail": {
+            "timestamp": 819.5,
+            "state": "complete",
+            "status": "结果完整",
+            "meta": "第 1–1 行本次返回 1 行（非源库总量）返回完整：未截断读取 2026-10-12T06:38:25.008181Z查询 WqMFVuuMvDEzQbvs7n937b20来源 diag_facts保护 5 · 记忆修订 24覆盖 缺行不证明未发生请求attempts recorded=0 empty=0 unrecorded=0 in_progress=0",
+            "cells": 1,
+            "submitted": "查询 WqMFVuuMvDEzQbvs7n937b20已提交查询查看本次提交的 SQLSELECT fact FROM diag_facts",
+            "table": true
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787105039,
+          "path": "/api/database/queries/WqMFVuuMvDEzQbvs7n937b20/execute",
+          "status": 200,
+          "body": {
+            "returned_rows": 1,
+            "instance_id": "190db649d1e54d6e81080a1941e63c38",
+            "memory_revision": "24",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787105045,
+          "path": "/api/database/queries/WqMFVuuMvDEzQbvs7n937b20",
+          "status": 200,
+          "body": {
+            "status": "completed",
+            "cleanup": "released",
+            "instance_id": "190db649d1e54d6e81080a1941e63c38"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787105054,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "190db649d1e54d6e81080a1941e63c38",
+            "memory_revision": "24",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787105507,
+          "detail": {
+            "timestamp": 1287.300000011921,
+            "state": "unavailable",
+            "status": "不可用 · 连接中断",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787105511,
+          "path": "/api/database/queries/WqMFVuuMvDEzQbvs7n937b20/cancel",
+          "status": 200,
+          "body": {
+            "status": "completed",
+            "cleanup": "released"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787108515,
+          "detail": {
+            "timestamp": 4294.300000011921,
+            "state": "checking",
+            "status": "核验中",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787108515,
+          "detail": {
+            "timestamp": 4294.399999976158,
+            "state": "invalidated",
+            "status": "失效",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787108532,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "190db649d1e54d6e81080a1941e63c38",
+            "memory_revision": "46",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787108532,
+          "path": "/api/database/queries/WqMFVuuMvDEzQbvs7n937b20",
+          "status": 200,
+          "body": {
+            "status": "completed",
+            "cleanup": "released",
+            "instance_id": "190db649d1e54d6e81080a1941e63c38"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787108535,
+          "detail": {
+            "timestamp": 4313.800000011921,
+            "state": "checking",
+            "status": "核验中",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787108535,
+          "path": "/api/database/queries/WqMFVuuMvDEzQbvs7n937b20",
+          "status": 200,
+          "body": {
+            "status": "completed",
+            "cleanup": "released",
+            "instance_id": "190db649d1e54d6e81080a1941e63c38"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787108546,
+          "detail": {
+            "timestamp": 4322.899999976158,
+            "state": "ready",
+            "status": "可执行",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787108547,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "190db649d1e54d6e81080a1941e63c38",
+            "memory_revision": "46",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787109496,
+          "detail": {
+            "timestamp": 5278.5,
+            "state": "working",
+            "status": "准备／执行中",
+            "cells": 0,
+            "submitted": "已提交查询查看本次提交的 SQLSELECT fact FROM diag_facts",
+            "table": false
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787109510,
+          "detail": {
+            "timestamp": 5284.899999976158,
+            "state": "working",
+            "status": "准备／执行中",
+            "cells": 0,
+            "submitted": "查询 IhPJGOWJ7QQcVyGmyLmi9OWu已提交查询查看本次提交的 SQLSELECT fact FROM diag_facts",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787109513,
+          "path": "/api/database/queries",
+          "status": 200,
+          "body": {
+            "instance_id": "190db649d1e54d6e81080a1941e63c38"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787110073,
+          "detail": {
+            "timestamp": 5845.300000011921,
+            "state": "empty",
+            "status": "空结果",
+            "meta": "0 行本次返回 0 行（非源库总量）返回完整：未截断读取 2026-10-12T06:38:29.980790Z查询 IhPJGOWJ7QQcVyGmyLmi9OWu来源 diag_facts保护 5 · 记忆修订 46覆盖 缺行不证明未发生请求attempts recorded=0 empty=0 unrecorded=0 in_progress=0",
+            "cells": 0,
+            "submitted": "查询 IhPJGOWJ7QQcVyGmyLmi9OWu已提交查询查看本次提交的 SQLSELECT fact FROM diag_facts",
+            "table": true
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787110075,
+          "path": "/api/database/queries/IhPJGOWJ7QQcVyGmyLmi9OWu/execute",
+          "status": 200,
+          "body": {
+            "returned_rows": 0,
+            "instance_id": "190db649d1e54d6e81080a1941e63c38",
+            "memory_revision": "46",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787110079,
+          "path": "/api/database/queries/IhPJGOWJ7QQcVyGmyLmi9OWu",
+          "status": 200,
+          "body": {
+            "status": "completed",
+            "cleanup": "released",
+            "instance_id": "190db649d1e54d6e81080a1941e63c38"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787110090,
+          "path": "/api/database",
+          "status": 200,
+          "body": {
+            "instance_id": "190db649d1e54d6e81080a1941e63c38",
+            "memory_revision": "46",
+            "protection_version": "5"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787110367,
+          "detail": {
+            "timestamp": 6149.199999988079,
+            "state": "invalidated",
+            "status": "失效",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787110372,
+          "path": "/api/database/queries/IhPJGOWJ7QQcVyGmyLmi9OWu/cancel",
+          "status": 503,
+          "body": {
+            "code": "shutting_down"
+          }
+        },
+        {
+          "kind": "HTTP",
+          "received_at": 1791787110377,
+          "path": "/api/database/queries/IhPJGOWJ7QQcVyGmyLmi9OWu",
+          "status": 503,
+          "body": {
+            "code": "shutting_down"
+          }
+        },
+        {
+          "kind": "DOM",
+          "received_at": 1791787110790,
+          "detail": {
+            "timestamp": 6564.399999976158,
+            "state": "unavailable",
+            "status": "不可用 · 连接中断",
+            "cells": 0,
+            "submitted": "",
+            "table": false
+          }
+        }
+      ]
+    }
+  ]
+}

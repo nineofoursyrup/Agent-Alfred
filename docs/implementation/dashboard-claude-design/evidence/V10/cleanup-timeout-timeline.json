@@ -1,0 +1,100 @@
+[
+  {
+    "type": "after",
+    "callId": "expect@51",
+    "error": {
+      "name": "",
+      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"\u001b[7mreleas\u001b[27med\"\u001b[39m\nReceived: \u001b[31m\"\u001b[7mfail\u001b[27med\"\u001b[39m",
+      "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBe\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m) // Object.is equality\u001b[22m\n\nExpected: \u001b[32m\"\u001b[7mreleas\u001b[27med\"\u001b[39m\nReceived: \u001b[31m\"\u001b[7mfail\u001b[27med\"\u001b[39m\n    at /Users/nineofour/Agent-Alfred-v10/tests/browser/database_status.spec.js:123:31"
+    },
+    "endTime": 127103.344
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/database",
+    "status": 200,
+    "start": 125719.298,
+    "duration_ms": 36.826
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/database",
+    "status": 200,
+    "start": 125719.36,
+    "duration_ms": 35.092999999999996
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/database",
+    "status": 200,
+    "start": 125719.339,
+    "duration_ms": 37.417
+  },
+  {
+    "type": "HTTP",
+    "method": "POST",
+    "path": "/api/database/queries",
+    "status": 200,
+    "start": 125824.35,
+    "duration_ms": 4.017
+  },
+  {
+    "type": "HTTP",
+    "method": "POST",
+    "path": "/api/database/queries/knrnKcqQyQ0jYqax2BUqIzDL/execute",
+    "status": -1,
+    "start": 125869.196,
+    "duration_ms": 180.89800000000105
+  },
+  {
+    "type": "HTTP",
+    "method": "POST",
+    "path": "/api/database/queries/knrnKcqQyQ0jYqax2BUqIzDL/cancel",
+    "status": 200,
+    "start": 126039.795,
+    "duration_ms": 1.6
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/database/queries/knrnKcqQyQ0jYqax2BUqIzDL",
+    "status": 200,
+    "start": 126088.665,
+    "duration_ms": 3.582
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/database/queries/knrnKcqQyQ0jYqax2BUqIzDL",
+    "status": 200,
+    "start": 127107.016,
+    "duration_ms": 1.645
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/database/queries/knrnKcqQyQ0jYqax2BUqIzDL",
+    "status": 200,
+    "start": 126060.836,
+    "duration_ms": 2.786999999982072
+  },
+  {
+    "type": "HTTP",
+    "method": "POST",
+    "path": "/api/database/queries",
+    "status": 503,
+    "start": 126071.984,
+    "duration_ms": 2.312999999994645
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/database/queries/knrnKcqQyQ0jYqax2BUqIzDL",
+    "status": 200,
+    "start": 127092.03,
+    "duration_ms": 1.5230000000010477
+  }
+]
