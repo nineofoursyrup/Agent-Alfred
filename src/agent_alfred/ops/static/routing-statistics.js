@@ -10,8 +10,9 @@ function ratio(value, comparable) {
 }
 /** @param {HTMLElement} root @param {()=>string} instance */
 export function routingStatistics(root, instance) {
-  const panel = document.createElement('details'); panel.className = 'card routing-statistics';
-  const summary = node('summary'); summary.append(node('span','路由统计')); panel.append(summary);
+  const panel = document.createElement('details'); panel.className = 'sy-panel routing-statistics';
+  const summary = node('summary'); summary.className = 'sy-panel-header';
+  const title = node('span','路由统计'); title.className = 'sy-panel-eyebrow'; summary.append(title); panel.append(summary);
   const label = node('label', '统计范围');
   const range = document.createElement('select'); range.setAttribute('aria-label', '统计范围');
   for (const [key, text] of Object.entries(ranges)) {
@@ -22,8 +23,10 @@ export function routingStatistics(root, instance) {
   const status = node('span','未读取；展开后读取统计。'); status.className = 'observation-summary'; status.setAttribute('role', 'status');
   summary.append(status);
   const content = node('div');
-  panel.append(node('p', '跨会话 CLI/Web 已准入聊天 Run；按准入时刻归窗，仅启用且终态已持久保存的 Run 进入主结果。未知不代表未发生。'),
+  const body = node('div'); body.className = 'sy-panel-body';
+  body.append(node('p', '跨会话 CLI/Web 已准入聊天 Run；按准入时刻归窗，仅启用且终态已持久保存的 Run 进入主结果。未知不代表未发生。'),
     label, refresh, content);
+  panel.append(body);
   root.append(panel);
   let sequence = 0;
   let process = instance();
@@ -128,9 +131,18 @@ function render(root, data) {
     if (group.comparable) {
       const chart = node('ul'); chart.className = 'routing-chart'; chart.setAttribute('aria-label','路由决议比例');
       for (const [key,label] of Object.entries(routes)) {
-        const value = d.ratios[key], item = node('li'), description = `${label}：${d.counts[key]} 次；${ratio(value,true)}`;
-        item.append(node('span',description));
-        if (value.value !== null) {const bar = node('progress');bar.max = 1;bar.value = value.value;bar.setAttribute('aria-label',description);item.append(bar);}
+        const value = d.ratios[key], item = node('li'); item.className = 'sy-bar-row';
+        const heading = node('div'); heading.className = 'sy-bar-heading';
+        heading.append(node('span',label+'：'),node('span',`${d.counts[key]} 次；${ratio(value,true)}`)); item.append(heading);
+        if (value.value !== null) {
+          const bar = document.createElementNS('http://www.w3.org/2000/svg','svg');
+          bar.classList.add('sy-bar-track'); bar.setAttribute('aria-hidden','true'); bar.setAttribute('focusable','false');
+          if (key === 'quick') bar.classList.add('sy-tone-attention');
+          else if (key !== 'full') bar.classList.add('sy-tone-muted');
+          const fill = document.createElementNS('http://www.w3.org/2000/svg','rect');
+          fill.classList.add('sy-bar-fill'); fill.setAttribute('width',`${d.counts[key] / value.denominator * 100}%`); fill.setAttribute('height','7');
+          bar.append(fill); item.append(bar);
+        }
         chart.append(item);
       }
       section.append(chart);
