@@ -552,7 +552,7 @@ test("A38: equal creation times page in stable internal order and stale cursors 
     await expandMemory(page);
     const panel = page.getByRole("tabpanel", {name: "语义记忆"});
     const list = panel.getByLabel("语义记忆列表");
-    const facts = () => list.locator("article > p").allTextContents();
+    const facts = () => list.locator("article .memory-excerpt").allTextContents();
     await expect(list.locator("article")).toHaveCount(25);
     const expected = Array.from({length: 30}, (_, index) => `同一时刻 ${String(29 - index).padStart(2, "0")}`);
     expect(await facts()).toEqual(expected.slice(0, 25));

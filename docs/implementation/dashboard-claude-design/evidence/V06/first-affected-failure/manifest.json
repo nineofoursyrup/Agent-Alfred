@@ -1,0 +1,23 @@
+[
+  {
+    "original_path": "output/playwright/results/memory-A38-equal-creation--bd79e-tale-cursors-force-a-reread/test-failed-1.png",
+    "sha256": "2034f6d63eee74af6b529cd1d505d153d895d50c0721413d380f675a72e8635f",
+    "bytes": 111393,
+    "archived_path": "first-affected-failure/memory-A38-equal-creation--bd79e-tale-cursors-force-a-reread/test-failed-1.png",
+    "scratch_archive_path": ".scratch/v06/first-affected-failure/memory-A38-equal-creation--bd79e-tale-cursors-force-a-reread/test-failed-1.png"
+  },
+  {
+    "original_path": "output/playwright/results/memory-A38-equal-creation--bd79e-tale-cursors-force-a-reread/trace.zip",
+    "sha256": "834e2ed1f24f581fa1795eb556406f2293425c35c88112d895e4550bc32035de",
+    "bytes": 1838635,
+    "archived_path": "first-affected-failure/memory-A38-equal-creation--bd79e-tale-cursors-force-a-reread/trace.zip",
+    "scratch_archive_path": ".scratch/v06/first-affected-failure/memory-A38-equal-creation--bd79e-tale-cursors-force-a-reread/trace.zip"
+  },
+  {
+    "original_path": "output/playwright/results/memory-A38-equal-creation--bd79e-tale-cursors-force-a-reread/error-context.md",
+    "sha256": "aaf99d3a77e1f50ce94398f1cc1dc12d86a0b03b4355ca1e4930d677fd4c4a7d",
+    "bytes": 34363,
+    "archived_path": "first-affected-failure/memory-A38-equal-creation--bd79e-tale-cursors-force-a-reread/error-context.md.json",
+    "scratch_archive_path": ".scratch/v06/first-affected-failure/memory-A38-equal-creation--bd79e-tale-cursors-force-a-reread/error-context.md.json"
+  }
+]

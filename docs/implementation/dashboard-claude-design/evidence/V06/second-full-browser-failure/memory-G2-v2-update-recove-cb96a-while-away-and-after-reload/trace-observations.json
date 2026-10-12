@@ -1,0 +1,216 @@
+{
+  "case": "memory-G2-v2-update-recove-cb96a-while-away-and-after-reload",
+  "last_calls": [
+    {
+      "class": "BrowserContext",
+      "method": "newPage",
+      "params": {},
+      "start": 604478.383,
+      "end": 604554.057,
+      "elapsed_ms": 75.7
+    },
+    {
+      "class": "Frame",
+      "method": "goto",
+      "params": {
+        "url": "http://127.0.0.1:18064/memory",
+        "waitUntil": "load"
+      },
+      "start": 605055.836,
+      "end": 614870.335,
+      "elapsed_ms": 9814.5
+    },
+    {
+      "class": "Frame",
+      "method": "getAttribute",
+      "params": {
+        "selector": "internal:role=button[name=\"操作回执／遗忘进度\"s]",
+        "strict": true,
+        "name": "aria-expanded"
+      },
+      "start": 614876.881,
+      "end": 614905.937,
+      "elapsed_ms": 29.1
+    },
+    {
+      "class": "Frame",
+      "method": "click",
+      "params": {
+        "selector": "internal:role=button[name=\"操作回执／遗忘进度\"s]",
+        "strict": true
+      },
+      "start": 614915.688,
+      "end": 614994.384,
+      "elapsed_ms": 78.7
+    },
+    {
+      "class": "Frame",
+      "method": "getAttribute",
+      "params": {
+        "selector": "internal:role=button[name=\"提炼队列\"s]",
+        "strict": true,
+        "name": "aria-expanded"
+      },
+      "start": 614996.244,
+      "end": 614999.663,
+      "elapsed_ms": 3.4
+    },
+    {
+      "class": "Frame",
+      "method": "click",
+      "params": {
+        "selector": "internal:role=button[name=\"提炼队列\"s]",
+        "strict": true
+      },
+      "start": 615011.44,
+      "end": 619413.907,
+      "elapsed_ms": 4402.5
+    },
+    {
+      "class": "Frame",
+      "method": "getAttribute",
+      "params": {
+        "selector": "internal:role=button[name=\"检索统计\"s]",
+        "strict": true,
+        "name": "aria-expanded"
+      },
+      "start": 619419.414,
+      "end": 619428.005,
+      "elapsed_ms": 8.6
+    },
+    {
+      "class": "Frame",
+      "method": "click",
+      "params": {
+        "selector": "internal:role=button[name=\"检索统计\"s]",
+        "strict": true
+      },
+      "start": 619430.737,
+      "end": 619497.217,
+      "elapsed_ms": 66.5
+    },
+    {
+      "class": "Frame",
+      "method": "getAttribute",
+      "params": {
+        "selector": "internal:role=button[name=\"Markdown 镜像\"s]",
+        "strict": true,
+        "name": "aria-expanded"
+      },
+      "start": 619501.869,
+      "end": 619509.913,
+      "elapsed_ms": 8.0
+    },
+    {
+      "class": "Frame",
+      "method": "click",
+      "params": {
+        "selector": "internal:role=button[name=\"Markdown 镜像\"s]",
+        "strict": true
+      },
+      "start": 619511.265,
+      "end": 619552.073,
+      "elapsed_ms": 40.8
+    },
+    {
+      "class": "Frame",
+      "method": "textContent",
+      "params": {
+        "selector": "internal:role=tab[selected=true]",
+        "strict": true
+      },
+      "start": 619555.082,
+      "end": 619557.867,
+      "elapsed_ms": 2.8
+    },
+    {
+      "class": "APIRequestContext",
+      "method": "fetch",
+      "params": {
+        "url": "http://127.0.0.1:18064/api/entry",
+        "method": "GET"
+      },
+      "start": 605037.556,
+      "end": 605041.178,
+      "elapsed_ms": 3.6
+    },
+    {
+      "class": "APIRequestContext",
+      "method": "fetch",
+      "params": {
+        "url": "http://127.0.0.1:18064/api/memory/commands",
+        "method": "POST",
+        "headers": [
+          {
+            "name": "x-agent-alfred-csrf",
+            "value": "<REDACTED>"
+          }
+        ],
+        "jsonData": "{\"schema_version\":1,\"operation_id\":\"seed-away\",\"kind\":\"semantic\",\"action\":\"save\",\"payload\":{\"subject\":\"away\",\"fact\":\"before\"}}"
+      },
+      "start": 605042.114,
+      "end": 605054.727,
+      "elapsed_ms": 12.6
+    }
+  ],
+  "errors": [
+    {
+      "class": "Test",
+      "method": "pw:api",
+      "params": {
+        "locator": "getByRole('tabpanel', { name: '语义记忆' }).getByRole('button', { name: '编辑', exact: true })"
+      },
+      "start": 619827.695,
+      "end": 619863.033,
+      "elapsed_ms": 35.3,
+      "error": {
+        "name": "",
+        "message": "Error: locator.click: Test timeout of 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('tabpanel', { name: '语义记忆' }).getByRole('button', { name: '编辑', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button>编辑</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n",
+        "stack": "Error: locator.click: Test timeout of 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('tabpanel', { name: '语义记忆' }).getByRole('button', { name: '编辑', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <button>编辑</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\n    at /Users/nineofour/Agent-Alfred-v06/tests/browser/memory.spec.js:1738:68"
+      }
+    }
+  ],
+  "pending_calls": [
+    {
+      "class": "Frame",
+      "method": "click",
+      "params": {
+        "selector": "internal:role=tab[name=\"语义记忆\"s]",
+        "strict": true
+      }
+    }
+  ],
+  "root_cause": "UNKNOWN",
+  "redactions": [
+    "Derived observations redact temporary fixture authentication values; required original trace remains unchanged."
+  ],
+  "prior_runs": [
+    {
+      "gate": "01-affected-browser",
+      "outcome": "PASS",
+      "test_seconds": 3.4
+    },
+    {
+      "gate": "03-browser",
+      "outcome": "PASS",
+      "test_seconds": 4.3
+    },
+    {
+      "gate": "05-browser",
+      "outcome": "FAIL",
+      "test_seconds": 15.4
+    }
+  ],
+  "hypotheses": [
+    {
+      "order": 1,
+      "claim": "Page load/render scheduling delay consumes the global budget before the recovery path starts",
+      "prediction": "With unchanged assertions, baseline and V06 both complete quickly in isolation; original network/call timings distinguish load delay from business recovery."
+    },
+    {
+      "order": 2,
+      "claim": "V06 layout increases scrolling or element-stability costs",
+      "prediction": "An unchanged isolated test is consistently slower for V06 than for original memory.js and memory.css under the same environment."
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "at": "2026-10-12T07:08:13.993114+00:00",
+  "port": 18064,
+  "pid": 78247,
+  "verified_command": "78247     1 /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -X faulthandler -B tests/browser/database_server.py --port 18064 --state /var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/alfred-memory-browser-LGAE3w --threshold 10",
+  "verified_cwd": "p78247\nfcwd\nn/Users/nineofour/Agent-Alfred-v06\n",
+  "orphan_parent": 1,
+  "child_pids": [],
+  "action": "SIGTERM to verified orphan temporary test server and its direct children",
+  "production_changes": false,
+  "scope": "Only a temporary fixture process started from Agent-Alfred-v06; no other worktree services targeted."
+}

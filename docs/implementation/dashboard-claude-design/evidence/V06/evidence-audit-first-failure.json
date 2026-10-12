@@ -1,0 +1,15 @@
+{
+  "command": [
+    "uv",
+    "run",
+    "python",
+    "-"
+  ],
+  "error": "KeyError: file",
+  "cause": "The preserved first-affected manifest predates the later manifest schema and has original_path instead of file.",
+  "repair": "Derive the filename from original_path; keep all original hashes and artifacts unchanged.",
+  "cwd": "/Users/nineofour/Agent-Alfred-v06",
+  "exit_code": 1,
+  "stdout_stderr": "Traceback (most recent call last):\n  File \"<stdin>\", line 15, in <module>\nKeyError: 'file'\n",
+  "raw_sha256": "40383499e4ca3a790edbf738b2239eceeede4767dbd37acf3cd721eb0e9c6a78"
+}

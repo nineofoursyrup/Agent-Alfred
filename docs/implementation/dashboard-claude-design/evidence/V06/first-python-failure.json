@@ -1,0 +1,16 @@
+{
+  "gate": "gates/03-pytest.json",
+  "full_result": "FAIL",
+  "passed": 6442,
+  "failed": 3,
+  "deselected": 1,
+  "warnings": 14,
+  "duration_seconds": 5098.159,
+  "failed_cases": [
+    "src/agent_alfred/evals/deterministic/test_database_lifecycle.py::test_real_forgetting_waits_for_worker_cleanup[protect]",
+    "src/agent_alfred/evals/deterministic/test_database_lifecycle.py::test_real_forgetting_waits_for_worker_cleanup[encode]",
+    "src/agent_alfred/evals/deterministic/test_database_lifecycle.py::test_real_byte_probe_cancel_and_timeout_are_not_truncation[cancel]"
+  ],
+  "root_causes": "UNKNOWN",
+  "scope": "No Python source or Python test modifications; original full-gate stdout/stderr and SHA remain in the gate JSON."
+}
