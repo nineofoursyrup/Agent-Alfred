@@ -1,0 +1,213 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: routing-statistics.spec.js >> SPEC-03 CE-05/12/13/15 legacy counts, unknown metrics and real bad-data errors
+- Location: tests/browser/routing-statistics.spec.js:263:1
+
+# Error details
+
+```
+Test timeout of 15000ms exceeded.
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - banner "导航面板" [ref=e2]:
+    - generic [ref=e3]:
+      - link "Alfred 本地助手" [ref=e4] [cursor=pointer]:
+        - /url: /overview
+        - text: Alfred
+        - generic [ref=e5]: 本地助手
+      - paragraph [ref=e6]:
+        - generic [ref=e8]: 已同步
+      - paragraph [ref=e9]: 127.0.0.1:18034
+    - navigation "主导航" [ref=e10]:
+      - paragraph [ref=e11]: 工作区
+      - link "总览" [ref=e12] [cursor=pointer]:
+        - /url: /overview
+      - link "收件箱" [ref=e13] [cursor=pointer]:
+        - /url: /inbox
+      - link "运行" [ref=e14] [cursor=pointer]:
+        - /url: /runs
+      - link "记忆" [ref=e15] [cursor=pointer]:
+        - /url: /memory
+      - paragraph [ref=e16]: Agent 配置
+      - link "模型" [ref=e17] [cursor=pointer]:
+        - /url: /models
+      - link "连接" [ref=e18] [cursor=pointer]:
+        - /url: /connections
+      - link "行为" [ref=e19] [cursor=pointer]:
+        - /url: /behaviour
+      - link "工具" [ref=e20] [cursor=pointer]:
+        - /url: /tools
+      - paragraph [ref=e21]: 诊断
+      - link "用量账本" [ref=e22] [cursor=pointer]:
+        - /url: /ops
+      - link "数据库" [ref=e23] [cursor=pointer]:
+        - /url: /database
+    - paragraph [ref=e24]: 本地优先 · 共享运行宿主
+  - main [ref=e26]:
+    - generic [ref=e27]:
+      - generic [ref=e28]:
+        - paragraph [ref=e29]: BEHAVIOUR
+        - heading "行为" [level=1] [ref=e30]
+        - paragraph [ref=e31]: 查看与配置消息分流，区分流程拓扑、路由决策与执行事实。
+      - generic "壳层状态与操作" [ref=e32]:
+        - button "打开主对话" [expanded] [ref=e33] [cursor=pointer]
+        - region "运行与连接摘要" [ref=e34]:
+          - paragraph [ref=e35]:
+            - generic [ref=e37]: 回复完成 · 已保存
+          - link "查看最近运行结果" [ref=e38] [cursor=pointer]:
+            - /url: /runs/1f645d79cf95449e84e8007e3fd77432
+    - generic [ref=e39]:
+      - region "消息分流" [ref=e40]:
+        - heading "消息分流" [level=2] [ref=e41]
+        - paragraph [ref=e42]: 持续设置 · CLI/Web 共享。默认关闭；保存后下一 Run 生效。回复进入当前会话，静默时只记用户消息，不生成助手消息或长期记忆。
+        - paragraph [ref=e43]: 已保存的分流设置：开启 · revision 1。能查看结构不代表已经启用或可以成功执行。
+        - paragraph [ref=e44]: 启用后识别纯问候、致谢及明确无需回复的消息；实际任务仍进入完整回答。
+        - generic [ref=e45]:
+          - checkbox "启用消息分流" [checked] [ref=e46]
+          - text: 启用消息分流
+        - paragraph [ref=e47]: 当前选择：开启 · 编辑基线 revision 1。
+        - generic [ref=e48]:
+          - button "保存设置" [ref=e49] [cursor=pointer]
+          - button "刷新设置" [ref=e50] [cursor=pointer]
+        - status [ref=e51]: 已保存；下一 Run 生效。
+        - region "流程拓扑" [ref=e52]:
+          - button "查看流程" [ref=e53] [cursor=pointer]
+          - status [ref=e54]: 服务已连接；结构仅在手动读取时更新。
+          - status [ref=e55]: 尚未读取；展开后读取。
+        - group [ref=e56]:
+          - generic "路由统计" [ref=e57] [cursor=pointer]:
+            - text: 路由统计
+            - status [ref=e58]: 已读取7天统计；快照 2026-10-12T06:06:16.419305+00:00。
+          - paragraph [ref=e59]: 跨会话 CLI/Web 已准入聊天 Run；按准入时刻归窗，仅启用且终态已持久保存的 Run 进入主结果。未知不代表未发生。
+          - generic [ref=e60]:
+            - text: 统计范围
+            - combobox "统计范围" [ref=e61]:
+              - option "24小时"
+              - option "7天" [selected]
+              - option "30天"
+              - option "全部"
+          - button "刷新统计" [active] [ref=e62] [cursor=pointer]
+          - generic [ref=e64]:
+            - paragraph [ref=e65]: 范围：7天 · 10/5/2026, 2:06:16 PM（含）— 10/12/2026, 2:06:16 PM（不含）
+            - paragraph [ref=e66]: 显示时区：Asia/Shanghai；判窗 UTC。快照时间：2026-10-12T06:06:16.419305+00:00；读取身份：4edd10506b874adabea5bfc28a28269f；进程：5a5c0fbb261c488eb7df7fe0c9c4b767
+            - paragraph [ref=e67]: 已准入 1 · 启用 1 · 关闭 0 · 启用未知 0
+            - paragraph [ref=e68]: 启用样本：已持久终态 1 · 尚未记录终态 0；启用状态未知的已知图前绕行 0
+            - paragraph [ref=e69]: 路由决议不代表成功。组内可能包含不同模型、工具和参数；这些数字不表示分类准确率、成功率、费用节省或因果效果。
+            - generic [ref=e70]:
+              - heading "当前版本" [level=3] [ref=e71]
+              - paragraph [ref=e72]: 统计口径：routing-statistics-1；路由策略：message-routing-1
+              - paragraph [ref=e73]: 终态 1 · 已知决议 1 · 明确未形成决议 0 · 未知决议 0；决议覆盖 1/1 · 100%
+              - list "路由决议比例" [ref=e74]:
+                - listitem [ref=e75]:
+                  - text: 快速回复：1 次；1/1 · 100%
+                  - progressbar "快速回复：1 次；1/1 · 100%" [ref=e76]
+                - listitem [ref=e77]:
+                  - text: 完整回答：0 次；0/1 · 0%
+                  - progressbar "完整回答：0 次；0/1 · 0%" [ref=e78]
+                - listitem [ref=e79]:
+                  - text: 图内保守兜底：0 次；0/1 · 0%
+                  - progressbar "图内保守兜底：0 次；0/1 · 0%" [ref=e80]
+                - listitem [ref=e81]:
+                  - text: 不回复：0 次；0/1 · 0%
+                  - progressbar "不回复：0 次；0/1 · 0%" [ref=e82]
+                - listitem [ref=e83]:
+                  - text: 上下文失败提示：0 次；0/1 · 0%
+                  - progressbar "上下文失败提示：0 次；0/1 · 0%" [ref=e84]
+              - region "路由决议完整数表" [ref=e85]:
+                - table [ref=e86]:
+                  - row [ref=e87]:
+                    - columnheader "路由决议" [ref=e88]
+                    - columnheader "次数" [ref=e89]
+                    - columnheader "分支比例（分母为已知决议）" [ref=e90]
+                  - row [ref=e91]:
+                    - rowheader "快速回复" [ref=e92]
+                    - cell "1" [ref=e93]
+                    - cell "1/1 · 100%" [ref=e94]
+                  - row [ref=e95]:
+                    - rowheader "完整回答" [ref=e96]
+                    - cell "0" [ref=e97]
+                    - cell "0/1 · 0%" [ref=e98]
+                  - row [ref=e99]:
+                    - rowheader "图内保守兜底" [ref=e100]
+                    - cell "0" [ref=e101]
+                    - cell "0/1 · 0%" [ref=e102]
+                  - row [ref=e103]:
+                    - rowheader "不回复" [ref=e104]
+                    - cell "0" [ref=e105]
+                    - cell "0/1 · 0%" [ref=e106]
+                  - row [ref=e107]:
+                    - rowheader "上下文失败提示" [ref=e108]
+                    - cell "0" [ref=e109]
+                    - cell "0/1 · 0%" [ref=e110]
+              - paragraph [ref=e111]: 图后故障回退：发生 0 · 已知未发生 1 · 未知 0；发生率 0/1 · 0%；覆盖 1/1 · 100%
+              - paragraph [ref=e112]: 上下文恢复：发生 0 · 已知未发生 1 · 未知 0；发生率 0/1 · 0%；覆盖 1/1 · 100%
+              - paragraph [ref=e113]: 图前绕行：0 · 未知 0
+              - paragraph [ref=e114]: 被阻止的回退：0
+      - region "手动聚合" [ref=e115]:
+        - heading "手动聚合" [level=2] [ref=e116]
+        - paragraph [ref=e117]: 单次动作 · 显式生成时固定目标会话与所选来源，草稿进入目标会话。草稿不自动进入工作窗口、后续聚合或提炼；再次生成会创建新运行。
+        - generic [ref=e118]:
+          - text: 目标会话
+          - combobox "目标会话" [ref=e119]:
+            - option "请选择目标会话" [selected]
+        - generic [ref=e120]:
+          - text: 聚合目标
+          - textbox "聚合目标" [ref=e121]
+        - generic [ref=e122]:
+          - text: 聚合关键词
+          - textbox "聚合关键词" [ref=e123]
+        - group "本次资料来源" [ref=e124]:
+          - generic [ref=e126]:
+            - checkbox "语义记忆" [checked] [ref=e127]
+            - text: 语义记忆
+          - generic [ref=e128]:
+            - checkbox "情景记忆" [checked] [ref=e129]
+            - text: 情景记忆
+          - generic [ref=e130]:
+            - checkbox "会话窗口" [checked] [ref=e131]
+            - text: 会话窗口
+        - paragraph [ref=e132]: 未选择的来源不会读取；全不选来源仍可提交，将记录无动作。关键词仅用于所选记忆来源。
+        - generic [ref=e133]:
+          - button "生成聚合草稿" [ref=e134] [cursor=pointer]
+          - button "刷新会话" [ref=e135] [cursor=pointer]
+        - paragraph [ref=e136]: 表单没有新增的未提交修改。
+        - status [ref=e137]: 本次读取 0 个会话。刷新列表不会改变已提交目标。
+        - status [ref=e138]: 尚未提交聚合请求。
+        - region "流程拓扑" [ref=e140]:
+          - button "查看流程" [ref=e141] [cursor=pointer]
+          - status [ref=e142]: 服务已连接；结构仅在手动读取时更新。
+          - status [ref=e143]: 尚未读取；展开后读取。
+  - region "MainBar" [ref=e144]:
+    - generic [ref=e145]:
+      - heading "主对话" [level=2] [ref=e146]
+      - generic [ref=e147]: 已同步
+      - button "收起主对话" [ref=e150] [cursor=pointer]
+    - generic [ref=e151]:
+      - generic [ref=e152]: 会话
+      - button "新建会话" [ref=e153] [cursor=pointer]
+    - region "主对话" [ref=e154]:
+      - article [ref=e156]:
+        - paragraph [ref=e157]: 你好
+        - paragraph [ref=e158]: 你好！
+        - generic [ref=e159]: 已保存
+        - link "查看运行" [ref=e160] [cursor=pointer]:
+          - /url: /runs/1f645d79cf95449e84e8007e3fd77432
+    - generic [ref=e161]:
+      - generic [ref=e162]: 消息
+      - textbox "消息" [ref=e163]:
+        - /placeholder: 写下消息；/skills 指定流程…
+      - button "发送" [disabled] [ref=e164]
+    - paragraph [ref=e165]: Enter 发送 · Shift+Enter 换行
+  - status [ref=e166]: 就绪
+  - alert [ref=e167]
+```

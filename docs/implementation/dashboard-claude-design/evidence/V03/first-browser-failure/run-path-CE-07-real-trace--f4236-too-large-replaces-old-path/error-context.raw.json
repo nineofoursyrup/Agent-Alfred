@@ -1,0 +1,5 @@
+{
+  "original_filename": "error-context.md",
+  "sha256": "53d8a75abbef85a7b2c8626645db0bf5364f6b22485780d54bdc72cc2f15f643",
+  "text": "# Instructions\n\n- Following Playwright test failed.\n- Explain why, be concise, respect Playwright best practices.\n- Provide a snippet of code with the fix, if possible.\n\n# Test info\n\n- Name: run-path.spec.js >> CE-07 real trace refresh too_large replaces old path\n- Location: tests/browser/run-path.spec.js:475:90\n\n# Error details\n\n```\nTest timeout of 15000ms exceeded.\n```"
+}
