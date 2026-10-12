@@ -1,0 +1,15 @@
+{
+  "orphan_pid": 41028,
+  "orphan_parent_pid": 1,
+  "cwd": "/Users/nineofour/Agent-Alfred-v12",
+  "reserved_port": 18124,
+  "evidence": "Later fixture startup fails with OSError: [Errno 48] Address already in use",
+  "processes": [
+    {
+      "pid": 41028,
+      "ppid": 1,
+      "command": "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -X faulthandler -B tests/browser/database_server.py --port 18124 --state /var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/alfred-memory-browser-YEsbEX --threshold 10"
+    }
+  ],
+  "resolution": "Interrupted polluted browser run; test runner cleanup reaped the orphan before explicit TERM. TERM reported no such process; lsof confirmed reserved ports 18120-18129 have no listeners."
+}

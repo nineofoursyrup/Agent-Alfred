@@ -1,0 +1,7 @@
+{
+  "original_file": "error-context.md",
+  "original_sha256": "202c3c79ec4fb049470a6dac555170f783a6efdafc031ecc6ba1fa90e14bd2a7",
+  "original_utf8": "# Instructions\n\n- Following Playwright test failed.\n- Explain why, be concise, respect Playwright best practices.\n- Provide a snippet of code with the fix, if possible.\n\n# Test info\n\n- Name: database_lifecycle.spec.js >> AC-25: real close cancels an actual worker and releases all owners\n- Location: tests/browser/database_lifecycle.spec.js:7:3\n\n# Error details\n\n```\nTest timeout of 15000ms exceeded.\n```",
+  "readable_markdown_sha256": "a73c37fb15334b1840a376629f5f8522bfb0819016b2d86e0bc904d36c79e7a0",
+  "normalization": "Readable Markdown removes trailing whitespace; original UTF-8 string restores exact bytes."
+}

@@ -1,0 +1,7 @@
+{
+  "original_file": "error-context.md",
+  "original_sha256": "972cb79ca46dac73c928ee6539a60e527dfeae1a932338574fcce22e3d91360e",
+  "original_utf8": "# Instructions\n\n- Following Playwright test failed.\n- Explain why, be concise, respect Playwright best practices.\n- Provide a snippet of code with the fix, if possible.\n\n# Test info\n\n- Name: routing.spec.js >> CE-09/10: failed recording keeps no-reply projection and rejects next Run\n- Location: tests/browser/routing.spec.js:88:1\n\n# Error details\n\n```\nTest timeout of 15000ms exceeded.\n```",
+  "readable_markdown_sha256": "46a0d8ce81fc6312135da87b6c6a23c5b75c93f77f9c02752108f49f1c359022",
+  "normalization": "Readable Markdown removes trailing whitespace; original UTF-8 string restores exact bytes."
+}
