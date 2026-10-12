@@ -1,0 +1,12 @@
+{
+  "candidate": "8828d13347d6cbe626bc6f8b37e686b7fe06e272",
+  "exit_code": 2,
+  "elapsed_seconds": 4094.76,
+  "status": "INTERRUPTED",
+  "reason": "A proven Inbox CSS repair required a new candidate; prior full Python run was stopped before changing tracked files.",
+  "observed_summary": "1 failed, 2460 passed, 1 deselected; KeyboardInterrupt",
+  "first_failure": "test_real_byte_probe_cancel_and_timeout_are_not_truncation[cancel]",
+  "first_failure_assertion": "cancelled[cleanup] was failed, expected released",
+  "failure_preceded_interruption": true,
+  "original_case_rerun": "04-pytest-first-failure.json"
+}

@@ -1,0 +1,118 @@
+{
+  "tested_head": "b80ad60abd566b19cb667f42b2b0fd6e00e6e382",
+  "source_files_unchanged_since_gates": true,
+  "checks": [
+    {
+      "command": [
+        "uv",
+        "run",
+        "ruff",
+        "check"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.19,
+      "head": "b80ad60abd566b19cb667f42b2b0fd6e00e6e382",
+      "input_manifest_sha256": "74c78ed88d1240b8feaf6d933d4090a27e381b3f0c66b01e754135d579ba5d19",
+      "label": "01-ruff-r2"
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check_skills.py"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.15,
+      "head": "b80ad60abd566b19cb667f42b2b0fd6e00e6e382",
+      "input_manifest_sha256": "74c78ed88d1240b8feaf6d933d4090a27e381b3f0c66b01e754135d579ba5d19",
+      "label": "02-skills-r2"
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check_env_example.py"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 3.86,
+      "head": "b80ad60abd566b19cb667f42b2b0fd6e00e6e382",
+      "input_manifest_sha256": "74c78ed88d1240b8feaf6d933d4090a27e381b3f0c66b01e754135d579ba5d19",
+      "label": "03-env-r2"
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "--extra",
+        "mcp",
+        "pytest"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 2924.75,
+      "head": "b80ad60abd566b19cb667f42b2b0fd6e00e6e382",
+      "input_manifest_sha256": "74c78ed88d1240b8feaf6d933d4090a27e381b3f0c66b01e754135d579ba5d19",
+      "label": "04-pytest-r2"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.12,
+      "head": "b80ad60abd566b19cb667f42b2b0fd6e00e6e382",
+      "input_manifest_sha256": "74c78ed88d1240b8feaf6d933d4090a27e381b3f0c66b01e754135d579ba5d19",
+      "label": "05-typecheck-r2"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "test:browser"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 882.95,
+      "head": "b80ad60abd566b19cb667f42b2b0fd6e00e6e382",
+      "input_manifest_sha256": "74c78ed88d1240b8feaf6d933d4090a27e381b3f0c66b01e754135d579ba5d19",
+      "label": "06-browser-r2"
+    },
+    {
+      "command": [
+        "zsh",
+        "-c",
+        "git diff --check && git diff --check origin/main...HEAD"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.24,
+      "head": "b80ad60abd566b19cb667f42b2b0fd6e00e6e382",
+      "input_manifest_sha256": "74c78ed88d1240b8feaf6d933d4090a27e381b3f0c66b01e754135d579ba5d19",
+      "label": "07-diff-r2"
+    },
+    {
+      "command": [
+        "zsh",
+        "-c",
+        "uv build && uv run python scripts/check_mcp_installations.py --output .scratch/v11/mcp-artifacts.json"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 29.79,
+      "head": "b80ad60abd566b19cb667f42b2b0fd6e00e6e382",
+      "input_manifest_sha256": "74c78ed88d1240b8feaf6d933d4090a27e381b3f0c66b01e754135d579ba5d19",
+      "label": "08-install-r2"
+    }
+  ],
+  "evidence_closeout_diff": {
+    "command": [
+      "zsh",
+      "-c",
+      "git diff --check && git diff --check origin/main...HEAD"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.26,
+    "head": "8acb3b3cc14ddb7a7c243e1b438fa172cef19c61",
+    "input_manifest_sha256": "74c78ed88d1240b8feaf6d933d4090a27e381b3f0c66b01e754135d579ba5d19"
+  }
+}

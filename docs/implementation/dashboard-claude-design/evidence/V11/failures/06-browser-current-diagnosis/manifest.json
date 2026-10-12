@@ -1,0 +1,16 @@
+{
+  "session-create-race-a-dela-9c126-trols-reachable-at-1440x360/test-failed-1.png": {
+    "bytes": 62689,
+    "sha256": "d10acfd03e3919e6caf0c53f05f4af5cf78d1a20be4aab6f82f0eab68caca2c5"
+  },
+  "session-create-race-a-dela-9c126-trols-reachable-at-1440x360/trace.zip": {
+    "bytes": 1811219,
+    "sha256": "402e6b00b07f41413df67b7826f232826f88d9f8a0220db2cfe28661780b311a"
+  },
+  "session-create-race-a-dela-9c126-trols-reachable-at-1440x360/error-context.md": {
+    "bytes": 14418,
+    "sha256": "b7f261f8888da3a08ee43261dac0eaf471dfff4df7490df87b797f7f71f7e988",
+    "archived_as": "session-create-race-a-dela-9c126-trols-reachable-at-1440x360/error-context.md.json",
+    "representation": "lossless UTF-8 text in JSON"
+  }
+}
