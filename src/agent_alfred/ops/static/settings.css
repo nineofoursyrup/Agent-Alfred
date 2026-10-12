@@ -6,7 +6,7 @@
 }
 .settings-page section,.settings-page article,.settings-page details {min-width:0}
 .settings-page p {margin:0}
-.settings-page p:empty {display:none}
+.settings-page p:empty:not([role=status]) {display:none}
 .settings-page .settings-toolbar {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--gap-small);min-width:0}
 .settings-page .settings-toolbar p {flex:1 1 var(--settings-item-min);font:400 var(--font-size-meta)/1.5 var(--font-mono);color:var(--tertiary)}
 .settings-page .settings-catalog {display:grid;gap:var(--gap-medium);min-width:0}
@@ -35,7 +35,7 @@
 .settings-page .setting-field [role=status] {font:400 var(--font-size-meta)/1.5 var(--font-mono);color:var(--attention)}
 .settings-page .setting-field p,.settings-page .setting-field button {grid-column:1/-1}
 .settings-page .setting-field button {justify-self:start}
-.settings-page .setting-field>.sy-button-accent {grid-column:2;grid-row:1;align-self:end}
+.settings-page .setting-field>.setting-save {grid-column:2;grid-row:1;align-self:end}
 .settings-page .model-probe {display:grid;gap:var(--settings-half-gap);border-top:var(--settings-rule) solid var(--panel-divider);margin-top:var(--gap-small);padding-top:var(--gap-small)}
 .settings-page h4 {margin:0;font:600 var(--font-size-meta-large)/1.45 var(--font-mono);color:var(--secondary)}
 .settings-page .model-probe p {font:400 var(--font-size-meta)/1.5 var(--font-mono);color:var(--muted)}
