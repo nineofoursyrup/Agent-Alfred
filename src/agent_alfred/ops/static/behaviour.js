@@ -19,6 +19,22 @@ function validSettings(state) {
     && (state.status === 'ok' || Object.hasOwn(settingsReasons,state.status));
 }
 
+/** Keep existing headings and controls while applying the shared panel recipe.
+ * @param {HTMLElement} section @param {string} [tone]
+ */
+function panelBody(section, tone='') {
+  const [title, description, ...contents] = [...section.children];
+  section.classList.add('sy-panel');
+  title.classList.add('sy-panel-eyebrow');
+  if (tone) title.classList.add(tone);
+  description.classList.add('sy-panel-description');
+  const header = node('header'); header.className = 'sy-panel-header';
+  const heading = node('div'); heading.append(title,description); header.append(heading);
+  const body = node('div'); body.className = 'sy-panel-body'; body.append(...contents);
+  section.replaceChildren(header,body);
+  return body;
+}
+
 /** Behaviour owns each draft and observation; the shell owns navigation and Host facts.
  * @param {HTMLElement} root @param {()=>string} csrf @param {()=>Wire} runtime
  * @param {import('./memory.js').MemorySync} memory @param {()=>string} instance
@@ -54,9 +70,15 @@ export function behaviourPage(root, csrf, runtime, memory, instance) {
   const actions = node('div'); actions.className = 'behaviour-actions'; actions.append(save,refresh,rebase,recover);
   routing.append(actual,node('p','启用后识别纯问候、致谢及明确无需回复的消息；实际任务仍进入完整回答。'),label,choiceState,actions,reading,receipt);
   root.append(routing);
+  const routingBody = panelBody(routing,'sy-tone-attention');
+  const settings = node('div'); settings.className = 'behaviour-settings';
+  settings.append(node('h3','分流设置'),...routingBody.children);
+  const support = node('div'); support.className = 'behaviour-support'; support.append(settings);
   const aggregation = aggregationForm(root,csrf,pageRuntime,memory);
-  const views = [topologyView(routing,'message_routing',pageRuntime,memory),topologyView(aggregation,'manual_aggregation',pageRuntime,memory)];
-  const statistics = routingStatistics(routing,instance);
+  const aggregationBody = panelBody(aggregation);
+  const views = [topologyView(routingBody,'message_routing',pageRuntime,memory),topologyView(aggregationBody,'manual_aggregation',pageRuntime,memory)];
+  const statistics = routingStatistics(support,instance);
+  routingBody.append(support);
 
   function cancelRead() {readSequence++; readController?.abort(); readController = null;}
   function dirty() {return submittedChoice === null ? drafts.dirty() : enabled.checked !== submittedChoice;}

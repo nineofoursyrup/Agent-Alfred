@@ -1,0 +1,63 @@
+{
+  "navigationName": "Graph\non",
+  "referenceView": "graph",
+  "browser": "155.0.8059.39",
+  "responses": [
+    {
+      "url": "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+      "status": 200
+    },
+    {
+      "url": "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
+      "status": 200
+    }
+  ],
+  "failed": [],
+  "errors": [],
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 900,
+      "dpr": 1,
+      "main": 886,
+      "body": [
+        1440,
+        1440
+      ],
+      "navigation": 233
+    },
+    {
+      "width": 1280,
+      "height": 800,
+      "dpr": 1,
+      "main": 726,
+      "body": [
+        1280,
+        1280
+      ],
+      "navigation": 233
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "dpr": 1,
+      "main": 0,
+      "body": [
+        390,
+        390
+      ],
+      "navigation": 191
+    },
+    {
+      "width": 320,
+      "height": 800,
+      "dpr": 1,
+      "main": 0,
+      "body": [
+        320,
+        320
+      ],
+      "navigation": 191
+    }
+  ]
+}
