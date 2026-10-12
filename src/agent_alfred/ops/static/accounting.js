@@ -35,7 +35,7 @@ function table(title, headings,kind='') {
   const element=node('table'),caption=node('caption',title),head=node('thead'),row=node('tr'),body=node('tbody');
   if(kind==='ops-runs'){
     // Explicit roles preserve the native table when its rows use flex layout.
-    element.setAttribute('role','table');head.setAttribute('role','rowgroup');body.setAttribute('role','rowgroup');row.setAttribute('role','row');
+    element.setAttribute('role','table');element.setAttribute('aria-label',title);head.setAttribute('role','rowgroup');body.setAttribute('role','rowgroup');row.setAttribute('role','row');
     caption.className='sy-list-header';
   }
   for(const [index,text] of headings.entries()){
