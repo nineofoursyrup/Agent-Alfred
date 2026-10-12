@@ -48,7 +48,7 @@
       "gate": "diff-check",
       "result": "PASS",
       "count": "2/0",
-      "seconds": 0.21800000000000003
+      "seconds": 0.307
     },
     {
       "gate": "build+installation",
