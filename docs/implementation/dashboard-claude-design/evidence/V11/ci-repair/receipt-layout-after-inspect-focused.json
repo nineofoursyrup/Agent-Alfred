@@ -1,0 +1,285 @@
+{
+  "ancestors": [
+    {
+      "tag": "A",
+      "id": "",
+      "class": "",
+      "rect": {
+        "x": 531,
+        "y": 42.609375,
+        "width": 77,
+        "height": 13,
+        "top": 42.609375,
+        "bottom": 55.609375
+      },
+      "scrollTop": 0,
+      "scrollHeight": 0,
+      "clientHeight": 0,
+      "overflow": "visible",
+      "overflowY": "visible",
+      "display": "inline",
+      "position": "static",
+      "lineHeight": "17.6px",
+      "padding": "0px",
+      "margin": "0px",
+      "border": "0px none rgb(124, 138, 236)"
+    },
+    {
+      "tag": "SECTION",
+      "id": "",
+      "class": "",
+      "rect": {
+        "x": 428.5,
+        "y": -20.171875,
+        "width": 346.171875,
+        "height": 85.71875,
+        "top": -20.171875,
+        "bottom": 65.546875
+      },
+      "scrollTop": 0,
+      "scrollHeight": 86,
+      "clientHeight": 86,
+      "overflow": "visible",
+      "overflowY": "visible",
+      "display": "block",
+      "position": "static",
+      "lineHeight": "17.6px",
+      "padding": "0px",
+      "margin": "0px",
+      "border": "0px none rgb(169, 168, 179)"
+    },
+    {
+      "tag": "SECTION",
+      "id": "shell-status",
+      "class": "",
+      "rect": {
+        "x": 347.5,
+        "y": 17.828125,
+        "width": 427.171875,
+        "height": 48,
+        "top": 17.828125,
+        "bottom": 65.828125
+      },
+      "scrollTop": 38,
+      "scrollHeight": 86,
+      "clientHeight": 48,
+      "overflow": "auto",
+      "overflowY": "auto",
+      "display": "flex",
+      "position": "static",
+      "lineHeight": "17.6px",
+      "padding": "0px",
+      "margin": "0px",
+      "border": "0px none rgb(169, 168, 179)"
+    },
+    {
+      "tag": "DIV",
+      "id": "shell-toolbar",
+      "class": "",
+      "rect": {
+        "x": 260,
+        "y": 17.828125,
+        "width": 514.671875,
+        "height": 48,
+        "top": 17.828125,
+        "bottom": 65.828125
+      },
+      "scrollTop": 0,
+      "scrollHeight": 48,
+      "clientHeight": 48,
+      "overflow": "visible",
+      "overflowY": "visible",
+      "display": "flex",
+      "position": "static",
+      "lineHeight": "20.8px",
+      "padding": "0px",
+      "margin": "0px",
+      "border": "0px none rgb(236, 236, 234)"
+    },
+    {
+      "tag": "HEADER",
+      "id": "page-header",
+      "class": "",
+      "rect": {
+        "x": 232,
+        "y": -99,
+        "width": 879,
+        "height": 183.828125,
+        "top": -99,
+        "bottom": 84.828125
+      },
+      "scrollTop": 0,
+      "scrollHeight": 183,
+      "clientHeight": 183,
+      "overflow": "visible",
+      "overflowY": "visible",
+      "display": "flex",
+      "position": "static",
+      "lineHeight": "20.8px",
+      "padding": "24px 28px 18px",
+      "margin": "-28px -28px 20px",
+      "border": ""
+    },
+    {
+      "tag": "MAIN",
+      "id": "page",
+      "class": "",
+      "rect": {
+        "x": 232,
+        "y": 0,
+        "width": 888,
+        "height": 360,
+        "top": 0,
+        "bottom": 360
+      },
+      "scrollTop": 99,
+      "scrollHeight": 459,
+      "clientHeight": 360,
+      "overflow": "auto",
+      "overflowY": "auto",
+      "display": "block",
+      "position": "static",
+      "lineHeight": "20.8px",
+      "padding": "28px",
+      "margin": "0px",
+      "border": "0px none rgb(236, 236, 234)"
+    },
+    {
+      "tag": "DIV",
+      "id": "workspace",
+      "class": "",
+      "rect": {
+        "x": 232,
+        "y": 0,
+        "width": 888,
+        "height": 360,
+        "top": 0,
+        "bottom": 360
+      },
+      "scrollTop": 0,
+      "scrollHeight": 360,
+      "clientHeight": 360,
+      "overflow": "visible",
+      "overflowY": "visible",
+      "display": "flex",
+      "position": "static",
+      "lineHeight": "20.8px",
+      "padding": "0px",
+      "margin": "0px",
+      "border": "0px none rgb(236, 236, 234)"
+    },
+    {
+      "tag": "BODY",
+      "id": "",
+      "class": "chat-open",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 360,
+        "top": 0,
+        "bottom": 360
+      },
+      "scrollTop": 0,
+      "scrollHeight": 360,
+      "clientHeight": 360,
+      "overflow": "hidden",
+      "overflowY": "hidden",
+      "display": "grid",
+      "position": "static",
+      "lineHeight": "20.8px",
+      "padding": "0px",
+      "margin": "0px",
+      "border": "0px none rgb(236, 236, 234)"
+    },
+    {
+      "tag": "HTML",
+      "id": "",
+      "class": "",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 1440,
+        "height": 360,
+        "top": 0,
+        "bottom": 360
+      },
+      "scrollTop": 0,
+      "scrollHeight": 360,
+      "clientHeight": 360,
+      "overflow": "visible",
+      "overflowY": "visible",
+      "display": "block",
+      "position": "static",
+      "lineHeight": "20.8px",
+      "padding": "0px",
+      "margin": "0px",
+      "border": "0px none rgb(236, 236, 234)"
+    }
+  ],
+  "root": 360,
+  "viewport": 360,
+  "active": "<a href=\"/inbox?session_id=871a8114227f4dc89329e35c32a2acc6&amp;view=messages\">查看已创建会话</a>",
+  "inbox": {
+    "x": 260,
+    "y": 104.828125,
+    "width": 823,
+    "height": 227.3125,
+    "top": 104.828125,
+    "right": 1083,
+    "bottom": 332.140625,
+    "left": 260
+  },
+  "bodyScroll": 0,
+  "intersectionRatio": 1,
+  "controls": [
+    {
+      "class": "sy-list-header",
+      "rect": {
+        "x": 261,
+        "y": 121.828125,
+        "width": 821,
+        "height": 36.640625,
+        "top": 121.828125,
+        "right": 1082,
+        "bottom": 158.46875,
+        "left": 261
+      },
+      "padding": "11px 16px"
+    },
+    {
+      "class": "inbox-actions sy-panel-body",
+      "rect": {
+        "x": 261,
+        "y": 158.46875,
+        "width": 821,
+        "height": 55.9375,
+        "top": 158.46875,
+        "right": 1082,
+        "bottom": 214.40625,
+        "left": 261
+      },
+      "padding": "11px 16px"
+    },
+    {
+      "class": "inbox-read-controls sy-panel-body",
+      "rect": {
+        "x": 261,
+        "y": 259.203125,
+        "width": 821,
+        "height": 55.9375,
+        "top": 259.203125,
+        "right": 1082,
+        "bottom": 315.140625,
+        "left": 261
+      },
+      "padding": "11px 16px"
+    }
+  ],
+  "connected": true,
+  "streamStates": [
+    2,
+    1
+  ],
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.12 Safari/537.36"
+}

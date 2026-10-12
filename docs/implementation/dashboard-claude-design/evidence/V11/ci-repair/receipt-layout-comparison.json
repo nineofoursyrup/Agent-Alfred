@@ -1,0 +1,83 @@
+{
+  "viewport": {
+    "width": 1440,
+    "height": 360
+  },
+  "clock": "2026-10-12T01:15:00Z",
+  "service": "tests/browser/overview_server.py",
+  "measurement_script": "scripts/layout.spec.js",
+  "measurements": {
+    "main": {
+      "inspect-focused": {
+        "scrollHeight": 471,
+        "scrollTop": 111,
+        "action_top": 30.609375,
+        "intersectionRatio": 1,
+        "connected": true,
+        "streamStates": [
+          2,
+          1
+        ]
+      },
+      "open-focused": {
+        "scrollHeight": 471,
+        "scrollTop": 111,
+        "action_top": 20.609375,
+        "intersectionRatio": 1,
+        "connected": true,
+        "streamStates": [
+          2,
+          1
+        ]
+      }
+    },
+    "before": {
+      "inspect-focused": {
+        "scrollHeight": 483,
+        "scrollTop": 123,
+        "action_top": 18.609375,
+        "intersectionRatio": 1,
+        "connected": true,
+        "streamStates": [
+          2,
+          1
+        ]
+      },
+      "open-focused": {
+        "scrollHeight": 483,
+        "scrollTop": 123,
+        "action_top": 8.609375,
+        "intersectionRatio": 1,
+        "connected": true,
+        "streamStates": [
+          2,
+          1
+        ]
+      }
+    },
+    "after": {
+      "inspect-focused": {
+        "scrollHeight": 459,
+        "scrollTop": 99,
+        "action_top": 42.609375,
+        "intersectionRatio": 1,
+        "connected": true,
+        "streamStates": [
+          2,
+          1
+        ]
+      },
+      "open-focused": {
+        "scrollHeight": 459,
+        "scrollTop": 99,
+        "action_top": 32.609375,
+        "intersectionRatio": 1,
+        "connected": true,
+        "streamStates": [
+          2,
+          1
+        ]
+      }
+    }
+  }
+}

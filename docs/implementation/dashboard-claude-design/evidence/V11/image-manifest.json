@@ -1,15 +1,15 @@
 {
   "inbox-320x800.png": {
-    "sha256": "e336f65e29853e01d06f70cd5b5f2524a8afd2b3f3fe9ad3b7d229c535e22f00",
+    "sha256": "536f69957e7d592251859c18909873a9e6be331c6e19dec3a23df0cbcdd67923",
     "width": 320,
     "height": 800,
-    "bytes": 58273
+    "bytes": 56332
   },
   "inbox-preview-320x800.png": {
-    "sha256": "5949df74a37b1400130b5984d1653960f8dfcbce8cd1affd4e551cee14f432c7",
+    "sha256": "0e1b71cdc9c051f622ff0a309fe6593c1ea37ff1518d3bba4e8aa9ca673f1ee0",
     "width": 320,
     "height": 800,
-    "bytes": 55640
+    "bytes": 55634
   },
   "runs-before-1440x900.png": {
     "sha256": "d84cf55a89b7efb58bbab6bbad5ab15ae80e1147f2cb09078a4a41572956a2e0",
@@ -30,16 +30,16 @@
     "bytes": 183384
   },
   "inbox-1280x800.png": {
-    "sha256": "4916e377bd0aa502e7d34857749d12da29d813520bbdae483ef98363c123c84d",
+    "sha256": "fb66fedde8264c9336c52a344c2dda435757c488c9d215164ec37fc1cc058e91",
     "width": 1280,
     "height": 800,
-    "bytes": 161761
+    "bytes": 171040
   },
   "inbox-1440x900.png": {
-    "sha256": "96a25c2da9d52e1841e7f0bb1155cbefdb1b4ae07788fe3e830ccf8d1213e3d7",
+    "sha256": "e2586c05924db1a8fdd212612ab6846078054d2cec0798db98a08d50dec69be2",
     "width": 1440,
     "height": 900,
-    "bytes": 166691
+    "bytes": 167239
   },
   "reference-loop-390x844.png": {
     "sha256": "f6ff83e62ce40a0c38b46f67960d004dcb7e0c952374a4a9608737bf9ae42ab7",
@@ -48,10 +48,10 @@
     "bytes": 51241
   },
   "inbox-runs-1280x800.png": {
-    "sha256": "420b3f6aa64a8e85da11611359c768886ec265a2d942b43a2cbd4cac6db23500",
+    "sha256": "ba8e18013c67a69b18ef5ef9267378a04450196300dee264df1a7f10d1412535",
     "width": 1280,
     "height": 800,
-    "bytes": 164703
+    "bytes": 166824
   },
   "runs-390x844.png": {
     "sha256": "b09a6e99ca87a28e255919a8f72254fa79bb0b90db561f65c575dc6df7b4c9e2",
@@ -60,10 +60,10 @@
     "bytes": 79499
   },
   "inbox-runs-1440x900.png": {
-    "sha256": "27f61a7e8ebf6a36beb4ff53a87a7067c51a7ac76bff421d722177c76bb54780",
+    "sha256": "706f972e3d7d71ab96ca9b481245c0725e18c7d88c86dff93fb61f86c6472792",
     "width": 1440,
     "height": 900,
-    "bytes": 182422
+    "bytes": 193641
   },
   "runs-1440x900.png": {
     "sha256": "d84cf55a89b7efb58bbab6bbad5ab15ae80e1147f2cb09078a4a41572956a2e0",
@@ -78,16 +78,16 @@
     "bytes": 183384
   },
   "inbox-runs-320x800.png": {
-    "sha256": "8b09582b2fb62e960bbb377cd6416eb39d67b177dfd50a6dd23c509644ad974e",
+    "sha256": "8d365235be83d7837766de465b3a32ce007447c3a9714a67c39897563eac884b",
     "width": 320,
     "height": 800,
-    "bytes": 53250
+    "bytes": 54381
   },
   "inbox-preview-1440x900.png": {
-    "sha256": "ee2915a9fac8cc6a4a22cc9d0fb024d3d927d5978dbd8bd510ee18476bcff423",
+    "sha256": "94e8dd6e52a4f14ad50c06fd1055bd0d40a2831b0dd147c2b7cb1f7ebcd92a21",
     "width": 1440,
     "height": 900,
-    "bytes": 184821
+    "bytes": 184299
   },
   "runs-before-320x800.png": {
     "sha256": "6b13f3f1bed0cfc6392fbfe0ba5a119a5ac40e8725d6aa5796b6a8fba679a7ff",
@@ -96,28 +96,28 @@
     "bytes": 64078
   },
   "inbox-preview-1280x800.png": {
-    "sha256": "18e9c6dc2566eedac84e27896b30ad639697b41b26ff6255b09ce8f0b3c2b934",
+    "sha256": "bae6e14a888202a366788a08b9b93e3e8444ec5c66495eb4daa381348ee0dc6c",
     "width": 1280,
     "height": 800,
-    "bytes": 168161
+    "bytes": 162402
   },
   "inbox-preview-390x844.png": {
-    "sha256": "8e6a128c3adbc6c2322cb4d6e94479dd2746c71e1aa1d2fcc857728857b8addb",
+    "sha256": "63be33bd0fbe48a8d4b88bf5a6ed2fd5006975de6d893005fe8e8048f5dfdc90",
     "width": 390,
     "height": 844,
-    "bytes": 59802
+    "bytes": 59707
   },
   "inbox-390x844.png": {
-    "sha256": "d58faad864d98e81b087440639a8f7f7068bba01d74e732277eb122f027f6e1f",
+    "sha256": "e8f91ac6e6cbdd4b1477ef4048aea71a14d13e56c975d7503277ea339085196e",
     "width": 390,
     "height": 844,
-    "bytes": 63237
+    "bytes": 63451
   },
   "inbox-runs-390x844.png": {
-    "sha256": "7af48f0cbaa85f4e10ba24307d6ca3c443955e00c225808094ca138771d812ae",
+    "sha256": "a08754e53351434941b95a766bc8b041e729bfba203fb45baa357ef04eb3bdb5",
     "width": 390,
     "height": 844,
-    "bytes": 57478
+    "bytes": 57769
   },
   "runs-320x800.png": {
     "sha256": "6b13f3f1bed0cfc6392fbfe0ba5a119a5ac40e8725d6aa5796b6a8fba679a7ff",

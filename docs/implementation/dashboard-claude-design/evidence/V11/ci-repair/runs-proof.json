@@ -1,0 +1,39 @@
+{
+  "clock": "2026-10-12T01:15:00Z",
+  "server": "tests/browser/server.py",
+  "reduced_motion": "reduce",
+  "results": [
+    {
+      "width": 1440,
+      "height": 900,
+      "same_accessibility": true,
+      "png_bytes_equal": true,
+      "before_sha256": "d84cf55a89b7efb58bbab6bbad5ab15ae80e1147f2cb09078a4a41572956a2e0",
+      "after_sha256": "d84cf55a89b7efb58bbab6bbad5ab15ae80e1147f2cb09078a4a41572956a2e0"
+    },
+    {
+      "width": 1280,
+      "height": 800,
+      "same_accessibility": true,
+      "png_bytes_equal": true,
+      "before_sha256": "274e669a8931cc68883377a01dedc1301b7611f765a971e2319d473399d44545",
+      "after_sha256": "274e669a8931cc68883377a01dedc1301b7611f765a971e2319d473399d44545"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "same_accessibility": true,
+      "png_bytes_equal": true,
+      "before_sha256": "b09a6e99ca87a28e255919a8f72254fa79bb0b90db561f65c575dc6df7b4c9e2",
+      "after_sha256": "b09a6e99ca87a28e255919a8f72254fa79bb0b90db561f65c575dc6df7b4c9e2"
+    },
+    {
+      "width": 320,
+      "height": 800,
+      "same_accessibility": true,
+      "png_bytes_equal": true,
+      "before_sha256": "6b13f3f1bed0cfc6392fbfe0ba5a119a5ac40e8725d6aa5796b6a8fba679a7ff",
+      "after_sha256": "6b13f3f1bed0cfc6392fbfe0ba5a119a5ac40e8725d6aa5796b6a8fba679a7ff"
+    }
+  ]
+}

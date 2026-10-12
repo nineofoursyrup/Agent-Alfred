@@ -417,6 +417,7 @@
 }
 .inbox-page .inbox-actions {
   margin: 0;
+  padding: calc(var(--gap-small) - var(--inbox-line)) var(--gap-large);
   border-bottom: var(--inbox-line) solid var(--panel-divider);
 }
 .inbox-page .inbox-context {
@@ -517,6 +518,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--gap-small);
+  padding: calc(var(--gap-small) - var(--inbox-line)) var(--gap-large);
   border-top: var(--inbox-line) solid var(--panel-divider);
 }
 .inbox-page .inbox-read-controls [role="status"] {

@@ -1,0 +1,50 @@
+{
+  "inbox-320x800.png": {
+    "sha256": "e336f65e29853e01d06f70cd5b5f2524a8afd2b3f3fe9ad3b7d229c535e22f00",
+    "bytes": 58273
+  },
+  "inbox-preview-320x800.png": {
+    "sha256": "5949df74a37b1400130b5984d1653960f8dfcbce8cd1affd4e551cee14f432c7",
+    "bytes": 55640
+  },
+  "inbox-1280x800.png": {
+    "sha256": "4916e377bd0aa502e7d34857749d12da29d813520bbdae483ef98363c123c84d",
+    "bytes": 161761
+  },
+  "inbox-1440x900.png": {
+    "sha256": "96a25c2da9d52e1841e7f0bb1155cbefdb1b4ae07788fe3e830ccf8d1213e3d7",
+    "bytes": 166691
+  },
+  "inbox-runs-1280x800.png": {
+    "sha256": "420b3f6aa64a8e85da11611359c768886ec265a2d942b43a2cbd4cac6db23500",
+    "bytes": 164703
+  },
+  "inbox-runs-1440x900.png": {
+    "sha256": "27f61a7e8ebf6a36beb4ff53a87a7067c51a7ac76bff421d722177c76bb54780",
+    "bytes": 182422
+  },
+  "inbox-runs-320x800.png": {
+    "sha256": "8b09582b2fb62e960bbb377cd6416eb39d67b177dfd50a6dd23c509644ad974e",
+    "bytes": 53250
+  },
+  "inbox-preview-1440x900.png": {
+    "sha256": "ee2915a9fac8cc6a4a22cc9d0fb024d3d927d5978dbd8bd510ee18476bcff423",
+    "bytes": 184821
+  },
+  "inbox-preview-1280x800.png": {
+    "sha256": "18e9c6dc2566eedac84e27896b30ad639697b41b26ff6255b09ce8f0b3c2b934",
+    "bytes": 168161
+  },
+  "inbox-preview-390x844.png": {
+    "sha256": "8e6a128c3adbc6c2322cb4d6e94479dd2746c71e1aa1d2fcc857728857b8addb",
+    "bytes": 59802
+  },
+  "inbox-390x844.png": {
+    "sha256": "d58faad864d98e81b087440639a8f7f7068bba01d74e732277eb122f027f6e1f",
+    "bytes": 63237
+  },
+  "inbox-runs-390x844.png": {
+    "sha256": "7af48f0cbaa85f4e10ba24307d6ca3c443955e00c225808094ca138771d812ae",
+    "bytes": 57478
+  }
+}

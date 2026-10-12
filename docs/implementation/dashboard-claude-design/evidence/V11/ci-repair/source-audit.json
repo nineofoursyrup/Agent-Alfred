@@ -1,0 +1,20 @@
+{
+  "before_head": "421ee2a11039c0216410385445e882465a5e7d96",
+  "main": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "production_diff": [
+    "src/agent_alfred/ops/static/inbox-runs.css"
+  ],
+  "css_sha256": "3315d2ee6e513cafc674a5df03f4e9a1452d2be208228a2ebfd3da615e6829fa",
+  "main_prefix_bytes": 8978,
+  "main_prefix_unchanged": true,
+  "tests_changed": false,
+  "inbox_js_changed": false,
+  "frozen_layers_changed": false,
+  "rule_changes": [
+    ".inbox-page .inbox-actions padding",
+    ".inbox-page .inbox-read-controls padding"
+  ],
+  "standards_review_blockers": 0,
+  "spec_review_blockers": 0,
+  "review_kind": "focused local self-review"
+}
