@@ -1,0 +1,240 @@
+{
+  "view": "database",
+  "version": "1786950414092924",
+  "captured_at": "2026-10-12T05:50:34.669Z",
+  "browser": "153.0.8010.12",
+  "network_dependencies": [
+    {
+      "url": "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+      "status": 200
+    },
+    {
+      "url": "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
+      "status": 200
+    }
+  ],
+  "page_errors": [],
+  "request_failures": [],
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 900,
+      "dpr": 1,
+      "main": {
+        "font": "16px -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "padding": "0px",
+        "borderRadius": "0px",
+        "width": 886
+      },
+      "nav": {
+        "font": "16px -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "padding": "0px",
+        "borderRadius": "0px",
+        "width": 233
+      },
+      "aside": {
+        "font": "16px -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "padding": "0px",
+        "borderRadius": "0px",
+        "width": 321
+      },
+      "console": {
+        "font": "16px -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(20, 20, 22)",
+        "padding": "16px 19px",
+        "borderRadius": "14px",
+        "width": 564
+      },
+      "title": {
+        "font": "600 11px / 11px ui-monospace, \"SF Mono\", Menlo, monospace",
+        "color": "rgb(124, 138, 236)",
+        "background": "rgba(0, 0, 0, 0)",
+        "padding": "0px",
+        "borderRadius": "0px",
+        "width": 524
+      },
+      "editor": {
+        "font": "12.5px / 20px ui-monospace, \"SF Mono\", Menlo, monospace",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(24, 24, 27)",
+        "padding": "13px 15px",
+        "borderRadius": "10px",
+        "width": 524
+      },
+      "bodyScrollWidth": 1440
+    },
+    {
+      "width": 1280,
+      "height": 800,
+      "dpr": 1,
+      "main": {
+        "font": "16px -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "padding": "0px",
+        "borderRadius": "0px",
+        "width": 726
+      },
+      "nav": {
+        "font": "16px -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "padding": "0px",
+        "borderRadius": "0px",
+        "width": 233
+      },
+      "aside": {
+        "font": "16px -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "padding": "0px",
+        "borderRadius": "0px",
+        "width": 321
+      },
+      "console": {
+        "font": "16px -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(20, 20, 22)",
+        "padding": "16px 19px",
+        "borderRadius": "14px",
+        "width": 444
+      },
+      "title": {
+        "font": "600 11px / 11px ui-monospace, \"SF Mono\", Menlo, monospace",
+        "color": "rgb(124, 138, 236)",
+        "background": "rgba(0, 0, 0, 0)",
+        "padding": "0px",
+        "borderRadius": "0px",
+        "width": 404
+      },
+      "editor": {
+        "font": "12.5px / 20px ui-monospace, \"SF Mono\", Menlo, monospace",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(24, 24, 27)",
+        "padding": "13px 15px",
+        "borderRadius": "10px",
+        "width": 404
+      },
+      "bodyScrollWidth": 1280
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "dpr": 1,
+      "main": {
+        "font": "16px -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "padding": "0px",
+        "borderRadius": "0px",
+        "width": 0
+      },
+      "nav": {
+        "font": "16px -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "padding": "0px",
+        "borderRadius": "0px",
+        "width": 191
+      },
+      "aside": {
+        "font": "16px -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "padding": "0px",
+        "borderRadius": "0px",
+        "width": 293
+      },
+      "console": {
+        "font": "16px -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(20, 20, 22)",
+        "padding": "16px 19px",
+        "borderRadius": "14px",
+        "width": 40
+      },
+      "title": {
+        "font": "600 11px / 11px ui-monospace, \"SF Mono\", Menlo, monospace",
+        "color": "rgb(124, 138, 236)",
+        "background": "rgba(0, 0, 0, 0)",
+        "padding": "0px",
+        "borderRadius": "0px",
+        "width": 0
+      },
+      "editor": {
+        "font": "12.5px / 20px ui-monospace, \"SF Mono\", Menlo, monospace",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(24, 24, 27)",
+        "padding": "13px 15px",
+        "borderRadius": "10px",
+        "width": 32
+      },
+      "bodyScrollWidth": 390
+    },
+    {
+      "width": 320,
+      "height": 800,
+      "dpr": 1,
+      "main": {
+        "font": "16px -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "padding": "0px",
+        "borderRadius": "0px",
+        "width": 0
+      },
+      "nav": {
+        "font": "16px -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "padding": "0px",
+        "borderRadius": "0px",
+        "width": 191
+      },
+      "aside": {
+        "font": "16px -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(14, 14, 16)",
+        "padding": "0px",
+        "borderRadius": "0px",
+        "width": 293
+      },
+      "console": {
+        "font": "16px -apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(20, 20, 22)",
+        "padding": "16px 19px",
+        "borderRadius": "14px",
+        "width": 40
+      },
+      "title": {
+        "font": "600 11px / 11px ui-monospace, \"SF Mono\", Menlo, monospace",
+        "color": "rgb(124, 138, 236)",
+        "background": "rgba(0, 0, 0, 0)",
+        "padding": "0px",
+        "borderRadius": "0px",
+        "width": 0
+      },
+      "editor": {
+        "font": "12.5px / 20px ui-monospace, \"SF Mono\", Menlo, monospace",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(24, 24, 27)",
+        "padding": "13px 15px",
+        "borderRadius": "10px",
+        "width": 32
+      },
+      "bodyScrollWidth": 320
+    }
+  ],
+  "Syrup Dashboard.dc.html_sha256": "54807adb38541fa2966e5b0c334b9d0e8d71c60b814245601bc4f35b8ec54b84",
+  "support.js_sha256": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe",
+  "navigation_accessible_name": "Database state.db",
+  "exit_code": 0
+}

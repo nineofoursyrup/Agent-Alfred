@@ -1,0 +1,18 @@
+{
+  "baseline": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "files": {
+    "src/agent_alfred/ops/static/database.js": "6311a4492ddb84fa49837dac2e66b9ebd4e0ddb2a327640f2b108e99658753f7",
+    "src/agent_alfred/ops/static/database.css": "2d03c77cd64452f31413b45b366d76863ca5e9e19a365c034a90f0688f2f1432",
+    "tests/browser/database_migration.spec.js": "5fa5609478e695184ad6193f78f2e2225c19b965c35de28a1ca2f034e4d7f5a2"
+  },
+  "export": "databasePage(root, ctx)",
+  "behavior_suffix_byte_identical": true,
+  "page_css_scope": ".db-console",
+  "literal_sizes_or_colors": false,
+  "new_heading": {
+    "level": 2,
+    "name": "SQL 控制台 · 只读"
+  },
+  "existing_regions_and_labels": "Preserved",
+  "implementation_head": "93f7a384796e0b274fc521c5dba75f0994d2ee81"
+}

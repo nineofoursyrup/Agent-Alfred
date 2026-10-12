@@ -1,0 +1,24 @@
+{
+  "view": "database",
+  "version": "1786950414092924",
+  "captured_at": "2026-10-12T05:49:43.456Z",
+  "browser": "153.0.8010.12",
+  "network_dependencies": [
+    {
+      "url": "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+      "status": 200
+    },
+    {
+      "url": "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
+      "status": 200
+    }
+  ],
+  "page_errors": [],
+  "request_failures": [],
+  "viewports": [],
+  "Syrup Dashboard.dc.html_sha256": "54807adb38541fa2966e5b0c334b9d0e8d71c60b814245601bc4f35b8ec54b84",
+  "support.js_sha256": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe",
+  "navigation_accessible_name": "Database\nstate.db",
+  "exit_code": 1,
+  "error": "page.evaluate: TypeError: Cannot read properties of undefined (reading 'parentElement')\n    at eval (eval at evaluate (:311:30), <anonymous>:4:24)\n    at UtilityScript.evaluate (<anonymous>:313:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)\n    at /Users/nineofour/Agent-Alfred-v10/.scratch/v10/capture-reference.mjs:32:36"
+}

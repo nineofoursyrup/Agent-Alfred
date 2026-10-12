@@ -1,0 +1,200 @@
+[
+  {
+    "path": "/api/database",
+    "start": 357638.462,
+    "duration_ms": 5.3100000000000005,
+    "status": 200,
+    "body": {
+      "instance_id": "74cccd0a9479422c88476fbf71d582a5",
+      "memory_revision": "24",
+      "protection_version": "5",
+      "available": true
+    }
+  },
+  {
+    "path": "/api/database",
+    "start": 357638.488,
+    "duration_ms": 8.627,
+    "status": 200,
+    "body": {
+      "instance_id": "74cccd0a9479422c88476fbf71d582a5",
+      "memory_revision": "24",
+      "protection_version": "5",
+      "available": true
+    }
+  },
+  {
+    "path": "/api/database",
+    "start": 357638.513,
+    "duration_ms": 11.196,
+    "status": 200,
+    "body": {
+      "instance_id": "74cccd0a9479422c88476fbf71d582a5",
+      "memory_revision": "24",
+      "protection_version": "5",
+      "available": true
+    }
+  },
+  {
+    "path": "/api/database/queries",
+    "start": 357732.44,
+    "duration_ms": 3.522,
+    "status": 200,
+    "body": {
+      "instance_id": "74cccd0a9479422c88476fbf71d582a5"
+    }
+  },
+  {
+    "path": "/api/database/queries/8Vp1r_qeR9TVub0MdtipaQ80/execute",
+    "start": 357796.161,
+    "duration_ms": 202.81300000000002,
+    "status": 200,
+    "body": {
+      "returned_rows": 1,
+      "instance_id": "74cccd0a9479422c88476fbf71d582a5",
+      "memory_revision": "24",
+      "protection_version": "5"
+    }
+  },
+  {
+    "path": "/api/database/queries/8Vp1r_qeR9TVub0MdtipaQ80",
+    "start": 357997.396,
+    "duration_ms": 1.41,
+    "status": 200,
+    "body": {
+      "status": "completed",
+      "cleanup": "released",
+      "instance_id": "74cccd0a9479422c88476fbf71d582a5"
+    }
+  },
+  {
+    "path": "/api/database",
+    "start": 357998.28,
+    "duration_ms": 4.277,
+    "status": 200,
+    "body": {
+      "instance_id": "74cccd0a9479422c88476fbf71d582a5",
+      "memory_revision": "24",
+      "protection_version": "5",
+      "available": true
+    }
+  },
+  {
+    "path": "/api/database/queries/8Vp1r_qeR9TVub0MdtipaQ80/cancel",
+    "start": 358111.684,
+    "duration_ms": 1.448,
+    "status": 200,
+    "body": {
+      "status": "completed",
+      "cleanup": "released"
+    }
+  },
+  {
+    "path": "/api/database/queries/8Vp1r_qeR9TVub0MdtipaQ80",
+    "start": 361119.059,
+    "duration_ms": 8.162,
+    "status": 200,
+    "body": {
+      "status": "completed",
+      "cleanup": "released",
+      "instance_id": "74cccd0a9479422c88476fbf71d582a5"
+    }
+  },
+  {
+    "path": "/api/database/queries/8Vp1r_qeR9TVub0MdtipaQ80",
+    "start": 361119.504,
+    "duration_ms": 17.843,
+    "status": 200,
+    "body": {
+      "status": "completed",
+      "cleanup": "released",
+      "instance_id": "74cccd0a9479422c88476fbf71d582a5"
+    }
+  },
+  {
+    "path": "/api/database",
+    "start": 361119.002,
+    "duration_ms": 29.185,
+    "status": 200,
+    "body": {
+      "instance_id": "74cccd0a9479422c88476fbf71d582a5",
+      "memory_revision": "46",
+      "protection_version": "5",
+      "available": true
+    }
+  },
+  {
+    "path": "/api/database",
+    "start": 361142.037,
+    "duration_ms": 16.784000000000002,
+    "status": 200,
+    "body": {
+      "instance_id": "74cccd0a9479422c88476fbf71d582a5",
+      "memory_revision": "46",
+      "protection_version": "5",
+      "available": true
+    }
+  },
+  {
+    "path": "/api/database/queries",
+    "start": 362151.861,
+    "duration_ms": 11.202,
+    "status": 200,
+    "body": {
+      "instance_id": "74cccd0a9479422c88476fbf71d582a5"
+    }
+  },
+  {
+    "path": "/api/database/queries/DjtW2Lg2KGRMfqjVELdHiEQK/execute",
+    "start": 362161.177,
+    "duration_ms": 584.604,
+    "status": 200,
+    "body": {
+      "returned_rows": 0,
+      "instance_id": "74cccd0a9479422c88476fbf71d582a5",
+      "memory_revision": "46",
+      "protection_version": "5"
+    }
+  },
+  {
+    "path": "/api/database/queries/DjtW2Lg2KGRMfqjVELdHiEQK",
+    "start": 362745.566,
+    "duration_ms": 1.3559999999999999,
+    "status": 200,
+    "body": {
+      "status": "completed",
+      "cleanup": "released",
+      "instance_id": "74cccd0a9479422c88476fbf71d582a5"
+    }
+  },
+  {
+    "path": "/api/database",
+    "start": 362747.229,
+    "duration_ms": 5.734,
+    "status": 200,
+    "body": {
+      "instance_id": "74cccd0a9479422c88476fbf71d582a5",
+      "memory_revision": "46",
+      "protection_version": "5",
+      "available": true
+    }
+  },
+  {
+    "path": "/api/database/queries/DjtW2Lg2KGRMfqjVELdHiEQK/cancel",
+    "start": 370340.503,
+    "duration_ms": 3.1919999999999997,
+    "status": 503,
+    "body": {
+      "code": "shutting_down"
+    }
+  },
+  {
+    "path": "/api/database/queries/DjtW2Lg2KGRMfqjVELdHiEQK",
+    "start": 370343.607,
+    "duration_ms": 1.319,
+    "status": 503,
+    "body": {
+      "code": "shutting_down"
+    }
+  }
+]
