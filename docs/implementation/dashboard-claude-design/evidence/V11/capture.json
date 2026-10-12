@@ -8,10 +8,6 @@
     },
     {
       "method": "GET",
-      "path": "/api/mainbar"
-    },
-    {
-      "method": "GET",
       "path": "/api/events"
     },
     {
@@ -25,6 +21,14 @@
     {
       "method": "GET",
       "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
     },
     {
       "method": "GET",
@@ -260,7 +264,12 @@
     }
   ],
   "errors": [],
-  "request_failures": [],
+  "request_failures": [
+    {
+      "url": "http://127.0.0.1:18110/api/events",
+      "error": "net::ERR_ABORTED"
+    }
+  ],
   "snapshots": [
     {
       "name": "inbox",

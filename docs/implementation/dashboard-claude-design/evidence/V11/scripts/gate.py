@@ -29,6 +29,20 @@ record = {
     "input_manifest_sha256": hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest(),
     "inputs": inputs,
 }
+if label == "06-browser" and (scratch / "browser-parallel.started").exists():
+    previous_path = scratch / "gates/06-browser-parallel.json"
+    while not previous_path.exists():
+        time.sleep(5)
+    previous = json.loads(previous_path.read_text())
+    if previous["exit_code"] != 0:
+        print("Parallel full browser failed; preserve it and run its original failing cases before another full suite.", flush=True)
+        sys.exit(1)
+    assert previous["input_manifest_sha256"] == record["input_manifest_sha256"]
+    assert previous["head"] == record["head"]
+    previous["reused_from"] = previous_path.name
+    record_path.write_text(json.dumps(previous, ensure_ascii=False, indent=2) + "\n")
+    print("Reused identical-input full browser PASS: " + previous_path.name, flush=True)
+    sys.exit(0)
 start = time.monotonic()
 raw = scratch / "gates" / (label + ".raw")
 with raw.open("wb") as stream:
@@ -42,6 +56,9 @@ if result.returncode and "test:browser" in command:
     members = {}
     for folder in (root / "output/playwright/results").iterdir():
         if not folder.is_dir():
+            continue
+        started_epoch = datetime.datetime.fromisoformat(record["started_at"]).timestamp()
+        if not any(f.is_file() and f.stat().st_mtime >= started_epoch for f in folder.iterdir()):
             continue
         if not any(folder.glob("test-failed-*.png")) and not (folder / "error-context.md").exists():
             continue

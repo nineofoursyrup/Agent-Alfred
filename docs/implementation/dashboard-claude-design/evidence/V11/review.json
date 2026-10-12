@@ -3,8 +3,9 @@
   "baseline": "449e77fd0ff814fb63f97a009c2435139a68686d",
   "candidate_files": {
     "src/agent_alfred/ops/static/inbox.js": "344d8989e0d168e5fe49bfbeae306adbcfd6482279a598d7248b2a00796ce046",
-    "src/agent_alfred/ops/static/inbox-runs.css": "c06ac755707e3cba40802ffe9cf2f4655927916194e52c1c9da12eb7a5cf841f",
+    "src/agent_alfred/ops/static/inbox-runs.css": "3a20783a99ce7dea54650759de58ab91a4cd176c830d8ebaa3d5d42885f03d24",
     "tests/browser/inbox-run-sources.spec.js": "87a43821ec30559dbe7955c29dd4c975841d9738520291d08bef570fbff77f59",
+    "tests/browser/shell.spec.js": "5dc2180c12eeca1b2e249ff199aee66fc88bfd05f53096a6a1ad9a8d24a0ef9e",
     "src/agent_alfred/ops/static/run-fields.js": "3e5303c27123a2c5b7ced5c27d758fb9c074da187e611b10174b6f75bb53e638"
   },
   "standards": {

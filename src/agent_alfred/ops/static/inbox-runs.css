@@ -520,7 +520,7 @@
   border-top: var(--inbox-line) solid var(--panel-divider);
 }
 .inbox-page .inbox-read-controls [role="status"] {
-  flex-basis: 100%;
+  flex: 1 1 calc(var(--gap-large) * 12);
   margin: 0;
   color: var(--metadata);
   font: 400 var(--font-size-meta)/1.5 var(--font-mono);

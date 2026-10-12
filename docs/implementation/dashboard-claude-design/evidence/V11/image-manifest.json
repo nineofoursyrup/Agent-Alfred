@@ -6,10 +6,10 @@
     "bytes": 58273
   },
   "inbox-preview-320x800.png": {
-    "sha256": "a0c3c82fedcba964a13f2426347ad9ab1bd8ac800bd15e17230f60db8a0ecc95",
+    "sha256": "5949df74a37b1400130b5984d1653960f8dfcbce8cd1affd4e551cee14f432c7",
     "width": 320,
     "height": 800,
-    "bytes": 52889
+    "bytes": 55640
   },
   "runs-before-1440x900.png": {
     "sha256": "d84cf55a89b7efb58bbab6bbad5ab15ae80e1147f2cb09078a4a41572956a2e0",
@@ -30,16 +30,16 @@
     "bytes": 183384
   },
   "inbox-1280x800.png": {
-    "sha256": "b62012dd17f72c1da7c483af6089db661b5fa1c7b5b1aa1cd2187fb14b355162",
+    "sha256": "4916e377bd0aa502e7d34857749d12da29d813520bbdae483ef98363c123c84d",
     "width": 1280,
     "height": 800,
-    "bytes": 161973
+    "bytes": 161761
   },
   "inbox-1440x900.png": {
-    "sha256": "96cd323dbb469c17cc55cd8fb59dc39ab0007f358fa2cdcdcb300ce56f8c1303",
+    "sha256": "96a25c2da9d52e1841e7f0bb1155cbefdb1b4ae07788fe3e830ccf8d1213e3d7",
     "width": 1440,
     "height": 900,
-    "bytes": 166693
+    "bytes": 166691
   },
   "reference-loop-390x844.png": {
     "sha256": "f6ff83e62ce40a0c38b46f67960d004dcb7e0c952374a4a9608737bf9ae42ab7",
@@ -60,10 +60,10 @@
     "bytes": 79499
   },
   "inbox-runs-1440x900.png": {
-    "sha256": "fe66d14a5351b0cf0a6d3f004347d9fd3a90f2bb7d05ea94806f8d1e34b051d9",
+    "sha256": "27f61a7e8ebf6a36beb4ff53a87a7067c51a7ac76bff421d722177c76bb54780",
     "width": 1440,
     "height": 900,
-    "bytes": 191660
+    "bytes": 182422
   },
   "runs-1440x900.png": {
     "sha256": "d84cf55a89b7efb58bbab6bbad5ab15ae80e1147f2cb09078a4a41572956a2e0",
@@ -78,16 +78,16 @@
     "bytes": 183384
   },
   "inbox-runs-320x800.png": {
-    "sha256": "b12bd9a696ad4404566db5126226a1325cda159bce56a327077bc6e7c80ca161",
+    "sha256": "8b09582b2fb62e960bbb377cd6416eb39d67b177dfd50a6dd23c509644ad974e",
     "width": 320,
     "height": 800,
-    "bytes": 53820
+    "bytes": 53250
   },
   "inbox-preview-1440x900.png": {
-    "sha256": "2e21852174703517d14b66a5735a0d8f8ba45c1e246a050154fd89e72a8a1abf",
+    "sha256": "ee2915a9fac8cc6a4a22cc9d0fb024d3d927d5978dbd8bd510ee18476bcff423",
     "width": 1440,
     "height": 900,
-    "bytes": 185618
+    "bytes": 184821
   },
   "runs-before-320x800.png": {
     "sha256": "6b13f3f1bed0cfc6392fbfe0ba5a119a5ac40e8725d6aa5796b6a8fba679a7ff",
@@ -102,10 +102,10 @@
     "bytes": 168161
   },
   "inbox-preview-390x844.png": {
-    "sha256": "3802a795e2d7119b90c90b851ffda82a1be2c8646e1195653444e9343c59523a",
+    "sha256": "8e6a128c3adbc6c2322cb4d6e94479dd2746c71e1aa1d2fcc857728857b8addb",
     "width": 390,
     "height": 844,
-    "bytes": 60609
+    "bytes": 59802
   },
   "inbox-390x844.png": {
     "sha256": "d58faad864d98e81b087440639a8f7f7068bba01d74e732277eb122f027f6e1f",
