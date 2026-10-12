@@ -1,0 +1,31 @@
+{
+  "driver": "un-instrumented Chromium through Playwright library",
+  "beforeScreenshot": [],
+  "afterScreenshot": [
+    {
+      "tag": "INPUT",
+      "style": ""
+    },
+    {
+      "tag": "INPUT",
+      "style": ""
+    },
+    {
+      "tag": "INPUT",
+      "style": ""
+    },
+    {
+      "tag": "INPUT",
+      "style": ""
+    },
+    {
+      "tag": "INPUT",
+      "style": ""
+    },
+    {
+      "tag": "INPUT",
+      "style": ""
+    }
+  ],
+  "nonempty_style_count": 0
+}

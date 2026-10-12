@@ -1,0 +1,66 @@
+[
+  {
+    "name": "ruff check",
+    "log": "31-ruff.json",
+    "exit_code": 0,
+    "elapsed_seconds": 0.177,
+    "summary": "PASS，0 FAIL",
+    "head": "ee179c8c1dd31b6c46605609e7c78746dd8a4de8"
+  },
+  {
+    "name": "check_skills",
+    "log": "32-skills.json",
+    "exit_code": 0,
+    "elapsed_seconds": 0.22,
+    "summary": "PASS，0 FAIL",
+    "head": "ee179c8c1dd31b6c46605609e7c78746dd8a4de8"
+  },
+  {
+    "name": "check_env_example",
+    "log": "33-env.json",
+    "exit_code": 0,
+    "elapsed_seconds": 8.973,
+    "summary": "PASS，0 FAIL",
+    "head": "ee179c8c1dd31b6c46605609e7c78746dd8a4de8"
+  },
+  {
+    "name": "Python 全量",
+    "log": "34-pytest.json",
+    "exit_code": 0,
+    "elapsed_seconds": 3631.677,
+    "summary": "6445 passed, 1 deselected, 14 warnings in 3629.14s (1:00:29)",
+    "head": "ee179c8c1dd31b6c46605609e7c78746dd8a4de8"
+  },
+  {
+    "name": "typecheck",
+    "log": "35-typecheck.json",
+    "exit_code": 0,
+    "elapsed_seconds": 1.937,
+    "summary": "PASS，0 FAIL",
+    "head": "ee179c8c1dd31b6c46605609e7c78746dd8a4de8"
+  },
+  {
+    "name": "完整浏览器",
+    "log": "36-browser.json",
+    "exit_code": 0,
+    "elapsed_seconds": 808.61,
+    "summary": "545 passed (13.5m)",
+    "head": "ee179c8c1dd31b6c46605609e7c78746dd8a4de8"
+  },
+  {
+    "name": "diff-check",
+    "log": "37-diff-check.json",
+    "exit_code": 0,
+    "elapsed_seconds": 0.174,
+    "summary": "PASS，0 FAIL",
+    "head": "ee179c8c1dd31b6c46605609e7c78746dd8a4de8"
+  },
+  {
+    "name": "build + MCP 安装核验",
+    "log": "38-build-install.json",
+    "exit_code": 0,
+    "elapsed_seconds": 63.39,
+    "summary": "wheel/sdist × base/MCP：4 PASS，0 FAIL",
+    "head": "ee179c8c1dd31b6c46605609e7c78746dd8a4de8"
+  }
+]

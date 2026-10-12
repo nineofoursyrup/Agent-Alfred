@@ -1,0 +1,37 @@
+[
+  {
+    "source": "output/playwright/results/aggregation-aggregation-CE-10ea8-mbination-through-Behaviour/error-context.md",
+    "saved": "aggregation-aggregation-CE-10ea8-mbination-through-Behaviour/error-context.md.json",
+    "original_sha256": "e912b04e019f677540d79193665cabfd97cb436ad5b2ba5e93f1c8ee77090092"
+  },
+  {
+    "source": "output/playwright/results/aggregation-aggregation-CE-10ea8-mbination-through-Behaviour/test-failed-1.png",
+    "saved": "aggregation-aggregation-CE-10ea8-mbination-through-Behaviour/test-failed-1.png",
+    "original_sha256": "a602784513c20ce6db5afedcda8cb17551990d7258fd636420a567e8a3706d60"
+  },
+  {
+    "source": "output/playwright/results/aggregation-aggregation-CE-10ea8-mbination-through-Behaviour/trace.zip",
+    "saved": "aggregation-aggregation-CE-10ea8-mbination-through-Behaviour/trace.zip",
+    "original_sha256": "a2c7e75b60de57a3d0e7a773787a895c043ac0c6dc5d6ff4269b73ca4d490e79"
+  },
+  {
+    "source": "output/playwright/results/behaviour-S06-CE-28-Behavi-adffe--remain-readable-at-320x800/error-context.md",
+    "saved": "behaviour-S06-CE-28-Behavi-adffe--remain-readable-at-320x800/error-context.md.json",
+    "original_sha256": "35e801a1763c9b7ef52ac42cf267cf8ea18f3448f4de6fc4bd75b322521bd190"
+  },
+  {
+    "source": "output/playwright/results/behaviour-S06-CE-28-Behavi-adffe--remain-readable-at-320x800/trace.zip",
+    "saved": "behaviour-S06-CE-28-Behavi-adffe--remain-readable-at-320x800/trace.zip",
+    "original_sha256": "481f1f5d73c99ac7fcd64323c67f9683c6351da8daaa0ea5383c853f4453b79b"
+  },
+  {
+    "source": "output/playwright/results/database_cancel-STD-05-can-d54c4-ipt-after-B-cannot-change-B/error-context.md",
+    "saved": "database_cancel-STD-05-can-d54c4-ipt-after-B-cannot-change-B/error-context.md.json",
+    "original_sha256": "1e3d52aac64f17161b4baeb9beb1605040e7c2e787c0244c4b215fbe42bf7564"
+  },
+  {
+    "source": "output/playwright/results/database_cancel-STD-05-can-d54c4-ipt-after-B-cannot-change-B/trace.zip",
+    "saved": "database_cancel-STD-05-can-d54c4-ipt-after-B-cannot-change-B/trace.zip",
+    "original_sha256": "6b5e07307c52adfb49cb635703664cebff1171688622ccedd0d80e8a032ef070"
+  }
+]
