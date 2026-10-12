@@ -1,0 +1,63 @@
+{
+  "failure": "aggregation.spec.js:632 S06 CE-19 retained failed-recording form restarted Run outcome",
+  "candidate_runtime_file_changed": false,
+  "candidate_aggregation_js_changed": false,
+  "observed_failure": "API summary is interrupted; final DOM reports connection / process changed, with original target and Run retained",
+  "http_observation": [
+    {
+      "time": 5173.421,
+      "url": "http://127.0.0.1:18074/api/runs/locate/921b3e45dd094dae8a5d446e24462d2c?limit=1&filter=chat&process_instance_id=ea139879522b413ead1f1e69b63eb385",
+      "status": 200,
+      "body": {
+        "filter": "chat",
+        "runs": [
+          {
+            "run_id": "921b3e45dd094dae8a5d446e24462d2c",
+            "purpose": "aggregation",
+            "filter": "chat",
+            "purpose_known": true,
+            "admission_state": "admitted",
+            "admission_label": "已获准",
+            "session_id": "0d9122fb54734d8394c9f39c16352cf9",
+            "gateway": "web",
+            "entry_surface_id": "behaviour",
+            "prompt_preview": null,
+            "phase": "finished",
+            "outcome": "interrupted",
+            "accepted_at": "2026-10-12T07:03:28Z",
+            "started_at": "2026-10-12T07:03:28Z",
+            "finished_at": "2026-10-12T07:03:29Z",
+            "activity_revision": 4,
+            "recording_state": null,
+            "recording_source": "unknown",
+            "aggregation": {
+              "graph_result": null,
+              "reply_disposition": null,
+              "reason_code": null,
+              "evidence_state": "unknown"
+            }
+          }
+        ],
+        "non_terminal": null,
+        "next_cursor": null,
+        "target": {
+          "anchor": "921b3e45dd094dae8a5d446e24462d2c",
+          "run_id": "921b3e45dd094dae8a5d446e24462d2c",
+          "placement": "page"
+        },
+        "schema_version": 1,
+        "process_instance_id": "ea139879522b413ead1f1e69b63eb385",
+        "observed_at": "2026-10-12T07:03:30Z"
+      }
+    }
+  ],
+  "possible_existing_race": "observe() sets interrupted while update() can subsequently invalidate it on first observation of new instance. Existing aggregation.js logic; root cause not established.",
+  "root_cause": "UNKNOWN",
+  "baseline_probe": {
+    "baseline": "449e77fd0ff814fb63f97a009c2435139a68686d",
+    "result": "1 passed",
+    "elapsed_seconds": 6.67,
+    "implication": "One baseline pass does not establish causality or candidate safety. See baseline identity and raw output."
+  },
+  "assertions_retries_timeouts_changed": false
+}

@@ -1,0 +1,107 @@
+{
+  "source_candidate": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+  "runs": [
+    {
+      "file": "01-affected-browser.json",
+      "head": "449e77fd0ff814fb63f97a009c2435139a68686d",
+      "exit_code": 0,
+      "elapsed_seconds": 332.607
+    },
+    {
+      "file": "02-ruff.json",
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "exit_code": 0,
+      "elapsed_seconds": 1.075
+    },
+    {
+      "file": "03-skills.json",
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "exit_code": 0,
+      "elapsed_seconds": 0.171
+    },
+    {
+      "file": "04-env.json",
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "exit_code": 0,
+      "elapsed_seconds": 4.138
+    },
+    {
+      "file": "05-pytest.json",
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "exit_code": 1,
+      "elapsed_seconds": 4990.056
+    },
+    {
+      "file": "06-typecheck.json",
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "exit_code": 0,
+      "elapsed_seconds": 1.219
+    },
+    {
+      "file": "07-browser.json",
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "exit_code": 1,
+      "elapsed_seconds": 1538.041
+    },
+    {
+      "file": "08-diff.json",
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "exit_code": 0,
+      "elapsed_seconds": 0.147
+    },
+    {
+      "file": "09-install.json",
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "exit_code": 0,
+      "elapsed_seconds": 44.232
+    },
+    {
+      "file": "10-browser-first-failures.json",
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "exit_code": 0,
+      "elapsed_seconds": 86.946
+    },
+    {
+      "file": "11-browser-full.json",
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "exit_code": 1,
+      "elapsed_seconds": 1378.87
+    },
+    {
+      "file": "12-browser-second-failures.json",
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "exit_code": 1,
+      "elapsed_seconds": 50.047
+    },
+    {
+      "file": "13-baseline-restart-probe.json",
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "exit_code": 0,
+      "elapsed_seconds": 6.67
+    },
+    {
+      "file": "14-pytest-first-failures.json",
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "exit_code": 0,
+      "elapsed_seconds": 409.748
+    },
+    {
+      "file": "15-browser-full.json",
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "exit_code": 0,
+      "elapsed_seconds": 797.821
+    },
+    {
+      "file": "16-pytest-full.json",
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "exit_code": 0,
+      "elapsed_seconds": 2612.413
+    },
+    {
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "exit_code": 0,
+      "elapsed_seconds": 0.106,
+      "file": "17-diff-final-stage.json"
+    }
+  ]
+}

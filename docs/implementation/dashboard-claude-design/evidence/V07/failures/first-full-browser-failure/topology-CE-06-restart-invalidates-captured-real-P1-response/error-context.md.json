@@ -1,0 +1,6 @@
+{
+  "original_path": "output/playwright/results/topology-CE-06-restart-invalidates-captured-real-P1-response/error-context.md",
+  "bytes": 372,
+  "sha256": "e2001fcd2cacbccb159147daf414fccb59a5197b15cbc35d75631769ba6c90e8",
+  "utf8_source": "# Instructions\n\n- Following Playwright test failed.\n- Explain why, be concise, respect Playwright best practices.\n- Provide a snippet of code with the fix, if possible.\n\n# Test info\n\n- Name: topology.spec.js >> CE-06: restart invalidates captured real P1 response\n- Location: tests/browser/topology.spec.js:202:3\n\n# Error details\n\n```\nTest timeout of 15000ms exceeded.\n```"
+}

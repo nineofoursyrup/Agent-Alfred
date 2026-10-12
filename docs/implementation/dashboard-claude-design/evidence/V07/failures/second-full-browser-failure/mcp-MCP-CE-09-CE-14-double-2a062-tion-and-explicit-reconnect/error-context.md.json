@@ -1,0 +1,6 @@
+{
+  "original_path": "output/playwright/results/mcp-MCP-CE-09-CE-14-double-2a062-tion-and-explicit-reconnect/error-context.md",
+  "bytes": 374,
+  "sha256": "ca1f60402006d1a53959a9ef61c1c509fbae1f9a770502d7bdc26d169fdaa159",
+  "utf8_source": "# Instructions\n\n- Following Playwright test failed.\n- Explain why, be concise, respect Playwright best practices.\n- Provide a snippet of code with the fix, if possible.\n\n# Test info\n\n- Name: mcp.spec.js >> MCP CE-09 CE-14 double-tab env publication and explicit reconnect\n- Location: tests/browser/mcp.spec.js:47:1\n\n# Error details\n\n```\nTest timeout of 15000ms exceeded.\n```"
+}

@@ -1,0 +1,371 @@
+{
+  "folders": 23,
+  "members": [
+    {
+      "source": "output/playwright/results/aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/error-context.md",
+      "file": "aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/error-context.md",
+      "bytes": 21457,
+      "sha256": "febd76d6959b488773b45fa42fa6da8228710841048e98bff8dda5033e6005d2",
+      "archive_file": "aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/test-failed-1.png",
+      "file": "aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/test-failed-1.png",
+      "bytes": 124916,
+      "sha256": "9214c4d984546adb9c6f08232b2d8d30f773c1a2a3683a7ea4955b16cf4a3b48",
+      "archive_file": "aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/trace.zip",
+      "file": "aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/trace.zip",
+      "bytes": 5255826,
+      "sha256": "31c7d0cb242a06ea1bb2565612ef37e799602d3597c035e3bf9529a54760331f",
+      "archive_file": "aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/mcp-MCP-CE-09-CE-14-double-2a062-tion-and-explicit-reconnect/error-context.md",
+      "file": "mcp-MCP-CE-09-CE-14-double-2a062-tion-and-explicit-reconnect/error-context.md",
+      "bytes": 374,
+      "sha256": "ca1f60402006d1a53959a9ef61c1c509fbae1f9a770502d7bdc26d169fdaa159",
+      "archive_file": "mcp-MCP-CE-09-CE-14-double-2a062-tion-and-explicit-reconnect/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/mcp-MCP-CE-09-CE-14-double-2a062-tion-and-explicit-reconnect/test-failed-2.png",
+      "file": "mcp-MCP-CE-09-CE-14-double-2a062-tion-and-explicit-reconnect/test-failed-2.png",
+      "bytes": 4254,
+      "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+      "archive_file": "mcp-MCP-CE-09-CE-14-double-2a062-tion-and-explicit-reconnect/test-failed-2.png"
+    },
+    {
+      "source": "output/playwright/results/mcp-MCP-CE-09-CE-14-double-2a062-tion-and-explicit-reconnect/trace.zip",
+      "file": "mcp-MCP-CE-09-CE-14-double-2a062-tion-and-explicit-reconnect/trace.zip",
+      "bytes": 39024,
+      "sha256": "51e7a5d4eff15ebf62c9e8dbdfb7ff24aee1bf1825fc810c478bd0d01c91e06e",
+      "archive_file": "mcp-MCP-CE-09-CE-14-double-2a062-tion-and-explicit-reconnect/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/mcp-MCP-CE-09-CE-14-late-o-47897--cannot-restore-callable-UI/error-context.md",
+      "file": "mcp-MCP-CE-09-CE-14-late-o-47897--cannot-restore-callable-UI/error-context.md",
+      "bytes": 2629,
+      "sha256": "f5458112a52cc99b56ec05ca435db58d6bcb9dfa9afe493ef8fb4b015a50eb28",
+      "archive_file": "mcp-MCP-CE-09-CE-14-late-o-47897--cannot-restore-callable-UI/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/mcp-MCP-CE-09-CE-14-late-o-47897--cannot-restore-callable-UI/trace.zip",
+      "file": "mcp-MCP-CE-09-CE-14-late-o-47897--cannot-restore-callable-UI/trace.zip",
+      "bytes": 2789,
+      "sha256": "d0965f47be942e1fd2fe7455df026f34fe999d35a25e78d3c5537850437c853a",
+      "archive_file": "mcp-MCP-CE-09-CE-14-late-o-47897--cannot-restore-callable-UI/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/mcp-MCP-CE-09-CE-15-real-p-8e5ca-rejects-competing-operation/error-context.md",
+      "file": "mcp-MCP-CE-09-CE-15-real-p-8e5ca-rejects-competing-operation/error-context.md",
+      "bytes": 2656,
+      "sha256": "63a6c6859bc1752218671758580f26aafcfefaf21574e3928a81a052c85c0e82",
+      "archive_file": "mcp-MCP-CE-09-CE-15-real-p-8e5ca-rejects-competing-operation/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/mcp-MCP-CE-09-CE-15-real-p-8e5ca-rejects-competing-operation/trace.zip",
+      "file": "mcp-MCP-CE-09-CE-15-real-p-8e5ca-rejects-competing-operation/trace.zip",
+      "bytes": 2797,
+      "sha256": "f5fe261aebfbce16c66728797afa40e5327db02a9ca4299b03bbc43d034be1bc",
+      "archive_file": "mcp-MCP-CE-09-CE-15-real-p-8e5ca-rejects-competing-operation/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/mcp-MCP-CE-14-delayed-Tool-ffb80-o-new-environment-isolation/error-context.md",
+      "file": "mcp-MCP-CE-14-delayed-Tool-ffb80-o-new-environment-isolation/error-context.md",
+      "bytes": 2634,
+      "sha256": "ec55ef4dedabbaa1840dd8fcbab56767eaed03e3f3237fa34b358f61b420e29d",
+      "archive_file": "mcp-MCP-CE-14-delayed-Tool-ffb80-o-new-environment-isolation/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/mcp-MCP-CE-14-delayed-Tool-ffb80-o-new-environment-isolation/trace.zip",
+      "file": "mcp-MCP-CE-14-delayed-Tool-ffb80-o-new-environment-isolation/trace.zip",
+      "bytes": 2794,
+      "sha256": "8ad41e75e7e8787a680068d6ef904dd3102af9e713af9049701e085d7c9f4ad7",
+      "archive_file": "mcp-MCP-CE-14-delayed-Tool-ffb80-o-new-environment-isolation/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/mcp-MCP-SPEC-01-real-HTTP--74b75-d-startup-and-stale-preview/error-context.md",
+      "file": "mcp-MCP-SPEC-01-real-HTTP--74b75-d-startup-and-stale-preview/error-context.md",
+      "bytes": 2632,
+      "sha256": "585d73af462f49c75f2ca6638a63dca3eefe301f18f785207e07006909ed906f",
+      "archive_file": "mcp-MCP-SPEC-01-real-HTTP--74b75-d-startup-and-stale-preview/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/mcp-MCP-SPEC-01-real-HTTP--74b75-d-startup-and-stale-preview/trace.zip",
+      "file": "mcp-MCP-SPEC-01-real-HTTP--74b75-d-startup-and-stale-preview/trace.zip",
+      "bytes": 2796,
+      "sha256": "542c0ee96adc342010b62e54493fc5352c41df4719238dbaaacb8fa776ac3af7",
+      "archive_file": "mcp-MCP-SPEC-01-real-HTTP--74b75-d-startup-and-stale-preview/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/mcp-S08-lost-MCP-receipt-r-20f19-reserves-connection-details/error-context.md",
+      "file": "mcp-S08-lost-MCP-receipt-r-20f19-reserves-connection-details/error-context.md",
+      "bytes": 2656,
+      "sha256": "a91c58cdd1d1703478f4daf18728d5512a2b48ac421a49e8c76945de881f902e",
+      "archive_file": "mcp-S08-lost-MCP-receipt-r-20f19-reserves-connection-details/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/mcp-S08-lost-MCP-receipt-r-20f19-reserves-connection-details/trace.zip",
+      "file": "mcp-S08-lost-MCP-receipt-r-20f19-reserves-connection-details/trace.zip",
+      "bytes": 2797,
+      "sha256": "e6fa3d205320bebd1f12236ff7d4f7e58ad70a2410cbb224187f6dffcc39a546",
+      "archive_file": "mcp-S08-lost-MCP-receipt-r-20f19-reserves-connection-details/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-SPEC--12e1e-ad-before-explicit-adoption/error-context.md",
+      "file": "models-migration-S08-SPEC--12e1e-ad-before-explicit-adoption/error-context.md",
+      "bytes": 12735,
+      "sha256": "1933cf508e259332c52fec3a9bd78ddf8951d75ba52eed9ca532216c68348d38",
+      "archive_file": "models-migration-S08-SPEC--12e1e-ad-before-explicit-adoption/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-SPEC--12e1e-ad-before-explicit-adoption/trace.zip",
+      "file": "models-migration-S08-SPEC--12e1e-ad-before-explicit-adoption/trace.zip",
+      "bytes": 5604,
+      "sha256": "adaa307fd52e5f61606dc8fd41f896bf560f65b8f4db52eb920e909138e107ae",
+      "archive_file": "models-migration-S08-SPEC--12e1e-ad-before-explicit-adoption/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-SPEC--3d55a-line-even-when-values-match/error-context.md",
+      "file": "models-migration-S08-SPEC--3d55a-line-even-when-values-match/error-context.md",
+      "bytes": 12744,
+      "sha256": "f7b9b2e0f81a0e680acae839e3c9fb24a4db9cb2661c6854b9db0f00c8257c33",
+      "archive_file": "models-migration-S08-SPEC--3d55a-line-even-when-values-match/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-SPEC--3d55a-line-even-when-values-match/trace.zip",
+      "file": "models-migration-S08-SPEC--3d55a-line-even-when-values-match/trace.zip",
+      "bytes": 5640,
+      "sha256": "5e9a39afd256428bd58adf163ccded60c5ccab9d63477fb41e7e83c463447f7a",
+      "archive_file": "models-migration-S08-SPEC--3d55a-line-even-when-values-match/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-STD01-93d72-after-real-Stream-reconnect/error-context.md",
+      "file": "models-migration-S08-STD01-93d72-after-real-Stream-reconnect/error-context.md",
+      "bytes": 12735,
+      "sha256": "a17a799dbe6f79be5df1f6077f077e3c69a30819d70d27be04059666b36b186c",
+      "archive_file": "models-migration-S08-STD01-93d72-after-real-Stream-reconnect/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-STD01-93d72-after-real-Stream-reconnect/trace.zip",
+      "file": "models-migration-S08-STD01-93d72-after-real-Stream-reconnect/trace.zip",
+      "bytes": 5641,
+      "sha256": "46cc1874a6fc2dafdaf509355c42a5f103489577b7d848e94fb2ab550f5ce1cb",
+      "archive_file": "models-migration-S08-STD01-93d72-after-real-Stream-reconnect/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-STD02-f6b8e-thout-stealing-a-new-intent/error-context.md",
+      "file": "models-migration-S08-STD02-f6b8e-thout-stealing-a-new-intent/error-context.md",
+      "bytes": 12742,
+      "sha256": "03e6b3f360670d2e55e902eda24823ff81d782f5e9429ddac2962dfc27baf515",
+      "archive_file": "models-migration-S08-STD02-f6b8e-thout-stealing-a-new-intent/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-STD02-f6b8e-thout-stealing-a-new-intent/trace.zip",
+      "file": "models-migration-S08-STD02-f6b8e-thout-stealing-a-new-intent/trace.zip",
+      "bytes": 5644,
+      "sha256": "1b86b3db936b5f2e5694eb68867c0098c9671bd21bf98b384b6b10a8ae9ccd62",
+      "archive_file": "models-migration-S08-STD02-f6b8e-thout-stealing-a-new-intent/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-a-los-8d39e-replays-on-focus-or-reentry/error-context.md",
+      "file": "models-migration-S08-a-los-8d39e-replays-on-focus-or-reentry/error-context.md",
+      "bytes": 12725,
+      "sha256": "af8e6d5b8a7fd3d2b181199392773c29f8717e4ceeb68f10b74b224f465f2320",
+      "archive_file": "models-migration-S08-a-los-8d39e-replays-on-focus-or-reentry/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-a-los-8d39e-replays-on-focus-or-reentry/trace.zip",
+      "file": "models-migration-S08-a-los-8d39e-replays-on-focus-or-reentry/trace.zip",
+      "bytes": 5632,
+      "sha256": "669c90f7f8d55831a979ff0a318c8d0d65cbf88d8b0b2cbada8ed120568867b8",
+      "archive_file": "models-migration-S08-a-los-8d39e-replays-on-focus-or-reentry/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-catal-2e630-in-usable-in-four-viewports/error-context.md",
+      "file": "models-migration-S08-catal-2e630-in-usable-in-four-viewports/error-context.md",
+      "bytes": 12734,
+      "sha256": "edd4c58c766b903fa99a91c491ca60b5ffb868b39f4c50258401d3ccfc393af2",
+      "archive_file": "models-migration-S08-catal-2e630-in-usable-in-four-viewports/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-catal-2e630-in-usable-in-four-viewports/trace.zip",
+      "file": "models-migration-S08-catal-2e630-in-usable-in-four-viewports/trace.zip",
+      "bytes": 5641,
+      "sha256": "3713af4cf95923bdee232b8fae55d766335f1bc307849346ae3ed1b42f166017",
+      "archive_file": "models-migration-S08-catal-2e630-in-usable-in-four-viewports/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-each--42b18--uses-the-public-HTTP-value/error-context.md",
+      "file": "models-migration-S08-each--42b18--uses-the-public-HTTP-value/error-context.md",
+      "bytes": 12718,
+      "sha256": "3934280a6c95dac12ef6eb00b202750845602eb20e1d77a3dbcf73d186d1896e",
+      "archive_file": "models-migration-S08-each--42b18--uses-the-public-HTTP-value/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-each--42b18--uses-the-public-HTTP-value/trace.zip",
+      "file": "models-migration-S08-each--42b18--uses-the-public-HTTP-value/trace.zip",
+      "bytes": 5636,
+      "sha256": "433830ee977933390c39349dce405999762c5a432148abc8ac39e99a4e09e8d0",
+      "archive_file": "models-migration-S08-each--42b18--uses-the-public-HTTP-value/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-real--b9e6e--requires-explicit-adoption/error-context.md",
+      "file": "models-migration-S08-real--b9e6e--requires-explicit-adoption/error-context.md",
+      "bytes": 12724,
+      "sha256": "7a5b20e92018a41b35f543141a754752eaf841d49ad1eacb706cb3611af77f59",
+      "archive_file": "models-migration-S08-real--b9e6e--requires-explicit-adoption/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-real--b9e6e--requires-explicit-adoption/trace.zip",
+      "file": "models-migration-S08-real--b9e6e--requires-explicit-adoption/trace.zip",
+      "bytes": 5605,
+      "sha256": "b7ee7ed6a31cb225451033c8a4125f0de5ce6deef5c2559060b06d918996efa1",
+      "archive_file": "models-migration-S08-real--b9e6e--requires-explicit-adoption/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-real--d090e--HTTP-read-and-page-reentry/error-context.md",
+      "file": "models-migration-S08-real--d090e--HTTP-read-and-page-reentry/error-context.md",
+      "bytes": 12730,
+      "sha256": "d824f1f921ed2144ae4316923667134920f4307f860f1b8f1d6db42776962030",
+      "archive_file": "models-migration-S08-real--d090e--HTTP-read-and-page-reentry/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-real--d090e--HTTP-read-and-page-reentry/trace.zip",
+      "file": "models-migration-S08-real--d090e--HTTP-read-and-page-reentry/trace.zip",
+      "bytes": 5606,
+      "sha256": "763db191f5801b5fb22d7ef5a555eab1416fd5d521538b4ae803d333065a5f49",
+      "archive_file": "models-migration-S08-real--d090e--HTTP-read-and-page-reentry/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-rejec-2207f-ps-the-original-dirty-draft/error-context.md",
+      "file": "models-migration-S08-rejec-2207f-ps-the-original-dirty-draft/error-context.md",
+      "bytes": 12701,
+      "sha256": "b2bdd61e65f80c461f8ecbe6540753667167712188296cf82fd3318851953079",
+      "archive_file": "models-migration-S08-rejec-2207f-ps-the-original-dirty-draft/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-rejec-2207f-ps-the-original-dirty-draft/trace.zip",
+      "file": "models-migration-S08-rejec-2207f-ps-the-original-dirty-draft/trace.zip",
+      "bytes": 5621,
+      "sha256": "45e7c250b3b048b330618275977a44d6a956db240cf060f691fe199992bfe7fa",
+      "archive_file": "models-migration-S08-rejec-2207f-ps-the-original-dirty-draft/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-saved-04299-s-its-real-Attempt-and-cost/error-context.md",
+      "file": "models-migration-S08-saved-04299-s-its-real-Attempt-and-cost/error-context.md",
+      "bytes": 13122,
+      "sha256": "d6ef082f7827abc5f6fc63237e126b312c0c93e7ecc67efe2f69db3436fbe944",
+      "archive_file": "models-migration-S08-saved-04299-s-its-real-Attempt-and-cost/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-saved-04299-s-its-real-Attempt-and-cost/trace.zip",
+      "file": "models-migration-S08-saved-04299-s-its-real-Attempt-and-cost/trace.zip",
+      "bytes": 3396451,
+      "sha256": "54f20e8d27e08478ac5c2de64c0ed27fd427703370c100526426224b6e86b6bd",
+      "archive_file": "models-migration-S08-saved-04299-s-its-real-Attempt-and-cost/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-unkno-79bb0--read-and-keeps-its-receipt/error-context.md",
+      "file": "models-migration-S08-unkno-79bb0--read-and-keeps-its-receipt/error-context.md",
+      "bytes": 12742,
+      "sha256": "e88adf6610dbc6dafee567da9560e74e02aeb9d0c87dbc49c5b9cdd7288da6bc",
+      "archive_file": "models-migration-S08-unkno-79bb0--read-and-keeps-its-receipt/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S08-unkno-79bb0--read-and-keeps-its-receipt/trace.zip",
+      "file": "models-migration-S08-unkno-79bb0--read-and-keeps-its-receipt/trace.zip",
+      "bytes": 5651,
+      "sha256": "bbe646e84e4f98127bd54c601ed6d7a13a3599d6be6ca2c3cbe45a358c395c59",
+      "archive_file": "models-migration-S08-unkno-79bb0--read-and-keeps-its-receipt/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S11-clear-459a3-he-old-snapshot-stays-fixed/error-context.md",
+      "file": "models-migration-S11-clear-459a3-he-old-snapshot-stays-fixed/error-context.md",
+      "bytes": 12739,
+      "sha256": "b385df3309bd07af41eb2b5281f21c1bb27fde497b3614839ece92531689638c",
+      "archive_file": "models-migration-S11-clear-459a3-he-old-snapshot-stays-fixed/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S11-clear-459a3-he-old-snapshot-stays-fixed/trace.zip",
+      "file": "models-migration-S11-clear-459a3-he-old-snapshot-stays-fixed/trace.zip",
+      "bytes": 5651,
+      "sha256": "87c20918cea1950fa8c4474182d71b2ed0ae0f08d212e7a32bdf088748d0379e",
+      "archive_file": "models-migration-S11-clear-459a3-he-old-snapshot-stays-fixed/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S11-model-a29a4-qual-to-its-old-saved-value/error-context.md",
+      "file": "models-migration-S11-model-a29a4-qual-to-its-old-saved-value/error-context.md",
+      "bytes": 12723,
+      "sha256": "96ba88e41717b5ee431344f48492a574019d61fb60c739223899527b437989d3",
+      "archive_file": "models-migration-S11-model-a29a4-qual-to-its-old-saved-value/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S11-model-a29a4-qual-to-its-old-saved-value/trace.zip",
+      "file": "models-migration-S11-model-a29a4-qual-to-its-old-saved-value/trace.zip",
+      "bytes": 5610,
+      "sha256": "86e421753821c354776513867ec3e5d89fa0c8a75d98a3c4f7bfe8735a382fac",
+      "archive_file": "models-migration-S11-model-a29a4-qual-to-its-old-saved-value/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S11-model-da593-qual-to-its-old-saved-value/error-context.md",
+      "file": "models-migration-S11-model-da593-qual-to-its-old-saved-value/error-context.md",
+      "bytes": 12723,
+      "sha256": "8375376df08fda5743fb32154f0b332d8ac01189b5d923ed895d01c0879887db",
+      "archive_file": "models-migration-S11-model-da593-qual-to-its-old-saved-value/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/models-migration-S11-model-da593-qual-to-its-old-saved-value/trace.zip",
+      "file": "models-migration-S11-model-da593-qual-to-its-old-saved-value/trace.zip",
+      "bytes": 5523,
+      "sha256": "522876453150f4cdcae89e11b4ede0ffd75d93496aaea198cf7873c040316f7f",
+      "archive_file": "models-migration-S11-model-da593-qual-to-its-old-saved-value/trace.zip"
+    },
+    {
+      "source": "output/playwright/results/shell-startup-first-readin-bda96--before-mounting-its-target/error-context.md",
+      "file": "shell-startup-first-readin-bda96--before-mounting-its-target/error-context.md",
+      "bytes": 18209,
+      "sha256": "9adc6a3559e9ee6457c718ead6fbd06763b34ac99cbd1ec0540294e4e7c21f23",
+      "archive_file": "shell-startup-first-readin-bda96--before-mounting-its-target/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/shell-startup-first-readin-bda96--before-mounting-its-target/test-failed-1.png",
+      "file": "shell-startup-first-readin-bda96--before-mounting-its-target/test-failed-1.png",
+      "bytes": 25294,
+      "sha256": "fb644a8cfd7aab777fa10e62745b103c41c5579d44c6e46dfa97f0b60793de5a",
+      "archive_file": "shell-startup-first-readin-bda96--before-mounting-its-target/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/shell-startup-first-readin-bda96--before-mounting-its-target/trace.zip",
+      "file": "shell-startup-first-readin-bda96--before-mounting-its-target/trace.zip",
+      "bytes": 87108,
+      "sha256": "cfe7117b47c1a360eff1e9efc85a068031bedcf19fbcf5ca722ffe6b62ab6d57",
+      "archive_file": "shell-startup-first-readin-bda96--before-mounting-its-target/trace.zip"
+    }
+  ]
+}
