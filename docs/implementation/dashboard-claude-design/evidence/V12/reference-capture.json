@@ -1,0 +1,88 @@
+{
+  "viewKey": "tools",
+  "accessibleName": "Tools\n14",
+  "browser": "155.0.8059.39",
+  "deviceScaleFactor": 1,
+  "records": [
+    {
+      "file": ".scratch/v12/capture/reference-tools-1440x900.png",
+      "measurements": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "nav": 233,
+        "main": 886,
+        "aside": 321,
+        "heading": "Tools",
+        "bodyWidth": 1440,
+        "remoteScripts": [
+          "http://127.0.0.1:18121/support.js",
+          "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+          "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"
+        ]
+      },
+      "snapshot": "- navigation:\n  - text: Syrup v0.9 · 本地 claude-sonnet-4-5 127.0.0.1:9049 SYSTEM\n  - link \"Overview\":\n    - /url: \"#\"\n  - link \"Loop 48\":\n    - /url: \"#\"\n  - link \"Memory 126\":\n    - /url: \"#\"\n  - link \"Graph on\":\n    - /url: \"#\"\n  - link \"Ops pass\":\n    - /url: \"#\"\n  - text: DATA\n  - link \"Tools 14\":\n    - /url: \"#\"\n  - link \"Database state.db\":\n    - /url: \"#\"\n  - button \"中文\"\n  - button \"EN\"\n  - text: ~/.syrup/state.db · 1.4 MB traces/2026-08-17.jsonl\n- main:\n  - text: 每个工具都要占提示词的位置\n  - heading \"Tools\" [level=1]\n  - text: \"按来源分组的工具，以及它们真实的调用次数。 live · turn #48 CALENDAR & NOTES syrup/tools/ create_event 把一件事订到一个时刻 31 次 read_calendar 读本地日历（ics + sqlite） 44 次 write_note 写一条笔记到 outbox 6 次 search_web 联网搜索（Tavily / DuckDuckGo） 12 次 MEMORY syrup/tools/memory_admin.py manage_memory 改正或忘掉一条事实 9 次 update_soul 记下长期偏好到 SOUL.md 4 次 create_skill 把一套流程存成技能 3 次 search_memory FTS5 关键词检索 19 次 MCP · demo .syrup/mcp.json demo_word_count 外部 MCP 服务提供 2 次 delegate_task 把编码任务派给 pi（实验） 1 次\"\n- complementary:\n  - text: CHAT working memory 记住 Alex 更喜欢上午开会 好，记下了。以后给你和 Alex 排会我会默认放在上午。 skip 2 iter 1.9s +1 fact 周五和 Alex 约个碰头 已排在周五 09:00 —— 用的是你之前告诉我的偏好。 retrieve 3 iter 3.4s create_event 正在流式输出… 事件同时写进 trace\n  - textbox \"跟 Syrup 说点什么…\"\n  - button \"发送\""
+    },
+    {
+      "file": ".scratch/v12/capture/reference-tools-1280x800.png",
+      "measurements": {
+        "viewport": {
+          "width": 1280,
+          "height": 800
+        },
+        "nav": 233,
+        "main": 726,
+        "aside": 321,
+        "heading": "Tools",
+        "bodyWidth": 1280,
+        "remoteScripts": [
+          "http://127.0.0.1:18121/support.js",
+          "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+          "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"
+        ]
+      },
+      "snapshot": "- navigation:\n  - text: Syrup v0.9 · 本地 claude-sonnet-4-5 127.0.0.1:9049 SYSTEM\n  - link \"Overview\":\n    - /url: \"#\"\n  - link \"Loop 48\":\n    - /url: \"#\"\n  - link \"Memory 126\":\n    - /url: \"#\"\n  - link \"Graph on\":\n    - /url: \"#\"\n  - link \"Ops pass\":\n    - /url: \"#\"\n  - text: DATA\n  - link \"Tools 14\":\n    - /url: \"#\"\n  - link \"Database state.db\":\n    - /url: \"#\"\n  - button \"中文\"\n  - button \"EN\"\n  - text: ~/.syrup/state.db · 1.4 MB traces/2026-08-17.jsonl\n- main:\n  - text: 每个工具都要占提示词的位置\n  - heading \"Tools\" [level=1]\n  - text: \"按来源分组的工具，以及它们真实的调用次数。 live · turn #48 CALENDAR & NOTES syrup/tools/ create_event 把一件事订到一个时刻 31 次 read_calendar 读本地日历（ics + sqlite） 44 次 write_note 写一条笔记到 outbox 6 次 search_web 联网搜索（Tavily / DuckDuckGo） 12 次 MEMORY syrup/tools/memory_admin.py manage_memory 改正或忘掉一条事实 9 次 update_soul 记下长期偏好到 SOUL.md 4 次 create_skill 把一套流程存成技能 3 次 search_memory FTS5 关键词检索 19 次 MCP · demo .syrup/mcp.json demo_word_count 外部 MCP 服务提供 2 次 delegate_task 把编码任务派给 pi（实验） 1 次\"\n- complementary:\n  - text: CHAT working memory 记住 Alex 更喜欢上午开会 好，记下了。以后给你和 Alex 排会我会默认放在上午。 skip 2 iter 1.9s +1 fact 周五和 Alex 约个碰头 已排在周五 09:00 —— 用的是你之前告诉我的偏好。 retrieve 3 iter 3.4s create_event 正在流式输出… 事件同时写进 trace\n  - textbox \"跟 Syrup 说点什么…\"\n  - button \"发送\""
+    },
+    {
+      "file": ".scratch/v12/capture/reference-tools-390x844.png",
+      "measurements": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "nav": 191,
+        "main": 0,
+        "aside": 293,
+        "heading": "Tools",
+        "bodyWidth": 390,
+        "remoteScripts": [
+          "http://127.0.0.1:18121/support.js",
+          "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+          "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"
+        ]
+      },
+      "snapshot": "- navigation:\n  - text: Syrup v0.9 · 本地 claude-sonnet-4-5 127.0.0.1:9049 SYSTEM\n  - link \"Overview\":\n    - /url: \"#\"\n  - link \"Loop 48\":\n    - /url: \"#\"\n  - link \"Memory 126\":\n    - /url: \"#\"\n  - link \"Graph on\":\n    - /url: \"#\"\n  - link \"Ops pass\":\n    - /url: \"#\"\n  - text: DATA\n  - link \"Tools 14\":\n    - /url: \"#\"\n  - link \"Database state.db\":\n    - /url: \"#\"\n  - button \"中文\"\n  - button \"EN\"\n  - text: ~/.syrup/state.db · 1.4 MB traces/2026-08-17.jsonl\n- main:\n  - text: 每个工具都要占提示词的位置\n  - heading \"Tools\" [level=1]\n  - text: \"按来源分组的工具，以及它们真实的调用次数。 live · turn #48 CALENDAR & NOTES syrup/tools/ create_event 把一件事订到一个时刻 31 次 read_calendar 读本地日历（ics + sqlite） 44 次 write_note 写一条笔记到 outbox 6 次 search_web 联网搜索（Tavily / DuckDuckGo） 12 次 MEMORY syrup/tools/memory_admin.py manage_memory 改正或忘掉一条事实 9 次 update_soul 记下长期偏好到 SOUL.md 4 次 create_skill 把一套流程存成技能 3 次 search_memory FTS5 关键词检索 19 次 MCP · demo .syrup/mcp.json demo_word_count 外部 MCP 服务提供 2 次 delegate_task 把编码任务派给 pi（实验） 1 次\"\n- complementary:\n  - text: CHAT working memory 记住 Alex 更喜欢上午开会 好，记下了。以后给你和 Alex 排会我会默认放在上午。 skip 2 iter 1.9s +1 fact 周五和 Alex 约个碰头 已排在周五 09:00 —— 用的是你之前告诉我的偏好。 retrieve 3 iter 3.4s create_event 正在流式输出… 事件同时写进 trace\n  - textbox \"跟 Syrup 说点什么…\"\n  - button \"发送\""
+    },
+    {
+      "file": ".scratch/v12/capture/reference-tools-320x800.png",
+      "measurements": {
+        "viewport": {
+          "width": 320,
+          "height": 800
+        },
+        "nav": 191,
+        "main": 0,
+        "aside": 293,
+        "heading": "Tools",
+        "bodyWidth": 320,
+        "remoteScripts": [
+          "http://127.0.0.1:18121/support.js",
+          "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+          "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"
+        ]
+      },
+      "snapshot": "- navigation:\n  - text: Syrup v0.9 · 本地 claude-sonnet-4-5 127.0.0.1:9049 SYSTEM\n  - link \"Overview\":\n    - /url: \"#\"\n  - link \"Loop 48\":\n    - /url: \"#\"\n  - link \"Memory 126\":\n    - /url: \"#\"\n  - link \"Graph on\":\n    - /url: \"#\"\n  - link \"Ops pass\":\n    - /url: \"#\"\n  - text: DATA\n  - link \"Tools 14\":\n    - /url: \"#\"\n  - link \"Database state.db\":\n    - /url: \"#\"\n  - button \"中文\"\n  - button \"EN\"\n  - text: ~/.syrup/state.db · 1.4 MB traces/2026-08-17.jsonl\n- main:\n  - text: 每个工具都要占提示词的位置\n  - heading \"Tools\" [level=1]\n  - text: \"按来源分组的工具，以及它们真实的调用次数。 live · turn #48 CALENDAR & NOTES syrup/tools/ create_event 把一件事订到一个时刻 31 次 read_calendar 读本地日历（ics + sqlite） 44 次 write_note 写一条笔记到 outbox 6 次 search_web 联网搜索（Tavily / DuckDuckGo） 12 次 MEMORY syrup/tools/memory_admin.py manage_memory 改正或忘掉一条事实 9 次 update_soul 记下长期偏好到 SOUL.md 4 次 create_skill 把一套流程存成技能 3 次 search_memory FTS5 关键词检索 19 次 MCP · demo .syrup/mcp.json demo_word_count 外部 MCP 服务提供 2 次 delegate_task 把编码任务派给 pi（实验） 1 次\"\n- complementary:\n  - text: CHAT working memory 记住 Alex 更喜欢上午开会 好，记下了。以后给你和 Alex 排会我会默认放在上午。 skip 2 iter 1.9s +1 fact 周五和 Alex 约个碰头 已排在周五 09:00 —— 用的是你之前告诉我的偏好。 retrieve 3 iter 3.4s create_event 正在流式输出… 事件同时写进 trace\n  - textbox \"跟 Syrup 说点什么…\"\n  - button \"发送\""
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+[
+  {
+    "case": "routing-statistics-SPEC-03-b2e50-cs-and-real-bad-data-errors",
+    "name": "routing-statistics.spec.js >> SPEC-03 CE-05/12/13/15 legacy counts, unknown metrics and real bad-data errors",
+    "error": "\n\n```\nTest timeout of 15000ms exceeded.\n```\n\n"
+  },
+  {
+    "case": "accounting-migration-S09-n-caa4e-y-requires-explicit-refresh",
+    "name": "accounting-migration.spec.js >> S09 native return reuses the source snapshot and one bounded page, expiry requires explicit refresh",
+    "error": "\n\n```\nTest timeout of 15000ms exceeded.\n```"
+  },
+  {
+    "case": "routing-CE-09-10-failed-re-3bfdc-ection-and-rejects-next-Run",
+    "name": "routing.spec.js >> CE-09/10: failed recording keeps no-reply projection and rejects next Run",
+    "error": "\n\n```\nTest timeout of 15000ms exceeded.\n```"
+  }
+]

@@ -1,0 +1,163 @@
+{
+  "final-01-ruff": {
+    "command": [
+      "uv",
+      "run",
+      "ruff",
+      "check"
+    ],
+    "head": "9312581c6026b81d33bd0d886a344a3a92b9d496",
+    "source_sha256": {
+      "src/agent_alfred/ops/static/models.js": "5bac770518eab681b2d7a43aa713f66a6c642fa263b613768933e4163a2f9788",
+      "src/agent_alfred/ops/static/connections.js": "375a5fdd49fb219fb8fab16f6532f8d2a9c284747dfab86989062f5011f2616e",
+      "src/agent_alfred/ops/static/settings.css": "71d73fec4198d7ae2de0f264a00bfc49006fd42fb520b570d466643932966dbf",
+      "src/agent_alfred/ops/static/settings-focus.js": "07229e0d2f90554cbd3a26d7a1e079b4843cebef587945381a60a65b328e2915"
+    },
+    "exit_code": 0,
+    "duration_seconds": 0.254,
+    "output_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+  },
+  "final-02-skills": {
+    "command": [
+      "uv",
+      "run",
+      "python",
+      "scripts/check_skills.py"
+    ],
+    "head": "9312581c6026b81d33bd0d886a344a3a92b9d496",
+    "source_sha256": {
+      "src/agent_alfred/ops/static/models.js": "5bac770518eab681b2d7a43aa713f66a6c642fa263b613768933e4163a2f9788",
+      "src/agent_alfred/ops/static/connections.js": "375a5fdd49fb219fb8fab16f6532f8d2a9c284747dfab86989062f5011f2616e",
+      "src/agent_alfred/ops/static/settings.css": "71d73fec4198d7ae2de0f264a00bfc49006fd42fb520b570d466643932966dbf",
+      "src/agent_alfred/ops/static/settings-focus.js": "07229e0d2f90554cbd3a26d7a1e079b4843cebef587945381a60a65b328e2915"
+    },
+    "exit_code": 0,
+    "duration_seconds": 0.682,
+    "output_sha256": "fd7f151ef9c20676183c52051dc38436a8de140577cf552f4bfb470d5c8058b6"
+  },
+  "final-03-env": {
+    "command": [
+      "uv",
+      "run",
+      "python",
+      "scripts/check_env_example.py"
+    ],
+    "head": "9312581c6026b81d33bd0d886a344a3a92b9d496",
+    "source_sha256": {
+      "src/agent_alfred/ops/static/models.js": "5bac770518eab681b2d7a43aa713f66a6c642fa263b613768933e4163a2f9788",
+      "src/agent_alfred/ops/static/connections.js": "375a5fdd49fb219fb8fab16f6532f8d2a9c284747dfab86989062f5011f2616e",
+      "src/agent_alfred/ops/static/settings.css": "71d73fec4198d7ae2de0f264a00bfc49006fd42fb520b570d466643932966dbf",
+      "src/agent_alfred/ops/static/settings-focus.js": "07229e0d2f90554cbd3a26d7a1e079b4843cebef587945381a60a65b328e2915"
+    },
+    "exit_code": 0,
+    "duration_seconds": 10.083,
+    "output_sha256": "bc243523b805cfaeb64daf1540da71749c485a41d8aed112495ab3f052f28a97"
+  },
+  "final-04-pytest": {
+    "command": [
+      "uv",
+      "run",
+      "--extra",
+      "mcp",
+      "pytest"
+    ],
+    "head": "9312581c6026b81d33bd0d886a344a3a92b9d496",
+    "source_sha256": {
+      "src/agent_alfred/ops/static/models.js": "5bac770518eab681b2d7a43aa713f66a6c642fa263b613768933e4163a2f9788",
+      "src/agent_alfred/ops/static/connections.js": "375a5fdd49fb219fb8fab16f6532f8d2a9c284747dfab86989062f5011f2616e",
+      "src/agent_alfred/ops/static/settings.css": "71d73fec4198d7ae2de0f264a00bfc49006fd42fb520b570d466643932966dbf",
+      "src/agent_alfred/ops/static/settings-focus.js": "07229e0d2f90554cbd3a26d7a1e079b4843cebef587945381a60a65b328e2915"
+    },
+    "exit_code": 0,
+    "duration_seconds": 4094.305,
+    "output_sha256": "8ade566f214efc009e4e83d25eb8b3d5c7653818ff3278468df9c1938071b77f"
+  },
+  "final-05-typecheck": {
+    "command": [
+      "npm",
+      "run",
+      "typecheck"
+    ],
+    "head": "9312581c6026b81d33bd0d886a344a3a92b9d496",
+    "source_sha256": {
+      "src/agent_alfred/ops/static/models.js": "5bac770518eab681b2d7a43aa713f66a6c642fa263b613768933e4163a2f9788",
+      "src/agent_alfred/ops/static/connections.js": "375a5fdd49fb219fb8fab16f6532f8d2a9c284747dfab86989062f5011f2616e",
+      "src/agent_alfred/ops/static/settings.css": "71d73fec4198d7ae2de0f264a00bfc49006fd42fb520b570d466643932966dbf",
+      "src/agent_alfred/ops/static/settings-focus.js": "07229e0d2f90554cbd3a26d7a1e079b4843cebef587945381a60a65b328e2915"
+    },
+    "exit_code": 0,
+    "duration_seconds": 3.083,
+    "output_sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f"
+  },
+  "final-06-browser-4": {
+    "command": [
+      "env",
+      "ALFRED_BROWSER_TEST_PORT=18120",
+      "npm",
+      "run",
+      "test:browser"
+    ],
+    "head": "9312581c6026b81d33bd0d886a344a3a92b9d496",
+    "source_sha256": {
+      "src/agent_alfred/ops/static/models.js": "5bac770518eab681b2d7a43aa713f66a6c642fa263b613768933e4163a2f9788",
+      "src/agent_alfred/ops/static/connections.js": "375a5fdd49fb219fb8fab16f6532f8d2a9c284747dfab86989062f5011f2616e",
+      "src/agent_alfred/ops/static/settings.css": "71d73fec4198d7ae2de0f264a00bfc49006fd42fb520b570d466643932966dbf",
+      "src/agent_alfred/ops/static/settings-focus.js": "07229e0d2f90554cbd3a26d7a1e079b4843cebef587945381a60a65b328e2915"
+    },
+    "exit_code": 0,
+    "duration_seconds": 776.654,
+    "output_sha256": "170646a6ae5dd5e9bf5d050d6bf65222a29bac1fc06dc1b9d4c9c37d3ba82b3b"
+  },
+  "final-07-working-diff": {
+    "command": [
+      "git",
+      "diff",
+      "--check"
+    ],
+    "head": "9312581c6026b81d33bd0d886a344a3a92b9d496",
+    "source_sha256": {
+      "src/agent_alfred/ops/static/models.js": "5bac770518eab681b2d7a43aa713f66a6c642fa263b613768933e4163a2f9788",
+      "src/agent_alfred/ops/static/connections.js": "375a5fdd49fb219fb8fab16f6532f8d2a9c284747dfab86989062f5011f2616e",
+      "src/agent_alfred/ops/static/settings.css": "71d73fec4198d7ae2de0f264a00bfc49006fd42fb520b570d466643932966dbf",
+      "src/agent_alfred/ops/static/settings-focus.js": "07229e0d2f90554cbd3a26d7a1e079b4843cebef587945381a60a65b328e2915"
+    },
+    "exit_code": 0,
+    "duration_seconds": 0.189,
+    "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final-07-branch-diff": {
+    "command": [
+      "git",
+      "diff",
+      "--check",
+      "origin/main...HEAD"
+    ],
+    "head": "9312581c6026b81d33bd0d886a344a3a92b9d496",
+    "source_sha256": {
+      "src/agent_alfred/ops/static/models.js": "5bac770518eab681b2d7a43aa713f66a6c642fa263b613768933e4163a2f9788",
+      "src/agent_alfred/ops/static/connections.js": "375a5fdd49fb219fb8fab16f6532f8d2a9c284747dfab86989062f5011f2616e",
+      "src/agent_alfred/ops/static/settings.css": "71d73fec4198d7ae2de0f264a00bfc49006fd42fb520b570d466643932966dbf",
+      "src/agent_alfred/ops/static/settings-focus.js": "07229e0d2f90554cbd3a26d7a1e079b4843cebef587945381a60a65b328e2915"
+    },
+    "exit_code": 0,
+    "duration_seconds": 0.129,
+    "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "final-08-build-install": {
+    "command": [
+      "zsh",
+      "-c",
+      "uv build && uv run python scripts/check_mcp_installations.py --output .scratch/v12/final-mcp-artifacts.json"
+    ],
+    "head": "9312581c6026b81d33bd0d886a344a3a92b9d496",
+    "source_sha256": {
+      "src/agent_alfred/ops/static/models.js": "5bac770518eab681b2d7a43aa713f66a6c642fa263b613768933e4163a2f9788",
+      "src/agent_alfred/ops/static/connections.js": "375a5fdd49fb219fb8fab16f6532f8d2a9c284747dfab86989062f5011f2616e",
+      "src/agent_alfred/ops/static/settings.css": "71d73fec4198d7ae2de0f264a00bfc49006fd42fb520b570d466643932966dbf",
+      "src/agent_alfred/ops/static/settings-focus.js": "07229e0d2f90554cbd3a26d7a1e079b4843cebef587945381a60a65b328e2915"
+    },
+    "exit_code": 0,
+    "duration_seconds": 73.221,
+    "output_sha256": "a47fe223eef9c3b56c9bc8bb8da147cb967d1a5baa351734783488e5d6d40026"
+  }
+}

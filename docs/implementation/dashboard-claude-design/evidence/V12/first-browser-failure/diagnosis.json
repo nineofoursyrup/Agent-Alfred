@@ -1,0 +1,120 @@
+{
+  "head": "c6fb5e754eb77734f3a7333db9afa007db240ae9",
+  "case": "S09 native return reuses the source snapshot and one bounded page, expiry requires explicit refresh",
+  "test_file": "tests/browser/accounting-migration.spec.js",
+  "location": 189,
+  "failure": "Test timeout of 15000ms exceeded.",
+  "root_cause": "UNKNOWN",
+  "scope": "unowned accounting page",
+  "last_actions": [
+    {
+      "callId": "call@889",
+      "method": "click",
+      "params": {
+        "selector": "internal:role=link[name=\"进入运行过程（保留账目快照）\"i]",
+        "strict": true
+      },
+      "startTime": 34150.137
+    },
+    {
+      "callId": "call@891",
+      "method": "expect",
+      "title": "Expect \"toHaveURL\"",
+      "params": {
+        "expression": "to.have.url",
+        "expectedText": [
+          {
+            "string": "http://127.0.0.1:18124/runs/60d04f3602d54af2b20306b7c9ab3049?ops_timezone=Asia%2FShanghai&ops_range=all&snapshot_id=5abcad5d463449db9e4f52fc1f792844"
+          }
+        ],
+        "expectedValue": {
+          "value": {
+            "v": "undefined"
+          },
+          "handles": []
+        },
+        "isNot": false,
+        "timeout": 4000
+      },
+      "startTime": 34194.179
+    },
+    {
+      "callId": "call@893",
+      "method": "goBack",
+      "params": {
+        "waitUntil": "load"
+      },
+      "startTime": 34204.407
+    },
+    {
+      "callId": "call@895",
+      "method": "expect",
+      "title": "Expect \"toContainText\"",
+      "params": {
+        "selector": "internal:role=region[name=\"当前账目快照\"i]",
+        "expression": "to.have.text",
+        "expectedText": [
+          {
+            "string": "5abcad5d463449db9e4f52fc1f792844",
+            "matchSubstring": true,
+            "normalizeWhiteSpace": true
+          }
+        ],
+        "expectedValue": {
+          "value": {
+            "v": "undefined"
+          },
+          "handles": []
+        },
+        "isNot": false,
+        "timeout": 4000
+      },
+      "startTime": 34218.231
+    },
+    {
+      "callId": "call@898",
+      "method": "expect",
+      "title": "Expect \"toHaveCount\"",
+      "params": {
+        "selector": "internal:role=button[name=/查看账目 /]",
+        "expression": "to.have.count",
+        "expectedNumber": 5,
+        "expectedValue": {
+          "value": {
+            "v": "undefined"
+          },
+          "handles": []
+        },
+        "isNot": false,
+        "timeout": 4000
+      },
+      "startTime": 39957.181
+    },
+    {
+      "callId": "call@900",
+      "method": "expect",
+      "title": "Expect \"toContainText\"",
+      "params": {
+        "selector": "internal:role=region[name=\"运行账目明细\"i]",
+        "expression": "to.have.text",
+        "expectedText": [
+          {
+            "string": "60d04f3602d54af2b20306b7c9ab3049",
+            "matchSubstring": true,
+            "normalizeWhiteSpace": true
+          }
+        ],
+        "expectedValue": {
+          "value": {
+            "v": "undefined"
+          },
+          "handles": []
+        },
+        "isNot": false,
+        "timeout": 4000
+      },
+      "startTime": 39962.612
+    }
+  ],
+  "resolution_plan": "Preserve first failure; repeat this unchanged case alone; then rerun the full browser suite without changing code, assertions, retries or timeouts."
+}
