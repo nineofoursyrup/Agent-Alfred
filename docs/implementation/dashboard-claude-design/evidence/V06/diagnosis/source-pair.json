@@ -1,0 +1,10 @@
+{
+  "src/agent_alfred/ops/static/memory.js": {
+    "baseline_sha256": "9129f17ae69d5e854bc2084e2d18be1afcc4ca53a1484a4ea8e247d2523bc9a0",
+    "candidate_sha256": "53de17e308776b2ee4b91a8c923cc86449ba6d363f6c3b84a59de6883a1401c3"
+  },
+  "src/agent_alfred/ops/static/memory.css": {
+    "baseline_sha256": "35db69100f3aec59f8b1d24c33a71e91907f024b05d6d19c8b91729f5da31a9d",
+    "candidate_sha256": "df2689115e0c8d1540aa42f142e944a70d2a34ee7a0bb160a6c753b55c6c27ed"
+  }
+}

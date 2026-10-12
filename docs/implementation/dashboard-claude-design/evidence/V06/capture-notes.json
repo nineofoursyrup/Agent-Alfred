@@ -1,0 +1,5 @@
+{
+  "measurement_note": "1440x900 metrics were measured while semantic and episodic were re-reading: only Skill was visible in this early sample. The subsequent screenshot and ARIA snapshot show settled 6/2/1 cards. This transitional sample is retained as-is rather than rewritten; 1280/390/320 measurements were settled.",
+  "requestfailed_note": "One api/events net::ERR_ABORTED occurred during native SSE lifecycle in the temporary evidence workflow. It is retained in capture.json; pageerror was empty. All production script/style resources were same-origin.",
+  "scope_note": "Screenshots use a temporary real Host/HTTP/SQLite and existing offline MemoryModel. Values are fixture state, not the user live memory store or real-provider acceptance."
+}

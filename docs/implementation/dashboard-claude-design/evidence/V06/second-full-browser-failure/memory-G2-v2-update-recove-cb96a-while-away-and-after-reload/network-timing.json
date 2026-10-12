@@ -1,0 +1,323 @@
+{
+  "requests": [
+    {
+      "path": "/memory",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 4.691999999999999,
+      "started": "2026-10-12T06:45:50.137Z"
+    },
+    {
+      "path": "/assets/app.css",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 3.85,
+      "started": "2026-10-12T06:45:50.143Z"
+    },
+    {
+      "path": "/assets/inbox-runs.css",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 7.639,
+      "started": "2026-10-12T06:45:50.143Z"
+    },
+    {
+      "path": "/assets/database.css",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 7.117,
+      "started": "2026-10-12T06:45:50.143Z"
+    },
+    {
+      "path": "/assets/settings.css",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 7.550000000000001,
+      "started": "2026-10-12T06:45:50.143Z"
+    },
+    {
+      "path": "/assets/tools.css",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 5.808999999999999,
+      "started": "2026-10-12T06:45:50.143Z"
+    },
+    {
+      "path": "/assets/behaviour.css",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 6.881,
+      "started": "2026-10-12T06:45:50.143Z"
+    },
+    {
+      "path": "/assets/overview.css",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 7.377,
+      "started": "2026-10-12T06:45:50.143Z"
+    },
+    {
+      "path": "/assets/memory.css",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 5.459,
+      "started": "2026-10-12T06:45:50.143Z"
+    },
+    {
+      "path": "/assets/accounting.css",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 5.376,
+      "started": "2026-10-12T06:45:50.143Z"
+    },
+    {
+      "path": "/assets/app.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 5.607,
+      "started": "2026-10-12T06:45:50.143Z"
+    },
+    {
+      "path": "/assets/shell.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 2.714,
+      "started": "2026-10-12T06:45:50.175Z"
+    },
+    {
+      "path": "/assets/dom.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 7.022,
+      "started": "2026-10-12T06:45:50.175Z"
+    },
+    {
+      "path": "/assets/aggregation.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 7.182,
+      "started": "2026-10-12T06:45:50.175Z"
+    },
+    {
+      "path": "/assets/stream.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 8.91,
+      "started": "2026-10-12T06:45:50.175Z"
+    },
+    {
+      "path": "/assets/accounting.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 8.661,
+      "started": "2026-10-12T06:45:50.175Z"
+    },
+    {
+      "path": "/assets/pages.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 4.63,
+      "started": "2026-10-12T06:45:50.175Z"
+    },
+    {
+      "path": "/assets/inbox.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 4.746,
+      "started": "2026-10-12T06:45:50.175Z"
+    },
+    {
+      "path": "/assets/memory.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 3.045,
+      "started": "2026-10-12T06:45:50.175Z"
+    },
+    {
+      "path": "/assets/notices.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 7.9879999999999995,
+      "started": "2026-10-12T06:45:50.175Z"
+    },
+    {
+      "path": "/assets/runs.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 7.802,
+      "started": "2026-10-12T06:45:50.175Z"
+    },
+    {
+      "path": "/assets/tools.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 16.645,
+      "started": "2026-10-12T06:45:50.175Z"
+    },
+    {
+      "path": "/assets/behaviour.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 2.901,
+      "started": "2026-10-12T06:45:50.187Z"
+    },
+    {
+      "path": "/assets/overview.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 5.598,
+      "started": "2026-10-12T06:45:50.175Z"
+    },
+    {
+      "path": "/assets/database.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 7.639,
+      "started": "2026-10-12T06:45:50.175Z"
+    },
+    {
+      "path": "/assets/models.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 4.08,
+      "started": "2026-10-12T06:45:50.187Z"
+    },
+    {
+      "path": "/assets/progress.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 19.029,
+      "started": "2026-10-12T06:45:50.175Z"
+    },
+    {
+      "path": "/assets/topology.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 2.282,
+      "started": "2026-10-12T06:45:50.193Z"
+    },
+    {
+      "path": "/assets/trace_export.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 1.814,
+      "started": "2026-10-12T06:45:50.193Z"
+    },
+    {
+      "path": "/assets/settings-focus.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 5.274,
+      "started": "2026-10-12T06:45:50.196Z"
+    },
+    {
+      "path": "/assets/run-fields.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 10.239,
+      "started": "2026-10-12T06:45:50.188Z"
+    },
+    {
+      "path": "/assets/routing-statistics.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 8.173,
+      "started": "2026-10-12T06:45:50.193Z"
+    },
+    {
+      "path": "/assets/connections.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 15.577,
+      "started": "2026-10-12T06:45:50.187Z"
+    },
+    {
+      "path": "/assets/run-evidence.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 12.293,
+      "started": "2026-10-12T06:45:50.193Z"
+    },
+    {
+      "path": "/assets/source.js",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 15.64,
+      "started": "2026-10-12T06:45:50.188Z"
+    },
+    {
+      "path": "/api/entry",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 2.269,
+      "started": "2026-10-12T06:45:59.945Z"
+    },
+    {
+      "path": "/api/memory/state",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 1.658,
+      "started": "2026-10-12T06:45:59.958Z"
+    },
+    {
+      "path": "/api/memory/statistics",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 15.091,
+      "started": "2026-10-12T06:45:59.964Z"
+    },
+    {
+      "path": "/api/memory/records",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 3.089,
+      "started": "2026-10-12T06:45:59.979Z"
+    },
+    {
+      "path": "/api/memory/records",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 7.769,
+      "started": "2026-10-12T06:45:59.979Z"
+    },
+    {
+      "path": "/api/memory/consolidation",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 27.66,
+      "started": "2026-10-12T06:45:59.980Z"
+    },
+    {
+      "path": "/api/memory/mirrors",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 37.684000000000005,
+      "started": "2026-10-12T06:45:59.980Z"
+    },
+    {
+      "path": "/api/events",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 1.252,
+      "started": "2026-10-12T06:45:59.954Z"
+    },
+    {
+      "path": "/api/entry",
+      "method": "GET",
+      "status": 200,
+      "time_ms": 2.6760000000940636,
+      "started": "2026-10-12T06:45:50.116Z"
+    },
+    {
+      "path": "/api/memory/commands",
+      "method": "POST",
+      "status": 200,
+      "time_ms": 11.375,
+      "started": "2026-10-12T06:45:50.120Z"
+    }
+  ],
+  "notes": [
+    "Headers, query strings and response bodies intentionally omitted from derived timing data.",
+    "Original trace observations still have UNKNOWN root cause."
+  ]
+}
