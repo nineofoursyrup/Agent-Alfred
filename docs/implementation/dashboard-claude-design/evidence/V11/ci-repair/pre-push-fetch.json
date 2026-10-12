@@ -1,0 +1,11 @@
+{
+  "command": [
+    "git",
+    "fetch",
+    "origin"
+  ],
+  "exit_code": 0,
+  "main": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "head": "3c14a17af1647824c5f36c32526ec6d49971dcde",
+  "rebase_required": false
+}

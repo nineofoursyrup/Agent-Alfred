@@ -106,5 +106,21 @@
       "message": "  unexpected value \"viewport ratio 0.9881404042243958\""
     }
   ],
-  "interpretation": "Stable 0.9881404042243958 at all 12 reads; product layout repair, no assertion change."
+  "interpretation": "Stable 0.9881404042243958 at all 12 reads; product layout repair, no assertion change.",
+  "sse_requests": [
+    {
+      "started_at": "2026-10-12T09:32:29.020Z",
+      "status": 200,
+      "monotonic_start_ms": 940584.314,
+      "duration_ms": 0.999,
+      "monotonic_end_ms": 940585.313
+    },
+    {
+      "started_at": "2026-10-12T09:32:29.059Z",
+      "status": 200,
+      "monotonic_start_ms": 940624.122,
+      "duration_ms": 5138.968,
+      "monotonic_end_ms": 945763.09
+    }
+  ]
 }
