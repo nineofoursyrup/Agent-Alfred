@@ -1,0 +1,5 @@
+{
+  "original_filename": "error-context.md",
+  "sha256": "54423bbfcc584a5ae4ade81a542d6e121d5bed88b2e5ee5f7463189172a97383",
+  "text": "# Instructions\n\n- Following Playwright test failed.\n- Explain why, be concise, respect Playwright best practices.\n- Provide a snippet of code with the fix, if possible.\n\n# Test info\n\n- Name: topology.spec.js >> CE-08: keyboard and complete text at 1280px\n- Location: tests/browser/topology.spec.js:240:3\n\n# Error details\n\n```\nTest timeout of 15000ms exceeded.\n```"
+}

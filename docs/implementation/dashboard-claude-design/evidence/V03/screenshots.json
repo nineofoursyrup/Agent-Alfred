@@ -1,0 +1,52 @@
+{
+  "mainbar-1280x800.png": {
+    "width": 1280,
+    "height": 800,
+    "sha256": "f27359ccd950ab790749272c8a857fa514341a90368a9d336c6303d1665eccb7"
+  },
+  "mainbar-1440x900.png": {
+    "width": 1440,
+    "height": 900,
+    "sha256": "654a49a63dc590cb4db0efc443add7ced54c0f2661168f99914f1db000e90665"
+  },
+  "mainbar-320x800.png": {
+    "width": 320,
+    "height": 800,
+    "sha256": "1c3b99047e060aac1137973a40a271bd1bd935ed428f2ea469a586352a0181a2"
+  },
+  "mainbar-390x844.png": {
+    "width": 390,
+    "height": 844,
+    "sha256": "e42b484631289580b1184b6db10d348a12ee8678d2ebeb56abcb4335b2ad7a7b"
+  },
+  "mainbar-located-1440x900.png": {
+    "width": 1440,
+    "height": 900,
+    "sha256": "d0c04f5325f8a6ee4b6c28e49f6502f5eac4e5091271a753ad86b0c726be7cc6"
+  },
+  "mainbar-streaming-1440x900.png": {
+    "width": 1440,
+    "height": 900,
+    "sha256": "b0e44b371e471ccfee8131622cde4f3d66c8dc4cef5e59639d4890bf53113f9d"
+  },
+  "reference-overview-1280x800.png": {
+    "width": 1280,
+    "height": 800,
+    "sha256": "98e053c41655d4326a204caee77bfcbc140c82aa963eea2dec22baf036839573"
+  },
+  "reference-overview-1440x900.png": {
+    "width": 1440,
+    "height": 900,
+    "sha256": "d1e62275a0ff945712cd3b7f55fb6227e9c792480bcd07bfdf9d793c394b5035"
+  },
+  "reference-overview-320x800.png": {
+    "width": 320,
+    "height": 800,
+    "sha256": "2fc61dc829f64794dbde50ff054494579b7c7f6c32142c0787d1759be4af7cef"
+  },
+  "reference-overview-390x844.png": {
+    "width": 390,
+    "height": 844,
+    "sha256": "afc927e2d0664b3f8a8e969deb80831212db3a4f2005642465346647269b65db"
+  }
+}

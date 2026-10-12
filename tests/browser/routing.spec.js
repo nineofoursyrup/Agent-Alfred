@@ -214,7 +214,9 @@ test('CE-01: disabled real browser conversation matches exact pre-routing baseli
         await expect(page.getByRole('textbox', {name:'消息'})).toBeEnabled();
         await page.reload();
         await expect(page.locator('#messages').getByText('离线 Skill 回复')).toBeVisible();
-        texts.push(await page.locator('#messages').innerText());
+        // Compare exact request/reply and state text across the visual layout;
+        // V03 adds Run navigation and preserves message whitespace.
+        texts.push((await page.locator('#messages p, #messages small').allTextContents()).join('\n'));
       } finally {
         try {await context.close();} finally {await server.close();}
       }

@@ -1,0 +1,34 @@
+{
+  "command": [
+    "uv",
+    "run",
+    "ruff",
+    "check"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v03",
+  "started_at": "2026-10-12T05:55:28.046914+00:00",
+  "elapsed_seconds": 0.615,
+  "exit_code": 0,
+  "candidate_before": {
+    "head": "dc7ff2d969c0d75973cab6ac2841f7d2428b896f",
+    "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_sha256": {
+      "src/agent_alfred/ops/static/app.css": "8c57f8a322afb4b1839609b8bea6b1b5662ebbb5f6fb656c1d66748dcd3f6c4e",
+      "src/agent_alfred/ops/static/app.js": "8b5f737a91ae943e2ce5ab15b53cbd25772a6233f046673bdf9515d6d7ba597d",
+      "src/agent_alfred/ops/static/index.html": "b0f39799a068dd47598e3155cf4a5082ea6a5f7a1055a939f8ceca95d5e92ddb",
+      "tests/browser/shell.spec.js": "7179f72aa3c083753f1362838d65c7b312da20b407fd26f99f1df1182c18d686"
+    }
+  },
+  "candidate_after": {
+    "head": "dc7ff2d969c0d75973cab6ac2841f7d2428b896f",
+    "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_sha256": {
+      "src/agent_alfred/ops/static/app.css": "8c57f8a322afb4b1839609b8bea6b1b5662ebbb5f6fb656c1d66748dcd3f6c4e",
+      "src/agent_alfred/ops/static/app.js": "8b5f737a91ae943e2ce5ab15b53cbd25772a6233f046673bdf9515d6d7ba597d",
+      "src/agent_alfred/ops/static/index.html": "b0f39799a068dd47598e3155cf4a5082ea6a5f7a1055a939f8ceca95d5e92ddb",
+      "tests/browser/shell.spec.js": "7179f72aa3c083753f1362838d65c7b312da20b407fd26f99f1df1182c18d686"
+    }
+  },
+  "output_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+  "output": "All checks passed!\n"
+}

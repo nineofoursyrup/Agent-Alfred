@@ -1,0 +1,44 @@
+{
+  "command": [
+    "npx",
+    "playwright",
+    "test",
+    "integrations.spec.js:147",
+    "routing-statistics.spec.js:57",
+    "routing-statistics.spec.js:263",
+    "routing.spec.js:88",
+    "routing.spec.js:185",
+    "run-path.spec.js:444",
+    "run-path.spec.js:475",
+    "skills.spec.js:67",
+    "topology.spec.js:240",
+    "--grep",
+    "^(?:(?!partial|\\b(?:collapsed|unavailable|none|start|aborted|prune|corrupt|version|legacy)|at (?:1440|390|320)px).)*$"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v03",
+  "started_at": "2026-10-12T06:21:04.348829+00:00",
+  "elapsed_seconds": 94.279,
+  "exit_code": 1,
+  "candidate_before": {
+    "head": "dc7ff2d969c0d75973cab6ac2841f7d2428b896f",
+    "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_sha256": {
+      "src/agent_alfred/ops/static/app.css": "8c57f8a322afb4b1839609b8bea6b1b5662ebbb5f6fb656c1d66748dcd3f6c4e",
+      "src/agent_alfred/ops/static/app.js": "8b5f737a91ae943e2ce5ab15b53cbd25772a6233f046673bdf9515d6d7ba597d",
+      "src/agent_alfred/ops/static/index.html": "b0f39799a068dd47598e3155cf4a5082ea6a5f7a1055a939f8ceca95d5e92ddb",
+      "tests/browser/shell.spec.js": "7179f72aa3c083753f1362838d65c7b312da20b407fd26f99f1df1182c18d686"
+    }
+  },
+  "candidate_after": {
+    "head": "dc7ff2d969c0d75973cab6ac2841f7d2428b896f",
+    "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_sha256": {
+      "src/agent_alfred/ops/static/app.css": "8c57f8a322afb4b1839609b8bea6b1b5662ebbb5f6fb656c1d66748dcd3f6c4e",
+      "src/agent_alfred/ops/static/app.js": "8b5f737a91ae943e2ce5ab15b53cbd25772a6233f046673bdf9515d6d7ba597d",
+      "src/agent_alfred/ops/static/index.html": "b0f39799a068dd47598e3155cf4a5082ea6a5f7a1055a939f8ceca95d5e92ddb",
+      "tests/browser/shell.spec.js": "7179f72aa3c083753f1362838d65c7b312da20b407fd26f99f1df1182c18d686"
+    }
+  },
+  "output_sha256": "8c5a632e28288d1e11c474d7de3dedb868694bc28d3a73a454d06180951b2a28",
+  "output": "\nRunning 13 tests using 1 worker\n\n(node:8717) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✓   1 tests/browser/integrations.spec.js:147:1 › CE-08 rotated old and new secrets are redacted before real SSE delivery (4.2s)\n  ✓   2 tests/browser/routing-statistics.spec.js:57:1 › CE-03/08/14 real recovery counts survive restart and late range responses (7.6s)\n  ✓   3 tests/browser/routing.spec.js:88:1 › CE-09/10: failed recording keeps no-reply projection and rejects next Run (4.6s)\n\n  ✘   4 tests/browser/routing.spec.js:185:1 › CE-01: disabled real browser conversation matches exact pre-routing baseline (5.0s)\n(node:9555) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✓   5 tests/browser/run-path.spec.js:444:70 › CE-06 real SIGKILL restart browser complete (5.2s)\n  ✓   6 tests/browser/run-path.spec.js:444:70 › CE-06 real SIGKILL restart browser prefix (3.3s)\n  ✓   7 tests/browser/run-path.spec.js:444:70 › CE-06 real SIGKILL restart browser missing (3.7s)\n  ✓   8 tests/browser/run-path.spec.js:444:70 › CE-06 real SIGKILL restart browser recording_failed (5.1s)\n  ✓   9 tests/browser/run-path.spec.js:475:90 › CE-07 real trace refresh too_large replaces old path (2.9s)\n  ✓  10 tests/browser/run-path.spec.js:475:90 › CE-07 real trace refresh seq replaces old path (2.5s)\n  ✓  11 tests/browser/run-path.spec.js:475:90 › CE-07 real trace refresh wrong_run replaces old path (3.7s)\n  ✓  12 tests/browser/skills.spec.js:67:1 › CE-23: a late real evidence response cannot replace the next Run (3.1s)\n  ✓  13 tests/browser/topology.spec.js:240:3 › CE-08: keyboard and complete text at 1280px (11.8s)\n\n\n  1) tests/browser/routing.spec.js:185:1 › CE-01: disabled real browser conversation matches exact pre-routing baseline \n\n    Error: expect(received).toBe(expected) // Object.is equality\n\n    - Expected  - 1\n    + Received  + 3\n\n    - /skills off hello\n    + /skills off\n    + hello\n\n      离线 Skill 回复\n\n      已保存\n    + 查看运行\n\n      220 |       }\n      221 |     }\n    > 222 |     expect(texts[1]).toBe(texts[0]);\n          |                      ^\n      223 |   } finally {await rm(baseline, {recursive:true, force:true});}\n      224 | });\n      225 |\n        at /Users/nineofour/Agent-Alfred-v03/tests/browser/routing.spec.js:222:22\n\n    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────\n    output/playwright/results/routing-CE-01-disabled-rea-5ccaf--exact-pre-routing-baseline/test-failed-1.png\n    ────────────────────────────────────────────────────────────────────────────────────────────────\n\n    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────\n    output/playwright/results/routing-CE-01-disabled-rea-5ccaf--exact-pre-routing-baseline/test-failed-2.png\n    ────────────────────────────────────────────────────────────────────────────────────────────────\n\n    Error Context: output/playwright/results/routing-CE-01-disabled-rea-5ccaf--exact-pre-routing-baseline/error-context.md\n\n    attachment #4: trace (application/zip) ─────────────────────────────────────────────────────────\n    output/playwright/results/routing-CE-01-disabled-rea-5ccaf--exact-pre-routing-baseline/trace.zip\n    Usage:\n\n        npx playwright show-trace output/playwright/results/routing-CE-01-disabled-rea-5ccaf--exact-pre-routing-baseline/trace.zip\n\n    ────────────────────────────────────────────────────────────────────────────────────────────────\n\n  1 failed\n    tests/browser/routing.spec.js:185:1 › CE-01: disabled real browser conversation matches exact pre-routing baseline \n  12 passed (1.5m)\n"
+}

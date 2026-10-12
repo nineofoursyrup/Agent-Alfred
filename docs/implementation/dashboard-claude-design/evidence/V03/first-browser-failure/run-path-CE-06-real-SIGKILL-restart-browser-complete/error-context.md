@@ -1,0 +1,329 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: run-path.spec.js >> CE-06 real SIGKILL restart browser complete
+- Location: tests/browser/run-path.spec.js:444:70
+
+# Error details
+
+```
+Test timeout of 15000ms exceeded.
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=f1e1]:
+  - banner "导航面板" [ref=f1e2]:
+    - generic [ref=f1e3]:
+      - link "Alfred 本地助手" [ref=f1e4] [cursor=pointer]:
+        - /url: /overview
+        - text: Alfred
+        - generic [ref=f1e5]: 本地助手
+      - paragraph [ref=f1e6]:
+        - generic [ref=f1e8]: 连接中断或正在同步
+      - paragraph [ref=f1e9]: 127.0.0.1:18034
+    - navigation "主导航" [ref=f1e10]:
+      - paragraph [ref=f1e11]: 工作区
+      - link "总览" [ref=f1e12] [cursor=pointer]:
+        - /url: /overview
+      - link "收件箱" [ref=f1e13] [cursor=pointer]:
+        - /url: /inbox
+      - link "运行" [ref=f1e14] [cursor=pointer]:
+        - /url: /runs
+      - link "记忆" [ref=f1e15] [cursor=pointer]:
+        - /url: /memory
+      - paragraph [ref=f1e16]: Agent 配置
+      - link "模型" [ref=f1e17] [cursor=pointer]:
+        - /url: /models
+      - link "连接" [ref=f1e18] [cursor=pointer]:
+        - /url: /connections
+      - link "行为" [ref=f1e19] [cursor=pointer]:
+        - /url: /behaviour
+      - link "工具" [ref=f1e20] [cursor=pointer]:
+        - /url: /tools
+      - paragraph [ref=f1e21]: 诊断
+      - link "用量账本" [ref=f1e22] [cursor=pointer]:
+        - /url: /ops
+      - link "数据库" [ref=f1e23] [cursor=pointer]:
+        - /url: /database
+    - paragraph [ref=f1e24]: 本地优先 · 共享运行宿主
+  - main [ref=f1e26]:
+    - generic [ref=f1e27]:
+      - generic [ref=f1e28]:
+        - paragraph [ref=f1e29]: RUNS
+        - heading "运行" [level=1] [ref=f1e30]
+        - paragraph [ref=f1e31]: 查看会话运行与系统运行的过程、来源和用量证据。
+      - generic "壳层状态与操作" [ref=f1e32]:
+        - button "打开主对话" [expanded] [ref=f1e33] [cursor=pointer]
+        - region "运行与连接摘要" [ref=f1e34]:
+          - paragraph [ref=f1e35]:
+            - generic [ref=f1e37]: 连接中断或正在同步
+    - generic [ref=f1e38]:
+      - generic [ref=f1e39]:
+        - link "返回运行列表" [ref=f1e40] [cursor=pointer]:
+          - /url: /runs?filter=all
+        - button "切换到此会话并在主对话中查看" [disabled] [ref=f1e41]
+        - link "查看追踪导出" [ref=f1e42] [cursor=pointer]:
+          - /url: "#trace-export"
+      - region "运行摘要" [ref=f1e43]:
+        - heading "运行摘要" [level=2] [ref=f1e45]
+        - article [ref=f1e46]:
+          - generic [ref=f1e47]:
+            - generic [ref=f1e49]:
+              - term [ref=f1e50]: 输入预览
+              - definition [ref=f1e51]: explain
+            - generic [ref=f1e52]:
+              - generic [ref=f1e53]:
+                - term [ref=f1e54]: 准入
+                - definition [ref=f1e55]: 已获准
+              - generic [ref=f1e56]:
+                - term [ref=f1e57]: 阶段
+                - definition [ref=f1e58]: 已结束
+              - generic [ref=f1e59]:
+                - term [ref=f1e60]: 结果
+                - definition [ref=f1e61]: 运行终态无法确认
+              - generic [ref=f1e62]:
+                - term [ref=f1e63]: 记录
+                - definition [ref=f1e64]: 记录状态未知
+              - generic [ref=f1e65]:
+                - term [ref=f1e66]: Step 数
+                - definition [ref=f1e67]: 已读 3 · 总数未提供
+              - generic [ref=f1e68]:
+                - term [ref=f1e69]: 耗时
+                - definition [ref=f1e70]: 0 ms
+              - generic [ref=f1e71]:
+                - term [ref=f1e72]: 费用
+                - definition [ref=f1e73]:
+                  - generic [ref=f1e74]: 暂无可读调用账目；不代表未调用或免费。
+          - generic [ref=f1e76]:
+            - generic [ref=f1e77]:
+              - term [ref=f1e78]: Run ID
+              - definition [ref=f1e79]: 20fbcadf3e0c4d5186d4317199d17e0a
+            - generic [ref=f1e80]:
+              - term [ref=f1e81]: 用途
+              - definition [ref=f1e82]: 普通聊天（chat）
+            - generic [ref=f1e83]:
+              - term [ref=f1e84]: 所属分组
+              - definition [ref=f1e85]: 会话运行
+          - group [ref=f1e86]:
+            - generic "运行摘要明细" [ref=f1e87]
+        - button "刷新运行摘要" [disabled] [ref=f1e89]
+      - status [ref=f1e90]: 运行摘要 · 读取于 2:08:32 PM · 连接中断，保留旧快照
+      - status [ref=f1e91]: 过程证据共同来源 · 读取于 2:08:32 PM · 连接中断，保留旧快照
+      - region "运行过程" [ref=f1e92]:
+        - generic [ref=f1e93]:
+          - generic [ref=f1e94]:
+            - generic [ref=f1e95]:
+              - heading "过程证据" [level=2] [ref=f1e96]
+              - paragraph [ref=f1e97]: 事件发布顺序
+            - button "刷新过程证据" [disabled] [ref=f1e99]
+          - generic [ref=f1e100]:
+            - paragraph [ref=f1e101]: 过程记录可用 · available
+            - generic [ref=f1e102]:
+              - generic [ref=f1e103]:
+                - heading "Step 0" [level=3] [ref=f1e104]
+                - paragraph [ref=f1e105]: 主结果 · committed
+                - generic [ref=f1e106]: 0 ms
+              - group [ref=f1e107]:
+                - generic "Attempt · seq 3 · committed" [ref=f1e108] [cursor=pointer]:
+                  - text: ▸
+                  - generic [ref=f1e110]: gate
+                  - generic [ref=f1e111]: 0 ms
+            - generic [ref=f1e112]:
+              - generic [ref=f1e113]:
+                - heading "Step 1" [level=3] [ref=f1e114]
+                - paragraph [ref=f1e115]: 主结果 · committed
+                - generic [ref=f1e116]: 0 ms
+              - group [ref=f1e117]:
+                - generic "Attempt · seq 11 · committed" [ref=f1e118] [cursor=pointer]:
+                  - text: ▸
+                  - generic [ref=f1e120]: message_classifier
+                  - generic [ref=f1e121]: 0 ms
+            - generic [ref=f1e122]:
+              - generic [ref=f1e123]:
+                - heading "Step 2" [level=3] [ref=f1e124]
+                - paragraph [ref=f1e125]: 主结果 · committed
+                - generic [ref=f1e126]: 0 ms
+              - group [ref=f1e127]:
+                - generic "Attempt · seq 25 · committed" [ref=f1e128] [cursor=pointer]:
+                  - text: ▸
+                  - generic [ref=f1e130]: answer
+                  - generic [ref=f1e131]: 0 ms
+        - group [ref=f1e132]:
+          - generic "本次输入" [ref=f1e133]
+      - region "本次执行路径" [ref=f1e135]:
+        - button "收起执行路径" [expanded] [active] [ref=f1e136] [cursor=pointer]
+        - status [ref=f1e137]: 服务连接已断开；保留的图仅为旧快照。
+        - status [ref=f1e138]: 读取时的执行路径 · 2026-08-28T12:00:00Z。来源：持久 trace；路径 available；Graph Completed；Run interrupted；记录 未落定。
+        - generic [ref=f1e139]:
+          - button "重新读取" [ref=f1e140] [cursor=pointer]
+          - generic [ref=f1e141]:
+            - generic [ref=f1e142]:
+              - button "放大" [ref=f1e143] [cursor=pointer]
+              - button "缩小" [ref=f1e144] [cursor=pointer]
+              - button "适应全图" [ref=f1e145] [cursor=pointer]
+              - button "向左平移" [ref=f1e146] [cursor=pointer]
+              - button "向右平移" [ref=f1e147] [cursor=pointer]
+              - button "向上平移" [ref=f1e148] [cursor=pointer]
+              - button "向下平移" [ref=f1e149] [cursor=pointer]
+            - paragraph [ref=f1e150]: 图例：实线＝步骤依赖；虚线＝条件分支；点线＝声明的恢复路径（不保证任意异常均可恢复）。出口以文字标明。
+            - img "流程节点与连接图" [ref=f1e151]:
+              - generic "project_context → recover_context · 声明的恢复路径 · 未选中 not_taken" [ref=f1e152]
+              - generic "classify → join_route · 步骤依赖 · 已选中 taken" [ref=f1e153]
+              - generic "project_context → join_route · 步骤依赖 · 已选中 taken" [ref=f1e154]
+              - generic "recover_context → join_route · 步骤依赖 · 未选中 not_taken"
+              - generic "full_agent → full_result · 步骤依赖 · 已选中 taken"
+              - generic "join_route → quick_result · 条件分支 · quick：分类为问候/感谢、匹配有限短语且没有已加载 Skills，使用固定短回复 · 未选中 not_taken" [ref=f1e155]
+              - generic [ref=f1e156]: quick
+              - generic "join_route → full_agent · 条件分支 · full：分类要求完整处理 · 已选中 taken"
+              - generic [ref=f1e157]: full
+              - generic "join_route → full_agent · 条件分支 · fallback：分类未知、短语守卫不匹配或已有 Skills，改由图内完整处理 · 未选中 not_taken"
+              - generic [ref=f1e158]: fallback
+              - generic "join_route → no_reply_terminal · 条件分支 · no_action：分类为无需回复且匹配守卫；该判断先于上下文不可用和 Skills 分支 · 未选中 not_taken" [ref=f1e159]
+              - generic [ref=f1e160]: no_action
+              - generic "join_route → context_failure_result · 条件分支 · context_failure：上下文不可用，返回固定提示 · 未选中 not_taken" [ref=f1e161]
+              - generic [ref=f1e162]: context_failure
+              - generic [ref=f1e163]:
+                - generic [ref=f1e165]: 判断消息类型
+                - generic [ref=f1e166]: classify
+                - generic [ref=f1e167]: · 计算成功 · 已提交
+              - generic [ref=f1e168]:
+                - generic [ref=f1e170]: 整理已准备的上下文
+                - generic [ref=f1e171]: project_context
+                - generic [ref=f1e172]: · 计算成功 · 已提交
+              - generic [ref=f1e173]:
+                - generic [ref=f1e175]: 标记上下文不可用
+                - generic [ref=f1e176]: recover_context
+                - generic [ref=f1e177]: · 跳过 · 已提交 · all_inbound_not_taken
+              - generic [ref=f1e178]:
+                - generic [ref=f1e180]: 决定处理分支
+                - generic [ref=f1e181]: join_route
+                - generic [ref=f1e182]: · 计算成功 · 已提交
+              - generic [ref=f1e183]:
+                - generic [ref=f1e185]: 完整处理
+                - generic [ref=f1e186]: full_agent
+                - generic [ref=f1e187]: · 计算成功 · 已提交
+              - generic [ref=f1e188]:
+                - generic [ref=f1e190]: 返回完整处理结果
+                - generic [ref=f1e191]: full_result
+                - generic [ref=f1e192]: · 计算成功 · 已提交
+              - generic [ref=f1e193]:
+                - generic [ref=f1e195]: 返回固定短回复
+                - generic [ref=f1e196]: quick_result
+                - generic [ref=f1e197]: · 跳过 · 已提交 · all_inbound_not_taken
+              - generic [ref=f1e198]:
+                - generic [ref=f1e200]: 返回上下文失败提示
+                - generic [ref=f1e201]: context_failure_result
+                - generic [ref=f1e202]: · 跳过 · 已提交 · all_inbound_not_taken
+              - generic [ref=f1e203]:
+                - generic [ref=f1e205]: 按要求不回复
+                - generic [ref=f1e206]: no_reply_terminal
+                - generic [ref=f1e207]: · 跳过 · 已提交 · all_inbound_not_taken
+          - generic [ref=f1e208]:
+            - generic "节点详情"
+            - generic [ref=f1e209]:
+              - heading "完整文字明细" [level=3] [ref=f1e210]
+              - paragraph [ref=f1e211]: 仅展示读取边界内可证明的事实。taken 不证明目标成功；波撤销不撤回工具副作用或费用。
+              - list [ref=f1e212]:
+                - listitem [ref=f1e213]:
+                  - button "判断消息类型 · classify" [ref=f1e214] [cursor=pointer]
+                  - paragraph [ref=f1e215]: 仅分类当前任务，分类是控制信息；它不生成用户回复
+                  - paragraph [ref=f1e216]: 节点类型：llm · 步骤 · 计算成功 · 已提交
+                - listitem [ref=f1e217]:
+                  - button "整理已准备的上下文 · project_context" [ref=f1e218] [cursor=pointer]
+                  - paragraph [ref=f1e219]: 校验并投影已准备的上下文，不在此重新检索或产生模型请求
+                  - paragraph [ref=f1e220]: 节点类型：fn · 步骤 · 计算成功 · 已提交
+                - listitem [ref=f1e221]:
+                  - button "标记上下文不可用 · recover_context" [ref=f1e222] [cursor=pointer]
+                  - paragraph [ref=f1e223]: 处理投影故障，不能解释为上下文恢复成功
+                  - paragraph [ref=f1e224]: 节点类型：fn · 步骤 · 跳过 · 已提交 · all_inbound_not_taken
+                - listitem [ref=f1e225]:
+                  - button "决定处理分支 · join_route" [ref=f1e226] [cursor=pointer]
+                  - paragraph [ref=f1e227]: 综合分类、守卫、Skills 与上下文情况选择分支
+                  - paragraph [ref=f1e228]: 节点类型：fn · 步骤 · 计算成功 · 已提交
+                - listitem [ref=f1e229]:
+                  - button "完整处理 · full_agent" [ref=f1e230] [cursor=pointer]
+                  - paragraph [ref=f1e231]: 进入图内 Agent 完成实质任务
+                  - paragraph [ref=f1e232]: 节点类型：agent · 步骤 · 计算成功 · 已提交
+                - listitem [ref=f1e233]:
+                  - button "返回完整处理结果 · full_result" [ref=f1e234] [cursor=pointer]
+                  - paragraph [ref=f1e235]: 结果出口，交付 Agent 的输出
+                  - paragraph [ref=f1e236]: 节点类型：fn · 结果出口 · full_output · 计算成功 · 已提交
+                - listitem [ref=f1e237]:
+                  - button "返回固定短回复 · quick_result" [ref=f1e238] [cursor=pointer]
+                  - paragraph [ref=f1e239]: 合格问候/感谢返回固定短回复，不是生成式回答
+                  - paragraph [ref=f1e240]: 节点类型：fn · 结果出口 · quick_output · 跳过 · 已提交 · all_inbound_not_taken
+                - listitem [ref=f1e241]:
+                  - button "返回上下文失败提示 · context_failure_result" [ref=f1e242] [cursor=pointer]
+                  - paragraph [ref=f1e243]: 结果出口，产生固定失败提示
+                  - paragraph [ref=f1e244]: 节点类型：fn · 结果出口 · context_failure_output · 跳过 · 已提交 · all_inbound_not_taken
+                - listitem [ref=f1e245]:
+                  - button "按要求不回复 · no_reply_terminal" [ref=f1e246] [cursor=pointer]
+                  - paragraph [ref=f1e247]: 无动作出口，保留用户记录，不生成助手消息或长期记忆
+                  - paragraph [ref=f1e248]: 节点类型：fn · 无动作出口 · user_requested_no_reply（不产生内容） · 跳过 · 已提交 · all_inbound_not_taken
+              - heading "全部连接与条件" [level=4] [ref=f1e249]
+              - list [ref=f1e250]:
+                - listitem [ref=f1e251]: project_context → recover_context · 声明的恢复路径 · 未选中 not_taken
+                - listitem [ref=f1e252]: classify → join_route · 步骤依赖 · 已选中 taken
+                - listitem [ref=f1e253]: project_context → join_route · 步骤依赖 · 已选中 taken
+                - listitem [ref=f1e254]: recover_context → join_route · 步骤依赖 · 未选中 not_taken
+                - listitem [ref=f1e255]: full_agent → full_result · 步骤依赖 · 已选中 taken
+                - listitem [ref=f1e256]: join_route → quick_result · 条件分支 · quick：分类为问候/感谢、匹配有限短语且没有已加载 Skills，使用固定短回复 · 未选中 not_taken
+                - listitem [ref=f1e257]: join_route → full_agent · 条件分支 · full：分类要求完整处理 · 已选中 taken
+                - listitem [ref=f1e258]: join_route → full_agent · 条件分支 · fallback：分类未知、短语守卫不匹配或已有 Skills，改由图内完整处理 · 未选中 not_taken
+                - listitem [ref=f1e259]: join_route → no_reply_terminal · 条件分支 · no_action：分类为无需回复且匹配守卫；该判断先于上下文不可用和 Skills 分支 · 未选中 not_taken
+                - listitem [ref=f1e260]: join_route → context_failure_result · 条件分支 · context_failure：上下文不可用，返回固定提示 · 未选中 not_taken
+            - paragraph [ref=f1e261]: 图外策略：关闭分流走普通对话。图不可用或失败时，普通循环回退受副作用、上下文、安全停止和剩余预算等条件限制；图内 fallback 仅表示进入完整处理。
+            - group [ref=f1e262]:
+              - generic "快照身份与输入声明" [ref=f1e263]
+            - heading "按 wave 分组" [level=4] [ref=f1e264]
+            - paragraph [ref=f1e265]: Wave 0 · 已提交 · classify, project_context
+            - paragraph [ref=f1e266]: Wave 1 · 已提交 · recover_context
+            - paragraph [ref=f1e267]: Wave 2 · 已提交 · join_route
+            - paragraph [ref=f1e268]: Wave 3 · 已提交 · full_agent, quick_result, context_failure_result, no_reply_terminal
+            - paragraph [ref=f1e269]: Wave 4 · 已提交 · full_result
+            - heading "独立业务摘要" [level=4] [ref=f1e270]
+            - region "独立业务摘要" [ref=f1e271]: "{ \"stages\": [], \"graph\": null, \"fallback\": null, \"graph_error\": null, \"no_action\": null, \"recoveries\": null }"
+            - group [ref=f1e272]:
+              - generic "条件映射与读取声明" [ref=f1e273]
+      - group [ref=f1e274]:
+        - generic "用量" [ref=f1e275]
+      - region "追踪导出" [ref=f1e277]:
+        - heading "追踪导出" [level=2] [ref=f1e279]
+        - generic [ref=f1e280]:
+          - status [ref=f1e281]: 连接或记忆边界已变化，旧导出不可恢复；可重新手动生成。
+          - group [ref=f1e282]:
+            - generic "追踪导出操作" [ref=f1e283]
+            - combobox "导出模式" [ref=f1e284]:
+              - option "分享净化" [selected]
+              - option "保留诊断正文"
+            - paragraph [ref=f1e285]: 默认移除自由正文；净化与源追踪完整性分别说明。
+            - button "生成追踪导出" [disabled] [ref=f1e286]
+  - region "MainBar" [ref=f1e287]:
+    - generic [ref=f1e288]:
+      - heading "主对话" [level=2] [ref=f1e289]
+      - generic [ref=f1e290]: 未同步
+      - button "收起主对话" [ref=f1e293] [cursor=pointer]
+    - complementary "本标签页连接状态" [ref=f1e294]:
+      - paragraph [ref=f1e295]: 连接已断开；已清除临时文字，正在重新连接。
+      - text: 仅影响本标签页
+      - button "关闭连接提示" [ref=f1e296] [cursor=pointer]
+    - generic [ref=f1e297]:
+      - generic [ref=f1e298]: 尚未选择会话
+      - button "新建会话" [ref=f1e299] [cursor=pointer]
+    - region "主对话" [ref=f1e300]
+    - generic [ref=f1e301]:
+      - generic [ref=f1e302]: 消息
+      - textbox "消息" [disabled] [ref=f1e303]:
+        - /placeholder: 写下消息；/skills 指定流程…
+      - button "发送" [disabled] [ref=f1e304]
+    - paragraph [ref=f1e305]: 请显式新建或继续会话。
+  - status [ref=f1e306]: 就绪
+  - alert [ref=f1e307]
+```
