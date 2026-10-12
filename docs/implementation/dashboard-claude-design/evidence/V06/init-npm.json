@@ -1,0 +1,7 @@
+{
+  "command": "npm ci --ignore-scripts",
+  "cwd": "/Users/nineofour/Agent-Alfred-v06",
+  "exit_code": 0,
+  "stdout_stderr": "\nadded 5 packages, and audited 6 packages in 2s\n\nfound 0 vulnerabilities\n",
+  "raw_sha256": "5ba68166c659a682080a327f9a0faa08cd75819898f4e10fd0fe98bb324c16bb"
+}

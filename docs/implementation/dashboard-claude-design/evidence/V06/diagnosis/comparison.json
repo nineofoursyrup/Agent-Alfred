@@ -1,0 +1,17 @@
+{
+  "base": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "unchanged_test": "G2 v2: update recovery clears forgotten bodies while away and after reload",
+  "repeat_eaches": 3,
+  "candidate_sha256": {
+    "src/agent_alfred/ops/static/memory.js": "53de17e308776b2ee4b91a8c923cc86449ba6d363f6c3b84a59de6883a1401c3",
+    "src/agent_alfred/ops/static/memory.css": "df2689115e0c8d1540aa42f142e944a70d2a34ee7a0bb160a6c753b55c6c27ed"
+  },
+  "baseline_sha256": {
+    "src/agent_alfred/ops/static/memory.js": "9129f17ae69d5e854bc2084e2d18be1afcc4ca53a1484a4ea8e247d2523bc9a0",
+    "src/agent_alfred/ops/static/memory.css": "35db69100f3aec59f8b1d24c33a71e91907f024b05d6d19c8b91729f5da31a9d"
+  },
+  "purpose": "Compare original and V06 presentation using unchanged behavior assertions and original time limits; bounded diagnostic repetitions are not retries.",
+  "baseline_exit_code": 0,
+  "candidate_restored_byte_identical": true,
+  "candidate_exit_code": 0
+}

@@ -1,0 +1,23 @@
+{
+  "cases": [
+    "tests/browser/database_lifecycle.spec.js:62",
+    "tests/browser/database.spec.js:380"
+  ],
+  "passed": 543,
+  "failed": 2,
+  "raw_sha256": "044f14f58aae038e25a0a17016344d7912874dade5c76e40a2eb0bed78ad5ecb",
+  "screenshots": {
+    "status": "NOT GENERATED",
+    "reason": "Playwright final output and both failure directories contain no failure PNG; original records retained without synthesizing an image"
+  },
+  "failure_directory_files": {
+    "database_lifecycle-S10-a-n-62f83-apability-without-rerunning": [
+      "error-context.md",
+      "trace.zip"
+    ],
+    "database-S10-copies-only-t-02e92-w-limit-and-source-evidence": [
+      "error-context.md",
+      "trace.zip"
+    ]
+  }
+}

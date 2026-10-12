@@ -1,0 +1,1207 @@
+{
+  "browser": "155.0.8059.39",
+  "fixture": "real Host + HTTP + SQLite + existing MemoryModel; ephemeral state",
+  "viewport_only": true,
+  "errors": [],
+  "requestfailed": [
+    {
+      "url": "http://127.0.0.1:18064/api/events",
+      "failure": {
+        "errorText": "net::ERR_ABORTED"
+      }
+    }
+  ],
+  "results": [
+    {
+      "view": "semantic",
+      "width": 1440,
+      "height": 900,
+      "measurements": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "pageWidth": 823,
+        "pageOverflow": 0,
+        "documentOverflow": 0,
+        "metricColumns": "823px 0px 0px 0px",
+        "metrics": [
+          {
+            "value": "1",
+            "label": "Skill 目录 · procedural",
+            "note": "启动时的只读目录条目数；不是记忆库条目数。文件修改需重启后生效。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 16,
+            "noteScrollHeight": 16
+          }
+        ],
+        "tabNames": [
+          {
+            "name": "语义记忆",
+            "selected": "true",
+            "class": "sy-tab"
+          },
+          {
+            "name": "情景记忆",
+            "selected": "false",
+            "class": "sy-tab"
+          },
+          {
+            "name": "Skill 目录",
+            "selected": "false",
+            "class": "sy-tab"
+          }
+        ],
+        "inlineStyles": 0,
+        "focused": "语义记忆",
+        "focusOutline": "3px",
+        "headings": [
+          {
+            "name": "语义记忆",
+            "level": "H2"
+          },
+          {
+            "name": "记忆维护",
+            "level": "H2"
+          },
+          {
+            "name": "操作回执／遗忘进度",
+            "level": "H2"
+          },
+          {
+            "name": "提炼队列",
+            "level": "H2"
+          },
+          {
+            "name": "检索统计",
+            "level": "H2"
+          },
+          {
+            "name": "Markdown 镜像",
+            "level": "H2"
+          }
+        ],
+        "resources": [
+          "http://127.0.0.1:18064/assets/app.css",
+          "http://127.0.0.1:18064/assets/inbox-runs.css",
+          "http://127.0.0.1:18064/assets/settings.css",
+          "http://127.0.0.1:18064/assets/overview.css",
+          "http://127.0.0.1:18064/assets/tools.css",
+          "http://127.0.0.1:18064/assets/memory.css",
+          "http://127.0.0.1:18064/assets/database.css",
+          "http://127.0.0.1:18064/assets/accounting.css",
+          "http://127.0.0.1:18064/assets/behaviour.css",
+          "http://127.0.0.1:18064/assets/app.js",
+          "http://127.0.0.1:18064/assets/shell.js",
+          "http://127.0.0.1:18064/assets/aggregation.js",
+          "http://127.0.0.1:18064/assets/accounting.js",
+          "http://127.0.0.1:18064/assets/tools.js",
+          "http://127.0.0.1:18064/assets/stream.js",
+          "http://127.0.0.1:18064/assets/dom.js",
+          "http://127.0.0.1:18064/assets/progress.js",
+          "http://127.0.0.1:18064/assets/pages.js",
+          "http://127.0.0.1:18064/assets/notices.js",
+          "http://127.0.0.1:18064/assets/inbox.js",
+          "http://127.0.0.1:18064/assets/runs.js",
+          "http://127.0.0.1:18064/assets/overview.js",
+          "http://127.0.0.1:18064/assets/memory.js",
+          "http://127.0.0.1:18064/assets/database.js",
+          "http://127.0.0.1:18064/assets/behaviour.js",
+          "http://127.0.0.1:18064/assets/models.js",
+          "http://127.0.0.1:18064/assets/connections.js",
+          "http://127.0.0.1:18064/assets/run-fields.js",
+          "http://127.0.0.1:18064/assets/source.js",
+          "http://127.0.0.1:18064/assets/trace_export.js",
+          "http://127.0.0.1:18064/assets/run-evidence.js",
+          "http://127.0.0.1:18064/assets/topology.js",
+          "http://127.0.0.1:18064/assets/routing-statistics.js",
+          "http://127.0.0.1:18064/assets/settings-focus.js"
+        ]
+      },
+      "snapshot": "- banner \"导航面板\":\n  - link \"Alfred 本地助手\":\n    - /url: /overview\n  - paragraph: 已同步\n  - paragraph: 127.0.0.1:18064\n  - navigation \"主导航\":\n    - paragraph: 工作区\n    - link \"总览\":\n      - /url: /overview\n    - link \"收件箱\":\n      - /url: /inbox\n    - link \"运行\":\n      - /url: /runs\n    - link \"记忆\":\n      - /url: /memory\n    - paragraph: Agent 配置\n    - link \"模型\":\n      - /url: /models\n    - link \"连接\":\n      - /url: /connections\n    - link \"行为\":\n      - /url: /behaviour\n    - link \"工具\":\n      - /url: /tools\n    - paragraph: 诊断\n    - link \"用量账本\":\n      - /url: /ops\n    - link \"数据库\":\n      - /url: /database\n  - paragraph: 本地优先 · 共享运行宿主\n- main:\n  - paragraph: MEMORY\n  - heading \"记忆\" [level=1]\n  - paragraph: 维护已保存的语义记忆与情景记忆，查看只读 Skill 目录。\n  - button \"打开主对话\" [expanded]\n  - region \"运行与连接摘要\":\n    - paragraph: 已完成 · 已保存\n    - link \"查看最近运行结果\":\n      - /url: /runs/79270c87168c48009a9a897bd59207e3\n  - tablist \"记忆类别\":\n    - tab \"语义记忆\" [selected]\n    - tab \"情景记忆\"\n    - tab \"Skill 目录\"\n  - article:\n    - paragraph: \"6\"\n    - paragraph: 语义记忆 · semantic\n    - paragraph: 当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。\n  - article:\n    - paragraph: \"2\"\n    - paragraph: 情景记忆 · episodic\n    - paragraph: 当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。\n  - article:\n    - paragraph: \"1\"\n    - paragraph: Skill 目录 · procedural\n    - paragraph: 启动时的只读目录条目数；不是记忆库条目数。文件修改需重启后生效。\n  - tabpanel \"语义记忆\":\n    - heading \"语义记忆\" [level=2]\n    - paragraph: 已保存的事实与来源；查看详情后可编辑或确认删除。\n    - form \"搜索语义记忆\":\n      - text: 文本\n      - textbox \"文本\"\n      - text: 主题（精确匹配）\n      - textbox \"主题（精确匹配）\"\n      - button \"搜索\"\n      - button \"显示全部\"\n    - article:\n      - heading \"操作回执\" [level=3]\n      - paragraph: 保存事实与遗忘清理在独立回执中分别核对。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:08:18.048248+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:08:18.048248+00:00 · 人工保护\n    - article:\n      - heading \"长中文与完整状态\" [level=3]\n      - paragraph: 长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:07:23.650499+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:07:23.650499+00:00 · 人工保护\n    - article:\n      - heading \"来源证据\" [level=3]\n      - paragraph: 来源组入口绑定已有 Run 标识，返回时重新核验。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:07:23.629502+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:07:23.629502+00:00 · 人工保护\n    - article:\n      - heading \"遗忘范围\" [level=3]\n      - paragraph: 条目删除与受管副本清理分别核对。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:07:23.610563+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:07:23.610563+00:00 · 人工保护\n    - article:\n      - heading \"编辑保护\" [level=3]\n      - paragraph: 类别切换与折叠保留尚未保存的输入。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:07:23.588782+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:07:23.588782+00:00 · 人工保护\n    - article:\n      - heading \"环境\" [level=3]\n      - paragraph: 本次浏览器验证使用 uv 管理 Python 环境。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:07:23.558541+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:07:23.558541+00:00 · 人工保护\n    - button \"新建语义记忆\"\n  - heading \"记忆维护\" [level=2]\n  - heading \"操作回执／遗忘进度\" [level=2]:\n    - button \"操作回执／遗忘进度\": 操作回执／遗忘进度 ＋\n  - paragraph: 仅本标签页 · 提交中 0 · 结果待确认 0 · 遗忘未完成 0；操作 3507c591-66ba-4b15-a459-fd174cb6fefd：清理进度暂不可读取（memory_changed）。当前进度待核验；已确认的删除与上次进度保留。。已确认历史至多 20 项；未确认与未完成责任单独保留。\n  - heading \"提炼队列\" [level=2]:\n    - button \"提炼队列\": 提炼队列 ＋\n  - paragraph: 当前队列页 1 · 1 个会话／1 个批次 · 待批准（覆盖人工保护记忆） 1 · 当前筛选已到末页；不是全局待办总数。\n  - heading \"检索统计\" [level=2]:\n    - button \"检索统计\": 检索统计 ＋\n  - paragraph: 已读取 · 全部会话 · [2026-10-05T06:08:18.831480+00:00, 2026-10-12T06:08:18.831480+00:00)\n  - heading \"Markdown 镜像\" [level=2]:\n    - button \"Markdown 镜像\": Markdown 镜像 ＋\n  - paragraph: 事实：已同步并核验；情景：已同步并核验\n- region \"MainBar\":\n  - heading \"主对话\" [level=2]\n  - button \"收起主对话\"\n  - text: 会话\n  - button \"新建会话\"\n  - region \"主对话\":\n    - article:\n      - paragraph: V06 视觉验证第一条对话\n      - paragraph: 离线模型回复\n      - paragraph: Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。\n      - text: 已保存\n    - article:\n      - paragraph: V06 视觉验证第二条对话\n      - paragraph: 离线模型回复\n      - paragraph: Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。\n      - text: 已保存\n  - text: 消息\n  - textbox \"消息\":\n    - /placeholder: 写下消息；/skills 指定流程…\n  - button \"发送\" [disabled]\n  - paragraph: Enter 发送 · Shift+Enter 换行\n- status: 运行中\n- alert"
+    },
+    {
+      "view": "skills",
+      "width": 1440,
+      "height": 900,
+      "measurements": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "pageWidth": 823,
+        "pageOverflow": 0,
+        "documentOverflow": 0,
+        "metricColumns": "266.328px 266.328px 266.344px 0px",
+        "metrics": [
+          {
+            "value": "6",
+            "label": "语义记忆 · semantic",
+            "note": "当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 32,
+            "noteScrollHeight": 32
+          },
+          {
+            "value": "2",
+            "label": "情景记忆 · episodic",
+            "note": "当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 32,
+            "noteScrollHeight": 32
+          },
+          {
+            "value": "1",
+            "label": "Skill 目录 · procedural",
+            "note": "启动时的只读目录条目数；不是记忆库条目数。文件修改需重启后生效。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 32,
+            "noteScrollHeight": 32
+          }
+        ],
+        "tabNames": [
+          {
+            "name": "语义记忆",
+            "selected": "false",
+            "class": "sy-tab"
+          },
+          {
+            "name": "情景记忆",
+            "selected": "false",
+            "class": "sy-tab"
+          },
+          {
+            "name": "Skill 目录",
+            "selected": "true",
+            "class": "sy-tab"
+          }
+        ],
+        "inlineStyles": 0,
+        "focused": "Skill 目录",
+        "focusOutline": "3px",
+        "headings": [
+          {
+            "name": "Skill 目录",
+            "level": "H2"
+          },
+          {
+            "name": "browser-plan",
+            "level": "H3"
+          },
+          {
+            "name": "记忆维护",
+            "level": "H2"
+          },
+          {
+            "name": "操作回执／遗忘进度",
+            "level": "H2"
+          },
+          {
+            "name": "提炼队列",
+            "level": "H2"
+          },
+          {
+            "name": "检索统计",
+            "level": "H2"
+          },
+          {
+            "name": "Markdown 镜像",
+            "level": "H2"
+          }
+        ],
+        "resources": [
+          "http://127.0.0.1:18064/assets/app.css",
+          "http://127.0.0.1:18064/assets/inbox-runs.css",
+          "http://127.0.0.1:18064/assets/settings.css",
+          "http://127.0.0.1:18064/assets/overview.css",
+          "http://127.0.0.1:18064/assets/tools.css",
+          "http://127.0.0.1:18064/assets/memory.css",
+          "http://127.0.0.1:18064/assets/database.css",
+          "http://127.0.0.1:18064/assets/accounting.css",
+          "http://127.0.0.1:18064/assets/behaviour.css",
+          "http://127.0.0.1:18064/assets/app.js",
+          "http://127.0.0.1:18064/assets/shell.js",
+          "http://127.0.0.1:18064/assets/aggregation.js",
+          "http://127.0.0.1:18064/assets/accounting.js",
+          "http://127.0.0.1:18064/assets/tools.js",
+          "http://127.0.0.1:18064/assets/stream.js",
+          "http://127.0.0.1:18064/assets/dom.js",
+          "http://127.0.0.1:18064/assets/progress.js",
+          "http://127.0.0.1:18064/assets/pages.js",
+          "http://127.0.0.1:18064/assets/notices.js",
+          "http://127.0.0.1:18064/assets/inbox.js",
+          "http://127.0.0.1:18064/assets/runs.js",
+          "http://127.0.0.1:18064/assets/overview.js",
+          "http://127.0.0.1:18064/assets/memory.js",
+          "http://127.0.0.1:18064/assets/database.js",
+          "http://127.0.0.1:18064/assets/behaviour.js",
+          "http://127.0.0.1:18064/assets/models.js",
+          "http://127.0.0.1:18064/assets/connections.js",
+          "http://127.0.0.1:18064/assets/run-fields.js",
+          "http://127.0.0.1:18064/assets/source.js",
+          "http://127.0.0.1:18064/assets/trace_export.js",
+          "http://127.0.0.1:18064/assets/run-evidence.js",
+          "http://127.0.0.1:18064/assets/topology.js",
+          "http://127.0.0.1:18064/assets/routing-statistics.js",
+          "http://127.0.0.1:18064/assets/settings-focus.js"
+        ]
+      },
+      "snapshot": "- banner \"导航面板\":\n  - link \"Alfred 本地助手\":\n    - /url: /overview\n  - paragraph: 已同步\n  - paragraph: 127.0.0.1:18064\n  - navigation \"主导航\":\n    - paragraph: 工作区\n    - link \"总览\":\n      - /url: /overview\n    - link \"收件箱\":\n      - /url: /inbox\n    - link \"运行\":\n      - /url: /runs\n    - link \"记忆\":\n      - /url: /memory\n    - paragraph: Agent 配置\n    - link \"模型\":\n      - /url: /models\n    - link \"连接\":\n      - /url: /connections\n    - link \"行为\":\n      - /url: /behaviour\n    - link \"工具\":\n      - /url: /tools\n    - paragraph: 诊断\n    - link \"用量账本\":\n      - /url: /ops\n    - link \"数据库\":\n      - /url: /database\n  - paragraph: 本地优先 · 共享运行宿主\n- main:\n  - paragraph: MEMORY\n  - heading \"记忆\" [level=1]\n  - paragraph: 维护已保存的语义记忆与情景记忆，查看只读 Skill 目录。\n  - button \"打开主对话\" [expanded]\n  - region \"运行与连接摘要\":\n    - paragraph: 已完成 · 已保存\n    - link \"查看最近运行结果\":\n      - /url: /runs/79270c87168c48009a9a897bd59207e3\n  - tablist \"记忆类别\":\n    - tab \"语义记忆\"\n    - tab \"情景记忆\"\n    - tab \"Skill 目录\" [selected]\n  - article:\n    - paragraph: \"6\"\n    - paragraph: 语义记忆 · semantic\n    - paragraph: 当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。\n  - article:\n    - paragraph: \"2\"\n    - paragraph: 情景记忆 · episodic\n    - paragraph: 当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。\n  - article:\n    - paragraph: \"1\"\n    - paragraph: Skill 目录 · procedural\n    - paragraph: 启动时的只读目录条目数；不是记忆库条目数。文件修改需重启后生效。\n  - tabpanel \"Skill 目录\":\n    - heading \"Skill 目录\" [level=2]\n    - paragraph: 只读目录：启动时建立索引，文件修改需重启后生效。聊天支持 /skills 明确指定、禁用及自动选择；运行详情展示当次加载与发送证据。这里不提供编辑。\n    - article:\n      - heading \"browser-plan\" [level=3]\n      - paragraph: 内置计划\n      - text: 内置 Skill\n      - button \"查看正文\"\n      - button \"在主对话使用 /skills\"\n      - paragraph: 在主对话中明确输入 /skills browser-plan 及你的请求；打开主对话不会提交或替换现有草稿。\n  - heading \"记忆维护\" [level=2]\n  - heading \"操作回执／遗忘进度\" [level=2]:\n    - button \"操作回执／遗忘进度\": 操作回执／遗忘进度 ＋\n  - paragraph: 仅本标签页 · 提交中 0 · 结果待确认 0 · 遗忘未完成 0；操作 3507c591-66ba-4b15-a459-fd174cb6fefd：清理进度暂不可读取（memory_changed）。当前进度待核验；已确认的删除与上次进度保留。。已确认历史至多 20 项；未确认与未完成责任单独保留。\n  - heading \"提炼队列\" [level=2]:\n    - button \"提炼队列\": 提炼队列 ＋\n  - paragraph: 当前队列页 1 · 1 个会话／1 个批次 · 待批准（覆盖人工保护记忆） 1 · 当前筛选已到末页；不是全局待办总数。\n  - heading \"检索统计\" [level=2]:\n    - button \"检索统计\": 检索统计 ＋\n  - paragraph: 已读取 · 全部会话 · [2026-10-05T06:08:18.831480+00:00, 2026-10-12T06:08:18.831480+00:00)\n  - heading \"Markdown 镜像\" [level=2]:\n    - button \"Markdown 镜像\": Markdown 镜像 ＋\n  - paragraph: 事实：已同步并核验；情景：已同步并核验\n- region \"MainBar\":\n  - heading \"主对话\" [level=2]\n  - button \"收起主对话\"\n  - text: 会话\n  - button \"新建会话\"\n  - region \"主对话\":\n    - article:\n      - paragraph: V06 视觉验证第一条对话\n      - paragraph: 离线模型回复\n      - paragraph: Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。\n      - text: 已保存\n    - article:\n      - paragraph: V06 视觉验证第二条对话\n      - paragraph: 离线模型回复\n      - paragraph: Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。\n      - text: 已保存\n  - text: 消息\n  - textbox \"消息\":\n    - /placeholder: 写下消息；/skills 指定流程…\n  - button \"发送\" [disabled]\n  - paragraph: Enter 发送 · Shift+Enter 换行\n- status: 就绪\n- alert"
+    },
+    {
+      "view": "queue",
+      "width": 1440,
+      "height": 900,
+      "snapshot": "- heading \"提炼队列\" [level=2]:\n  - button \"提炼队列\" [expanded]: 提炼队列 −\n- paragraph: 当前队列页 1 · 1 个会话／1 个批次 · 待批准（覆盖人工保护记忆） 1 · 当前筛选已到末页；不是全局待办总数。\n- region \"提炼队列\":\n  - paragraph: 达到阈值后，于正常聊天保存后的空闲机会自动启动；不提供绕过阈值的立即提炼。\n  - text: 按会话 ID 筛选队列\n  - textbox \"按会话 ID 筛选队列\"\n  - button \"筛选队列\"\n  - button \"上一页\" [disabled]\n  - text: 第 1 页（每页最多 50 个会话与 50 个批次）\n  - button \"下一页\" [disabled]\n  - paragraph\n  - article:\n    - strong: 会话 bbcb45f00fd64ac28b188252f4b28e37\n    - paragraph: 有效未处理 2 / 阈值 2\n  - article:\n    - strong: 批次 3d3f98f20f754751a65fd9682da7ac18 · 修订 1\n    - paragraph: 待批准（覆盖人工保护记忆）\n    - text: 来源对话 [2026-10-12T06:08:18+00:00, 2026-10-12T06:08:18+00:00] · 创建 2026-10-12T06:08:19.032908+00:00 · 更新 2026-10-12T06:08:19.128175+00:00\n    - link \"提炼运行 79270c87168c48009a9a897bd59207e3\":\n      - /url: /runs/79270c87168c48009a9a897bd59207e3?filter=system\n    - paragraph: 模型 opencode-go / deepseek-v4-flash\n    - text: Attempt 048e20f99ec2467aadbfe97fb34c56ff · committed · 输入 未知 · 输出 4\n    - button \"批准整批\"\n    - button \"拒绝整批\"\n    - button \"查看候选\"",
+      "logFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+    },
+    {
+      "view": "semantic",
+      "width": 1280,
+      "height": 800,
+      "measurements": {
+        "viewport": {
+          "width": 1280,
+          "height": 800
+        },
+        "pageWidth": 663,
+        "pageOverflow": 0,
+        "documentOverflow": 0,
+        "metricColumns": "213px 213px 213px",
+        "metrics": [
+          {
+            "value": "6",
+            "label": "语义记忆 · semantic",
+            "note": "当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 48,
+            "noteScrollHeight": 48
+          },
+          {
+            "value": "2",
+            "label": "情景记忆 · episodic",
+            "note": "当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 48,
+            "noteScrollHeight": 48
+          },
+          {
+            "value": "1",
+            "label": "Skill 目录 · procedural",
+            "note": "启动时的只读目录条目数；不是记忆库条目数。文件修改需重启后生效。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 32,
+            "noteScrollHeight": 32
+          }
+        ],
+        "tabNames": [
+          {
+            "name": "语义记忆",
+            "selected": "true",
+            "class": "sy-tab"
+          },
+          {
+            "name": "情景记忆",
+            "selected": "false",
+            "class": "sy-tab"
+          },
+          {
+            "name": "Skill 目录",
+            "selected": "false",
+            "class": "sy-tab"
+          }
+        ],
+        "inlineStyles": 0,
+        "focused": "语义记忆",
+        "focusOutline": "3px",
+        "headings": [
+          {
+            "name": "语义记忆",
+            "level": "H2"
+          },
+          {
+            "name": "操作回执",
+            "level": "H3"
+          },
+          {
+            "name": "长中文与完整状态",
+            "level": "H3"
+          },
+          {
+            "name": "来源证据",
+            "level": "H3"
+          },
+          {
+            "name": "遗忘范围",
+            "level": "H3"
+          },
+          {
+            "name": "编辑保护",
+            "level": "H3"
+          },
+          {
+            "name": "环境",
+            "level": "H3"
+          },
+          {
+            "name": "记忆维护",
+            "level": "H2"
+          },
+          {
+            "name": "操作回执／遗忘进度",
+            "level": "H2"
+          },
+          {
+            "name": "提炼队列",
+            "level": "H2"
+          },
+          {
+            "name": "检索统计",
+            "level": "H2"
+          },
+          {
+            "name": "Markdown 镜像",
+            "level": "H2"
+          }
+        ],
+        "resources": [
+          "http://127.0.0.1:18064/assets/app.css",
+          "http://127.0.0.1:18064/assets/inbox-runs.css",
+          "http://127.0.0.1:18064/assets/settings.css",
+          "http://127.0.0.1:18064/assets/overview.css",
+          "http://127.0.0.1:18064/assets/tools.css",
+          "http://127.0.0.1:18064/assets/memory.css",
+          "http://127.0.0.1:18064/assets/database.css",
+          "http://127.0.0.1:18064/assets/accounting.css",
+          "http://127.0.0.1:18064/assets/behaviour.css",
+          "http://127.0.0.1:18064/assets/app.js",
+          "http://127.0.0.1:18064/assets/shell.js",
+          "http://127.0.0.1:18064/assets/aggregation.js",
+          "http://127.0.0.1:18064/assets/accounting.js",
+          "http://127.0.0.1:18064/assets/tools.js",
+          "http://127.0.0.1:18064/assets/stream.js",
+          "http://127.0.0.1:18064/assets/dom.js",
+          "http://127.0.0.1:18064/assets/progress.js",
+          "http://127.0.0.1:18064/assets/pages.js",
+          "http://127.0.0.1:18064/assets/notices.js",
+          "http://127.0.0.1:18064/assets/inbox.js",
+          "http://127.0.0.1:18064/assets/runs.js",
+          "http://127.0.0.1:18064/assets/overview.js",
+          "http://127.0.0.1:18064/assets/memory.js",
+          "http://127.0.0.1:18064/assets/database.js",
+          "http://127.0.0.1:18064/assets/behaviour.js",
+          "http://127.0.0.1:18064/assets/models.js",
+          "http://127.0.0.1:18064/assets/connections.js",
+          "http://127.0.0.1:18064/assets/run-fields.js",
+          "http://127.0.0.1:18064/assets/source.js",
+          "http://127.0.0.1:18064/assets/trace_export.js",
+          "http://127.0.0.1:18064/assets/run-evidence.js",
+          "http://127.0.0.1:18064/assets/topology.js",
+          "http://127.0.0.1:18064/assets/routing-statistics.js",
+          "http://127.0.0.1:18064/assets/settings-focus.js"
+        ]
+      },
+      "snapshot": "- banner \"导航面板\":\n  - link \"Alfred 本地助手\":\n    - /url: /overview\n  - paragraph: 已同步\n  - paragraph: 127.0.0.1:18064\n  - navigation \"主导航\":\n    - paragraph: 工作区\n    - link \"总览\":\n      - /url: /overview\n    - link \"收件箱\":\n      - /url: /inbox\n    - link \"运行\":\n      - /url: /runs\n    - link \"记忆\":\n      - /url: /memory\n    - paragraph: Agent 配置\n    - link \"模型\":\n      - /url: /models\n    - link \"连接\":\n      - /url: /connections\n    - link \"行为\":\n      - /url: /behaviour\n    - link \"工具\":\n      - /url: /tools\n    - paragraph: 诊断\n    - link \"用量账本\":\n      - /url: /ops\n    - link \"数据库\":\n      - /url: /database\n  - paragraph: 本地优先 · 共享运行宿主\n- main:\n  - paragraph: MEMORY\n  - heading \"记忆\" [level=1]\n  - paragraph: 维护已保存的语义记忆与情景记忆，查看只读 Skill 目录。\n  - button \"打开主对话\" [expanded]\n  - region \"运行与连接摘要\":\n    - paragraph: 已完成 · 已保存\n    - link \"查看最近运行结果\":\n      - /url: /runs/79270c87168c48009a9a897bd59207e3\n  - tablist \"记忆类别\":\n    - tab \"语义记忆\" [selected]\n    - tab \"情景记忆\"\n    - tab \"Skill 目录\"\n  - article:\n    - paragraph: \"6\"\n    - paragraph: 语义记忆 · semantic\n    - paragraph: 当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。\n  - article:\n    - paragraph: \"2\"\n    - paragraph: 情景记忆 · episodic\n    - paragraph: 当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。\n  - article:\n    - paragraph: \"1\"\n    - paragraph: Skill 目录 · procedural\n    - paragraph: 启动时的只读目录条目数；不是记忆库条目数。文件修改需重启后生效。\n  - tabpanel \"语义记忆\":\n    - heading \"语义记忆\" [level=2]\n    - paragraph: 已保存的事实与来源；查看详情后可编辑或确认删除。\n    - form \"搜索语义记忆\":\n      - text: 文本\n      - textbox \"文本\"\n      - text: 主题（精确匹配）\n      - textbox \"主题（精确匹配）\"\n      - button \"搜索\"\n      - button \"显示全部\"\n    - article:\n      - heading \"操作回执\" [level=3]\n      - paragraph: 保存事实与遗忘清理在独立回执中分别核对。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:08:18.048248+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:08:18.048248+00:00 · 人工保护\n    - article:\n      - heading \"长中文与完整状态\" [level=3]\n      - paragraph: 长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:07:23.650499+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:07:23.650499+00:00 · 人工保护\n    - article:\n      - heading \"来源证据\" [level=3]\n      - paragraph: 来源组入口绑定已有 Run 标识，返回时重新核验。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:07:23.629502+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:07:23.629502+00:00 · 人工保护\n    - article:\n      - heading \"遗忘范围\" [level=3]\n      - paragraph: 条目删除与受管副本清理分别核对。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:07:23.610563+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:07:23.610563+00:00 · 人工保护\n    - article:\n      - heading \"编辑保护\" [level=3]\n      - paragraph: 类别切换与折叠保留尚未保存的输入。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:07:23.588782+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:07:23.588782+00:00 · 人工保护\n    - article:\n      - heading \"环境\" [level=3]\n      - paragraph: 本次浏览器验证使用 uv 管理 Python 环境。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:07:23.558541+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:07:23.558541+00:00 · 人工保护\n    - button \"新建语义记忆\"\n  - heading \"记忆维护\" [level=2]\n  - heading \"操作回执／遗忘进度\" [level=2]:\n    - button \"操作回执／遗忘进度\": 操作回执／遗忘进度 ＋\n  - paragraph: 仅本标签页 · 提交中 0 · 结果待确认 0 · 遗忘未完成 0；操作 3507c591-66ba-4b15-a459-fd174cb6fefd：清理进度暂不可读取（memory_changed）。当前进度待核验；已确认的删除与上次进度保留。。已确认历史至多 20 项；未确认与未完成责任单独保留。\n  - heading \"提炼队列\" [level=2]:\n    - button \"提炼队列\": 提炼队列 ＋\n  - paragraph: 当前队列页 1 · 1 个会话／1 个批次 · 待批准（覆盖人工保护记忆） 1 · 当前筛选已到末页；不是全局待办总数。\n  - heading \"检索统计\" [level=2]:\n    - button \"检索统计\": 检索统计 ＋\n  - paragraph: 已读取 · 全部会话 · [2026-10-05T06:08:18.831480+00:00, 2026-10-12T06:08:18.831480+00:00)\n  - heading \"Markdown 镜像\" [level=2]:\n    - button \"Markdown 镜像\": Markdown 镜像 ＋\n  - paragraph: 事实：已同步并核验；情景：已同步并核验\n- region \"MainBar\":\n  - heading \"主对话\" [level=2]\n  - button \"收起主对话\"\n  - text: 会话\n  - button \"新建会话\"\n  - region \"主对话\":\n    - article:\n      - paragraph: V06 视觉验证第一条对话\n      - paragraph: 离线模型回复\n      - paragraph: Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。\n      - text: 已保存\n    - article:\n      - paragraph: V06 视觉验证第二条对话\n      - paragraph: 离线模型回复\n      - paragraph: Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。\n      - text: 已保存\n  - text: 消息\n  - textbox \"消息\":\n    - /placeholder: 写下消息；/skills 指定流程…\n  - button \"发送\" [disabled]\n  - paragraph: Enter 发送 · Shift+Enter 换行\n- status: 就绪\n- alert"
+    },
+    {
+      "view": "skills",
+      "width": 1280,
+      "height": 800,
+      "measurements": {
+        "viewport": {
+          "width": 1280,
+          "height": 800
+        },
+        "pageWidth": 663,
+        "pageOverflow": 0,
+        "documentOverflow": 0,
+        "metricColumns": "213px 213px 213px",
+        "metrics": [
+          {
+            "value": "6",
+            "label": "语义记忆 · semantic",
+            "note": "当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 48,
+            "noteScrollHeight": 48
+          },
+          {
+            "value": "2",
+            "label": "情景记忆 · episodic",
+            "note": "当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 48,
+            "noteScrollHeight": 48
+          },
+          {
+            "value": "1",
+            "label": "Skill 目录 · procedural",
+            "note": "启动时的只读目录条目数；不是记忆库条目数。文件修改需重启后生效。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 32,
+            "noteScrollHeight": 32
+          }
+        ],
+        "tabNames": [
+          {
+            "name": "语义记忆",
+            "selected": "false",
+            "class": "sy-tab"
+          },
+          {
+            "name": "情景记忆",
+            "selected": "false",
+            "class": "sy-tab"
+          },
+          {
+            "name": "Skill 目录",
+            "selected": "true",
+            "class": "sy-tab"
+          }
+        ],
+        "inlineStyles": 0,
+        "focused": "Skill 目录",
+        "focusOutline": "3px",
+        "headings": [
+          {
+            "name": "Skill 目录",
+            "level": "H2"
+          },
+          {
+            "name": "browser-plan",
+            "level": "H3"
+          },
+          {
+            "name": "记忆维护",
+            "level": "H2"
+          },
+          {
+            "name": "操作回执／遗忘进度",
+            "level": "H2"
+          },
+          {
+            "name": "提炼队列",
+            "level": "H2"
+          },
+          {
+            "name": "检索统计",
+            "level": "H2"
+          },
+          {
+            "name": "Markdown 镜像",
+            "level": "H2"
+          }
+        ],
+        "resources": [
+          "http://127.0.0.1:18064/assets/app.css",
+          "http://127.0.0.1:18064/assets/inbox-runs.css",
+          "http://127.0.0.1:18064/assets/settings.css",
+          "http://127.0.0.1:18064/assets/overview.css",
+          "http://127.0.0.1:18064/assets/tools.css",
+          "http://127.0.0.1:18064/assets/memory.css",
+          "http://127.0.0.1:18064/assets/database.css",
+          "http://127.0.0.1:18064/assets/accounting.css",
+          "http://127.0.0.1:18064/assets/behaviour.css",
+          "http://127.0.0.1:18064/assets/app.js",
+          "http://127.0.0.1:18064/assets/shell.js",
+          "http://127.0.0.1:18064/assets/aggregation.js",
+          "http://127.0.0.1:18064/assets/accounting.js",
+          "http://127.0.0.1:18064/assets/tools.js",
+          "http://127.0.0.1:18064/assets/stream.js",
+          "http://127.0.0.1:18064/assets/dom.js",
+          "http://127.0.0.1:18064/assets/progress.js",
+          "http://127.0.0.1:18064/assets/pages.js",
+          "http://127.0.0.1:18064/assets/notices.js",
+          "http://127.0.0.1:18064/assets/inbox.js",
+          "http://127.0.0.1:18064/assets/runs.js",
+          "http://127.0.0.1:18064/assets/overview.js",
+          "http://127.0.0.1:18064/assets/memory.js",
+          "http://127.0.0.1:18064/assets/database.js",
+          "http://127.0.0.1:18064/assets/behaviour.js",
+          "http://127.0.0.1:18064/assets/models.js",
+          "http://127.0.0.1:18064/assets/connections.js",
+          "http://127.0.0.1:18064/assets/run-fields.js",
+          "http://127.0.0.1:18064/assets/source.js",
+          "http://127.0.0.1:18064/assets/trace_export.js",
+          "http://127.0.0.1:18064/assets/run-evidence.js",
+          "http://127.0.0.1:18064/assets/topology.js",
+          "http://127.0.0.1:18064/assets/routing-statistics.js",
+          "http://127.0.0.1:18064/assets/settings-focus.js"
+        ]
+      },
+      "snapshot": "- banner \"导航面板\":\n  - link \"Alfred 本地助手\":\n    - /url: /overview\n  - paragraph: 已同步\n  - paragraph: 127.0.0.1:18064\n  - navigation \"主导航\":\n    - paragraph: 工作区\n    - link \"总览\":\n      - /url: /overview\n    - link \"收件箱\":\n      - /url: /inbox\n    - link \"运行\":\n      - /url: /runs\n    - link \"记忆\":\n      - /url: /memory\n    - paragraph: Agent 配置\n    - link \"模型\":\n      - /url: /models\n    - link \"连接\":\n      - /url: /connections\n    - link \"行为\":\n      - /url: /behaviour\n    - link \"工具\":\n      - /url: /tools\n    - paragraph: 诊断\n    - link \"用量账本\":\n      - /url: /ops\n    - link \"数据库\":\n      - /url: /database\n  - paragraph: 本地优先 · 共享运行宿主\n- main:\n  - paragraph: MEMORY\n  - heading \"记忆\" [level=1]\n  - paragraph: 维护已保存的语义记忆与情景记忆，查看只读 Skill 目录。\n  - button \"打开主对话\" [expanded]\n  - region \"运行与连接摘要\":\n    - paragraph: 已完成 · 已保存\n    - link \"查看最近运行结果\":\n      - /url: /runs/79270c87168c48009a9a897bd59207e3\n  - tablist \"记忆类别\":\n    - tab \"语义记忆\"\n    - tab \"情景记忆\"\n    - tab \"Skill 目录\" [selected]\n  - article:\n    - paragraph: \"6\"\n    - paragraph: 语义记忆 · semantic\n    - paragraph: 当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。\n  - article:\n    - paragraph: \"2\"\n    - paragraph: 情景记忆 · episodic\n    - paragraph: 当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。\n  - article:\n    - paragraph: \"1\"\n    - paragraph: Skill 目录 · procedural\n    - paragraph: 启动时的只读目录条目数；不是记忆库条目数。文件修改需重启后生效。\n  - tabpanel \"Skill 目录\":\n    - heading \"Skill 目录\" [level=2]\n    - paragraph: 只读目录：启动时建立索引，文件修改需重启后生效。聊天支持 /skills 明确指定、禁用及自动选择；运行详情展示当次加载与发送证据。这里不提供编辑。\n    - article:\n      - heading \"browser-plan\" [level=3]\n      - paragraph: 内置计划\n      - text: 内置 Skill\n      - button \"查看正文\"\n      - button \"在主对话使用 /skills\"\n      - paragraph: 在主对话中明确输入 /skills browser-plan 及你的请求；打开主对话不会提交或替换现有草稿。\n  - heading \"记忆维护\" [level=2]\n  - heading \"操作回执／遗忘进度\" [level=2]:\n    - button \"操作回执／遗忘进度\": 操作回执／遗忘进度 ＋\n  - paragraph: 仅本标签页 · 提交中 0 · 结果待确认 0 · 遗忘未完成 0；操作 3507c591-66ba-4b15-a459-fd174cb6fefd：清理进度暂不可读取（memory_changed）。当前进度待核验；已确认的删除与上次进度保留。。已确认历史至多 20 项；未确认与未完成责任单独保留。\n  - heading \"提炼队列\" [level=2]:\n    - button \"提炼队列\": 提炼队列 ＋\n  - paragraph: 当前队列页 1 · 1 个会话／1 个批次 · 待批准（覆盖人工保护记忆） 1 · 当前筛选已到末页；不是全局待办总数。\n  - heading \"检索统计\" [level=2]:\n    - button \"检索统计\": 检索统计 ＋\n  - paragraph: 已读取 · 全部会话 · [2026-10-05T06:08:18.831480+00:00, 2026-10-12T06:08:18.831480+00:00)\n  - heading \"Markdown 镜像\" [level=2]:\n    - button \"Markdown 镜像\": Markdown 镜像 ＋\n  - paragraph: 事实：已同步并核验；情景：已同步并核验\n- region \"MainBar\":\n  - heading \"主对话\" [level=2]\n  - button \"收起主对话\"\n  - text: 会话\n  - button \"新建会话\"\n  - region \"主对话\":\n    - article:\n      - paragraph: V06 视觉验证第一条对话\n      - paragraph: 离线模型回复\n      - paragraph: Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。\n      - text: 已保存\n    - article:\n      - paragraph: V06 视觉验证第二条对话\n      - paragraph: 离线模型回复\n      - paragraph: Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。\n      - text: 已保存\n  - text: 消息\n  - textbox \"消息\":\n    - /placeholder: 写下消息；/skills 指定流程…\n  - button \"发送\" [disabled]\n  - paragraph: Enter 发送 · Shift+Enter 换行\n- status: 就绪\n- alert"
+    },
+    {
+      "view": "queue",
+      "width": 1280,
+      "height": 800,
+      "snapshot": "- heading \"提炼队列\" [level=2]:\n  - button \"提炼队列\" [expanded]: 提炼队列 −\n- paragraph: 当前队列页 1 · 1 个会话／1 个批次 · 待批准（覆盖人工保护记忆） 1 · 当前筛选已到末页；不是全局待办总数。\n- region \"提炼队列\":\n  - paragraph: 达到阈值后，于正常聊天保存后的空闲机会自动启动；不提供绕过阈值的立即提炼。\n  - text: 按会话 ID 筛选队列\n  - textbox \"按会话 ID 筛选队列\"\n  - button \"筛选队列\"\n  - button \"上一页\" [disabled]\n  - text: 第 1 页（每页最多 50 个会话与 50 个批次）\n  - button \"下一页\" [disabled]\n  - paragraph\n  - article:\n    - strong: 会话 bbcb45f00fd64ac28b188252f4b28e37\n    - paragraph: 有效未处理 2 / 阈值 2\n  - article:\n    - strong: 批次 3d3f98f20f754751a65fd9682da7ac18 · 修订 1\n    - paragraph: 待批准（覆盖人工保护记忆）\n    - text: 来源对话 [2026-10-12T06:08:18+00:00, 2026-10-12T06:08:18+00:00] · 创建 2026-10-12T06:08:19.032908+00:00 · 更新 2026-10-12T06:08:19.128175+00:00\n    - link \"提炼运行 79270c87168c48009a9a897bd59207e3\":\n      - /url: /runs/79270c87168c48009a9a897bd59207e3?filter=system\n    - paragraph: 模型 opencode-go / deepseek-v4-flash\n    - text: Attempt 048e20f99ec2467aadbfe97fb34c56ff · committed · 输入 未知 · 输出 4\n    - button \"批准整批\"\n    - button \"拒绝整批\"\n    - button \"查看候选\"",
+      "logFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+    },
+    {
+      "view": "semantic",
+      "width": 390,
+      "height": 844,
+      "measurements": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "pageWidth": 349,
+        "pageOverflow": 0,
+        "documentOverflow": 0,
+        "metricColumns": "349px",
+        "metrics": [
+          {
+            "value": "6",
+            "label": "语义记忆 · semantic",
+            "note": "当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 32,
+            "noteScrollHeight": 32
+          },
+          {
+            "value": "2",
+            "label": "情景记忆 · episodic",
+            "note": "当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 32,
+            "noteScrollHeight": 32
+          },
+          {
+            "value": "1",
+            "label": "Skill 目录 · procedural",
+            "note": "启动时的只读目录条目数；不是记忆库条目数。文件修改需重启后生效。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 32,
+            "noteScrollHeight": 32
+          }
+        ],
+        "tabNames": [
+          {
+            "name": "语义记忆",
+            "selected": "true",
+            "class": "sy-tab"
+          },
+          {
+            "name": "情景记忆",
+            "selected": "false",
+            "class": "sy-tab"
+          },
+          {
+            "name": "Skill 目录",
+            "selected": "false",
+            "class": "sy-tab"
+          }
+        ],
+        "inlineStyles": 0,
+        "focused": "语义记忆",
+        "focusOutline": "3px",
+        "headings": [
+          {
+            "name": "语义记忆",
+            "level": "H2"
+          },
+          {
+            "name": "操作回执",
+            "level": "H3"
+          },
+          {
+            "name": "长中文与完整状态",
+            "level": "H3"
+          },
+          {
+            "name": "来源证据",
+            "level": "H3"
+          },
+          {
+            "name": "遗忘范围",
+            "level": "H3"
+          },
+          {
+            "name": "编辑保护",
+            "level": "H3"
+          },
+          {
+            "name": "环境",
+            "level": "H3"
+          },
+          {
+            "name": "记忆维护",
+            "level": "H2"
+          },
+          {
+            "name": "操作回执／遗忘进度",
+            "level": "H2"
+          },
+          {
+            "name": "提炼队列",
+            "level": "H2"
+          },
+          {
+            "name": "检索统计",
+            "level": "H2"
+          },
+          {
+            "name": "Markdown 镜像",
+            "level": "H2"
+          }
+        ],
+        "resources": [
+          "http://127.0.0.1:18064/assets/app.css",
+          "http://127.0.0.1:18064/assets/inbox-runs.css",
+          "http://127.0.0.1:18064/assets/settings.css",
+          "http://127.0.0.1:18064/assets/overview.css",
+          "http://127.0.0.1:18064/assets/tools.css",
+          "http://127.0.0.1:18064/assets/memory.css",
+          "http://127.0.0.1:18064/assets/database.css",
+          "http://127.0.0.1:18064/assets/accounting.css",
+          "http://127.0.0.1:18064/assets/behaviour.css",
+          "http://127.0.0.1:18064/assets/app.js",
+          "http://127.0.0.1:18064/assets/shell.js",
+          "http://127.0.0.1:18064/assets/aggregation.js",
+          "http://127.0.0.1:18064/assets/accounting.js",
+          "http://127.0.0.1:18064/assets/tools.js",
+          "http://127.0.0.1:18064/assets/stream.js",
+          "http://127.0.0.1:18064/assets/dom.js",
+          "http://127.0.0.1:18064/assets/progress.js",
+          "http://127.0.0.1:18064/assets/pages.js",
+          "http://127.0.0.1:18064/assets/notices.js",
+          "http://127.0.0.1:18064/assets/inbox.js",
+          "http://127.0.0.1:18064/assets/runs.js",
+          "http://127.0.0.1:18064/assets/overview.js",
+          "http://127.0.0.1:18064/assets/memory.js",
+          "http://127.0.0.1:18064/assets/database.js",
+          "http://127.0.0.1:18064/assets/behaviour.js",
+          "http://127.0.0.1:18064/assets/models.js",
+          "http://127.0.0.1:18064/assets/connections.js",
+          "http://127.0.0.1:18064/assets/run-fields.js",
+          "http://127.0.0.1:18064/assets/source.js",
+          "http://127.0.0.1:18064/assets/trace_export.js",
+          "http://127.0.0.1:18064/assets/run-evidence.js",
+          "http://127.0.0.1:18064/assets/topology.js",
+          "http://127.0.0.1:18064/assets/routing-statistics.js",
+          "http://127.0.0.1:18064/assets/settings-focus.js"
+        ]
+      },
+      "snapshot": "- button \"打开导航\"\n- button \"打开主对话\"\n- region \"运行与连接摘要\":\n  - paragraph: 已完成 · 已保存\n  - link \"查看最近运行结果\":\n    - /url: /runs/79270c87168c48009a9a897bd59207e3\n- main:\n  - paragraph: MEMORY\n  - heading \"记忆\" [level=1]\n  - paragraph: 维护已保存的语义记忆与情景记忆，查看只读 Skill 目录。\n  - tablist \"记忆类别\":\n    - tab \"语义记忆\" [selected]\n    - tab \"情景记忆\"\n    - tab \"Skill 目录\"\n  - article:\n    - paragraph: \"6\"\n    - paragraph: 语义记忆 · semantic\n    - paragraph: 当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。\n  - article:\n    - paragraph: \"2\"\n    - paragraph: 情景记忆 · episodic\n    - paragraph: 当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。\n  - article:\n    - paragraph: \"1\"\n    - paragraph: Skill 目录 · procedural\n    - paragraph: 启动时的只读目录条目数；不是记忆库条目数。文件修改需重启后生效。\n  - tabpanel \"语义记忆\":\n    - heading \"语义记忆\" [level=2]\n    - paragraph: 已保存的事实与来源；查看详情后可编辑或确认删除。\n    - form \"搜索语义记忆\":\n      - text: 文本\n      - textbox \"文本\"\n      - text: 主题（精确匹配）\n      - textbox \"主题（精确匹配）\"\n      - button \"搜索\"\n      - button \"显示全部\"\n    - article:\n      - heading \"操作回执\" [level=3]\n      - paragraph: 保存事实与遗忘清理在独立回执中分别核对。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:08:18.048248+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:08:18.048248+00:00 · 人工保护\n    - article:\n      - heading \"长中文与完整状态\" [level=3]\n      - paragraph: 长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:07:23.650499+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:07:23.650499+00:00 · 人工保护\n    - article:\n      - heading \"来源证据\" [level=3]\n      - paragraph: 来源组入口绑定已有 Run 标识，返回时重新核验。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:07:23.629502+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:07:23.629502+00:00 · 人工保护\n    - article:\n      - heading \"遗忘范围\" [level=3]\n      - paragraph: 条目删除与受管副本清理分别核对。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:07:23.610563+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:07:23.610563+00:00 · 人工保护\n    - article:\n      - heading \"编辑保护\" [level=3]\n      - paragraph: 类别切换与折叠保留尚未保存的输入。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:07:23.588782+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:07:23.588782+00:00 · 人工保护\n    - article:\n      - heading \"环境\" [level=3]\n      - paragraph: 本次浏览器验证使用 uv 管理 Python 环境。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:07:23.558541+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:07:23.558541+00:00 · 人工保护\n    - button \"新建语义记忆\"\n  - heading \"记忆维护\" [level=2]\n  - heading \"操作回执／遗忘进度\" [level=2]:\n    - button \"操作回执／遗忘进度\": 操作回执／遗忘进度 ＋\n  - paragraph: 仅本标签页 · 提交中 0 · 结果待确认 0 · 遗忘未完成 0；操作 3507c591-66ba-4b15-a459-fd174cb6fefd：清理进度暂不可读取（memory_changed）。当前进度待核验；已确认的删除与上次进度保留。。已确认历史至多 20 项；未确认与未完成责任单独保留。\n  - heading \"提炼队列\" [level=2]:\n    - button \"提炼队列\": 提炼队列 ＋\n  - paragraph: 当前队列页 1 · 1 个会话／1 个批次 · 待批准（覆盖人工保护记忆） 1 · 当前筛选已到末页；不是全局待办总数。\n  - heading \"检索统计\" [level=2]:\n    - button \"检索统计\": 检索统计 ＋\n  - paragraph: 已读取 · 全部会话 · [2026-10-05T06:08:18.831480+00:00, 2026-10-12T06:08:18.831480+00:00)\n  - heading \"Markdown 镜像\" [level=2]:\n    - button \"Markdown 镜像\": Markdown 镜像 ＋\n  - paragraph: 事实：已同步并核验；情景：已同步并核验\n- status: 就绪\n- alert"
+    },
+    {
+      "view": "skills",
+      "width": 390,
+      "height": 844,
+      "measurements": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "pageWidth": 349,
+        "pageOverflow": 0,
+        "documentOverflow": 0,
+        "metricColumns": "349px",
+        "metrics": [
+          {
+            "value": "6",
+            "label": "语义记忆 · semantic",
+            "note": "当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 32,
+            "noteScrollHeight": 32
+          },
+          {
+            "value": "2",
+            "label": "情景记忆 · episodic",
+            "note": "当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 32,
+            "noteScrollHeight": 32
+          },
+          {
+            "value": "1",
+            "label": "Skill 目录 · procedural",
+            "note": "启动时的只读目录条目数；不是记忆库条目数。文件修改需重启后生效。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 32,
+            "noteScrollHeight": 32
+          }
+        ],
+        "tabNames": [
+          {
+            "name": "语义记忆",
+            "selected": "false",
+            "class": "sy-tab"
+          },
+          {
+            "name": "情景记忆",
+            "selected": "false",
+            "class": "sy-tab"
+          },
+          {
+            "name": "Skill 目录",
+            "selected": "true",
+            "class": "sy-tab"
+          }
+        ],
+        "inlineStyles": 0,
+        "focused": "Skill 目录",
+        "focusOutline": "3px",
+        "headings": [
+          {
+            "name": "Skill 目录",
+            "level": "H2"
+          },
+          {
+            "name": "browser-plan",
+            "level": "H3"
+          },
+          {
+            "name": "记忆维护",
+            "level": "H2"
+          },
+          {
+            "name": "操作回执／遗忘进度",
+            "level": "H2"
+          },
+          {
+            "name": "提炼队列",
+            "level": "H2"
+          },
+          {
+            "name": "检索统计",
+            "level": "H2"
+          },
+          {
+            "name": "Markdown 镜像",
+            "level": "H2"
+          }
+        ],
+        "resources": [
+          "http://127.0.0.1:18064/assets/app.css",
+          "http://127.0.0.1:18064/assets/inbox-runs.css",
+          "http://127.0.0.1:18064/assets/settings.css",
+          "http://127.0.0.1:18064/assets/overview.css",
+          "http://127.0.0.1:18064/assets/tools.css",
+          "http://127.0.0.1:18064/assets/memory.css",
+          "http://127.0.0.1:18064/assets/database.css",
+          "http://127.0.0.1:18064/assets/accounting.css",
+          "http://127.0.0.1:18064/assets/behaviour.css",
+          "http://127.0.0.1:18064/assets/app.js",
+          "http://127.0.0.1:18064/assets/shell.js",
+          "http://127.0.0.1:18064/assets/aggregation.js",
+          "http://127.0.0.1:18064/assets/accounting.js",
+          "http://127.0.0.1:18064/assets/tools.js",
+          "http://127.0.0.1:18064/assets/stream.js",
+          "http://127.0.0.1:18064/assets/dom.js",
+          "http://127.0.0.1:18064/assets/progress.js",
+          "http://127.0.0.1:18064/assets/pages.js",
+          "http://127.0.0.1:18064/assets/notices.js",
+          "http://127.0.0.1:18064/assets/inbox.js",
+          "http://127.0.0.1:18064/assets/runs.js",
+          "http://127.0.0.1:18064/assets/overview.js",
+          "http://127.0.0.1:18064/assets/memory.js",
+          "http://127.0.0.1:18064/assets/database.js",
+          "http://127.0.0.1:18064/assets/behaviour.js",
+          "http://127.0.0.1:18064/assets/models.js",
+          "http://127.0.0.1:18064/assets/connections.js",
+          "http://127.0.0.1:18064/assets/run-fields.js",
+          "http://127.0.0.1:18064/assets/source.js",
+          "http://127.0.0.1:18064/assets/trace_export.js",
+          "http://127.0.0.1:18064/assets/run-evidence.js",
+          "http://127.0.0.1:18064/assets/topology.js",
+          "http://127.0.0.1:18064/assets/routing-statistics.js",
+          "http://127.0.0.1:18064/assets/settings-focus.js"
+        ]
+      },
+      "snapshot": "- button \"打开导航\"\n- button \"打开主对话\"\n- region \"运行与连接摘要\":\n  - paragraph: 已完成 · 已保存\n  - link \"查看最近运行结果\":\n    - /url: /runs/79270c87168c48009a9a897bd59207e3\n- main:\n  - paragraph: MEMORY\n  - heading \"记忆\" [level=1]\n  - paragraph: 维护已保存的语义记忆与情景记忆，查看只读 Skill 目录。\n  - tablist \"记忆类别\":\n    - tab \"语义记忆\"\n    - tab \"情景记忆\"\n    - tab \"Skill 目录\" [selected]\n  - article:\n    - paragraph: \"6\"\n    - paragraph: 语义记忆 · semantic\n    - paragraph: 当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。\n  - article:\n    - paragraph: \"2\"\n    - paragraph: 情景记忆 · episodic\n    - paragraph: 当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。\n  - article:\n    - paragraph: \"1\"\n    - paragraph: Skill 目录 · procedural\n    - paragraph: 启动时的只读目录条目数；不是记忆库条目数。文件修改需重启后生效。\n  - tabpanel \"Skill 目录\":\n    - heading \"Skill 目录\" [level=2]\n    - paragraph: 只读目录：启动时建立索引，文件修改需重启后生效。聊天支持 /skills 明确指定、禁用及自动选择；运行详情展示当次加载与发送证据。这里不提供编辑。\n    - article:\n      - heading \"browser-plan\" [level=3]\n      - paragraph: 内置计划\n      - text: 内置 Skill\n      - button \"查看正文\"\n      - button \"在主对话使用 /skills\"\n      - paragraph: 在主对话中明确输入 /skills browser-plan 及你的请求；打开主对话不会提交或替换现有草稿。\n  - heading \"记忆维护\" [level=2]\n  - heading \"操作回执／遗忘进度\" [level=2]:\n    - button \"操作回执／遗忘进度\": 操作回执／遗忘进度 ＋\n  - paragraph: 仅本标签页 · 提交中 0 · 结果待确认 0 · 遗忘未完成 0；操作 3507c591-66ba-4b15-a459-fd174cb6fefd：清理进度暂不可读取（memory_changed）。当前进度待核验；已确认的删除与上次进度保留。。已确认历史至多 20 项；未确认与未完成责任单独保留。\n  - heading \"提炼队列\" [level=2]:\n    - button \"提炼队列\": 提炼队列 ＋\n  - paragraph: 当前队列页 1 · 1 个会话／1 个批次 · 待批准（覆盖人工保护记忆） 1 · 当前筛选已到末页；不是全局待办总数。\n  - heading \"检索统计\" [level=2]:\n    - button \"检索统计\": 检索统计 ＋\n  - paragraph: 已读取 · 全部会话 · [2026-10-05T06:08:18.831480+00:00, 2026-10-12T06:08:18.831480+00:00)\n  - heading \"Markdown 镜像\" [level=2]:\n    - button \"Markdown 镜像\": Markdown 镜像 ＋\n  - paragraph: 事实：已同步并核验；情景：已同步并核验\n- status: 就绪\n- alert"
+    },
+    {
+      "view": "queue",
+      "width": 390,
+      "height": 844,
+      "snapshot": "- heading \"提炼队列\" [level=2]:\n  - button \"提炼队列\" [expanded]: 提炼队列 −\n- paragraph: 当前队列页 1 · 1 个会话／1 个批次 · 待批准（覆盖人工保护记忆） 1 · 当前筛选已到末页；不是全局待办总数。\n- region \"提炼队列\":\n  - paragraph: 达到阈值后，于正常聊天保存后的空闲机会自动启动；不提供绕过阈值的立即提炼。\n  - text: 按会话 ID 筛选队列\n  - textbox \"按会话 ID 筛选队列\"\n  - button \"筛选队列\"\n  - button \"上一页\" [disabled]\n  - text: 第 1 页（每页最多 50 个会话与 50 个批次）\n  - button \"下一页\" [disabled]\n  - paragraph\n  - article:\n    - strong: 会话 bbcb45f00fd64ac28b188252f4b28e37\n    - paragraph: 有效未处理 2 / 阈值 2\n  - article:\n    - strong: 批次 3d3f98f20f754751a65fd9682da7ac18 · 修订 1\n    - paragraph: 待批准（覆盖人工保护记忆）\n    - text: 来源对话 [2026-10-12T06:08:18+00:00, 2026-10-12T06:08:18+00:00] · 创建 2026-10-12T06:08:19.032908+00:00 · 更新 2026-10-12T06:08:19.128175+00:00\n    - link \"提炼运行 79270c87168c48009a9a897bd59207e3\":\n      - /url: /runs/79270c87168c48009a9a897bd59207e3?filter=system\n    - paragraph: 模型 opencode-go / deepseek-v4-flash\n    - text: Attempt 048e20f99ec2467aadbfe97fb34c56ff · committed · 输入 未知 · 输出 4\n    - button \"批准整批\"\n    - button \"拒绝整批\"\n    - button \"查看候选\"",
+      "logFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+    },
+    {
+      "view": "semantic",
+      "width": 320,
+      "height": 800,
+      "measurements": {
+        "viewport": {
+          "width": 320,
+          "height": 800
+        },
+        "pageWidth": 279,
+        "pageOverflow": 0,
+        "documentOverflow": 0,
+        "metricColumns": "279px",
+        "metrics": [
+          {
+            "value": "6",
+            "label": "语义记忆 · semantic",
+            "note": "当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 32,
+            "noteScrollHeight": 32
+          },
+          {
+            "value": "2",
+            "label": "情景记忆 · episodic",
+            "note": "当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 32,
+            "noteScrollHeight": 32
+          },
+          {
+            "value": "1",
+            "label": "Skill 目录 · procedural",
+            "note": "启动时的只读目录条目数；不是记忆库条目数。文件修改需重启后生效。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 32,
+            "noteScrollHeight": 32
+          }
+        ],
+        "tabNames": [
+          {
+            "name": "语义记忆",
+            "selected": "true",
+            "class": "sy-tab"
+          },
+          {
+            "name": "情景记忆",
+            "selected": "false",
+            "class": "sy-tab"
+          },
+          {
+            "name": "Skill 目录",
+            "selected": "false",
+            "class": "sy-tab"
+          }
+        ],
+        "inlineStyles": 0,
+        "focused": "语义记忆",
+        "focusOutline": "3px",
+        "headings": [
+          {
+            "name": "语义记忆",
+            "level": "H2"
+          },
+          {
+            "name": "操作回执",
+            "level": "H3"
+          },
+          {
+            "name": "长中文与完整状态",
+            "level": "H3"
+          },
+          {
+            "name": "来源证据",
+            "level": "H3"
+          },
+          {
+            "name": "遗忘范围",
+            "level": "H3"
+          },
+          {
+            "name": "编辑保护",
+            "level": "H3"
+          },
+          {
+            "name": "环境",
+            "level": "H3"
+          },
+          {
+            "name": "记忆维护",
+            "level": "H2"
+          },
+          {
+            "name": "操作回执／遗忘进度",
+            "level": "H2"
+          },
+          {
+            "name": "提炼队列",
+            "level": "H2"
+          },
+          {
+            "name": "检索统计",
+            "level": "H2"
+          },
+          {
+            "name": "Markdown 镜像",
+            "level": "H2"
+          }
+        ],
+        "resources": [
+          "http://127.0.0.1:18064/assets/app.css",
+          "http://127.0.0.1:18064/assets/inbox-runs.css",
+          "http://127.0.0.1:18064/assets/settings.css",
+          "http://127.0.0.1:18064/assets/overview.css",
+          "http://127.0.0.1:18064/assets/tools.css",
+          "http://127.0.0.1:18064/assets/memory.css",
+          "http://127.0.0.1:18064/assets/database.css",
+          "http://127.0.0.1:18064/assets/accounting.css",
+          "http://127.0.0.1:18064/assets/behaviour.css",
+          "http://127.0.0.1:18064/assets/app.js",
+          "http://127.0.0.1:18064/assets/shell.js",
+          "http://127.0.0.1:18064/assets/aggregation.js",
+          "http://127.0.0.1:18064/assets/accounting.js",
+          "http://127.0.0.1:18064/assets/tools.js",
+          "http://127.0.0.1:18064/assets/stream.js",
+          "http://127.0.0.1:18064/assets/dom.js",
+          "http://127.0.0.1:18064/assets/progress.js",
+          "http://127.0.0.1:18064/assets/pages.js",
+          "http://127.0.0.1:18064/assets/notices.js",
+          "http://127.0.0.1:18064/assets/inbox.js",
+          "http://127.0.0.1:18064/assets/runs.js",
+          "http://127.0.0.1:18064/assets/overview.js",
+          "http://127.0.0.1:18064/assets/memory.js",
+          "http://127.0.0.1:18064/assets/database.js",
+          "http://127.0.0.1:18064/assets/behaviour.js",
+          "http://127.0.0.1:18064/assets/models.js",
+          "http://127.0.0.1:18064/assets/connections.js",
+          "http://127.0.0.1:18064/assets/run-fields.js",
+          "http://127.0.0.1:18064/assets/source.js",
+          "http://127.0.0.1:18064/assets/trace_export.js",
+          "http://127.0.0.1:18064/assets/run-evidence.js",
+          "http://127.0.0.1:18064/assets/topology.js",
+          "http://127.0.0.1:18064/assets/routing-statistics.js",
+          "http://127.0.0.1:18064/assets/settings-focus.js"
+        ]
+      },
+      "snapshot": "- button \"打开导航\"\n- button \"打开主对话\"\n- region \"运行与连接摘要\":\n  - paragraph: 已完成 · 已保存\n  - link \"查看最近运行结果\":\n    - /url: /runs/79270c87168c48009a9a897bd59207e3\n- main:\n  - paragraph: MEMORY\n  - heading \"记忆\" [level=1]\n  - paragraph: 维护已保存的语义记忆与情景记忆，查看只读 Skill 目录。\n  - tablist \"记忆类别\":\n    - tab \"语义记忆\" [selected]\n    - tab \"情景记忆\"\n    - tab \"Skill 目录\"\n  - article:\n    - paragraph: \"6\"\n    - paragraph: 语义记忆 · semantic\n    - paragraph: 当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。\n  - article:\n    - paragraph: \"2\"\n    - paragraph: 情景记忆 · episodic\n    - paragraph: 当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。\n  - article:\n    - paragraph: \"1\"\n    - paragraph: Skill 目录 · procedural\n    - paragraph: 启动时的只读目录条目数；不是记忆库条目数。文件修改需重启后生效。\n  - tabpanel \"语义记忆\":\n    - heading \"语义记忆\" [level=2]\n    - paragraph: 已保存的事实与来源；查看详情后可编辑或确认删除。\n    - form \"搜索语义记忆\":\n      - text: 文本\n      - textbox \"文本\"\n      - text: 主题（精确匹配）\n      - textbox \"主题（精确匹配）\"\n      - button \"搜索\"\n      - button \"显示全部\"\n    - article:\n      - heading \"操作回执\" [level=3]\n      - paragraph: 保存事实与遗忘清理在独立回执中分别核对。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:08:18.048248+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:08:18.048248+00:00 · 人工保护\n    - article:\n      - heading \"长中文与完整状态\" [level=3]\n      - paragraph: 长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。长中文用于验证正文换行与详情展开。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:07:23.650499+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:07:23.650499+00:00 · 人工保护\n    - article:\n      - heading \"来源证据\" [level=3]\n      - paragraph: 来源组入口绑定已有 Run 标识，返回时重新核验。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:07:23.629502+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:07:23.629502+00:00 · 人工保护\n    - article:\n      - heading \"遗忘范围\" [level=3]\n      - paragraph: 条目删除与受管副本清理分别核对。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:07:23.610563+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:07:23.610563+00:00 · 人工保护\n    - article:\n      - heading \"编辑保护\" [level=3]\n      - paragraph: 类别切换与折叠保留尚未保存的输入。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:07:23.588782+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:07:23.588782+00:00 · 人工保护\n    - article:\n      - heading \"环境\" [level=3]\n      - paragraph: 本次浏览器验证使用 uv 管理 Python 环境。\n      - button \"查看详情\"\n      - text: 版本 1 · 创建：用户手填（Web） · 2026-10-12T06:07:23.558541+00:00 · 最近修改：用户手填（Web） · 2026-10-12T06:07:23.558541+00:00 · 人工保护\n    - button \"新建语义记忆\"\n  - heading \"记忆维护\" [level=2]\n  - heading \"操作回执／遗忘进度\" [level=2]:\n    - button \"操作回执／遗忘进度\": 操作回执／遗忘进度 ＋\n  - paragraph: 仅本标签页 · 提交中 0 · 结果待确认 0 · 遗忘未完成 0；操作 3507c591-66ba-4b15-a459-fd174cb6fefd：清理进度暂不可读取（memory_changed）。当前进度待核验；已确认的删除与上次进度保留。。已确认历史至多 20 项；未确认与未完成责任单独保留。\n  - heading \"提炼队列\" [level=2]:\n    - button \"提炼队列\": 提炼队列 ＋\n  - paragraph: 当前队列页 1 · 1 个会话／1 个批次 · 待批准（覆盖人工保护记忆） 1 · 当前筛选已到末页；不是全局待办总数。\n  - heading \"检索统计\" [level=2]:\n    - button \"检索统计\": 检索统计 ＋\n  - paragraph: 已读取 · 全部会话 · [2026-10-05T06:08:18.831480+00:00, 2026-10-12T06:08:18.831480+00:00)\n  - heading \"Markdown 镜像\" [level=2]:\n    - button \"Markdown 镜像\": Markdown 镜像 ＋\n  - paragraph: 事实：已同步并核验；情景：已同步并核验\n- status: 就绪\n- alert"
+    },
+    {
+      "view": "skills",
+      "width": 320,
+      "height": 800,
+      "measurements": {
+        "viewport": {
+          "width": 320,
+          "height": 800
+        },
+        "pageWidth": 279,
+        "pageOverflow": 0,
+        "documentOverflow": 0,
+        "metricColumns": "279px",
+        "metrics": [
+          {
+            "value": "6",
+            "label": "语义记忆 · semantic",
+            "note": "当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 32,
+            "noteScrollHeight": 32
+          },
+          {
+            "value": "2",
+            "label": "情景记忆 · episodic",
+            "note": "当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 32,
+            "noteScrollHeight": 32
+          },
+          {
+            "value": "1",
+            "label": "Skill 目录 · procedural",
+            "note": "启动时的只读目录条目数；不是记忆库条目数。文件修改需重启后生效。",
+            "fontSize": "20px",
+            "noteClamped": "none",
+            "noteHeight": 32,
+            "noteScrollHeight": 32
+          }
+        ],
+        "tabNames": [
+          {
+            "name": "语义记忆",
+            "selected": "false",
+            "class": "sy-tab"
+          },
+          {
+            "name": "情景记忆",
+            "selected": "false",
+            "class": "sy-tab"
+          },
+          {
+            "name": "Skill 目录",
+            "selected": "true",
+            "class": "sy-tab"
+          }
+        ],
+        "inlineStyles": 0,
+        "focused": "Skill 目录",
+        "focusOutline": "3px",
+        "headings": [
+          {
+            "name": "Skill 目录",
+            "level": "H2"
+          },
+          {
+            "name": "browser-plan",
+            "level": "H3"
+          },
+          {
+            "name": "记忆维护",
+            "level": "H2"
+          },
+          {
+            "name": "操作回执／遗忘进度",
+            "level": "H2"
+          },
+          {
+            "name": "提炼队列",
+            "level": "H2"
+          },
+          {
+            "name": "检索统计",
+            "level": "H2"
+          },
+          {
+            "name": "Markdown 镜像",
+            "level": "H2"
+          }
+        ],
+        "resources": [
+          "http://127.0.0.1:18064/assets/app.css",
+          "http://127.0.0.1:18064/assets/inbox-runs.css",
+          "http://127.0.0.1:18064/assets/settings.css",
+          "http://127.0.0.1:18064/assets/overview.css",
+          "http://127.0.0.1:18064/assets/tools.css",
+          "http://127.0.0.1:18064/assets/memory.css",
+          "http://127.0.0.1:18064/assets/database.css",
+          "http://127.0.0.1:18064/assets/accounting.css",
+          "http://127.0.0.1:18064/assets/behaviour.css",
+          "http://127.0.0.1:18064/assets/app.js",
+          "http://127.0.0.1:18064/assets/shell.js",
+          "http://127.0.0.1:18064/assets/aggregation.js",
+          "http://127.0.0.1:18064/assets/accounting.js",
+          "http://127.0.0.1:18064/assets/tools.js",
+          "http://127.0.0.1:18064/assets/stream.js",
+          "http://127.0.0.1:18064/assets/dom.js",
+          "http://127.0.0.1:18064/assets/progress.js",
+          "http://127.0.0.1:18064/assets/pages.js",
+          "http://127.0.0.1:18064/assets/notices.js",
+          "http://127.0.0.1:18064/assets/inbox.js",
+          "http://127.0.0.1:18064/assets/runs.js",
+          "http://127.0.0.1:18064/assets/overview.js",
+          "http://127.0.0.1:18064/assets/memory.js",
+          "http://127.0.0.1:18064/assets/database.js",
+          "http://127.0.0.1:18064/assets/behaviour.js",
+          "http://127.0.0.1:18064/assets/models.js",
+          "http://127.0.0.1:18064/assets/connections.js",
+          "http://127.0.0.1:18064/assets/run-fields.js",
+          "http://127.0.0.1:18064/assets/source.js",
+          "http://127.0.0.1:18064/assets/trace_export.js",
+          "http://127.0.0.1:18064/assets/run-evidence.js",
+          "http://127.0.0.1:18064/assets/topology.js",
+          "http://127.0.0.1:18064/assets/routing-statistics.js",
+          "http://127.0.0.1:18064/assets/settings-focus.js"
+        ]
+      },
+      "snapshot": "- button \"打开导航\"\n- button \"打开主对话\"\n- region \"运行与连接摘要\":\n  - paragraph: 已完成 · 已保存\n  - link \"查看最近运行结果\":\n    - /url: /runs/79270c87168c48009a9a897bd59207e3\n- main:\n  - paragraph: MEMORY\n  - heading \"记忆\" [level=1]\n  - paragraph: 维护已保存的语义记忆与情景记忆，查看只读 Skill 目录。\n  - tablist \"记忆类别\":\n    - tab \"语义记忆\"\n    - tab \"情景记忆\"\n    - tab \"Skill 目录\" [selected]\n  - article:\n    - paragraph: \"6\"\n    - paragraph: 语义记忆 · semantic\n    - paragraph: 当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。\n  - article:\n    - paragraph: \"2\"\n    - paragraph: 情景记忆 · episodic\n    - paragraph: 当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。\n  - article:\n    - paragraph: \"1\"\n    - paragraph: Skill 目录 · procedural\n    - paragraph: 启动时的只读目录条目数；不是记忆库条目数。文件修改需重启后生效。\n  - tabpanel \"Skill 目录\":\n    - heading \"Skill 目录\" [level=2]\n    - paragraph: 只读目录：启动时建立索引，文件修改需重启后生效。聊天支持 /skills 明确指定、禁用及自动选择；运行详情展示当次加载与发送证据。这里不提供编辑。\n    - article:\n      - heading \"browser-plan\" [level=3]\n      - paragraph: 内置计划\n      - text: 内置 Skill\n      - button \"查看正文\"\n      - button \"在主对话使用 /skills\"\n      - paragraph: 在主对话中明确输入 /skills browser-plan 及你的请求；打开主对话不会提交或替换现有草稿。\n  - heading \"记忆维护\" [level=2]\n  - heading \"操作回执／遗忘进度\" [level=2]:\n    - button \"操作回执／遗忘进度\": 操作回执／遗忘进度 ＋\n  - paragraph: 仅本标签页 · 提交中 0 · 结果待确认 0 · 遗忘未完成 0；操作 3507c591-66ba-4b15-a459-fd174cb6fefd：清理进度暂不可读取（memory_changed）。当前进度待核验；已确认的删除与上次进度保留。。已确认历史至多 20 项；未确认与未完成责任单独保留。\n  - heading \"提炼队列\" [level=2]:\n    - button \"提炼队列\": 提炼队列 ＋\n  - paragraph: 当前队列页 1 · 1 个会话／1 个批次 · 待批准（覆盖人工保护记忆） 1 · 当前筛选已到末页；不是全局待办总数。\n  - heading \"检索统计\" [level=2]:\n    - button \"检索统计\": 检索统计 ＋\n  - paragraph: 已读取 · 全部会话 · [2026-10-05T06:08:18.831480+00:00, 2026-10-12T06:08:18.831480+00:00)\n  - heading \"Markdown 镜像\" [level=2]:\n    - button \"Markdown 镜像\": Markdown 镜像 ＋\n  - paragraph: 事实：已同步并核验；情景：已同步并核验\n- status: 就绪\n- alert"
+    },
+    {
+      "view": "queue",
+      "width": 320,
+      "height": 800,
+      "snapshot": "- heading \"提炼队列\" [level=2]:\n  - button \"提炼队列\" [expanded]: 提炼队列 −\n- paragraph: 当前队列页 1 · 1 个会话／1 个批次 · 待批准（覆盖人工保护记忆） 1 · 当前筛选已到末页；不是全局待办总数。\n- region \"提炼队列\":\n  - paragraph: 达到阈值后，于正常聊天保存后的空闲机会自动启动；不提供绕过阈值的立即提炼。\n  - text: 按会话 ID 筛选队列\n  - textbox \"按会话 ID 筛选队列\"\n  - button \"筛选队列\"\n  - button \"上一页\" [disabled]\n  - text: 第 1 页（每页最多 50 个会话与 50 个批次）\n  - button \"下一页\" [disabled]\n  - paragraph\n  - article:\n    - strong: 会话 bbcb45f00fd64ac28b188252f4b28e37\n    - paragraph: 有效未处理 2 / 阈值 2\n  - article:\n    - strong: 批次 3d3f98f20f754751a65fd9682da7ac18 · 修订 1\n    - paragraph: 待批准（覆盖人工保护记忆）\n    - text: 来源对话 [2026-10-12T06:08:18+00:00, 2026-10-12T06:08:18+00:00] · 创建 2026-10-12T06:08:19.032908+00:00 · 更新 2026-10-12T06:08:19.128175+00:00\n    - link \"提炼运行 79270c87168c48009a9a897bd59207e3\":\n      - /url: /runs/79270c87168c48009a9a897bd59207e3?filter=system\n    - paragraph: 模型 opencode-go / deepseek-v4-flash\n    - text: Attempt 048e20f99ec2467aadbfe97fb34c56ff · committed · 输入 未知 · 输出 4\n    - button \"批准整批\"\n    - button \"拒绝整批\"\n    - button \"查看候选\"",
+      "logFont": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace"
+    },
+    {
+      "view": "discard",
+      "snapshot": "- dialog \"保留当前编辑？\":\n  - heading \"保留当前编辑？\" [level=2]\n  - paragraph: 继续会丢失尚未提交的修改。已提交的操作仍可在操作回执中核对，不会因此撤销。\n  - button \"保留当前编辑\"\n  - button \"放弃后继续\"",
+      "focusOutline": "3px"
+    },
+    {
+      "view": "delete-confirmation",
+      "snapshot": "- group \"删除确认\":\n  - paragraph: 确认删除 语义记忆 c36f06d1-da28-4c74-a866-c778070e7e8b 的版本 1？条目与索引会真删，受管副本随后清理；其他独立记忆不自动删除。原始会话与删除前的追踪仍可人工查看，不在追溯擦除范围内。\n  - button \"确认删除\"\n  - button \"取消\""
+    },
+    {
+      "view": "receipts",
+      "snapshot": "- heading \"操作回执／遗忘进度\" [level=2]:\n  - button \"操作回执／遗忘进度\" [expanded]: 操作回执／遗忘进度 −\n- paragraph: 仅本标签页 · 提交中 0 · 结果待确认 0 · 遗忘未完成 0；操作 3507c591-66ba-4b15-a459-fd174cb6fefd：清理进度暂不可读取（memory_changed）。当前进度待核验；已确认的删除与上次进度保留。。已确认历史至多 20 项；未确认与未完成责任单独保留。\n- region \"记忆操作回执\":\n  - article:\n    - strong: 删除 · 语义记忆 · 操作 990e3048-412b-414d-a617-b3edd7a20e37\n    - paragraph: 记忆已删除（数据库已确认） · ID c36f06d1-da28-4c74-a866-c778070e7e8b · 提交于 2026-10-12T06:08:23.615024+00:00\n    - paragraph: 遗忘完成：条目、索引与受管副本均已清理并核实。\n    - text: 原始会话与删除前的追踪仍可人工查看，不在追溯擦除范围内。\n  - article:\n    - strong: 保存 · 语义记忆 · 操作 3507c591-66ba-4b15-a459-fd174cb6fefd\n    - paragraph: 已保存 · ID 3e81376c-8d33-4a53-b993-cad5442d177a · 版本 1 · 提交于 2026-10-12T06:08:18.048819+00:00\n    - paragraph: 清理进度暂不可读取（memory_changed）。当前进度待核验；已确认的删除与上次进度保留。"
+    },
+    {
+      "view": "mirrors",
+      "snapshot": "- heading \"Markdown 镜像\" [level=2]:\n  - button \"Markdown 镜像\" [expanded]: Markdown 镜像 −\n- paragraph: 事实：已同步并核验；情景：已同步并核验；事实预览：已核验\n- region \"Markdown 镜像\":\n  - paragraph: 单向只读派生，不导入修改。自动刷新、重建和清理期间请停止外部编辑；指纹检查不是任意并发写入的保证。\n  - paragraph\n  - article:\n    - strong: 事实镜像\n    - paragraph: 路径 /var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/alfred-memory-browser-O8EuKt/memory/facts.md\n    - paragraph: 已同步并核验。\n    - text: 生成 2026-10-12T06:08:23.636445+00:00 · 核验 2026-10-12T06:08:23.669035+00:00\n    - button \"预览\"\n    - text: \"# Facts ## 操作回执 保存事实与遗忘清理在独立回执中分别核对。 Origin: {\\\"source\\\":\\\"web\\\",\\\"type\\\":\\\"manual\\\"} · last change: {\\\"source\\\":\\\"web\\\",\\\"type\\\":\\\"manual\\\"} ID: 3e81376c-8d33-4a53-b993-cad5442d177a · version: 1 · protected: true Created: 2026-10-12T06:08:18.048248+00:00 · modified: 2026-10-12T06:08:18.048248+00:00 Provenance: known_none · sources: none ## 来源证据 来源组入口绑定已有 Run 标识，返回时重新核验。 Origin: {\\\"source\\\":\\\"web\\\",\\\"type\\\":\\\"manual\\\"} · last change: {\\\"source\\\":\\\"web\\\",\\\"type\\\":\\\"manual\\\"} ID: af0a9b25-f9d8-43f9-b5a2-e217de132858 · version: 1 · protected: true Created: 2026-10-12T06:07:23.629502+00:00 · modified: 2026-10-12T06:07:23.629502+00:00 Provenance: known_none · sources: none ## 环境 本次浏览器验证使用 uv 管理 Python 环境。 Origin: {\\\"source\\\":\\\"web\\\",\\\"type\\\":\\\"manual\\\"} · last change: {\\\"source\\\":\\\"web\\\",\\\"type\\\":\\\"manual\\\"} ID: 680f99f9-41a7-4982-bd36-7fec761222b5 · version: 1 · protected: true Created: 2026-10-12T06:07:23.558541+00:00 · modified: 2026-10-12T06:07:23.558541+00:00 Provenance: known_none · sources: none ## 编辑保护 类别切换与折叠保留尚未保存的输入。 Origin: {\\\"source\\\":\\\"web\\\",\\\"type\\\":\\\"manual\\\"} · last change: {\\\"source\\\":\\\"web\\\",\\\"type\\\":\\\"manual\\\"} ID: ea773aa9-dbae-44fa-81ee-53ec73f4e121 · version: 1 · protected: true Created: 2026-10-12T06:07:23.588782+00:00 · modified: 2026-10-12T06:07:23.588782+00:00 Provenance: known_none · sources: none ## 遗忘范围 条目删除与受管副本清理分别核对。 Origin: {\\\"source\\\":\\\"web\\\",\\\"type\\\":\\\"manual\\\"} · last change: {\\\"source\\\":\\\"web\\\",\\\"type\\\":\\\"manual\\\"} ID: 40daf91e-5656-44f3-8856-36fa609b5792 · version: 1 · protected: true Created: 2026-10-12T06:07:23.610563+00:00 · modified: 2026-10-12T06:07:23.610563+00:00 Provenance: known_none · sources: none\"\n  - article:\n    - strong: 情景镜像\n    - paragraph: 路径 /var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/alfred-memory-browser-O8EuKt/memory/episodes.md\n    - paragraph: 已同步并核验。\n    - text: 生成 2026-10-12T06:08:23.700998+00:00 · 核验 2026-10-12T06:08:23.703121+00:00\n    - button \"预览\""
+    },
+    {
+      "view": "statistics",
+      "snapshot": "- heading \"检索统计\" [level=2]:\n  - button \"检索统计\" [expanded]: 检索统计 −\n- paragraph: 已读取 · 全部会话 · [2026-10-05T06:08:18.831480+00:00, 2026-10-12T06:08:18.831480+00:00)\n- region \"检索统计\":\n  - text: 仅当前会话\n  - checkbox \"仅当前会话\"\n  - button \"刷新统计\"\n  - paragraph: 范围 [2026-10-05T06:08:18.831480+00:00, 2026-10-12T06:08:18.831480+00:00) · 全部会话的已记录对话运行\n  - paragraph: 次数：S 0 · H 0 · M 0 · E 0\n  - paragraph: 跳过 S/(S+H+M) 0/0（无数据）\n  - paragraph: 命中 H/(H+M) 0/0（无数据）\n  - paragraph: 错误 E/(S+H+M+E) 0/0（无数据）\n  - paragraph: 不进入比例：未记录 1 · 未评估 0 · 不完整 0 · 旧或不支持 1"
+    }
+  ],
+  "metricChecks": {
+    "noMatch": [
+      {
+        "value": "0",
+        "label": "语义记忆 · semantic",
+        "note": "当前筛选已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。",
+        "fontSize": "20px",
+        "noteClamped": "none",
+        "noteHeight": 32,
+        "noteScrollHeight": 32
+      },
+      {
+        "value": "2",
+        "label": "情景记忆 · episodic",
+        "note": "当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。",
+        "fontSize": "20px",
+        "noteClamped": "none",
+        "noteHeight": 32,
+        "noteScrollHeight": 32
+      },
+      {
+        "value": "1",
+        "label": "Skill 目录 · procedural",
+        "note": "启动时的只读目录条目数；不是记忆库条目数。文件修改需重启后生效。",
+        "fontSize": "20px",
+        "noteClamped": "none",
+        "noteHeight": 32,
+        "noteScrollHeight": 32
+      }
+    ],
+    "failedRead": [
+      {
+        "value": "2",
+        "label": "情景记忆 · episodic",
+        "note": "当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。",
+        "fontSize": "20px",
+        "noteClamped": "none",
+        "noteHeight": 32,
+        "noteScrollHeight": 32
+      },
+      {
+        "value": "1",
+        "label": "Skill 目录 · procedural",
+        "note": "启动时的只读目录条目数；不是记忆库条目数。文件修改需重启后生效。",
+        "fontSize": "20px",
+        "noteClamped": "none",
+        "noteHeight": 32,
+        "noteScrollHeight": 32
+      }
+    ]
+  },
+  "source_hashes": {
+    "src/agent_alfred/ops/static/memory.js": "53de17e308776b2ee4b91a8c923cc86449ba6d363f6c3b84a59de6883a1401c3",
+    "src/agent_alfred/ops/static/memory.css": "df2689115e0c8d1540aa42f142e944a70d2a34ee7a0bb160a6c753b55c6c27ed",
+    "tests/browser/memory.spec.js": "9c45973bc2ff06b3051dba4f46cacb1adc6ccbb937a63edfed2654039924a325"
+  }
+}

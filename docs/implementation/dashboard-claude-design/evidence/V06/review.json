@@ -1,0 +1,39 @@
+{
+  "scope": [
+    "src/agent_alfred/ops/static/memory.js",
+    "src/agent_alfred/ops/static/memory.css",
+    "tests/browser/memory.spec.js"
+  ],
+  "base": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "kind": "Focused local review, not independent review",
+  "standards": {
+    "findings": 0,
+    "sources": [
+      "user AGENTS.md",
+      "implement SKILL.md",
+      "code-review SKILL.md smell baseline",
+      "RECIPES.md"
+    ],
+    "checks": [
+      "CSS rules page-scoped; no literal colour or dimensional units; no public tokens/recipes modified",
+      "Shared helpers and exported names/signatures preserved",
+      "Only one necessary locator hunk; original expected results, retry and timeout unchanged"
+    ]
+  },
+  "spec": {
+    "findings": 0,
+    "sources": [
+      "Issue #128",
+      "Issue #122 memory mapping",
+      "ADR-0046 supplement",
+      "current user constraints"
+    ],
+    "checks": [
+      "sy-tab retains existing aria-selected and deep links",
+      "Real page-local counts are labelled as read-list counts, not global totals",
+      "Skill catalog stays read-only and loaded by its original request",
+      "Original operation identity, edit protection, deletion and cleanup semantics retained",
+      "Reference identities verified; four viewport and supplemental actual UI screenshots captured"
+    ]
+  }
+}

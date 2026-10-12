@@ -1,0 +1,9 @@
+{
+  "failed_context_directories": 136,
+  "confirmed_address_in_use": 135,
+  "other_contexts": [
+    "database_status-STD-06-SPE-d95bf--failure-is-cleanup-failure"
+  ],
+  "process_cleanup_record": "orphan-cleanup.json",
+  "scope": "Address binding failures occur before each associated Memory/UI scenario can run; original outcomes remain FAIL."
+}

@@ -1,0 +1,14 @@
+{
+  "worktree": "/Users/nineofour/Agent-Alfred-v06",
+  "branch": "dashboard-visual/v06-memory",
+  "head": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "origin_main": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "status": "## dashboard-visual/v06-memory...origin/main\n",
+  "diff": "",
+  "untracked": "",
+  "files": {
+    "src/agent_alfred/ops/static/memory.js": "9129f17ae69d5e854bc2084e2d18be1afcc4ca53a1484a4ea8e247d2523bc9a0",
+    "src/agent_alfred/ops/static/memory.css": "35db69100f3aec59f8b1d24c33a71e91907f024b05d6d19c8b91729f5da31a9d"
+  },
+  "main_initial_status": "main behind 31; M docs/dashboard.md; untracked README.md, tmp/; no edits made in primary checkout"
+}
