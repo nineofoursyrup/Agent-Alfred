@@ -1,20 +1,52 @@
-.accounting {min-width:0;overflow-wrap:anywhere}
-.accounting form,.accounting>section {border:1px solid var(--border);border-radius:var(--radius-usage);padding:18px;background:var(--surface)}
-.accounting .ops-filter-fields {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:8px 16px}
-.accounting label {display:flex;flex-direction:column;gap:4px;margin:0;min-width:0}
+.accounting {
+  --ops-rule:calc(var(--gap-small) / 12);
+  --ops-content-min:calc(var(--font-size-eyebrow) * 20);
+  --ops-purpose-width:calc(var(--font-size-eyebrow) * 10);
+  --ops-time-width:calc(var(--gap-small) * 10);
+  --ops-coverage-width:calc(var(--font-size-eyebrow) * 17);
+  --ops-action-width:calc(var(--font-size-body) * 10);
+  --ops-row-inline:calc(var(--gap-large) + var(--gap-small) / 4);
+  min-width:0;overflow-wrap:anywhere
+}
+.accounting .ops-filter-fields {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(var(--font-size-eyebrow) * 23)),1fr));gap:var(--gap-small) var(--gap-large)}
+.accounting label {display:flex;flex-direction:column;gap:calc(var(--gap-small) / 3);margin:0;min-width:0}
 .accounting label>span {font-size:var(--font-size-meta);font-family:var(--font-mono);color:var(--muted)}
-.accounting details {margin:12px 0;min-width:0}
+.accounting details {margin:var(--gap-small) 0;min-width:0}
 .accounting summary {cursor:pointer;color:var(--secondary)}
-.accounting .table-scroll {margin:12px 0}
-.accounting .ops-runs table,.accounting .ops-attempts table,.accounting .ops-prices table {min-width:760px}
-.accounting .ops-runs td,.accounting .ops-attempts td {min-width:110px}
-.accounting .ops-runs td:first-child,.accounting .ops-attempts td:first-child {min-width:170px;font-family:var(--font-mono)}
-.accounting .ops-prices td {min-width:100px}
-.accounting .ops-prices td:last-child {min-width:230px}
-.accounting caption {text-align:left;margin-bottom:8px;color:var(--secondary)}
-.accounting pre {max-height:400px;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--raised);padding:12px;border-radius:var(--radius-console);outline-offset:-3px}
-.accounting button {margin:4px 8px 4px 0}
-.accounting p {margin:8px 0}
+.accounting .table-scroll {margin:var(--gap-small) 0}
+.accounting .ops-metrics {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(var(--font-size-eyebrow) * 23)),1fr));gap:var(--gap-small)}
+.accounting .ops-summary>h2 {padding-inline:0;margin-bottom:var(--gap-medium)}
+.accounting .ops-metric-heading {display:contents}
+.accounting .ops-metric-eyebrow {grid-column:1;font:600 var(--font-size-table-header)/1.4 var(--font-mono);letter-spacing:calc(var(--font-size-eyebrow) * .18);color:var(--metadata)}
+.accounting .ops-metrics>div {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--gap-small) calc(var(--gap-small) * 2 / 3);padding:var(--gap-large) calc(var(--gap-large) + var(--gap-small) / 6)}
+.accounting .ops-metric-status {grid-row:1;grid-column:2;max-width:var(--ops-purpose-width);margin:0;text-align:right;font:400 var(--font-size-meta-small)/1.4 var(--font-mono);overflow-wrap:anywhere}
+.accounting .ops-metric-status:not(.sy-tone-success):not(.sy-tone-attention) {color:var(--muted)}
+.accounting .ops-metrics .sy-metric-value {grid-row:2;grid-column:1/-1;line-height:1.2}
+.accounting .ops-metrics .sy-metric-label {grid-column:1/-1;margin:0}
+.accounting .ops-summary-notes {margin-top:var(--gap-medium);font:400 var(--font-size-meta-large)/1.5 var(--font-mono);color:var(--muted)}
+.accounting .ops-runs {margin:0;overflow:visible}
+.accounting .ops-runs table,.accounting .ops-runs thead,.accounting .ops-runs tbody {display:block;min-width:0;width:100%}
+.accounting .ops-runs caption {display:block;width:100%;text-align:left;margin:0;padding:var(--gap-medium) var(--ops-row-inline)}
+.accounting .ops-runs tr {display:flex;flex-wrap:wrap;align-items:flex-start;gap:calc(var(--gap-small) / 2) var(--gap-medium);padding:var(--gap-small) var(--ops-row-inline);min-width:0}
+.accounting .ops-runs thead tr {border-bottom:var(--ops-rule) solid var(--panel-divider)}
+.accounting .ops-runs th,.accounting .ops-runs td {padding:0;border:0;min-width:0;max-width:100%;font-family:var(--font-mono);line-height:1.5}
+.accounting .ops-runs th:first-child,.accounting .ops-runs td:first-child {flex:1 1 var(--ops-content-min);min-width:min(100%,var(--ops-content-min))}
+.accounting .ops-runs th:nth-child(2),.accounting .ops-runs td:nth-child(2) {flex:0 0 var(--ops-purpose-width)}
+.accounting .ops-runs th:nth-child(3),.accounting .ops-runs td:nth-child(3) {flex:0 0 var(--ops-time-width)}
+.accounting .ops-runs th:nth-child(4),.accounting .ops-runs td:nth-child(4) {flex:0 0 var(--ops-coverage-width)}
+.accounting .ops-runs th:nth-child(5),.accounting .ops-runs td:nth-child(5) {flex:0 0 var(--ops-action-width)}
+.accounting .ops-runs td:not(:first-child) {font-size:var(--font-size-meta-large);color:var(--tertiary)}
+.accounting .ops-runs button {margin:0}
+.accounting .ops-attempts table,.accounting .ops-prices table {min-width:calc(var(--font-size-eyebrow) * 76)}
+.accounting .ops-attempts td {min-width:calc(var(--font-size-meta) * 10)}
+.accounting .ops-attempts td:first-child {min-width:var(--ops-coverage-width);font-family:var(--font-mono)}
+.accounting .ops-prices td {min-width:var(--ops-purpose-width)}
+.accounting .ops-prices td:last-child {min-width:calc(var(--font-size-eyebrow) * 23)}
+.accounting caption {text-align:left;margin-bottom:calc(var(--gap-small) * 2 / 3);color:var(--secondary)}
+.accounting .ops-detail {padding:var(--gap-large) var(--ops-row-inline)}
+.accounting pre {max-height:calc(var(--ops-content-min) * 2);white-space:pre-wrap;overflow-wrap:anywhere;background:var(--raised);padding:var(--gap-small);border-radius:var(--radius-console);outline-offset:calc(var(--ops-rule) * -3)}
+.accounting button {margin:calc(var(--gap-small) / 3) calc(var(--gap-small) * 2 / 3) calc(var(--gap-small) / 3) 0}
+.accounting p {margin:calc(var(--gap-small) * 2 / 3) 0}
+.accounting .ops-metric-heading,.accounting .ops-metric-status {margin:0}
 .accounting [role=status] {color:var(--attention)}
 .accounting section:empty {display:none}
-@container (max-width:500px){.accounting form,.accounting>section {padding:12px}}
