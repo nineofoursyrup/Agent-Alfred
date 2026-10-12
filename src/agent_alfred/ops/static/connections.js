@@ -34,15 +34,17 @@ export function connectionsPage(root, csrf) {
   const channel = new BroadcastChannel("alfred-integrations");
   const notice = node("p");
   const configurationNotice = node("p");
-  root.append(configurationNotice, notice);
+  const toolbar=node("div");toolbar.className="settings-toolbar";
+  toolbar.append(configurationNotice, notice);
   channel.onmessage = () => void refresh();
   const focused = () => void refresh();
   window.addEventListener("focus", focused);
   const list = node("div");
+  list.className="settings-catalog";
   list.setAttribute("aria-label", "端点连接");
   const reread = node("button", "重新读取 .env");reread.dataset.focusKey="reread";
   reread.addEventListener("click", () => void postReread());
-  root.append(reread, list);
+  toolbar.append(reread);root.append(toolbar, list);
 
   async function postReread() {
     const token = csrf();
@@ -149,11 +151,15 @@ export function connectionsPage(root, csrf) {
       ? "配置未能一致生效，外部能力已暂停；请修复后重新读取 .env。" : "";
     const focusRequest=focus.capture();
     list.replaceChildren();
-    const endpointGroup=node("section"); endpointGroup.className="settings-group";endpointGroup.setAttribute("aria-label","模型端点");
-    endpointGroup.append(node("h2","模型端点"));
-    const integrationGroup=node("section");integrationGroup.className="settings-group";integrationGroup.setAttribute("aria-label","可选集成");
-    integrationGroup.append(node("h2","可选集成"));
-    list.append(endpointGroup,integrationGroup);
+    /** @param {string} label @param {string} description */
+    function settingsGroup(label,description) {
+      const section=node("section"),header=node("header"),heading=node("h2",label),help=node("p",description),grid=node("div");
+      section.className="settings-group sy-panel";section.setAttribute("aria-label",label);header.className="sy-panel-header";heading.className="sy-panel-eyebrow";help.className="settings-group-description";grid.className="settings-grid sy-row-list";
+      header.append(heading,help);section.append(header,grid);list.append(section);
+      return {section,grid};
+    }
+    const endpointGroup=settingsGroup("模型端点","连接观测、目录与凭据");
+    const integrationGroup=settingsGroup("可选集成","测试连接不授予工具权限。");
     /** @param {string} key @param {string} label */
     function details(key,label) {
       const box=node("details"), toggle=node("summary",label);toggle.dataset.focusKey=key;
@@ -162,33 +168,37 @@ export function connectionsPage(root, csrf) {
       return box;
     }
     for (const endpoint of body.endpoints || []) {
-      const card=node("article");card.className="connection-row";card.dataset.endpoint=endpoint.endpoint_id;
+      const card=node("article");card.className="connection-row sy-row";card.dataset.endpoint=endpoint.endpoint_id;
       const observation=node("p",`连接：${STATE_LABEL[endpoint.observation.state] || endpoint.observation.state} ${endpoint.observation.reason || ""}`);
       observation.dataset.dimension="connection";
+      observation.className="settings-row-status";
       if(endpoint.observation.checked_at) observation.append(document.createTextNode(` ${endpoint.observation.checked_at} ${endpoint.observation.checked_via || ""}`));
       const catalog=node("p",`目录：${CATALOG_LABEL[endpoint.catalog.health] || endpoint.catalog.health}；上次成功 ${endpoint.catalog.last_success_at || "尚无"} ${endpoint.catalog.last_error || ""} ${endpoint.catalog.retry_at ? "重试 "+endpoint.catalog.retry_at : ""}`);catalog.dataset.dimension="catalog";
       const key=endpoint.key.configured ? endpoint.key.masked ? "密钥：已掩码" : `密钥：末四位 ${endpoint.key.last4}` : "密钥：未配置";
-      card.append(node("h3",endpoint.endpoint_id),observation,catalog,node("p",key),node("p",endpoint.auth_probe.available?"凭据探针可用":"无免费认证探针"));
+      const heading=node("div");heading.className="settings-row-heading";heading.append(node("h3",endpoint.endpoint_id),observation);
+      card.append(heading,catalog,node("p",key),node("p",endpoint.auth_probe.available?"凭据探针可用":"无免费认证探针"));
       if(endpoint.auth_probe.available && endpoint.key.configured) {
         const button=node("button","验证凭据");button.dataset.probeEndpoint=endpoint.endpoint_id;button.dataset.focusKey="probe:"+endpoint.endpoint_id;button.disabled=!connected || pending.has(endpoint.endpoint_id);
+        button.className="sy-button-accent";
         button.onclick=()=>void verifyCredentials(endpoint.endpoint_id,button);card.append(button);
       }
       if(pending.has(endpoint.endpoint_id))card.append(node("p","凭据测试正在提交，结果仍待核对。"));
       const more=details("endpoint:"+endpoint.endpoint_id,"端点详情");
       more.append(node("p",`base_url：${endpoint.base_url || "未提供"}`),node("p",`catalog_url：${endpoint.catalog_url || "未单独配置；沿 base_url 目录路径回落，不等于无目录能力"}`),node("p",`api_key_env：${endpoint.api_key_env || "未提供"}`),node("p",key),node("p",`观测时间：${endpoint.observation.checked_at || "尚无"}；方式：${endpoint.observation.checked_via || "尚无"}`));
-      card.append(more);endpointGroup.append(card);
+      card.append(more);endpointGroup.grid.append(card);
     }
-    if(!(body.endpoints || []).length)endpointGroup.append(node("p","当前没有可展示的模型端点。"));
+    if(!(body.endpoints || []).length)endpointGroup.grid.append(node("p","当前没有可展示的模型端点。"));
     for (const integration of body.integrations || []) {
-      const card=node("article");card.className="connection-row";card.dataset.integration=integration.integration_id;
+      const card=node("article");card.className="connection-row sy-row";card.dataset.integration=integration.integration_id;
       const observed=integration.observation, key=integration.key;
-      card.append(node("h3",integration.integration_id),node("p",`连接：${STATE_LABEL[observed.state] || observed.state} ${observed.reason || ""}`));
+      const heading=node("div"),observation=node("p",`连接：${STATE_LABEL[observed.state] || observed.state} ${observed.reason || ""}`);heading.className="settings-row-heading";observation.className="settings-row-status";heading.append(node("h3",integration.integration_id),observation);card.append(heading);
       if(observed.checked_at)card.append(node("p",`历史观测 ${observed.checked_at} ${observed.checked_via || ""}`));
       card.append(node("p",!key.configured?"密钥：未配置":key.masked?"密钥：已掩码":`密钥：末四位 ${key.last4}`),node("p","仅显式测试发送 /usage；探活免费未证实。测试连接不授予工具权限。"));
       if(integration.last_attempt)card.append(node("p",`最近尝试：${integration.last_attempt.reason || "未提供说明"} ${integration.last_attempt.attempted_at || integration.last_attempt.checked_at || ""}`));
       if(integration.retry_at)card.append(node("p",`下次可测试：${integration.retry_at}`));
       if(integration.search_retry_at)card.append(node("p",`搜索可重试：${integration.search_retry_at}`));
       const button=node("button","测试连接");button.dataset.probeEndpoint=integration.integration_id;button.dataset.focusKey="probe:"+integration.integration_id;
+      button.className="sy-button-accent";
       button.disabled=!connected || integration.availability!=="configured" || pending.has(integration.integration_id);button.onclick=()=>void verifyCredentials(integration.integration_id,button);card.append(button);
       if(integration.availability!=="configured")card.append(node("p",`测试不可用：${integration.availability || "未知"}`));
       if(pending.has(integration.integration_id))card.append(node("p","测试连接正在提交；旧观测不代表本次结果。"));
@@ -197,21 +207,24 @@ export function connectionsPage(root, csrf) {
         const balance=observed.balances?.[scope];
         more.append(node("p",`${scope} 套餐用量：${balance?.plan_usage ?? "未报告"}；套餐上限：${balance?.plan_limit ?? "未报告"}`));
       }
-      const tools=node("a","到工具页核对授权");tools.dataset.focusKey="tools:integration:"+integration.integration_id;tools.href="/tools";more.append(tools);card.append(more);integrationGroup.append(card);
+      const tools=node("a","到工具页核对授权");tools.dataset.focusKey="tools:integration:"+integration.integration_id;tools.href="/tools";more.append(tools);card.append(more);integrationGroup.grid.append(card);
     }
-    if(!(body.integrations || []).length)integrationGroup.append(node("p","当前没有可展示的可选集成。"));
-    const section=node("section");section.className="settings-group";section.setAttribute("aria-label","MCP 服务器");section.append(node("h2","MCP 服务器"));list.append(section);
+    if(!(body.integrations || []).length)integrationGroup.grid.append(node("p","当前没有可展示的可选集成。"));
+    const mcpGroup=settingsGroup("MCP 服务器","工具调用仍需在工具页逐项授权。");
+    const section=node("div");section.className="settings-mcp-configuration sy-panel-body";mcpGroup.section.insertBefore(section,mcpGroup.grid);
     if (body.mcp) {
       const mcp=body.mcp;
       section.append(node("p",`配置来源：${mcp.config_path || "未配置"}`),node("p","启用配置允许启动本地程序；工具调用仍需在工具页逐项授权。命令不是沙箱，配置指纹不证明程序内容未变。"));
       if(mcp.error)section.append(node("p",`配置未应用或能力暂停：${mcp.error}`));
       if(!mcp.servers.length)section.append(node("p","未配置服务器；在状态目录 mcp.json 中显式设置 enabled: true 后应用。"));
       const apply=node("button","应用 mcp.json");apply.dataset.focusKey="mcp:apply";apply.disabled=!connected || pendingMCP;
+      apply.className="sy-button-accent";
       apply.onclick=()=>void operateMCP({action:"apply",server_key:null,token:mcp.token,operation_id:crypto.randomUUID()});section.append(apply);
       if(mcp.operation)section.append(node("p",`最近操作 ${mcp.operation.operation_id}：${mcp.operation.status}；操作结束不等于全部服务器成功。`));
       for(const server of mcp.servers) {
-        const card=node("article");card.className="connection-row";card.dataset.mcpServer=server.server_key;
-        card.append(node("h3",server.server_key),node("p",`启动许可：${server.enabled?"已启用":"未启用"}`),node("p",`连接：${STATE_LABEL[server.state] || server.state} ${server.reason || ""}`),node("p",`工具：可用 ${server.available_tools} / 总数 ${server.total_tools}；可用数不等于已授权数。`));
+        const card=node("article");card.className="connection-row sy-row";card.dataset.mcpServer=server.server_key;
+        const heading=node("div"),observation=node("p",`连接：${STATE_LABEL[server.state] || server.state} ${server.reason || ""}`);heading.className="settings-row-heading";observation.className="settings-row-status";heading.append(node("h3",server.server_key),observation);
+        card.append(heading,node("p",`启动许可：${server.enabled?"已启用":"未启用"}`),node("p",`工具：可用 ${server.available_tools} / 总数 ${server.total_tools}；可用数不等于已授权数。`));
         if(server.reason==="restart_required")card.append(node("p","新环境已生效，MCP 尚待重连；旧工具不可调用。"));
         if(server.cleanup_incomplete)card.append(node("p","清理未完成，不能启动替代进程。"));
         if(server.directory_changed)card.append(node("p","目录可能变化；显式重连后重新发现。"));
@@ -223,7 +236,7 @@ export function connectionsPage(root, csrf) {
         more.append(node("p",`server_key：${server.server_key}`));
         if(server.history)more.append(node("p",`历史连接：${server.history.state}；不代表当前就绪。`));
         for(const line of server.diagnostics || [])more.append(node("pre",line));
-        const tools=node("a","到工具页核对授权");tools.dataset.focusKey="tools:mcp:"+server.server_key;tools.href="/tools";more.append(tools);card.append(more);section.append(card);
+        const tools=node("a","到工具页核对授权");tools.dataset.focusKey="tools:mcp:"+server.server_key;tools.href="/tools";more.append(tools);card.append(more);mcpGroup.grid.append(card);
       }
     } else section.append(node("p","MCP 状态未提供；不能推断维护成功。"));
     focus.restore(focusRequest);

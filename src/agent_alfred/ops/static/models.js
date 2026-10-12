@@ -41,7 +41,9 @@ export function modelsPage(root, csrf) {
   const refresh = node('button', '核对当前模型设置');
   const assignments = node('section'); assignments.setAttribute('aria-label', '模型指派');
   const list = node('div'); list.setAttribute('aria-label', '模型候选');
-  root.append(pageNotice, refresh, assignments, list);
+  const toolbar=node('div');toolbar.className='settings-toolbar';toolbar.append(pageNotice,refresh);
+  assignments.className='settings-group sy-panel';list.className='settings-catalog';
+  root.append(toolbar, assignments, list);
   /** @type {Map<string,Draft>} */ const drafts = new Map();
   /** @type {Map<string,Wire>} */ const receipts = new Map();
   /** @type {Map<string,boolean>} */ const expanded = new Map();
@@ -228,6 +230,7 @@ export function modelsPage(root, csrf) {
     if (draft.conflict || (draft.value!==draft.baseline && draft.revision!==current?.revision)) baseline.textContent=`编辑基线：${shown(draft.baseline)} · revision ${draft.revision}；当前 revision ${current?.revision}`;
     const feedback=node('p',draft.message || (unsubmitted(draft)?'未保存':'')); feedback.setAttribute('role','status');
     const save=node('button',field==='display'?'保存显示名':field==='style'?'保存线路':`保存 ${field}`);
+    save.className='sy-button-accent';
     save.dataset.focusKey=JSON.stringify([model.endpoint_id,model.model_id,'save',field]);
     const update=()=>{
       const receipt=receipts.get(modelKey(model));
@@ -290,24 +293,34 @@ export function modelsPage(root, csrf) {
   function render() {
     if (!alive || !current || !root.isConnected) return;
     const focusRequest=focus.capture();
-    assignments.replaceChildren(node('h2','模型指派'));
+    const assignmentHeader=node('header'),assignmentTitle=node('h2','模型指派'),assignmentBody=node('div');
+    assignmentHeader.className='sy-panel-header';assignmentTitle.className='sy-panel-eyebrow';assignmentBody.className='settings-assignment-body sy-panel-body';
+    assignmentHeader.append(assignmentTitle);assignments.replaceChildren(assignmentHeader,assignmentBody);
     const describe=(/** @type {Wire|null|undefined} */ value)=>value?`${value.endpoint_id} / ${value.model_id}`:'未知';
-    if (current.status!=='ok') assignments.append(node('p',`设置不可用：${current.status}；不能确认当前指派。`));
-    else assignments.append(node('p','主模型：'+describe(current.assignments?.primary)),node('p','辅助小模型：'+(current.assignments?.retrieval_gate?describe(current.assignments.retrieval_gate):'跟随主模型')),node('p','辅助小模型用于记忆检索门、Skill 自动选择与消息分类。'));
+    if (current.status!=='ok') assignmentBody.append(node('p',`设置不可用：${current.status}；不能确认当前指派。`));
+    else {
+      const description=node('p','辅助小模型用于记忆检索门、Skill 自动选择与消息分类。');description.className='settings-group-description';assignmentHeader.append(description);
+      assignmentBody.append(node('p','主模型：'+describe(current.assignments?.primary)),node('p','辅助小模型：'+(current.assignments?.retrieval_gate?describe(current.assignments.retrieval_gate):'跟随主模型')));
+    }
     list.replaceChildren();
     for (const group of current.endpoints || []) {
-      const section=node('section');section.className='settings-group';section.dataset.endpoint=group.endpoint_id;
+      const section=node('section');section.className='settings-group sy-panel';section.dataset.endpoint=group.endpoint_id;
+      const header=node('header'),heading=node('h2',group.endpoint_id),body=node('div'),controls=node('div'),grid=node('div');
+      header.className='sy-panel-header';heading.className='sy-panel-eyebrow';body.className='settings-group-body';controls.className='settings-actions';grid.className='settings-grid sy-row-list';
       const connection=node('p',`连接：${CONNECTION[group.observation?.state] || group.observation?.state || '未知'} ${group.observation?.reason || ''} ${group.observation?.checked_at || ''} ${group.observation?.checked_via || ''}`);connection.dataset.dimension='connection';
+      connection.className='settings-group-description';
       const catalog=node('p',`目录：${CATALOG[group.catalog.health] || group.catalog.health}；上次成功 ${group.catalog.last_success_at || '尚无'} ${group.catalog.last_error || ''} ${group.catalog.retry_at?'重试 '+group.catalog.retry_at:''}`);catalog.dataset.dimension='catalog';
       const open=node('button','展开此端点');open.dataset.focusKey=JSON.stringify([group.endpoint_id,'expand']);open.disabled=!connected;open.onclick=()=>void read(group.endpoint_id);
       const reload=node('button',catalogs.has(group.endpoint_id)?'目录读取中…':'刷新目录');reload.dataset.focusKey=JSON.stringify([group.endpoint_id,'refresh']);reload.disabled=catalogs.has(group.endpoint_id)||!connected;reload.onclick=()=>void read(group.endpoint_id,true);
-      section.append(node('h2',group.endpoint_id),connection,catalog,open,reload);
-      if (!group.models.length) section.append(node('p','暂无候选；目录尚未获取、失败或为空均不代表当前无指派。'));
+      header.append(heading,connection);controls.append(catalog,open,reload);body.append(controls,grid);section.append(header,body);
+      if (!group.models.length) grid.append(node('p','暂无候选；目录尚未获取、失败或为空均不代表当前无指派。'));
       for (const model of group.models) {
-        const key=modelKey(model), row=node('article');row.className='model-row';row.dataset.model=`${model.endpoint_id}:${model.model_id}`;row.dataset.modelKey=key;
+        const key=modelKey(model), row=node('article');row.className='model-row sy-row';row.dataset.model=`${model.endpoint_id}:${model.model_id}`;row.dataset.modelKey=key;
         const support=node('p',`支持状态：${model.support_label} ${model.reason || ''}`);support.dataset.dimension='support';
+        const heading=node('div'),identity=node('div'),modelId=node('p',model.model_id);heading.className='settings-row-heading';identity.className='settings-row-identity';modelId.className='settings-metadata';support.className='settings-row-status';
         const primary=modelKey(current.assignments?.primary || {})===key, gate=modelKey(current.assignments?.retrieval_gate || {})===key;
-        row.append(node('h3',model.display_name || model.model_id),node('p',model.model_id),support,node('p',`${model.pinned?'已钉选':'未钉选'}${primary?' · 当前主模型':''}${gate?' · 当前辅助小模型':''}`));
+        identity.append(node('h3',model.display_name || model.model_id),modelId);heading.append(identity,support);
+        row.append(heading,node('p',`${model.pinned?'已钉选':'未钉选'}${primary?' · 当前主模型':''}${gate?' · 当前辅助小模型':''}`));
         const summary=node('p',rowState(model));summary.className='model-row-state';row.append(summary);
         const details=node('details'), toggle=node('summary','模型详情');toggle.dataset.focusKey=key+'detail';details.append(toggle);details.open=expanded.get(key) ?? false;
         details.addEventListener('toggle',()=>{expanded.set(key,details.open);if(!details.open && details.contains(document.activeElement))toggle.focus({preventScroll:true});});
@@ -328,12 +341,13 @@ export function modelsPage(root, csrf) {
         const probe=node('section');probe.className='model-probe';probe.setAttribute('aria-label','真实调用测试');
         probe.append(node('h4','真实调用测试'),node('p',`${model.endpoint_id} / ${model.model_id} · 仅按已保存设置测试；可能产生费用，未保存编辑不会纳入。`));
         const button=node('button','测试真实调用（可能计费）');button.dataset.focusKey=JSON.stringify([model.endpoint_id,model.model_id,'probe']);button.disabled=!model.probe_enabled||!connected||Boolean(receipts.get(key)?.pending);button.onclick=()=>void inferenceProbe(model);probe.append(button);
+        button.className='sy-button-accent';
         if(!model.probe_enabled)probe.append(node('p',!model.probe?'需先钉选并指派此模型。':'缺少该端点凭据。'));
         const receipt=receipts.get(key);if(receipt?.message)probe.append(node('p',receipt.message));
         if(receipt?.runId)probe.append(runLink(model,receipt.runId,`查看探针 Run ${receipt.runId}`));
         if(receipt?.blockingRun)probe.append(runLink(model,receipt.blockingRun,`查看阻挡本次操作的 Run ${receipt.blockingRun}`));
         if(receipt && !receipt.runId){const all=node('a','核对运行记录');all.dataset.focusKey=JSON.stringify([model.endpoint_id,model.model_id,'runs']);all.href='/runs?filter=system';probe.append(all);}
-        details.append(probe);row.append(details);section.append(row);
+        details.append(probe);row.append(details);grid.append(row);
       }
       list.append(section);
     }
