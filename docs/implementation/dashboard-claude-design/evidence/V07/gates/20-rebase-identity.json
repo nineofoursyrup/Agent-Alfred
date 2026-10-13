@@ -1,0 +1,57 @@
+{
+  "identity": {
+    "worktree": "/Users/nineofour/Agent-Alfred-v07",
+    "scratch": "/Users/nineofour/Agent-Alfred-v07/.scratch/v07/rebase-20261013-220627",
+    "initial_head": "ba14f05be960c3e85500d45e317a866519529c39",
+    "initial_branch": "dashboard-visual/v07-behaviour",
+    "initial_hashes": {
+      "src/agent_alfred/ops/static/behaviour.js": "b2b79bde8e4b9b257e273eac6f4211322dd29e3d7e03832b4725c277d2fa7b52",
+      "src/agent_alfred/ops/static/behaviour.css": "7d2da2365bcb7e0f4a490120c545650a717575a7661ae8e67ee2306ce331b64e",
+      "src/agent_alfred/ops/static/routing-statistics.js": "68665e58e0da89eb750060f571bb018dba183dff8d5259f05bee693318e9e281",
+      "tests/browser/routing-statistics.spec.js": "e382df4894d498cbe48af21afc20dd364d3bc59e9f1f5a2cfbbbdf332b58a719",
+      "package.json": "f3e4bb5814ef3913c90d8152433d4b116c7dd33359bc88544dc412287f7c05f3",
+      "package-lock.json": "d964ea8313a3dfb83a72e230ee61f0b166c524548fa80514319e081d30d7e896",
+      "playwright.config.js": "ee0d64ce222e3c6f5f8cf90b9be9e7ceb160fddefc375b17d9e8ccb92fabf4e5"
+    },
+    "rebase_target": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+    "initial_base": "449e77fd0ff814fb63f97a009c2435139a68686d",
+    "rebased_head": "8aaed0b9371985796d6c2a3cb635cce85d688fce",
+    "rebased_tree": "714502f9b0a15b4d34f454bd860164265ee09bc4",
+    "product_test_patch_unchanged": true,
+    "product_test_patch_sha256": "5b57842560bea3e71c45136e8e9593ba07aeb384f9ac38a99e2f250ac2fadaa2",
+    "rebased_hashes": {
+      "src/agent_alfred/ops/static/behaviour.js": "b2b79bde8e4b9b257e273eac6f4211322dd29e3d7e03832b4725c277d2fa7b52",
+      "src/agent_alfred/ops/static/behaviour.css": "7d2da2365bcb7e0f4a490120c545650a717575a7661ae8e67ee2306ce331b64e",
+      "src/agent_alfred/ops/static/routing-statistics.js": "68665e58e0da89eb750060f571bb018dba183dff8d5259f05bee693318e9e281",
+      "tests/browser/routing-statistics.spec.js": "e382df4894d498cbe48af21afc20dd364d3bc59e9f1f5a2cfbbbdf332b58a719",
+      "package.json": "f3e4bb5814ef3913c90d8152433d4b116c7dd33359bc88544dc412287f7c05f3",
+      "package-lock.json": "d964ea8313a3dfb83a72e230ee61f0b166c524548fa80514319e081d30d7e896",
+      "playwright.config.js": "ee0d64ce222e3c6f5f8cf90b9be9e7ceb160fddefc375b17d9e8ccb92fabf4e5"
+    },
+    "range_diff": "1:  c8b1bc5 = 1:  ce7ae9e feat(dashboard): restyle behaviour topology and routing statistics\n2:  ba491eb = 2:  092a82d docs(dashboard): record V07 validation and failure evidence\n3:  ba14f05 = 3:  8aaed0b docs(dashboard): correct V07 browser failure count\n"
+  },
+  "fetch": {
+    "command": "git fetch origin",
+    "head": "ba14f05be960c3e85500d45e317a866519529c39",
+    "started_at": "2026-10-13T14:06:27.493678+00:00",
+    "elapsed_seconds": 2.654,
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "rebase": {
+    "command": "git rebase origin/main",
+    "cwd": "/Users/nineofour/Agent-Alfred-v07",
+    "initial_head": "ba14f05be960c3e85500d45e317a866519529c39",
+    "initial_base": "449e77fd0ff814fb63f97a009c2435139a68686d",
+    "rebase_target": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+    "started_at": "2026-10-13T14:07:14.458760+00:00",
+    "elapsed_seconds": 0.958,
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": "Rebasing (1/3)\rRebasing (2/3)\rRebasing (3/3)\rSuccessfully rebased and updated refs/heads/dashboard-visual/v07-behaviour.\n"
+  },
+  "browser_gate": "18-browser-rebase-full.json",
+  "diff_gate": "19-diff-rebase.json",
+  "archive_only_changes_after_testing": true
+}
