@@ -1,0 +1,19 @@
+{
+  "reason": "Task-owned MCP test server orphaned after timeout held ports 18077/18078; subsequent fixtures failed bind",
+  "root_cause_of_original_timeout": "UNKNOWN",
+  "first_guard_attempt": "No signals sent because child cwd was temporary state; subsequently validated exact child args, temp state and parent identity",
+  "processes": [
+    {
+      "pid": 36487,
+      "identity": "36487     1 /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python tests/browser/mcp_server.py",
+      "cwd": "p36487\nfcwd\nn/Users/nineofour/Agent-Alfred-v07\n",
+      "action": "SIGTERM"
+    },
+    {
+      "pid": 36496,
+      "identity": "36496 36487 /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python /Users/nineofour/Agent-Alfred-v07/src/agent_alfred/evals/deterministic/mcp_server_fixture.py /var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/alfred-mcp-browser-vcbnh9rr/behavior.json",
+      "cwd": "p36496\nfcwd\nn/private/var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/alfred-mcp-browser-vcbnh9rr/state\n",
+      "action": "SIGTERM"
+    }
+  ]
+}

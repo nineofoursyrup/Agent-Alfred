@@ -1,0 +1,5 @@
+{
+  "source": ".scratch/v07/second-port-observation.txt",
+  "stdout_stderr": "COMMAND   PID      USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nPython  25406 nineofour    8u  IPv4 0xedfe396673d52a62      0t0  TCP 127.0.0.1:18070 (LISTEN)\nPython  36487 nineofour    3u  IPv4 0x460c2661e3f53eb2      0t0  TCP 127.0.0.1:18078 (LISTEN)\nPython  36487 nineofour   10u  IPv4 0xb9a389e68d1043c2      0t0  TCP 127.0.0.1:18077 (LISTEN)\nPython  43569 nineofour    8u  IPv4 0x5adbc332d3cc679d      0t0  TCP 127.0.0.1:18074 (LISTEN)\n",
+  "sha256": "2145d74191ec4e6f5eae210b24c6530afbf0c8812f09c98f37b4e2ecf2821331"
+}

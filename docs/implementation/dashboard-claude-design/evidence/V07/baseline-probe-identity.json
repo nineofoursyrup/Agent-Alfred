@@ -1,0 +1,11 @@
+{
+  "baseline": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "inputs": {
+    "src/agent_alfred/ops/static/behaviour.js": "265c1513fbfafab108ae3248391487a7c835b4dc04ae2bd45a1782c40b382345",
+    "src/agent_alfred/ops/static/behaviour.css": "68bc5087ea905cc30762e02ee0b2551cb06b925ef45d94de66693940db24dcc5",
+    "src/agent_alfred/ops/static/routing-statistics.js": "88bc39a98ce302a61dee408582611d89032e9f686b903577936aae1881bbe69d",
+    "src/agent_alfred/ops/static/aggregation.js": "2ed4534a18114be56b0df33850040828305d316e794b52ec62e49103384e5ebb",
+    "tests/browser/aggregation.spec.js": "fefa5c2a312259d5b0f974bca77126876091e7e5eefbfbd3cbecab433a208d7b"
+  },
+  "environment_reused_from": "/Users/nineofour/Agent-Alfred-v07"
+}

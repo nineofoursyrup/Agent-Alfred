@@ -1,0 +1,245 @@
+{
+  "fixture": "statistics_fixed_server.py; real HTTP/Host/SQLite with offline fixed samples",
+  "port": 18077,
+  "browser": "155.0.8059.39",
+  "scope": "Chromium DPR 1 viewport simulation",
+  "writes": [],
+  "responses": [
+    {
+      "url": "http://127.0.0.1:18077/api/behaviour/routing-statistics?window=7d",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:18077/api/behaviour/routing-statistics?window=all",
+      "status": 200
+    }
+  ],
+  "failed": [],
+  "errors": [],
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 900,
+      "dpr": 1,
+      "central": 823,
+      "body": [
+        1440,
+        1440
+      ],
+      "page": [
+        879,
+        879
+      ],
+      "styleAttributes": 6,
+      "styleDeclarations": 0,
+      "nodeCard": {
+        "fill": "rgb(24, 24, 27)",
+        "stroke": "rgb(44, 44, 49)",
+        "radius": "10px"
+      },
+      "panelTitleColor": "rgb(224, 164, 88)",
+      "bars": [
+        {
+          "text": "快速回复：1 次；1/6 · 16.7%",
+          "svgHidden": "true",
+          "width": "16.666666666666664%",
+          "height": "7px"
+        },
+        {
+          "text": "完整回答：3 次；3/6 · 50%",
+          "svgHidden": "true",
+          "width": "50%",
+          "height": "7px"
+        },
+        {
+          "text": "图内保守兜底：1 次；1/6 · 16.7%",
+          "svgHidden": "true",
+          "width": "16.666666666666664%",
+          "height": "7px"
+        },
+        {
+          "text": "不回复：1 次；1/6 · 16.7%",
+          "svgHidden": "true",
+          "width": "16.666666666666664%",
+          "height": "7px"
+        },
+        {
+          "text": "上下文失败提示：0 次；0/6 · 0%",
+          "svgHidden": "true",
+          "width": "0%",
+          "height": "7px"
+        }
+      ],
+      "focus": "3px",
+      "snapshot": "- main:\n  - paragraph: BEHAVIOUR\n  - heading \"行为\" [level=1]\n  - paragraph: 查看与配置消息分流，区分流程拓扑、路由决策与执行事实。\n  - button \"打开主对话\" [expanded]\n  - region \"运行与连接摘要\":\n    - paragraph: 正在保存 · CLI\n    - link \"查看当前运行\":\n      - /url: /runs/531f98c3ad164b9da7c8c581f00a7674?filter=chat\n  - region \"消息分流\":\n    - heading \"消息分流\" [level=2]\n    - paragraph: 持续设置 · CLI/Web 共享。默认关闭；保存后下一 Run 生效。回复进入当前会话，静默时只记用户消息，不生成助手消息或长期记忆。\n    - region \"流程拓扑\":\n      - button \"查看流程\"\n      - status: 服务已连接；结构仅在手动读取时更新。\n      - status: 读取时的结构 · 2036-08-25T12:00:00Z。\n    - heading \"分流设置\" [level=3]\n    - paragraph: 已保存的分流设置：开启 · revision 2。能查看结构不代表已经启用或可以成功执行。\n    - paragraph: 启用后识别纯问候、致谢及明确无需回复的消息；实际任务仍进入完整回答。\n    - checkbox \"启用消息分流\" [checked]\n    - text: 启用消息分流\n    - paragraph: 当前选择：开启 · 编辑基线 revision 2。\n    - button \"保存设置\"\n    - button \"刷新设置\"\n    - status: 当前值已核对；设置在下一 Run 生效。\n    - group:\n      - text: 路由统计\n      - status: 已读取全部统计；快照 2036-08-25T12:00:00+00:00。\n      - paragraph: 跨会话 CLI/Web 已准入聊天 Run；按准入时刻归窗，仅启用且终态已持久保存的 Run 进入主结果。未知不代表未发生。\n      - text: 统计范围\n      - combobox \"统计范围\":\n        - option \"24小时\"\n        - option \"7天\"\n        - option \"30天\"\n        - option \"全部\" [selected]\n      - button \"刷新统计\"\n      - paragraph: 范围：全部 · 无下界（含）— 2036/8/25 20:00:00（不含）\n      - paragraph: 显示时区：Asia/Shanghai；判窗 UTC。快照时间：2036-08-25T12:00:00+00:00；读取身份：cc45734c1167478dbdee8debb22c783a；进程：955b1c0936924d02a306601158b44b42\n      - paragraph: 已准入 13 · 启用 11 · 关闭 1 · 启用未知 1\n      - paragraph: 启用样本：已持久终态 10 · 尚未记录终态 1；启用状态未知的已知图前绕行 1\n      - paragraph: 路由决议不代表成功。组内可能包含不同模型、工具和参数；这些数字不表示分类准确率、成功率、费用节省或因果效果。\n      - heading \"当前版本\" [level=3]\n      - paragraph: 统计口径：routing-statistics-1；路由策略：message-routing-1\n      - paragraph: 终态 10 · 已知决议 6 · 明确未形成决议 2 · 未知决议 2；决议覆盖 6/10 · 60%\n      - list \"路由决议比例\":\n        - listitem: 快速回复： 1 次；1/6 · 16.7%\n        - listitem: 完整回答： 3 次；3/6 · 50%\n        - listitem: 图内保守兜底： 1 次；1/6 · 16.7%\n        - listitem: 不回复： 1 次；1/6 · 16.7%\n        - listitem: 上下文失败提示： 0 次；0/6 · 0%\n      - region \"路由决议完整数表\":\n        - table:\n          - row \"路由决议 次数 分支比例（分母为已知决议）\":\n            - columnheader \"路由决议\"\n            - columnheader \"次数\"\n            - columnheader \"分支比例（分母为已知决议）\"\n          - row \"快速回复 1 1/6 · 16.7%\":\n            - rowheader \"快速回复\"\n            - cell \"1\"\n            - cell \"1/6 · 16.7%\"\n          - row \"完整回答 3 3/6 · 50%\":\n            - rowheader \"完整回答\"\n            - cell \"3\"\n            - cell \"3/6 · 50%\"\n          - row \"图内保守兜底 1 1/6 · 16.7%\":\n            - rowheader \"图内保守兜底\"\n            - cell \"1\"\n            - cell \"1/6 · 16.7%\"\n          - row \"不回复 1 1/6 · 16.7%\":\n            - rowheader \"不回复\"\n            - cell \"1\"\n            - cell \"1/6 · 16.7%\"\n          - row \"上下文失败提示 0 0/6 · 0%\":\n            - rowheader \"上下文失败提示\"\n            - cell \"0\"\n            - cell \"0/6 · 0%\"\n      - paragraph: 图后故障回退：发生 2 · 已知未发生 6 · 未知 2；发生率 2/8 · 25%；覆盖 8/10 · 80%\n      - paragraph: 上下文恢复：发生 1 · 已知未发生 7 · 未知 2；发生率 1/8 · 12.5%；覆盖 8/10 · 80%\n      - paragraph: 图前绕行：1 · 未知 2\n      - paragraph: 被阻止的回退：1\n      - paragraph: side_effect_occurred：1\n      - paragraph: 缺失原因：缺少已持久保存的结果摘要 · 2 Run\n  - region \"手动聚合\":\n    - heading \"手动聚合\" [level=2]\n    - paragraph: 单次动作 · 显式生成时固定目标会话与所选来源，草稿进入目标会话。草稿不自动进入工作窗口、后续聚合或提炼；再次生成会创建新运行。\n    - text: 目标会话\n    - combobox \"目标会话\":\n      - option \"请选择目标会话\" [selected]\n      - option \"新会话 · 2026-08-28T12:00:00Z\"\n      - option \"新会话 · 2026-08-28T12:00:00Z\"\n      - option \"m\"\n      - option \"l\"\n      - option \"不用回复\"\n      - option \"不用回复\"\n      - option \"h\"\n      - option \"不用回复\"\n      - option \"g\"\n      - option \"e\"\n      - option \"d\"\n      - option \"save tea\"\n      - option \"b\"\n      - option \"你好\"\n    - text: 聚合目标\n    - textbox \"聚合目标\": 完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识 source-A / source-B\n    - text: 聚合关键词\n    - textbox \"聚合关键词\": 完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识 source-A / source-B\n    - group \"本次资料来源\":\n      - text: 本次资料来源\n      - checkbox \"语义记忆\" [checked]\n      - text: 语义记忆\n      - checkbox \"情景记忆\" [checked]\n      - text: 情景记忆\n      - checkbox \"会话窗口\" [checked]\n      - text: 会话窗口\n    - paragraph: 未选择的来源不会读取；全不选来源仍可提交，将记录无动作。关键词仅用于所选记忆来源。\n    - button \"生成聚合草稿\" [disabled]\n    - button \"刷新会话\"\n    - paragraph: 表单有未提交输入；更改不会影响已提交的请求。\n    - status: 本次读取 14 个会话。刷新列表不会改变已提交目标。\n    - paragraph: 已有运行或保存尚未收尾；不会排队。\n    - status: 尚未提交聚合请求。\n    - region \"流程拓扑\":\n      - button \"查看流程\"\n      - status: 服务已连接；结构仅在手动读取时更新。\n      - status: 尚未读取；展开后读取。"
+    },
+    {
+      "width": 1280,
+      "height": 800,
+      "dpr": 1,
+      "central": 663,
+      "body": [
+        1280,
+        1280
+      ],
+      "page": [
+        719,
+        719
+      ],
+      "styleAttributes": 6,
+      "styleDeclarations": 0,
+      "nodeCard": {
+        "fill": "rgb(24, 24, 27)",
+        "stroke": "rgb(44, 44, 49)",
+        "radius": "10px"
+      },
+      "panelTitleColor": "rgb(224, 164, 88)",
+      "bars": [
+        {
+          "text": "快速回复：1 次；1/6 · 16.7%",
+          "svgHidden": "true",
+          "width": "16.666666666666664%",
+          "height": "7px"
+        },
+        {
+          "text": "完整回答：3 次；3/6 · 50%",
+          "svgHidden": "true",
+          "width": "50%",
+          "height": "7px"
+        },
+        {
+          "text": "图内保守兜底：1 次；1/6 · 16.7%",
+          "svgHidden": "true",
+          "width": "16.666666666666664%",
+          "height": "7px"
+        },
+        {
+          "text": "不回复：1 次；1/6 · 16.7%",
+          "svgHidden": "true",
+          "width": "16.666666666666664%",
+          "height": "7px"
+        },
+        {
+          "text": "上下文失败提示：0 次；0/6 · 0%",
+          "svgHidden": "true",
+          "width": "0%",
+          "height": "7px"
+        }
+      ],
+      "focus": "3px",
+      "snapshot": "- main:\n  - paragraph: BEHAVIOUR\n  - heading \"行为\" [level=1]\n  - paragraph: 查看与配置消息分流，区分流程拓扑、路由决策与执行事实。\n  - button \"打开主对话\" [expanded]\n  - region \"运行与连接摘要\":\n    - paragraph: 正在保存 · CLI\n    - link \"查看当前运行\":\n      - /url: /runs/531f98c3ad164b9da7c8c581f00a7674?filter=chat\n  - region \"消息分流\":\n    - heading \"消息分流\" [level=2]\n    - paragraph: 持续设置 · CLI/Web 共享。默认关闭；保存后下一 Run 生效。回复进入当前会话，静默时只记用户消息，不生成助手消息或长期记忆。\n    - region \"流程拓扑\":\n      - button \"查看流程\"\n      - status: 服务已连接；结构仅在手动读取时更新。\n      - status: 读取时的结构 · 2036-08-25T12:00:00Z。\n    - heading \"分流设置\" [level=3]\n    - paragraph: 已保存的分流设置：开启 · revision 2。能查看结构不代表已经启用或可以成功执行。\n    - paragraph: 启用后识别纯问候、致谢及明确无需回复的消息；实际任务仍进入完整回答。\n    - checkbox \"启用消息分流\" [checked]\n    - text: 启用消息分流\n    - paragraph: 当前选择：开启 · 编辑基线 revision 2。\n    - button \"保存设置\"\n    - button \"刷新设置\"\n    - status: 当前值已核对；设置在下一 Run 生效。\n    - group:\n      - text: 路由统计\n      - status: 已读取全部统计；快照 2036-08-25T12:00:00+00:00。\n      - paragraph: 跨会话 CLI/Web 已准入聊天 Run；按准入时刻归窗，仅启用且终态已持久保存的 Run 进入主结果。未知不代表未发生。\n      - text: 统计范围\n      - combobox \"统计范围\":\n        - option \"24小时\"\n        - option \"7天\"\n        - option \"30天\"\n        - option \"全部\" [selected]\n      - button \"刷新统计\"\n      - paragraph: 范围：全部 · 无下界（含）— 2036/8/25 20:00:00（不含）\n      - paragraph: 显示时区：Asia/Shanghai；判窗 UTC。快照时间：2036-08-25T12:00:00+00:00；读取身份：cc45734c1167478dbdee8debb22c783a；进程：955b1c0936924d02a306601158b44b42\n      - paragraph: 已准入 13 · 启用 11 · 关闭 1 · 启用未知 1\n      - paragraph: 启用样本：已持久终态 10 · 尚未记录终态 1；启用状态未知的已知图前绕行 1\n      - paragraph: 路由决议不代表成功。组内可能包含不同模型、工具和参数；这些数字不表示分类准确率、成功率、费用节省或因果效果。\n      - heading \"当前版本\" [level=3]\n      - paragraph: 统计口径：routing-statistics-1；路由策略：message-routing-1\n      - paragraph: 终态 10 · 已知决议 6 · 明确未形成决议 2 · 未知决议 2；决议覆盖 6/10 · 60%\n      - list \"路由决议比例\":\n        - listitem: 快速回复： 1 次；1/6 · 16.7%\n        - listitem: 完整回答： 3 次；3/6 · 50%\n        - listitem: 图内保守兜底： 1 次；1/6 · 16.7%\n        - listitem: 不回复： 1 次；1/6 · 16.7%\n        - listitem: 上下文失败提示： 0 次；0/6 · 0%\n      - region \"路由决议完整数表\":\n        - table:\n          - row \"路由决议 次数 分支比例（分母为已知决议）\":\n            - columnheader \"路由决议\"\n            - columnheader \"次数\"\n            - columnheader \"分支比例（分母为已知决议）\"\n          - row \"快速回复 1 1/6 · 16.7%\":\n            - rowheader \"快速回复\"\n            - cell \"1\"\n            - cell \"1/6 · 16.7%\"\n          - row \"完整回答 3 3/6 · 50%\":\n            - rowheader \"完整回答\"\n            - cell \"3\"\n            - cell \"3/6 · 50%\"\n          - row \"图内保守兜底 1 1/6 · 16.7%\":\n            - rowheader \"图内保守兜底\"\n            - cell \"1\"\n            - cell \"1/6 · 16.7%\"\n          - row \"不回复 1 1/6 · 16.7%\":\n            - rowheader \"不回复\"\n            - cell \"1\"\n            - cell \"1/6 · 16.7%\"\n          - row \"上下文失败提示 0 0/6 · 0%\":\n            - rowheader \"上下文失败提示\"\n            - cell \"0\"\n            - cell \"0/6 · 0%\"\n      - paragraph: 图后故障回退：发生 2 · 已知未发生 6 · 未知 2；发生率 2/8 · 25%；覆盖 8/10 · 80%\n      - paragraph: 上下文恢复：发生 1 · 已知未发生 7 · 未知 2；发生率 1/8 · 12.5%；覆盖 8/10 · 80%\n      - paragraph: 图前绕行：1 · 未知 2\n      - paragraph: 被阻止的回退：1\n      - paragraph: side_effect_occurred：1\n      - paragraph: 缺失原因：缺少已持久保存的结果摘要 · 2 Run\n  - region \"手动聚合\":\n    - heading \"手动聚合\" [level=2]\n    - paragraph: 单次动作 · 显式生成时固定目标会话与所选来源，草稿进入目标会话。草稿不自动进入工作窗口、后续聚合或提炼；再次生成会创建新运行。\n    - text: 目标会话\n    - combobox \"目标会话\":\n      - option \"请选择目标会话\" [selected]\n      - option \"新会话 · 2026-08-28T12:00:00Z\"\n      - option \"新会话 · 2026-08-28T12:00:00Z\"\n      - option \"m\"\n      - option \"l\"\n      - option \"不用回复\"\n      - option \"不用回复\"\n      - option \"h\"\n      - option \"不用回复\"\n      - option \"g\"\n      - option \"e\"\n      - option \"d\"\n      - option \"save tea\"\n      - option \"b\"\n      - option \"你好\"\n    - text: 聚合目标\n    - textbox \"聚合目标\": 完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识 source-A / source-B\n    - text: 聚合关键词\n    - textbox \"聚合关键词\": 完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识 source-A / source-B\n    - group \"本次资料来源\":\n      - text: 本次资料来源\n      - checkbox \"语义记忆\" [checked]\n      - text: 语义记忆\n      - checkbox \"情景记忆\" [checked]\n      - text: 情景记忆\n      - checkbox \"会话窗口\" [checked]\n      - text: 会话窗口\n    - paragraph: 未选择的来源不会读取；全不选来源仍可提交，将记录无动作。关键词仅用于所选记忆来源。\n    - button \"生成聚合草稿\" [disabled]\n    - button \"刷新会话\"\n    - paragraph: 表单有未提交输入；更改不会影响已提交的请求。\n    - status: 本次读取 14 个会话。刷新列表不会改变已提交目标。\n    - paragraph: 已有运行或保存尚未收尾；不会排队。\n    - status: 尚未提交聚合请求。\n    - region \"流程拓扑\":\n      - button \"查看流程\"\n      - status: 服务已连接；结构仅在手动读取时更新。\n      - status: 尚未读取；展开后读取。"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "dpr": 1,
+      "central": 349,
+      "body": [
+        390,
+        390
+      ],
+      "page": [
+        381,
+        381
+      ],
+      "styleAttributes": 6,
+      "styleDeclarations": 0,
+      "nodeCard": {
+        "fill": "rgb(24, 24, 27)",
+        "stroke": "rgb(44, 44, 49)",
+        "radius": "10px"
+      },
+      "panelTitleColor": "rgb(224, 164, 88)",
+      "bars": [
+        {
+          "text": "快速回复：1 次；1/6 · 16.7%",
+          "svgHidden": "true",
+          "width": "16.666666666666664%",
+          "height": "7px"
+        },
+        {
+          "text": "完整回答：3 次；3/6 · 50%",
+          "svgHidden": "true",
+          "width": "50%",
+          "height": "7px"
+        },
+        {
+          "text": "图内保守兜底：1 次；1/6 · 16.7%",
+          "svgHidden": "true",
+          "width": "16.666666666666664%",
+          "height": "7px"
+        },
+        {
+          "text": "不回复：1 次；1/6 · 16.7%",
+          "svgHidden": "true",
+          "width": "16.666666666666664%",
+          "height": "7px"
+        },
+        {
+          "text": "上下文失败提示：0 次；0/6 · 0%",
+          "svgHidden": "true",
+          "width": "0%",
+          "height": "7px"
+        }
+      ],
+      "focus": "3px",
+      "snapshot": "- main:\n  - paragraph: BEHAVIOUR\n  - heading \"行为\" [level=1]\n  - paragraph: 查看与配置消息分流，区分流程拓扑、路由决策与执行事实。\n  - region \"消息分流\":\n    - heading \"消息分流\" [level=2]\n    - paragraph: 持续设置 · CLI/Web 共享。默认关闭；保存后下一 Run 生效。回复进入当前会话，静默时只记用户消息，不生成助手消息或长期记忆。\n    - region \"流程拓扑\":\n      - button \"查看流程\"\n      - status: 服务已连接；结构仅在手动读取时更新。\n      - status: 读取时的结构 · 2036-08-25T12:00:00Z。\n    - heading \"分流设置\" [level=3]\n    - paragraph: 已保存的分流设置：开启 · revision 2。能查看结构不代表已经启用或可以成功执行。\n    - paragraph: 启用后识别纯问候、致谢及明确无需回复的消息；实际任务仍进入完整回答。\n    - checkbox \"启用消息分流\" [checked]\n    - text: 启用消息分流\n    - paragraph: 当前选择：开启 · 编辑基线 revision 2。\n    - button \"保存设置\"\n    - button \"刷新设置\"\n    - status: 当前值已核对；设置在下一 Run 生效。\n    - group:\n      - text: 路由统计\n      - status: 已读取全部统计；快照 2036-08-25T12:00:00+00:00。\n      - paragraph: 跨会话 CLI/Web 已准入聊天 Run；按准入时刻归窗，仅启用且终态已持久保存的 Run 进入主结果。未知不代表未发生。\n      - text: 统计范围\n      - combobox \"统计范围\":\n        - option \"24小时\"\n        - option \"7天\"\n        - option \"30天\"\n        - option \"全部\" [selected]\n      - button \"刷新统计\"\n      - paragraph: 范围：全部 · 无下界（含）— 2036/8/25 20:00:00（不含）\n      - paragraph: 显示时区：Asia/Shanghai；判窗 UTC。快照时间：2036-08-25T12:00:00+00:00；读取身份：cc45734c1167478dbdee8debb22c783a；进程：955b1c0936924d02a306601158b44b42\n      - paragraph: 已准入 13 · 启用 11 · 关闭 1 · 启用未知 1\n      - paragraph: 启用样本：已持久终态 10 · 尚未记录终态 1；启用状态未知的已知图前绕行 1\n      - paragraph: 路由决议不代表成功。组内可能包含不同模型、工具和参数；这些数字不表示分类准确率、成功率、费用节省或因果效果。\n      - heading \"当前版本\" [level=3]\n      - paragraph: 统计口径：routing-statistics-1；路由策略：message-routing-1\n      - paragraph: 终态 10 · 已知决议 6 · 明确未形成决议 2 · 未知决议 2；决议覆盖 6/10 · 60%\n      - list \"路由决议比例\":\n        - listitem: 快速回复： 1 次；1/6 · 16.7%\n        - listitem: 完整回答： 3 次；3/6 · 50%\n        - listitem: 图内保守兜底： 1 次；1/6 · 16.7%\n        - listitem: 不回复： 1 次；1/6 · 16.7%\n        - listitem: 上下文失败提示： 0 次；0/6 · 0%\n      - region \"路由决议完整数表\":\n        - table:\n          - row \"路由决议 次数 分支比例（分母为已知决议）\":\n            - columnheader \"路由决议\"\n            - columnheader \"次数\"\n            - columnheader \"分支比例（分母为已知决议）\"\n          - row \"快速回复 1 1/6 · 16.7%\":\n            - rowheader \"快速回复\"\n            - cell \"1\"\n            - cell \"1/6 · 16.7%\"\n          - row \"完整回答 3 3/6 · 50%\":\n            - rowheader \"完整回答\"\n            - cell \"3\"\n            - cell \"3/6 · 50%\"\n          - row \"图内保守兜底 1 1/6 · 16.7%\":\n            - rowheader \"图内保守兜底\"\n            - cell \"1\"\n            - cell \"1/6 · 16.7%\"\n          - row \"不回复 1 1/6 · 16.7%\":\n            - rowheader \"不回复\"\n            - cell \"1\"\n            - cell \"1/6 · 16.7%\"\n          - row \"上下文失败提示 0 0/6 · 0%\":\n            - rowheader \"上下文失败提示\"\n            - cell \"0\"\n            - cell \"0/6 · 0%\"\n      - paragraph: 图后故障回退：发生 2 · 已知未发生 6 · 未知 2；发生率 2/8 · 25%；覆盖 8/10 · 80%\n      - paragraph: 上下文恢复：发生 1 · 已知未发生 7 · 未知 2；发生率 1/8 · 12.5%；覆盖 8/10 · 80%\n      - paragraph: 图前绕行：1 · 未知 2\n      - paragraph: 被阻止的回退：1\n      - paragraph: side_effect_occurred：1\n      - paragraph: 缺失原因：缺少已持久保存的结果摘要 · 2 Run\n  - region \"手动聚合\":\n    - heading \"手动聚合\" [level=2]\n    - paragraph: 单次动作 · 显式生成时固定目标会话与所选来源，草稿进入目标会话。草稿不自动进入工作窗口、后续聚合或提炼；再次生成会创建新运行。\n    - text: 目标会话\n    - combobox \"目标会话\":\n      - option \"请选择目标会话\" [selected]\n      - option \"新会话 · 2026-08-28T12:00:00Z\"\n      - option \"新会话 · 2026-08-28T12:00:00Z\"\n      - option \"m\"\n      - option \"l\"\n      - option \"不用回复\"\n      - option \"不用回复\"\n      - option \"h\"\n      - option \"不用回复\"\n      - option \"g\"\n      - option \"e\"\n      - option \"d\"\n      - option \"save tea\"\n      - option \"b\"\n      - option \"你好\"\n    - text: 聚合目标\n    - textbox \"聚合目标\": 完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识 source-A / source-B\n    - text: 聚合关键词\n    - textbox \"聚合关键词\": 完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识 source-A / source-B\n    - group \"本次资料来源\":\n      - text: 本次资料来源\n      - checkbox \"语义记忆\" [checked]\n      - text: 语义记忆\n      - checkbox \"情景记忆\" [checked]\n      - text: 情景记忆\n      - checkbox \"会话窗口\" [checked]\n      - text: 会话窗口\n    - paragraph: 未选择的来源不会读取；全不选来源仍可提交，将记录无动作。关键词仅用于所选记忆来源。\n    - button \"生成聚合草稿\" [disabled]\n    - button \"刷新会话\"\n    - paragraph: 表单有未提交输入；更改不会影响已提交的请求。\n    - status: 本次读取 14 个会话。刷新列表不会改变已提交目标。\n    - paragraph: 已有运行或保存尚未收尾；不会排队。\n    - status: 尚未提交聚合请求。\n    - region \"流程拓扑\":\n      - button \"查看流程\"\n      - status: 服务已连接；结构仅在手动读取时更新。\n      - status: 尚未读取；展开后读取。"
+    },
+    {
+      "width": 320,
+      "height": 800,
+      "dpr": 1,
+      "central": 279,
+      "body": [
+        320,
+        320
+      ],
+      "page": [
+        311,
+        311
+      ],
+      "styleAttributes": 6,
+      "styleDeclarations": 0,
+      "nodeCard": {
+        "fill": "rgb(24, 24, 27)",
+        "stroke": "rgb(44, 44, 49)",
+        "radius": "10px"
+      },
+      "panelTitleColor": "rgb(224, 164, 88)",
+      "bars": [
+        {
+          "text": "快速回复：1 次；1/6 · 16.7%",
+          "svgHidden": "true",
+          "width": "16.666666666666664%",
+          "height": "7px"
+        },
+        {
+          "text": "完整回答：3 次；3/6 · 50%",
+          "svgHidden": "true",
+          "width": "50%",
+          "height": "7px"
+        },
+        {
+          "text": "图内保守兜底：1 次；1/6 · 16.7%",
+          "svgHidden": "true",
+          "width": "16.666666666666664%",
+          "height": "7px"
+        },
+        {
+          "text": "不回复：1 次；1/6 · 16.7%",
+          "svgHidden": "true",
+          "width": "16.666666666666664%",
+          "height": "7px"
+        },
+        {
+          "text": "上下文失败提示：0 次；0/6 · 0%",
+          "svgHidden": "true",
+          "width": "0%",
+          "height": "7px"
+        }
+      ],
+      "focus": "3px",
+      "snapshot": "- main:\n  - paragraph: BEHAVIOUR\n  - heading \"行为\" [level=1]\n  - paragraph: 查看与配置消息分流，区分流程拓扑、路由决策与执行事实。\n  - region \"消息分流\":\n    - heading \"消息分流\" [level=2]\n    - paragraph: 持续设置 · CLI/Web 共享。默认关闭；保存后下一 Run 生效。回复进入当前会话，静默时只记用户消息，不生成助手消息或长期记忆。\n    - region \"流程拓扑\":\n      - button \"查看流程\"\n      - status: 服务已连接；结构仅在手动读取时更新。\n      - status: 读取时的结构 · 2036-08-25T12:00:00Z。\n    - heading \"分流设置\" [level=3]\n    - paragraph: 已保存的分流设置：开启 · revision 2。能查看结构不代表已经启用或可以成功执行。\n    - paragraph: 启用后识别纯问候、致谢及明确无需回复的消息；实际任务仍进入完整回答。\n    - checkbox \"启用消息分流\" [checked]\n    - text: 启用消息分流\n    - paragraph: 当前选择：开启 · 编辑基线 revision 2。\n    - button \"保存设置\"\n    - button \"刷新设置\"\n    - status: 当前值已核对；设置在下一 Run 生效。\n    - group:\n      - text: 路由统计\n      - status: 已读取全部统计；快照 2036-08-25T12:00:00+00:00。\n      - paragraph: 跨会话 CLI/Web 已准入聊天 Run；按准入时刻归窗，仅启用且终态已持久保存的 Run 进入主结果。未知不代表未发生。\n      - text: 统计范围\n      - combobox \"统计范围\":\n        - option \"24小时\"\n        - option \"7天\"\n        - option \"30天\"\n        - option \"全部\" [selected]\n      - button \"刷新统计\"\n      - paragraph: 范围：全部 · 无下界（含）— 2036/8/25 20:00:00（不含）\n      - paragraph: 显示时区：Asia/Shanghai；判窗 UTC。快照时间：2036-08-25T12:00:00+00:00；读取身份：cc45734c1167478dbdee8debb22c783a；进程：955b1c0936924d02a306601158b44b42\n      - paragraph: 已准入 13 · 启用 11 · 关闭 1 · 启用未知 1\n      - paragraph: 启用样本：已持久终态 10 · 尚未记录终态 1；启用状态未知的已知图前绕行 1\n      - paragraph: 路由决议不代表成功。组内可能包含不同模型、工具和参数；这些数字不表示分类准确率、成功率、费用节省或因果效果。\n      - heading \"当前版本\" [level=3]\n      - paragraph: 统计口径：routing-statistics-1；路由策略：message-routing-1\n      - paragraph: 终态 10 · 已知决议 6 · 明确未形成决议 2 · 未知决议 2；决议覆盖 6/10 · 60%\n      - list \"路由决议比例\":\n        - listitem: 快速回复： 1 次；1/6 · 16.7%\n        - listitem: 完整回答： 3 次；3/6 · 50%\n        - listitem: 图内保守兜底： 1 次；1/6 · 16.7%\n        - listitem: 不回复： 1 次；1/6 · 16.7%\n        - listitem: 上下文失败提示： 0 次；0/6 · 0%\n      - region \"路由决议完整数表\":\n        - table:\n          - row \"路由决议 次数 分支比例（分母为已知决议）\":\n            - columnheader \"路由决议\"\n            - columnheader \"次数\"\n            - columnheader \"分支比例（分母为已知决议）\"\n          - row \"快速回复 1 1/6 · 16.7%\":\n            - rowheader \"快速回复\"\n            - cell \"1\"\n            - cell \"1/6 · 16.7%\"\n          - row \"完整回答 3 3/6 · 50%\":\n            - rowheader \"完整回答\"\n            - cell \"3\"\n            - cell \"3/6 · 50%\"\n          - row \"图内保守兜底 1 1/6 · 16.7%\":\n            - rowheader \"图内保守兜底\"\n            - cell \"1\"\n            - cell \"1/6 · 16.7%\"\n          - row \"不回复 1 1/6 · 16.7%\":\n            - rowheader \"不回复\"\n            - cell \"1\"\n            - cell \"1/6 · 16.7%\"\n          - row \"上下文失败提示 0 0/6 · 0%\":\n            - rowheader \"上下文失败提示\"\n            - cell \"0\"\n            - cell \"0/6 · 0%\"\n      - paragraph: 图后故障回退：发生 2 · 已知未发生 6 · 未知 2；发生率 2/8 · 25%；覆盖 8/10 · 80%\n      - paragraph: 上下文恢复：发生 1 · 已知未发生 7 · 未知 2；发生率 1/8 · 12.5%；覆盖 8/10 · 80%\n      - paragraph: 图前绕行：1 · 未知 2\n      - paragraph: 被阻止的回退：1\n      - paragraph: side_effect_occurred：1\n      - paragraph: 缺失原因：缺少已持久保存的结果摘要 · 2 Run\n  - region \"手动聚合\":\n    - heading \"手动聚合\" [level=2]\n    - paragraph: 单次动作 · 显式生成时固定目标会话与所选来源，草稿进入目标会话。草稿不自动进入工作窗口、后续聚合或提炼；再次生成会创建新运行。\n    - text: 目标会话\n    - combobox \"目标会话\":\n      - option \"请选择目标会话\" [selected]\n      - option \"新会话 · 2026-08-28T12:00:00Z\"\n      - option \"新会话 · 2026-08-28T12:00:00Z\"\n      - option \"m\"\n      - option \"l\"\n      - option \"不用回复\"\n      - option \"不用回复\"\n      - option \"h\"\n      - option \"不用回复\"\n      - option \"g\"\n      - option \"e\"\n      - option \"d\"\n      - option \"save tea\"\n      - option \"b\"\n      - option \"你好\"\n    - text: 聚合目标\n    - textbox \"聚合目标\": 完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识 source-A / source-B\n    - text: 聚合关键词\n    - textbox \"聚合关键词\": 完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识完整保留的中文聚合目标与同名前缀标识 source-A / source-B\n    - group \"本次资料来源\":\n      - text: 本次资料来源\n      - checkbox \"语义记忆\" [checked]\n      - text: 语义记忆\n      - checkbox \"情景记忆\" [checked]\n      - text: 情景记忆\n      - checkbox \"会话窗口\" [checked]\n      - text: 会话窗口\n    - paragraph: 未选择的来源不会读取；全不选来源仍可提交，将记录无动作。关键词仅用于所选记忆来源。\n    - button \"生成聚合草稿\" [disabled]\n    - button \"刷新会话\"\n    - paragraph: 表单有未提交输入；更改不会影响已提交的请求。\n    - status: 本次读取 14 个会话。刷新列表不会改变已提交目标。\n    - paragraph: 已有运行或保存尚未收尾；不会排队。\n    - status: 尚未提交聚合请求。\n    - region \"流程拓扑\":\n      - button \"查看流程\"\n      - status: 服务已连接；结构仅在手动读取时更新。\n      - status: 尚未读取；展开后读取。"
+    }
+  ]
+}

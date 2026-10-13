@@ -1,0 +1,114 @@
+[
+  {
+    "file": "behaviour-aggregation-1280x800.png",
+    "width": 1280,
+    "height": 800,
+    "bytes": 134689,
+    "sha256": "9d9408593b3bab2ff5efd90d4e36924b5357f32906f3ee03ad8bb4ea07affc8a"
+  },
+  {
+    "file": "behaviour-aggregation-1440x900.png",
+    "width": 1440,
+    "height": 900,
+    "bytes": 143339,
+    "sha256": "69df4d981b54382fcc77376eb55df4fa377bdf3799352237a136781f7b693e4d"
+  },
+  {
+    "file": "behaviour-aggregation-320x800.png",
+    "width": 320,
+    "height": 800,
+    "bytes": 71569,
+    "sha256": "602ecca398879c3ef954ce872836f13f3432532666412caa878b9bb0c7c016e5"
+  },
+  {
+    "file": "behaviour-aggregation-390x844.png",
+    "width": 390,
+    "height": 844,
+    "bytes": 84897,
+    "sha256": "f05ccfa6da919fe0d83a6c7e94d9649eab0dce3bc89b2a0aa86b64829f513f27"
+  },
+  {
+    "file": "behaviour-graph-1280x800.png",
+    "width": 1280,
+    "height": 800,
+    "bytes": 118010,
+    "sha256": "e91811e4a0a62ade3ddb3430abc1f1271c674de4f214dff66b58afd81c4c9a40"
+  },
+  {
+    "file": "behaviour-graph-1440x900.png",
+    "width": 1440,
+    "height": 900,
+    "bytes": 128275,
+    "sha256": "1764d548fa8cd85018995f4f8391f6e08d63a61cc31587ac0e50735df31fd3ce"
+  },
+  {
+    "file": "behaviour-graph-320x800.png",
+    "width": 320,
+    "height": 800,
+    "bytes": 60016,
+    "sha256": "127ab86f2a9647700dd974e6cc105b610957abbc312559bd401940f7499f9780"
+  },
+  {
+    "file": "behaviour-graph-390x844.png",
+    "width": 390,
+    "height": 844,
+    "bytes": 65350,
+    "sha256": "63a2e95a2e159259b7e1b296bd1b9701a674660d29741f3d5349111e60e94c0b"
+  },
+  {
+    "file": "behaviour-statistics-1280x800.png",
+    "width": 1280,
+    "height": 800,
+    "bytes": 129898,
+    "sha256": "44c684eb10b67bf365f96540cce64f3c8e5075af6431b9ad986b3d96b93e24eb"
+  },
+  {
+    "file": "behaviour-statistics-1440x900.png",
+    "width": 1440,
+    "height": 900,
+    "bytes": 183337,
+    "sha256": "0fe22d9114e86bbd798f7f7aaa8b590446ed2f0113f88bf05dda0512160aaa14"
+  },
+  {
+    "file": "behaviour-statistics-320x800.png",
+    "width": 320,
+    "height": 800,
+    "bytes": 60794,
+    "sha256": "8b1055fe6a60f41c7f6be0c637bd2d3a50526eeaf228784b27f62959c666a573"
+  },
+  {
+    "file": "behaviour-statistics-390x844.png",
+    "width": 390,
+    "height": 844,
+    "bytes": 86315,
+    "sha256": "125178c8063ee63bc29d640a335fb35d7d32cbcb2a1287f10ec7af4f8b09ad61"
+  },
+  {
+    "file": "reference-graph-1280x800.png",
+    "width": 1280,
+    "height": 800,
+    "bytes": 142767,
+    "sha256": "1beac74059dc336f4a81a574b1e195d7fd312fe1044e4c03b9313b71347ae8eb"
+  },
+  {
+    "file": "reference-graph-1440x900.png",
+    "width": 1440,
+    "height": 900,
+    "bytes": 148035,
+    "sha256": "d1f766354e7a3ecdfd222fc6b514c6ad0a1c3253b3b3efd017faa3acaca7bce1"
+  },
+  {
+    "file": "reference-graph-320x800.png",
+    "width": 320,
+    "height": 800,
+    "bytes": 39573,
+    "sha256": "afdfdf4716e2e1281143aaa23c3a05b369bb24bba9ec9fa50f4f940342c86763"
+  },
+  {
+    "file": "reference-graph-390x844.png",
+    "width": 390,
+    "height": 844,
+    "bytes": 51524,
+    "sha256": "77305ff2fb672093afddb18b39eca4e8cdeb32a6f635b6a4e857742ae2a37f1f"
+  }
+]

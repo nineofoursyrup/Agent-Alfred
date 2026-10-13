@@ -9,8 +9,11 @@ test('S06 CE-16/26: ratio bars use the same real sample and failures remain visi
     await expect(panel.getByText('未读取；展开后读取统计。',{exact:true})).toBeVisible();
     await panel.getByText('路由统计',{exact:true}).click();
     await page.getByLabel('统计范围').selectOption('all');
-    const full = panel.getByRole('progressbar',{name:'完整回答：3 次；3/6 · 50%',exact:true});
-    await expect(full).toHaveAttribute('value','0.5');
+    const full = panel.locator('.sy-bar-row').filter({hasText:'完整回答：'}).filter({hasText:'3 次；3/6 · 50%'}).locator('svg');
+    await expect(full.locator('rect')).toHaveAttribute('width','50%');
+    await expect(full).toHaveAttribute('aria-hidden','true');
+    await expect(full.locator('rect')).toHaveAttribute('height','7');
+    await expect(full.locator('..').locator('.sy-bar-heading')).toBeVisible();
     await expect(panel.locator('tr').filter({hasText:'完整回答'})).toContainText('3/6 · 50%');
     await page.setViewportSize({width:390,height:844});await full.scrollIntoViewIfNeeded();await page.screenshot({path:testInfo.outputPath('statistics-real-counts.png')});
     await page.route('**/api/behaviour/routing-statistics*',async route=>{
@@ -19,14 +22,14 @@ test('S06 CE-16/26: ratio bars use the same real sample and failures remain visi
     });
     await panel.getByRole('button',{name:'刷新统计',exact:true}).click();
     await expect(panel.getByText(/统计响应不兼容/)).toBeVisible();
-    await expect(panel.getByRole('progressbar')).toHaveCount(0);await expect(panel.locator('tr')).toHaveCount(0);
+    await expect(panel.locator('.sy-bar-track')).toHaveCount(0);await expect(panel.locator('tr')).toHaveCount(0);
     await page.unroute('**/api/behaviour/routing-statistics*');
     await page.route('**/api/behaviour/routing-statistics*',route=>route.abort());
     await panel.getByRole('button',{name:'刷新统计',exact:true}).click();
     await expect(panel.getByText(/读取失败/)).toBeVisible();
     await panel.getByText('路由统计',{exact:true}).click();
     await expect(panel.getByText(/读取失败/)).toBeVisible();
-    await expect(panel.getByRole('progressbar')).toHaveCount(0);
+    await expect(panel.locator('.sy-bar-track')).toHaveCount(0);
     await page.screenshot({path:testInfo.outputPath('statistics-collapsed-failure.png')});
   } finally {await server.close();}
 });
@@ -271,7 +274,7 @@ test('SPEC-03 CE-05/12/13/15 legacy counts, unknown metrics and real bad-data er
     const history = panel.locator('section').filter({hasText:'历史／版本未知'});
     await expect(history.locator('tr').filter({hasText:'快速回复'})).toContainText('1');
     await expect(history).not.toContainText('%');
-    await expect(history.getByRole('progressbar')).toHaveCount(0);
+    await expect(history.locator('.sy-bar-track')).toHaveCount(0);
     await expect(history).toContainText('仅列次数与缺失');
     await server.send('future-version');
     await page.getByRole('button', {name:'刷新统计', exact:true}).click();
@@ -282,7 +285,7 @@ test('SPEC-03 CE-05/12/13/15 legacy counts, unknown metrics and real bad-data er
     await expect(panel).toContainText('未知决议 1');
     await expect(panel).toContainText('缺少已持久保存的结果摘要');
     await expect(panel).toContainText('发生率 0/0 · 无可计算样本');
-    await expect(panel.locator('section').filter({hasText:'当前版本'}).getByRole('progressbar')).toHaveCount(0);
+    await expect(panel.locator('section').filter({hasText:'当前版本'}).locator('.sy-bar-track')).toHaveCount(0);
     await server.send('bad-time');
     await page.getByRole('button', {name:'刷新统计', exact:true}).click();
     await expect(panel).toContainText('样本归属无法判定');

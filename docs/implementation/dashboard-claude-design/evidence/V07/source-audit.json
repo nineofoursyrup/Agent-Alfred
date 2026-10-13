@@ -1,0 +1,150 @@
+{
+  "baseline_sha": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "worktree": "/Users/nineofour/Agent-Alfred-v07",
+  "branch": "dashboard-visual/v07-behaviour",
+  "initial_worktree_status": "",
+  "main_checkout_observed_status": [
+    " M docs/dashboard.md",
+    "?? README.md",
+    "?? tmp/"
+  ],
+  "main_checkout_files_modified_by_task": false,
+  "issue": 129,
+  "source_files": {
+    "src/agent_alfred/ops/static/behaviour.js": {
+      "baseline": "265c1513fbfafab108ae3248391487a7c835b4dc04ae2bd45a1782c40b382345",
+      "candidate": "b2b79bde8e4b9b257e273eac6f4211322dd29e3d7e03832b4725c277d2fa7b52"
+    },
+    "src/agent_alfred/ops/static/behaviour.css": {
+      "baseline": "68bc5087ea905cc30762e02ee0b2551cb06b925ef45d94de66693940db24dcc5",
+      "candidate": "7d2da2365bcb7e0f4a490120c545650a717575a7661ae8e67ee2306ce331b64e"
+    },
+    "src/agent_alfred/ops/static/routing-statistics.js": {
+      "baseline": "88bc39a98ce302a61dee408582611d89032e9f686b903577936aae1881bbe69d",
+      "candidate": "68665e58e0da89eb750060f571bb018dba183dff8d5259f05bee693318e9e281"
+    },
+    "tests/browser/routing-statistics.spec.js": {
+      "baseline": "12ddbe43564388b2d8f49ae1067821dae0b9710790f90e4d5a1bb270b59bd882",
+      "candidate": "e382df4894d498cbe48af21afc20dd364d3bc59e9f1f5a2cfbbbdf332b58a719"
+    }
+  },
+  "protected_files": {
+    "src/agent_alfred/ops/static/topology.js": {
+      "baseline": "da3c1dda2d0ab85dee05eaf1c19e4974c12c405fe65422601571d32363cd1c08",
+      "candidate": "da3c1dda2d0ab85dee05eaf1c19e4974c12c405fe65422601571d32363cd1c08"
+    },
+    "src/agent_alfred/ops/static/aggregation.js": {
+      "baseline": "2ed4534a18114be56b0df33850040828305d316e794b52ec62e49103384e5ebb",
+      "candidate": "2ed4534a18114be56b0df33850040828305d316e794b52ec62e49103384e5ebb"
+    },
+    "src/agent_alfred/ops/static/runs.js": {
+      "baseline": "ae901cae89a6847a2c2408dd06b9cee73f1eb54b7032a03c5a260fce1e4c3303",
+      "candidate": "ae901cae89a6847a2c2408dd06b9cee73f1eb54b7032a03c5a260fce1e4c3303"
+    },
+    "src/agent_alfred/ops/static/app.js": {
+      "baseline": "87cf98ab70e8bdf4fd3d5de37ef6df125ab624487b522e72b50362144c249d35",
+      "candidate": "87cf98ab70e8bdf4fd3d5de37ef6df125ab624487b522e72b50362144c249d35"
+    },
+    "src/agent_alfred/ops/static/app.css": {
+      "baseline": "caaec9cf2e5e6f69798a8f222dc4bdb143636b21ddb5af84a33e7ab0a239f194",
+      "candidate": "caaec9cf2e5e6f69798a8f222dc4bdb143636b21ddb5af84a33e7ab0a239f194"
+    },
+    "src/agent_alfred/ops/static/shell.js": {
+      "baseline": "c71dfdaae24d2349cd78d36ff96fb89daf4842df823fd021d407d87565bff03b",
+      "candidate": "c71dfdaae24d2349cd78d36ff96fb89daf4842df823fd021d407d87565bff03b"
+    },
+    "src/agent_alfred/ops/static/index.html": {
+      "baseline": "1806bc790c4abb172d848ba04c5054d0e20341657e90111a1696574785835c7a",
+      "candidate": "1806bc790c4abb172d848ba04c5054d0e20341657e90111a1696574785835c7a"
+    },
+    "docs/design/issue-122/RECIPES.md": {
+      "baseline": "e98a228252a21a3752df7e59c4eda8b35bb928f61944c12dc25b02dbc047a35c",
+      "candidate": "e98a228252a21a3752df7e59c4eda8b35bb928f61944c12dc25b02dbc047a35c"
+    },
+    ".gitattributes": {
+      "baseline": "d5343a905893d25b866ea0921443de86a315abf45c085584318e3813d95f890d",
+      "candidate": "d5343a905893d25b866ea0921443de86a315abf45c085584318e3813d95f890d"
+    }
+  },
+  "unchanged_functions": [
+    "behaviourPage: cancelRead, dirty, present, read, write, event handlers, lifecycle",
+    "routingStatistics: observation lifecycle, load, invalidate, validate",
+    "ratio"
+  ],
+  "exports_preserved": [
+    "behaviourPage(root, csrf, runtime, memory, instance)",
+    "routingStatistics(root, instance)"
+  ],
+  "css_scope": "Every selector starts with .behaviour-page; no literal dimensions or colors, :root, inline declarations, remote resources or CSS url",
+  "local_review": {
+    "kind": "local single pass; no independent subagents",
+    "standards_blocking_findings": 0,
+    "spec_blocking_findings": 0,
+    "spec_gap": "No existing recent decisions source; omitted according to no reads and no demo data constraints"
+  },
+  "not_run": [
+    "native 200% zoom",
+    "Chinese IME",
+    "iPhone / iOS / real soft keyboard",
+    "real provider / user daily acceptance / issue 135 visual acceptance"
+  ],
+  "implementation_gate_head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+  "final_full_pytest_log": "16-pytest-full.json",
+  "final_full_browser_log": "15-browser-full.json",
+  "evidence_archival_changes_tested_source_dependencies_or_configuration": false,
+  "gate_inputs_reused": {
+    "02-ruff": {
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "inputs_match": true,
+      "exit_code": 0
+    },
+    "03-skills": {
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "inputs_match": true,
+      "exit_code": 0
+    },
+    "04-env": {
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "inputs_match": true,
+      "exit_code": 0
+    },
+    "16-pytest-full": {
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "inputs_match": true,
+      "exit_code": 0
+    },
+    "06-typecheck": {
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "inputs_match": true,
+      "exit_code": 0
+    },
+    "15-browser-full": {
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "inputs_match": true,
+      "exit_code": 0
+    },
+    "08-diff": {
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "inputs_match": true,
+      "exit_code": 0
+    },
+    "09-install": {
+      "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+      "inputs_match": true,
+      "exit_code": 0
+    }
+  },
+  "pre_push_fetch": {
+    "head": "c8b1bc5918a57af9af8429ef9f48bee6b4f98671",
+    "origin_main": "449e77fd0ff814fb63f97a009c2435139a68686d",
+    "branch_base": "449e77fd0ff814fb63f97a009c2435139a68686d",
+    "rebase_required": false
+  },
+  "rebase_required": false,
+  "final_archival_diff_check": {
+    "file": "17-diff-final-stage.json",
+    "exit_code": 0,
+    "includes_staged": true,
+    "elapsed_seconds": 0.106
+  }
+}

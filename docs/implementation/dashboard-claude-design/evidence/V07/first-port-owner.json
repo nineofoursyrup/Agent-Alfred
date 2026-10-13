@@ -1,0 +1,5 @@
+{
+  "source": ".scratch/v07/first-port-owner.txt",
+  "stdout_stderr": "COMMAND   PID      USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nPython  79523 nineofour    8u  IPv4 0xcd67a1750bbfe3e1      0t0  TCP 127.0.0.1:18074 (LISTEN)\n",
+  "sha256": "c1249eb14f2fc2101ea294d189edc5b36e550fdb21c69f563919af7a95b83257"
+}
