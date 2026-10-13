@@ -258,7 +258,7 @@ test('Back restores the central scroll only after the list response returns',asy
     const response=await page.request.get('/api/entry');const entry=await response.json();
     await page.request.post('/api/sessions',{headers:{'x-agent-alfred-csrf':entry.csrf_token},data:{}});
   }
-  await page.reload();await expect(page.locator('#page .card').first()).toBeVisible();
+  await page.reload();await expect(page.locator('#page .inbox-rows article').first()).toBeVisible();
   await page.locator('#page').evaluate(element=>element.scrollTop=400);
   const top=await page.locator('#page').evaluate(element=>element.scrollTop);expect(top).toBeGreaterThan(100);
   await page.locator('nav a[href="/models"]').click();

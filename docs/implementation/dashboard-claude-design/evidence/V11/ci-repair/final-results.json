@@ -1,0 +1,93 @@
+{
+  "source_candidate": "3c14a17af1647824c5f36c32526ec6d49971dcde",
+  "gates": {
+    "01-ruff": {
+      "exit_code": 0,
+      "elapsed_seconds": 0.1,
+      "tested_head": "3c14a17af1647824c5f36c32526ec6d49971dcde",
+      "input_manifest_sha256": "13b3578c5238be4323ec5166f0a9812777f37724b8953466e839a7a17dfb9ec8",
+      "log": "gates/ci-repair-01-ruff.json"
+    },
+    "02-skills": {
+      "exit_code": 0,
+      "elapsed_seconds": 0.06,
+      "tested_head": "3c14a17af1647824c5f36c32526ec6d49971dcde",
+      "input_manifest_sha256": "13b3578c5238be4323ec5166f0a9812777f37724b8953466e839a7a17dfb9ec8",
+      "log": "gates/ci-repair-02-skills.json"
+    },
+    "03-env": {
+      "exit_code": 0,
+      "elapsed_seconds": 1.95,
+      "tested_head": "3c14a17af1647824c5f36c32526ec6d49971dcde",
+      "input_manifest_sha256": "13b3578c5238be4323ec5166f0a9812777f37724b8953466e839a7a17dfb9ec8",
+      "log": "gates/ci-repair-03-env.json"
+    },
+    "04-pytest": {
+      "exit_code": 0,
+      "elapsed_seconds": 2564.64,
+      "tested_head": "3c14a17af1647824c5f36c32526ec6d49971dcde",
+      "input_manifest_sha256": "13b3578c5238be4323ec5166f0a9812777f37724b8953466e839a7a17dfb9ec8",
+      "log": "gates/ci-repair-04-pytest.json"
+    },
+    "05-typecheck": {
+      "exit_code": 0,
+      "elapsed_seconds": 0.53,
+      "tested_head": "3c14a17af1647824c5f36c32526ec6d49971dcde",
+      "input_manifest_sha256": "13b3578c5238be4323ec5166f0a9812777f37724b8953466e839a7a17dfb9ec8",
+      "log": "gates/ci-repair-05-typecheck.json"
+    },
+    "06-browser": {
+      "exit_code": 0,
+      "elapsed_seconds": 737.53,
+      "tested_head": "3c14a17af1647824c5f36c32526ec6d49971dcde",
+      "input_manifest_sha256": "13b3578c5238be4323ec5166f0a9812777f37724b8953466e839a7a17dfb9ec8",
+      "log": "gates/ci-repair-06-browser.json"
+    },
+    "07-diff": {
+      "exit_code": 0,
+      "elapsed_seconds": 0.26,
+      "tested_head": "3c14a17af1647824c5f36c32526ec6d49971dcde",
+      "input_manifest_sha256": "13b3578c5238be4323ec5166f0a9812777f37724b8953466e839a7a17dfb9ec8",
+      "log": "gates/ci-repair-07-diff.json",
+      "final_fixed_viewport_archive_check": {
+        "elapsed_seconds": 0.68,
+        "log": "gates/ci-repair-07-diff-recapture.json",
+        "exit_code": 0
+      }
+    },
+    "08-install": {
+      "exit_code": 0,
+      "elapsed_seconds": 25.61,
+      "tested_head": "3c14a17af1647824c5f36c32526ec6d49971dcde",
+      "input_manifest_sha256": "13b3578c5238be4323ec5166f0a9812777f37724b8953466e839a7a17dfb9ec8",
+      "log": "gates/ci-repair-08-install.json"
+    }
+  },
+  "passed": 8,
+  "failed": 0,
+  "source_sha256": "3315d2ee6e513cafc674a5df03f4e9a1452d2be208228a2ebfd3da615e6829fa",
+  "after_gate_changes": "Only evidence, documentation and gate result archival; production/test inputs unchanged.",
+  "ci_unrelated_failure": {
+    "run": 38265016136,
+    "head": "b9c2f3fe5cc937eabff7873761a899d73def76b2",
+    "browser_passed": 544,
+    "browser_failed": 1,
+    "original_receipt_case_passed": true,
+    "failure": "mainbar-integration.spec.js:55",
+    "isolated_passed": 1,
+    "isolated_seconds": 2.58,
+    "full_replay_passed": 545,
+    "full_replay_failed": 0,
+    "full_replay_seconds": 705.9,
+    "source_inputs_unchanged": true
+  },
+  "fixed_viewport_capture": {
+    "script": "scripts/recapture.mjs",
+    "reference_script": "scripts/reference-recapture.mjs",
+    "previous_record": "capture-collection-first-failure/record.json",
+    "source_changed": false,
+    "formal_tests_changed": false,
+    "snapshots": 12,
+    "all_four_runs_png_pairs_equal": true
+  }
+}

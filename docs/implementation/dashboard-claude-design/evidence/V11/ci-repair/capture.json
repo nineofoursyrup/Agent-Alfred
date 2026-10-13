@@ -1,0 +1,3098 @@
+{
+  "clock": "2026-10-12T01:15:00Z",
+  "server": "tests/browser/server.py",
+  "method": "Separate headless context per fixed viewport; no viewport resizing",
+  "responses": [
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions/messages"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions/messages"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/locate/v11-run-2-1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/run-evidence"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions/messages/locate"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions/runs"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions/messages"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions/messages"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/locate/v11-run-2-1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/run-evidence"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions/messages/locate"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions/runs"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions/messages"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions/messages"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/locate/v11-run-2-1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/run-evidence"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions/messages/locate"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions/runs"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions/messages"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions/messages"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs/locate/v11-run-2-1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/run-evidence"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions/messages/locate"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sessions/runs"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs"
+    },
+    {
+      "method": "GET",
+      "path": "/api/entry"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mainbar"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runs"
+    }
+  ],
+  "errors": [],
+  "request_failures": [
+    {
+      "url": "http://127.0.0.1:18110/api/events",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:18110/api/events",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:18110/api/events",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:18110/api/events",
+      "error": "net::ERR_ABORTED"
+    }
+  ],
+  "snapshots": [
+    {
+      "name": "inbox",
+      "width": 1440,
+      "height": 900,
+      "selected_session": "v11-session-1",
+      "overflow": false,
+      "inline_styles": 0,
+      "page_width": 823,
+      "accessibility": "- main:\n  - paragraph: INBOX\n  - heading \"收件箱\" [level=1]\n  - paragraph: 按 Session 查看会话记录及运行入口，继续会话由你明确选择。\n  - button \"打开主对话\" [expanded]\n  - region \"运行与连接摘要\":\n    - paragraph: 已同步\n  - region \"会话列表\":\n    - heading \"最近会话\" [level=2]\n    - button \"新建会话并打开主对话\"\n    - article:\n      - link \"离线测试：确认显式继续会话\":\n        - /url: /inbox?session_id=v11-session-6&view=messages\n      - paragraph: v11-session-6\n      - paragraph: 2026-10-12T01:00:00Z\n    - article:\n      - link \"历史会话：相同内容有独立身份\":\n        - /url: /inbox?session_id=v11-session-5&view=messages\n      - paragraph: v11-session-5\n      - paragraph: 2026-10-12T01:00:00Z\n    - article:\n      - link \"长标题：保留完整中文与标识 Session / source?anchor#，在窄屏阅读和来源返回后仍可定位\":\n        - /url: /inbox?session_id=v11-session-4&view=messages\n      - paragraph: v11-session-4\n      - paragraph: 2026-10-12T01:00:00Z\n    - article:\n      - link \"检查历史运行的边界状态\":\n        - /url: /inbox?session_id=v11-session-3&view=messages\n      - paragraph: v11-session-3\n      - paragraph: 2026-10-12T01:00:00Z\n    - article:\n      - link \"整理本地文档并保留来源\":\n        - /url: /inbox?session_id=v11-session-2&view=messages\n      - paragraph: v11-session-2\n      - paragraph: 2026-10-12T01:00:00Z\n    - article:\n      - link \"核对今日任务与记录状态\":\n        - /url: /inbox?session_id=v11-session-1&view=messages\n      - paragraph: v11-session-1\n      - paragraph: 2026-10-12T01:00:00Z\n    - status: 读取于 9:15:00 AM\n    - button \"刷新会话\"",
+      "rows": [
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "总览",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": "page",
+          "text": "收件箱",
+          "font": "13px",
+          "color": "rgb(236, 236, 234)",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "运行",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "记忆",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "模型",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "连接",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "行为",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "工具",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "用量账本",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "数据库",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-6",
+          "selected": "false",
+          "current": null,
+          "text": "离线测试：确认显式继续会话v11-session-62026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-5",
+          "selected": "false",
+          "current": null,
+          "text": "历史会话：相同内容有独立身份v11-session-52026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-4",
+          "selected": "false",
+          "current": null,
+          "text": "长标题：保留完整中文与标识 Session / source?anchor#，在窄屏阅读和来源返回后仍可定位v11-session-42026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-3",
+          "selected": "false",
+          "current": null,
+          "text": "检查历史运行的边界状态v11-session-32026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-2",
+          "selected": "false",
+          "current": null,
+          "text": "整理本地文档并保留来源v11-session-22026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-1",
+          "selected": "true",
+          "current": null,
+          "text": "核对今日任务与记录状态v11-session-12026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        }
+      ]
+    },
+    {
+      "name": "inbox-preview",
+      "width": 1440,
+      "height": 900,
+      "selected_session": "v11-session-1",
+      "overflow": false,
+      "inline_styles": 0,
+      "page_width": 823,
+      "accessibility": "- main:\n  - paragraph: INBOX\n  - heading \"收件箱\" [level=1]\n  - paragraph: 按 Session 查看会话记录及运行入口，继续会话由你明确选择。\n  - button \"打开主对话\" [expanded]\n  - region \"运行与连接摘要\":\n    - paragraph: 已同步\n  - region \"会话只读预览\":\n    - heading \"整理本地文档并保留来源\" [level=2]\n    - button \"新建会话并打开主对话\"\n    - status: 已重新核验来源并恢复原入口。\n    - link \"返回会话列表\":\n      - /url: /inbox\n    - paragraph: 只读预览；继续此会话将切换主对话。\n    - button \"继续此会话\"\n    - navigation \"会话预览分区\":\n      - link \"消息\":\n        - /url: /inbox?session_id=v11-session-2&view=messages\n      - link \"运行\":\n        - /url: /inbox?session_id=v11-session-2&view=runs\n    - article:\n      - text: 整理本地文档并保留来源\n      - button \"展开全文\"\n      - paragraph: user · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-1?filter=chat\n    - article:\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - paragraph: assistant · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-1?filter=chat\n    - article:\n      - text: 整理本地文档并保留来源 · 继续核对 2\n      - button \"展开全文\"\n      - paragraph: user · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-2?filter=chat\n    - article:\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - paragraph: assistant · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-2?filter=chat\n    - article:\n      - text: 整理本地文档并保留来源 · 继续核对 3\n      - button \"展开全文\"\n      - paragraph: user · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-3?filter=chat\n    - article:\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - paragraph: assistant · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-3?filter=chat\n    - status: 读取于 9:15:00 AM\n    - button \"刷新会话消息\"",
+      "rows": [
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "总览",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": "page",
+          "text": "收件箱",
+          "font": "13px",
+          "color": "rgb(236, 236, 234)",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "运行",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "记忆",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "模型",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "连接",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "行为",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "工具",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "用量账本",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "数据库",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": "page",
+          "text": "消息",
+          "font": "11.5px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "运行",
+          "font": "11.5px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6N30=",
+          "selected": "true",
+          "current": null,
+          "text": "整理本地文档并保留来源展开全文user · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6OH0=",
+          "selected": null,
+          "current": null,
+          "text": "离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文assistant · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6OX0=",
+          "selected": null,
+          "current": null,
+          "text": "整理本地文档并保留来源 · 继续核对 2展开全文user · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6MTB9",
+          "selected": null,
+          "current": null,
+          "text": "离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文assistant · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6MTF9",
+          "selected": null,
+          "current": null,
+          "text": "整理本地文档并保留来源 · 继续核对 3展开全文user · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6MTJ9",
+          "selected": null,
+          "current": null,
+          "text": "离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文assistant · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        }
+      ]
+    },
+    {
+      "name": "inbox-runs",
+      "width": 1440,
+      "height": 900,
+      "selected_session": "v11-session-1",
+      "overflow": false,
+      "inline_styles": 0,
+      "page_width": 823,
+      "accessibility": "- main:\n  - paragraph: INBOX\n  - heading \"收件箱\" [level=1]\n  - paragraph: 按 Session 查看会话记录及运行入口，继续会话由你明确选择。\n  - button \"打开主对话\" [expanded]\n  - region \"运行与连接摘要\":\n    - paragraph: 已同步\n  - region \"会话只读预览\":\n    - heading \"会话 v11-session-2\" [level=2]\n    - button \"新建会话并打开主对话\"\n    - link \"返回会话列表\":\n      - /url: /inbox\n    - paragraph: 只读预览；继续此会话将切换主对话。\n    - button \"继续此会话\"\n    - navigation \"会话预览分区\":\n      - link \"消息\":\n        - /url: /inbox?session_id=v11-session-2&view=messages\n      - link \"运行\":\n        - /url: /inbox?session_id=v11-session-2&view=runs\n    - article:\n      - term: 输入预览\n      - definition: 整理本地文档并保留来源 · 继续核对 3\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - term: Run ID\n      - definition: v11-run-2-3\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - term: 来源\n      - definition: cli\n      - term: 入口\n      - definition: 未知\n      - term: 会话\n      - definition: v11-session-2\n      - term: 接受时间\n      - definition: 2026-10-12T01:00:00Z\n      - term: 开始时间\n      - definition: 2026-10-12T01:00:01Z\n      - term: 结束时间\n      - definition: 2026-10-12T01:00:02Z\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 受控失败\n      - term: 记录\n      - definition: 记录状态未知\n      - term: 记录来源\n      - definition: unknown\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-3?filter=chat\n    - article:\n      - term: 输入预览\n      - definition: 整理本地文档并保留来源 · 继续核对 2\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - term: Run ID\n      - definition: v11-run-2-2\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - term: 来源\n      - definition: cli\n      - term: 入口\n      - definition: 未知\n      - term: 会话\n      - definition: v11-session-2\n      - term: 接受时间\n      - definition: 2026-10-12T01:00:00Z\n      - term: 开始时间\n      - definition: 2026-10-12T01:00:01Z\n      - term: 结束时间\n      - definition: 2026-10-12T01:00:02Z\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 受控停止\n      - term: 记录\n      - definition: 记录状态未知\n      - term: 记录来源\n      - definition: unknown\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-2?filter=chat\n    - article:\n      - term: 输入预览\n      - definition: 整理本地文档并保留来源\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - term: Run ID\n      - definition: v11-run-2-1\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - term: 来源\n      - definition: cli\n      - term: 入口\n      - definition: 未知\n      - term: 会话\n      - definition: v11-session-2\n      - term: 接受时间\n      - definition: 2026-10-12T01:00:00Z\n      - term: 开始时间\n      - definition: 2026-10-12T01:00:01Z\n      - term: 结束时间\n      - definition: 2026-10-12T01:00:02Z\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 记录状态未知\n      - term: 记录来源\n      - definition: unknown\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-1?filter=chat\n    - status: 读取于 9:15:00 AM\n    - button \"刷新会话运行\"",
+      "rows": [
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "总览",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": "page",
+          "text": "收件箱",
+          "font": "13px",
+          "color": "rgb(236, 236, 234)",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "运行",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "记忆",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "模型",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "连接",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "行为",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "工具",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "用量账本",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "数据库",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "消息",
+          "font": "11.5px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": "page",
+          "text": "运行",
+          "font": "11.5px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-run-2-3",
+          "selected": null,
+          "current": null,
+          "text": "输入预览整理本地文档并保留来源 · 继续核对 3离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文Run IDv11-run-2-3用途普通聊天（chat）所属分组会话运行来源cli入口未知会话v11-session-2接受时间2026-10-12T01:00:00Z开始时间2026-10-12T01:00:01Z结束时间2026-10-12T01:00:02Z准入已获准阶段已结束结果受控失败记录记录状态未知记录来源unknown查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-run-2-2",
+          "selected": null,
+          "current": null,
+          "text": "输入预览整理本地文档并保留来源 · 继续核对 2离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文Run IDv11-run-2-2用途普通聊天（chat）所属分组会话运行来源cli入口未知会话v11-session-2接受时间2026-10-12T01:00:00Z开始时间2026-10-12T01:00:01Z结束时间2026-10-12T01:00:02Z准入已获准阶段已结束结果受控停止记录记录状态未知记录来源unknown查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-run-2-1",
+          "selected": null,
+          "current": null,
+          "text": "输入预览整理本地文档并保留来源离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文Run IDv11-run-2-1用途普通聊天（chat）所属分组会话运行来源cli入口未知会话v11-session-2接受时间2026-10-12T01:00:00Z开始时间2026-10-12T01:00:01Z结束时间2026-10-12T01:00:02Z准入已获准阶段已结束结果回复完成记录记录状态未知记录来源unknown查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        }
+      ]
+    },
+    {
+      "name": "inbox",
+      "width": 1280,
+      "height": 800,
+      "selected_session": "v11-session-1",
+      "overflow": false,
+      "inline_styles": 0,
+      "page_width": 663,
+      "accessibility": "- main:\n  - paragraph: INBOX\n  - heading \"收件箱\" [level=1]\n  - paragraph: 按 Session 查看会话记录及运行入口，继续会话由你明确选择。\n  - button \"打开主对话\" [expanded]\n  - region \"运行与连接摘要\":\n    - paragraph: 已同步\n  - region \"会话列表\":\n    - heading \"最近会话\" [level=2]\n    - button \"新建会话并打开主对话\"\n    - article:\n      - link \"离线测试：确认显式继续会话\":\n        - /url: /inbox?session_id=v11-session-6&view=messages\n      - paragraph: v11-session-6\n      - paragraph: 2026-10-12T01:00:00Z\n    - article:\n      - link \"历史会话：相同内容有独立身份\":\n        - /url: /inbox?session_id=v11-session-5&view=messages\n      - paragraph: v11-session-5\n      - paragraph: 2026-10-12T01:00:00Z\n    - article:\n      - link \"长标题：保留完整中文与标识 Session / source?anchor#，在窄屏阅读和来源返回后仍可定位\":\n        - /url: /inbox?session_id=v11-session-4&view=messages\n      - paragraph: v11-session-4\n      - paragraph: 2026-10-12T01:00:00Z\n    - article:\n      - link \"检查历史运行的边界状态\":\n        - /url: /inbox?session_id=v11-session-3&view=messages\n      - paragraph: v11-session-3\n      - paragraph: 2026-10-12T01:00:00Z\n    - article:\n      - link \"整理本地文档并保留来源\":\n        - /url: /inbox?session_id=v11-session-2&view=messages\n      - paragraph: v11-session-2\n      - paragraph: 2026-10-12T01:00:00Z\n    - article:\n      - link \"核对今日任务与记录状态\":\n        - /url: /inbox?session_id=v11-session-1&view=messages\n      - paragraph: v11-session-1\n      - paragraph: 2026-10-12T01:00:00Z\n    - status: 读取于 9:15:00 AM\n    - button \"刷新会话\"",
+      "rows": [
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "总览",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": "page",
+          "text": "收件箱",
+          "font": "13px",
+          "color": "rgb(236, 236, 234)",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "运行",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "记忆",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "模型",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "连接",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "行为",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "工具",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "用量账本",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "数据库",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-6",
+          "selected": "false",
+          "current": null,
+          "text": "离线测试：确认显式继续会话v11-session-62026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-5",
+          "selected": "false",
+          "current": null,
+          "text": "历史会话：相同内容有独立身份v11-session-52026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-4",
+          "selected": "false",
+          "current": null,
+          "text": "长标题：保留完整中文与标识 Session / source?anchor#，在窄屏阅读和来源返回后仍可定位v11-session-42026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-3",
+          "selected": "false",
+          "current": null,
+          "text": "检查历史运行的边界状态v11-session-32026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-2",
+          "selected": "false",
+          "current": null,
+          "text": "整理本地文档并保留来源v11-session-22026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-1",
+          "selected": "true",
+          "current": null,
+          "text": "核对今日任务与记录状态v11-session-12026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        }
+      ]
+    },
+    {
+      "name": "inbox-preview",
+      "width": 1280,
+      "height": 800,
+      "selected_session": "v11-session-1",
+      "overflow": false,
+      "inline_styles": 0,
+      "page_width": 663,
+      "accessibility": "- main:\n  - paragraph: INBOX\n  - heading \"收件箱\" [level=1]\n  - paragraph: 按 Session 查看会话记录及运行入口，继续会话由你明确选择。\n  - button \"打开主对话\" [expanded]\n  - region \"运行与连接摘要\":\n    - paragraph: 已同步\n  - region \"会话只读预览\":\n    - heading \"整理本地文档并保留来源\" [level=2]\n    - button \"新建会话并打开主对话\"\n    - status: 已重新核验来源并恢复原入口。\n    - link \"返回会话列表\":\n      - /url: /inbox\n    - paragraph: 只读预览；继续此会话将切换主对话。\n    - button \"继续此会话\"\n    - navigation \"会话预览分区\":\n      - link \"消息\":\n        - /url: /inbox?session_id=v11-session-2&view=messages\n      - link \"运行\":\n        - /url: /inbox?session_id=v11-session-2&view=runs\n    - article:\n      - text: 整理本地文档并保留来源\n      - button \"展开全文\"\n      - paragraph: user · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-1?filter=chat\n    - article:\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - paragraph: assistant · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-1?filter=chat\n    - article:\n      - text: 整理本地文档并保留来源 · 继续核对 2\n      - button \"展开全文\"\n      - paragraph: user · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-2?filter=chat\n    - article:\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - paragraph: assistant · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-2?filter=chat\n    - article:\n      - text: 整理本地文档并保留来源 · 继续核对 3\n      - button \"展开全文\"\n      - paragraph: user · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-3?filter=chat\n    - article:\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - paragraph: assistant · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-3?filter=chat\n    - status: 读取于 9:15:00 AM\n    - button \"刷新会话消息\"",
+      "rows": [
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "总览",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": "page",
+          "text": "收件箱",
+          "font": "13px",
+          "color": "rgb(236, 236, 234)",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "运行",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "记忆",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "模型",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "连接",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "行为",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "工具",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "用量账本",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "数据库",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": "page",
+          "text": "消息",
+          "font": "11.5px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "运行",
+          "font": "11.5px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6N30=",
+          "selected": "true",
+          "current": null,
+          "text": "整理本地文档并保留来源展开全文user · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6OH0=",
+          "selected": null,
+          "current": null,
+          "text": "离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文assistant · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6OX0=",
+          "selected": null,
+          "current": null,
+          "text": "整理本地文档并保留来源 · 继续核对 2展开全文user · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6MTB9",
+          "selected": null,
+          "current": null,
+          "text": "离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文assistant · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6MTF9",
+          "selected": null,
+          "current": null,
+          "text": "整理本地文档并保留来源 · 继续核对 3展开全文user · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6MTJ9",
+          "selected": null,
+          "current": null,
+          "text": "离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文assistant · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        }
+      ]
+    },
+    {
+      "name": "inbox-runs",
+      "width": 1280,
+      "height": 800,
+      "selected_session": "v11-session-1",
+      "overflow": false,
+      "inline_styles": 0,
+      "page_width": 663,
+      "accessibility": "- main:\n  - paragraph: INBOX\n  - heading \"收件箱\" [level=1]\n  - paragraph: 按 Session 查看会话记录及运行入口，继续会话由你明确选择。\n  - button \"打开主对话\" [expanded]\n  - region \"运行与连接摘要\":\n    - paragraph: 已同步\n  - region \"会话只读预览\":\n    - heading \"会话 v11-session-2\" [level=2]\n    - button \"新建会话并打开主对话\"\n    - link \"返回会话列表\":\n      - /url: /inbox\n    - paragraph: 只读预览；继续此会话将切换主对话。\n    - button \"继续此会话\"\n    - navigation \"会话预览分区\":\n      - link \"消息\":\n        - /url: /inbox?session_id=v11-session-2&view=messages\n      - link \"运行\":\n        - /url: /inbox?session_id=v11-session-2&view=runs\n    - article:\n      - term: 输入预览\n      - definition: 整理本地文档并保留来源 · 继续核对 3\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - term: Run ID\n      - definition: v11-run-2-3\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - term: 来源\n      - definition: cli\n      - term: 入口\n      - definition: 未知\n      - term: 会话\n      - definition: v11-session-2\n      - term: 接受时间\n      - definition: 2026-10-12T01:00:00Z\n      - term: 开始时间\n      - definition: 2026-10-12T01:00:01Z\n      - term: 结束时间\n      - definition: 2026-10-12T01:00:02Z\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 受控失败\n      - term: 记录\n      - definition: 记录状态未知\n      - term: 记录来源\n      - definition: unknown\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-3?filter=chat\n    - article:\n      - term: 输入预览\n      - definition: 整理本地文档并保留来源 · 继续核对 2\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - term: Run ID\n      - definition: v11-run-2-2\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - term: 来源\n      - definition: cli\n      - term: 入口\n      - definition: 未知\n      - term: 会话\n      - definition: v11-session-2\n      - term: 接受时间\n      - definition: 2026-10-12T01:00:00Z\n      - term: 开始时间\n      - definition: 2026-10-12T01:00:01Z\n      - term: 结束时间\n      - definition: 2026-10-12T01:00:02Z\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 受控停止\n      - term: 记录\n      - definition: 记录状态未知\n      - term: 记录来源\n      - definition: unknown\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-2?filter=chat\n    - article:\n      - term: 输入预览\n      - definition: 整理本地文档并保留来源\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - term: Run ID\n      - definition: v11-run-2-1\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - term: 来源\n      - definition: cli\n      - term: 入口\n      - definition: 未知\n      - term: 会话\n      - definition: v11-session-2\n      - term: 接受时间\n      - definition: 2026-10-12T01:00:00Z\n      - term: 开始时间\n      - definition: 2026-10-12T01:00:01Z\n      - term: 结束时间\n      - definition: 2026-10-12T01:00:02Z\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 记录状态未知\n      - term: 记录来源\n      - definition: unknown\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-1?filter=chat\n    - status: 读取于 9:15:00 AM\n    - button \"刷新会话运行\"",
+      "rows": [
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "总览",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": "page",
+          "text": "收件箱",
+          "font": "13px",
+          "color": "rgb(236, 236, 234)",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "运行",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "记忆",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "模型",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "连接",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "行为",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "工具",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "用量账本",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "数据库",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "消息",
+          "font": "11.5px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": "page",
+          "text": "运行",
+          "font": "11.5px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-run-2-3",
+          "selected": null,
+          "current": null,
+          "text": "输入预览整理本地文档并保留来源 · 继续核对 3离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文Run IDv11-run-2-3用途普通聊天（chat）所属分组会话运行来源cli入口未知会话v11-session-2接受时间2026-10-12T01:00:00Z开始时间2026-10-12T01:00:01Z结束时间2026-10-12T01:00:02Z准入已获准阶段已结束结果受控失败记录记录状态未知记录来源unknown查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-run-2-2",
+          "selected": null,
+          "current": null,
+          "text": "输入预览整理本地文档并保留来源 · 继续核对 2离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文Run IDv11-run-2-2用途普通聊天（chat）所属分组会话运行来源cli入口未知会话v11-session-2接受时间2026-10-12T01:00:00Z开始时间2026-10-12T01:00:01Z结束时间2026-10-12T01:00:02Z准入已获准阶段已结束结果受控停止记录记录状态未知记录来源unknown查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-run-2-1",
+          "selected": null,
+          "current": null,
+          "text": "输入预览整理本地文档并保留来源离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文Run IDv11-run-2-1用途普通聊天（chat）所属分组会话运行来源cli入口未知会话v11-session-2接受时间2026-10-12T01:00:00Z开始时间2026-10-12T01:00:01Z结束时间2026-10-12T01:00:02Z准入已获准阶段已结束结果回复完成记录记录状态未知记录来源unknown查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        }
+      ]
+    },
+    {
+      "name": "inbox",
+      "width": 390,
+      "height": 844,
+      "selected_session": "v11-session-1",
+      "overflow": false,
+      "inline_styles": 0,
+      "page_width": 349,
+      "accessibility": "- main:\n  - paragraph: INBOX\n  - heading \"收件箱\" [level=1]\n  - paragraph: 按 Session 查看会话记录及运行入口，继续会话由你明确选择。\n  - region \"会话列表\":\n    - heading \"最近会话\" [level=2]\n    - button \"新建会话并打开主对话\"\n    - article:\n      - link \"离线测试：确认显式继续会话\":\n        - /url: /inbox?session_id=v11-session-6&view=messages\n      - paragraph: v11-session-6\n      - paragraph: 2026-10-12T01:00:00Z\n    - article:\n      - link \"历史会话：相同内容有独立身份\":\n        - /url: /inbox?session_id=v11-session-5&view=messages\n      - paragraph: v11-session-5\n      - paragraph: 2026-10-12T01:00:00Z\n    - article:\n      - link \"长标题：保留完整中文与标识 Session / source?anchor#，在窄屏阅读和来源返回后仍可定位\":\n        - /url: /inbox?session_id=v11-session-4&view=messages\n      - paragraph: v11-session-4\n      - paragraph: 2026-10-12T01:00:00Z\n    - article:\n      - link \"检查历史运行的边界状态\":\n        - /url: /inbox?session_id=v11-session-3&view=messages\n      - paragraph: v11-session-3\n      - paragraph: 2026-10-12T01:00:00Z\n    - article:\n      - link \"整理本地文档并保留来源\":\n        - /url: /inbox?session_id=v11-session-2&view=messages\n      - paragraph: v11-session-2\n      - paragraph: 2026-10-12T01:00:00Z\n    - article:\n      - link \"核对今日任务与记录状态\":\n        - /url: /inbox?session_id=v11-session-1&view=messages\n      - paragraph: v11-session-1\n      - paragraph: 2026-10-12T01:00:00Z\n    - status: 读取于 9:15:00 AM\n    - button \"刷新会话\"",
+      "rows": [
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "总览",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": "page",
+          "text": "收件箱",
+          "font": "13px",
+          "color": "rgb(236, 236, 234)",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "运行",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "记忆",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "模型",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "连接",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "行为",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "工具",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "用量账本",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "数据库",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-6",
+          "selected": "false",
+          "current": null,
+          "text": "离线测试：确认显式继续会话v11-session-62026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-5",
+          "selected": "false",
+          "current": null,
+          "text": "历史会话：相同内容有独立身份v11-session-52026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-4",
+          "selected": "false",
+          "current": null,
+          "text": "长标题：保留完整中文与标识 Session / source?anchor#，在窄屏阅读和来源返回后仍可定位v11-session-42026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-3",
+          "selected": "false",
+          "current": null,
+          "text": "检查历史运行的边界状态v11-session-32026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-2",
+          "selected": "false",
+          "current": null,
+          "text": "整理本地文档并保留来源v11-session-22026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-1",
+          "selected": "true",
+          "current": null,
+          "text": "核对今日任务与记录状态v11-session-12026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        }
+      ]
+    },
+    {
+      "name": "inbox-preview",
+      "width": 390,
+      "height": 844,
+      "selected_session": "v11-session-1",
+      "overflow": false,
+      "inline_styles": 0,
+      "page_width": 349,
+      "accessibility": "- main:\n  - paragraph: INBOX\n  - heading \"收件箱\" [level=1]\n  - paragraph: 按 Session 查看会话记录及运行入口，继续会话由你明确选择。\n  - region \"会话只读预览\":\n    - heading \"整理本地文档并保留来源\" [level=2]\n    - button \"新建会话并打开主对话\"\n    - status: 已重新核验来源并恢复原入口。\n    - link \"返回会话列表\":\n      - /url: /inbox\n    - paragraph: 只读预览；继续此会话将切换主对话。\n    - button \"继续此会话\"\n    - navigation \"会话预览分区\":\n      - link \"消息\":\n        - /url: /inbox?session_id=v11-session-2&view=messages\n      - link \"运行\":\n        - /url: /inbox?session_id=v11-session-2&view=runs\n    - article:\n      - text: 整理本地文档并保留来源\n      - button \"展开全文\"\n      - paragraph: user · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-1?filter=chat\n    - article:\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - paragraph: assistant · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-1?filter=chat\n    - article:\n      - text: 整理本地文档并保留来源 · 继续核对 2\n      - button \"展开全文\"\n      - paragraph: user · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-2?filter=chat\n    - article:\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - paragraph: assistant · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-2?filter=chat\n    - article:\n      - text: 整理本地文档并保留来源 · 继续核对 3\n      - button \"展开全文\"\n      - paragraph: user · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-3?filter=chat\n    - article:\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - paragraph: assistant · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-3?filter=chat\n    - status: 读取于 9:15:00 AM\n    - button \"刷新会话消息\"",
+      "rows": [
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "总览",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": "page",
+          "text": "收件箱",
+          "font": "13px",
+          "color": "rgb(236, 236, 234)",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "运行",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "记忆",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "模型",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "连接",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "行为",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "工具",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "用量账本",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "数据库",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": "page",
+          "text": "消息",
+          "font": "11.5px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "运行",
+          "font": "11.5px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6N30=",
+          "selected": "true",
+          "current": null,
+          "text": "整理本地文档并保留来源展开全文user · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6OH0=",
+          "selected": null,
+          "current": null,
+          "text": "离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文assistant · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6OX0=",
+          "selected": null,
+          "current": null,
+          "text": "整理本地文档并保留来源 · 继续核对 2展开全文user · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6MTB9",
+          "selected": null,
+          "current": null,
+          "text": "离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文assistant · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6MTF9",
+          "selected": null,
+          "current": null,
+          "text": "整理本地文档并保留来源 · 继续核对 3展开全文user · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6MTJ9",
+          "selected": null,
+          "current": null,
+          "text": "离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文assistant · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        }
+      ]
+    },
+    {
+      "name": "inbox-runs",
+      "width": 390,
+      "height": 844,
+      "selected_session": "v11-session-1",
+      "overflow": false,
+      "inline_styles": 0,
+      "page_width": 349,
+      "accessibility": "- main:\n  - paragraph: INBOX\n  - heading \"收件箱\" [level=1]\n  - paragraph: 按 Session 查看会话记录及运行入口，继续会话由你明确选择。\n  - region \"会话只读预览\":\n    - heading \"会话 v11-session-2\" [level=2]\n    - button \"新建会话并打开主对话\"\n    - link \"返回会话列表\":\n      - /url: /inbox\n    - paragraph: 只读预览；继续此会话将切换主对话。\n    - button \"继续此会话\"\n    - navigation \"会话预览分区\":\n      - link \"消息\":\n        - /url: /inbox?session_id=v11-session-2&view=messages\n      - link \"运行\":\n        - /url: /inbox?session_id=v11-session-2&view=runs\n    - article:\n      - term: 输入预览\n      - definition: 整理本地文档并保留来源 · 继续核对 3\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - term: Run ID\n      - definition: v11-run-2-3\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - term: 来源\n      - definition: cli\n      - term: 入口\n      - definition: 未知\n      - term: 会话\n      - definition: v11-session-2\n      - term: 接受时间\n      - definition: 2026-10-12T01:00:00Z\n      - term: 开始时间\n      - definition: 2026-10-12T01:00:01Z\n      - term: 结束时间\n      - definition: 2026-10-12T01:00:02Z\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 受控失败\n      - term: 记录\n      - definition: 记录状态未知\n      - term: 记录来源\n      - definition: unknown\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-3?filter=chat\n    - article:\n      - term: 输入预览\n      - definition: 整理本地文档并保留来源 · 继续核对 2\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - term: Run ID\n      - definition: v11-run-2-2\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - term: 来源\n      - definition: cli\n      - term: 入口\n      - definition: 未知\n      - term: 会话\n      - definition: v11-session-2\n      - term: 接受时间\n      - definition: 2026-10-12T01:00:00Z\n      - term: 开始时间\n      - definition: 2026-10-12T01:00:01Z\n      - term: 结束时间\n      - definition: 2026-10-12T01:00:02Z\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 受控停止\n      - term: 记录\n      - definition: 记录状态未知\n      - term: 记录来源\n      - definition: unknown\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-2?filter=chat\n    - article:\n      - term: 输入预览\n      - definition: 整理本地文档并保留来源\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - term: Run ID\n      - definition: v11-run-2-1\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - term: 来源\n      - definition: cli\n      - term: 入口\n      - definition: 未知\n      - term: 会话\n      - definition: v11-session-2\n      - term: 接受时间\n      - definition: 2026-10-12T01:00:00Z\n      - term: 开始时间\n      - definition: 2026-10-12T01:00:01Z\n      - term: 结束时间\n      - definition: 2026-10-12T01:00:02Z\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 记录状态未知\n      - term: 记录来源\n      - definition: unknown\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-1?filter=chat\n    - status: 读取于 9:15:00 AM\n    - button \"刷新会话运行\"",
+      "rows": [
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "总览",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": "page",
+          "text": "收件箱",
+          "font": "13px",
+          "color": "rgb(236, 236, 234)",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "运行",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "记忆",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "模型",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "连接",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "行为",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "工具",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "用量账本",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "数据库",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "消息",
+          "font": "11.5px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": "page",
+          "text": "运行",
+          "font": "11.5px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-run-2-3",
+          "selected": null,
+          "current": null,
+          "text": "输入预览整理本地文档并保留来源 · 继续核对 3离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文Run IDv11-run-2-3用途普通聊天（chat）所属分组会话运行来源cli入口未知会话v11-session-2接受时间2026-10-12T01:00:00Z开始时间2026-10-12T01:00:01Z结束时间2026-10-12T01:00:02Z准入已获准阶段已结束结果受控失败记录记录状态未知记录来源unknown查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-run-2-2",
+          "selected": null,
+          "current": null,
+          "text": "输入预览整理本地文档并保留来源 · 继续核对 2离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文Run IDv11-run-2-2用途普通聊天（chat）所属分组会话运行来源cli入口未知会话v11-session-2接受时间2026-10-12T01:00:00Z开始时间2026-10-12T01:00:01Z结束时间2026-10-12T01:00:02Z准入已获准阶段已结束结果受控停止记录记录状态未知记录来源unknown查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-run-2-1",
+          "selected": null,
+          "current": null,
+          "text": "输入预览整理本地文档并保留来源离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文Run IDv11-run-2-1用途普通聊天（chat）所属分组会话运行来源cli入口未知会话v11-session-2接受时间2026-10-12T01:00:00Z开始时间2026-10-12T01:00:01Z结束时间2026-10-12T01:00:02Z准入已获准阶段已结束结果回复完成记录记录状态未知记录来源unknown查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        }
+      ]
+    },
+    {
+      "name": "inbox",
+      "width": 320,
+      "height": 800,
+      "selected_session": "v11-session-1",
+      "overflow": false,
+      "inline_styles": 0,
+      "page_width": 279,
+      "accessibility": "- main:\n  - paragraph: INBOX\n  - heading \"收件箱\" [level=1]\n  - paragraph: 按 Session 查看会话记录及运行入口，继续会话由你明确选择。\n  - region \"会话列表\":\n    - heading \"最近会话\" [level=2]\n    - button \"新建会话并打开主对话\"\n    - article:\n      - link \"离线测试：确认显式继续会话\":\n        - /url: /inbox?session_id=v11-session-6&view=messages\n      - paragraph: v11-session-6\n      - paragraph: 2026-10-12T01:00:00Z\n    - article:\n      - link \"历史会话：相同内容有独立身份\":\n        - /url: /inbox?session_id=v11-session-5&view=messages\n      - paragraph: v11-session-5\n      - paragraph: 2026-10-12T01:00:00Z\n    - article:\n      - link \"长标题：保留完整中文与标识 Session / source?anchor#，在窄屏阅读和来源返回后仍可定位\":\n        - /url: /inbox?session_id=v11-session-4&view=messages\n      - paragraph: v11-session-4\n      - paragraph: 2026-10-12T01:00:00Z\n    - article:\n      - link \"检查历史运行的边界状态\":\n        - /url: /inbox?session_id=v11-session-3&view=messages\n      - paragraph: v11-session-3\n      - paragraph: 2026-10-12T01:00:00Z\n    - article:\n      - link \"整理本地文档并保留来源\":\n        - /url: /inbox?session_id=v11-session-2&view=messages\n      - paragraph: v11-session-2\n      - paragraph: 2026-10-12T01:00:00Z\n    - article:\n      - link \"核对今日任务与记录状态\":\n        - /url: /inbox?session_id=v11-session-1&view=messages\n      - paragraph: v11-session-1\n      - paragraph: 2026-10-12T01:00:00Z\n    - status: 读取于 9:15:00 AM\n    - button \"刷新会话\"",
+      "rows": [
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "总览",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": "page",
+          "text": "收件箱",
+          "font": "13px",
+          "color": "rgb(236, 236, 234)",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "运行",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "记忆",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "模型",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "连接",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "行为",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "工具",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "用量账本",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "数据库",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-6",
+          "selected": "false",
+          "current": null,
+          "text": "离线测试：确认显式继续会话v11-session-62026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-5",
+          "selected": "false",
+          "current": null,
+          "text": "历史会话：相同内容有独立身份v11-session-52026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-4",
+          "selected": "false",
+          "current": null,
+          "text": "长标题：保留完整中文与标识 Session / source?anchor#，在窄屏阅读和来源返回后仍可定位v11-session-42026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-3",
+          "selected": "false",
+          "current": null,
+          "text": "检查历史运行的边界状态v11-session-32026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-2",
+          "selected": "false",
+          "current": null,
+          "text": "整理本地文档并保留来源v11-session-22026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-session-1",
+          "selected": "true",
+          "current": null,
+          "text": "核对今日任务与记录状态v11-session-12026-10-12T01:00:00Z",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        }
+      ]
+    },
+    {
+      "name": "inbox-preview",
+      "width": 320,
+      "height": 800,
+      "selected_session": "v11-session-1",
+      "overflow": false,
+      "inline_styles": 0,
+      "page_width": 279,
+      "accessibility": "- main:\n  - paragraph: INBOX\n  - heading \"收件箱\" [level=1]\n  - paragraph: 按 Session 查看会话记录及运行入口，继续会话由你明确选择。\n  - region \"会话只读预览\":\n    - heading \"整理本地文档并保留来源\" [level=2]\n    - button \"新建会话并打开主对话\"\n    - status: 已重新核验来源并恢复原入口。\n    - link \"返回会话列表\":\n      - /url: /inbox\n    - paragraph: 只读预览；继续此会话将切换主对话。\n    - button \"继续此会话\"\n    - navigation \"会话预览分区\":\n      - link \"消息\":\n        - /url: /inbox?session_id=v11-session-2&view=messages\n      - link \"运行\":\n        - /url: /inbox?session_id=v11-session-2&view=runs\n    - article:\n      - text: 整理本地文档并保留来源\n      - button \"展开全文\"\n      - paragraph: user · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-1?filter=chat\n    - article:\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - paragraph: assistant · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-1?filter=chat\n    - article:\n      - text: 整理本地文档并保留来源 · 继续核对 2\n      - button \"展开全文\"\n      - paragraph: user · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-2?filter=chat\n    - article:\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - paragraph: assistant · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-2?filter=chat\n    - article:\n      - text: 整理本地文档并保留来源 · 继续核对 3\n      - button \"展开全文\"\n      - paragraph: user · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-3?filter=chat\n    - article:\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - paragraph: assistant · cli · 2026-10-12T01:00:02Z\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-3?filter=chat\n    - status: 读取于 9:15:00 AM\n    - button \"刷新会话消息\"",
+      "rows": [
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "总览",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": "page",
+          "text": "收件箱",
+          "font": "13px",
+          "color": "rgb(236, 236, 234)",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "运行",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "记忆",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "模型",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "连接",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "行为",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "工具",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "用量账本",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "数据库",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": "page",
+          "text": "消息",
+          "font": "11.5px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "运行",
+          "font": "11.5px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6N30=",
+          "selected": "true",
+          "current": null,
+          "text": "整理本地文档并保留来源展开全文user · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6OH0=",
+          "selected": null,
+          "current": null,
+          "text": "离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文assistant · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6OX0=",
+          "selected": null,
+          "current": null,
+          "text": "整理本地文档并保留来源 · 继续核对 2展开全文user · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6MTB9",
+          "selected": null,
+          "current": null,
+          "text": "离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文assistant · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6MTF9",
+          "selected": null,
+          "current": null,
+          "text": "整理本地文档并保留来源 · 继续核对 3展开全文user · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "eyJ2IjoxLCJrIjoibWVzc2FnZV9hbmNob3IiLCJzIjoidjExLXNlc3Npb24tMiIsInNlZyI6InJ1bnMiLCJpZCI6MTJ9",
+          "selected": null,
+          "current": null,
+          "text": "离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文assistant · cli · 2026-10-12T01:00:02Z查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        }
+      ]
+    },
+    {
+      "name": "inbox-runs",
+      "width": 320,
+      "height": 800,
+      "selected_session": "v11-session-1",
+      "overflow": false,
+      "inline_styles": 0,
+      "page_width": 279,
+      "accessibility": "- main:\n  - paragraph: INBOX\n  - heading \"收件箱\" [level=1]\n  - paragraph: 按 Session 查看会话记录及运行入口，继续会话由你明确选择。\n  - region \"会话只读预览\":\n    - heading \"会话 v11-session-2\" [level=2]\n    - button \"新建会话并打开主对话\"\n    - link \"返回会话列表\":\n      - /url: /inbox\n    - paragraph: 只读预览；继续此会话将切换主对话。\n    - button \"继续此会话\"\n    - navigation \"会话预览分区\":\n      - link \"消息\":\n        - /url: /inbox?session_id=v11-session-2&view=messages\n      - link \"运行\":\n        - /url: /inbox?session_id=v11-session-2&view=runs\n    - article:\n      - term: 输入预览\n      - definition: 整理本地文档并保留来源 · 继续核对 3\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - term: Run ID\n      - definition: v11-run-2-3\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - term: 来源\n      - definition: cli\n      - term: 入口\n      - definition: 未知\n      - term: 会话\n      - definition: v11-session-2\n      - term: 接受时间\n      - definition: 2026-10-12T01:00:00Z\n      - term: 开始时间\n      - definition: 2026-10-12T01:00:01Z\n      - term: 结束时间\n      - definition: 2026-10-12T01:00:02Z\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 受控失败\n      - term: 记录\n      - definition: 记录状态未知\n      - term: 记录来源\n      - definition: unknown\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-3?filter=chat\n    - article:\n      - term: 输入预览\n      - definition: 整理本地文档并保留来源 · 继续核对 2\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - term: Run ID\n      - definition: v11-run-2-2\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - term: 来源\n      - definition: cli\n      - term: 入口\n      - definition: 未知\n      - term: 会话\n      - definition: v11-session-2\n      - term: 接受时间\n      - definition: 2026-10-12T01:00:00Z\n      - term: 开始时间\n      - definition: 2026-10-12T01:00:01Z\n      - term: 结束时间\n      - definition: 2026-10-12T01:00:02Z\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 受控停止\n      - term: 记录\n      - definition: 记录状态未知\n      - term: 记录来源\n      - definition: unknown\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-2?filter=chat\n    - article:\n      - term: 输入预览\n      - definition: 整理本地文档并保留来源\n      - text: 离线模型回复：保留来源、运行结局和记录状态。 详细信息继续由现有读取提供；只读预览不会切换主对话。\n      - button \"展开全文\"\n      - term: Run ID\n      - definition: v11-run-2-1\n      - term: 用途\n      - definition: 普通聊天（chat）\n      - term: 所属分组\n      - definition: 会话运行\n      - term: 来源\n      - definition: cli\n      - term: 入口\n      - definition: 未知\n      - term: 会话\n      - definition: v11-session-2\n      - term: 接受时间\n      - definition: 2026-10-12T01:00:00Z\n      - term: 开始时间\n      - definition: 2026-10-12T01:00:01Z\n      - term: 结束时间\n      - definition: 2026-10-12T01:00:02Z\n      - term: 准入\n      - definition: 已获准\n      - term: 阶段\n      - definition: 已结束\n      - term: 结果\n      - definition: 回复完成\n      - term: 记录\n      - definition: 记录状态未知\n      - term: 记录来源\n      - definition: unknown\n      - link \"查看运行\":\n        - /url: /runs/v11-run-2-1?filter=chat\n    - status: 读取于 9:15:00 AM\n    - button \"刷新会话运行\"",
+      "rows": [
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "总览",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": "page",
+          "text": "收件箱",
+          "font": "13px",
+          "color": "rgb(236, 236, 234)",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "运行",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "记忆",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "模型",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "连接",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "行为",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "工具",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "用量账本",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "数据库",
+          "font": "13px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": null,
+          "text": "消息",
+          "font": "11.5px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": null,
+          "selected": null,
+          "current": "page",
+          "text": "运行",
+          "font": "11.5px",
+          "color": "rgb(216, 215, 222)",
+          "selected_opacity": "1",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-run-2-3",
+          "selected": null,
+          "current": null,
+          "text": "输入预览整理本地文档并保留来源 · 继续核对 3离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文Run IDv11-run-2-3用途普通聊天（chat）所属分组会话运行来源cli入口未知会话v11-session-2接受时间2026-10-12T01:00:00Z开始时间2026-10-12T01:00:01Z结束时间2026-10-12T01:00:02Z准入已获准阶段已结束结果受控失败记录记录状态未知记录来源unknown查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-run-2-2",
+          "selected": null,
+          "current": null,
+          "text": "输入预览整理本地文档并保留来源 · 继续核对 2离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文Run IDv11-run-2-2用途普通聊天（chat）所属分组会话运行来源cli入口未知会话v11-session-2接受时间2026-10-12T01:00:00Z开始时间2026-10-12T01:00:01Z结束时间2026-10-12T01:00:02Z准入已获准阶段已结束结果受控停止记录记录状态未知记录来源unknown查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        },
+        {
+          "key": "v11-run-2-1",
+          "selected": null,
+          "current": null,
+          "text": "输入预览整理本地文档并保留来源离线模型回复：保留来源、运行结局和记录状态。\n详细信息继续由现有读取提供；只读预览不会切换主对话。展开全文Run IDv11-run-2-1用途普通聊天（chat）所属分组会话运行来源cli入口未知会话v11-session-2接受时间2026-10-12T01:00:00Z开始时间2026-10-12T01:00:01Z结束时间2026-10-12T01:00:02Z准入已获准阶段已结束结果回复完成记录记录状态未知记录来源unknown查看运行",
+          "font": "12.5px",
+          "color": "rgb(216, 215, 222)",
+          "meta_font": "11px",
+          "meta_family": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+          "selected_opacity": "0",
+          "selected_color": "rgb(32, 34, 58)",
+          "selected_shadow": "rgb(124, 138, 236) 2px 0px 0px 0px inset"
+        }
+      ]
+    }
+  ],
+  "runs_proof": {
+    "clock": "2026-10-12T01:15:00Z",
+    "server": "tests/browser/server.py",
+    "reduced_motion": "reduce",
+    "results": [
+      {
+        "width": 1440,
+        "height": 900,
+        "same_accessibility": true,
+        "png_bytes_equal": true,
+        "before_sha256": "78c57340083158fc04d47b5b2cda2533729a3b0587d1e24301f63b1ea5ad9dc6",
+        "after_sha256": "78c57340083158fc04d47b5b2cda2533729a3b0587d1e24301f63b1ea5ad9dc6"
+      },
+      {
+        "width": 1280,
+        "height": 800,
+        "same_accessibility": true,
+        "png_bytes_equal": true,
+        "before_sha256": "c05fa3af95aea9315adc79520e6a224006959a51902e5bd5bfd364d9a415a9d1",
+        "after_sha256": "c05fa3af95aea9315adc79520e6a224006959a51902e5bd5bfd364d9a415a9d1"
+      },
+      {
+        "width": 390,
+        "height": 844,
+        "same_accessibility": true,
+        "png_bytes_equal": true,
+        "before_sha256": "5c22023b35d7c31b777a03f3df3d08207dedaf132d27b6e238aeac4aacba0a61",
+        "after_sha256": "5c22023b35d7c31b777a03f3df3d08207dedaf132d27b6e238aeac4aacba0a61"
+      },
+      {
+        "width": 320,
+        "height": 800,
+        "same_accessibility": true,
+        "png_bytes_equal": true,
+        "before_sha256": "64d827580eaa50e1f0dc0b9674cfe9d2bc84f7c8272e0d62283c02a34dbc49f6",
+        "after_sha256": "64d827580eaa50e1f0dc0b9674cfe9d2bc84f7c8272e0d62283c02a34dbc49f6"
+      }
+    ],
+    "method": "Replace only the linked inbox-runs.css in the same /runs document; await stylesheet load. MainBar DOM and focus remain stable."
+  },
+  "geometry": [
+    {
+      "requested": {
+        "width": 1440,
+        "height": 900
+      },
+      "actual": {
+        "width": 1440,
+        "height": 900,
+        "clientWidth": 1440,
+        "clientHeight": 900,
+        "mainCount": 1
+      }
+    },
+    {
+      "requested": {
+        "width": 1280,
+        "height": 800
+      },
+      "actual": {
+        "width": 1280,
+        "height": 800,
+        "clientWidth": 1280,
+        "clientHeight": 800,
+        "mainCount": 1
+      }
+    },
+    {
+      "requested": {
+        "width": 390,
+        "height": 844
+      },
+      "actual": {
+        "width": 390,
+        "height": 844,
+        "clientWidth": 390,
+        "clientHeight": 844,
+        "mainCount": 1
+      }
+    },
+    {
+      "requested": {
+        "width": 320,
+        "height": 800
+      },
+      "actual": {
+        "width": 320,
+        "height": 800,
+        "clientWidth": 320,
+        "clientHeight": 800,
+        "mainCount": 1
+      }
+    }
+  ]
+}

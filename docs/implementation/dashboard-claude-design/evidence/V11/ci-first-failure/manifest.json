@@ -1,0 +1,29 @@
+{
+  "run": 38223059161,
+  "job": 114723755305,
+  "head": "421ee2a11039c0216410385445e882465a5e7d96",
+  "files": {
+    "session-create-race-a-dela-9c126-trols-reachable-at-1440x360/error-context.md": {
+      "bytes": 14132,
+      "sha256": "951edd4f2e2bd52ea51a2159f24c3e1861498239f8af1d8e1fdee030e0468fbb",
+      "representation": "lossless UTF-8 text in JSON; original trailing whitespace retained",
+      "archived_as": "session-create-race-a-dela-9c126-trols-reachable-at-1440x360/error-context.md.json"
+    },
+    "session-create-race-a-dela-9c126-trols-reachable-at-1440x360/test-failed-1.png": {
+      "bytes": 67764,
+      "sha256": "f2bb632cdb275641522304541c5124af95ba49df4df24dc4a08e6a2463bf1703",
+      "archived_as": "session-create-race-a-dela-9c126-trols-reachable-at-1440x360/test-failed-1.png"
+    },
+    "session-create-race-a-dela-9c126-trols-reachable-at-1440x360/trace.zip": {
+      "bytes": 1784453,
+      "sha256": "08b747a3366356c13a22ddce7f270c225a59c76ede1e4eb4df7dc1b52cad5cd1",
+      "archived_as": "session-create-race-a-dela-9c126-trols-reachable-at-1440x360/trace.zip"
+    },
+    "job-114723755305.log": {
+      "bytes": 670659,
+      "sha256": "ea52e00148aa7cb09d3e5c3a45d3dd2081c15b8cb068dc8b8d67dfc471e1c96b",
+      "archived_as": "job-114723755305.log.json",
+      "representation": "lossless UTF-8 text in JSON; ANSI and original trailing whitespace retained"
+    }
+  }
+}

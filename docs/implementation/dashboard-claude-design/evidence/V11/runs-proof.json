@@ -1,0 +1,40 @@
+{
+  "clock": "2026-10-12T01:15:00Z",
+  "server": "tests/browser/server.py",
+  "reduced_motion": "reduce",
+  "results": [
+    {
+      "width": 1440,
+      "height": 900,
+      "same_accessibility": true,
+      "png_bytes_equal": true,
+      "before_sha256": "78c57340083158fc04d47b5b2cda2533729a3b0587d1e24301f63b1ea5ad9dc6",
+      "after_sha256": "78c57340083158fc04d47b5b2cda2533729a3b0587d1e24301f63b1ea5ad9dc6"
+    },
+    {
+      "width": 1280,
+      "height": 800,
+      "same_accessibility": true,
+      "png_bytes_equal": true,
+      "before_sha256": "c05fa3af95aea9315adc79520e6a224006959a51902e5bd5bfd364d9a415a9d1",
+      "after_sha256": "c05fa3af95aea9315adc79520e6a224006959a51902e5bd5bfd364d9a415a9d1"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "same_accessibility": true,
+      "png_bytes_equal": true,
+      "before_sha256": "5c22023b35d7c31b777a03f3df3d08207dedaf132d27b6e238aeac4aacba0a61",
+      "after_sha256": "5c22023b35d7c31b777a03f3df3d08207dedaf132d27b6e238aeac4aacba0a61"
+    },
+    {
+      "width": 320,
+      "height": 800,
+      "same_accessibility": true,
+      "png_bytes_equal": true,
+      "before_sha256": "64d827580eaa50e1f0dc0b9674cfe9d2bc84f7c8272e0d62283c02a34dbc49f6",
+      "after_sha256": "64d827580eaa50e1f0dc0b9674cfe9d2bc84f7c8272e0d62283c02a34dbc49f6"
+    }
+  ],
+  "method": "Replace only the linked inbox-runs.css in the same /runs document; await stylesheet load. MainBar DOM and focus remain stable."
+}

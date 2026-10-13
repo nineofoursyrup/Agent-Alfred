@@ -1,0 +1,24 @@
+{
+  "reviewed_head": "b80ad60abd566b19cb667f42b2b0fd6e00e6e382",
+  "kind": "local Standards and Spec review after the demonstrated repair",
+  "standards_findings": [],
+  "spec_findings": [],
+  "ownership": {
+    "production_files": ["inbox.js", "inbox-runs.css"],
+    "browser_tests": ["inbox-run-sources.spec.js", "shell.spec.js"],
+    "frozen_production_layers_changed": false,
+    "shared_run_fields_changed": false
+  },
+  "repair_evidence": {
+    "old_shell_selector": "#page .card",
+    "new_shell_selector": "#page .inbox-rows article",
+    "assertions_preserved": ["visible first row", "scrollTop > 100", "restore same scroll after delayed response", "focused Inbox heading"],
+    "short_window_css": "Inbox read status shares a flex row with read controls, matching V05; wraps at narrow widths",
+    "receipt_link_y_before": -0.390625,
+    "receipt_link_y_after": 18.609375,
+    "diagnostic_four_viewports_passed": 4,
+    "real_affected_tests_passed": 65
+  },
+  "not_a_gate": true,
+  "independent_review": false
+}

@@ -1,0 +1,170 @@
+{
+  "inbox-1280x800.png": {
+    "sha256": "4d43cd90c0fb5d87ec15e8b528156e1bce3c848a7e0aaebf04eafcac195e2e62",
+    "width": 1280,
+    "height": 800,
+    "bytes": 164636,
+    "bottom_87_equals_top_87": false
+  },
+  "inbox-1440x900.png": {
+    "sha256": "aea0c56d1e4fada31ea4ad8b67a0f88b1dc896e504437bbc94df78f63e8c9f61",
+    "width": 1440,
+    "height": 900,
+    "bytes": 169715,
+    "bottom_87_equals_top_87": false
+  },
+  "inbox-320x800.png": {
+    "sha256": "b0c1ec0347b482a8e0dc24be4003c926d92731743214ced95397493861a4ae7e",
+    "width": 320,
+    "height": 800,
+    "bytes": 59166,
+    "bottom_87_equals_top_87": false
+  },
+  "inbox-390x844.png": {
+    "sha256": "c100b64cca3cc3df95fc37d49897ed6bd0761d50d76d4e7b259031f2e127820f",
+    "width": 390,
+    "height": 844,
+    "bytes": 64277,
+    "bottom_87_equals_top_87": false
+  },
+  "inbox-preview-1280x800.png": {
+    "sha256": "5ce2858317fe071403c5d8e53a9e7b95fc91240231f74176fdc81547cfd71918",
+    "width": 1280,
+    "height": 800,
+    "bytes": 179040,
+    "bottom_87_equals_top_87": false
+  },
+  "inbox-preview-1440x900.png": {
+    "sha256": "2a00e0d7a22f27b6574f1d9f9be280e8136d29d54a283357076c9b950f7af6ef",
+    "width": 1440,
+    "height": 900,
+    "bytes": 191264,
+    "bottom_87_equals_top_87": false
+  },
+  "inbox-preview-320x800.png": {
+    "sha256": "e77c01f4ed13c893ba388bc4dda318f1e5a139b3fbc10bd87505b8cffea8b089",
+    "width": 320,
+    "height": 800,
+    "bytes": 57571,
+    "bottom_87_equals_top_87": false
+  },
+  "inbox-preview-390x844.png": {
+    "sha256": "b240250a06c82ce8bfcda988190259edb70e5afd060cef8318c3d9753cf9f0ea",
+    "width": 390,
+    "height": 844,
+    "bytes": 62255,
+    "bottom_87_equals_top_87": false
+  },
+  "inbox-runs-1280x800.png": {
+    "sha256": "b12bebd6f6c5d2b508221c2986fb79318c07fd068be5c4fd99b67301e02a2a80",
+    "width": 1280,
+    "height": 800,
+    "bytes": 170266,
+    "bottom_87_equals_top_87": false
+  },
+  "inbox-runs-1440x900.png": {
+    "sha256": "82a3836e58b02d25d0009b699b12d769a0b5be60ac90d32b90254d7b7f3e9bce",
+    "width": 1440,
+    "height": 900,
+    "bytes": 196315,
+    "bottom_87_equals_top_87": false
+  },
+  "inbox-runs-320x800.png": {
+    "sha256": "5993c441438c02eb91ba96589a98c3aa02af665fb2c9027a258b5f7fb4028415",
+    "width": 320,
+    "height": 800,
+    "bytes": 55277,
+    "bottom_87_equals_top_87": false
+  },
+  "inbox-runs-390x844.png": {
+    "sha256": "1c58739cacce9ad053d952b31e4cf1238aa335a6997514974d82abac0a206c02",
+    "width": 390,
+    "height": 844,
+    "bytes": 59007,
+    "bottom_87_equals_top_87": false
+  },
+  "reference-loop-1280x800.png": {
+    "sha256": "a41afb4523ac9c7c2acd5ec53ca3256c0badef7f732ab98c5964876b8aaac87e",
+    "width": 1280,
+    "height": 800,
+    "bytes": 148359,
+    "bottom_87_equals_top_87": false
+  },
+  "reference-loop-1440x900.png": {
+    "sha256": "73b48b67940a32bdc26d5ac86e547df2798fb17ea7f749eeedfacb26944eee8c",
+    "width": 1440,
+    "height": 900,
+    "bytes": 173067,
+    "bottom_87_equals_top_87": false
+  },
+  "reference-loop-320x800.png": {
+    "sha256": "7cb5538600d8d8701874a5824565e288f99b89276750d2739358f40c533767c0",
+    "width": 320,
+    "height": 800,
+    "bytes": 40021,
+    "bottom_87_equals_top_87": false
+  },
+  "reference-loop-390x844.png": {
+    "sha256": "790eb0b08be4a86cd7a9dac5e5af82979db6ebf7c34acc84026b1598d21f2251",
+    "width": 390,
+    "height": 844,
+    "bytes": 52243,
+    "bottom_87_equals_top_87": false
+  },
+  "runs-1280x800.png": {
+    "sha256": "c05fa3af95aea9315adc79520e6a224006959a51902e5bd5bfd364d9a415a9d1",
+    "width": 1280,
+    "height": 800,
+    "bytes": 187279,
+    "bottom_87_equals_top_87": false
+  },
+  "runs-1440x900.png": {
+    "sha256": "78c57340083158fc04d47b5b2cda2533729a3b0587d1e24301f63b1ea5ad9dc6",
+    "width": 1440,
+    "height": 900,
+    "bytes": 202290,
+    "bottom_87_equals_top_87": false
+  },
+  "runs-320x800.png": {
+    "sha256": "64d827580eaa50e1f0dc0b9674cfe9d2bc84f7c8272e0d62283c02a34dbc49f6",
+    "width": 320,
+    "height": 800,
+    "bytes": 65639,
+    "bottom_87_equals_top_87": false
+  },
+  "runs-390x844.png": {
+    "sha256": "5c22023b35d7c31b777a03f3df3d08207dedaf132d27b6e238aeac4aacba0a61",
+    "width": 390,
+    "height": 844,
+    "bytes": 81232,
+    "bottom_87_equals_top_87": false
+  },
+  "runs-before-1280x800.png": {
+    "sha256": "c05fa3af95aea9315adc79520e6a224006959a51902e5bd5bfd364d9a415a9d1",
+    "width": 1280,
+    "height": 800,
+    "bytes": 187279,
+    "bottom_87_equals_top_87": false
+  },
+  "runs-before-1440x900.png": {
+    "sha256": "78c57340083158fc04d47b5b2cda2533729a3b0587d1e24301f63b1ea5ad9dc6",
+    "width": 1440,
+    "height": 900,
+    "bytes": 202290,
+    "bottom_87_equals_top_87": false
+  },
+  "runs-before-320x800.png": {
+    "sha256": "64d827580eaa50e1f0dc0b9674cfe9d2bc84f7c8272e0d62283c02a34dbc49f6",
+    "width": 320,
+    "height": 800,
+    "bytes": 65639,
+    "bottom_87_equals_top_87": false
+  },
+  "runs-before-390x844.png": {
+    "sha256": "5c22023b35d7c31b777a03f3df3d08207dedaf132d27b6e238aeac4aacba0a61",
+    "width": 390,
+    "height": 844,
+    "bytes": 81232,
+    "bottom_87_equals_top_87": false
+  }
+}

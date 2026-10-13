@@ -1,0 +1,31 @@
+{
+  "run": 38265016136,
+  "job": 114864875344,
+  "head": "b9c2f3fe5cc937eabff7873761a899d73def76b2",
+  "browser_passed": 544,
+  "browser_failed": 1,
+  "original_receipt_case_failed": false,
+  "files": {
+    "mainbar-integration-real-S-d239a-ge-and-cross-Session-drafts/error-context.md": {
+      "bytes": 5275,
+      "sha256": "dac29ddf697c2153f904042b73fe5eb17ea49d3f7cd2c76843b391d272280fac",
+      "representation": "lossless UTF-8 text in JSON; original trailing whitespace retained",
+      "archived_as": "mainbar-integration-real-S-d239a-ge-and-cross-Session-drafts/error-context.md.json"
+    },
+    "mainbar-integration-real-S-d239a-ge-and-cross-Session-drafts/test-failed-1.png": {
+      "bytes": 108274,
+      "sha256": "d995d0bca21a2a6285ba322ad5720786f85b4045345fc08bfea47b226977e069",
+      "archived_as": "mainbar-integration-real-S-d239a-ge-and-cross-Session-drafts/test-failed-1.png"
+    },
+    "mainbar-integration-real-S-d239a-ge-and-cross-Session-drafts/trace.zip": {
+      "bytes": 2405625,
+      "sha256": "05207a5f3511c0bdc831201f8c2fa7963778eee32d74fb268e1af7a9c33dc853",
+      "archived_as": "mainbar-integration-real-S-d239a-ge-and-cross-Session-drafts/trace.zip"
+    },
+    "job-114864875344.log": {
+      "bytes": 677204,
+      "sha256": "cba274a822e66ccb79f8b46cd00c87b39b425b7316498e5834027e0e72f7ec6d",
+      "archived_as": "job-114864875344.log.json"
+    }
+  }
+}

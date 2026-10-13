@@ -1,0 +1,28 @@
+{
+  "clock": "2026-10-12T01:15:00Z",
+  "same_accessibility": true,
+  "mismatches": [
+    {
+      "size": "1440x900",
+      "difference_bounds": [
+        1001,
+        80,
+        1002,
+        81
+      ],
+      "after_sha256": "eeaf79a0e8ee942f46675bd068c26dd486c6a6c566daf8da1db49edeee7af8f0",
+      "before_sha256": "d84cf55a89b7efb58bbab6bbad5ab15ae80e1147f2cb09078a4a41572956a2e0"
+    },
+    {
+      "size": "1280x800",
+      "difference_bounds": [
+        841,
+        80,
+        842,
+        81
+      ],
+      "after_sha256": "274e669a8931cc68883377a01dedc1301b7611f765a971e2319d473399d44545",
+      "before_sha256": "8e3ab3129088fa51c85d735d33658780704b4d9bb4e9a021c544765b6088af7e"
+    }
+  ]
+}

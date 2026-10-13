@@ -1,0 +1,126 @@
+{
+  "source_sha256": "08b747a3366356c13a22ddce7f270c225a59c76ede1e4eb4df7dc1b52cad5cd1",
+  "assertion": {
+    "type": "before",
+    "callId": "call@36973",
+    "startTime": 941307.403,
+    "title": "Expect \"toBeInViewport\"",
+    "class": "Frame",
+    "method": "expect",
+    "params": {
+      "selector": "internal:role=region[name=\"新建会话回执\"s] >> internal:role=button[name=\"打开已创建会话\"s]",
+      "expression": "to.be.in.viewport",
+      "expectedNumber": 1,
+      "expectedValue": {
+        "value": {
+          "v": "undefined"
+        },
+        "handles": []
+      },
+      "isNot": false,
+      "timeout": 4000
+    },
+    "stepId": "expect@100"
+  },
+  "result": {
+    "type": "after",
+    "callId": "call@36973",
+    "endTime": 945308.751,
+    "error": {
+      "message": "Expect failed",
+      "stack": "ExpectError: Expect failed\n    at _Frame.expect (/home/runner/work/Agent-Alfred/Agent-Alfred/node_modules/playwright-core/lib/coreBundle.js:24312:17)\n    at _FrameDispatcher.expect (/home/runner/work/Agent-Alfred/Agent-Alfred/node_modules/playwright-core/lib/coreBundle.js:54886:11)\n    at _ProgressController.run (/home/runner/work/Agent-Alfred/Agent-Alfred/node_modules/playwright-core/lib/coreBundle.js:12374:27)\n    at DispatcherConnection.dispatch (/home/runner/work/Agent-Alfred/Agent-Alfred/node_modules/playwright-core/lib/coreBundle.js:19135:27)",
+      "name": "ExpectError"
+    }
+  },
+  "viewport_samples": [
+    {
+      "type": "log",
+      "callId": "call@36973",
+      "time": 941329.017,
+      "message": "  unexpected value \"viewport ratio 0.9881404042243958\""
+    },
+    {
+      "type": "log",
+      "callId": "call@36973",
+      "time": 941362.386,
+      "message": "  unexpected value \"viewport ratio 0.9881404042243958\""
+    },
+    {
+      "type": "log",
+      "callId": "call@36973",
+      "time": 941429.272,
+      "message": "  unexpected value \"viewport ratio 0.9881404042243958\""
+    },
+    {
+      "type": "log",
+      "callId": "call@36973",
+      "time": 941545.869,
+      "message": "  unexpected value \"viewport ratio 0.9881404042243958\""
+    },
+    {
+      "type": "log",
+      "callId": "call@36973",
+      "time": 941662.73,
+      "message": "  unexpected value \"viewport ratio 0.9881404042243958\""
+    },
+    {
+      "type": "log",
+      "callId": "call@36973",
+      "time": 942179.124,
+      "message": "  unexpected value \"viewport ratio 0.9881404042243958\""
+    },
+    {
+      "type": "log",
+      "callId": "call@36973",
+      "time": 942695.835,
+      "message": "  unexpected value \"viewport ratio 0.9881404042243958\""
+    },
+    {
+      "type": "log",
+      "callId": "call@36973",
+      "time": 943212.454,
+      "message": "  unexpected value \"viewport ratio 0.9881404042243958\""
+    },
+    {
+      "type": "log",
+      "callId": "call@36973",
+      "time": 943729.367,
+      "message": "  unexpected value \"viewport ratio 0.9881404042243958\""
+    },
+    {
+      "type": "log",
+      "callId": "call@36973",
+      "time": 944245.758,
+      "message": "  unexpected value \"viewport ratio 0.9881404042243958\""
+    },
+    {
+      "type": "log",
+      "callId": "call@36973",
+      "time": 944763.407,
+      "message": "  unexpected value \"viewport ratio 0.9881404042243958\""
+    },
+    {
+      "type": "log",
+      "callId": "call@36973",
+      "time": 945279.171,
+      "message": "  unexpected value \"viewport ratio 0.9881404042243958\""
+    }
+  ],
+  "interpretation": "Stable 0.9881404042243958 at all 12 reads; product layout repair, no assertion change.",
+  "sse_requests": [
+    {
+      "started_at": "2026-10-12T09:32:29.020Z",
+      "status": 200,
+      "monotonic_start_ms": 940584.314,
+      "duration_ms": 0.999,
+      "monotonic_end_ms": 940585.313
+    },
+    {
+      "started_at": "2026-10-12T09:32:29.059Z",
+      "status": 200,
+      "monotonic_start_ms": 940624.122,
+      "duration_ms": 5138.968,
+      "monotonic_end_ms": 945763.09
+    }
+  ]
+}

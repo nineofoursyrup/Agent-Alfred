@@ -1,0 +1,5 @@
+{
+  "exit_code": 1,
+  "output": "main prefix 8978 True\nCSS change 144\nTraceback (most recent call last):\n  File \"<stdin>\", line 4, in <module>\nAssertionError\n",
+  "cause": "Auxiliary selector parser included the existing V11 comment; removed CSS comments before extracting selectors, same source passed."
+}
