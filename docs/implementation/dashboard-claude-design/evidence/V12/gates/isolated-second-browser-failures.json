@@ -1,0 +1,26 @@
+{
+  "command": [
+    "env",
+    "ALFRED_BROWSER_TEST_PORT=18120",
+    "npx",
+    "playwright",
+    "test",
+    "tests/browser/database_migration.spec.js",
+    "tests/browser/database_status.spec.js",
+    "tests/browser/memory.spec.js",
+    "--grep",
+    "Database catalog preserves every approved field and expanded state across capability checks|S10 failed cleanup blocks queries until both release and capability are verified|R08: a lost response stays unconfirmed until queried or resent with the same id"
+  ],
+  "started_at": "2026-10-12T06:55:07.604148+00:00",
+  "head": "9312581c6026b81d33bd0d886a344a3a92b9d496",
+  "source_sha256": {
+    "src/agent_alfred/ops/static/models.js": "5bac770518eab681b2d7a43aa713f66a6c642fa263b613768933e4163a2f9788",
+    "src/agent_alfred/ops/static/connections.js": "375a5fdd49fb219fb8fab16f6532f8d2a9c284747dfab86989062f5011f2616e",
+    "src/agent_alfred/ops/static/settings.css": "71d73fec4198d7ae2de0f264a00bfc49006fd42fb520b570d466643932966dbf",
+    "src/agent_alfred/ops/static/settings-focus.js": "07229e0d2f90554cbd3a26d7a1e079b4843cebef587945381a60a65b328e2915"
+  },
+  "exit_code": 1,
+  "duration_seconds": 18.754,
+  "output_sha256": "d8ce88d7db53514f1131f7bca3feddc830bdbab08614cb6f7293f2b404b76317",
+  "output": "\nRunning 3 tests using 1 worker\n\n(node:66646) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✓  1 tests/browser/database_migration.spec.js:14:1 › Database catalog preserves every approved field and expanded state across capability checks (3.2s)\n  ✘  2 tests/browser/database_status.spec.js:127:1 › S10 failed cleanup blocks queries until both release and capability are verified (7.0s)\n(node:66882) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✓  3 tests/browser/memory.spec.js:1022:1 › R08: a lost response stays unconfirmed until queried or resent with the same id (3.5s)\n\n\n  1) tests/browser/database_status.spec.js:127:1 › S10 failed cleanup blocks queries until both release and capability are verified \n\n    Error: expect(locator).toBeVisible() failed\n\n    Locator: getByText('清理已释放', { exact: true })\n    Expected: visible\n    Timeout: 4000ms\n    Error: element(s) not found\n\n    Call log:\n      - Expect \"toBeVisible\" getByText('清理已释放', { exact: true }) with timeout 4000ms\n      - waiting for getByText('清理已释放', { exact: true })\n\n\n      150 |     await server.send('heal');\n      151 |     await page.getByRole('button', {name:'核验查询与可用性',exact:true}).click();\n    > 152 |     await expect(page.getByText('清理已释放',{exact:true})).toBeVisible();\n          |                                                        ^\n      153 |     await expect(run).toBeEnabled();\n      154 |     await page.getByRole('textbox', {name:'SQL',exact:true}).fill('SELECT 7 AS recovered');\n      155 |     await run.click();\n        at /Users/nineofour/Agent-Alfred-v12/tests/browser/database_status.spec.js:152:56\n\n    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────\n    output/playwright/results/database_status-S10-failed-27f05-and-capability-are-verified/test-failed-1.png\n    ────────────────────────────────────────────────────────────────────────────────────────────────\n\n    Error Context: output/playwright/results/database_status-S10-failed-27f05-and-capability-are-verified/error-context.md\n\n    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────\n    output/playwright/results/database_status-S10-failed-27f05-and-capability-are-verified/trace.zip\n    Usage:\n\n        npx playwright show-trace output/playwright/results/database_status-S10-failed-27f05-and-capability-are-verified/trace.zip\n\n    ────────────────────────────────────────────────────────────────────────────────────────────────\n\n  1 failed\n    tests/browser/database_status.spec.js:127:1 › S10 failed cleanup blocks queries until both release and capability are verified \n  2 passed (17.2s)\n"
+}

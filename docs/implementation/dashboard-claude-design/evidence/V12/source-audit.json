@@ -1,0 +1,68 @@
+{
+  "base_sha": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "implementation_sha": "9312581c6026b81d33bd0d886a344a3a92b9d496",
+  "status": "",
+  "changed_files": [
+    "src/agent_alfred/ops/static/connections.js",
+    "src/agent_alfred/ops/static/models.js",
+    "src/agent_alfred/ops/static/settings.css"
+  ],
+  "source_sha256": {
+    "src/agent_alfred/ops/static/models.js": "5bac770518eab681b2d7a43aa713f66a6c642fa263b613768933e4163a2f9788",
+    "src/agent_alfred/ops/static/connections.js": "375a5fdd49fb219fb8fab16f6532f8d2a9c284747dfab86989062f5011f2616e",
+    "src/agent_alfred/ops/static/settings.css": "71d73fec4198d7ae2de0f264a00bfc49006fd42fb520b570d466643932966dbf"
+  },
+  "frozen_sha256": {
+    "src/agent_alfred/ops/static/settings-focus.js": "07229e0d2f90554cbd3a26d7a1e079b4843cebef587945381a60a65b328e2915",
+    "src/agent_alfred/ops/static/app.css": "caaec9cf2e5e6f69798a8f222dc4bdb143636b21ddb5af84a33e7ab0a239f194",
+    "src/agent_alfred/ops/static/index.html": "1806bc790c4abb172d848ba04c5054d0e20341657e90111a1696574785835c7a",
+    "src/agent_alfred/ops/static/app.js": "87cf98ab70e8bdf4fd3d5de37ef6df125ab624487b522e72b50362144c249d35",
+    "src/agent_alfred/ops/static/shell.js": "c71dfdaae24d2349cd78d36ff96fb89daf4842df823fd021d407d87565bff03b",
+    "src/agent_alfred/ops/static/pages.js": "3c1782eb300215494e3c349436706de84e083c08051f18244151bc0bab4b20a4",
+    "src/agent_alfred/ops/static/tools.js": "3edbb1ab7822e27f1fbdd742561659a11ee2082a137b64f56f9e89b0ad53efe5",
+    "src/agent_alfred/ops/static/tools.css": "56412274954849ffe7b6fd69aa12ad4800ce035e81d3bf244924764703dcbefe",
+    "docs/design/issue-122/RECIPES.md": "e98a228252a21a3752df7e59c4eda8b35bb928f61944c12dc25b02dbc047a35c",
+    ".gitattributes": "d5343a905893d25b866ea0921443de86a315abf45c085584318e3813d95f890d",
+    "package.json": "f3e4bb5814ef3913c90d8152433d4b116c7dd33359bc88544dc412287f7c05f3",
+    "package-lock.json": "d964ea8313a3dfb83a72e230ee61f0b166c524548fa80514319e081d30d7e896",
+    "pyproject.toml": "0b3ebe230f399935af91723dd9b9d02a2064edd526a822dfd3b502d4373a2afb",
+    "uv.lock": "b0445c57d4cdb22a7c816fe27fa8a0c7ddd39962aea69df367e3b1c27a275bb9",
+    "playwright.config.js": "ee0d64ce222e3c6f5f8cf90b9be9e7ceb160fddefc375b17d9e8ccb92fabf4e5"
+  },
+  "reference_sha256": {
+    "docs/design/issue-122/reference/Syrup Dashboard.dc.html": "54807adb38541fa2966e5b0c334b9d0e8d71c60b814245601bc4f35b8ec54b84",
+    "docs/design/issue-122/reference/support.js": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe"
+  },
+  "exports": {
+    "modelsPage": {
+      "signature": "(root, csrf)",
+      "return_block_byte_identical": true,
+      "return_sha256": "58a166daa1a33fe4db6c814de12947e778f88ac44f75e84414fecebcc992a901"
+    },
+    "connectionsPage": {
+      "signature": "(root, csrf)",
+      "return_block_byte_identical": true,
+      "return_sha256": "9ae8579b0dd962b02c82d440542c9558dbaaad0e81c033aa12d5c3bc4822fa20"
+    }
+  },
+  "css_audit": {
+    "selector_count": 41,
+    "all_scoped": true,
+    "literal_colors_or_sizes": false,
+    "root_or_url": false
+  },
+  "review": {
+    "method": "local focused code-review pass",
+    "standards_remaining_findings": 0,
+    "spec_remaining_findings": 0,
+    "resolved_findings": [
+      "Preserve the original empty live status regions; empty ordinary paragraphs can be hidden.",
+      "Use the page-owned setting-save class for layout and keep sy-button-accent styling untouched."
+    ],
+    "notes": [
+      "Only rendering structure and CSS changed; operation guards, requests and state ownership remain unchanged.",
+      "All existing heading levels, accessible names, regions and controls preserved.",
+      "New right-side group copy repeats existing connection/authorization semantics."
+    ]
+  }
+}

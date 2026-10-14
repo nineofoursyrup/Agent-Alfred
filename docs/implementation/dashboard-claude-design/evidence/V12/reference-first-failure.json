@@ -1,0 +1,6 @@
+{
+  "command": "playwright-cli --session=v12-reference open file:///Users/nineofour/Agent-Alfred-v12/docs/design/issue-122/reference/Syrup%20Dashboard.dc.html",
+  "exit_code": 1,
+  "output": "### Browser `v12-reference` opened with pid 50835.\n### Error\nError: Access to \"file:\" protocol is blocked. Attempted URL: \"file:///Users/nineofour/Agent-Alfred-v12/docs/design/issue-122/reference/Syrup%20Dashboard.dc.html\"\n",
+  "resolution": "Serve the unchanged archive over loopback HTTP on reserved port 18121."
+}

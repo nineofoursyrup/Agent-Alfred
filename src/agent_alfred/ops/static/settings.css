@@ -1,22 +1,46 @@
-.settings-page {overflow-wrap:anywhere}
-.settings-page section, .settings-page article, .settings-page details {min-width:0}
-.settings-page h2 {margin:12px 0;font-size:var(--font-size-body)}
-.settings-page h3 {margin:0;font-size:var(--font-size-body)}
-.settings-page h4 {font-size:var(--font-size-body);margin:8px 0}
-.settings-page p {margin:8px 0}
-.settings-page .settings-group {margin:22px 0;border-top:1px solid var(--border);padding-top:14px}
-.settings-page .model-row, .settings-page .connection-row {padding:14px;margin:10px 0;border:1px solid var(--border);border-radius:var(--radius-panel);background:var(--surface)}
-.settings-page summary {cursor:pointer;padding:10px 0;font-weight:600;overflow-wrap:anywhere}
-.settings-page summary:focus-visible {outline:3px solid var(--focus);outline-offset:3px;border-radius:4px}
-.settings-page .model-row-state {color:var(--accent);font-size:var(--font-size-body)}
-.settings-page .settings-actions {display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
-.settings-page .settings-actions p {flex-basis:100%}
-.settings-page .setting-field {margin:14px 0;padding:12px;border:1px solid var(--border);border-radius:var(--radius-control)}
-.settings-page .setting-field label {display:block;font-weight:600}
-.settings-page .setting-field input, .settings-page .setting-field select {display:block;width:100%;margin:8px 0}
-.settings-page .setting-help {color:var(--muted);font-size:var(--font-size-meta);line-height:1.6}
-.settings-page .setting-field button {margin:4px 8px 4px 0}
-.settings-page .model-probe {border-top:1px solid var(--border);margin-top:18px;padding-top:10px}
-.settings-page .model-probe a {display:block;margin-top:10px}
-.settings-page pre {white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;font-size:var(--font-size-body)}
-.settings-page .connection-row details {border-top:1px solid var(--border);margin-top:10px}
+.settings-page {
+ --settings-item-min:calc(var(--font-size-body) * 20);
+ --settings-rule:calc(var(--gap-small) / 12);
+ --settings-half-gap:calc(var(--gap-small) / 2);
+ display:grid;align-content:start;gap:var(--gap-medium);min-width:0;overflow-wrap:anywhere;
+}
+.settings-page section,.settings-page article,.settings-page details {min-width:0}
+.settings-page p {margin:0}
+.settings-page p:empty:not([role=status]) {display:none}
+.settings-page .settings-toolbar {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--gap-small);min-width:0}
+.settings-page .settings-toolbar p {flex:1 1 var(--settings-item-min);font:400 var(--font-size-meta)/1.5 var(--font-mono);color:var(--tertiary)}
+.settings-page .settings-catalog {display:grid;gap:var(--gap-medium);min-width:0}
+.settings-page>.settings-group {margin:0}
+.settings-page .settings-group-description {flex:0 1 auto;min-width:0;font:400 var(--font-size-meta)/1.5 var(--font-mono);color:var(--metadata);text-align:end}
+.settings-page .settings-assignment-body {display:grid;gap:var(--gap-small);grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--settings-item-min)),1fr));font-family:var(--font-mono)}
+.settings-page .settings-group-body>.settings-actions {padding:var(--font-size-body) var(--font-size-brand);border-bottom:var(--settings-rule) solid var(--panel-divider)}
+.settings-page .settings-grid {display:grid;align-items:start;grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--settings-item-min)),1fr));min-width:0}
+.settings-page .settings-grid>p {padding:var(--font-size-body) var(--font-size-brand);font-size:var(--font-size-row);color:var(--muted)}
+.settings-page .model-row,.settings-page .connection-row {display:grid;align-content:start;gap:var(--settings-half-gap);padding:var(--font-size-body) var(--font-size-brand);min-width:0}
+.settings-page .settings-row-heading {display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:var(--settings-half-gap) var(--gap-small);min-width:0}
+.settings-page h3 {margin:0;font:500 var(--font-size-row)/1.45 var(--font-mono);color:var(--text)}
+.settings-page .settings-row-identity {flex:1 1 var(--font-size-metric-memory);min-width:0}
+.settings-page .settings-row-status {flex:0 1 auto;min-width:0;font:400 var(--font-size-meta-small)/1.5 var(--font-mono);color:var(--tertiary);text-align:end}
+.settings-page .settings-metadata {font:400 var(--font-size-meta)/1.5 var(--font-mono);color:var(--metadata)}
+.settings-page .model-row-state {color:var(--accent);font:400 var(--font-size-meta)/1.5 var(--font-mono)}
+.settings-page summary {cursor:pointer;padding:var(--settings-half-gap) 0;font:500 var(--font-size-meta-large)/1.5 var(--font-mono);color:var(--secondary);overflow-wrap:anywhere}
+.settings-page details>p {margin-block:var(--settings-half-gap);font:400 var(--font-size-meta)/1.5 var(--font-mono);color:var(--muted)}
+.settings-page .settings-actions {display:flex;gap:var(--settings-half-gap);flex-wrap:wrap;align-items:center;min-width:0}
+.settings-page details>.settings-actions {margin-block:var(--gap-small)}
+.settings-page .settings-actions p {flex-basis:100%;font:400 var(--font-size-meta)/1.5 var(--font-mono);color:var(--muted)}
+.settings-page .setting-field {display:grid;grid-template-columns:minmax(0,1fr) fit-content(calc(100% / 2));gap:var(--settings-half-gap) var(--gap-small);padding-block:var(--gap-small);border-top:var(--settings-rule) solid var(--row-divider);min-width:0}
+.settings-page .setting-field label {display:grid;gap:var(--settings-half-gap);min-width:0;font:500 var(--font-size-row)/1.45 var(--font-mono);color:var(--secondary)}
+.settings-page .setting-field input,.settings-page .setting-field select {display:block;width:100%;min-width:0}
+.settings-page .setting-help {color:var(--muted);font:400 var(--font-size-meta)/1.5 var(--font-mono)}
+.settings-page .setting-field [role=status] {font:400 var(--font-size-meta)/1.5 var(--font-mono);color:var(--attention)}
+.settings-page .setting-field p,.settings-page .setting-field button {grid-column:1/-1}
+.settings-page .setting-field button {justify-self:start}
+.settings-page .setting-field>.setting-save {grid-column:2;grid-row:1;align-self:end}
+.settings-page .model-probe {display:grid;gap:var(--settings-half-gap);border-top:var(--settings-rule) solid var(--panel-divider);margin-top:var(--gap-small);padding-top:var(--gap-small)}
+.settings-page h4 {margin:0;font:600 var(--font-size-meta-large)/1.45 var(--font-mono);color:var(--secondary)}
+.settings-page .model-probe p {font:400 var(--font-size-meta)/1.5 var(--font-mono);color:var(--muted)}
+.settings-page .model-probe button,.settings-page .connection-row>button,.settings-page .settings-mcp-configuration>button {justify-self:start}
+.settings-page .model-probe a {display:block}
+.settings-page pre {white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;font-size:var(--font-size-meta)}
+.settings-page .connection-row details {border-top:var(--settings-rule) solid var(--panel-divider);margin-top:var(--settings-half-gap)}
+.settings-page .settings-mcp-configuration {display:grid;gap:var(--gap-small);font:400 var(--font-size-meta)/1.5 var(--font-mono);color:var(--muted)}
