@@ -1,0 +1,4 @@
+{
+  "raw_sha256": "ec1e879780fa57a4eb093a1a5b9c8bd7c9c80aafd58f81b62c6a20bdf5ef0007",
+  "text": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\npage.evaluate: TypeError: Cannot read properties of undefined (reading 'parentElement')\n    at eval (eval at evaluate (:311:30), <anonymous>:4:24)\n    at UtilityScript.evaluate (<anonymous>:313:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)\n    at /Users/nineofour/Agent-Alfred-v10/.scratch/v10/capture-reference.mjs:32:36 {\n  log: []\n}\n\nNode.js v26.8.2\n"
+}

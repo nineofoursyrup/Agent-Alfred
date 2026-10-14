@@ -1,0 +1,570 @@
+[
+  {
+    "type": "before",
+    "callId": "expect@37",
+    "method": "expect",
+    "params": {
+      "locator": "getByText('可执行', { exact: true })"
+    },
+    "startTime": 357629.339
+  },
+  {
+    "type": "before",
+    "callId": "expect@40",
+    "method": "expect",
+    "params": {
+      "locator": "getByRole('region', { name: '查询结果' })",
+      "expected": "forget-this-real-diagnostic-body"
+    },
+    "startTime": 357736.115
+  },
+  {
+    "type": "before",
+    "callId": "expect@42",
+    "method": "expect",
+    "params": {
+      "expected": "deleted"
+    },
+    "startTime": 358150.112
+  },
+  {
+    "type": "before",
+    "callId": "expect@43",
+    "method": "expect",
+    "params": {
+      "locator": "getByRole('region', { name: '查询结果' })"
+    },
+    "startTime": 358150.543
+  },
+  {
+    "type": "before",
+    "callId": "expect@44",
+    "method": "expect",
+    "params": {
+      "expected": "1"
+    },
+    "startTime": 358184.252
+  },
+  {
+    "type": "before",
+    "callId": "expect@45",
+    "method": "expect",
+    "params": {
+      "expected": "1"
+    },
+    "startTime": 358184.397
+  },
+  {
+    "type": "after",
+    "callId": "expect@45",
+    "error": {
+      "name": "",
+      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1\u001b[39m\nReceived:   \u001b[31m1\u001b[39m",
+      "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1\u001b[39m\nReceived:   \u001b[31m1\u001b[39m"
+    },
+    "endTime": 358184.626
+  },
+  {
+    "type": "before",
+    "callId": "expect@46",
+    "method": "expect",
+    "params": {
+      "expected": "1"
+    },
+    "startTime": 358300.164
+  },
+  {
+    "type": "after",
+    "callId": "expect@46",
+    "error": {
+      "name": "",
+      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1\u001b[39m\nReceived:   \u001b[31m1\u001b[39m",
+      "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1\u001b[39m\nReceived:   \u001b[31m1\u001b[39m"
+    },
+    "endTime": 358300.46
+  },
+  {
+    "type": "before",
+    "callId": "expect@47",
+    "method": "expect",
+    "params": {
+      "expected": "1"
+    },
+    "startTime": 358555.397
+  },
+  {
+    "type": "after",
+    "callId": "expect@47",
+    "error": {
+      "name": "",
+      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1\u001b[39m\nReceived:   \u001b[31m1\u001b[39m",
+      "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1\u001b[39m\nReceived:   \u001b[31m1\u001b[39m"
+    },
+    "endTime": 358555.557
+  },
+  {
+    "type": "before",
+    "callId": "expect@48",
+    "method": "expect",
+    "params": {
+      "expected": "1"
+    },
+    "startTime": 359060.751
+  },
+  {
+    "type": "after",
+    "callId": "expect@48",
+    "error": {
+      "name": "",
+      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1\u001b[39m\nReceived:   \u001b[31m1\u001b[39m",
+      "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1\u001b[39m\nReceived:   \u001b[31m1\u001b[39m"
+    },
+    "endTime": 359060.9
+  },
+  {
+    "type": "before",
+    "callId": "expect@49",
+    "method": "expect",
+    "params": {
+      "expected": "1"
+    },
+    "startTime": 360062.468
+  },
+  {
+    "type": "after",
+    "callId": "expect@49",
+    "error": {
+      "name": "",
+      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1\u001b[39m\nReceived:   \u001b[31m1\u001b[39m",
+      "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1\u001b[39m\nReceived:   \u001b[31m1\u001b[39m"
+    },
+    "endTime": 360062.558
+  },
+  {
+    "type": "before",
+    "callId": "expect@50",
+    "method": "expect",
+    "params": {
+      "expected": "1"
+    },
+    "startTime": 361064.186
+  },
+  {
+    "type": "after",
+    "callId": "expect@50",
+    "error": {
+      "name": "",
+      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1\u001b[39m\nReceived:   \u001b[31m1\u001b[39m",
+      "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeGreaterThan\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m\n\nExpected: > \u001b[32m1\u001b[39m\nReceived:   \u001b[31m1\u001b[39m"
+    },
+    "endTime": 361064.274
+  },
+  {
+    "type": "before",
+    "callId": "expect@51",
+    "method": "expect",
+    "params": {
+      "expected": "1"
+    },
+    "startTime": 362068.593
+  },
+  {
+    "type": "before",
+    "callId": "expect@52",
+    "method": "expect",
+    "params": {
+      "expected": "4"
+    },
+    "startTime": 362068.951
+  },
+  {
+    "type": "before",
+    "callId": "expect@53",
+    "method": "expect",
+    "params": {
+      "expected": "4"
+    },
+    "startTime": 362069.079
+  },
+  {
+    "type": "before",
+    "callId": "expect@54",
+    "method": "expect",
+    "params": {
+      "locator": "getByText('可执行', { exact: true })"
+    },
+    "startTime": 362069.555
+  },
+  {
+    "type": "before",
+    "callId": "expect@55",
+    "method": "expect",
+    "params": {
+      "locator": "getByRole('textbox', { name: 'SQL' })",
+      "expected": "SELECT fact FROM diag_facts"
+    },
+    "startTime": 362092.629
+  },
+  {
+    "type": "before",
+    "callId": "expect@56",
+    "method": "expect",
+    "params": {
+      "expected": "1"
+    },
+    "startTime": 362102.552
+  },
+  {
+    "type": "before",
+    "callId": "expect@58",
+    "method": "expect",
+    "params": {
+      "locator": "getByRole('region', { name: '查询结果' })",
+      "expected": "0 行"
+    },
+    "startTime": 362160.575
+  },
+  {
+    "type": "after",
+    "callId": "expect@58",
+    "error": {
+      "name": "",
+      "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('region', { name: '查询结果' })\nExpected substring: \u001b[32m\"0 行\"\u001b[39m\nReceived string:    \u001b[31m\"\"\u001b[39m\nTimeout: 4000ms\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" getByRole('region', { name: '查询结果' }) with timeout 4000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('region', { name: '查询结果' })\u001b[22m\n\u001b[2m    5 × locator resolved to <section aria-label=\"查询结果\" class=\"db-result\"></section>\u001b[22m\n\u001b[2m      - unexpected value \"\"\u001b[22m\n",
+      "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoContainText\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('region', { name: '查询结果' })\nExpected substring: \u001b[32m\"0 行\"\u001b[39m\nReceived string:    \u001b[31m\"\"\u001b[39m\nTimeout: 4000ms\n\nCall log:\n\u001b[2m  - Expect \"toContainText\" getByRole('region', { name: '查询结果' }) with timeout 4000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('region', { name: '查询结果' })\u001b[22m\n\u001b[2m    5 × locator resolved to <section aria-label=\"查询结果\" class=\"db-result\"></section>\u001b[22m\n\u001b[2m      - unexpected value \"\"\u001b[22m\n\n    at /Users/nineofour/Agent-Alfred-v10/tests/browser/database.spec.js:253:26"
+    },
+    "endTime": 370335.049
+  },
+  {
+    "type": "before",
+    "callId": "call@8525",
+    "method": "expect",
+    "params": {
+      "selector": "internal:text=\"可执行\"s",
+      "expression": "to.be.visible",
+      "expectedValue": {
+        "value": {
+          "v": "undefined"
+        },
+        "handles": []
+      },
+      "isNot": false,
+      "timeout": 4000
+    },
+    "startTime": 357629.96
+  },
+  {
+    "type": "before",
+    "callId": "call@8529",
+    "method": "click",
+    "params": {
+      "selector": "internal:role=button[name=\"执行\"s]",
+      "strict": true
+    },
+    "startTime": 357689.326
+  },
+  {
+    "type": "before",
+    "callId": "call@8531",
+    "method": "expect",
+    "params": {
+      "selector": "internal:role=region[name=\"查询结果\"i]",
+      "expression": "to.have.text",
+      "expectedText": [
+        {
+          "string": "forget-this-real-diagnostic-body",
+          "matchSubstring": true,
+          "normalizeWhiteSpace": true
+        }
+      ],
+      "expectedValue": {
+        "value": {
+          "v": "undefined"
+        },
+        "handles": []
+      },
+      "isNot": false,
+      "timeout": 4000
+    },
+    "startTime": 357736.948
+  },
+  {
+    "type": "before",
+    "callId": "call@8536",
+    "method": "expect",
+    "params": {
+      "selector": "internal:role=region[name=\"查询结果\"i]",
+      "expression": "to.be.empty",
+      "expectedValue": {
+        "value": {
+          "v": "undefined"
+        },
+        "handles": []
+      },
+      "isNot": false,
+      "timeout": 4000
+    },
+    "startTime": 358151.263
+  },
+  {
+    "type": "before",
+    "callId": "call@8538",
+    "method": "expect",
+    "params": {
+      "selector": "internal:text=\"可执行\"s",
+      "expression": "to.be.visible",
+      "expectedValue": {
+        "value": {
+          "v": "undefined"
+        },
+        "handles": []
+      },
+      "isNot": false,
+      "timeout": 4000
+    },
+    "startTime": 362069.997
+  },
+  {
+    "type": "before",
+    "callId": "call@8540",
+    "method": "expect",
+    "params": {
+      "selector": "internal:role=textbox[name=\"SQL\"i]",
+      "expression": "to.have.value",
+      "expectedText": [
+        {
+          "string": "SELECT fact FROM diag_facts"
+        }
+      ],
+      "expectedValue": {
+        "value": {
+          "v": "undefined"
+        },
+        "handles": []
+      },
+      "isNot": false,
+      "timeout": 4000
+    },
+    "startTime": 362093.049
+  },
+  {
+    "type": "before",
+    "callId": "call@8542",
+    "method": "click",
+    "params": {
+      "selector": "internal:role=button[name=\"执行\"s]",
+      "strict": true
+    },
+    "startTime": 362102.919
+  },
+  {
+    "type": "before",
+    "callId": "call@8544",
+    "method": "expect",
+    "params": {
+      "selector": "internal:role=region[name=\"查询结果\"i]",
+      "expression": "to.have.text",
+      "expectedText": [
+        {
+          "string": "0 行",
+          "matchSubstring": true,
+          "normalizeWhiteSpace": true
+        }
+      ],
+      "expectedValue": {
+        "value": {
+          "v": "undefined"
+        },
+        "handles": []
+      },
+      "isNot": false,
+      "timeout": 4000
+    },
+    "startTime": 362165.311
+  },
+  {
+    "type": "after",
+    "callId": "call@8544",
+    "error": {
+      "message": "Expect failed",
+      "stack": "ExpectError: Expect failed\n    at _Frame.expect (/Users/nineofour/Agent-Alfred-v10/node_modules/playwright-core/lib/coreBundle.js:24312:17)\n    at _FrameDispatcher.expect (/Users/nineofour/Agent-Alfred-v10/node_modules/playwright-core/lib/coreBundle.js:54886:11)\n    at _ProgressController.run (/Users/nineofour/Agent-Alfred-v10/node_modules/playwright-core/lib/coreBundle.js:12374:27)\n    at DispatcherConnection.dispatch (/Users/nineofour/Agent-Alfred-v10/node_modules/playwright-core/lib/coreBundle.js:19135:27)",
+      "name": "ExpectError"
+    },
+    "endTime": 366170.391
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/database",
+    "status": 200,
+    "start": 357638.462,
+    "duration_ms": 5.3100000000000005
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/database",
+    "status": 200,
+    "start": 357638.488,
+    "duration_ms": 8.627
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/database",
+    "status": 200,
+    "start": 357638.513,
+    "duration_ms": 11.196
+  },
+  {
+    "type": "HTTP",
+    "method": "POST",
+    "path": "/api/database/queries",
+    "status": 200,
+    "start": 357732.44,
+    "duration_ms": 3.522
+  },
+  {
+    "type": "HTTP",
+    "method": "POST",
+    "path": "/api/database/queries/8Vp1r_qeR9TVub0MdtipaQ80/execute",
+    "status": 200,
+    "start": 357796.161,
+    "duration_ms": 202.81300000000002
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/database/queries/8Vp1r_qeR9TVub0MdtipaQ80",
+    "status": 200,
+    "start": 357997.396,
+    "duration_ms": 1.41
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/database",
+    "status": 200,
+    "start": 357998.28,
+    "duration_ms": 4.277
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/events",
+    "status": 200,
+    "start": 357629.78,
+    "duration_ms": 480.95300000000003
+  },
+  {
+    "type": "HTTP",
+    "method": "POST",
+    "path": "/api/database/queries/8Vp1r_qeR9TVub0MdtipaQ80/cancel",
+    "status": 200,
+    "start": 358111.684,
+    "duration_ms": 1.448
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/database/queries/8Vp1r_qeR9TVub0MdtipaQ80",
+    "status": 200,
+    "start": 361119.059,
+    "duration_ms": 8.162
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/database/queries/8Vp1r_qeR9TVub0MdtipaQ80",
+    "status": 200,
+    "start": 361119.504,
+    "duration_ms": 17.843
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/database",
+    "status": 200,
+    "start": 361119.002,
+    "duration_ms": 29.185
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/database",
+    "status": 200,
+    "start": 361142.037,
+    "duration_ms": 16.784000000000002
+  },
+  {
+    "type": "HTTP",
+    "method": "POST",
+    "path": "/api/database/queries",
+    "status": 200,
+    "start": 362151.861,
+    "duration_ms": 11.202
+  },
+  {
+    "type": "HTTP",
+    "method": "POST",
+    "path": "/api/database/queries/DjtW2Lg2KGRMfqjVELdHiEQK/execute",
+    "status": 200,
+    "start": 362161.177,
+    "duration_ms": 584.604
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/database/queries/DjtW2Lg2KGRMfqjVELdHiEQK",
+    "status": 200,
+    "start": 362745.566,
+    "duration_ms": 1.3559999999999999
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/database",
+    "status": 200,
+    "start": 362747.229,
+    "duration_ms": 5.734
+  },
+  {
+    "type": "HTTP",
+    "method": "POST",
+    "path": "/api/database/queries/DjtW2Lg2KGRMfqjVELdHiEQK/cancel",
+    "status": 503,
+    "start": 370340.503,
+    "duration_ms": 3.1919999999999997
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/database/queries/DjtW2Lg2KGRMfqjVELdHiEQK",
+    "status": 503,
+    "start": 370343.607,
+    "duration_ms": 1.319
+  },
+  {
+    "type": "HTTP",
+    "method": "GET",
+    "path": "/api/events",
+    "status": 200,
+    "start": 361111.763,
+    "duration_ms": 9521.059000000001
+  },
+  {
+    "type": "HTTP",
+    "method": "POST",
+    "path": "/api/memory/commands",
+    "status": 200,
+    "start": 357540.983,
+    "duration_ms": 14.385999999998603
+  },
+  {
+    "type": "HTTP",
+    "method": "POST",
+    "path": "/api/memory/commands",
+    "status": 200,
+    "start": 358098.374,
+    "duration_ms": 48.396000000007916
+  }
+]

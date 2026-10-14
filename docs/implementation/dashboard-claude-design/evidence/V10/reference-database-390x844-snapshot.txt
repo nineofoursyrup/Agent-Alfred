@@ -1,0 +1,30 @@
+- navigation:
+  - text: Syrup v0.9 · 本地 claude-sonnet-4-5 127.0.0.1:9049 SYSTEM
+  - link "Overview":
+    - /url: "#"
+  - link "Loop 48":
+    - /url: "#"
+  - link "Memory 126":
+    - /url: "#"
+  - link "Graph on":
+    - /url: "#"
+  - link "Ops pass":
+    - /url: "#"
+  - text: DATA
+  - link "Tools 14":
+    - /url: "#"
+  - link "Database state.db":
+    - /url: "#"
+  - button "中文"
+  - button "EN"
+  - text: ~/.syrup/state.db · 1.4 MB traces/2026-08-17.jsonl
+- main:
+  - text: 你的记忆就是一个文件
+  - heading "Database" [level=1]
+  - text: "state.db 的实时浏览器：分表、表结构，还有一个只读 SQL 控制台。 live · turn #48 TABLES facts 126 episodes 34 skills 3 turns 48 events 27 usage 312 SQL CONSOLE · 只读 select text, created_at from facts order by created_at desc limit 5;"
+  - button "执行"
+  - text: 5 rows · 3 ms text created_at Alex 更喜欢上午开会 2026-08-15 09:12 周六 08:00 固定去游泳 2026-08-14 20:41 不喜欢周一开会 2026-08-11 11:02 用 uv 管理 Python 环境 2026-08-09 15:30 咖啡只喝手冲，不加奶 2026-08-03 08:15 妹妹的生日是 11 月 4 日 2026-07-28 22:07
+- complementary:
+  - text: CHAT gateway 记住 Alex 更喜欢上午开会 好，记下了。以后给你和 Alex 排会我会默认放在上午。 skip 2 iter 1.9s +1 fact 周五和 Alex 约个碰头 已排在周五 09:00 —— 用的是你之前告诉我的偏好。 retrieve 3 iter 3.4s create_event 正在流式输出… 事件同时写进 trace
+  - textbox "跟 Syrup 说点什么…"
+  - button "发送"
