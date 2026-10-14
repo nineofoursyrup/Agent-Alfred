@@ -33,11 +33,42 @@ function attemptDetails(attempt){
 function table(title, headings,kind='') {
   const region=node('div');region.className='table-scroll '+kind;region.tabIndex=0;region.setAttribute('role','region');region.setAttribute('aria-label',title);
   const element=node('table'),caption=node('caption',title),head=node('thead'),row=node('tr'),body=node('tbody');
-  for(const text of headings){const th=node('th',text);th.scope='col';row.append(th);}
+  if(kind==='ops-runs'){
+    // Explicit roles preserve the native table when its rows use flex layout.
+    element.setAttribute('role','table');element.setAttribute('aria-label',title);head.setAttribute('role','rowgroup');body.setAttribute('role','rowgroup');row.setAttribute('role','row');
+    caption.className='sy-list-header';
+  }
+  for(const [index,text] of headings.entries()){
+    const th=node('th',text);th.scope='col';
+    if(kind==='ops-runs'){th.id=`ops-run-column-${index}`;th.setAttribute('role','columnheader');}
+    row.append(th);
+  }
   head.append(row);element.append(caption,head,body);region.append(element);return {region,body};
 }
 /** @param {HTMLElement} body @param {(string|number|HTMLElement)[]} values */
-function tableRow(body,values){const row=node('tr');for(const value of values){const cell=node('td');cell.append(value instanceof HTMLElement?value:String(value));row.append(cell);}body.append(row);return row;}
+function tableRow(body,values){
+  const row=node('tr'),runIndex=body.parentElement?.closest('.ops-runs');
+  if(runIndex){row.className='sy-row';row.setAttribute('role','row');}
+  for(const [index,value] of values.entries()){
+    const cell=node('td');
+    if(runIndex){cell.setAttribute('role','cell');cell.setAttribute('headers',`ops-run-column-${index}`);}
+    cell.append(value instanceof HTMLElement?value:String(value));row.append(cell);
+  }
+  body.append(row);return row;
+}
+/** @param {string} title @param {HTMLElement[]} content */
+function panelContent(title,...content){
+  const header=node('header'),heading=node('h2',title),body=node('div');
+  header.className='sy-panel-header';heading.className='sy-panel-eyebrow';body.className='sy-panel-body';
+  header.append(heading);body.append(...content);return [header,body];
+}
+/** @param {string} label @param {string|number} value @param {string} status @param {string} description @param {string} [tone] */
+function metric(label,value,status,description,tone=''){
+  const card=node('div'),heading=node('p'),eyebrow=node('span',label+' '),amount=node('span',String(value)),state=node('p',status),note=node('p',description);
+  card.className='sy-metric-card sy-metric-usage';heading.className='ops-metric-heading';eyebrow.className='ops-metric-eyebrow';amount.className='sy-metric-value '+tone;state.className='ops-metric-status '+tone;note.className='sy-metric-label';
+  // Keep each label and its value adjacent in the reading order and textContent.
+  heading.append(eyebrow,amount);card.append(heading,state,note);return card;
+}
 /** @param {string} title @param {HTMLElement} content */
 function disclosure(title,content){const box=node('details');box.append(node('summary',title),content);return box;}
 /** @param {string} title @param {HTMLInputElement|HTMLSelectElement} input @param {string} [hint] */
@@ -67,7 +98,7 @@ export function accountingPage(root, csrf) {
   root.classList.add('accounting');
   const params = new URLSearchParams(location.search);
   const explicitRefresh = params.has('snapshot_context');
-  const filters = node('form'); filters.setAttribute('aria-label', '账目筛选');
+  const filters = node('form'); filters.className='sy-panel';filters.setAttribute('aria-label', '账目筛选');
   const range = node('select'); range.setAttribute('aria-label', '时间范围');
   for (const [key, label] of [['7d','近七个自然日'],['today','今天'],['30d','近三十个自然日'],['custom','自定义半开区间'],['all','全部历史']]) {
     const option = node('option', label); option.value = key; range.append(option);
@@ -89,13 +120,13 @@ export function accountingPage(root, csrf) {
   const fields=node('div');fields.className='ops-filter-fields';
   fields.append(field('时间范围',range),field('IANA 时区',zone),field('开始日期（含）',start,'自定义期间使用当地日期'),field('结束日期（不含）',end,'结束日为排他边界'),field('会话 ID',session),field('运行用途',purpose),field('工具身份',tool,'包含匹配工具的完整 Run'),field('Run ID',run,'使用完整不透明标识'));
   const draftState=node('p');draftState.setAttribute('role','status');
-  filters.append(node('h2','待查询条件'),fields,draftState,refresh);
+  filters.append(...panelContent('待查询条件',fields,draftState,refresh));
   const state = node('p'); state.setAttribute('role','status');
   const notice=node('p');notice.setAttribute('role','status');
   const retrySource=node('button','重新核验原快照');retrySource.hidden=true;
-  const scope=node('section');scope.setAttribute('aria-label','当前账目快照');
-  const totals = node('section'); totals.setAttribute('aria-label','账目汇总');
-  const rows = node('section'); const detail = node('section'); detail.setAttribute('aria-label','运行账目明细');
+  const scope=node('section');scope.className='sy-panel';scope.setAttribute('aria-label','当前账目快照');
+  const totals = node('section'); totals.className='ops-summary';totals.setAttribute('aria-label','账目汇总');
+  const rows = node('section');rows.className='sy-panel'; const detail = node('section');detail.className='sy-panel ops-detail';detail.setAttribute('aria-label','运行账目明细');
   let runTable=table('Run 账目索引',['Run / Session','用途与状态','归属时间','账目与过程覆盖','操作'],'ops-runs');
   const more = node('button','下一页'); more.hidden = true;
   root.append(filters, state, notice, retrySource, scope, node('p','工具筛选展示包含该工具的完整 Run；模型 USD 与工具服务／单位分列，不能归因给单一工具。'), totals, rows, more, detail);
@@ -177,19 +208,25 @@ export function accountingPage(root, csrf) {
   /** @param {Wire} value */
   function renderSummary(value) {
     const s = value.summary;
-    scope.replaceChildren(node('h2','当前账目快照'),node('p',filterDescription(value.filters)),
+    scope.replaceChildren(...panelContent('当前账目快照',node('p',filterDescription(value.filters)),
       node('p',`计算时刻 ${value.computed_at} · 有效至 ${value.expires_at}`),
-      disclosure('快照与价格身份',node('p',`snapshot_id ${value.snapshot_id} · process_instance_id ${value.process_instance_id} · price_version ${value.price_version}`)));
-    totals.replaceChildren(node('h2','分项汇总'),node('p', `Run ${s.run_count} · 模型 Attempt ${s.attempt_count} · 账目覆盖不足 Run ${s.incomplete_runs}`),
-      node('p', `精确费用 USD ${s.exact_usd} · 估算费用 USD ${s.estimated_usd} · 费用未知 Attempt ${s.unknown_cost_attempts}`),
-      node('p', `工具请求 ${s.tool_requests} · 已确认启动 ${s.confirmed_starts} · 明确未启动 ${s.not_started} · 启动未确认 ${s.unconfirmed_starts}`));
-    totals.append(node('p',`精确 Attempt ${s.exact_attempts} · 估算 Attempt ${s.estimated_attempts} · 使用陈旧价格 ${s.stale_price_attempts} · 涉及阶梯价 ${s.tiered_price_attempts}`),node('p',`估算价格来源：${Object.entries(s.price_sources).map(([name,count])=>`${name} ${count}`).join(' · ')||'无'}`));
-    for (const cost of s.tool_costs) totals.append(node('p', `工具服务 ${cost.service}：${cost.units} ${cost.unit}`));
-    totals.append(node('p', `工具计量状态：${Object.entries(s.tool_cost_states).map(([key,count])=>`${LABEL[key]||key} ${count}`).join(' · ')}`));
-    if (value.unresolved_membership?.length) totals.append(node('p', `范围覆盖不足：${value.unresolved_membership.length} 条 Run 的时间无法判定，未纳入所示汇总。可选择全部历史核对。`));
+      disclosure('快照与价格身份',node('p',`snapshot_id ${value.snapshot_id} · process_instance_id ${value.process_instance_id} · price_version ${value.price_version}`))));
+    const heading=node('h2','分项汇总'),cards=node('div'),notes=node('div');heading.className='sy-list-header';cards.className='ops-metrics';notes.className='ops-summary-notes';
+    cards.append(
+      metric('Run',s.run_count,`账目覆盖不足 Run ${s.incomplete_runs}`,`模型 Attempt ${s.attempt_count}`),
+      metric('精确费用 USD',s.exact_usd,`精确 Attempt ${s.exact_attempts}`,'精确费用来自端点报告。','sy-tone-success'),
+      metric('估算费用 USD',s.estimated_usd,`估算 Attempt ${s.estimated_attempts}`,`使用陈旧价格 ${s.stale_price_attempts} · 涉及阶梯价 ${s.tiered_price_attempts}`,'sy-tone-attention'),
+      metric('费用未知 Attempt',s.unknown_cost_attempts,'费用未知','未提供的价格或 Token 不等于零。','sy-tone-attention'),
+      metric('工具请求',s.tool_requests,`启动未确认 ${s.unconfirmed_starts}`,`已确认启动 ${s.confirmed_starts} · 明确未启动 ${s.not_started}`),
+    );
+    notes.append(node('p',`估算价格来源：${Object.entries(s.price_sources).map(([name,count])=>`${name} ${count}`).join(' · ')||'无'}`));
+    for (const cost of s.tool_costs) notes.append(node('p', `工具服务 ${cost.service}：${cost.units} ${cost.unit}`));
+    notes.append(node('p', `工具计量状态：${Object.entries(s.tool_cost_states).map(([key,count])=>`${LABEL[key]||key} ${count}`).join(' · ')}`));
+    if (value.unresolved_membership?.length) notes.append(node('p', `范围覆盖不足：${value.unresolved_membership.length} 条 Run 的时间无法判定，未纳入所示汇总。可选择全部历史核对。`));
     const tokens=table('Token 用量与缺失覆盖',['维度','已记录 Token','未报告的 Attempt 数']);
     for(const [key,value] of Object.entries(/** @type {Record<string,Wire>} */(s.tokens)))tableRow(tokens.body,[TOKEN[key]||key,value.known,value.missing_attempts]);
-    totals.append(disclosure('Token 用量与缺失覆盖',tokens.region),node('p','仅统计持久 Run 与可读账目；无 Run 的旧消息不计入。账目覆盖不证明正式回复已保存，完整记录状态请进入运行过程核对。'));
+    notes.append(disclosure('Token 用量与缺失覆盖',tokens.region),node('p','仅统计持久 Run 与可读账目；无 Run 的旧消息不计入。账目覆盖不证明正式回复已保存，完整记录状态请进入运行过程核对。'));
+    totals.replaceChildren(heading,cards,notes);
   }
   /** @param {Wire} value */
   function append(value,offset=0) {
@@ -298,7 +335,7 @@ export function accountingPage(root, csrf) {
       const normalized=snapshotContext(fixedFilters);
       for(const [key,input] of /** @type {[string,HTMLInputElement|HTMLSelectElement][]} */([['range',range],['timezone',zone],['start',start],['end',end],['session_id',session],['purpose',purpose],['tool',tool],['run_id',run]]))input.value=normalized.get('ops_'+key)||'';
       submitted=JSON.stringify(draft());describeDraft();
-      scope.replaceChildren(node('h2','原账目来源待核验'),node('p',filterDescription(fixedFilters)),node('p',`snapshot_id ${snapshot}`));
+      scope.replaceChildren(...panelContent('原账目来源待核验',node('p',filterDescription(fixedFilters)),node('p',`snapshot_id ${snapshot}`)));
     }
     void readSource(source);
   }
