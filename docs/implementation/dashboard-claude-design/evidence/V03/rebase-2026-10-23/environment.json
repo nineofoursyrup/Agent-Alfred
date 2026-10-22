@@ -1,0 +1,54 @@
+{
+  "recorded_at": "2026-10-22T21:57:20.730148+00:00",
+  "platform": "macOS-27.2-arm64-arm-64bit-Mach-O",
+  "browser_port_base": 18030,
+  "playwright": "1.63.0",
+  "typescript": "7.0.2",
+  "tools": [
+    {
+      "command": [
+        ".venv/bin/python",
+        "--version"
+      ],
+      "exit_code": 0,
+      "stdout": "Python 3.14.7\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        ".venv/bin/ruff",
+        "--version"
+      ],
+      "exit_code": 0,
+      "stdout": "ruff 0.16.4\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "node",
+        "--version"
+      ],
+      "exit_code": 0,
+      "stdout": "v26.8.2\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "npm",
+        "--version"
+      ],
+      "exit_code": 0,
+      "stdout": "11.19.1\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "uv",
+        "--version"
+      ],
+      "exit_code": 0,
+      "stdout": "uv 0.11.7 (9d177269e 2026-04-15 aarch64-apple-darwin)\n",
+      "stderr": ""
+    }
+  ]
+}

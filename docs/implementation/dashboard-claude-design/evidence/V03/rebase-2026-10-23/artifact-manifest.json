@@ -1,0 +1,101 @@
+{
+  "files": [
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/rebase-2026-10-23/browser-port-proof.json",
+      "sha256": "52389f1152febb7ad8d08be86752431b926142247e403670fbb7eeb4042c816a",
+      "bytes": 674
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/rebase-2026-10-23/candidate.json",
+      "sha256": "bcaca5c7fc311ea05b776e162cdcdf9051e0859d06ab52e0d685eb7cdb32de37",
+      "bytes": 90087
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/rebase-2026-10-23/environment.json",
+      "sha256": "5af465bf13a9cc5fbe17ec8330fbeac8aed5ccb9a97b490b676bb3a69ddbd54a",
+      "bytes": 1015
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/rebase-2026-10-23/frozen-scope.json",
+      "sha256": "efcb78c8b250828eb79d43c190ec1d07c7f5d7eb4a5a04824509b277fbba9056",
+      "bytes": 722
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/rebase-2026-10-23/gates/01-ruff.json",
+      "sha256": "0837f1c12583b6b2df6b574878b0c5b8f3ae59f2103ba797521349066cc7cc1a",
+      "bytes": 555
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/rebase-2026-10-23/gates/02-skills.json",
+      "sha256": "0fa1ec0785ddd760ad5b28dd7971e46583172c95bdad9dee492d587912811f55",
+      "bytes": 585
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/rebase-2026-10-23/gates/03-env.json",
+      "sha256": "dadb43c8a5757999fe9aa1534d8a7a8cb7cb04c976d9b3e3369c3d96167798a7",
+      "bytes": 580
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/rebase-2026-10-23/gates/04-typecheck.json",
+      "sha256": "99fd2e51a6cfd6016690eda7e5db2ddc2b7d11f48c2d619766ab5c5f97a11163",
+      "bytes": 550
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/rebase-2026-10-23/gates/05-pytest.json",
+      "sha256": "9e5d19dfdf1b5808d7afadf199313a3d6c7084c58a62cb86aed800a40a527184",
+      "bytes": 8847
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/rebase-2026-10-23/gates/06-build.json",
+      "sha256": "85b41105f7ea89d50b2fcf2d3be35f22ecc19f15b150dc02effcd77eda97b9ca",
+      "bytes": 687
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/rebase-2026-10-23/gates/07-browser.json",
+      "sha256": "2da004cd033c2cf34e890402ce4d4420f9ec955903709cb0749e081b7738ada3",
+      "bytes": 80332
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/rebase-2026-10-23/gates/08-install.json",
+      "sha256": "df980ba89047be051dba981c5645015b15912b645b340ec36c4d786e13805de1",
+      "bytes": 564271
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/rebase-2026-10-23/gates/09-branch-diff.json",
+      "sha256": "44796f851f00e0d3d9dd25fb5c094d609bb74b2e1cb543538860459db9c7abc2",
+      "bytes": 544
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/rebase-2026-10-23/gates/09-diff.json",
+      "sha256": "e4baf805a79e8c30bdc0c771385d161c92afaf8606c50acdb6a95eb00a00319b",
+      "bytes": 511
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/rebase-2026-10-23/mcp-artifacts.json",
+      "sha256": "b291bf9d806ed7590ed1790193806cbf8ecd8049009d6ab2e590315c919d0f92",
+      "bytes": 619832
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/rebase-2026-10-23/review.md",
+      "sha256": "fb08ae3c66b719acdf77a9fd113a946fa26ff6bb5f1803c57add338b036d6067",
+      "bytes": 3512
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/rebase-2026-10-23/runtime-output.json",
+      "sha256": "39b340453bfc67afe3edc1b137484c4b9a2ca82a32442ec398358ac12bb23fab",
+      "bytes": 1448
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/rebase-2026-10-23/scope-audit.json",
+      "sha256": "a4446c2d536514110a7aad42a484914ed55532de5e7e0c2db469ac3e8ceaf8c5",
+      "bytes": 19501
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/rebase-2026-10-23/validation-summary.json",
+      "sha256": "9a8f6f4a8691bf3b3807e0068ea5d3bda7e8810b65621b07a6b4c2bb591e97fe",
+      "bytes": 5296
+    }
+  ],
+  "document_sha256": "17ed4fdb091960dd9e8d1b4f56b6abf1eb282d6f6b89bb2ea19fc78234a987cf",
+  "note": "The manifest does not include itself. Historical scope-audit.json is preserved unchanged."
+}

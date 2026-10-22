@@ -1,0 +1,29 @@
+{
+  "reason": "These four screenshots were produced by the unchanged full browser suite. Preserve them as ignored runtime outputs; do not add unrelated page screenshots to the PR.",
+  "files": [
+    {
+      "original_path": "tmp/agent-work/issue-27/behaviour.png",
+      "preserved_path": ".scratch/v03/pr147-20261023/browser-generated/tmp/agent-work/issue-27/behaviour.png",
+      "sha256": "26661a7f60a7f015a194615efa26eeb83d92aeeac7fddc545711dfbc8578ab4f",
+      "mtime": 1792708300.6229653
+    },
+    {
+      "original_path": "tmp/agent-work/issue-27/aggregation-combinations.png",
+      "preserved_path": ".scratch/v03/pr147-20261023/browser-generated/tmp/agent-work/issue-27/aggregation-combinations.png",
+      "sha256": "a3444aa1ed070bdb8130453076c6f66450ab323e2bbbbda069766d00e76d3c16",
+      "mtime": 1792708310.2753937
+    },
+    {
+      "original_path": "tmp/agent-work/issue-76/narrow.png",
+      "preserved_path": ".scratch/v03/pr147-20261023/browser-generated/tmp/agent-work/issue-76/narrow.png",
+      "sha256": "49614cd9cc9184babe8998459cfce99262e190a6f7ccee1a5cf19c85c79435ad",
+      "mtime": 1792708689.937767
+    },
+    {
+      "original_path": "tmp/agent-work/issue-76/statistics.png",
+      "preserved_path": ".scratch/v03/pr147-20261023/browser-generated/tmp/agent-work/issue-76/statistics.png",
+      "sha256": "5844eec06259851de7ea700854bced56520cdee50aca6d60d570ed1194e8dec7",
+      "mtime": 1792708697.250975
+    }
+  ]
+}

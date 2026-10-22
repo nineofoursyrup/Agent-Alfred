@@ -1,0 +1,17 @@
+{
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "head": "a8bebff38c3a99e0c2bc5662a8b4b0ee66535bb8",
+  "checks": {
+    "css_outside_mainbar_unchanged": true,
+    "all_added_css_selectors_mainbar_scoped": true,
+    "html_outside_mainbar_unchanged": true,
+    "js_outside_mainbar_render_and_bindings_unchanged": true,
+    "approved_test_patch_unchanged": true,
+    "only_authorized_paths": true,
+    "no_static_asset_additions_or_deletions": true
+  },
+  "outside_allowlist": [],
+  "original_test_patch_id": "1471ea13a58853477cc110593fe5527b9cc95a2d",
+  "rebased_test_patch_id": "1471ea13a58853477cc110593fe5527b9cc95a2d",
+  "method": "Source comparisons and diff scope audit; not a substitute for runtime tests."
+}
