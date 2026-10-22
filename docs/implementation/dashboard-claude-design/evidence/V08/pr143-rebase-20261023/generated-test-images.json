@@ -1,0 +1,22 @@
+[
+  {
+    "source": "tmp/agent-work/issue-27/aggregation-combinations.png",
+    "destination": ".scratch/v08/pr143-20261023/generated-test-images/agent-work/issue-27/aggregation-combinations.png",
+    "sha256": "550424c20ce17a2bcb1e47f274822e70757623e6b89fba318f63740b1f97ebc7"
+  },
+  {
+    "source": "tmp/agent-work/issue-27/behaviour.png",
+    "destination": ".scratch/v08/pr143-20261023/generated-test-images/agent-work/issue-27/behaviour.png",
+    "sha256": "d0f44c4ef5f0469e1db324d9dcdd9c55ce481d8ecb8fea09b771399bb74b6d65"
+  },
+  {
+    "source": "tmp/agent-work/issue-76/statistics.png",
+    "destination": ".scratch/v08/pr143-20261023/generated-test-images/agent-work/issue-76/statistics.png",
+    "sha256": "0581405fe77ef78469169d39fc629d37ef8303bbf2e4577afbb2140681c37ce5"
+  },
+  {
+    "source": "tmp/agent-work/issue-76/narrow.png",
+    "destination": ".scratch/v08/pr143-20261023/generated-test-images/agent-work/issue-76/narrow.png",
+    "sha256": "56c2b72ef9d8be17ddb2c25566198d727dd37d6c2e5c7a2897535249a4f8dac8"
+  }
+]
