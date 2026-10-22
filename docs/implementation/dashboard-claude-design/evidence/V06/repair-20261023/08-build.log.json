@@ -1,0 +1,4 @@
+{
+  "raw_sha256": "7074ab6ff45bcd398fd9027e14204d3abf3ece90fef3d062c88178fdbd74f866",
+  "stdout_stderr": "Building source distribution...\nBuilding wheel from source distribution...\nSuccessfully built dist/agent_alfred-0.1.0.tar.gz\nSuccessfully built dist/agent_alfred-0.1.0-py3-none-any.whl\n"
+}

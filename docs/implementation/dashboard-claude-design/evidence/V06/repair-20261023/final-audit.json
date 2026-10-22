@@ -1,0 +1,27 @@
+{
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "reviewed_head": "9eeae7c830cc9a920ff938fdd63634653afdf699",
+  "scope_violations": [],
+  "test_diff_lines": [
+    "-    const facts = () => list.locator(\"article > p\").allTextContents();",
+    "+    const facts = () => list.locator(\"article .memory-excerpt\").allTextContents();"
+  ],
+  "source_input_files_verified": 720,
+  "source_input_drift": [],
+  "raw_logs_verified": [
+    "01-mainbar-replay.log.json",
+    "02-ruff.log.json",
+    "03-skills.log.json",
+    "04-env.log.json",
+    "05-typecheck.log.json",
+    "06-browser.log.json",
+    "07-pytest.log.json",
+    "08-build.log.json",
+    "09-mcp.log.json",
+    "10-diff.log.json",
+    "ci-38222412459-failure.log.json"
+  ],
+  "retained_png_zip_files_byte_identical": 31,
+  "missing_markdown_links": [],
+  "historical_artifact_source_commit": "9eeae7c830cc9a920ff938fdd63634653afdf699"
+}

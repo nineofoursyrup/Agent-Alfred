@@ -14,13 +14,5 @@
     "sha256": "8eef0ac215bc6beb25adc4366803a14afe7aec6e51e9b27a7bfaad32a7563f0f",
     "archived_path": "third-retest-failure/routing-statistics-SPEC-03-37cdb-nd-real-SQL-timeout-recover/test-failed-1.png",
     "scratch_archive_path": ".scratch/v06/third-retest-failure/routing-statistics-SPEC-03-37cdb-nd-real-SQL-timeout-recover/test-failed-1.png"
-  },
-  {
-    "original_path": "output/playwright/results/routing-statistics-SPEC-03-37cdb-nd-real-SQL-timeout-recover/trace.zip",
-    "file": "trace.zip",
-    "bytes": 6813299,
-    "sha256": "640b45af589ef508ab029cea9fa717283ccce8335491e6b248f993a7bbcf8ef4",
-    "archived_path": "third-retest-failure/routing-statistics-SPEC-03-37cdb-nd-real-SQL-timeout-recover/trace.zip",
-    "scratch_archive_path": ".scratch/v06/third-retest-failure/routing-statistics-SPEC-03-37cdb-nd-real-SQL-timeout-recover/trace.zip"
   }
 ]

@@ -1,0 +1,112 @@
+{
+  "status": "PASS",
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "tested_head": "9eeae7c830cc9a920ff938fdd63634653afdf699",
+  "input_manifest_sha256": "d87007e9b7c99d25367a281bd209cd881e3140c201471c6e66528c8d55f3dd89",
+  "gates": [
+    {
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "--no-cache",
+        "."
+      ],
+      "elapsed_seconds": 0.203,
+      "exit_code": 0,
+      "inputs_unchanged": true,
+      "log": "02-ruff.log.json"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "-B",
+        "scripts/check_skills.py"
+      ],
+      "elapsed_seconds": 0.139,
+      "exit_code": 0,
+      "inputs_unchanged": true,
+      "log": "03-skills.log.json"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "-B",
+        "scripts/check_env_example.py"
+      ],
+      "elapsed_seconds": 2.373,
+      "exit_code": 0,
+      "inputs_unchanged": true,
+      "log": "04-env.log.json"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "elapsed_seconds": 0.597,
+      "exit_code": 0,
+      "inputs_unchanged": true,
+      "log": "05-typecheck.log.json"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "test:browser"
+      ],
+      "elapsed_seconds": 841.298,
+      "exit_code": 0,
+      "inputs_unchanged": true,
+      "log": "06-browser.log.json"
+    },
+    {
+      "command": [
+        ".venv/bin/python",
+        "-B",
+        "-m",
+        "pytest",
+        "-q"
+      ],
+      "elapsed_seconds": 2639.678,
+      "exit_code": 0,
+      "inputs_unchanged": true,
+      "log": "07-pytest.log.json"
+    },
+    {
+      "command": [
+        "uv",
+        "build"
+      ],
+      "elapsed_seconds": 9.298,
+      "exit_code": 0,
+      "inputs_unchanged": true,
+      "log": "08-build.log.json"
+    },
+    {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check_mcp_installations.py",
+        "--output",
+        "/Users/nineofour/Agent-Alfred-v06/.scratch/v06/pr145-repair/mcp-artifacts.json"
+      ],
+      "elapsed_seconds": 12.392,
+      "exit_code": 0,
+      "inputs_unchanged": true,
+      "log": "09-mcp.log.json"
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "elapsed_seconds": 0.346,
+      "exit_code": 0,
+      "inputs_unchanged": true,
+      "log": "10-diff.log.json"
+    }
+  ]
+}
