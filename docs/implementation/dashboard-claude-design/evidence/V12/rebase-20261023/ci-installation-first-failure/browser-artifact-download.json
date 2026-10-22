@@ -1,0 +1,14 @@
+{
+  "command": [
+    "gh",
+    "run",
+    "download",
+    "39865395432",
+    "-n",
+    "browser-failure-evidence",
+    "-D",
+    ".scratch/v12/rebase-20261023-r1/ci-failure-39865395432/browser-artifact"
+  ],
+  "exit_code": 1,
+  "output": "no valid artifacts found to download\n"
+}

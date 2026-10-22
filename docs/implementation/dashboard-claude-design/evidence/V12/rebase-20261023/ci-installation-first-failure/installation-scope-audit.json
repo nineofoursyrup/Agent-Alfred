@@ -1,0 +1,22 @@
+{
+  "scripts/check_mcp_installations.py": {
+    "identical_to_main": true,
+    "sha256": "22d569289d9555e5aa5aee9f20ec16e66b113d70de29e21fe17aa63071dc308e"
+  },
+  "scripts/dashboard_installation_probe.py": {
+    "identical_to_main": true,
+    "sha256": "3798a760900c1f9c6013f7790f7a8ffa49a373238e944b90979b5e8f30beeaa5"
+  },
+  "pyproject.toml": {
+    "identical_to_main": true,
+    "sha256": "0b3ebe230f399935af91723dd9b9d02a2064edd526a822dfd3b502d4373a2afb"
+  },
+  "uv.lock": {
+    "identical_to_main": true,
+    "sha256": "b0445c57d4cdb22a7c816fe27fa8a0c7ddd39962aea69df367e3b1c27a275bb9"
+  },
+  ".github/workflows/ci.yml": {
+    "identical_to_main": true,
+    "sha256": "db144c8b13a5b894a52b6cc48ec417fc6d801d43c589f12c3ce3c91a1db5f8ac"
+  }
+}
