@@ -6,7 +6,7 @@ import {createHash} from 'node:crypto';
 const folder='.scratch/v10/reference';
 const source='docs/design/issue-122/reference';
 await mkdir(folder,{recursive:true});
-const server=spawn('.venv/bin/python',['-u','-m','http.server','18109','--bind','127.0.0.1','--directory',source]);
+const server=spawn('.venv/bin/python',['-u','-m','http.server','18108','--bind','127.0.0.1','--directory',source]);
 const closed=once(server,'close');
 let stderr=''; server.stderr.on('data',chunk=>stderr+=chunk);
 await Promise.race([once(server.stdout,'data'),closed.then(()=>{throw Error(stderr);})]);
@@ -18,7 +18,7 @@ page.on('response',r=>{if(r.url().includes('unpkg.com'))report.network_dependenc
 page.on('pageerror',e=>report.page_errors.push(e.message));
 page.on('requestfailed',r=>report.request_failures.push({url:r.url(),error:r.failure()?.errorText}));
 try{
- await page.goto('http://127.0.0.1:18109/Syrup%20Dashboard.dc.html');
+ await page.goto('http://127.0.0.1:18108/Syrup%20Dashboard.dc.html');
  const link=page.getByRole('link',{name:/^Database/});
  await expect(link).toBeVisible();
  report.navigation_accessible_name=(await link.innerText()).replace(/\s+/g,' ');

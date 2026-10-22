@@ -1,0 +1,115 @@
+{
+  "candidate": {
+    "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+    "head": "1fd8f8f14fd21ddf76bfacac463b11265c38b463",
+    "pending_diff": "review-pending-r1.patch",
+    "tracked_inputs_sha256": "96d38fe8bbf9614a6d4d38c2a7b093baf570817ba5193d508a489f4f0a0e0fee",
+    "archived_pending_diff": "review-pending-r1.patch.json"
+  },
+  "method": "Independent Standards and Spec reviewers, read-only; both use the same pinned candidate.",
+  "round_0": {
+    "standards": {
+      "reviewer": "standards_review",
+      "status": "FAIL",
+      "findings": [
+        {
+          "id": "S1",
+          "severity": "P2",
+          "rule": "RECIPES.md: do not redefine public sy classes in page CSS",
+          "files": [
+            "src/agent_alfred/ops/static/database.css:13-18"
+          ],
+          "defect": "Page-scoped accent-button color selector overrides common button:disabled text color; public layout classes also redefined."
+        }
+      ]
+    },
+    "spec": {
+      "reviewer": "spec_review",
+      "product_findings": 0,
+      "status": "Product conforms; full gates pending"
+    }
+  },
+  "round_1": {
+    "standards": {
+      "reviewer": "standards_review",
+      "status": "PASS",
+      "unresolved_findings": 0,
+      "optional_smells": 0,
+      "closed": [
+        "S1"
+      ]
+    },
+    "spec": {
+      "reviewer": "spec_review",
+      "status": "Product PASS; full gates and evidence archive pending",
+      "product_findings": 0
+    }
+  },
+  "closure": {
+    "red": "08-disabled-red.json",
+    "green": "09-disabled-green.json",
+    "probe_inputs_identical_except_product_repair": true,
+    "disabled_before": "rgb(236, 236, 234)",
+    "disabled_after": "rgb(141, 140, 150)",
+    "enabled_color_unchanged": true,
+    "four_viewport_geometry_and_styles_unchanged": true,
+    "keyboard_scroll_offsets": [
+      {
+        "viewport": [
+          1440,
+          900
+        ],
+        "before": 40,
+        "after": 40
+      },
+      {
+        "viewport": [
+          1280,
+          800
+        ],
+        "before": 39,
+        "after": 39
+      },
+      {
+        "viewport": [
+          390,
+          844
+        ],
+        "before": 37,
+        "after": 39
+      },
+      {
+        "viewport": [
+          320,
+          800
+        ],
+        "before": 38,
+        "after": 37
+      }
+    ],
+    "comparison_note": "Initial raw viewports equality was false only for scroll_left after keyboard ArrowRight (390/320 widths). All geometry/style fields are equal; both captures have positive local scroll offsets. Raw captures preserved.",
+    "behavior_suffix_unchanged": true,
+    "test_exception_unchanged": true
+  },
+  "interrupted_gate": {
+    "gate": "07-pytest.json",
+    "status": "NOT_RUN (full gate interrupted)",
+    "reason": "Stopped own pytest child with SIGINT after S1 confirmation; fixed source before restarting the entire gate.",
+    "exit_code": 2,
+    "partial_result": "811 passed, 1 deselected; not a complete gate and not classified as flaky."
+  },
+  "final_review": {
+    "reviewed_at": "2026-10-22T22:56:20.709374+00:00",
+    "standards": {
+      "reviewer": "standards_review",
+      "status": "PASS",
+      "remaining_findings": 0
+    },
+    "spec": {
+      "reviewer": "spec_review",
+      "status": "PASS",
+      "remaining_product_or_local_acceptance_gaps": 0
+    },
+    "scope": "Same reviewed production and test hashes; final V10 documentation, all local gate records, capture evidence and archived raw hashes checked. Remote CI remains a separate post-push gate."
+  }
+}

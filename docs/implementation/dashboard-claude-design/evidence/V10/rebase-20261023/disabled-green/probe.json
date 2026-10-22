@@ -1,0 +1,23 @@
+{
+  "phase": "green",
+  "origin": "http://127.0.0.1:18104",
+  "probe": "Real Database DOM; initial /api/database response is held to observe the real checking/disabled state, then released.",
+  "source_sha256": {
+    "src/agent_alfred/ops/static/database.js": "d36eea47528d1c816ca6b8e668267951cb0b0f84828d6479708bfc4349518129",
+    "src/agent_alfred/ops/static/database.css": "0955699cef1706e98f9071e5fadcfdc211310017466faae88e9088828ea45c47",
+    "src/agent_alfred/ops/static/app.css": "caaec9cf2e5e6f69798a8f222dc4bdb143636b21ddb5af84a33e7ab0a239f194"
+  },
+  "disabled": {
+    "disabled": true,
+    "color": "rgb(141, 140, 150)",
+    "muted": "#8d8c96",
+    "text": "#ececea",
+    "className": "sy-button-accent"
+  },
+  "enabled": {
+    "disabled": false,
+    "color": "rgb(236, 236, 234)"
+  },
+  "expected_disabled_color": "rgb(141, 140, 150)",
+  "exit_code": 0
+}

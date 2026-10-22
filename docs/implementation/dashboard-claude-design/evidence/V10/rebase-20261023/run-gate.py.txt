@@ -1,0 +1,48 @@
+import datetime
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import time
+
+root = Path.cwd()
+folder = root / '.scratch/v10/rebase-20261023'
+label, *command = sys.argv[1:]
+if command and command[0] == '--':
+    command = command[1:]
+record = folder / f'{label}.json'
+log = folder / f'{label}.log'
+if record.exists() or log.exists():
+    raise SystemExit(f'Refusing to overwrite gate {label}')
+def sha(data):
+    return hashlib.sha256(data).hexdigest()
+def git(*args):
+    return subprocess.check_output(['git', *args], text=True).strip()
+def manifest():
+    paths = subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0')
+    return {p: sha((root / p).read_bytes()) for p in paths if p and (root / p).is_file()}
+inputs = manifest()
+input_digest = sha(json.dumps(inputs, sort_keys=True).encode())
+manifest_file = folder / f'inputs-{input_digest}.json'
+if not manifest_file.exists():
+    manifest_file.write_text(json.dumps(inputs, indent=2, ensure_ascii=False) + '\n')
+start = time.monotonic()
+meta = {'label':label,'command':command,'cwd':str(root),
+        'git_head':git('rev-parse','HEAD'),'base':git('rev-parse','origin/main'),
+        'tracked_inputs_sha256':input_digest,'input_manifest':manifest_file.name,
+        'browser_base_port':os.environ.get('ALFRED_BROWSER_TEST_PORT'),
+        'started_at':datetime.datetime.now(datetime.timezone.utc).isoformat()}
+print(json.dumps({'event':'started',**meta},ensure_ascii=False),flush=True)
+with log.open('wb') as out:
+    result = subprocess.run(command, stdout=out, stderr=subprocess.STDOUT)
+meta.update(exit_code=result.returncode,duration_seconds=round(time.monotonic()-start,3),
+            finished_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            tracked_inputs_unchanged=inputs==manifest())
+raw = log.read_bytes()
+meta.update(raw_output_sha256=sha(raw),output=raw.decode('utf-8',errors='replace'))
+record.write_text(json.dumps(meta,ensure_ascii=False,indent=2)+'\n')
+print(json.dumps({k:v for k,v in meta.items() if k!='output'},ensure_ascii=False),flush=True)
+print(raw.decode('utf-8',errors='replace')[-5000:],flush=True)
+raise SystemExit(result.returncode)

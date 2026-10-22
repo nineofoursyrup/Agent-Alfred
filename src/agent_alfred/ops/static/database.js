@@ -32,11 +32,11 @@ export function databasePage(root, ctx) {
   const status = node("p", STATES.checking);
   status.setAttribute("aria-live", "polite");
   const notice = node("p", "查询受保护的临时数据。SQL 的 WHERE／LIMIT 不缩小准备范围。结果有上限，不是数据库总量。");
-  notice.className = "sy-panel-description";
+  notice.className = "db-query-notice sy-panel-description";
   const consolePanel = node("section");
   consolePanel.className = "db-query-panel sy-panel sy-panel-body";
   const consoleTitle = node("h2", "SQL 控制台 · 只读");
-  consoleTitle.className = "sy-panel-eyebrow";
+  consoleTitle.className = "db-query-title sy-panel-eyebrow";
   const catalog = node("section");
   catalog.setAttribute("aria-label", "诊断对象目录");
   catalog.className = "db-catalog sy-panel sy-panel-body";

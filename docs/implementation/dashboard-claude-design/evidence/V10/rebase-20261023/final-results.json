@@ -1,0 +1,201 @@
+{
+  "local_date": "2026-10-23",
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "review_head": "1fd8f8f14fd21ddf76bfacac463b11265c38b463",
+  "source_sha256": {
+    "src/agent_alfred/ops/static/database.js": "d36eea47528d1c816ca6b8e668267951cb0b0f84828d6479708bfc4349518129",
+    "src/agent_alfred/ops/static/database.css": "0955699cef1706e98f9071e5fadcfdc211310017466faae88e9088828ea45c47",
+    "tests/browser/database_migration.spec.js": "5fa5609478e695184ad6193f78f2e2225c19b965c35de28a1ca2f034e4d7f5a2"
+  },
+  "all_required_local_gates": "PASS",
+  "gates": [
+    {
+      "label": "11-ruff",
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "--no-cache",
+        "."
+      ],
+      "exit_code": 0,
+      "duration_seconds": 0.198,
+      "tracked_inputs_sha256": "96d38fe8bbf9614a6d4d38c2a7b093baf570817ba5193d508a489f4f0a0e0fee",
+      "tracked_inputs_unchanged": true
+    },
+    {
+      "label": "12-skills",
+      "command": [
+        ".venv/bin/python",
+        "-B",
+        "scripts/check_skills.py"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 0.103,
+      "tracked_inputs_sha256": "96d38fe8bbf9614a6d4d38c2a7b093baf570817ba5193d508a489f4f0a0e0fee",
+      "tracked_inputs_unchanged": true
+    },
+    {
+      "label": "13-env",
+      "command": [
+        ".venv/bin/python",
+        "-B",
+        "scripts/check_env_example.py"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 2.735,
+      "tracked_inputs_sha256": "96d38fe8bbf9614a6d4d38c2a7b093baf570817ba5193d508a489f4f0a0e0fee",
+      "tracked_inputs_unchanged": true
+    },
+    {
+      "label": "14-typecheck",
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 0.767,
+      "tracked_inputs_sha256": "96d38fe8bbf9614a6d4d38c2a7b093baf570817ba5193d508a489f4f0a0e0fee",
+      "tracked_inputs_unchanged": true
+    },
+    {
+      "label": "15-pytest",
+      "command": [
+        ".venv/bin/python",
+        "-B",
+        "-m",
+        "pytest",
+        "-q"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 2658.144,
+      "tracked_inputs_sha256": "96d38fe8bbf9614a6d4d38c2a7b093baf570817ba5193d508a489f4f0a0e0fee",
+      "tracked_inputs_unchanged": true
+    },
+    {
+      "label": "16-browser",
+      "command": [
+        "npm",
+        "run",
+        "test:browser"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 742.216,
+      "tracked_inputs_sha256": "96d38fe8bbf9614a6d4d38c2a7b093baf570817ba5193d508a489f4f0a0e0fee",
+      "tracked_inputs_unchanged": true
+    },
+    {
+      "label": "17-diff-worktree",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 0.063,
+      "tracked_inputs_sha256": "96d38fe8bbf9614a6d4d38c2a7b093baf570817ba5193d508a489f4f0a0e0fee",
+      "tracked_inputs_unchanged": true
+    },
+    {
+      "label": "18-diff-branch",
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "origin/main...HEAD"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 0.205,
+      "tracked_inputs_sha256": "96d38fe8bbf9614a6d4d38c2a7b093baf570817ba5193d508a489f4f0a0e0fee",
+      "tracked_inputs_unchanged": true
+    },
+    {
+      "label": "19-build",
+      "command": [
+        "uv",
+        "build"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 8.694,
+      "tracked_inputs_sha256": "96d38fe8bbf9614a6d4d38c2a7b093baf570817ba5193d508a489f4f0a0e0fee",
+      "tracked_inputs_unchanged": true
+    },
+    {
+      "label": "20-mcp-install",
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check_mcp_installations.py",
+        "--output",
+        ".scratch/v10/rebase-20261023/mcp-artifacts.json"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 11.355,
+      "tracked_inputs_sha256": "96d38fe8bbf9614a6d4d38c2a7b093baf570817ba5193d508a489f4f0a0e0fee",
+      "tracked_inputs_unchanged": true
+    }
+  ],
+  "pytest": "6445 passed, 1 deselected, 14 warnings",
+  "browser": "545 passed, no retries",
+  "installation_modes": [
+    {
+      "kind": "wheel",
+      "mode": "base",
+      "artifact_sha256": "e3383ee389b261024cb94b2bdc3e363ac7b89f48aad2cc01fff9082db2f2a3b3",
+      "core": "PASS",
+      "cli": "PASS",
+      "database_dashboard": "PASS",
+      "configured": "PASS",
+      "unconfigured": "PASS",
+      "source_contamination": false
+    },
+    {
+      "kind": "wheel",
+      "mode": "mcp",
+      "artifact_sha256": "e3383ee389b261024cb94b2bdc3e363ac7b89f48aad2cc01fff9082db2f2a3b3",
+      "core": "PASS",
+      "cli": "PASS",
+      "database_dashboard": "PASS",
+      "configured": "PASS",
+      "unconfigured": "PASS",
+      "source_contamination": false
+    },
+    {
+      "kind": "sdist",
+      "mode": "base",
+      "artifact_sha256": "c09b9ec970e4ec0860733ef9a1c000091c84760e47e6ecdd9f74c60600617753",
+      "core": "PASS",
+      "cli": "PASS",
+      "database_dashboard": "PASS",
+      "configured": "PASS",
+      "unconfigured": "PASS",
+      "source_contamination": false
+    },
+    {
+      "kind": "sdist",
+      "mode": "mcp",
+      "artifact_sha256": "c09b9ec970e4ec0860733ef9a1c000091c84760e47e6ecdd9f74c60600617753",
+      "core": "PASS",
+      "cli": "PASS",
+      "database_dashboard": "PASS",
+      "configured": "PASS",
+      "unconfigured": "PASS",
+      "source_contamination": false
+    }
+  ],
+  "flaky_cases_this_round": [],
+  "historical_records_preserved": true,
+  "excluded_from_final_pass": [
+    "07-pytest: interrupted full gate, exit 2, 811 passed only",
+    "08-disabled-red: expected reproduction FAIL before repair"
+  ],
+  "reference_reuse": "01-reference-capture uses unchanged reference HTML, support.js and corrected capture-reference.mjs; independent of product class repair.",
+  "remote_ci": "Pending verification on the pushed final commit; prior CI success is historical only.",
+  "review": {
+    "standards": "PASS",
+    "spec": "PASS",
+    "remaining_findings": 0,
+    "details": "review-r1.json"
+  }
+}

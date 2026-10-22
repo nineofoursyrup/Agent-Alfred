@@ -1,0 +1,8 @@
+{
+  "wheel_capture_scripts": [],
+  "sdist_capture_scripts": [
+    "agent_alfred-0.1.0/docs/implementation/dashboard-claude-design/evidence/V10/capture-product.mjs",
+    "agent_alfred-0.1.0/docs/implementation/dashboard-claude-design/evidence/V10/capture-reference.mjs"
+  ],
+  "note": "Source distribution may retain inert documentation; wheel serves only package static resources. No build/test runtime entrypoint imports these evidence scripts."
+}

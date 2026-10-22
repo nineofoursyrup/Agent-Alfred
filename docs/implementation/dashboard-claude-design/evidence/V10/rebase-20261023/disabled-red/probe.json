@@ -1,0 +1,24 @@
+{
+  "phase": "red",
+  "origin": "http://127.0.0.1:18104",
+  "probe": "Real Database DOM; initial /api/database response is held to observe the real checking/disabled state, then released.",
+  "source_sha256": {
+    "src/agent_alfred/ops/static/database.js": "6311a4492ddb84fa49837dac2e66b9ebd4e0ddb2a327640f2b108e99658753f7",
+    "src/agent_alfred/ops/static/database.css": "2d03c77cd64452f31413b45b366d76863ca5e9e19a365c034a90f0688f2f1432",
+    "src/agent_alfred/ops/static/app.css": "caaec9cf2e5e6f69798a8f222dc4bdb143636b21ddb5af84a33e7ab0a239f194"
+  },
+  "disabled": {
+    "disabled": true,
+    "color": "rgb(236, 236, 234)",
+    "muted": "#8d8c96",
+    "text": "#ececea",
+    "className": "sy-button-accent"
+  },
+  "enabled": {
+    "disabled": false,
+    "color": "rgb(236, 236, 234)"
+  },
+  "expected_disabled_color": "rgb(141, 140, 150)",
+  "exit_code": 1,
+  "error": "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: \"rgb(141, 140, 150)\"\nReceived: \"rgb(236, 236, 234)\"\n    at captureRawStack (/Users/nineofour/Agent-Alfred-v10/node_modules/playwright-core/lib/coreBundle.js:8588:17)\n    at callMatcherAsStep (/Users/nineofour/Agent-Alfred-v10/node_modules/playwright/lib/matchers/expect.js:13310:57)\n    at Object.toBe (/Users/nineofour/Agent-Alfred-v10/node_modules/playwright/lib/matchers/expect.js:13302:23)\n    at /Users/nineofour/Agent-Alfred-v10/.scratch/v10/rebase-20261023/probe-disabled.mjs:32:32"
+}

@@ -1,0 +1,21 @@
+{
+  "label": "17-diff-worktree",
+  "command": [
+    "git",
+    "diff",
+    "--check"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v10",
+  "git_head": "1fd8f8f14fd21ddf76bfacac463b11265c38b463",
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "tracked_inputs_sha256": "96d38fe8bbf9614a6d4d38c2a7b093baf570817ba5193d508a489f4f0a0e0fee",
+  "input_manifest": "inputs-96d38fe8bbf9614a6d4d38c2a7b093baf570817ba5193d508a489f4f0a0e0fee.json",
+  "browser_base_port": "18100",
+  "started_at": "2026-10-22T22:43:40.250244+00:00",
+  "exit_code": 0,
+  "duration_seconds": 0.063,
+  "finished_at": "2026-10-22T22:43:40.274905+00:00",
+  "tracked_inputs_unchanged": true,
+  "raw_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "output": ""
+}

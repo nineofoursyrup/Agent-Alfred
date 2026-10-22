@@ -1,0 +1,35 @@
+import {chromium, expect} from '@playwright/test';
+import {memoryServer} from '../../../tests/browser/memory-server.js';
+import {mkdir, writeFile, readFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+process.env.ALFRED_BROWSER_TEST_PORT='18100';
+const phase=process.argv[2];
+if(!['red','green'].includes(phase))throw new Error('Expected red or green');
+const folder=`.scratch/v10/rebase-20261023/disabled-${phase}`;
+await mkdir(folder,{recursive:false});
+const server=await memoryServer();
+const browser=await chromium.launch();
+const page=await browser.newPage({viewport:{width:1280,height:800}});
+const report={phase,origin:server.origin,probe:'Real Database DOM; initial /api/database response is held to observe the real checking/disabled state, then released.',source_sha256:{}};
+for(const path of ['src/agent_alfred/ops/static/database.js','src/agent_alfred/ops/static/database.css','src/agent_alfred/ops/static/app.css'])report.source_sha256[path]=createHash('sha256').update(await readFile(path)).digest('hex');
+let release;
+const gate=new Promise(resolve=>release=resolve);
+await page.route('**/api/database',async route=>{await gate; await route.continue();});
+try{
+ await page.goto(server.origin+'/database');
+ const run=page.getByRole('button',{name:'执行',exact:true});
+ await expect(run).toBeDisabled();
+ report.disabled=await run.evaluate(el=>({disabled:el.disabled,color:getComputedStyle(el).color,muted:getComputedStyle(el).getPropertyValue('--muted').trim(),text:getComputedStyle(el).getPropertyValue('--text').trim(),className:el.className}));
+ await page.screenshot({path:folder+'/disabled.png'});
+ await writeFile(folder+'/disabled-snapshot.txt',await page.locator('body').ariaSnapshot());
+ release();
+ await expect(page.getByText('可执行',{exact:true})).toBeVisible();
+ await expect(run).toBeEnabled();
+ report.enabled=await run.evaluate(el=>({disabled:el.disabled,color:getComputedStyle(el).color}));
+ const hex=report.disabled.muted.replace('#','');
+ const expected=`rgb(${parseInt(hex.slice(0,2),16)}, ${parseInt(hex.slice(2,4),16)}, ${parseInt(hex.slice(4,6),16)})`;
+ report.expected_disabled_color=expected;
+ expect(report.disabled.color).toBe(expected);
+ report.exit_code=0;
+}catch(error){report.exit_code=1;report.error=error.stack;throw error;}
+finally{release();await writeFile(folder+'/probe.json',JSON.stringify(report,null,2)+'\n');await browser.close();await server.close();}

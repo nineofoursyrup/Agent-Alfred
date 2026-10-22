@@ -1,0 +1,21 @@
+{
+  "label": "13-env",
+  "command": [
+    ".venv/bin/python",
+    "-B",
+    "scripts/check_env_example.py"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v10",
+  "git_head": "1fd8f8f14fd21ddf76bfacac463b11265c38b463",
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "tracked_inputs_sha256": "96d38fe8bbf9614a6d4d38c2a7b093baf570817ba5193d508a489f4f0a0e0fee",
+  "input_manifest": "inputs-96d38fe8bbf9614a6d4d38c2a7b093baf570817ba5193d508a489f4f0a0e0fee.json",
+  "browser_base_port": "18100",
+  "started_at": "2026-10-22T21:51:36.627507+00:00",
+  "exit_code": 0,
+  "duration_seconds": 2.735,
+  "finished_at": "2026-10-22T21:51:39.301819+00:00",
+  "tracked_inputs_unchanged": true,
+  "raw_output_sha256": "bc243523b805cfaeb64daf1540da71749c485a41d8aed112495ab3f052f28a97",
+  "output": "PASS: .env.example consistency check\n"
+}
