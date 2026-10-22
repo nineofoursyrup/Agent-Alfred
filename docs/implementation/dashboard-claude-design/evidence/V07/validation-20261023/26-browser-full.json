@@ -1,0 +1,30 @@
+{
+  "command": [
+    "npm",
+    "run",
+    "test:browser"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v07",
+  "head": "93734bb69ebf54bcc21af3e30f755b3185a4ede2",
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "started_at": "2026-10-22T22:29:04.184148+00:00",
+  "input_before": {
+    "sha256": "46447c9bd0447541233093ec5196a9030655fedd20d30bd7f0bb44df474a4c5d",
+    "file_count": 751
+  },
+  "status_before": "",
+  "env": {
+    "ALFRED_BROWSER_TEST_PORT": "18070"
+  },
+  "exit_code": 0,
+  "elapsed_seconds": 782.004,
+  "finished_at": "2026-10-22T22:42:06.223797+00:00",
+  "input_after": {
+    "sha256": "46447c9bd0447541233093ec5196a9030655fedd20d30bd7f0bb44df474a4c5d",
+    "file_count": 751
+  },
+  "input_unchanged": true,
+  "status_after": "?? tmp/",
+  "log": "26-browser-full.log",
+  "log_sha256": "881668fe1c508e06b96f83a055c0fa1ac89a2f5adff445f88f453940d77aefd3"
+}

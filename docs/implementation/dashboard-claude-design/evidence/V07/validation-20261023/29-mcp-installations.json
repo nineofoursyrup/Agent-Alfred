@@ -1,0 +1,30 @@
+{
+  "command": [
+    "uv",
+    "run",
+    "python",
+    "scripts/check_mcp_installations.py",
+    "--output",
+    "/Users/nineofour/Agent-Alfred-v07/.scratch/v07/validation-20261023/mcp-artifacts.json"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v07",
+  "head": "93734bb69ebf54bcc21af3e30f755b3185a4ede2",
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "started_at": "2026-10-22T22:42:18.804116+00:00",
+  "input_before": {
+    "sha256": "46447c9bd0447541233093ec5196a9030655fedd20d30bd7f0bb44df474a4c5d",
+    "file_count": 751
+  },
+  "status_before": "?? tmp/",
+  "exit_code": 0,
+  "elapsed_seconds": 14.79,
+  "finished_at": "2026-10-22T22:42:33.645657+00:00",
+  "input_after": {
+    "sha256": "46447c9bd0447541233093ec5196a9030655fedd20d30bd7f0bb44df474a4c5d",
+    "file_count": 751
+  },
+  "input_unchanged": true,
+  "status_after": "?? tmp/",
+  "log": "29-mcp-installations.log",
+  "log_sha256": "25fb1afc59dd0d61ea19566c96068450d3d9b6038329dd76856ac812d521466b"
+}
