@@ -1,0 +1,16 @@
+{
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "head": "5ec5c59e950d102074e4a238696646f2eee45e50",
+  "changed_count": 117,
+  "product_files": [
+    "src/agent_alfred/ops/static/connections.js",
+    "src/agent_alfred/ops/static/models.js",
+    "src/agent_alfred/ops/static/settings.css"
+  ],
+  "out_of_scope": [],
+  "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]",
+  "mcp_dependencies": {
+    "jsonschema": true,
+    "referencing": true
+  }
+}

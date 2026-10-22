@@ -1,0 +1,9 @@
+{
+  "command": [
+    "git",
+    "rebase",
+    "origin/main"
+  ],
+  "exit_code": 0,
+  "output": "Rebasing (1/3)\nRebasing (2/3)\nRebasing (3/3)\nSuccessfully rebased and updated refs/heads/dashboard-visual/v12-models-connections.\n"
+}
