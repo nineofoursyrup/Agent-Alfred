@@ -1,0 +1,32 @@
+{
+  "recorded_at": "2026-10-23T08:06:33.557339+08:00",
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "ci_failed_head": "da59d9682e3fd796858cd80965fe777f638bc87f",
+  "ci_failed_run": 39867720494,
+  "first_ci_browser": {
+    "passed": 544,
+    "failed": 1
+  },
+  "isolated_original_recheck": {
+    "passed": 1,
+    "failed": 0,
+    "elapsed_seconds": 2.133
+  },
+  "full_original_browser_recheck": {
+    "passed": 545,
+    "failed": 0,
+    "elapsed_seconds": 681.042
+  },
+  "classification": "Matches the existing cross-Session draft flaky symptom explicitly named in the user execution prompt. Unique timing root cause is not claimed.",
+  "test_changed": false,
+  "assertions_changed": false,
+  "timeouts_changed": false,
+  "retries_changed": false,
+  "source_files_checked": 719,
+  "source_changes": [],
+  "reused_local_validation_revision": "da59d9682e3fd796858cd80965fe777f638bc87f",
+  "reused_local_validation_path": "docs/implementation/dashboard-claude-design/evidence/V03/rebase-2026-10-23/validation-summary.json",
+  "reused_checks_reason": "No source, test, script, dependency or configuration changed. Retain successful unaffected deterministic gates; repeat the failing browser case and the entire related browser suite, then recheck the evidence diff.",
+  "final_ci_source": "The latest PR #147 head checks must independently succeed; the first failed CI remains FAIL.",
+  "archive_scope": "Only the single failing case directory, its source/provenance metadata and recheck logs. The complete downloaded browser artifact remains ignored."
+}

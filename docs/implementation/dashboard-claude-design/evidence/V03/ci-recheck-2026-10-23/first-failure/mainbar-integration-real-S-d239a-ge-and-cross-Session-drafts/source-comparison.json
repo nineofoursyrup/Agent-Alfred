@@ -1,0 +1,23 @@
+{
+  "unchanged_test": [
+    {
+      "revision": "origin/main",
+      "path": "tests/browser/mainbar-integration.spec.js",
+      "sha256": "a047b9514af17a032ec2338a8108ac1033d481bf3bc71aebc7678d0c7d695ecc"
+    },
+    {
+      "revision": "b6bfc71ceed00ac0da7db1559ba9e33136464436",
+      "path": "tests/browser/mainbar-integration.spec.js",
+      "sha256": "a047b9514af17a032ec2338a8108ac1033d481bf3bc71aebc7678d0c7d695ecc"
+    },
+    {
+      "revision": "HEAD",
+      "path": "tests/browser/mainbar-integration.spec.js",
+      "sha256": "a047b9514af17a032ec2338a8108ac1033d481bf3bc71aebc7678d0c7d695ecc"
+    }
+  ],
+  "all_validated_source_files_unchanged": 719,
+  "changed": [],
+  "session_logic": "frozen-scope.json establishes that app.js outside MainBar rendering/bindings matches origin/main; shell.js has no branch diff.",
+  "known_symptom": "The user execution prompt explicitly names the existing cross-Session draft flake receiving A未提交草稿. The CI failure matches that exact assertion symptom. This does not establish a unique timing root cause."
+}

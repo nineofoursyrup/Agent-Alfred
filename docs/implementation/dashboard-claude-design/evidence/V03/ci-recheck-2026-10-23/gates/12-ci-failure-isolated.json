@@ -1,0 +1,20 @@
+{
+  "command": [
+    "node",
+    "node_modules/@playwright/test/cli.js",
+    "test",
+    "tests/browser/mainbar-integration.spec.js"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v03",
+  "environment_overrides": {
+    "ALFRED_BROWSER_TEST_PORT": "18030"
+  },
+  "started_at": "2026-10-22T23:50:23.390076+00:00",
+  "ended_at": "2026-10-22T23:50:25.523224+00:00",
+  "elapsed_seconds": 2.133,
+  "exit_code": 0,
+  "head": "da59d9682e3fd796858cd80965fe777f638bc87f",
+  "log_file": "12-ci-failure-isolated.log",
+  "log_sha256": "b66206a9dceb45f56ae000bd7ab4b5c3ac5de165b6ec4e6931b123292a5ed2be",
+  "output": "\nRunning 1 test using 1 worker\n\n(node:49962) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✓  1 tests/browser/mainbar-integration.spec.js:3:1 › real S01 records compose with S02 exact location, identity merge and cross-Session drafts (796ms)\n\n  1 passed (1.8s)\n"
+}

@@ -1,0 +1,68 @@
+{
+  "files": [
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/ci-recheck-2026-10-23/first-failure/mainbar-integration-real-S-d239a-ge-and-cross-Session-drafts/browser-step.raw.json",
+      "bytes": 42886,
+      "sha256": "4e9016bf41a88a15ba1bf6e49217c3354f0e23f52968e8d08b382e89c980a7b4"
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/ci-recheck-2026-10-23/first-failure/mainbar-integration-real-S-d239a-ge-and-cross-Session-drafts/ci-result.json",
+      "bytes": 1493,
+      "sha256": "f6c9abec7cb2b56a586e4ef06695655b11d67a93c0e445ea1d249e0a3a43ec36"
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/ci-recheck-2026-10-23/first-failure/mainbar-integration-real-S-d239a-ge-and-cross-Session-drafts/error-context.md",
+      "bytes": 5274,
+      "sha256": "42bb846d4ad8999f9159139223d02a096b643c448d45183cb91f87ea8e00088e"
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/ci-recheck-2026-10-23/first-failure/mainbar-integration-real-S-d239a-ge-and-cross-Session-drafts/error-context.raw.json",
+      "bytes": 5515,
+      "sha256": "d9745732042b57f3573f22821e79bdb252a923533fdeaecc086b7174ee903362"
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/ci-recheck-2026-10-23/first-failure/mainbar-integration-real-S-d239a-ge-and-cross-Session-drafts/source-comparison.json",
+      "bytes": 1065,
+      "sha256": "c995e3f85da2288b1ca9f7866a6e5d7ac0507d6778c218bf29e74ff2ff6af0e2"
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/ci-recheck-2026-10-23/first-failure/mainbar-integration-real-S-d239a-ge-and-cross-Session-drafts/test-failed-1.png",
+      "bytes": 163462,
+      "sha256": "eff730243dc5b8df05f8734ac72f530bc12ef371cfac80863d263d962f5c264f"
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/ci-recheck-2026-10-23/first-failure/mainbar-integration-real-S-d239a-ge-and-cross-Session-drafts/trace.zip",
+      "bytes": 3485317,
+      "sha256": "e9d8c4c4ade6a17578652ad2f9ac496b4764d3df2346f82c1683d9f60b1ea1d3"
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/ci-recheck-2026-10-23/followup-summary.json",
+      "bytes": 1561,
+      "sha256": "ca7b6cc09afbddb396cf80e0beed269d286ec38413f33ba21e6bcab3ba9b3841"
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/ci-recheck-2026-10-23/gates/12-ci-failure-isolated.json",
+      "bytes": 985,
+      "sha256": "0fe9d4d975abdb8c3d22d96f232987136144fd7d362b49a05fb67b1192127d7a"
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/ci-recheck-2026-10-23/gates/13-browser-after-ci.json",
+      "bytes": 80375,
+      "sha256": "7865d63ed52b0c2b521cc7bbd707765c69682e437ec037ba85f58e32b3909f61"
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/ci-recheck-2026-10-23/gates/14-followup-diff.json",
+      "bytes": 520,
+      "sha256": "a1bf1c74c4cc318e5ffb24e58726d7b817510c35cf8faeceb6cf13f8ce6c7114"
+    },
+    {
+      "path": "docs/implementation/dashboard-claude-design/evidence/V03/ci-recheck-2026-10-23/review-followup.md",
+      "bytes": 1747,
+      "sha256": "d8063a9f39e25a0f9962e8a73a3a370e146ae50630be668a09506891d75a9107"
+    }
+  ],
+  "document_sha256": "efed88cf003c79c391b50152f369adb05c27d963f0aedc3904936728d1a9ec1e",
+  "previous_manifest_sha256": "9e738efb588a7a7cca1a337d9788f486ed7189049e70dee819bd961aa08d5223",
+  "previous_document_revision": "da59d9682e3fd796858cd80965fe777f638bc87f",
+  "note": "Only one failed CI case directory is archived; previous validation files remain unchanged. This manifest excludes itself."
+}
