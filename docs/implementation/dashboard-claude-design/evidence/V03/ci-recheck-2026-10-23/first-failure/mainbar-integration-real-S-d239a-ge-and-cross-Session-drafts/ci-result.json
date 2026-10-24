@@ -1,0 +1,48 @@
+{
+  "head": "da59d9682e3fd796858cd80965fe777f638bc87f",
+  "run_id": 39867720494,
+  "job_id": 120134025947,
+  "status": "completed",
+  "conclusion": "failure",
+  "browser": {
+    "passed": 544,
+    "failed": 1,
+    "reported_duration": "16.9m"
+  },
+  "failure": {
+    "test_file": "tests/browser/mainbar-integration.spec.js",
+    "line": 55,
+    "expected": "B独立草稿",
+    "received": "A未提交草稿",
+    "expect_timeout_ms": 4000
+  },
+  "artifact_directory": "mainbar-integration-real-S-d239a-ge-and-cross-Session-drafts",
+  "original_files": [
+    {
+      "name": "error-context.md",
+      "bytes": 5275,
+      "sha256": "dac29ddf697c2153f904042b73fe5eb17ea49d3f7cd2c76843b391d272280fac"
+    },
+    {
+      "name": "test-failed-1.png",
+      "bytes": 163462,
+      "sha256": "eff730243dc5b8df05f8734ac72f530bc12ef371cfac80863d263d962f5c264f"
+    },
+    {
+      "name": "trace.zip",
+      "bytes": 3485317,
+      "sha256": "e9d8c4c4ade6a17578652ad2f9ac496b4764d3df2346f82c1683d9f60b1ea1d3"
+    }
+  ],
+  "context_reading_copy": "error-context.md removes trailing whitespace only; error-context.raw.json reconstructs the original UTF-8 bytes. PNG and trace.zip are byte-identical.",
+  "port_provenance": {
+    "ci_origin": "GitHub Actions runner",
+    "ci_base_port": 17736,
+    "local_reproduction_base_port": 18030,
+    "local_allowed_range": [
+      18030,
+      18038
+    ]
+  },
+  "other_artifact_directories": "Not archived. Only the single failing case directory is selected."
+}

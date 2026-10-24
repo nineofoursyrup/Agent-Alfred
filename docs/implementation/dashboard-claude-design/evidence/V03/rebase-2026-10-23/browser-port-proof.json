@@ -1,0 +1,18 @@
+{
+  "recorded_at": "2026-10-22T22:31:39.120623+00:00",
+  "command": [
+    "lsof",
+    "-nP",
+    "-iTCP:18030-18038",
+    "-sTCP:LISTEN"
+  ],
+  "exit_code": 0,
+  "stdout": "COMMAND   PID      USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nPython   9785 nineofour    8u  IPv4  0x6e003b11ece6102      0t0  TCP 127.0.0.1:18030 (LISTEN)\nPython  10471 nineofour    8u  IPv4 0xd8d2e2381dce5874      0t0  TCP 127.0.0.1:18034 (LISTEN)\n",
+  "stderr": "",
+  "browser_port_base": 18030,
+  "reserved_range": [
+    18030,
+    18038
+  ],
+  "note": "Runtime listener observation during the full browser suite; fixture source and gate environment also pin the assigned range."
+}

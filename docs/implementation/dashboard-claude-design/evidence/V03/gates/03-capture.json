@@ -1,0 +1,32 @@
+{
+  "command": [
+    "node",
+    ".scratch/v03/capture.mjs"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v03",
+  "started_at": "2026-10-12T05:53:14.479309+00:00",
+  "elapsed_seconds": 5.176,
+  "exit_code": 0,
+  "candidate_before": {
+    "head": "449e77fd0ff814fb63f97a009c2435139a68686d",
+    "diff_sha256": "cba8aab18e83d23d4325fe4ced8c7b5a2892ea997ef5b03ec511c66c3f7b9dd5",
+    "source_sha256": {
+      "src/agent_alfred/ops/static/app.css": "8c57f8a322afb4b1839609b8bea6b1b5662ebbb5f6fb656c1d66748dcd3f6c4e",
+      "src/agent_alfred/ops/static/app.js": "8b5f737a91ae943e2ce5ab15b53cbd25772a6233f046673bdf9515d6d7ba597d",
+      "src/agent_alfred/ops/static/index.html": "b0f39799a068dd47598e3155cf4a5082ea6a5f7a1055a939f8ceca95d5e92ddb",
+      "tests/browser/shell.spec.js": "7179f72aa3c083753f1362838d65c7b312da20b407fd26f99f1df1182c18d686"
+    }
+  },
+  "candidate_after": {
+    "head": "449e77fd0ff814fb63f97a009c2435139a68686d",
+    "diff_sha256": "cba8aab18e83d23d4325fe4ced8c7b5a2892ea997ef5b03ec511c66c3f7b9dd5",
+    "source_sha256": {
+      "src/agent_alfred/ops/static/app.css": "8c57f8a322afb4b1839609b8bea6b1b5662ebbb5f6fb656c1d66748dcd3f6c4e",
+      "src/agent_alfred/ops/static/app.js": "8b5f737a91ae943e2ce5ab15b53cbd25772a6233f046673bdf9515d6d7ba597d",
+      "src/agent_alfred/ops/static/index.html": "b0f39799a068dd47598e3155cf4a5082ea6a5f7a1055a939f8ceca95d5e92ddb",
+      "tests/browser/shell.spec.js": "7179f72aa3c083753f1362838d65c7b312da20b407fd26f99f1df1182c18d686"
+    }
+  },
+  "output_sha256": "2175a11a982e5818d6d63661774234057c6a42954f21afb57e568bb86eaeacb5",
+  "output": "{\n  \"viewports\": [\n    {\n      \"width\": 1440,\n      \"height\": 900,\n      \"documentOverflow\": 0,\n      \"rootOverflow\": 0\n    },\n    {\n      \"width\": 1280,\n      \"height\": 800,\n      \"documentOverflow\": 0,\n      \"rootOverflow\": 0\n    },\n    {\n      \"width\": 390,\n      \"height\": 844,\n      \"documentOverflow\": 0,\n      \"rootOverflow\": 0\n    },\n    {\n      \"width\": 320,\n      \"height\": 800,\n      \"documentOverflow\": 0,\n      \"rootOverflow\": 0\n    }\n  ],\n  \"reference\": [\n    {\n      \"width\": 1440,\n      \"height\": 900,\n      \"main\": {\n        \"x\": 233,\n        \"y\": 0,\n        \"width\": 886,\n        \"height\": 900,\n        \"top\": 0,\n        \"right\": 1119,\n        \"bottom\": 900,\n        \"left\": 233\n      },\n      \"root\": {\n        \"x\": 1119,\n        \"y\": 0,\n        \"width\": 321,\n        \"height\": 900,\n        \"top\": 0,\n        \"right\": 1440,\n        \"bottom\": 900,\n        \"left\": 1119\n      }\n    },\n    {\n      \"width\": 1280,\n      \"height\": 800,\n      \"main\": {\n        \"x\": 233,\n        \"y\": 0,\n        \"width\": 726,\n        \"height\": 800,\n        \"top\": 0,\n        \"right\": 959,\n        \"bottom\": 800,\n        \"left\": 233\n      },\n      \"root\": {\n        \"x\": 959,\n        \"y\": 0,\n        \"width\": 321,\n        \"height\": 800,\n        \"top\": 0,\n        \"right\": 1280,\n        \"bottom\": 800,\n        \"left\": 959\n      }\n    },\n    {\n      \"width\": 390,\n      \"height\": 844,\n      \"main\": {\n        \"x\": 191,\n        \"y\": 0,\n        \"width\": 0,\n        \"height\": 844,\n        \"top\": 0,\n        \"right\": 191,\n        \"bottom\": 844,\n        \"left\": 191\n      },\n      \"root\": {\n        \"x\": 191,\n        \"y\": 0,\n        \"width\": 293,\n        \"height\": 844,\n        \"top\": 0,\n        \"right\": 484,\n        \"bottom\": 844,\n        \"left\": 191\n      }\n    },\n    {\n      \"width\": 320,\n      \"height\": 800,\n      \"main\": {\n        \"x\": 191,\n        \"y\": 0,\n        \"width\": 0,\n        \"height\": 800,\n        \"top\": 0,\n        \"right\": 191,\n        \"bottom\": 800,\n        \"left\": 191\n      },\n      \"root\": {\n        \"x\": 191,\n        \"y\": 0,\n        \"width\": 293,\n        \"height\": 800,\n        \"top\": 0,\n        \"right\": 484,\n        \"bottom\": 800,\n        \"left\": 191\n      }\n    }\n  ],\n  \"network\": [\n    {\n      \"url\": \"https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js\",\n      \"status\": 200\n    },\n    {\n      \"url\": \"https://unpkg.com/react@18.3.1/umd/react.production.min.js\",\n      \"status\": 200\n    }\n  ],\n  \"checks\": {\n    \"location\": {\n      \"result\": {\n        \"status\": \"applied\"\n      },\n      \"border\": \"rgb(124, 138, 236)\",\n      \"reading\": \"已定位历史回复；相邻历史尚未读取。\"\n    },\n    \"streaming\": {\n      \"text\": \"暂态过程输出：正式回复、结局和保存仍需分别核对。\",\n      \"borderStyle\": \"dashed\"\n    }\n  }\n}\n"
+}

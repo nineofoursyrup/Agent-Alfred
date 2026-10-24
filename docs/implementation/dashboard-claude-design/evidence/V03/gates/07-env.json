@@ -1,0 +1,38 @@
+{
+  "command": [
+    "uv",
+    "run",
+    "python",
+    "scripts/check_env_example.py"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v03",
+  "started_at": "2026-10-12T06:26:54.478704+00:00",
+  "elapsed_seconds": 6.403,
+  "exit_code": 0,
+  "candidate_before": {
+    "head": "c4226390b9f40b78eac46264db01818490232df5",
+    "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_sha256": {
+      "src/agent_alfred/ops/static/app.css": "8c57f8a322afb4b1839609b8bea6b1b5662ebbb5f6fb656c1d66748dcd3f6c4e",
+      "src/agent_alfred/ops/static/app.js": "8b5f737a91ae943e2ce5ab15b53cbd25772a6233f046673bdf9515d6d7ba597d",
+      "src/agent_alfred/ops/static/index.html": "b0f39799a068dd47598e3155cf4a5082ea6a5f7a1055a939f8ceca95d5e92ddb",
+      "tests/browser/shell.spec.js": "7179f72aa3c083753f1362838d65c7b312da20b407fd26f99f1df1182c18d686",
+      "tests/browser/routing.spec.js": "917e9f8de717206577728cba230391de60536bb3b3db8269c983283f37af0fc5",
+      "tests/browser/skills.spec.js": "d0b79df5db2c337caa3094b649cbafd74caa0b81caba505fb28485926c7a5eca"
+    }
+  },
+  "candidate_after": {
+    "head": "c4226390b9f40b78eac46264db01818490232df5",
+    "diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "source_sha256": {
+      "src/agent_alfred/ops/static/app.css": "8c57f8a322afb4b1839609b8bea6b1b5662ebbb5f6fb656c1d66748dcd3f6c4e",
+      "src/agent_alfred/ops/static/app.js": "8b5f737a91ae943e2ce5ab15b53cbd25772a6233f046673bdf9515d6d7ba597d",
+      "src/agent_alfred/ops/static/index.html": "b0f39799a068dd47598e3155cf4a5082ea6a5f7a1055a939f8ceca95d5e92ddb",
+      "tests/browser/shell.spec.js": "7179f72aa3c083753f1362838d65c7b312da20b407fd26f99f1df1182c18d686",
+      "tests/browser/routing.spec.js": "917e9f8de717206577728cba230391de60536bb3b3db8269c983283f37af0fc5",
+      "tests/browser/skills.spec.js": "d0b79df5db2c337caa3094b649cbafd74caa0b81caba505fb28485926c7a5eca"
+    }
+  },
+  "output_sha256": "bc243523b805cfaeb64daf1540da71749c485a41d8aed112495ab3f052f28a97",
+  "output": "PASS: .env.example consistency check\n"
+}

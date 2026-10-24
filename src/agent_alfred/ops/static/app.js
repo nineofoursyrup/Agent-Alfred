@@ -250,6 +250,8 @@ function renderShellStatus() {
   const tone=!connected?'sy-tone-muted':unavailable?'sy-tone-error':running?'sy-tone-accent':'sy-tone-success';
   const pulse=connected;
   const dotClass=`sy-status-dot ${tone}${pulse?' sy-pulse':''}`;
+  element('mainbar-dot').className=dotClass;
+  element('mainbar-stage').textContent=!connected?'未同步':unavailable?'记录不可用':busySummary?.stage||'已同步';
   const brandStatus=/** @type {HTMLElement} */(element('brand-status'));
   brandStatus.hidden=!instance;
   brandStatus.replaceChildren();
@@ -353,6 +355,12 @@ async function locateReply(target) {
     locationTarget={...target,loading:false,error:failure instanceof Error?failure.message:'正文未完整加载'};updateReadStatus();return {status:'unavailable'};
   }
 }
+/** @param {string} text @param {string} role */
+function messageBubble(text, role) {
+  const body=node('p',text);
+  body.className=`message-bubble message-${role}`;
+  return body;
+}
 function renderMessages() {
   const list=element('messages');
   const selection=document.getSelection();
@@ -386,21 +394,26 @@ function renderMessages() {
       article.dataset.replyComplete=String(item.type==='run_pair'?!!item.assistant&&item.reply_disposition!=='no_reply':item.type==='projection'&&!item.loading&&!item.recording_unverified&&typeof item.text==='string'&&['recorded','failed','pending'].includes(item.recording_state));
       if(item.aggregation)aggregationFacts(article,item.aggregation,memory);
       if(item.type==='run_pair') {
-        if(item.user)article.append(node('p',textBlocks(item.user)));
-        if(item.assistant)article.append(node('p',textBlocks(item.assistant)));
+        if(item.user)article.append(messageBubble(textBlocks(item.user),'user'));
+        if(item.assistant)article.append(messageBubble(textBlocks(item.assistant),'assistant'));
         if(item.reply_disposition==='no_reply'&&!item.aggregation)article.append(node('small','已结束 · 按要求未回复'));
         if(item.skill_notice)article.append(node('p',item.skill_notice));
         article.append(node('small','已保存'));
-      }else if(item.type==='historic_message')article.append(node('p',textBlocks(item.blocks)));
+      }else if(item.type==='historic_message')article.append(messageBubble(textBlocks(item.blocks),item.role==='user'?'user':'assistant'));
       else {
         if(item.userAvailability==='preview')article.append(node('small','请求预览（未取得完整请求）'));
-        if(item.user)article.append(node('p',item.user));
-        if(item.text!==undefined&&item.text!==null&&item.reply_disposition!=='no_reply')article.append(node('p',item.text));
+        if(item.user)article.append(messageBubble(item.user,'user'));
+        if(item.text!==undefined&&item.text!==null&&item.reply_disposition!=='no_reply')article.append(messageBubble(item.text,'assistant'));
         if(item.skill_notice)article.append(node('p',item.skill_notice));
         if(item.reply_disposition==='no_reply'&&!item.aggregation)article.append(node('small','已结束 · 按要求未回复'));
         if(item.loading){article.append(node('p','正文未完整加载'));const retry=node('button','重新加载正文');retry.onclick=()=>void recoverReply(item.run_id);article.append(retry);}
         if(item.outcome && (item.reply_disposition!=='no_reply'||item.outcome!=='completed'))article.append(node('small',outcomeLabel({...item,reply_disposition:undefined})));
         if(item.type==='projection')article.append(node('small',item.recording_unverified?'记录状态待核对':item.recording_state==='recorded'?'已保存':item.recording_state==='failed'?item.reply_disposition==='no_reply'?'本次运行未保存':'回复已收到但未保存':item.recording_state==='pending'?'正在保存':'记录状态未知'));
+      }
+      article.classList.toggle('message-streaming',key==='temporary');
+      if(typeof item.run_id==='string'){
+        const link=node('a','查看运行');link.className='message-run-link';
+        link.href='/runs/'+encodeURIComponent(item.run_id);article.append(link);
       }
     }
     article.classList.toggle('located',!!locationTarget&&item.run_id===locationTarget.run_id);

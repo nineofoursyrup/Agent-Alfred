@@ -1,0 +1,1444 @@
+{
+  "browser": "153.0.8010.12",
+  "port": 18030,
+  "deviceScaleFactor": 1,
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 900,
+      "root": {
+        "x": 1120,
+        "y": 0,
+        "width": 320,
+        "height": 900,
+        "top": 0,
+        "right": 1440,
+        "bottom": 900,
+        "left": 1120
+      },
+      "main": {
+        "x": 232,
+        "y": 0,
+        "width": 888,
+        "height": 900,
+        "top": 0,
+        "right": 1120,
+        "bottom": 900,
+        "left": 232
+      },
+      "documentOverflow": 0,
+      "rootOverflow": 0,
+      "inlineStyles": 0,
+      "emptyStyleAttributes": [],
+      "user": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "13px",
+        "lineHeight": "20.15px",
+        "backgroundColor": "rgb(32, 34, 58)",
+        "borderColor": "rgb(47, 50, 82)",
+        "borderStyle": "solid",
+        "borderRadius": "12px 12px 4px",
+        "maxWidth": "88%",
+        "animationName": "none",
+        "padding": "10px 13px"
+      },
+      "assistant": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "13px",
+        "lineHeight": "20.8px",
+        "backgroundColor": "rgb(24, 24, 27)",
+        "borderColor": "rgb(38, 38, 43)",
+        "borderStyle": "solid",
+        "borderRadius": "12px 12px 12px 4px",
+        "maxWidth": "92%",
+        "animationName": "none",
+        "padding": "10px 13px"
+      },
+      "composer": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "12.5px",
+        "lineHeight": "16.25px",
+        "backgroundColor": "rgb(20, 20, 22)",
+        "borderColor": "rgb(124, 138, 236)",
+        "borderStyle": "solid",
+        "borderRadius": "9px",
+        "maxWidth": "100%",
+        "animationName": "none",
+        "padding": "9px 12px"
+      },
+      "dot": {
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "fontSize": "10.5px",
+        "lineHeight": "13.65px",
+        "backgroundColor": "rgb(76, 195, 138)",
+        "borderColor": "rgb(76, 195, 138)",
+        "borderStyle": "none",
+        "borderRadius": "50%",
+        "maxWidth": "none",
+        "animationName": "none",
+        "padding": "0px"
+      },
+      "stage": "已同步",
+      "conversation": {
+        "x": 1137,
+        "y": 134.875,
+        "width": 287,
+        "height": 618.53125,
+        "top": 134.875,
+        "right": 1424,
+        "bottom": 753.40625,
+        "left": 1137
+      },
+      "bubbles": [
+        {
+          "class": "message-bubble message-user",
+          "text": "请检查主对话的正式回复、保存状态和运行入口。",
+          "box": {
+            "x": 1172.203125,
+            "y": 149.875,
+            "width": 250.796875,
+            "height": 62.28125,
+            "top": 149.875,
+            "right": 1423,
+            "bottom": 212.15625,
+            "left": 1172.203125
+          },
+          "overflow": 0
+        },
+        {
+          "class": "message-bubble message-assistant",
+          "text": "离线模型回复",
+          "box": {
+            "x": 1138,
+            "y": 219.15625,
+            "width": 106,
+            "height": 42.796875,
+            "top": 219.15625,
+            "right": 1244,
+            "bottom": 261.953125,
+            "left": 1138
+          },
+          "overflow": 0
+        },
+        {
+          "class": "message-bubble message-user",
+          "text": "长消息换行验证：中文正文仍然完整可读。\n/very-long-path/mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-\n这个请求包含换行；状态文字和草稿继续保留。",
+          "box": {
+            "x": 1172.203125,
+            "y": 347.1875,
+            "width": 250.796875,
+            "height": 243.546875,
+            "top": 347.1875,
+            "right": 1423,
+            "bottom": 590.734375,
+            "left": 1172.203125
+          },
+          "overflow": 0
+        },
+        {
+          "class": "message-bubble message-assistant",
+          "text": "离线模型回复",
+          "box": {
+            "x": 1138,
+            "y": 597.734375,
+            "width": 106,
+            "height": 42.796875,
+            "top": 597.734375,
+            "right": 1244,
+            "bottom": 640.53125,
+            "left": 1138
+          },
+          "overflow": 0
+        }
+      ],
+      "messageStructure": [
+        {
+          "run": "2115799166184532ae6b5409deb59a40",
+          "children": [
+            {
+              "tag": "P",
+              "class": "message-bubble message-user",
+              "text": "请检查主对话的正式回复、保存状态和运行入口。",
+              "href": null
+            },
+            {
+              "tag": "P",
+              "class": "message-bubble message-assistant",
+              "text": "离线模型回复",
+              "href": null
+            },
+            {
+              "tag": "P",
+              "class": "",
+              "text": "Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。",
+              "href": null
+            },
+            {
+              "tag": "SMALL",
+              "class": "",
+              "text": "已保存",
+              "href": null
+            },
+            {
+              "tag": "A",
+              "class": "message-run-link",
+              "text": "查看运行",
+              "href": "/runs/2115799166184532ae6b5409deb59a40"
+            }
+          ]
+        },
+        {
+          "run": "04aac2a6a201400aa42a3c70629dd952",
+          "children": [
+            {
+              "tag": "P",
+              "class": "message-bubble message-user",
+              "text": "长消息换行验证：中文正文仍然完整可读。\n/very-long-path/mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-\n这个请求包含换行；状态文字和草稿继续保留。",
+              "href": null
+            },
+            {
+              "tag": "P",
+              "class": "message-bubble message-assistant",
+              "text": "离线模型回复",
+              "href": null
+            },
+            {
+              "tag": "P",
+              "class": "",
+              "text": "Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。",
+              "href": null
+            },
+            {
+              "tag": "SMALL",
+              "class": "",
+              "text": "已保存",
+              "href": null
+            },
+            {
+              "tag": "A",
+              "class": "message-run-link",
+              "text": "查看运行",
+              "href": "/runs/04aac2a6a201400aa42a3c70629dd952"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "width": 1280,
+      "height": 800,
+      "root": {
+        "x": 960,
+        "y": 0,
+        "width": 320,
+        "height": 800,
+        "top": 0,
+        "right": 1280,
+        "bottom": 800,
+        "left": 960
+      },
+      "main": {
+        "x": 232,
+        "y": 0,
+        "width": 728,
+        "height": 800,
+        "top": 0,
+        "right": 960,
+        "bottom": 800,
+        "left": 232
+      },
+      "documentOverflow": 0,
+      "rootOverflow": 0,
+      "inlineStyles": 0,
+      "emptyStyleAttributes": [
+        {
+          "tag": "INPUT",
+          "id": ""
+        },
+        {
+          "tag": "TEXTAREA",
+          "id": "message"
+        }
+      ],
+      "user": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "13px",
+        "lineHeight": "20.15px",
+        "backgroundColor": "rgb(32, 34, 58)",
+        "borderColor": "rgb(47, 50, 82)",
+        "borderStyle": "solid",
+        "borderRadius": "12px 12px 4px",
+        "maxWidth": "88%",
+        "animationName": "none",
+        "padding": "10px 13px"
+      },
+      "assistant": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "13px",
+        "lineHeight": "20.8px",
+        "backgroundColor": "rgb(24, 24, 27)",
+        "borderColor": "rgb(38, 38, 43)",
+        "borderStyle": "solid",
+        "borderRadius": "12px 12px 12px 4px",
+        "maxWidth": "92%",
+        "animationName": "none",
+        "padding": "10px 13px"
+      },
+      "composer": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "12.5px",
+        "lineHeight": "16.25px",
+        "backgroundColor": "rgb(20, 20, 22)",
+        "borderColor": "rgb(124, 138, 236)",
+        "borderStyle": "solid",
+        "borderRadius": "9px",
+        "maxWidth": "100%",
+        "animationName": "none",
+        "padding": "9px 12px"
+      },
+      "dot": {
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "fontSize": "10.5px",
+        "lineHeight": "13.65px",
+        "backgroundColor": "rgb(76, 195, 138)",
+        "borderColor": "rgb(76, 195, 138)",
+        "borderStyle": "none",
+        "borderRadius": "50%",
+        "maxWidth": "none",
+        "animationName": "none",
+        "padding": "0px"
+      },
+      "stage": "已同步",
+      "conversation": {
+        "x": 977,
+        "y": 134.875,
+        "width": 287,
+        "height": 518.53125,
+        "top": 134.875,
+        "right": 1264,
+        "bottom": 653.40625,
+        "left": 977
+      },
+      "bubbles": [
+        {
+          "class": "message-bubble message-user",
+          "text": "请检查主对话的正式回复、保存状态和运行入口。",
+          "box": {
+            "x": 1012.203125,
+            "y": 78.875,
+            "width": 250.796875,
+            "height": 62.28125,
+            "top": 78.875,
+            "right": 1263,
+            "bottom": 141.15625,
+            "left": 1012.203125
+          },
+          "overflow": 0
+        },
+        {
+          "class": "message-bubble message-assistant",
+          "text": "离线模型回复",
+          "box": {
+            "x": 978,
+            "y": 148.15625,
+            "width": 106,
+            "height": 42.796875,
+            "top": 148.15625,
+            "right": 1084,
+            "bottom": 190.953125,
+            "left": 978
+          },
+          "overflow": 0
+        },
+        {
+          "class": "message-bubble message-user",
+          "text": "长消息换行验证：中文正文仍然完整可读。\n/very-long-path/mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-\n这个请求包含换行；状态文字和草稿继续保留。",
+          "box": {
+            "x": 1012.203125,
+            "y": 276.1875,
+            "width": 250.796875,
+            "height": 243.546875,
+            "top": 276.1875,
+            "right": 1263,
+            "bottom": 519.734375,
+            "left": 1012.203125
+          },
+          "overflow": 0
+        },
+        {
+          "class": "message-bubble message-assistant",
+          "text": "离线模型回复",
+          "box": {
+            "x": 978,
+            "y": 526.734375,
+            "width": 106,
+            "height": 42.796875,
+            "top": 526.734375,
+            "right": 1084,
+            "bottom": 569.53125,
+            "left": 978
+          },
+          "overflow": 0
+        }
+      ],
+      "messageStructure": [
+        {
+          "run": "2115799166184532ae6b5409deb59a40",
+          "children": [
+            {
+              "tag": "P",
+              "class": "message-bubble message-user",
+              "text": "请检查主对话的正式回复、保存状态和运行入口。",
+              "href": null
+            },
+            {
+              "tag": "P",
+              "class": "message-bubble message-assistant",
+              "text": "离线模型回复",
+              "href": null
+            },
+            {
+              "tag": "P",
+              "class": "",
+              "text": "Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。",
+              "href": null
+            },
+            {
+              "tag": "SMALL",
+              "class": "",
+              "text": "已保存",
+              "href": null
+            },
+            {
+              "tag": "A",
+              "class": "message-run-link",
+              "text": "查看运行",
+              "href": "/runs/2115799166184532ae6b5409deb59a40"
+            }
+          ]
+        },
+        {
+          "run": "04aac2a6a201400aa42a3c70629dd952",
+          "children": [
+            {
+              "tag": "P",
+              "class": "message-bubble message-user",
+              "text": "长消息换行验证：中文正文仍然完整可读。\n/very-long-path/mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-\n这个请求包含换行；状态文字和草稿继续保留。",
+              "href": null
+            },
+            {
+              "tag": "P",
+              "class": "message-bubble message-assistant",
+              "text": "离线模型回复",
+              "href": null
+            },
+            {
+              "tag": "P",
+              "class": "",
+              "text": "Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。",
+              "href": null
+            },
+            {
+              "tag": "SMALL",
+              "class": "",
+              "text": "已保存",
+              "href": null
+            },
+            {
+              "tag": "A",
+              "class": "message-run-link",
+              "text": "查看运行",
+              "href": "/runs/04aac2a6a201400aa42a3c70629dd952"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "root": {
+        "x": 0,
+        "y": 0,
+        "width": 390,
+        "height": 844,
+        "top": 0,
+        "right": 390,
+        "bottom": 844,
+        "left": 0
+      },
+      "main": {
+        "x": 0,
+        "y": 53.9375,
+        "width": 390,
+        "height": 790.0625,
+        "top": 53.9375,
+        "right": 390,
+        "bottom": 844,
+        "left": 0
+      },
+      "documentOverflow": 0,
+      "rootOverflow": 0,
+      "inlineStyles": 0,
+      "emptyStyleAttributes": [
+        {
+          "tag": "INPUT",
+          "id": ""
+        },
+        {
+          "tag": "TEXTAREA",
+          "id": "message"
+        }
+      ],
+      "user": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "13px",
+        "lineHeight": "20.15px",
+        "backgroundColor": "rgb(32, 34, 58)",
+        "borderColor": "rgb(47, 50, 82)",
+        "borderStyle": "solid",
+        "borderRadius": "12px 12px 4px",
+        "maxWidth": "88%",
+        "animationName": "none",
+        "padding": "10px 13px"
+      },
+      "assistant": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "13px",
+        "lineHeight": "20.8px",
+        "backgroundColor": "rgb(24, 24, 27)",
+        "borderColor": "rgb(38, 38, 43)",
+        "borderStyle": "solid",
+        "borderRadius": "12px 12px 12px 4px",
+        "maxWidth": "92%",
+        "animationName": "none",
+        "padding": "10px 13px"
+      },
+      "composer": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "12.5px",
+        "lineHeight": "16.25px",
+        "backgroundColor": "rgb(20, 20, 22)",
+        "borderColor": "rgb(124, 138, 236)",
+        "borderStyle": "solid",
+        "borderRadius": "9px",
+        "maxWidth": "100%",
+        "animationName": "none",
+        "padding": "9px 12px"
+      },
+      "dot": {
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "fontSize": "10.5px",
+        "lineHeight": "13.65px",
+        "backgroundColor": "rgb(76, 195, 138)",
+        "borderColor": "rgb(76, 195, 138)",
+        "borderStyle": "none",
+        "borderRadius": "50%",
+        "maxWidth": "none",
+        "animationName": "none",
+        "padding": "0px"
+      },
+      "stage": "已同步",
+      "conversation": {
+        "x": 16,
+        "y": 219.203125,
+        "width": 358,
+        "height": 478.203125,
+        "top": 219.203125,
+        "right": 374,
+        "bottom": 697.40625,
+        "left": 16
+      },
+      "bubbles": [
+        {
+          "class": "message-bubble message-user",
+          "text": "请检查主对话的正式回复、保存状态和运行入口。",
+          "box": {
+            "x": 59.734375,
+            "y": 203.203125,
+            "width": 313.265625,
+            "height": 62.28125,
+            "top": 203.203125,
+            "right": 373,
+            "bottom": 265.484375,
+            "left": 59.734375
+          },
+          "overflow": 0
+        },
+        {
+          "class": "message-bubble message-assistant",
+          "text": "离线模型回复",
+          "box": {
+            "x": 17,
+            "y": 272.484375,
+            "width": 106,
+            "height": 42.796875,
+            "top": 272.484375,
+            "right": 123,
+            "bottom": 315.28125,
+            "left": 17
+          },
+          "overflow": 0
+        },
+        {
+          "class": "message-bubble message-user",
+          "text": "长消息换行验证：中文正文仍然完整可读。\n/very-long-path/mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-\n这个请求包含换行；状态文字和草稿继续保留。",
+          "box": {
+            "x": 59.734375,
+            "y": 400.515625,
+            "width": 313.265625,
+            "height": 162.984375,
+            "top": 400.515625,
+            "right": 373,
+            "bottom": 563.5,
+            "left": 59.734375
+          },
+          "overflow": 0
+        },
+        {
+          "class": "message-bubble message-assistant",
+          "text": "离线模型回复",
+          "box": {
+            "x": 17,
+            "y": 570.5,
+            "width": 106,
+            "height": 42.796875,
+            "top": 570.5,
+            "right": 123,
+            "bottom": 613.296875,
+            "left": 17
+          },
+          "overflow": 0
+        }
+      ],
+      "messageStructure": [
+        {
+          "run": "2115799166184532ae6b5409deb59a40",
+          "children": [
+            {
+              "tag": "P",
+              "class": "message-bubble message-user",
+              "text": "请检查主对话的正式回复、保存状态和运行入口。",
+              "href": null
+            },
+            {
+              "tag": "P",
+              "class": "message-bubble message-assistant",
+              "text": "离线模型回复",
+              "href": null
+            },
+            {
+              "tag": "P",
+              "class": "",
+              "text": "Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。",
+              "href": null
+            },
+            {
+              "tag": "SMALL",
+              "class": "",
+              "text": "已保存",
+              "href": null
+            },
+            {
+              "tag": "A",
+              "class": "message-run-link",
+              "text": "查看运行",
+              "href": "/runs/2115799166184532ae6b5409deb59a40"
+            }
+          ]
+        },
+        {
+          "run": "04aac2a6a201400aa42a3c70629dd952",
+          "children": [
+            {
+              "tag": "P",
+              "class": "message-bubble message-user",
+              "text": "长消息换行验证：中文正文仍然完整可读。\n/very-long-path/mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-\n这个请求包含换行；状态文字和草稿继续保留。",
+              "href": null
+            },
+            {
+              "tag": "P",
+              "class": "message-bubble message-assistant",
+              "text": "离线模型回复",
+              "href": null
+            },
+            {
+              "tag": "P",
+              "class": "",
+              "text": "Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。",
+              "href": null
+            },
+            {
+              "tag": "SMALL",
+              "class": "",
+              "text": "已保存",
+              "href": null
+            },
+            {
+              "tag": "A",
+              "class": "message-run-link",
+              "text": "查看运行",
+              "href": "/runs/04aac2a6a201400aa42a3c70629dd952"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "height": 800,
+      "root": {
+        "x": 0,
+        "y": 0,
+        "width": 320,
+        "height": 800,
+        "top": 0,
+        "right": 320,
+        "bottom": 800,
+        "left": 0
+      },
+      "main": {
+        "x": 0,
+        "y": 53.9375,
+        "width": 320,
+        "height": 746.0625,
+        "top": 53.9375,
+        "right": 320,
+        "bottom": 800,
+        "left": 0
+      },
+      "documentOverflow": 0,
+      "rootOverflow": 0,
+      "inlineStyles": 0,
+      "emptyStyleAttributes": [
+        {
+          "tag": "INPUT",
+          "id": ""
+        },
+        {
+          "tag": "TEXTAREA",
+          "id": "message"
+        }
+      ],
+      "user": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "13px",
+        "lineHeight": "20.15px",
+        "backgroundColor": "rgb(32, 34, 58)",
+        "borderColor": "rgb(47, 50, 82)",
+        "borderStyle": "solid",
+        "borderRadius": "12px 12px 4px",
+        "maxWidth": "88%",
+        "animationName": "none",
+        "padding": "10px 13px"
+      },
+      "assistant": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "13px",
+        "lineHeight": "20.8px",
+        "backgroundColor": "rgb(24, 24, 27)",
+        "borderColor": "rgb(38, 38, 43)",
+        "borderStyle": "solid",
+        "borderRadius": "12px 12px 12px 4px",
+        "maxWidth": "92%",
+        "animationName": "none",
+        "padding": "10px 13px"
+      },
+      "composer": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "12.5px",
+        "lineHeight": "16.25px",
+        "backgroundColor": "rgb(20, 20, 22)",
+        "borderColor": "rgb(124, 138, 236)",
+        "borderStyle": "solid",
+        "borderRadius": "9px",
+        "maxWidth": "100%",
+        "animationName": "none",
+        "padding": "9px 12px"
+      },
+      "dot": {
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "fontSize": "10.5px",
+        "lineHeight": "13.65px",
+        "backgroundColor": "rgb(76, 195, 138)",
+        "borderColor": "rgb(76, 195, 138)",
+        "borderStyle": "none",
+        "borderRadius": "50%",
+        "maxWidth": "none",
+        "animationName": "none",
+        "padding": "0px"
+      },
+      "stage": "已同步",
+      "conversation": {
+        "x": 16,
+        "y": 219.203125,
+        "width": 288,
+        "height": 434.203125,
+        "top": 219.203125,
+        "right": 304,
+        "bottom": 653.40625,
+        "left": 16
+      },
+      "bubbles": [
+        {
+          "class": "message-bubble message-user",
+          "text": "请检查主对话的正式回复、保存状态和运行入口。",
+          "box": {
+            "x": 51.328125,
+            "y": 78.203125,
+            "width": 251.671875,
+            "height": 62.28125,
+            "top": 78.203125,
+            "right": 303,
+            "bottom": 140.484375,
+            "left": 51.328125
+          },
+          "overflow": 0
+        },
+        {
+          "class": "message-bubble message-assistant",
+          "text": "离线模型回复",
+          "box": {
+            "x": 17,
+            "y": 147.484375,
+            "width": 106,
+            "height": 42.796875,
+            "top": 147.484375,
+            "right": 123,
+            "bottom": 190.28125,
+            "left": 17
+          },
+          "overflow": 0
+        },
+        {
+          "class": "message-bubble message-user",
+          "text": "长消息换行验证：中文正文仍然完整可读。\n/very-long-path/mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-\n这个请求包含换行；状态文字和草稿继续保留。",
+          "box": {
+            "x": 51.328125,
+            "y": 275.515625,
+            "width": 251.671875,
+            "height": 243.546875,
+            "top": 275.515625,
+            "right": 303,
+            "bottom": 519.0625,
+            "left": 51.328125
+          },
+          "overflow": 0
+        },
+        {
+          "class": "message-bubble message-assistant",
+          "text": "离线模型回复",
+          "box": {
+            "x": 17,
+            "y": 526.0625,
+            "width": 106,
+            "height": 42.796875,
+            "top": 526.0625,
+            "right": 123,
+            "bottom": 568.859375,
+            "left": 17
+          },
+          "overflow": 0
+        }
+      ],
+      "messageStructure": [
+        {
+          "run": "2115799166184532ae6b5409deb59a40",
+          "children": [
+            {
+              "tag": "P",
+              "class": "message-bubble message-user",
+              "text": "请检查主对话的正式回复、保存状态和运行入口。",
+              "href": null
+            },
+            {
+              "tag": "P",
+              "class": "message-bubble message-assistant",
+              "text": "离线模型回复",
+              "href": null
+            },
+            {
+              "tag": "P",
+              "class": "",
+              "text": "Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。",
+              "href": null
+            },
+            {
+              "tag": "SMALL",
+              "class": "",
+              "text": "已保存",
+              "href": null
+            },
+            {
+              "tag": "A",
+              "class": "message-run-link",
+              "text": "查看运行",
+              "href": "/runs/2115799166184532ae6b5409deb59a40"
+            }
+          ]
+        },
+        {
+          "run": "04aac2a6a201400aa42a3c70629dd952",
+          "children": [
+            {
+              "tag": "P",
+              "class": "message-bubble message-user",
+              "text": "长消息换行验证：中文正文仍然完整可读。\n/very-long-path/mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-mainbar-message-\n这个请求包含换行；状态文字和草稿继续保留。",
+              "href": null
+            },
+            {
+              "tag": "P",
+              "class": "message-bubble message-assistant",
+              "text": "离线模型回复",
+              "href": null
+            },
+            {
+              "tag": "P",
+              "class": "",
+              "text": "Skill 已降级：部分流程未使用或选择器不可用；请查看运行详情中的本次输入。",
+              "href": null
+            },
+            {
+              "tag": "SMALL",
+              "class": "",
+              "text": "已保存",
+              "href": null
+            },
+            {
+              "tag": "A",
+              "class": "message-run-link",
+              "text": "查看运行",
+              "href": "/runs/04aac2a6a201400aa42a3c70629dd952"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "reference": [
+    {
+      "width": 1440,
+      "height": 900,
+      "root": {
+        "x": 1119,
+        "y": 0,
+        "width": 321,
+        "height": 900,
+        "top": 0,
+        "right": 1440,
+        "bottom": 900,
+        "left": 1119
+      },
+      "main": {
+        "x": 233,
+        "y": 0,
+        "width": 886,
+        "height": 900,
+        "top": 0,
+        "right": 1119,
+        "bottom": 900,
+        "left": 233
+      },
+      "documentOverflow": 0,
+      "rootOverflow": 0,
+      "inlineStyles": 161,
+      "emptyStyleAttributes": [],
+      "user": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "16px",
+        "lineHeight": "normal",
+        "backgroundColor": "rgb(32, 34, 58)",
+        "borderColor": "rgb(47, 50, 82)",
+        "borderStyle": "solid",
+        "borderRadius": "12px 12px 4px",
+        "maxWidth": "88%",
+        "animationName": "none",
+        "padding": "10px 13px"
+      },
+      "assistant": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "16px",
+        "lineHeight": "normal",
+        "backgroundColor": "rgb(24, 24, 27)",
+        "borderColor": "rgb(38, 38, 43)",
+        "borderStyle": "solid",
+        "borderRadius": "12px 12px 12px 4px",
+        "maxWidth": "none",
+        "animationName": "none",
+        "padding": "10px 13px"
+      },
+      "composer": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "13.3333px",
+        "lineHeight": "normal",
+        "backgroundColor": "rgb(20, 20, 22)",
+        "borderColor": "rgb(38, 38, 43)",
+        "borderStyle": "solid",
+        "borderRadius": "9px",
+        "maxWidth": "none",
+        "animationName": "none",
+        "padding": "9px 12px"
+      },
+      "dot": null,
+      "bubbles": [],
+      "messageStructure": []
+    },
+    {
+      "width": 1280,
+      "height": 800,
+      "root": {
+        "x": 959,
+        "y": 0,
+        "width": 321,
+        "height": 800,
+        "top": 0,
+        "right": 1280,
+        "bottom": 800,
+        "left": 959
+      },
+      "main": {
+        "x": 233,
+        "y": 0,
+        "width": 726,
+        "height": 800,
+        "top": 0,
+        "right": 959,
+        "bottom": 800,
+        "left": 233
+      },
+      "documentOverflow": 0,
+      "rootOverflow": 0,
+      "inlineStyles": 161,
+      "emptyStyleAttributes": [],
+      "user": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "16px",
+        "lineHeight": "normal",
+        "backgroundColor": "rgb(32, 34, 58)",
+        "borderColor": "rgb(47, 50, 82)",
+        "borderStyle": "solid",
+        "borderRadius": "12px 12px 4px",
+        "maxWidth": "88%",
+        "animationName": "none",
+        "padding": "10px 13px"
+      },
+      "assistant": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "16px",
+        "lineHeight": "normal",
+        "backgroundColor": "rgb(24, 24, 27)",
+        "borderColor": "rgb(38, 38, 43)",
+        "borderStyle": "solid",
+        "borderRadius": "12px 12px 12px 4px",
+        "maxWidth": "none",
+        "animationName": "none",
+        "padding": "10px 13px"
+      },
+      "composer": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "13.3333px",
+        "lineHeight": "normal",
+        "backgroundColor": "rgb(20, 20, 22)",
+        "borderColor": "rgb(38, 38, 43)",
+        "borderStyle": "solid",
+        "borderRadius": "9px",
+        "maxWidth": "none",
+        "animationName": "none",
+        "padding": "9px 12px"
+      },
+      "dot": null,
+      "bubbles": [],
+      "messageStructure": []
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "root": {
+        "x": 191,
+        "y": 0,
+        "width": 293,
+        "height": 844,
+        "top": 0,
+        "right": 484,
+        "bottom": 844,
+        "left": 191
+      },
+      "main": {
+        "x": 191,
+        "y": 0,
+        "width": 0,
+        "height": 844,
+        "top": 0,
+        "right": 191,
+        "bottom": 844,
+        "left": 191
+      },
+      "documentOverflow": 0,
+      "rootOverflow": 0,
+      "inlineStyles": 161,
+      "emptyStyleAttributes": [],
+      "user": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "16px",
+        "lineHeight": "normal",
+        "backgroundColor": "rgb(32, 34, 58)",
+        "borderColor": "rgb(47, 50, 82)",
+        "borderStyle": "solid",
+        "borderRadius": "12px 12px 4px",
+        "maxWidth": "88%",
+        "animationName": "none",
+        "padding": "10px 13px"
+      },
+      "assistant": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "16px",
+        "lineHeight": "normal",
+        "backgroundColor": "rgb(24, 24, 27)",
+        "borderColor": "rgb(38, 38, 43)",
+        "borderStyle": "solid",
+        "borderRadius": "12px 12px 12px 4px",
+        "maxWidth": "none",
+        "animationName": "none",
+        "padding": "10px 13px"
+      },
+      "composer": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "13.3333px",
+        "lineHeight": "normal",
+        "backgroundColor": "rgb(20, 20, 22)",
+        "borderColor": "rgb(38, 38, 43)",
+        "borderStyle": "solid",
+        "borderRadius": "9px",
+        "maxWidth": "none",
+        "animationName": "none",
+        "padding": "9px 12px"
+      },
+      "dot": null,
+      "bubbles": [],
+      "messageStructure": []
+    },
+    {
+      "width": 320,
+      "height": 800,
+      "root": {
+        "x": 191,
+        "y": 0,
+        "width": 293,
+        "height": 800,
+        "top": 0,
+        "right": 484,
+        "bottom": 800,
+        "left": 191
+      },
+      "main": {
+        "x": 191,
+        "y": 0,
+        "width": 0,
+        "height": 800,
+        "top": 0,
+        "right": 191,
+        "bottom": 800,
+        "left": 191
+      },
+      "documentOverflow": 0,
+      "rootOverflow": 0,
+      "inlineStyles": 161,
+      "emptyStyleAttributes": [],
+      "user": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "16px",
+        "lineHeight": "normal",
+        "backgroundColor": "rgb(32, 34, 58)",
+        "borderColor": "rgb(47, 50, 82)",
+        "borderStyle": "solid",
+        "borderRadius": "12px 12px 4px",
+        "maxWidth": "88%",
+        "animationName": "none",
+        "padding": "10px 13px"
+      },
+      "assistant": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "16px",
+        "lineHeight": "normal",
+        "backgroundColor": "rgb(24, 24, 27)",
+        "borderColor": "rgb(38, 38, 43)",
+        "borderStyle": "solid",
+        "borderRadius": "12px 12px 12px 4px",
+        "maxWidth": "none",
+        "animationName": "none",
+        "padding": "10px 13px"
+      },
+      "composer": {
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontSize": "13.3333px",
+        "lineHeight": "normal",
+        "backgroundColor": "rgb(20, 20, 22)",
+        "borderColor": "rgb(38, 38, 43)",
+        "borderStyle": "solid",
+        "borderRadius": "9px",
+        "maxWidth": "none",
+        "animationName": "none",
+        "padding": "9px 12px"
+      },
+      "dot": null,
+      "bubbles": [],
+      "messageStructure": []
+    }
+  ],
+  "checks": {
+    "location": {
+      "result": {
+        "status": "applied"
+      },
+      "border": "rgb(124, 138, 236)",
+      "reading": "已定位历史回复；相邻历史尚未读取。"
+    },
+    "streaming": {
+      "text": "暂态过程输出：正式回复、结局和保存仍需分别核对。",
+      "borderStyle": "dashed"
+    }
+  },
+  "errors": [],
+  "expectedStreamCancellations": [
+    {
+      "kind": "requestfailed",
+      "url": "http://127.0.0.1:18030/api/events",
+      "failure": {
+        "errorText": "net::ERR_ABORTED"
+      }
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/overview"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/app.css"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/inbox-runs.css"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/settings.css"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/overview.css"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/tools.css"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/behaviour.css"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/database.css"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/memory.css"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/accounting.css"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/app.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/shell.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/aggregation.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/tools.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/accounting.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/stream.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/dom.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/progress.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/notices.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/pages.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/inbox.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/runs.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/memory.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/database.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/overview.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/behaviour.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/models.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/connections.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/topology.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/trace_export.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/source.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/run-fields.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/run-evidence.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/settings-focus.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/assets/routing-statistics.js"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/api/entry"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/api/events"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/api/memory/state"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/api/overview/period?process_instance_id=b4900f5100854b6898cb353608cd5b7b&range=7d&timezone=Asia%2FShanghai"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/api/overview/recent-runs?process_instance_id=b4900f5100854b6898cb353608cd5b7b"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/api/overview/memory-counts?process_instance_id=b4900f5100854b6898cb353608cd5b7b&expected_memory_revision=47"
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:18030/api/sessions"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/api/mainbar?session_id=7f1a9603279a4a43bcde7eb7b369f3d5"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/api/events?session_id=7f1a9603279a4a43bcde7eb7b369f3d5"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/api/memory/state"
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:18030/api/runs"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/api/mainbar?session_id=7f1a9603279a4a43bcde7eb7b369f3d5"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/api/mainbar?session_id=7f1a9603279a4a43bcde7eb7b369f3d5"
+    },
+    {
+      "method": "POST",
+      "url": "http://127.0.0.1:18030/api/runs"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/api/mainbar?session_id=7f1a9603279a4a43bcde7eb7b369f3d5"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/api/mainbar?session_id=7f1a9603279a4a43bcde7eb7b369f3d5"
+    },
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:18030/api/mainbar/locate?process_instance_id=b4900f5100854b6898cb353608cd5b7b&session_id=7f1a9603279a4a43bcde7eb7b369f3d5&run_id=04aac2a6a201400aa42a3c70629dd952"
+    }
+  ],
+  "session": "7f1a9603279a4a43bcde7eb7b369f3d5",
+  "runs": [
+    "2115799166184532ae6b5409deb59a40",
+    "04aac2a6a201400aa42a3c70629dd952"
+  ],
+  "referenceNetwork": [
+    {
+      "url": "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
+      "status": 200
+    },
+    {
+      "url": "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+      "status": 200
+    }
+  ],
+  "referenceAccessibleName": "Overview",
+  "sourceSha256": {
+    "src/agent_alfred/ops/static/app.js": "8b5f737a91ae943e2ce5ab15b53cbd25772a6233f046673bdf9515d6d7ba597d",
+    "src/agent_alfred/ops/static/app.css": "8c57f8a322afb4b1839609b8bea6b1b5662ebbb5f6fb656c1d66748dcd3f6c4e",
+    "src/agent_alfred/ops/static/index.html": "b0f39799a068dd47598e3155cf4a5082ea6a5f7a1055a939f8ceca95d5e92ddb",
+    "docs/design/issue-122/reference/Syrup Dashboard.dc.html": "54807adb38541fa2966e5b0c334b9d0e8d71c60b814245601bc4f35b8ec54b84",
+    "docs/design/issue-122/reference/support.js": "8fe7df74405f3c55f49b7249c74ea1397e65d07dea2b1bd3b4a489bec2e28cbe"
+  }
+}
