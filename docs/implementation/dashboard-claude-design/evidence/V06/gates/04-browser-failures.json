@@ -1,0 +1,23 @@
+{
+  "command": [
+    "npx",
+    "playwright",
+    "test",
+    "tests/browser/database_lifecycle.spec.js:62",
+    "tests/browser/database.spec.js:380"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v06",
+  "head": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "started_at": "2026-10-12T06:35:24.650518+00:00",
+  "duration_seconds": 10.446,
+  "exit_code": 0,
+  "browser_port": "18060",
+  "stdout_stderr": "\nRunning 2 tests using 1 worker\n\n(node:34194) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✓  1 tests/browser/database_lifecycle.spec.js:62:1 › S10 a new process invalidates the old query and verifies new capability without rerunning (5.0s)\n  ✓  2 tests/browser/database.spec.js:380:1 › S10 copies only the rendered result page with row-limit and source evidence (1.6s)\n\n  2 passed (8.5s)\n",
+  "raw_sha256": "dd962f58f5678120d5a4d0ede1973ea1b2c59331e5eefb8d0cb4e56930a614bc",
+  "inputs_manifest": {
+    "entries": 720,
+    "canonical_json_sha256": "1f97107983be55839f30e7fce3b4204f5699e1bcf3d25c5313be785d94b5564f",
+    "source_commit": "9eeae7c830cc9a920ff938fdd63634653afdf699",
+    "source_path": "docs/implementation/dashboard-claude-design/evidence/V06/gates/04-browser-failures.json"
+  }
+}

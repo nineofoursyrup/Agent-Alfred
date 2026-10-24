@@ -1,0 +1,55 @@
+{
+  "run_id": 38222412459,
+  "url": "https://github.com/nineofoursyrup/Agent-Alfred/actions/runs/38222412459",
+  "head_sha": "7c73bf2075a049fb46ead090af495b59449738cb",
+  "status": "completed",
+  "conclusion": "failure",
+  "failed_step": "Offline Dashboard browser tests",
+  "browser_result": {
+    "passed": 544,
+    "failed": 1
+  },
+  "failed_test": "tests/browser/mainbar-empty-identity.spec.js: restored unread for real empty Session and Run IDs uses one guarded read and preserves its draft: navigate",
+  "failure": "route.fetch() expected HTTP 200, received HTTP 409",
+  "artifact_download": {
+    "command": "gh run download 38222412459 -n browser-failure-evidence",
+    "exit_code": 1,
+    "stderr": "no valid artifacts found to download",
+    "api_artifact_count": 0,
+    "retention_days": 7,
+    "original_artifact_id": 11737980313,
+    "availability": "UNAVAILABLE; current API returns no artifact"
+  },
+  "job_log_raw_sha256": "226c593f7f8f15a5edb20fb9f61ad858c5e0699c8102725bf61a7e71daa259a1",
+  "excerpt": "ci-38222412459-failure.log.json",
+  "local_replay": "01-mainbar-replay.json",
+  "root_cause": "UNKNOWN; local replay passed without changing product code, assertions, waits, timeouts or retries",
+  "scope_evidence": "Failure uses /inbox then /database and MainBar locate HTTP; Memory page is never mounted. MainBar fixture, test and product files have no V06 diff.",
+  "rebase_base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "rebase_head": "9eeae7c830cc9a920ff938fdd63634653afdf699",
+  "screenshot_reuse": {
+    "base": "449e77fd0ff814fb63f97a009c2435139a68686d",
+    "checked_paths": [
+      "src/agent_alfred/ops/static/app.css",
+      "src/agent_alfred/ops/static/app.js",
+      "src/agent_alfred/ops/static/index.html",
+      "src/agent_alfred/ops/static/shell.js",
+      "src/agent_alfred/ops/static/memory.js",
+      "src/agent_alfred/ops/static/memory.css",
+      "tests/browser/memory_server.py",
+      "tests/browser/memory.spec.js",
+      "tests/browser/mainbar-empty-identity.spec.js"
+    ],
+    "changed_on_main": [],
+    "memory_css_sha256": "df2689115e0c8d1540aa42f142e944a70d2a34ee7a0bb160a6c753b55c6c27ed",
+    "memory_js_sha256": "53de17e308776b2ee4b91a8c923cc86449ba6d363f6c3b84a59de6883a1401c3"
+  },
+  "scope_exception": "User explicitly approved retaining only the existing one-line memory.spec.js A38 locator change on 2026-10-23.",
+  "full_browser_replay": {
+    "passed": 545,
+    "failed": 0,
+    "gate": "06-browser.json",
+    "original_failed_test_in_full_run": "PASS (1.3s)",
+    "root_cause": "UNKNOWN; no product fix applied"
+  }
+}

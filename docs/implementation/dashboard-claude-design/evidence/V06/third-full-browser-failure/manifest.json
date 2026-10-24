@@ -1,0 +1,34 @@
+[
+  {
+    "original_path": "output/playwright/results/database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/error-context.md",
+    "file": "error-context.md",
+    "bytes": 8448,
+    "sha256": "338d6621dcc0ad8808fd23af72defdb08c1fe0c874e38e6d82825240c403e472",
+    "archived_path": "third-full-browser-failure/database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/error-context.md.json",
+    "scratch_archive_path": ".scratch/v06/third-full-browser-failure/database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/error-context.md.json"
+  },
+  {
+    "original_path": "output/playwright/results/database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/test-failed-1.png",
+    "file": "test-failed-1.png",
+    "bytes": 4254,
+    "sha256": "3878570f4a62a0d65f57cf1754e0269e56ec797f4e36e26b44c172eb6e800401",
+    "archived_path": "third-full-browser-failure/database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/test-failed-1.png",
+    "scratch_archive_path": ".scratch/v06/third-full-browser-failure/database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL/test-failed-1.png"
+  },
+  {
+    "original_path": "output/playwright/results/database_status-STD-06-SPE-d95bf--failure-is-cleanup-failure/error-context.md",
+    "file": "error-context.md",
+    "bytes": 4978,
+    "sha256": "d3369130d9e703475dd27b47d6abac1b38788f7b17daf640e53817c70b118709",
+    "archived_path": "third-full-browser-failure/database_status-STD-06-SPE-d95bf--failure-is-cleanup-failure/error-context.md.json",
+    "scratch_archive_path": ".scratch/v06/third-full-browser-failure/database_status-STD-06-SPE-d95bf--failure-is-cleanup-failure/error-context.md.json"
+  },
+  {
+    "original_path": "output/playwright/results/database_status-STD-06-SPE-d95bf--failure-is-cleanup-failure/test-failed-1.png",
+    "file": "test-failed-1.png",
+    "bytes": 100533,
+    "sha256": "d3e7ae11b519945d5dc233502773ebbd0a3e4938de65c56749f4977de81893a6",
+    "archived_path": "third-full-browser-failure/database_status-STD-06-SPE-d95bf--failure-is-cleanup-failure/test-failed-1.png",
+    "scratch_archive_path": ".scratch/v06/third-full-browser-failure/database_status-STD-06-SPE-d95bf--failure-is-cleanup-failure/test-failed-1.png"
+  }
+]

@@ -1,0 +1,4 @@
+{
+  "raw_sha256": "8ca712f2df60670d960c12093cbc73bf68bdd8b2b67968615e1b2f809824ce4b",
+  "stdout_stderr": "\n> test:browser\n> playwright test tests/browser/mainbar-empty-identity.spec.js --grep draft: navigate\n\n\nRunning 1 test using 1 worker\n\n(node:72336) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✓  1 tests/browser/mainbar-empty-identity.spec.js:4:53 › restored unread for real empty Session and Run IDs uses one guarded read and preserves its draft: navigate (1.4s)\n\n  1 passed (2.3s)\n"
+}

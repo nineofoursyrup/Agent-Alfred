@@ -1,0 +1,156 @@
+[
+  {
+    "file": "memory-1280x800.png",
+    "width": 1280,
+    "height": 800,
+    "bytes": 175432,
+    "sha256": "1f62565e84ddb46ad541f2cedc346c90246502c86c219809ebaaa911ab5c7fb6"
+  },
+  {
+    "file": "memory-1440x900.png",
+    "width": 1440,
+    "height": 900,
+    "bytes": 214479,
+    "sha256": "537a9a112f315b0ef03b3a1edd182e1db6f84f2c9642361aa7a1f6c5fb4c5adc"
+  },
+  {
+    "file": "memory-320x800.png",
+    "width": 320,
+    "height": 800,
+    "bytes": 58022,
+    "sha256": "c662182590f75b8250533d96c9d13ef4399fe50703d7036e0607952ccaa9f071"
+  },
+  {
+    "file": "memory-390x844.png",
+    "width": 390,
+    "height": 844,
+    "bytes": 60892,
+    "sha256": "34e40f0f38e1d7785d9a11502d80d0387a61e8e1ca46886c22667cda481c3d53"
+  },
+  {
+    "file": "memory-delete-320x800.png",
+    "width": 320,
+    "height": 800,
+    "bytes": 80107,
+    "sha256": "5637b59e7b71a82588ad444a594dc4adec974c9040cf2d066dd44d2120920d5d"
+  },
+  {
+    "file": "memory-discard-320x800.png",
+    "width": 320,
+    "height": 800,
+    "bytes": 60056,
+    "sha256": "b2a79db128caa0daf79721ba4991291e31565b6bed10f1f05ee7b498b5c56e0b"
+  },
+  {
+    "file": "memory-edit-320x800.png",
+    "width": 320,
+    "height": 800,
+    "bytes": 54703,
+    "sha256": "e2b92d9b291faaf58a2dfe9aafa48b306b3776d02a528affd67f6f169ea99c2d"
+  },
+  {
+    "file": "memory-mirror-320x800.png",
+    "width": 320,
+    "height": 800,
+    "bytes": 69018,
+    "sha256": "bd4f484541fa219b010d871748de67d5484ad01ef261dad9fc325869d7fa1d35"
+  },
+  {
+    "file": "memory-queue-1280x800.png",
+    "width": 1280,
+    "height": 800,
+    "bytes": 180952,
+    "sha256": "6927ba4e8825056beafad013558e5bed63fa4aac4c39eead24cbfb86e1faad7c"
+  },
+  {
+    "file": "memory-queue-1440x900.png",
+    "width": 1440,
+    "height": 900,
+    "bytes": 202723,
+    "sha256": "179be9956bf5d2ed8fcea570dae33ee3ad21b4a04d488df37a92be6e64ff3768"
+  },
+  {
+    "file": "memory-queue-320x800.png",
+    "width": 320,
+    "height": 800,
+    "bytes": 69485,
+    "sha256": "508384b8f64641079098c5eb3ed8301e858f9331a6994ffb7698650eed4bf3c4"
+  },
+  {
+    "file": "memory-queue-390x844.png",
+    "width": 390,
+    "height": 844,
+    "bytes": 92698,
+    "sha256": "69a98d62b1da4aaf619d670655d21d4e575af1b13ab925e59a8abd25eab91520"
+  },
+  {
+    "file": "memory-receipts-320x800.png",
+    "width": 320,
+    "height": 800,
+    "bytes": 95995,
+    "sha256": "37cda764fcabc2fdd327d9a745426d93413156e502f28c3506e7a0ae69f799a2"
+  },
+  {
+    "file": "memory-skills-1280x800.png",
+    "width": 1280,
+    "height": 800,
+    "bytes": 172296,
+    "sha256": "73058beb7534ee06d672e2f827c3c7e4edca644516893910f0bf653502d78e17"
+  },
+  {
+    "file": "memory-skills-1440x900.png",
+    "width": 1440,
+    "height": 900,
+    "bytes": 200763,
+    "sha256": "ff4dcf94f43df656139a35350db18227b3e64fd8ff4b8639bb5087a5f8156d01"
+  },
+  {
+    "file": "memory-skills-320x800.png",
+    "width": 320,
+    "height": 800,
+    "bytes": 66847,
+    "sha256": "ea935df4fd7d31c1bcec323035c9565f1fbcd9c6fd239dbec56d8fda72fa6152"
+  },
+  {
+    "file": "memory-skills-390x844.png",
+    "width": 390,
+    "height": 844,
+    "bytes": 71149,
+    "sha256": "4f4fe959d4d81218124ed3321219dc4be47de573204e26350885f022375a8a63"
+  },
+  {
+    "file": "memory-statistics-320x800.png",
+    "width": 320,
+    "height": 800,
+    "bytes": 66672,
+    "sha256": "629ddfd939e46ca735d254910d11ab6e886c7ec43dfcf4367d50efe2c5da4823"
+  },
+  {
+    "file": "reference-memory-1280x800.png",
+    "width": 1280,
+    "height": 800,
+    "bytes": 154149,
+    "sha256": "f5cf7ddd84b1a7010e01fb6c27bd333181bd622ef3ac643883eb60aec41a7c91"
+  },
+  {
+    "file": "reference-memory-1440x900.png",
+    "width": 1440,
+    "height": 900,
+    "bytes": 161883,
+    "sha256": "6d95b5638770140790a14d2433513649f07aa2e04bf5df08cdb2677fcd2bf07a"
+  },
+  {
+    "file": "reference-memory-320x800.png",
+    "width": 320,
+    "height": 800,
+    "bytes": 39282,
+    "sha256": "d7e6a06241e298b9093e63448604faab159066faf1691c1a857ab76cd56d31f9"
+  },
+  {
+    "file": "reference-memory-390x844.png",
+    "width": 390,
+    "height": 844,
+    "bytes": 51542,
+    "sha256": "a511239cfbf9fa12f25dbd0be8b5384f3fe0b617209b1bb1e9da58f3ddef75f8"
+  }
+]

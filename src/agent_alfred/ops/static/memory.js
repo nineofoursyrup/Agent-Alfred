@@ -290,11 +290,17 @@ function input(type = "text") {
 function confirmDiscard(root) {
   const trigger = document.activeElement;
   const dialog = node("dialog");
+  dialog.className = "memory-discard sy-panel";
   dialog.setAttribute("aria-label", "保留当前编辑？");
   const keep = node("button", "保留当前编辑");
   const discard = node("button", "放弃后继续");
-  dialog.append(node("h2", "保留当前编辑？"),
+  const header = node("div");header.className = "sy-panel-header";
+  const heading = node("h2", "保留当前编辑？");heading.className = "sy-panel-eyebrow sy-tone-attention";
+  const body = node("div");body.className = "sy-panel-body";
+  header.append(heading);
+  body.append(
     node("p", "继续会丢失尚未提交的修改。已提交的操作仍可在操作回执中核对，不会因此撤销。"), keep, discard);
+  dialog.append(header, body);
   root.append(dialog);
   return new Promise(resolve => {
     let answered = false;
@@ -316,14 +322,17 @@ function confirmDiscard(root) {
  * The summary is supplied from body-free state, never copied from content.
  * @param {HTMLElement} content @param {string} title @param {()=>string} describe */
 function foldSection(content, title, describe) {
-  const section = node("section");section.className = "memory-maintenance";
-  const heading = node("h2");const toggle = node("button", title);
+  const section = node("section");section.className = "memory-maintenance sy-panel";
+  const header = node("header");header.className = "sy-panel-header";
+  const heading = node("h2");heading.className = "sy-panel-eyebrow";
+  const toggle = node("button", title);
+  if (title === "提炼队列") toggle.className = "sy-tone-attention";
   toggle.setAttribute("aria-label", title);
-  const summary = node("p");summary.className = "memory-summary";
-  const body = node("div");body.className = "memory-maintenance-body";
+  const summary = node("p");summary.className = "memory-summary sy-panel-description";
+  const body = node("div");body.className = "memory-maintenance-body sy-panel-body";
   body.id = `memory-maintenance-${crypto.randomUUID()}`;
   toggle.setAttribute("aria-controls", body.id);toggle.setAttribute("aria-expanded", "false");
-  body.hidden = true;heading.append(toggle);body.append(content);section.append(heading, summary, body);
+  body.hidden = true;heading.append(toggle);header.append(heading, summary);body.append(content);section.append(header, body);
   const update = () => {summary.textContent = describe();};
   const open = (focus = false) => {
     body.hidden = false;toggle.setAttribute("aria-expanded", "true");
@@ -669,10 +678,11 @@ function receiptsPanel(page) {
   }
   function render() {
     section.replaceChildren(node("h2", "操作回执"));
+    const rows = node("div");rows.className = "sy-row-list";section.append(rows);
     if (!entries.length) section.append(node("p", "本标签页尚无记忆操作。"));
     for (const entry of [...entries].reverse()) {
       const row = node("article");
-      row.className = "card";
+      row.className = "memory-log-row sy-row";
       row.dataset.operation = entry.operation_id;
       const title = `${ACTION_LABEL[entry.action] || entry.action} · ${KIND_LABEL[entry.kind] || entry.kind} · 操作 ${entry.operation_id}`;
       row.append(node("strong", title));
@@ -706,7 +716,7 @@ function receiptsPanel(page) {
       }
       const note = notes.get(entry.operation_id);
       if (note) row.append(node("p", note));
-      section.append(row);
+      rows.append(row);
     }
   }
   render();
@@ -763,7 +773,24 @@ function recordPanel(kind, page) {
   const semantic = kind === "semantic";
   const label = KIND_LABEL[kind];
   const panel = node("div");
+  panel.className = "memory-category";
+  const metric = node("article");metric.className = "sy-metric-card sy-metric-memory";
+  metric.hidden = true;
+  const metricValue = node("p");metricValue.className = "sy-metric-value";
+  const metricLabel = node("p", `${label} · ${kind}`);metricLabel.className = "sy-metric-label";
+  const metricNote = node("p");metricNote.className = "sy-metric-label";
+  metric.append(metricValue, metricLabel, metricNote);
+  const listing = node("section");listing.className = "memory-list-panel sy-panel";
+  const listHeader = node("header");listHeader.className = "sy-panel-header";
+  const listHeading = node("div");listHeading.className = "memory-list-heading";
+  const title = node("h2", label);title.className = "sy-panel-eyebrow";
+  const description = node("p", semantic
+    ? "已保存的事实与来源；查看详情后可编辑或确认删除。"
+    : "已保存的经历与发生时间；查看详情后可编辑或确认删除。");
+  description.className = "sy-panel-description";
+  listHeading.append(title, description);
   const searchForm = node("form");
+  searchForm.className = "memory-search";
   searchForm.setAttribute("aria-label", `搜索${label}`);
   const text = field(searchForm, "文本", input());
   const subject = semantic ? field(searchForm, "主题（精确匹配）", input()) : null;
@@ -778,10 +805,12 @@ function recordPanel(kind, page) {
   const status = node("p");
   status.setAttribute("role", "status");
   const list = node("div");
+  list.className = "sy-row-list";
   list.setAttribute("aria-label", `${label}列表`);
   const more = node("button", "加载更多");
   const reread = node("button", "从首页重新读取");
   const detail = node("section");
+  detail.className = "memory-detail sy-panel";
   detail.setAttribute("aria-label", `${label}详情`);
   const editForm = node("form");
   editForm.setAttribute("aria-label", `编辑${label}`);
@@ -798,9 +827,11 @@ function recordPanel(kind, page) {
   editForm.append(editNotice, saveEdit, cancelEdit);
   editForm.hidden = true;
   const detailHeading = node("h3", "记录详情");detailHeading.tabIndex = -1;
+  detailHeading.className = "sy-panel-eyebrow";
   const detailToggle = node("button", "收起详情");
   const detailSummary = node("p");detailSummary.className = "memory-summary";
   const detailContent = node("div");detailContent.id = `memory-detail-${kind}`;
+  detailContent.className = "sy-panel-body";
   const detailBody = node("div");detailBody.className = "memory-record-content";
   detailToggle.setAttribute("aria-controls", detailContent.id);
   detailToggle.setAttribute("aria-expanded", "true");
@@ -811,7 +842,11 @@ function recordPanel(kind, page) {
   });
   list.tabIndex = -1;
   detailContent.append(detailBody, editForm);
-  detail.append(detailHeading, detailToggle, backToList, detailSummary, detailContent);
+  const detailHeader = node("header");detailHeader.className = "sy-panel-header";
+  const detailActions = node("div");detailActions.className = "memory-actions";
+  detailActions.append(detailToggle, backToList);
+  detailHeader.append(detailHeading, detailActions, detailSummary);
+  detail.append(detailHeader, detailContent);
   detail.hidden = true;
   detailToggle.addEventListener("click", () => {
     const closing = !detailContent.hidden;
@@ -850,10 +885,11 @@ function recordPanel(kind, page) {
     end.parentElement?.after(preview);
     show();
   }
-  const createSection = node("section");createSection.className = "memory-create";
+  const createSection = node("section");createSection.className = "memory-create sy-panel";
   const createToggle = node("button", `新建${label}`);
   const createSummary = node("p");createSummary.className = "memory-summary";
   const createContent = node("div");createContent.id = `memory-create-${kind}`;
+  createContent.className = "sy-panel-body";
   createContent.hidden = true;
   createToggle.setAttribute("aria-controls", createContent.id);createToggle.setAttribute("aria-expanded", "false");
   createToggle.addEventListener("click", () => {
@@ -863,8 +899,17 @@ function recordPanel(kind, page) {
   });
   createForm.addEventListener("input", updateCreateSummary);
   editForm.addEventListener("input", updateDetailSummary);
-  createContent.append(createForm);createSection.append(createToggle, createSummary, createNotice, createContent);
-  panel.append(node("h2", label), createSection, searchForm, status, list, more, reread, detail);
+  const createHeader = node("div");createHeader.className = "sy-panel-header";
+  createToggle.className = "memory-create-toggle";
+  createHeader.append(createToggle, createSummary);
+  createNotice.className = "memory-summary";
+  createContent.append(createForm);createSection.append(createHeader, createNotice, createContent);
+  const listBody = node("div");listBody.className = "memory-list-body";
+  const listActions = node("div");listActions.className = "memory-list-actions memory-actions";
+  listActions.append(more, reread);
+  listHeader.append(listHeading, searchForm);
+  listBody.append(status, list, listActions);listing.append(listHeader, listBody);
+  panel.append(listing, createSection, detail);
 
 
   /** @type {Record<string,string>} */ let filters = {};
@@ -954,6 +999,10 @@ function recordPanel(kind, page) {
     updateDetailSummary();
   }
   function renderList() {
+    metric.hidden = !page.sync.online || listState !== "ready";
+    metricValue.textContent = metric.hidden ? "" : String(records.length);
+    metricNote.textContent = metric.hidden ? "" :
+      `当前${filters.mode === "search" ? "筛选" : "列表"}已读取条目数${cursor ? "；后面还有分页" : "；已到末页"}。不表示全部条目均允许自动使用，也不证明遗忘清理完成。`;
     createForm.hidden = Boolean(createAttempt && createAttempt.request === JSON.stringify(createRequest())) &&
       (!page.sync.online || createDraftVerified !== page.sync.invalidations);
     list.replaceChildren();
@@ -980,15 +1029,18 @@ function recordPanel(kind, page) {
               : "";
     for (const record of records) {
       const card = node("article");
-      card.className = "card";
+      card.className = "memory-record sy-row";
       card.dataset.memoryId = record.id;
+      const content = node("div");content.className = "sy-row-content";
       const excerpt = node("p", semantic ? record.fact : record.summary);excerpt.className = "memory-excerpt";
-      if (semantic) card.append(node("h3", record.subject), excerpt);
-      else card.append(excerpt, node("p", interval(record)));
-      card.append(node("small", meta(record)));
+      if (semantic) {
+        const subjectLabel = node("h3", record.subject);subjectLabel.className = "memory-record-title sy-chip";
+        content.append(subjectLabel, excerpt);
+      } else content.append(excerpt, node("p", interval(record)));
+      const metadata = node("small", meta(record));metadata.className = "sy-row-meta";
       const open = node("button", "查看详情");
       open.addEventListener("click", () => void openRecord(record.id));
-      card.append(open);
+      card.append(content, open, metadata);
       list.append(card);
     }
   }
@@ -1096,6 +1148,7 @@ function recordPanel(kind, page) {
     detailBody.append(edit, remove);
     if (confirming === record.record_version) {
       const box = node("div");
+      box.className = "memory-delete sy-panel";
       box.setAttribute("role", "group");
       box.setAttribute("aria-label", "删除确认");
       const confirm = node("button", "确认删除");
@@ -1105,14 +1158,14 @@ function recordPanel(kind, page) {
         confirming = null;
         renderDetail();
       });
-      box.append(
-        node(
+      const deleteHeader = node("div");deleteHeader.className = "sy-panel-header";
+      const deleteNote = node(
           "p",
           `确认删除 ${label} ${record.id} 的版本 ${record.record_version}？条目与索引会真删，受管副本随后清理；其他独立记忆不自动删除。${HISTORY_NOTE}`,
-        ),
-        confirm,
-        cancel,
-      );
+        );
+      deleteNote.className = "sy-panel-description sy-tone-attention";deleteHeader.append(deleteNote);
+      const deleteActions = node("div");deleteActions.className = "sy-panel-body memory-actions";
+      deleteActions.append(confirm, cancel);box.append(deleteHeader, deleteActions);
       detailBody.append(box);
     }
     if (editing && editing.id === record.id) {
@@ -1399,6 +1452,7 @@ function recordPanel(kind, page) {
   }
   return {
     panel,
+    metric,
     selectedId:()=>selected?.id ?? null,
     async restore(/** @type {string|null} */ id) {
       if (typeof id !== "string" || disposed) return;
@@ -1426,16 +1480,24 @@ function recordPanel(kind, page) {
 
 /** @param {HTMLElement} root */
 function skillsPanel(root) {
+  root.className = "memory-skills sy-panel";
+  const metric = node("article");metric.className = "sy-metric-card sy-metric-memory";
+  metric.hidden = true;
+  const metricValue = node("p");metricValue.className = "sy-metric-value";
+  const metricLabel = node("p", "Skill 目录 · procedural");metricLabel.className = "sy-metric-label";
+  const metricNote = node("p", "启动时的只读目录条目数；不是记忆库条目数。文件修改需重启后生效。");
+  metricNote.className = "sy-metric-label";metric.append(metricValue, metricLabel, metricNote);
   const list = node("div");
+  list.className = "sy-row-list";
   list.setAttribute("aria-label", "Skill 列表");
-  root.append(
-    node("h2", "Skill 目录"),
-    node(
+  const header = node("header");header.className = "sy-panel-header";
+  const title = node("h2", "Skill 目录");title.className = "sy-panel-eyebrow";
+  const description = node(
       "p",
       "只读目录：启动时建立索引，文件修改需重启后生效。聊天支持 /skills 明确指定、禁用及自动选择；运行详情展示当次加载与发送证据。这里不提供编辑。",
-    ),
-    list,
-  );
+    );
+  description.className = "sy-panel-description";
+  header.append(title, description);root.append(header, list);
   let loaded = false;
   let disposed = false;
   const requests = new Set();
@@ -1447,10 +1509,11 @@ function skillsPanel(root) {
       const body = await response.json();
       if (disposed) return;
       if (!response.ok) throw new Error(failureCode(response.status, body));
+      metricValue.textContent = String(body.skills.length);metric.hidden = false;
       if (!body.skills.length) list.append(node("p", "没有可用的 Skill。"));
       for (const skill of body.skills) {
         const card = node("article");
-        card.className = "card";
+        card.className = "memory-skill sy-row";
         card.append(
           node("h3", skill.name),
           node("p", skill.description),
@@ -1495,7 +1558,7 @@ function skillsPanel(root) {
       );
     }
   }
-  return { load, dispose(){disposed=true;for(const request of requests)request.abort();requests.clear();} };
+  return { metric, load, dispose(){disposed=true;for(const request of requests)request.abort();requests.clear();} };
 }
 
 /** @param {Wire} ratio @param {string} label */
@@ -1510,6 +1573,7 @@ function statisticsPanel(session) {
   const scoped = input("checkbox");
   const refresh = node("button", "刷新统计");
   const output = node("div");
+  output.className = "memory-statistics";
   section.append(node("h2", "检索统计"));
   field(section, "仅当前会话", scoped);
   section.append(refresh, output);
@@ -1752,6 +1816,7 @@ function queuePanel(page) {
   const section = node("section");
   section.setAttribute("aria-label", "提炼队列");
   const output = node("div");
+  output.className = "sy-row-list";
   const note = node("div");
   note.setAttribute("role", "status");
   const readError = node("p");
@@ -1852,7 +1917,7 @@ function queuePanel(page) {
     if (!queue) return;
     for (const session of queue.sessions) {
       const row = node("article");
-      row.className = "card";
+      row.className = "memory-log-row sy-row";
       row.append(
         node("strong", `会话 ${session.session_id}`),
         node(
@@ -1886,7 +1951,7 @@ function queuePanel(page) {
     for (const [id, detail] of candidates)
       if (!listed.has(id) && typeof detail === "string") {
         const row = node("article");
-        row.className = "card";
+        row.className = "memory-log-row sy-row";
         row.dataset.batch = id;
         row.append(node("strong", `批次 ${id}`), node("p", detail));
         output.append(row);
@@ -1896,7 +1961,7 @@ function queuePanel(page) {
     );
     for (const batch of [...queue.batches, ...opened]) {
       const row = node("article");
-      row.className = "card";
+      row.className = "memory-log-row sy-row";
       row.dataset.batch = batch.batch_id;
       if (!listed.has(batch.batch_id)) row.append(node("p", "来源定位的历史批次，不属于当前队列分页结果。"));
       row.append(
@@ -2003,6 +2068,7 @@ function mirrorsPanel(page) {
   note.setAttribute("role", "status");
   const readError = node("p");
   const output = node("div");
+  output.className = "sy-row-list";
   section.append(
     node("h2", "Markdown 镜像"),
     node(
@@ -2087,7 +2153,7 @@ function mirrorsPanel(page) {
     for (const mirror of mirrors) {
       const name = mirror.name;
       const row = node("article");
-      row.className = "card";
+      row.className = "memory-log-row sy-row";
       row.dataset.mirror = name;
       row.append(
         node("strong", name === "facts" ? "事实镜像" : "情景镜像"),
@@ -2216,6 +2282,7 @@ export function memoryPage(root, sync, options) {
   ];
   const sections = panels.map(([key, label, content]) => {
     const tab = node("button", label);
+    tab.className = "sy-tab";
     tab.type = "button";
     tab.id = `memory-tab-${key}`;
     tab.setAttribute("role", "tab");
@@ -2250,11 +2317,14 @@ export function memoryPage(root, sync, options) {
     select(next.key);
     next.tab.focus();
   });
+  const metrics = node("div");metrics.className = "memory-metrics";
+  metrics.append(semantic.metric, episodic.metric, skills.metric);
   root.append(
     connection,
     verify,
     sourceNotice,
     tabs,
+    metrics,
     ...sections.map((item) => item.panel),
     node("h2", "记忆维护"),
     ...maintenance.map(item => item.section),

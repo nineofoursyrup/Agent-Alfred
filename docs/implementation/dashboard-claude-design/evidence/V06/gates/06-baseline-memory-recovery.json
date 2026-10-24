@@ -1,0 +1,25 @@
+{
+  "command": [
+    "npx",
+    "playwright",
+    "test",
+    "tests/browser/memory.spec.js",
+    "--grep",
+    "G2 v2: update recovery clears forgotten bodies while away and after reload",
+    "--repeat-each=3"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v06",
+  "head": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "started_at": "2026-10-12T07:34:01.299169+00:00",
+  "duration_seconds": 12.495,
+  "exit_code": 0,
+  "browser_port": "18060",
+  "stdout_stderr": "\nRunning 3 tests using 1 worker\n\n(node:31191) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✓  1 tests/browser/memory.spec.js:1717:3 › G2 v2: update recovery clears forgotten bodies while away and after reload (2.1s)\n(node:31244) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✓  2 tests/browser/memory.spec.js:1717:3 › G2 v2: update recovery clears forgotten bodies while away and after reload (5.3s)\n(node:31399) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✓  3 tests/browser/memory.spec.js:1717:3 › G2 v2: update recovery clears forgotten bodies while away and after reload (2.0s)\n\n  3 passed (11.4s)\n",
+  "raw_sha256": "53ec675537b7d22f6aa91ac4724c179885d0644e83121ca56889e130fb49aad3",
+  "inputs_manifest": {
+    "entries": 720,
+    "canonical_json_sha256": "f7afc23fbfacd900be75976813c47b7ca27d15037a7b847f7c290f69d5e4482f",
+    "source_commit": "9eeae7c830cc9a920ff938fdd63634653afdf699",
+    "source_path": "docs/implementation/dashboard-claude-design/evidence/V06/gates/06-baseline-memory-recovery.json"
+  }
+}

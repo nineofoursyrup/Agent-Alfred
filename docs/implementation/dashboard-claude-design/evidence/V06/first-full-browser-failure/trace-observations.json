@@ -1,0 +1,41 @@
+[
+  {
+    "case": "database-S10-copies-only-t-02e92-w-limit-and-source-evidence",
+    "errors": [
+      {
+        "class": "Test",
+        "method": "pw:api",
+        "params": {
+          "locator": "getByRole('textbox', { name: 'SQL', exact: true })",
+          "value": "SELECT 9 AS draft_only"
+        },
+        "error": {
+          "name": "",
+          "message": "Error: locator.fill: Test timeout of 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('textbox', { name: 'SQL', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <textarea rows=\"8\" aria-label=\"SQL\" id=\"database-sql\" spellcheck=\"false\" aria-describedby=\"database-editor-help\" placeholder=\"SELECT * FROM diag_sessions LIMIT 20\"></textarea>\u001b[22m\n\u001b[2m    - fill(\"SELECT 9 AS draft_only\")\u001b[22m\n\u001b[2m  - attempting fill action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and editable\u001b[22m\n",
+          "stack": "Error: locator.fill: Test timeout of 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('textbox', { name: 'SQL', exact: true })\u001b[22m\n\u001b[2m    - locator resolved to <textarea rows=\"8\" aria-label=\"SQL\" id=\"database-sql\" spellcheck=\"false\" aria-describedby=\"database-editor-help\" placeholder=\"SELECT * FROM diag_sessions LIMIT 20\"></textarea>\u001b[22m\n\u001b[2m    - fill(\"SELECT 9 AS draft_only\")\u001b[22m\n\u001b[2m  - attempting fill action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and editable\u001b[22m\n\n    at /Users/nineofour/Agent-Alfred-v06/tests/browser/database.spec.js:409:16"
+        }
+      }
+    ],
+    "root_cause": "UNKNOWN",
+    "failure_observation": "15 second test timeout; no page or assertion change authorized"
+  },
+  {
+    "case": "database_lifecycle-S10-a-n-62f83-apability-without-rerunning",
+    "errors": [
+      {
+        "class": "Test",
+        "method": "expect",
+        "params": {
+          "locator": "getByText('可执行', { exact: true })"
+        },
+        "error": {
+          "name": "",
+          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator:  getByText('可执行', { exact: true })\nExpected: visible\nReceived: undefined\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText('可执行', { exact: true }) with timeout 4000ms\u001b[22m\n\u001b[2m  - waiting for getByText('可执行', { exact: true })\u001b[22m\n\u001b[2m  - Protocol error (Runtime.callFunctionOn): Internal server error, session closed.\u001b[22m\n",
+          "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator:  getByText('可执行', { exact: true })\nExpected: visible\nReceived: undefined\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" getByText('可执行', { exact: true }) with timeout 4000ms\u001b[22m\n\u001b[2m  - waiting for getByText('可执行', { exact: true })\u001b[22m\n\u001b[2m  - Protocol error (Runtime.callFunctionOn): Internal server error, session closed.\u001b[22m\n\n    at /Users/nineofour/Agent-Alfred-v06/tests/browser/database_lifecycle.spec.js:75:54"
+        }
+      }
+    ],
+    "root_cause": "UNKNOWN",
+    "failure_observation": "15 second test timeout; no page or assertion change authorized"
+  }
+]

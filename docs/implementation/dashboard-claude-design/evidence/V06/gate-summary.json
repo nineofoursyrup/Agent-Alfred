@@ -1,0 +1,61 @@
+{
+  "passed_gates": 7,
+  "failed_gates": 1,
+  "gates": [
+    {
+      "gate": "ruff",
+      "result": "PASS",
+      "count": "1／0",
+      "seconds": 0.728,
+      "log": "gates/03-ruff.json"
+    },
+    {
+      "gate": "Skill 结构",
+      "result": "PASS",
+      "count": "1／0",
+      "seconds": 0.169,
+      "log": "gates/03-skills.json"
+    },
+    {
+      "gate": ".env.example",
+      "result": "PASS",
+      "count": "1／0",
+      "seconds": 5.346,
+      "log": "gates/03-env.json"
+    },
+    {
+      "gate": "Python 完整套件",
+      "result": "FAIL",
+      "count": "6442／3；1 deselected",
+      "seconds": 5098.159,
+      "log": "gates/03-pytest.json"
+    },
+    {
+      "gate": "TypeScript",
+      "result": "PASS",
+      "count": "1／0",
+      "seconds": 1.208,
+      "log": "gates/03-typecheck.json"
+    },
+    {
+      "gate": "完整浏览器",
+      "result": "PASS",
+      "count": "545／0",
+      "seconds": 804.581,
+      "log": "gates/09-browser.json"
+    },
+    {
+      "gate": "diff-check",
+      "result": "PASS",
+      "count": "2/0",
+      "seconds": 0.307
+    },
+    {
+      "gate": "build+installation",
+      "result": "PASS",
+      "count": "build 1/0; installation 4/0",
+      "seconds": 82.977
+    }
+  ],
+  "python_isolated_retest": "3 passed, not a replacement full-suite PASS"
+}

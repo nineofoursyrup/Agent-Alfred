@@ -1,0 +1,26 @@
+{
+  "command": [
+    "uv",
+    "run",
+    "--extra",
+    "mcp",
+    "pytest",
+    "src/agent_alfred/evals/deterministic/test_database_lifecycle.py::test_real_forgetting_waits_for_worker_cleanup[protect]",
+    "src/agent_alfred/evals/deterministic/test_database_lifecycle.py::test_real_forgetting_waits_for_worker_cleanup[encode]",
+    "src/agent_alfred/evals/deterministic/test_database_lifecycle.py::test_real_byte_probe_cancel_and_timeout_are_not_truncation[cancel]"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v06",
+  "head": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "started_at": "2026-10-12T07:33:00.313893+00:00",
+  "duration_seconds": 2.821,
+  "exit_code": 0,
+  "browser_port": null,
+  "stdout_stderr": "============================= test session starts ==============================\nplatform darwin -- Python 3.14.7, pytest-9.1.1, pluggy-1.6.0\nrootdir: /Users/nineofour/Agent-Alfred-v06\nconfigfile: pyproject.toml\nplugins: anyio-4.14.2\ncollected 3 items\n\nsrc/agent_alfred/evals/deterministic/test_database_lifecycle.py ...      [100%]\n\n============================== 3 passed in 2.38s ===============================\n",
+  "raw_sha256": "1524b00241c61940734bfa146ed9a415caf1b23773f9f589f5da8a64d4d27f2c",
+  "inputs_manifest": {
+    "entries": 720,
+    "canonical_json_sha256": "1f97107983be55839f30e7fce3b4204f5699e1bcf3d25c5313be785d94b5564f",
+    "source_commit": "9eeae7c830cc9a920ff938fdd63634653afdf699",
+    "source_path": "docs/implementation/dashboard-claude-design/evidence/V06/gates/09-pytest-failures.json"
+  }
+}

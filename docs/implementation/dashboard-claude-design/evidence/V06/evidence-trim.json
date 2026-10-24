@@ -1,0 +1,18 @@
+{
+  "source_commit": "9eeae7c830cc9a920ff938fdd63634653afdf699",
+  "original_file_count": 511,
+  "original_bytes": 46862768,
+  "removed_files": 409,
+  "compacted_files": 35,
+  "removed_cascade_directories": 134,
+  "retained_cascade_directories": [
+    "database-real-SSE-recovery-00ec9-rsions-and-never-reruns-SQL",
+    "database_status-STD-06-SPE-d95bf--failure-is-cleanup-failure"
+  ],
+  "retained_traces": [
+    "first-affected-failure/memory-A38-equal-creation--bd79e-tale-cursors-force-a-reread/trace.zip",
+    "second-full-browser-failure/memory-G2-v2-update-recove-cb96a-while-away-and-after-reload/trace.zip"
+  ],
+  "change_manifest": "evidence-trim-manifest.jsonl",
+  "originals_preserved_in_git": true
+}

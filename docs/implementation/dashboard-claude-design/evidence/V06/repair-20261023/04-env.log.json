@@ -1,0 +1,4 @@
+{
+  "raw_sha256": "bc243523b805cfaeb64daf1540da71749c485a41d8aed112495ab3f052f28a97",
+  "stdout_stderr": "PASS: .env.example consistency check\n"
+}

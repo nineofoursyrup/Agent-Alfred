@@ -1,0 +1,22 @@
+{
+  "command": [
+    ".venv/bin/ruff",
+    "check",
+    "--no-cache",
+    "."
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v06",
+  "head": "9eeae7c830cc9a920ff938fdd63634653afdf699",
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "started_at": "2026-10-22T21:45:22.633004+00:00",
+  "elapsed_seconds": 0.203,
+  "exit_code": 0,
+  "input_manifest_sha256": "d87007e9b7c99d25367a281bd209cd881e3140c201471c6e66528c8d55f3dd89",
+  "inputs_unchanged": true,
+  "browser_port": null,
+  "log": "02-ruff.log.json",
+  "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+  "original_log_name": "02-ruff.log",
+  "log_encoding": "JSON stdout_stderr string; log_sha256 hashes its decoded UTF-8 bytes",
+  "input_manifest": "gate-inputs.json"
+}

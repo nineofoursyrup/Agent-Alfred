@@ -1,0 +1,26 @@
+{
+  "command": [
+    "npx",
+    "playwright",
+    "test",
+    "tests/browser/aggregation.spec.js:632",
+    "tests/browser/memory.spec.js:1717",
+    "tests/browser/run-path.spec.js:636",
+    "--grep",
+    "S06 CE-19: a retained failed-recording form|G2 v2: update recovery clears forgotten bodies while away and after reload|C4 SPEC-03 COORD-02 real trace rejection and recovery complete_node_failed"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v06",
+  "head": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "started_at": "2026-10-12T06:57:58.995096+00:00",
+  "duration_seconds": 10.906,
+  "exit_code": 0,
+  "browser_port": "18060",
+  "stdout_stderr": "\nRunning 3 tests using 1 worker\n\n(node:70873) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✓  1 tests/browser/aggregation.spec.js:632:1 › S06 CE-19: a retained failed-recording form uses the restarted Run outcome instead of old trace success (3.3s)\n  ✓  2 tests/browser/memory.spec.js:1717:3 › G2 v2: update recovery clears forgotten bodies while away and after reload (2.5s)\n  ✓  3 tests/browser/run-path.spec.js:636:151 › C4 SPEC-03 COORD-02 real trace rejection and recovery complete_node_failed (1.7s)\n\n  3 passed (9.5s)\n",
+  "raw_sha256": "d8591b10f69f7feceb0cf7145f9b4373a36207618800a97b765e12700bfdf51b",
+  "inputs_manifest": {
+    "entries": 720,
+    "canonical_json_sha256": "1f97107983be55839f30e7fce3b4204f5699e1bcf3d25c5313be785d94b5564f",
+    "source_commit": "9eeae7c830cc9a920ff938fdd63634653afdf699",
+    "source_path": "docs/implementation/dashboard-claude-design/evidence/V06/gates/06-browser-failures.json"
+  }
+}

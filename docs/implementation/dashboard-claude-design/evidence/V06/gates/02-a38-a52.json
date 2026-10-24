@@ -1,0 +1,24 @@
+{
+  "command": [
+    "npx",
+    "playwright",
+    "test",
+    "tests/browser/memory.spec.js",
+    "--grep",
+    "A38:|A52:"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v06",
+  "head": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "started_at": "2026-10-12T05:55:57.026037+00:00",
+  "duration_seconds": 8.917,
+  "exit_code": 0,
+  "browser_port": "18060",
+  "stdout_stderr": "\nRunning 2 tests using 1 worker\n\n(node:61448) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✓  1 tests/browser/memory.spec.js:128:1 › A52: explicit save, next-Run hit, source, edit conflict, delete and requery (4.6s)\n\n  ✓  2 tests/browser/memory.spec.js:542:1 › A38: equal creation times page in stable internal order and stale cursors force a reread (1.7s)\n\n  2 passed (7.7s)\n",
+  "raw_sha256": "faea19be50e52652a6b508bf86d85d0f5e1ec72d2c207e8179ecfdc848bc08c4",
+  "inputs_manifest": {
+    "entries": 720,
+    "canonical_json_sha256": "1f97107983be55839f30e7fce3b4204f5699e1bcf3d25c5313be785d94b5564f",
+    "source_commit": "9eeae7c830cc9a920ff938fdd63634653afdf699",
+    "source_path": "docs/implementation/dashboard-claude-design/evidence/V06/gates/02-a38-a52.json"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "command": [
+    "uv",
+    "run",
+    "ruff",
+    "check"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v06",
+  "head": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "started_at": "2026-10-12T06:01:44.640278+00:00",
+  "duration_seconds": 0.728,
+  "exit_code": 0,
+  "browser_port": null,
+  "stdout_stderr": "All checks passed!\n",
+  "raw_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+  "inputs_manifest": {
+    "entries": 720,
+    "canonical_json_sha256": "1f97107983be55839f30e7fce3b4204f5699e1bcf3d25c5313be785d94b5564f",
+    "source_commit": "9eeae7c830cc9a920ff938fdd63634653afdf699",
+    "source_path": "docs/implementation/dashboard-claude-design/evidence/V06/gates/03-ruff.json"
+  }
+}

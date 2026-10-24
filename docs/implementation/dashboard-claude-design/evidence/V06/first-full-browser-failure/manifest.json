@@ -1,0 +1,18 @@
+[
+  {
+    "original_path": "output/playwright/results/database_lifecycle-S10-a-n-62f83-apability-without-rerunning/error-context.md",
+    "file": "error-context.md",
+    "bytes": 5265,
+    "sha256": "f22e446ee9752579d05a976fe9e5fd19c8a98afb8543b1b065ae611df2f2fcf0",
+    "archived_path": "first-full-browser-failure/database_lifecycle-S10-a-n-62f83-apability-without-rerunning/error-context.md.json",
+    "scratch_archive_path": ".scratch/v06/first-full-browser-failure/database_lifecycle-S10-a-n-62f83-apability-without-rerunning/error-context.md.json"
+  },
+  {
+    "original_path": "output/playwright/results/database-S10-copies-only-t-02e92-w-limit-and-source-evidence/error-context.md",
+    "file": "error-context.md",
+    "bytes": 6975,
+    "sha256": "8e90d89ae54eac5733caad5adf2f29c17b294bf5b46e3c843379665df94cb62f",
+    "archived_path": "first-full-browser-failure/database-S10-copies-only-t-02e92-w-limit-and-source-evidence/error-context.md.json",
+    "scratch_archive_path": ".scratch/v06/first-full-browser-failure/database-S10-copies-only-t-02e92-w-limit-and-source-evidence/error-context.md.json"
+  }
+]

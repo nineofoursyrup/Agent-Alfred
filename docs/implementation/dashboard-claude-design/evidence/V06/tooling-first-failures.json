@@ -1,0 +1,37 @@
+[
+  {
+    "action": "apply_patch replacing memory.css",
+    "error": "apply_patch verification failed: invalid patch: multiple operations target memory.css",
+    "handling": "No source was changed by the rejected patch. Replaced the content in one Update File patch."
+  },
+  {
+    "action": "First Alfred screenshot browser navigation",
+    "error": "net::ERR_CONNECTION_REFUSED at http://127.0.0.1:18064/memory",
+    "reason": "The temporary visual-server wrapper received stdin EOF in a non-TTY exec session and closed the server.",
+    "handling": "Restarted the same existing Memory server helper under a PTY; no product, test assertion, retry or timeout changed."
+  },
+  {
+    "action": "First product capture after first viewport screenshots",
+    "error": "### Error\nError: overflow or inline style {\"viewport\":{\"width\":1280,\"height\":800},\"pageWidth\":663,\"pageOverflow\":0,\"documentOverflow\":0,\"metricColumns\":\"213px 213px 213px\",\"metrics\":[{\"value\":\"6\",\"label\":\"语义记忆 · semantic\",\"note\":\"当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。\",\"fontSize\":\"20px\",\"noteClamped\":\"none\",\"noteHeight\":48,\"noteScrollHeight\":48},{\"value\":\"2\",\"label\":\"情景记忆 · episodic\",\"note\":\"当前列表已读取条目数；已到末页。不表示全部条目均允许自动使用，也不证明遗忘清理完成。\",\"fontSize\":\"20px\",\"noteClamped\":\"none\",\"noteHeight\":48,\"noteScrollHeight\":48},{\"value\":\"1\",\"label\":\"Skill 目录 · procedural\",\"note\":\"启动时的只读目录条目数；不是记忆库条目数。文件修改需重启后生效。\",\"fontSize\":\"20px\",\"noteClamped\":\"none\",\"noteHeight\":32,\"noteScrollHeight\":32}],\"tabNames\":[{\"name\":\"语义记忆\",\"selected\":\"true\",\"class\":\"sy-tab\"},{\"name\":\"情景记忆\",\"selected\":\"false\",\"class\":\"sy-tab\"},{\"name\":\"Skill 目录\",\"selected\":\"false\",\"class\":\"sy-tab\"}],\"inlineStyles\":17,\"focused\":\"语义记忆\",\"focusOutline\":\"3px\",\"headings\":[{\"name\":\"语义记忆\",\"level\":\"H2\"},{\"name\":\"操作回执\",\"level\":\"H3\"},{\"name\":\"长中文与完整状态\",\"level\":\"H3\"},{\"name\":\"来源证据\",\"level\":\"H3\"},{\"name\":\"遗忘范围\",\"level\":\"H3\"},{\"name\":\"编辑保护\",\"level\":\"H3\"},{\"name\":\"环境\",\"level\":\"H3\"},{\"name\":\"记忆维护\",\"level\":\"H2\"},{\"name\":\"操作回执／遗忘进度\",\"level\":\"H2\"},{\"name\":\"提炼队列\",\"level\":\"H2\"},{\"name\":\"检索统计\",\"level\":\"H2\"},{\"name\":\"Markdown 镜像\",\"level\":\"H2\"}],\"resources\":[\"http://127.0.0.1:18064/assets/app.css\",\"http://127.0.0.1:18064/assets/settings.css\",\"http://127.0.0.1:18064/assets/inbox-runs.css\",\"http://127.0.0.1:18064/assets/tools.css\",\"http://127.0.0.1:18064/assets/overview.css\",\"http://127.0.0.1:18064/assets/behaviour.css\",\"http://127.0.0.1:18064/assets/database.css\",\"http://127.0.0.1:18064/assets/memory.css\",\"http://127.0.0.1:18064/assets/accounting.css\",\"http://127.0.0.1:18064/assets/app.js\",\"http://127.0.0.1:18064/assets/shell.js\",\"http://127.0.0.1:18064/assets/stream.js\",\"http://127.0.0.1:18064/assets/tools.js\",\"http://127.0.0.1:18064/assets/accounting.js\",\"http://127.0.0.1:18064/assets/aggregation.js\",\"http://127.0.0.1:18064/assets/dom.js\",\"http://127.0.0.1:18064/assets/progress.js\",\"http://127.0.0.1:18064/assets/notices.js\",\"http://127.0.0.1:18064/assets/runs.js\",\"http://127.0.0.1:18064/assets/inbox.js\",\"http://127.0.0.1:18064/assets/pages.js\",\"http://127.0.0.1:18064/assets/memory.js\",\"http://127.0.0.1:18064/assets/database.js\",\"http://127.0.0.1:18064/assets/overview.js\",\"http://127.0.0.1:18064/assets/run-fields.js\",\"http://127.0.0.1:18064/assets/trace_export.js\",\"http://127.0.0.1:18064/assets/source.js\",\"http://127.0.0.1:18064/assets/topology.js\",\"http://127.0.0.1:18064/assets/run-evidence.js\",\"http://127.0.0.1:18064/assets/behaviour.js\",\"http://127.0.0.1:18064/assets/models.js\",\"http://127.0.0.1:18064/assets/connections.js\",\"http://127.0.0.1:18064/assets/routing-statistics.js\",\"http://127.0.0.1:18064/assets/settings-focus.js\"]}\n",
+    "reason": "Playwright default screenshot caret=hide left empty style attributes on form controls and emitted CSP diagnostics. Inspecting all 17 attributes showed style=\"\"; no memory.js inline style code exists.",
+    "handling": "Preserved this record. Restarted the ephemeral fixture and used screenshot caret=initial without changing product code or the inline-style assertion."
+  },
+  {
+    "action": "Second capture setup consolidation read",
+    "error": "### Error\nError: page.waitForFunction: TypeError: Cannot read properties of undefined (reading 'some')\n    at eval (eval at predicate (eval at evaluate (:368:30)), <anonymous>:1:91)\n",
+    "reason": "Temporary raw read overlapped the real consolidation write and received the native revision-race response, which has no batches array.",
+    "handling": "Kept the same fixture and waited for a successful revision-bound response with the expected batches array; no product or test changes."
+  },
+  {
+    "action": "Narrow viewport capture after desktop views",
+    "error": "### Error\nTimeoutError: locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: '收起主对话', exact: true })\u001b[22m\n\n",
+    "reason": "The capture sampled desktop button visibility during the shell breakpoint change, then used the obsolete desktop name.",
+    "handling": "Waited for the real shell narrow presentation, then selected the existing data-close-panel control if visible. No shell or product changes."
+  },
+  {
+    "action": "Supplementary mirror screenshot scroll after real deletion",
+    "error": "### Error\nError: locator.scrollIntoViewIfNeeded: Element is not attached to the DOM\nCall log:\n\u001b[2m  - attempting scroll into view action\u001b[22m\n\u001b[2m    - waiting for element to be stable\u001b[22m\n\n",
+    "reason": "The captured preview node was replaced by the existing revision-bound mirror re-read before scrolling completed.",
+    "handling": "Preserved the error and changed temporary scrolling to the stable maintenance-panel wrapper. Product behavior and assertions unchanged."
+  }
+]

@@ -1,0 +1,24 @@
+{
+  "command": [
+    "uv",
+    "run",
+    "python",
+    "scripts/check_mcp_installations.py",
+    "--output",
+    "/Users/nineofour/Agent-Alfred-v06/.scratch/v06/pr145-repair/mcp-artifacts.json"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v06",
+  "head": "9eeae7c830cc9a920ff938fdd63634653afdf699",
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "started_at": "2026-10-22T22:43:36.214531+00:00",
+  "elapsed_seconds": 12.392,
+  "exit_code": 0,
+  "input_manifest_sha256": "d87007e9b7c99d25367a281bd209cd881e3140c201471c6e66528c8d55f3dd89",
+  "inputs_unchanged": true,
+  "browser_port": null,
+  "log": "09-mcp.log.json",
+  "log_sha256": "8ef7baeaa64a10d28b4e1135abc78430595b69cfc42c58e26509442d1e539d38",
+  "original_log_name": "09-mcp.log",
+  "log_encoding": "Installation output with four repeated artifact JSON records omitted; complete raw log SHA and local path retained",
+  "input_manifest": "gate-inputs.json"
+}

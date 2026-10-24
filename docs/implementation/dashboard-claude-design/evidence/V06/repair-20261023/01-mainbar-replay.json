@@ -1,0 +1,20 @@
+{
+  "command": [
+    "npm",
+    "run",
+    "test:browser",
+    "--",
+    "tests/browser/mainbar-empty-identity.spec.js",
+    "--grep",
+    "draft: navigate"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v06",
+  "port": 18060,
+  "head": "9eeae7c830cc9a920ff938fdd63634653afdf699",
+  "started_at": "2026-10-22T21:42:40.811005+00:00",
+  "elapsed_seconds": 2.853,
+  "exit_code": 0,
+  "log": "01-mainbar-replay.log.json",
+  "log_sha256": "8ca712f2df60670d960c12093cbc73bf68bdd8b2b67968615e1b2f809824ce4b",
+  "log_encoding": "JSON stdout_stderr string; log_sha256 hashes its decoded UTF-8 bytes"
+}

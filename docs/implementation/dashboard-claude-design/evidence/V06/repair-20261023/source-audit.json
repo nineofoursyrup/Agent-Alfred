@@ -1,0 +1,36 @@
+{
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "head": "9eeae7c830cc9a920ff938fdd63634653afdf699",
+  "file": "src/agent_alfred/ops/static/memory.js",
+  "sha256": "53de17e308776b2ee4b91a8c923cc86449ba6d363f6c3b84a59de6883a1401c3",
+  "comparison": "Exact text from each top-level declaration through the next declaration; conservative byte comparison, not semantic equivalence.",
+  "unchanged_functions": {
+    "MemorySync": true,
+    "post": true,
+    "commandReceipt": true,
+    "originLabel": true,
+    "interval": true,
+    "sourceGroups": true,
+    "pad": true,
+    "awareLocal": true,
+    "localInput": true,
+    "field": true,
+    "input": true,
+    "memoryReceipts": true,
+    "ratioText": true,
+    "actionResult": true,
+    "actionRunner": true
+  },
+  "changed_declarations": [
+    "confirmDiscard",
+    "foldSection",
+    "receiptsPanel",
+    "recordPanel",
+    "skillsPanel",
+    "statisticsPanel",
+    "queuePanel",
+    "mirrorsPanel",
+    "memoryPage"
+  ],
+  "audit_tool_note": "Initial attempt with TypeScript compiler API failed because the installed TypeScript package did not expose ScriptTarget. Replaced the temporary audit with exact text comparison; no product or gate inputs changed."
+}

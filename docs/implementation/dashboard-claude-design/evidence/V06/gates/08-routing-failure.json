@@ -1,0 +1,22 @@
+{
+  "command": [
+    "npx",
+    "playwright",
+    "test",
+    "tests/browser/routing-statistics.spec.js:302"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v06",
+  "head": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "started_at": "2026-10-12T07:22:33.110929+00:00",
+  "duration_seconds": 8.049,
+  "exit_code": 0,
+  "browser_port": "18060",
+  "stdout_stderr": "\nRunning 1 test using 1 worker\n\n(node:13255) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✓  1 tests/browser/routing-statistics.spec.js:302:1 › SPEC-03 CE-06/15 disabled-only, settings conflict and real SQL timeout recover (6.2s)\n\n  1 passed (7.1s)\n",
+  "raw_sha256": "0c113a590c41dc5313defd9ac82d085c432ac4cd92ccb11fc7e43e63665a0fdf",
+  "inputs_manifest": {
+    "entries": 720,
+    "canonical_json_sha256": "1f97107983be55839f30e7fce3b4204f5699e1bcf3d25c5313be785d94b5564f",
+    "source_commit": "9eeae7c830cc9a920ff938fdd63634653afdf699",
+    "source_path": "docs/implementation/dashboard-claude-design/evidence/V06/gates/08-routing-failure.json"
+  }
+}

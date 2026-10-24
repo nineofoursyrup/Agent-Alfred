@@ -1,0 +1,127 @@
+{
+  "origin": "http://127.0.0.1:18064",
+  "directory": "/var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/alfred-memory-browser-O8EuKt",
+  "model": "existing offline MemoryModel",
+  "threshold": 2,
+  "receipts": [
+    {
+      "schema_version": 1,
+      "process_instance_id": "ebe587cb537840ac845efc66112e3f5c",
+      "memory_revision": 24,
+      "operation_id": "v06-evidence-0",
+      "result": {
+        "operation_id": "v06-evidence-0",
+        "action": "save",
+        "kind": "semantic",
+        "status": "saved",
+        "memory_id": "680f99f9-41a7-4982-bd36-7fec761222b5",
+        "record_version": 1,
+        "affected_count": 1,
+        "committed_at": "2026-10-12T06:07:23.559022+00:00"
+      },
+      "forgetting": null
+    },
+    {
+      "schema_version": 1,
+      "process_instance_id": "ebe587cb537840ac845efc66112e3f5c",
+      "memory_revision": 37,
+      "operation_id": "v06-evidence-1",
+      "result": {
+        "operation_id": "v06-evidence-1",
+        "action": "save",
+        "kind": "semantic",
+        "status": "saved",
+        "memory_id": "ea773aa9-dbae-44fa-81ee-53ec73f4e121",
+        "record_version": 1,
+        "affected_count": 1,
+        "committed_at": "2026-10-12T06:07:23.589343+00:00"
+      },
+      "forgetting": null
+    },
+    {
+      "schema_version": 1,
+      "process_instance_id": "ebe587cb537840ac845efc66112e3f5c",
+      "memory_revision": 50,
+      "operation_id": "v06-evidence-2",
+      "result": {
+        "operation_id": "v06-evidence-2",
+        "action": "save",
+        "kind": "semantic",
+        "status": "saved",
+        "memory_id": "40daf91e-5656-44f3-8856-36fa609b5792",
+        "record_version": 1,
+        "affected_count": 1,
+        "committed_at": "2026-10-12T06:07:23.610935+00:00"
+      },
+      "forgetting": null
+    },
+    {
+      "schema_version": 1,
+      "process_instance_id": "ebe587cb537840ac845efc66112e3f5c",
+      "memory_revision": 63,
+      "operation_id": "v06-evidence-3",
+      "result": {
+        "operation_id": "v06-evidence-3",
+        "action": "save",
+        "kind": "semantic",
+        "status": "saved",
+        "memory_id": "af0a9b25-f9d8-43f9-b5a2-e217de132858",
+        "record_version": 1,
+        "affected_count": 1,
+        "committed_at": "2026-10-12T06:07:23.630075+00:00"
+      },
+      "forgetting": null
+    },
+    {
+      "schema_version": 1,
+      "process_instance_id": "ebe587cb537840ac845efc66112e3f5c",
+      "memory_revision": 76,
+      "operation_id": "v06-evidence-4",
+      "result": {
+        "operation_id": "v06-evidence-4",
+        "action": "save",
+        "kind": "semantic",
+        "status": "saved",
+        "memory_id": "c36f06d1-da28-4c74-a866-c778070e7e8b",
+        "record_version": 1,
+        "affected_count": 1,
+        "committed_at": "2026-10-12T06:07:23.650889+00:00"
+      },
+      "forgetting": null
+    },
+    {
+      "schema_version": 1,
+      "process_instance_id": "ebe587cb537840ac845efc66112e3f5c",
+      "memory_revision": 89,
+      "operation_id": "v06-evidence-episode-0",
+      "result": {
+        "operation_id": "v06-evidence-episode-0",
+        "action": "save",
+        "kind": "episodic",
+        "status": "saved",
+        "memory_id": "7c368bab-055d-4597-97ea-44eb8d5def4b",
+        "record_version": 1,
+        "affected_count": 1,
+        "committed_at": "2026-10-12T06:07:23.666639+00:00"
+      },
+      "forgetting": null
+    },
+    {
+      "schema_version": 1,
+      "process_instance_id": "ebe587cb537840ac845efc66112e3f5c",
+      "memory_revision": 102,
+      "operation_id": "v06-evidence-episode-1",
+      "result": {
+        "operation_id": "v06-evidence-episode-1",
+        "action": "save",
+        "kind": "episodic",
+        "status": "saved",
+        "memory_id": "bd71af84-cefe-4b1c-af8e-99473c026112",
+        "record_version": 1,
+        "affected_count": 1,
+        "committed_at": "2026-10-12T06:07:23.687480+00:00"
+      },
+      "forgetting": null
+    }
+  ]
+}

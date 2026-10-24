@@ -1,0 +1,203 @@
+{
+  "browser": "155.0.8059.39",
+  "viewport_only": true,
+  "reference_view": "memory",
+  "results": [
+    {
+      "width": 1440,
+      "height": 900,
+      "navigationName": "Memory\n126",
+      "measurements": {
+        "main": {
+          "width": 886,
+          "height": 900,
+          "x": 233,
+          "y": 0
+        },
+        "nav": {
+          "width": 233,
+          "height": 900,
+          "x": 0,
+          "y": 0
+        },
+        "aside": {
+          "width": 321,
+          "height": 900,
+          "x": 1119,
+          "y": 0
+        },
+        "title": "32px",
+        "resources": [
+          {
+            "url": "http://127.0.0.1:18068/support.js",
+            "status": 200
+          },
+          {
+            "url": "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+            "status": 200
+          },
+          {
+            "url": "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
+            "status": 200
+          },
+          {
+            "url": "http://127.0.0.1:18068/Syrup%20Dashboard.dc.html",
+            "status": 200
+          },
+          {
+            "url": "http://127.0.0.1:18068/favicon.ico",
+            "status": 404
+          }
+        ]
+      },
+      "snapshot": "- navigation:\n  - text: Syrup v0.9 · 本地 claude-sonnet-4-5 127.0.0.1:9049 SYSTEM\n  - link \"Overview\":\n    - /url: \"#\"\n  - link \"Loop 48\":\n    - /url: \"#\"\n  - link \"Memory 126\":\n    - /url: \"#\"\n  - link \"Graph on\":\n    - /url: \"#\"\n  - link \"Ops pass\":\n    - /url: \"#\"\n  - text: DATA\n  - link \"Tools 14\":\n    - /url: \"#\"\n  - link \"Database state.db\":\n    - /url: \"#\"\n  - button \"中文\"\n  - button \"EN\"\n  - text: ~/.syrup/state.db · 1.4 MB traces/2026-08-17.jsonl\n- main:\n  - text: 三种记忆 + 闸门 + 整理\n  - heading \"Memory\" [level=1]\n  - text: \"语义（什么是真的）、情节（发生过什么）、程序（这件事该怎么做）—— 都可以直接编辑。 live · turn #48\"\n  - button \"semantic\"\n  - button \"episodic\"\n  - button \"skills\"\n  - button \"SOUL.md\"\n  - text: 126 semantic · 事实 34 episodic · 事件 3 procedural · 技能 SEMANTIC · facts 什么是真的 —— 可查询的源头在 state.db\n  - textbox \"搜索记忆…\"\n  - text: Alex 更喜欢上午开会 preference 2 天前 编辑 周六 08:00 固定去游泳 routine 3 天前 编辑 不喜欢周一开会 preference 6 天前 编辑 用 uv 管理 Python 环境 fact 1 周前 编辑 咖啡只喝手冲，不加奶 preference 2 周前 编辑 妹妹的生日是 11 月 4 日 fact 3 周前 编辑 CONSOLIDATION 每隔 N 轮，一道流程回头读原始对话，把值得留下的沉淀成持久事实。 turn 44 → +2 facts · “Alex 更喜欢上午开会”, “周六 8:00 游泳” turn 39 → +1 fact · “不喜欢周一开会” turn 33 → 0 facts · 没有值得留下的东西\n- complementary:\n  - text: CHAT working memory 记住 Alex 更喜欢上午开会 好，记下了。以后给你和 Alex 排会我会默认放在上午。 skip 2 iter 1.9s +1 fact 周五和 Alex 约个碰头 已排在周五 09:00 —— 用的是你之前告诉我的偏好。 retrieve 3 iter 3.4s create_event 正在流式输出… 事件同时写进 trace\n  - textbox \"跟 Syrup 说点什么…\"\n  - button \"发送\""
+    },
+    {
+      "width": 1280,
+      "height": 800,
+      "navigationName": "Memory\n126",
+      "measurements": {
+        "main": {
+          "width": 726,
+          "height": 800,
+          "x": 233,
+          "y": 0
+        },
+        "nav": {
+          "width": 233,
+          "height": 800,
+          "x": 0,
+          "y": 0
+        },
+        "aside": {
+          "width": 321,
+          "height": 800,
+          "x": 959,
+          "y": 0
+        },
+        "title": "32px",
+        "resources": [
+          {
+            "url": "http://127.0.0.1:18068/support.js",
+            "status": 200
+          },
+          {
+            "url": "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+            "status": 200
+          },
+          {
+            "url": "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
+            "status": 200
+          },
+          {
+            "url": "http://127.0.0.1:18068/Syrup%20Dashboard.dc.html",
+            "status": 200
+          },
+          {
+            "url": "http://127.0.0.1:18068/favicon.ico",
+            "status": 404
+          }
+        ]
+      },
+      "snapshot": "- navigation:\n  - text: Syrup v0.9 · 本地 claude-sonnet-4-5 127.0.0.1:9049 SYSTEM\n  - link \"Overview\":\n    - /url: \"#\"\n  - link \"Loop 48\":\n    - /url: \"#\"\n  - link \"Memory 126\":\n    - /url: \"#\"\n  - link \"Graph on\":\n    - /url: \"#\"\n  - link \"Ops pass\":\n    - /url: \"#\"\n  - text: DATA\n  - link \"Tools 14\":\n    - /url: \"#\"\n  - link \"Database state.db\":\n    - /url: \"#\"\n  - button \"中文\"\n  - button \"EN\"\n  - text: ~/.syrup/state.db · 1.4 MB traces/2026-08-17.jsonl\n- main:\n  - text: 三种记忆 + 闸门 + 整理\n  - heading \"Memory\" [level=1]\n  - text: \"语义（什么是真的）、情节（发生过什么）、程序（这件事该怎么做）—— 都可以直接编辑。 live · turn #48\"\n  - button \"semantic\"\n  - button \"episodic\"\n  - button \"skills\"\n  - button \"SOUL.md\"\n  - text: 126 semantic · 事实 34 episodic · 事件 3 procedural · 技能 SEMANTIC · facts 什么是真的 —— 可查询的源头在 state.db\n  - textbox \"搜索记忆…\"\n  - text: Alex 更喜欢上午开会 preference 2 天前 编辑 周六 08:00 固定去游泳 routine 3 天前 编辑 不喜欢周一开会 preference 6 天前 编辑 用 uv 管理 Python 环境 fact 1 周前 编辑 咖啡只喝手冲，不加奶 preference 2 周前 编辑 妹妹的生日是 11 月 4 日 fact 3 周前 编辑 CONSOLIDATION 每隔 N 轮，一道流程回头读原始对话，把值得留下的沉淀成持久事实。 turn 44 → +2 facts · “Alex 更喜欢上午开会”, “周六 8:00 游泳” turn 39 → +1 fact · “不喜欢周一开会” turn 33 → 0 facts · 没有值得留下的东西\n- complementary:\n  - text: CHAT working memory 记住 Alex 更喜欢上午开会 好，记下了。以后给你和 Alex 排会我会默认放在上午。 skip 2 iter 1.9s +1 fact 周五和 Alex 约个碰头 已排在周五 09:00 —— 用的是你之前告诉我的偏好。 retrieve 3 iter 3.4s create_event 正在流式输出… 事件同时写进 trace\n  - textbox \"跟 Syrup 说点什么…\"\n  - button \"发送\""
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "navigationName": "Memory\n126",
+      "measurements": {
+        "main": {
+          "width": 0,
+          "height": 844,
+          "x": 191,
+          "y": 0
+        },
+        "nav": {
+          "width": 191,
+          "height": 844,
+          "x": 0,
+          "y": 0
+        },
+        "aside": {
+          "width": 293,
+          "height": 844,
+          "x": 191,
+          "y": 0
+        },
+        "title": "32px",
+        "resources": [
+          {
+            "url": "http://127.0.0.1:18068/support.js",
+            "status": 200
+          },
+          {
+            "url": "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+            "status": 200
+          },
+          {
+            "url": "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
+            "status": 200
+          },
+          {
+            "url": "http://127.0.0.1:18068/Syrup%20Dashboard.dc.html",
+            "status": 200
+          },
+          {
+            "url": "http://127.0.0.1:18068/favicon.ico",
+            "status": 404
+          }
+        ]
+      },
+      "snapshot": "- navigation:\n  - text: Syrup v0.9 · 本地 claude-sonnet-4-5 127.0.0.1:9049 SYSTEM\n  - link \"Overview\":\n    - /url: \"#\"\n  - link \"Loop 48\":\n    - /url: \"#\"\n  - link \"Memory 126\":\n    - /url: \"#\"\n  - link \"Graph on\":\n    - /url: \"#\"\n  - link \"Ops pass\":\n    - /url: \"#\"\n  - text: DATA\n  - link \"Tools 14\":\n    - /url: \"#\"\n  - link \"Database state.db\":\n    - /url: \"#\"\n  - button \"中文\"\n  - button \"EN\"\n  - text: ~/.syrup/state.db · 1.4 MB traces/2026-08-17.jsonl\n- main:\n  - text: 三种记忆 + 闸门 + 整理\n  - heading \"Memory\" [level=1]\n  - text: \"语义（什么是真的）、情节（发生过什么）、程序（这件事该怎么做）—— 都可以直接编辑。 live · turn #48\"\n  - button \"semantic\"\n  - button \"episodic\"\n  - button \"skills\"\n  - button \"SOUL.md\"\n  - text: 126 semantic · 事实 34 episodic · 事件 3 procedural · 技能 SEMANTIC · facts 什么是真的 —— 可查询的源头在 state.db\n  - textbox \"搜索记忆…\"\n  - text: Alex 更喜欢上午开会 preference 2 天前 编辑 周六 08:00 固定去游泳 routine 3 天前 编辑 不喜欢周一开会 preference 6 天前 编辑 用 uv 管理 Python 环境 fact 1 周前 编辑 咖啡只喝手冲，不加奶 preference 2 周前 编辑 妹妹的生日是 11 月 4 日 fact 3 周前 编辑 CONSOLIDATION 每隔 N 轮，一道流程回头读原始对话，把值得留下的沉淀成持久事实。 turn 44 → +2 facts · “Alex 更喜欢上午开会”, “周六 8:00 游泳” turn 39 → +1 fact · “不喜欢周一开会” turn 33 → 0 facts · 没有值得留下的东西\n- complementary:\n  - text: CHAT working memory 记住 Alex 更喜欢上午开会 好，记下了。以后给你和 Alex 排会我会默认放在上午。 skip 2 iter 1.9s +1 fact 周五和 Alex 约个碰头 已排在周五 09:00 —— 用的是你之前告诉我的偏好。 retrieve 3 iter 3.4s create_event 正在流式输出… 事件同时写进 trace\n  - textbox \"跟 Syrup 说点什么…\"\n  - button \"发送\""
+    },
+    {
+      "width": 320,
+      "height": 800,
+      "navigationName": "Memory\n126",
+      "measurements": {
+        "main": {
+          "width": 0,
+          "height": 800,
+          "x": 191,
+          "y": 0
+        },
+        "nav": {
+          "width": 191,
+          "height": 800,
+          "x": 0,
+          "y": 0
+        },
+        "aside": {
+          "width": 293,
+          "height": 800,
+          "x": 191,
+          "y": 0
+        },
+        "title": "32px",
+        "resources": [
+          {
+            "url": "http://127.0.0.1:18068/support.js",
+            "status": 200
+          },
+          {
+            "url": "https://unpkg.com/react@18.3.1/umd/react.production.min.js",
+            "status": 200
+          },
+          {
+            "url": "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js",
+            "status": 200
+          },
+          {
+            "url": "http://127.0.0.1:18068/Syrup%20Dashboard.dc.html",
+            "status": 200
+          },
+          {
+            "url": "http://127.0.0.1:18068/favicon.ico",
+            "status": 404
+          }
+        ]
+      },
+      "snapshot": "- navigation:\n  - text: Syrup v0.9 · 本地 claude-sonnet-4-5 127.0.0.1:9049 SYSTEM\n  - link \"Overview\":\n    - /url: \"#\"\n  - link \"Loop 48\":\n    - /url: \"#\"\n  - link \"Memory 126\":\n    - /url: \"#\"\n  - link \"Graph on\":\n    - /url: \"#\"\n  - link \"Ops pass\":\n    - /url: \"#\"\n  - text: DATA\n  - link \"Tools 14\":\n    - /url: \"#\"\n  - link \"Database state.db\":\n    - /url: \"#\"\n  - button \"中文\"\n  - button \"EN\"\n  - text: ~/.syrup/state.db · 1.4 MB traces/2026-08-17.jsonl\n- main:\n  - text: 三种记忆 + 闸门 + 整理\n  - heading \"Memory\" [level=1]\n  - text: \"语义（什么是真的）、情节（发生过什么）、程序（这件事该怎么做）—— 都可以直接编辑。 live · turn #48\"\n  - button \"semantic\"\n  - button \"episodic\"\n  - button \"skills\"\n  - button \"SOUL.md\"\n  - text: 126 semantic · 事实 34 episodic · 事件 3 procedural · 技能 SEMANTIC · facts 什么是真的 —— 可查询的源头在 state.db\n  - textbox \"搜索记忆…\"\n  - text: Alex 更喜欢上午开会 preference 2 天前 编辑 周六 08:00 固定去游泳 routine 3 天前 编辑 不喜欢周一开会 preference 6 天前 编辑 用 uv 管理 Python 环境 fact 1 周前 编辑 咖啡只喝手冲，不加奶 preference 2 周前 编辑 妹妹的生日是 11 月 4 日 fact 3 周前 编辑 CONSOLIDATION 每隔 N 轮，一道流程回头读原始对话，把值得留下的沉淀成持久事实。 turn 44 → +2 facts · “Alex 更喜欢上午开会”, “周六 8:00 游泳” turn 39 → +1 fact · “不喜欢周一开会” turn 33 → 0 facts · 没有值得留下的东西\n- complementary:\n  - text: CHAT working memory 记住 Alex 更喜欢上午开会 好，记下了。以后给你和 Alex 排会我会默认放在上午。 skip 2 iter 1.9s +1 fact 周五和 Alex 约个碰头 已排在周五 09:00 —— 用的是你之前告诉我的偏好。 retrieve 3 iter 3.4s create_event 正在流式输出… 事件同时写进 trace\n  - textbox \"跟 Syrup 说点什么…\"\n  - button \"发送\""
+    }
+  ]
+}

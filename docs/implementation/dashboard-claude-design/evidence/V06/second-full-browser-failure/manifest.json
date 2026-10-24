@@ -1,0 +1,58 @@
+[
+  {
+    "original_path": "output/playwright/results/aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/error-context.md",
+    "file": "error-context.md",
+    "bytes": 21418,
+    "sha256": "957bc4a6debfae6030162ec764c2b236805bb5dc95455e066a1e9f9da537187e",
+    "archived_path": "second-full-browser-failure/aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/error-context.md.json",
+    "scratch_archive_path": ".scratch/v06/second-full-browser-failure/aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/error-context.md.json"
+  },
+  {
+    "original_path": "output/playwright/results/aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/test-failed-1.png",
+    "file": "test-failed-1.png",
+    "bytes": 122392,
+    "sha256": "e3a1d8b10a736afff738287d79421f7b9e773eed87e6aa14847249c31d544fba",
+    "archived_path": "second-full-browser-failure/aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/test-failed-1.png",
+    "scratch_archive_path": ".scratch/v06/second-full-browser-failure/aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/test-failed-1.png"
+  },
+  {
+    "original_path": "output/playwright/results/memory-G2-v2-update-recove-cb96a-while-away-and-after-reload/error-context.md",
+    "file": "error-context.md",
+    "bytes": 10714,
+    "sha256": "90a4dfab16276500c66c508c79dd2ed131c0b4fd9b195a8dcfa59b102d7caaf4",
+    "archived_path": "second-full-browser-failure/memory-G2-v2-update-recove-cb96a-while-away-and-after-reload/error-context.md.json",
+    "scratch_archive_path": ".scratch/v06/second-full-browser-failure/memory-G2-v2-update-recove-cb96a-while-away-and-after-reload/error-context.md.json"
+  },
+  {
+    "original_path": "output/playwright/results/memory-G2-v2-update-recove-cb96a-while-away-and-after-reload/test-failed-1.png",
+    "file": "test-failed-1.png",
+    "bytes": 103960,
+    "sha256": "660670631ae9983b959d7cc7bf10449470d22dea74bd80af7e5d353f5f3c81ed",
+    "archived_path": "second-full-browser-failure/memory-G2-v2-update-recove-cb96a-while-away-and-after-reload/test-failed-1.png",
+    "scratch_archive_path": ".scratch/v06/second-full-browser-failure/memory-G2-v2-update-recove-cb96a-while-away-and-after-reload/test-failed-1.png"
+  },
+  {
+    "original_path": "output/playwright/results/memory-G2-v2-update-recove-cb96a-while-away-and-after-reload/trace.zip",
+    "file": "trace.zip",
+    "bytes": 1967894,
+    "sha256": "c7bbf30a3ef7df5432168e1ef31db2c165f510dc67e7f2ab3b62fb01a7f96d5e",
+    "archived_path": "second-full-browser-failure/memory-G2-v2-update-recove-cb96a-while-away-and-after-reload/trace.zip",
+    "scratch_archive_path": ".scratch/v06/second-full-browser-failure/memory-G2-v2-update-recove-cb96a-while-away-and-after-reload/trace.zip"
+  },
+  {
+    "original_path": "output/playwright/results/run-path-C4-SPEC-03-COORD--b0433-covery-complete-node-failed/error-context.md",
+    "file": "error-context.md",
+    "bytes": 37943,
+    "sha256": "60a63dd1510bc770b72086e0ee358c569a4693f3419b990f4f4056874942f83d",
+    "archived_path": "second-full-browser-failure/run-path-C4-SPEC-03-COORD--b0433-covery-complete-node-failed/error-context.md.json",
+    "scratch_archive_path": ".scratch/v06/second-full-browser-failure/run-path-C4-SPEC-03-COORD--b0433-covery-complete-node-failed/error-context.md.json"
+  },
+  {
+    "original_path": "output/playwright/results/run-path-C4-SPEC-03-COORD--b0433-covery-complete-node-failed/test-failed-1.png",
+    "file": "test-failed-1.png",
+    "bytes": 111455,
+    "sha256": "36fcd08eccac049b0b381f71735e23e6db354844100acf5fb42f919b558c9110",
+    "archived_path": "second-full-browser-failure/run-path-C4-SPEC-03-COORD--b0433-covery-complete-node-failed/test-failed-1.png",
+    "scratch_archive_path": ".scratch/v06/second-full-browser-failure/run-path-C4-SPEC-03-COORD--b0433-covery-complete-node-failed/test-failed-1.png"
+  }
+]
