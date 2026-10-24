@@ -1,0 +1,89 @@
+{
+  "run_id": 39865395432,
+  "head": "f189b5fcc8e04faf29b7e5c93755e1a4d0c3f663",
+  "ci_result": "FAIL",
+  "python": "6423 passed, 22 skipped, 1 deselected in 2201.82s",
+  "build": "PASS",
+  "install_completed": [
+    {
+      "kind": "wheel",
+      "mode": "base",
+      "core": "PASS",
+      "cli": "PASS",
+      "files": "PASS",
+      "database_dashboard": "PASS",
+      "configured": "PASS",
+      "unconfigured": "PASS",
+      "source_contamination": false
+    },
+    {
+      "kind": "wheel",
+      "mode": "mcp",
+      "core": "PASS",
+      "cli": "PASS",
+      "files": "PASS",
+      "database_dashboard": "PASS",
+      "configured": "PASS",
+      "unconfigured": "PASS",
+      "source_contamination": false
+    },
+    {
+      "kind": "sdist",
+      "mode": "base",
+      "core": "PASS",
+      "cli": "PASS",
+      "files": "PASS",
+      "database_dashboard": "PASS",
+      "configured": "PASS",
+      "unconfigured": "PASS",
+      "source_contamination": false
+    }
+  ],
+  "install_failed": {
+    "kind": "sdist",
+    "mode": "mcp",
+    "exception": "subprocess.CalledProcessError",
+    "exit_code": 1,
+    "child_stderr": "UNKNOWN; captured by scripts/check_mcp_installations.py and not emitted"
+  },
+  "browser": "NOT_RUN; skipped after installation gate failure",
+  "browser_artifact": "NOT_AVAILABLE; no files produced",
+  "root_cause": "UNKNOWN",
+  "complete_job_log_sha256": "94a42ec229c0c74205b0e92b12cc7ecaf3de99bba57eeb8ae5b597f122943451",
+  "local_reproduction": {
+    "platform": "macOS, CPython 3.14.7",
+    "rebuild": "PASS for f189b5f",
+    "bounded_runs": 2,
+    "observed_failures": 0,
+    "combinations_per_run": 4,
+    "results": [
+      "PASS",
+      "PASS"
+    ],
+    "original_script_and_smoke_unchanged": true,
+    "diagnostic_wrapper": "install-diagnostic.py only catches CalledProcessError after the original script to preserve captured stdout/stderr"
+  },
+  "hypotheses": [
+    {
+      "rank": 1,
+      "cause": "transient failure during installation smoke execution",
+      "status": "UNCONFIRMED",
+      "basis": "Other three CI combinations passed and both complete local reproductions passed."
+    },
+    {
+      "rank": 2,
+      "cause": "CI platform or runtime difference",
+      "status": "UNCONFIRMED",
+      "basis": "Remote uses Linux/CPython 3.14.8; local reproductions use macOS/CPython 3.14.7."
+    }
+  ],
+  "classification": "CI installation failure, root cause UNKNOWN; not established as a browser flake or a fixed product defect",
+  "unchanged_gate_inputs": "d4f1627011164525e073ae6d81a72f63bae6ced510e6be35bce734773f6f4991",
+  "gate_reuse": "The existing full local pytest/browser/typecheck/lint/skills/env results remain applicable because source, tests, dependencies and configuration did not change. Rebuilt the current delivery commit and repeated the failing installation path twice. The next CI run executes all workflow gates again.",
+  "next_ci_rule": "If the same installation failure recurs in the next CI round, stop and report; do not modify out-of-scope code.",
+  "log_retrieval": {
+    "gh_run_view": "Returned incomplete output ending at the first package installation; not used as the complete failure evidence.",
+    "complete_source": "gh api --allow-escape-sequences repos/nineofoursyrup/Agent-Alfred/actions/jobs/120126209256/logs",
+    "retained": "Only the failed installation step is archived here, with its original output and SHA-256."
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "candidate_head": "5ec5c59e950d102074e4a238696646f2eee45e50",
+  "browser_base_port": 18120,
+  "gate_results": {
+    "01-ruff": {
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 0.473,
+      "input_sha256": "d4f1627011164525e073ae6d81a72f63bae6ced510e6be35bce734773f6f4991",
+      "log": "01-ruff.json"
+    },
+    "02-skills": {
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 0.248,
+      "input_sha256": "d4f1627011164525e073ae6d81a72f63bae6ced510e6be35bce734773f6f4991",
+      "log": "02-skills.json"
+    },
+    "03-env": {
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 3.131,
+      "input_sha256": "d4f1627011164525e073ae6d81a72f63bae6ced510e6be35bce734773f6f4991",
+      "log": "03-env.json"
+    },
+    "04-pytest": {
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 2750.418,
+      "input_sha256": "d4f1627011164525e073ae6d81a72f63bae6ced510e6be35bce734773f6f4991",
+      "log": "04-pytest.json"
+    },
+    "05-typecheck": {
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 1.362,
+      "input_sha256": "d4f1627011164525e073ae6d81a72f63bae6ced510e6be35bce734773f6f4991",
+      "log": "05-typecheck.json"
+    },
+    "06-browser": {
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 852.97,
+      "input_sha256": "d4f1627011164525e073ae6d81a72f63bae6ced510e6be35bce734773f6f4991",
+      "log": "06-browser.json"
+    },
+    "07-working-diff": {
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 0.279,
+      "input_sha256": "d4f1627011164525e073ae6d81a72f63bae6ced510e6be35bce734773f6f4991",
+      "log": "07-working-diff.json"
+    },
+    "07-branch-diff": {
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 0.226,
+      "input_sha256": "d4f1627011164525e073ae6d81a72f63bae6ced510e6be35bce734773f6f4991",
+      "log": "07-branch-diff.json"
+    },
+    "08-build": {
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 14.114,
+      "input_sha256": "d4f1627011164525e073ae6d81a72f63bae6ced510e6be35bce734773f6f4991",
+      "log": "08-build.json"
+    },
+    "09-install": {
+      "status": "PASS",
+      "exit_code": 0,
+      "duration_seconds": 26.714,
+      "input_sha256": "d4f1627011164525e073ae6d81a72f63bae6ced510e6be35bce734773f6f4991",
+      "log": "09-install.json"
+    }
+  },
+  "pytest_result": "6445 passed, 1 deselected, 14 warnings in 2748.11s (0:45:48)",
+  "browser_result": "545 passed (14.2m)",
+  "review": {
+    "Standards": "PASS; 0 findings",
+    "Spec": "PASS; 0 findings"
+  },
+  "new_flaky_cases": [],
+  "conflicts": [],
+  "out_of_scope_changes": [],
+  "evidence_sha256": {
+    "01-ruff.json": "65413d00cc9ef066bf121a33a0b85e5de89e60b9d7d6982d2e7068a0c84a96cf",
+    "02-skills.json": "7a1fc2baec35e9248ef748a5363beb2b0678a4d5f937aaf5c195de6bbbfe021b",
+    "03-env.json": "b808b4670916ddeb494482bc731874e405ed7ba6f0164b5206dd9435352c9a3f",
+    "04-pytest.json": "6e6660bac896a729f60313584b97d94773aa2cb8fc63a129c29a3348b527706b",
+    "05-typecheck.json": "e8110bc4fa6d525080651699bf324f18598e24e5992e90cfb94df03549301e6c",
+    "06-browser.json": "a6ba3dbaa44ce8ad3539a55acc8d3143adeb8414ce3098a022f2ca08a09b1872",
+    "07-working-diff.json": "01b0d51d702110e0a94e5a0b734402c2dc3e9dba7f150fa4260f6d574c550cd3",
+    "07-branch-diff.json": "1c529b536247415b80299bff67fb72c8f95606d6b853c029d929e1057ee3187a",
+    "08-build.json": "993ea0d2c7127816631d96ce7478a946fa85defbc1f84f65e4b36c6b2ed601b4",
+    "09-install.json": "d421420623e9c53799286d33bd525561ad2a6e163d5e22efa6e2137a1876a299",
+    "initial-state.json": "3f9e860c7eef4614fb39d23e98e207bc3249b0357a9a7aa933b6e99d9c698f13",
+    "fetch.json": "3c19fb0c9b04161bfa046a4b5e851aa5a6455e9b8fae57ee41f0189c711cf7ee",
+    "rebase.json": "1d0fbb24a23c922a733703a0c9b4348a1d94ae02f48e65f4dd0cdc4e2c66a214",
+    "rebase-state.json": "4828509b9999c614e5898205e5982eb262b6b1b21ae8a783bde610a95db0b547",
+    "preflight.json": "b835b0fd44b7f42df7c1007d4206b11de9fea58c6149fe9e7d15b1de0142df13",
+    "pre-delivery-fetch.json": "0b20ac587e37b0ff2fb30fbe2bfe9deb2b7efaeed52700977ef986097672fe5b",
+    "source-audit.json": "97339f20dd4587b224416a42959b62a791fe4881b391a4704abceccb18d0a184",
+    "review.json": "da0a7f345211c23838b38753129edb0903cc153408b37c7af8151dc0a7a1c6d5",
+    "mcp-artifacts.json": "9017d419fd1802a5b41671f3afd2296c2ebd7c67ff1254fe689cab04833bc2ff"
+  }
+}

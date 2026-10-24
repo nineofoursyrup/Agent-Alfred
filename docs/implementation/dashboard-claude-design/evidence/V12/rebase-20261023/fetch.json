@@ -1,0 +1,9 @@
+{
+  "command": [
+    "git",
+    "fetch",
+    "origin"
+  ],
+  "exit_code": 0,
+  "output": ""
+}

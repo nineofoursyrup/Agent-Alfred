@@ -1,0 +1,24 @@
+{
+  "command": [
+    "env",
+    "ALFRED_BROWSER_TEST_PORT=18120",
+    "npx",
+    "playwright",
+    "test",
+    "tests/browser/database_lifecycle.spec.js",
+    "--grep",
+    "AC-25: real close cancels an actual worker and releases all owners"
+  ],
+  "started_at": "2026-10-12T07:46:27.545643+00:00",
+  "head": "9312581c6026b81d33bd0d886a344a3a92b9d496",
+  "source_sha256": {
+    "src/agent_alfred/ops/static/models.js": "5bac770518eab681b2d7a43aa713f66a6c642fa263b613768933e4163a2f9788",
+    "src/agent_alfred/ops/static/connections.js": "375a5fdd49fb219fb8fab16f6532f8d2a9c284747dfab86989062f5011f2616e",
+    "src/agent_alfred/ops/static/settings.css": "71d73fec4198d7ae2de0f264a00bfc49006fd42fb520b570d466643932966dbf",
+    "src/agent_alfred/ops/static/settings-focus.js": "07229e0d2f90554cbd3a26d7a1e079b4843cebef587945381a60a65b328e2915"
+  },
+  "exit_code": 0,
+  "duration_seconds": 3.093,
+  "output_sha256": "358cc5be9ac71d278ddfdf6bc2df94d37d21c420edda502bcd7f9959ca4acabf",
+  "output": "\nRunning 1 test using 1 worker\n\n(node:51568) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\nactual-lifecycle close {\"before\":{\"query_id\":\"0qk73jgLMa99nG3rsWVefkaY\",\"pid\":51608,\"status\":\"running\",\"cleanup\":\"pending\"},\"after\":{\"query_id\":\"0qk73jgLMa99nG3rsWVefkaY\",\"pid\":51608,\"pid_exists\":false,\"status\":\"cancelled\",\"cleanup\":\"released\",\"worker\":null,\"response_owner\":null,\"buffers\":0,\"source_write_lock\":\"acquired-and-released\"}}\n  ✓  1 tests/browser/database_lifecycle.spec.js:7:3 › AC-25: real close cancels an actual worker and releases all owners (1.0s)\n\n  1 passed (2.1s)\n"
+}

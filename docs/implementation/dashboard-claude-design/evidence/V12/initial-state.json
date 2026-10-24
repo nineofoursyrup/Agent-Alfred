@@ -1,0 +1,15 @@
+{
+  "worktree": "/Users/nineofour/Agent-Alfred-v12",
+  "branch": "dashboard-visual/v12-models-connections",
+  "base_sha": "449e77fd0ff814fb63f97a009c2435139a68686d",
+  "recorded_at": "2026-10-12T05:47:42.473692+00:00",
+  "status": "",
+  "diff": "",
+  "untracked": "",
+  "source_sha256": {
+    "src/agent_alfred/ops/static/models.js": "617318593bccd41c7ca356856bc7c5d9ffd5aa5413cf62047968b2b5f9f51305",
+    "src/agent_alfred/ops/static/connections.js": "e057f5fe1d80ec8f52534b2f45df2d05f96a60fac4335f2ebda08f429f7ab891",
+    "src/agent_alfred/ops/static/settings.css": "7f7ff28c995ce4185991dfdef2426d422224e9e2e70f9bcc34447142b0ff6378",
+    "src/agent_alfred/ops/static/settings-focus.js": "07229e0d2f90554cbd3a26d7a1e079b4843cebef587945381a60a65b328e2915"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "command": [
+    "env",
+    "ALFRED_BROWSER_TEST_PORT=18120",
+    "npx",
+    "playwright",
+    "test",
+    "tests/browser/topology.spec.js",
+    "--grep",
+    "CE-06: restart invalidates captured real P1 response"
+  ],
+  "started_at": "2026-10-12T07:37:00.329856+00:00",
+  "head": "9312581c6026b81d33bd0d886a344a3a92b9d496",
+  "source_sha256": {
+    "src/agent_alfred/ops/static/models.js": "5bac770518eab681b2d7a43aa713f66a6c642fa263b613768933e4163a2f9788",
+    "src/agent_alfred/ops/static/connections.js": "375a5fdd49fb219fb8fab16f6532f8d2a9c284747dfab86989062f5011f2616e",
+    "src/agent_alfred/ops/static/settings.css": "71d73fec4198d7ae2de0f264a00bfc49006fd42fb520b570d466643932966dbf",
+    "src/agent_alfred/ops/static/settings-focus.js": "07229e0d2f90554cbd3a26d7a1e079b4843cebef587945381a60a65b328e2915"
+  },
+  "exit_code": 0,
+  "duration_seconds": 5.551,
+  "output_sha256": "45f0bb114a35daca2ad0b682c684ed61aac3b80d9494d9dda14375e0becabb90",
+  "output": "\nRunning 1 test using 1 worker\n\n(node:35860) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✓  1 tests/browser/topology.spec.js:202:3 › CE-06: restart invalidates captured real P1 response (3.2s)\n\n  1 passed (4.4s)\n"
+}

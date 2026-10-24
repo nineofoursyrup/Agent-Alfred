@@ -1,0 +1,26 @@
+{
+  "command": [
+    "env",
+    "ALFRED_BROWSER_TEST_PORT=18120",
+    "npx",
+    "playwright",
+    "test",
+    "tests/browser/accounting-migration.spec.js",
+    "tests/browser/routing-statistics.spec.js",
+    "tests/browser/routing.spec.js",
+    "--grep",
+    "S09 native return reuses the source snapshot and one bounded page, expiry requires explicit refresh|SPEC-03 CE-05/12/13/15 legacy counts, unknown metrics and real bad-data errors|CE-09/10: failed recording keeps no-reply projection and rejects next Run"
+  ],
+  "started_at": "2026-10-12T06:24:20.576763+00:00",
+  "head": "9312581c6026b81d33bd0d886a344a3a92b9d496",
+  "source_sha256": {
+    "src/agent_alfred/ops/static/models.js": "5bac770518eab681b2d7a43aa713f66a6c642fa263b613768933e4163a2f9788",
+    "src/agent_alfred/ops/static/connections.js": "375a5fdd49fb219fb8fab16f6532f8d2a9c284747dfab86989062f5011f2616e",
+    "src/agent_alfred/ops/static/settings.css": "71d73fec4198d7ae2de0f264a00bfc49006fd42fb520b570d466643932966dbf",
+    "src/agent_alfred/ops/static/settings-focus.js": "07229e0d2f90554cbd3a26d7a1e079b4843cebef587945381a60a65b328e2915"
+  },
+  "exit_code": 1,
+  "duration_seconds": 57.594,
+  "output_sha256": "5d08c895f2bd1cc7701372ada063eb903113ba441b5a52983b6f2c9f821ee2cf",
+  "output": "\nRunning 3 tests using 1 worker\n\n(node:14594) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✓  1 tests/browser/accounting-migration.spec.js:189:1 › S09 native return reuses the source snapshot and one bounded page, expiry requires explicit refresh (7.0s)\n  ✘  2 tests/browser/routing-statistics.spec.js:263:1 › SPEC-03 CE-05/12/13/15 legacy counts, unknown metrics and real bad-data errors (17.6s)\n(node:15445) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\n(Use `node --trace-warnings ...` to show where the warning was created)\n  ✘  3 tests/browser/routing.spec.js:88:1 › CE-09/10: failed recording keeps no-reply projection and rejects next Run (25.5s)\n\n\n  1) tests/browser/routing-statistics.spec.js:263:1 › SPEC-03 CE-05/12/13/15 legacy counts, unknown metrics and real bad-data errors \n\n    Test timeout of 15000ms exceeded.\n\n    Error: expect(locator).toContainText(expected) failed\n\n    Locator: locator('.routing-statistics').locator('tr').filter({ hasText: '快速回复' })\n    Expected substring: \"1/1\"\n    Error: element(s) not found\n\n    Call log:\n      - Expect \"toContainText\" locator('.routing-statistics').locator('tr').filter({ hasText: '快速回复' }) with timeout 4000ms\n      - waiting for locator('.routing-statistics').locator('tr').filter({ hasText: '快速回复' })\n      - Test timeout of 15000ms exceeded.\n\n\n      290 |     await server.send('restore-data');\n      291 |     await page.getByRole('button', {name:'刷新统计', exact:true}).click();\n    > 292 |     await expect(panel.locator('tr').filter({hasText:'快速回复'})).toContainText('1/1');\n          |                                                                ^\n      293 |     await server.send('offline-data');\n      294 |     await page.getByRole('button', {name:'刷新统计', exact:true}).click();\n      295 |     await expect(panel).toContainText('统计读取不可用');\n        at /Users/nineofour/Agent-Alfred-v12/tests/browser/routing-statistics.spec.js:292:64\n\n    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────\n    output/playwright/results/routing-statistics-SPEC-03-b2e50-cs-and-real-bad-data-errors/test-failed-1.png\n    ────────────────────────────────────────────────────────────────────────────────────────────────\n\n    Error Context: output/playwright/results/routing-statistics-SPEC-03-b2e50-cs-and-real-bad-data-errors/error-context.md\n\n    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────\n    output/playwright/results/routing-statistics-SPEC-03-b2e50-cs-and-real-bad-data-errors/trace.zip\n    Usage:\n\n        npx playwright show-trace output/playwright/results/routing-statistics-SPEC-03-b2e50-cs-and-real-bad-data-errors/trace.zip\n\n    ────────────────────────────────────────────────────────────────────────────────────────────────\n\n  2) tests/browser/routing.spec.js:88:1 › CE-09/10: failed recording keeps no-reply projection and rejects next Run \n\n    Test timeout of 15000ms exceeded.\n\n    Error Context: output/playwright/results/routing-CE-09-10-failed-re-3bfdc-ection-and-rejects-next-Run/error-context.md\n\n    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────\n    output/playwright/results/routing-CE-09-10-failed-re-3bfdc-ection-and-rejects-next-Run/trace.zip\n    Usage:\n\n        npx playwright show-trace output/playwright/results/routing-CE-09-10-failed-re-3bfdc-ection-and-rejects-next-Run/trace.zip\n\n    ────────────────────────────────────────────────────────────────────────────────────────────────\n\n  2 failed\n    tests/browser/routing-statistics.spec.js:263:1 › SPEC-03 CE-05/12/13/15 legacy counts, unknown metrics and real bad-data errors \n    tests/browser/routing.spec.js:88:1 › CE-09/10: failed recording keeps no-reply projection and rejects next Run \n  1 passed (55.2s)\n"
+}

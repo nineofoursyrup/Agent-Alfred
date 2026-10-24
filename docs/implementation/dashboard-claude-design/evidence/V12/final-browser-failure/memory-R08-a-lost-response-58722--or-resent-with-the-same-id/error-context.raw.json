@@ -1,0 +1,7 @@
+{
+  "original_file": "error-context.md",
+  "original_sha256": "9f58da4519d1d704b5aed8ce2b8d7c4f947e54476db892ee42fe00d5fe0482a5",
+  "original_utf8": "# Instructions\n\n- Following Playwright test failed.\n- Explain why, be concise, respect Playwright best practices.\n- Provide a snippet of code with the fix, if possible.\n\n# Test info\n\n- Name: memory.spec.js >> R08: a lost response stays unconfirmed until queried or resent with the same id\n- Location: tests/browser/memory.spec.js:1022:1\n\n# Error details\n\n```\nTest timeout of 15000ms exceeded.\n```",
+  "readable_markdown_sha256": "7fc3d6378069313d5daa587f38ad77f75fd88428f0d941d5199cad4238e988e6",
+  "normalization": "Readable Markdown removes trailing whitespace; original UTF-8 string restores exact bytes."
+}
