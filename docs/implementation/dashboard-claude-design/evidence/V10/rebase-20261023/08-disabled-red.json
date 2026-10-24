@@ -1,0 +1,21 @@
+{
+  "label": "08-disabled-red",
+  "command": [
+    "node",
+    ".scratch/v10/rebase-20261023/probe-disabled.mjs",
+    "red"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v10",
+  "git_head": "1fd8f8f14fd21ddf76bfacac463b11265c38b463",
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "tracked_inputs_sha256": "52452916b363992244392a24655d368203e2fd9b8f2fdbb328ed02728c6bf615",
+  "input_manifest": "inputs-52452916b363992244392a24655d368203e2fd9b8f2fdbb328ed02728c6bf615.json",
+  "browser_base_port": "18100",
+  "started_at": "2026-10-22T21:50:38.112660+00:00",
+  "exit_code": 1,
+  "duration_seconds": 1.61,
+  "finished_at": "2026-10-22T21:50:39.652291+00:00",
+  "tracked_inputs_unchanged": true,
+  "raw_output_sha256": "73e57e4d4c6d396f89d1ce4c2216666b2a2a69480e09cd01138462d437f63e32",
+  "output": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nExpectError: expect(received).toBe(expected) // Object.is equality\n\nExpected: \"rgb(141, 140, 150)\"\nReceived: \"rgb(236, 236, 234)\"\n    at captureRawStack (/Users/nineofour/Agent-Alfred-v10/node_modules/playwright-core/lib/coreBundle.js:8588:17)\n    at callMatcherAsStep (/Users/nineofour/Agent-Alfred-v10/node_modules/playwright/lib/matchers/expect.js:13310:57)\n    at Object.toBe (/Users/nineofour/Agent-Alfred-v10/node_modules/playwright/lib/matchers/expect.js:13302:23)\n    at /Users/nineofour/Agent-Alfred-v10/.scratch/v10/rebase-20261023/probe-disabled.mjs:32:32 {\n  matcherResult: {\n    actual: 'rgb(236, 236, 234)',\n    expected: 'rgb(141, 140, 150)',\n    message: 'expect(received).toBe(expected) // Object.is equality\\n' +\n      '\\n' +\n      'Expected: \"rgb(141, 140, 150)\"\\n' +\n      'Received: \"rgb(236, 236, 234)\"',\n    name: 'toBe',\n    pass: false\n  }\n}\n\nNode.js v26.8.2\n"
+}

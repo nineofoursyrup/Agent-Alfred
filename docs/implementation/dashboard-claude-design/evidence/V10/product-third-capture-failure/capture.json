@@ -1,0 +1,411 @@
+{
+  "captured_at": "2026-10-12T05:57:47.353Z",
+  "browser": "153.0.8010.12",
+  "origin": "http://127.0.0.1:18104",
+  "fixture": "existing memory_server.py, real Host/HTTP/SQLite, temporary state, offline model",
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 900,
+      "dpr": 1,
+      "touch": 0,
+      "central": {
+        "width": 823,
+        "height": 1364.640625,
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontStyle": "normal",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "borderColor": "rgb(236, 236, 234)",
+        "gridTemplateColumns": "823px"
+      },
+      "console": {
+        "width": 823,
+        "height": 475.21875,
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontStyle": "normal",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(20, 20, 22)",
+        "borderRadius": "14px",
+        "padding": "17px 19px",
+        "borderColor": "rgb(38, 38, 43)",
+        "gridTemplateColumns": "none"
+      },
+      "editor": {
+        "width": 783,
+        "height": 188,
+        "fontSize": "12.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "fontStyle": "normal",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(24, 24, 27)",
+        "borderRadius": "10px",
+        "padding": "13px 15px",
+        "borderColor": "rgb(44, 44, 49)",
+        "gridTemplateColumns": "none"
+      },
+      "title": {
+        "width": 783,
+        "height": 13.1875,
+        "fontSize": "11px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "fontStyle": "normal",
+        "color": "rgb(124, 138, 236)",
+        "background": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "borderColor": "rgb(124, 138, 236)",
+        "gridTemplateColumns": "none"
+      },
+      "facts": {
+        "width": 783,
+        "height": 91.78125,
+        "fontSize": "11px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "fontStyle": "normal",
+        "color": "rgb(169, 168, 179)",
+        "background": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "borderColor": "rgb(169, 168, 179)",
+        "gridTemplateColumns": "783px"
+      },
+      "header": {
+        "width": 296.8125,
+        "height": 39.71875,
+        "fontSize": "10.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "fontStyle": "normal",
+        "color": "rgb(69, 69, 75)",
+        "background": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "padding": "12px 19px",
+        "borderColor": "rgb(69, 69, 75) rgb(69, 69, 75) rgb(31, 31, 35)",
+        "gridTemplateColumns": "none"
+      },
+      "run": {
+        "width": 45,
+        "height": 32.9375,
+        "fontSize": "11.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "fontStyle": "normal",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(32, 34, 58)",
+        "borderRadius": "8px",
+        "padding": "8px 10px",
+        "borderColor": "rgb(124, 138, 236)",
+        "gridTemplateColumns": "none"
+      },
+      "page_overflow": 0,
+      "document_overflow": 0,
+      "inline_style_count": 0,
+      "inline_style_elements": [
+        {
+          "tag": "TEXTAREA",
+          "id": "database-sql",
+          "class": "",
+          "style": ""
+        },
+        {
+          "tag": "TEXTAREA",
+          "id": "message",
+          "class": "",
+          "style": ""
+        }
+      ],
+      "table_focus_outline": "3px",
+      "long_result": {
+        "page_overflow": 0,
+        "document_overflow": 0,
+        "null_font_style": "italic",
+        "table_columns": 7,
+        "scroll_left": 40,
+        "cell_text": [
+          "NULL",
+          "\"\"",
+          "\"NULL\"",
+          "1",
+          "1.0",
+          "BLOB 01ff (2 字节)",
+          "\"长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 LAST-VALUE\""
+        ]
+      }
+    },
+    {
+      "width": 1280,
+      "height": 800,
+      "dpr": 1,
+      "touch": 0,
+      "central": {
+        "width": 663,
+        "height": 1364.640625,
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontStyle": "normal",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "borderColor": "rgb(236, 236, 234)",
+        "gridTemplateColumns": "663px"
+      },
+      "console": {
+        "width": 663,
+        "height": 475.21875,
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontStyle": "normal",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(20, 20, 22)",
+        "borderRadius": "14px",
+        "padding": "17px 19px",
+        "borderColor": "rgb(38, 38, 43)",
+        "gridTemplateColumns": "none"
+      },
+      "editor": {
+        "width": 623,
+        "height": 188,
+        "fontSize": "12.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "fontStyle": "normal",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(24, 24, 27)",
+        "borderRadius": "10px",
+        "padding": "13px 15px",
+        "borderColor": "rgb(44, 44, 49)",
+        "gridTemplateColumns": "none"
+      },
+      "title": {
+        "width": 623,
+        "height": 13.1875,
+        "fontSize": "11px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "fontStyle": "normal",
+        "color": "rgb(124, 138, 236)",
+        "background": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "borderColor": "rgb(124, 138, 236)",
+        "gridTemplateColumns": "none"
+      },
+      "facts": {
+        "width": 623,
+        "height": 91.78125,
+        "fontSize": "11px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "fontStyle": "normal",
+        "color": "rgb(169, 168, 179)",
+        "background": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "borderColor": "rgb(169, 168, 179)",
+        "gridTemplateColumns": "623px"
+      },
+      "header": {
+        "width": 238.96875,
+        "height": 39.71875,
+        "fontSize": "10.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "fontStyle": "normal",
+        "color": "rgb(69, 69, 75)",
+        "background": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "padding": "12px 19px",
+        "borderColor": "rgb(69, 69, 75) rgb(69, 69, 75) rgb(31, 31, 35)",
+        "gridTemplateColumns": "none"
+      },
+      "run": {
+        "width": 45,
+        "height": 32.9375,
+        "fontSize": "11.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "fontStyle": "normal",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(32, 34, 58)",
+        "borderRadius": "8px",
+        "padding": "8px 10px",
+        "borderColor": "rgb(124, 138, 236)",
+        "gridTemplateColumns": "none"
+      },
+      "page_overflow": 0,
+      "document_overflow": 0,
+      "inline_style_count": 0,
+      "inline_style_elements": [
+        {
+          "tag": "TEXTAREA",
+          "id": "database-sql",
+          "class": "",
+          "style": ""
+        },
+        {
+          "tag": "TEXTAREA",
+          "id": "message",
+          "class": "",
+          "style": ""
+        }
+      ],
+      "table_focus_outline": "3px",
+      "long_result": {
+        "page_overflow": 0,
+        "document_overflow": 0,
+        "null_font_style": "italic",
+        "table_columns": 7,
+        "scroll_left": 40,
+        "cell_text": [
+          "NULL",
+          "\"\"",
+          "\"NULL\"",
+          "1",
+          "1.0",
+          "BLOB 01ff (2 字节)",
+          "\"长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 LAST-VALUE\""
+        ]
+      }
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "dpr": 1,
+      "touch": 1,
+      "central": {
+        "width": 349,
+        "height": 1400.359375,
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontStyle": "normal",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "borderColor": "rgb(236, 236, 234)",
+        "gridTemplateColumns": "349px"
+      },
+      "console": {
+        "width": 349,
+        "height": 493.34375,
+        "fontSize": "13px",
+        "fontFamily": "-apple-system, \"system-ui\", \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", sans-serif",
+        "fontStyle": "normal",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(20, 20, 22)",
+        "borderRadius": "14px",
+        "padding": "17px 19px",
+        "borderColor": "rgb(38, 38, 43)",
+        "gridTemplateColumns": "none"
+      },
+      "editor": {
+        "width": 309,
+        "height": 188,
+        "fontSize": "12.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "fontStyle": "normal",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(24, 24, 27)",
+        "borderRadius": "10px",
+        "padding": "13px 15px",
+        "borderColor": "rgb(44, 44, 49)",
+        "gridTemplateColumns": "none"
+      },
+      "title": {
+        "width": 309,
+        "height": 13.1875,
+        "fontSize": "11px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "fontStyle": "normal",
+        "color": "rgb(124, 138, 236)",
+        "background": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "borderColor": "rgb(124, 138, 236)",
+        "gridTemplateColumns": "none"
+      },
+      "facts": {
+        "width": 309,
+        "height": 91.78125,
+        "fontSize": "11px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "fontStyle": "normal",
+        "color": "rgb(169, 168, 179)",
+        "background": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "padding": "0px",
+        "borderColor": "rgb(169, 168, 179)",
+        "gridTemplateColumns": "309px"
+      },
+      "header": {
+        "width": 162.96875,
+        "height": 39.71875,
+        "fontSize": "10.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "fontStyle": "normal",
+        "color": "rgb(69, 69, 75)",
+        "background": "rgba(0, 0, 0, 0)",
+        "borderRadius": "0px",
+        "padding": "12px 19px",
+        "borderColor": "rgb(69, 69, 75) rgb(69, 69, 75) rgb(31, 31, 35)",
+        "gridTemplateColumns": "none"
+      },
+      "run": {
+        "width": 45,
+        "height": 32.9375,
+        "fontSize": "11.5px",
+        "fontFamily": "ui-monospace, \"SF Mono\", Menlo, Consolas, monospace",
+        "fontStyle": "normal",
+        "color": "rgb(236, 236, 234)",
+        "background": "rgb(32, 34, 58)",
+        "borderRadius": "8px",
+        "padding": "8px 10px",
+        "borderColor": "rgb(124, 138, 236)",
+        "gridTemplateColumns": "none"
+      },
+      "page_overflow": 0,
+      "document_overflow": 0,
+      "inline_style_count": 0,
+      "inline_style_elements": [
+        {
+          "tag": "TEXTAREA",
+          "id": "database-sql",
+          "class": "",
+          "style": ""
+        },
+        {
+          "tag": "TEXTAREA",
+          "id": "message",
+          "class": "",
+          "style": ""
+        }
+      ],
+      "table_focus_outline": "3px",
+      "long_result": {
+        "page_overflow": 0,
+        "document_overflow": 0,
+        "null_font_style": "italic",
+        "table_columns": 7,
+        "scroll_left": 40,
+        "cell_text": [
+          "NULL",
+          "\"\"",
+          "\"NULL\"",
+          "1",
+          "1.0",
+          "BLOB 01ff (2 字节)",
+          "\"长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 长值完整保留 LAST-VALUE\""
+        ]
+      }
+    }
+  ],
+  "source_sha256": {
+    "src/agent_alfred/ops/static/database.js": "6311a4492ddb84fa49837dac2e66b9ebd4e0ddb2a327640f2b108e99658753f7",
+    "src/agent_alfred/ops/static/database.css": "2d03c77cd64452f31413b45b366d76863ca5e9e19a365c034a90f0688f2f1432",
+    "tests/browser/database_migration.spec.js": "5fa5609478e695184ad6193f78f2e2225c19b965c35de28a1ca2f034e4d7f5a2"
+  },
+  "page_errors": [],
+  "request_failures": [],
+  "external_requests": [],
+  "exit_code": 1,
+  "error": "Error: expect(locator).toHaveCount(expected) failed\n\nLocator:  getByRole('region', { name: '查询结果', exact: true }).locator('td')\nExpected: 6\nReceived: 0\nTimeout:  5000ms\n\nCall log:\n  - Expect \"toHaveCount\" getByRole('region', { name: '查询结果', exact: true }).locator('td') with timeout 5000ms\n  - waiting for getByRole('region', { name: '查询结果', exact: true }).locator('td')\n    5 × locator resolved to 0 elements\n      - unexpected value \"0\"\n\n    at captureRawStack (/Users/nineofour/Agent-Alfred-v10/node_modules/playwright-core/lib/coreBundle.js:8588:17)\n    at callMatcherAsStep (/Users/nineofour/Agent-Alfred-v10/node_modules/playwright/lib/matchers/expect.js:13310:57)\n    at Object.toHaveCount (/Users/nineofour/Agent-Alfred-v10/node_modules/playwright/lib/matchers/expect.js:13302:23)\n    at /Users/nineofour/Agent-Alfred-v10/.scratch/v10/capture-product.mjs:35:38"
+}

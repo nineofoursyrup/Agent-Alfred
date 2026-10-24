@@ -1,0 +1,23 @@
+{
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "review_head": "1fd8f8f14fd21ddf76bfacac463b11265c38b463",
+  "source_sha256": {
+    "src/agent_alfred/ops/static/database.js": "d36eea47528d1c816ca6b8e668267951cb0b0f84828d6479708bfc4349518129",
+    "src/agent_alfred/ops/static/database.css": "0955699cef1706e98f9071e5fadcfdc211310017466faae88e9088828ea45c47",
+    "tests/browser/database_migration.spec.js": "5fa5609478e695184ad6193f78f2e2225c19b965c35de28a1ca2f034e4d7f5a2"
+  },
+  "behavior_suffix_byte_identical": true,
+  "exception_test_blob_unchanged": true,
+  "outside_scope": [],
+  "capture_scripts_runtime_references": [],
+  "capture_scripts_purpose": "Standalone evidence reproduction only; Playwright testDir is tests/browser, TypeScript includes only src static JS, wheel packages only src/agent_alfred; docs may be included as inert source-distribution documentation.",
+  "ports": {
+    "browser_suite": "18100-18108",
+    "product_capture": 18104,
+    "reference_capture": 18108
+  },
+  "historical_evidence": "Existing records remain immutable history; 2026-10-23 captures supersede the old out-of-range reference server.",
+  "pending_diff": "review-pending-r1.patch",
+  "tracked_inputs_sha256": "96d38fe8bbf9614a6d4d38c2a7b093baf570817ba5193d508a489f4f0a0e0fee",
+  "archived_pending_diff": "review-pending-r1.patch.json"
+}

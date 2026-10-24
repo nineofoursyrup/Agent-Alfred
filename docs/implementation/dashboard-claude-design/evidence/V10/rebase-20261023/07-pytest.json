@@ -1,0 +1,23 @@
+{
+  "label": "07-pytest",
+  "command": [
+    ".venv/bin/python",
+    "-B",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v10",
+  "git_head": "1fd8f8f14fd21ddf76bfacac463b11265c38b463",
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "tracked_inputs_sha256": "52452916b363992244392a24655d368203e2fd9b8f2fdbb328ed02728c6bf615",
+  "input_manifest": "inputs-52452916b363992244392a24655d368203e2fd9b8f2fdbb328ed02728c6bf615.json",
+  "browser_base_port": "18100",
+  "started_at": "2026-10-22T21:45:49.490914+00:00",
+  "exit_code": 2,
+  "duration_seconds": 247.877,
+  "finished_at": "2026-10-22T21:49:57.327164+00:00",
+  "tracked_inputs_unchanged": true,
+  "raw_output_sha256": "e7c01d6dd4b6dd5d51ddc6a93e5022a1d885f06815c44ab7f25f84d1103ae5d3",
+  "output": "........................................................................ [  1%]\n........................................................................ [  2%]\n........................................................................ [  3%]\n........................................................................ [  4%]\n........................................................................ [  5%]\n........................................................................ [  6%]\n........................................................................ [  7%]\n........................................................................ [  8%]\n........................................................................ [ 10%]\n........................................................................ [ 11%]\n........................................................................ [ 12%]\n...................\n! KeyboardInterrupt\nwhen serializing dict item 'seq'\nwhen serializing list item 26\nwhen serializing dict item 'events'\nwhen serializing dict item 'evidence'\nwhen serializing list item 5\nwhen serializing dict item 'results' !\n/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/json/encoder.py:263: KeyboardInterrupt\n(to show a full traceback on KeyboardInterrupt use --full-trace)\n811 passed, 1 deselected in 246.55s (0:04:06)\n"
+}

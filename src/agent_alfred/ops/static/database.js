@@ -32,10 +32,14 @@ export function databasePage(root, ctx) {
   const status = node("p", STATES.checking);
   status.setAttribute("aria-live", "polite");
   const notice = node("p", "查询受保护的临时数据。SQL 的 WHERE／LIMIT 不缩小准备范围。结果有上限，不是数据库总量。");
-  notice.className = "muted";
+  notice.className = "db-query-notice sy-panel-description";
+  const consolePanel = node("section");
+  consolePanel.className = "db-query-panel sy-panel sy-panel-body";
+  const consoleTitle = node("h2", "SQL 控制台 · 只读");
+  consoleTitle.className = "db-query-title sy-panel-eyebrow";
   const catalog = node("section");
   catalog.setAttribute("aria-label", "诊断对象目录");
-  catalog.className = "db-catalog";
+  catalog.className = "db-catalog sy-panel sy-panel-body";
   const catalogIdentity = node("p");
   const availability = node("p", "可用性：核验中");
   const resourceSummary = node("p");
@@ -55,11 +59,13 @@ export function databasePage(root, ctx) {
   editor.spellcheck = false;
   editor.placeholder = "SELECT * FROM diag_sessions LIMIT 20";
   const editorLabel = node("label", "SQL 草稿");
+  editorLabel.className = "db-editor-label";
   editorLabel.htmlFor = editor.id;
   const editorHelp = node("p", "Enter 换行。仅点击执行才提交；查询中可编辑下一份草稿。");
   editorHelp.id = "database-editor-help";
   editorHelp.className = "muted";
   const run = node("button", "执行");
+  run.className = "sy-button-accent";
   const cancel = node("button", "取消");
   const recheck = node("button", "核验查询与可用性");
   const cleanupText = node("p", "尚无查询清理责任");
@@ -77,10 +83,17 @@ export function databasePage(root, ctx) {
   }
   const submitted = node("section");
   submitted.setAttribute("aria-label", "已提交查询");
+  submitted.className = "db-submitted";
   const draftRelation = node("p");
   draftRelation.className = "db-attention";
   const result = node("section");
   result.setAttribute("aria-label", "查询结果");
+  result.className = "db-result";
+  const resultArea = node("div");
+  resultArea.className = "db-result-area";
+  const resultControls = node("div");
+  resultControls.className = "db-actions";
+  resultControls.append(copyResult);
   const controls = node("div");
   controls.className = "db-actions";
   controls.append(run, cancel, recheck, copySql);
@@ -92,8 +105,10 @@ export function databasePage(root, ctx) {
     fact.append(node("h3", /** @type {string} */ (title)), /** @type {HTMLElement} */ (value));
     facts.append(fact);
   }
-  root.append(notice, catalog, editorLabel, editor, editorHelp, controls, sqlCopyFeedback,
-    runReason, protectionNotice, facts, submitted, draftRelation, copyResult, resultCopyFeedback, result);
+  consolePanel.append(consoleTitle, notice, editorLabel, editor, editorHelp, controls, sqlCopyFeedback,
+    runReason, protectionNotice, facts);
+  resultArea.append(submitted, draftRelation, resultControls, resultCopyFeedback, result);
+  root.append(consolePanel, resultArea, catalog);
 
   let generation = 0;
   let pageGeneration = 0;

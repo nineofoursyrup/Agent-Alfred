@@ -1,0 +1,6 @@
+{
+  "command": "npm ci --ignore-scripts",
+  "exit_code": 0,
+  "output_sha256": "5ba68166c659a682080a327f9a0faa08cd75819898f4e10fd0fe98bb324c16bb",
+  "output": "\nadded 5 packages, and audited 6 packages in 2s\n\nfound 0 vulnerabilities\n"
+}

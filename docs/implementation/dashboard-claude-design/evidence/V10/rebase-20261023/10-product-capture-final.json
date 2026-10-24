@@ -1,0 +1,20 @@
+{
+  "label": "10-product-capture-final",
+  "command": [
+    "node",
+    "docs/implementation/dashboard-claude-design/evidence/V10/capture-product.mjs"
+  ],
+  "cwd": "/Users/nineofour/Agent-Alfred-v10",
+  "git_head": "1fd8f8f14fd21ddf76bfacac463b11265c38b463",
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "tracked_inputs_sha256": "96d38fe8bbf9614a6d4d38c2a7b093baf570817ba5193d508a489f4f0a0e0fee",
+  "input_manifest": "inputs-96d38fe8bbf9614a6d4d38c2a7b093baf570817ba5193d508a489f4f0a0e0fee.json",
+  "browser_base_port": "18100",
+  "started_at": "2026-10-22T21:50:59.094917+00:00",
+  "exit_code": 0,
+  "duration_seconds": 5.43,
+  "finished_at": "2026-10-22T21:51:04.475657+00:00",
+  "tracked_inputs_unchanged": true,
+  "raw_output_sha256": "49555907cfffa524d9e979fd8be8f6f34b051bff5d0422072bd3da749ed68196",
+  "output": "{\"exit_code\":0,\"viewports\":[{\"width\":1440,\"height\":900,\"central\":823,\"overflow\":0},{\"width\":1280,\"height\":800,\"central\":663,\"overflow\":0},{\"width\":390,\"height\":844,\"central\":349,\"overflow\":0},{\"width\":320,\"height\":800,\"central\":279,\"overflow\":0}],\"page_errors\":[],\"external_requests\":[]}\n"
+}
