@@ -1,0 +1,22 @@
+{
+  "ci-first-failure-job.log.gz": {
+    "bytes": 166827,
+    "sha256": "1c948e729f0d55e722ddf3a8b0144dc9e5f542f12c9182cfe373cff644416386"
+  },
+  "error-context.raw.json": {
+    "bytes": 5492,
+    "sha256": "219006417a28a12c3d0e85bf0a2f55444af0d2312232fc2fb492ef8bec16a5d3"
+  },
+  "repair.json": {
+    "bytes": 33356,
+    "sha256": "266f8058573791c5975a8b622cf959de890ef2102bbe905c775c8d8cd294ae9c"
+  },
+  "test-failed-1.png": {
+    "bytes": 161347,
+    "sha256": "aa89e873412e52a0234c98b06f40fe04c915df14a181fdfeb0e67ca09ee882db"
+  },
+  "trace.zip": {
+    "bytes": 3496481,
+    "sha256": "3eb48efed3b0840d6b292a59827f60fd58005c5f1ae7af6cb2374530be2c673f"
+  }
+}

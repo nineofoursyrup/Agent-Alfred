@@ -51,6 +51,11 @@ test('real S01 records compose with S02 exact location, identity merge and cross
   await expect(page.getByRole('textbox',{name:'消息',exact:true})).toHaveValue('A未提交草稿');
   expect(writes.length).toBe(beforeCross);expect(reads).toHaveLength(2);
   expect(writes.filter(path=>path==='/api/runs')).toHaveLength(2);
-  await page.evaluate(async session=>{const {dashboard}=await import('/assets/app.js');await dashboard.selectSession(session);},sessionB);
+  // Exact location can finish before the selected Session's first Stream snapshot.
+  // Wait for synchronization before making the next explicit guarded switch.
+  await expect.poll(()=>page.evaluate(async()=>{
+    const {dashboard}=await import('/assets/app.js');return dashboard.runtime().connected;
+  })).toBe(true);
+  expect(await page.evaluate(async session=>{const {dashboard}=await import('/assets/app.js');return dashboard.selectSession(session);},sessionB)).toBe(true);
   await expect(page.getByRole('textbox',{name:'消息',exact:true})).toHaveValue('B独立草稿');
 });
