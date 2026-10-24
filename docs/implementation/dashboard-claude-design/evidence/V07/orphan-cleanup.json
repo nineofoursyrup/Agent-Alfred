@@ -1,0 +1,8 @@
+{
+  "pid": 79523,
+  "identity": "79523     1 /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python -X faulthandler -B tests/browser/database_server.py --port 18074 --state /var/folders/2z/sxns83r94vl0_5wj2vtzwf800000gn/T/alfred-memory-browser-lNc7Q3 --threshold 10",
+  "cwd": "p79523\nfcwd\nn/Users/nineofour/Agent-Alfred-v07\n",
+  "action": "SIGTERM to task-owned orphan test server after parent Playwright worker exit",
+  "reason": "Occupied assigned port 18074 and caused subsequent Errno 48 failures",
+  "root_cause_of_original_timeout": "UNKNOWN"
+}

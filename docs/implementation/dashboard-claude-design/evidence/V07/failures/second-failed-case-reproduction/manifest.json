@@ -1,0 +1,27 @@
+{
+  "folders": 1,
+  "members": [
+    {
+      "source": "output/playwright/results/aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/error-context.md",
+      "file": "aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/error-context.md",
+      "bytes": 21457,
+      "sha256": "b3e62a35da9cb7ec90ddada3308e87c08398dbe116bc8cedba2313e650d15940",
+      "archive_file": "aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/error-context.md.json",
+      "encoding": "UTF-8 source in JSON, exactly reversible"
+    },
+    {
+      "source": "output/playwright/results/aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/test-failed-1.png",
+      "file": "aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/test-failed-1.png",
+      "bytes": 125334,
+      "sha256": "1cb3a0afde3270f092fbd284b93c7c9673d7232a7fb6358779194336263519ed",
+      "archive_file": "aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/test-failed-1.png"
+    },
+    {
+      "source": "output/playwright/results/aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/trace.zip",
+      "file": "aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/trace.zip",
+      "bytes": 5197564,
+      "sha256": "bd7d73bb0dfb0a2cf7e768e8b6cd21fa34a3c205b4ffe22f74e871586e961c1b",
+      "archive_file": "aggregation-S06-CE-19-a-re-49af4-nstead-of-old-trace-success/trace.zip"
+    }
+  ]
+}

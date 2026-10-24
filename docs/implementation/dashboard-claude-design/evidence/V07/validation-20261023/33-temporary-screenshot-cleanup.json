@@ -1,0 +1,25 @@
+{
+  "reason": "Existing browser tests explicitly generate these four screenshots; initial worktree status was clean. All are retained in task scratch rather than committed outside the V07 evidence path.",
+  "files": [
+    {
+      "original": "tmp/agent-work/issue-27/aggregation-combinations.png",
+      "retained_at": ".scratch/v07/validation-20261023/temporary-test-screenshots/issue-27/aggregation-combinations.png",
+      "sha256": "3f667dfada8c74d11df2da1d50243f939d173370969dac862d008f880d33a357"
+    },
+    {
+      "original": "tmp/agent-work/issue-27/behaviour.png",
+      "retained_at": ".scratch/v07/validation-20261023/temporary-test-screenshots/issue-27/behaviour.png",
+      "sha256": "d8523af0871adf5a76546dfec9f7b88189d111a95994ad8a63dba0012658b0e9"
+    },
+    {
+      "original": "tmp/agent-work/issue-76/narrow.png",
+      "retained_at": ".scratch/v07/validation-20261023/temporary-test-screenshots/issue-76/narrow.png",
+      "sha256": "8da38c76382feef74d9c1768be46d8b22f45b38c7a561bc1c03a6e9cdbec2bfa"
+    },
+    {
+      "original": "tmp/agent-work/issue-76/statistics.png",
+      "retained_at": ".scratch/v07/validation-20261023/temporary-test-screenshots/issue-76/statistics.png",
+      "sha256": "e9ee37aeb4604df373db3971befeae8a82c58bb983b891060e719ecb82ed83d3"
+    }
+  ]
+}

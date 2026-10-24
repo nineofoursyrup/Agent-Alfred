@@ -1,0 +1,13 @@
+{
+  "command": [
+    "git",
+    "diff",
+    "--cached",
+    "--check"
+  ],
+  "observed_at": "2026-10-22T22:47:36.860083+00:00",
+  "exit_code": 2,
+  "stdout": "docs/implementation/dashboard-claude-design/evidence/V07/validation-20261023/25-typecheck.log:4: new blank line at EOF.\n",
+  "stderr": "",
+  "note": "The preceding multi-command shell showed this same staged error but returned its final stat command exit code. This direct invocation captures the failing command exit code before repair."
+}

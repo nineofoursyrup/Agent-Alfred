@@ -1,0 +1,53 @@
+{
+  "observed_at": "2026-10-22T21:44:53.234826+00:00",
+  "worktree": "/Users/nineofour/Agent-Alfred-v07",
+  "branch": "dashboard-visual/v07-behaviour",
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "head": "93734bb69ebf54bcc21af3e30f755b3185a4ede2",
+  "remote_head": "93734bb69ebf54bcc21af3e30f755b3185a4ede2",
+  "fetch_exit_code": 0,
+  "rebase_exit_code": 0,
+  "rebase_stdout": "Current branch dashboard-visual/v07-behaviour is up to date.",
+  "initial_status": "",
+  "current_status": "?? .playwright-cli/",
+  "source_changes": [
+    "src/agent_alfred/ops/static/behaviour.css",
+    "src/agent_alfred/ops/static/behaviour.js",
+    "src/agent_alfred/ops/static/routing-statistics.js",
+    "tests/browser/routing-statistics.spec.js"
+  ],
+  "unexpected_files": [],
+  "user_scope_clarification": "2026-10-23: user explicitly permits retaining the existing tests/browser/routing-statistics.spec.js change.",
+  "protected_files": {
+    "src/agent_alfred/ops/static/app.css": {
+      "unchanged_from_base": true,
+      "sha256": "caaec9cf2e5e6f69798a8f222dc4bdb143636b21ddb5af84a33e7ab0a239f194"
+    },
+    "src/agent_alfred/ops/static/app.js": {
+      "unchanged_from_base": true,
+      "sha256": "87cf98ab70e8bdf4fd3d5de37ef6df125ab624487b522e72b50362144c249d35"
+    },
+    "src/agent_alfred/ops/static/index.html": {
+      "unchanged_from_base": true,
+      "sha256": "1806bc790c4abb172d848ba04c5054d0e20341657e90111a1696574785835c7a"
+    },
+    "src/agent_alfred/ops/static/shell.js": {
+      "unchanged_from_base": true,
+      "sha256": "c71dfdaae24d2349cd78d36ff96fb89daf4842df823fd021d407d87565bff03b"
+    },
+    "src/agent_alfred/ops/static/topology.js": {
+      "unchanged_from_base": true,
+      "sha256": "da3c1dda2d0ab85dee05eaf1c19e4974c12c405fe65422601571d32363cd1c08"
+    },
+    "src/agent_alfred/ops/static/aggregation.js": {
+      "unchanged_from_base": true,
+      "sha256": "2ed4534a18114be56b0df33850040828305d316e794b52ec62e49103384e5ebb"
+    },
+    "docs/design/issue-122/RECIPES.md": {
+      "unchanged_from_base": true,
+      "sha256": "e98a228252a21a3752df7e59c4eda8b35bb928f61944c12dc25b02dbc047a35c"
+    }
+  },
+  "local_browser_port_base": 18070,
+  "reference_port": 18078
+}

@@ -1,0 +1,12 @@
+{
+  "command": [
+    "git",
+    "diff",
+    "--cached",
+    "--check"
+  ],
+  "observed_at": "2026-10-22T22:47:36.954349+00:00",
+  "exit_code": 0,
+  "stdout": "",
+  "stderr": ""
+}

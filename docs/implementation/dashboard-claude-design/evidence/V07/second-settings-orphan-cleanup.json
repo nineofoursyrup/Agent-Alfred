@@ -1,0 +1,8 @@
+{
+  "pid": 45910,
+  "identity": "45910     1 /opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python tests/browser/settings_server.py",
+  "cwd": "p45910\nfcwd\nn/Users/nineofour/Agent-Alfred-v07\n",
+  "action": "SIGTERM to task-owned orphan settings test server",
+  "reason": "The orphan held assigned port 18078 and caused further startup bind failures",
+  "root_cause_of_original_timeout": "UNKNOWN"
+}

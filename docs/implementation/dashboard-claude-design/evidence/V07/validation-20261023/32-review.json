@@ -1,0 +1,108 @@
+{
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "head": "93734bb69ebf54bcc21af3e30f755b3185a4ede2",
+  "kind": "local focused code-review; Standards and Spec reviewed together; no independent subagents",
+  "standards_sources": [
+    "CLAUDE.md",
+    "docs/agents/issue-tracker.md",
+    "docs/design/issue-122/RECIPES.md",
+    "docs/adr/0049-claude-design-original-is-dashboard-visual-authority.md",
+    "current task worktree/file/port constraints",
+    "code-review SKILL.md smell baseline"
+  ],
+  "spec_sources": [
+    "https://github.com/nineofoursyrup/Agent-Alfred/issues/129",
+    "https://github.com/nineofoursyrup/Agent-Alfred/issues/122"
+  ],
+  "source_findings": [],
+  "source_evidence": {
+    "existing_product_test_sha_unchanged": {
+      "src/agent_alfred/ops/static/behaviour.js": true,
+      "src/agent_alfred/ops/static/behaviour.css": true,
+      "src/agent_alfred/ops/static/routing-statistics.js": true,
+      "tests/browser/routing-statistics.spec.js": true
+    },
+    "panelBody": "Both callers construct h2 and description as their first children; original controls and event-bearing elements are moved without reconstruction.",
+    "behaviour_lifecycle": "Only the panel wrapper and child placement changed; settings read/write, Drafts, subscribeState, close/disconnect remain unchanged.",
+    "topology_aggregation": "No changes against origin/main; CSS selectors remain under .behaviour-page.",
+    "statistics": "load/invalidate/cancel/validate/ratio functions unchanged; existing validation binds counts and positive denominators before SVG percentages are generated.",
+    "accessibility": "Route names/counts/ratios remain visible in sy-bar-heading and complete table; aria-hidden SVG is supplementary.",
+    "no_data": "Recent decisions omitted because parent #122 disallows invented data and new reads.",
+    "test_change": "Existing locator adaptations retain 3/6 real sample, 50% width, empty tracks for invalid/unknown/no denominator; user explicitly authorized retaining this test."
+  },
+  "evidence_correction": "Legacy reference capture used a port outside the current allocation; recaptured all four reference viewports on 18078 without changing the archived original. Typecheck raw stdout ends in a blank line; after preserving the staged diff-check failure, archive it as lossless JSON utf8_source with matching raw SHA-256.",
+  "gates": {
+    "21-ruff": {
+      "exit_code": 0,
+      "input_unchanged": true,
+      "elapsed_seconds": 0.258,
+      "record": "21-ruff.json"
+    },
+    "22-skills": {
+      "exit_code": 0,
+      "input_unchanged": true,
+      "elapsed_seconds": 0.115,
+      "record": "22-skills.json"
+    },
+    "23-env": {
+      "exit_code": 0,
+      "input_unchanged": true,
+      "elapsed_seconds": 2.113,
+      "record": "23-env.json"
+    },
+    "24-pytest-full": {
+      "exit_code": 0,
+      "input_unchanged": true,
+      "elapsed_seconds": 2746.286,
+      "record": "24-pytest-full.json"
+    },
+    "25-typecheck": {
+      "exit_code": 0,
+      "input_unchanged": true,
+      "elapsed_seconds": 0.731,
+      "record": "25-typecheck.json"
+    },
+    "26-browser-full": {
+      "exit_code": 0,
+      "input_unchanged": true,
+      "elapsed_seconds": 782.004,
+      "record": "26-browser-full.json"
+    },
+    "27-diff": {
+      "exit_code": 0,
+      "input_unchanged": true,
+      "elapsed_seconds": 0.071,
+      "record": "27-diff.json"
+    },
+    "28-build": {
+      "exit_code": 0,
+      "input_unchanged": true,
+      "elapsed_seconds": 17.562,
+      "record": "28-build.json"
+    },
+    "29-mcp-installations": {
+      "exit_code": 0,
+      "input_unchanged": true,
+      "elapsed_seconds": 14.79,
+      "record": "29-mcp-installations.json"
+    }
+  },
+  "standards": {
+    "verdict": "PASS",
+    "blocking_findings": [],
+    "optional_findings": []
+  },
+  "spec": {
+    "verdict": "PASS",
+    "blocking_findings": [],
+    "optional_findings": []
+  },
+  "review_scope": "origin/main...93734bb plus the current V07 documentation and evidence update; product/test bytes remain unchanged.",
+  "new_failure_or_flaky_cases": [],
+  "final_summary": "Standards: 0 findings; Spec: 0 findings; no remaining source or evidence correction.",
+  "archive_format_failure": {
+    "first": "34-staged-diff-first.json",
+    "final": "35-staged-diff-final.json",
+    "source_or_test_input_changed": false
+  }
+}
