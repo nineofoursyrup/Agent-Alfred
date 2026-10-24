@@ -1,0 +1,94 @@
+{
+  "head": "f36b33ea579e5412d84a8b536ff00bdbb92c0616",
+  "finding": "CSS text-transform changed the actual Chromium table name despite the DOM-caption based locator passing",
+  "observations": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "tables": [
+        {
+          "role": "table",
+          "name": "RUN 账目索引"
+        },
+        {
+          "role": "table",
+          "name": "模型 Attempt"
+        }
+      ]
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "tables": [
+        {
+          "role": "table",
+          "name": "RUN 账目索引"
+        },
+        {
+          "role": "table",
+          "name": "模型 Attempt"
+        },
+        {
+          "role": "table",
+          "name": "Token four-dim-aborted"
+        },
+        {
+          "role": "table",
+          "name": "四维价格 four-dim-aborted"
+        }
+      ]
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "tables": [
+        {
+          "role": "table",
+          "name": "RUN 账目索引"
+        },
+        {
+          "role": "table",
+          "name": "模型 Attempt"
+        },
+        {
+          "role": "table",
+          "name": "Token four-dim-aborted"
+        },
+        {
+          "role": "table",
+          "name": "四维价格 four-dim-aborted"
+        }
+      ]
+    },
+    {
+      "viewport": {
+        "width": 320,
+        "height": 800
+      },
+      "tables": [
+        {
+          "role": "table",
+          "name": "RUN 账目索引"
+        },
+        {
+          "role": "table",
+          "name": "模型 Attempt"
+        },
+        {
+          "role": "table",
+          "name": "Token four-dim-aborted"
+        },
+        {
+          "role": "table",
+          "name": "四维价格 four-dim-aborted"
+        }
+      ]
+    }
+  ]
+}

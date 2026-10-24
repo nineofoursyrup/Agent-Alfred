@@ -1,0 +1,22 @@
+{
+  "original_head": "6a015842e7984692111099dcad14de1fa2fbcaeb",
+  "rebased_head": "60da0c804d9b1e0f7ee74322c5fbbed0beb18b5f",
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "rebase_exit_code": 0,
+  "worktree_status": "",
+  "browser_port": 18080,
+  "user_scope_exception": "User explicitly authorized preserving the existing tests/browser/accounting-layout.spec.js difference; no new test edits authorized or made.",
+  "outside_scope": [],
+  "source_sha256": {
+    "src/agent_alfred/ops/static/accounting.js": "ec155dc8962e2254c7e623acf8c07b2bd1a2640f4181d5744a281bc7ef86b498",
+    "src/agent_alfred/ops/static/accounting.css": "7eaccf4b8d19c4294a0e1477e8d058b462fff0bc48e26a0dd78213de62d64cca",
+    "tests/browser/accounting-layout.spec.js": "4b9aca1b4a029ed4e19dbb9186d1d24fadd2db69ed854770b40a5cdbb41d6103",
+    "src/agent_alfred/ops/static/app.css": "caaec9cf2e5e6f69798a8f222dc4bdb143636b21ddb5af84a33e7ab0a239f194",
+    "src/agent_alfred/ops/static/index.html": "1806bc790c4abb172d848ba04c5054d0e20341657e90111a1696574785835c7a",
+    "src/agent_alfred/ops/static/app.js": "87cf98ab70e8bdf4fd3d5de37ef6df125ab624487b522e72b50362144c249d35",
+    "src/agent_alfred/ops/static/shell.js": "c71dfdaae24d2349cd78d36ff96fb89daf4842df823fd021d407d87565bff03b",
+    "src/agent_alfred/ops/static/tools.js": "3edbb1ab7822e27f1fbdd742561659a11ee2082a137b64f56f9e89b0ad53efe5",
+    "docs/design/issue-122/RECIPES.md": "e98a228252a21a3752df7e59c4eda8b35bb928f61944c12dc25b02dbc047a35c",
+    ".gitattributes": "d5343a905893d25b866ea0921443de86a315abf45c085584318e3813d95f890d"
+  }
+}

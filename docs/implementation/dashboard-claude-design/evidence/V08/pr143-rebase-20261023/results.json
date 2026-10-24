@@ -1,0 +1,157 @@
+{
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "tested_head": "60da0c804d9b1e0f7ee74322c5fbbed0beb18b5f",
+  "local_gates": "PASS",
+  "gates": {
+    "00-mainbar-repro": {
+      "command": [
+        "npm",
+        "run",
+        "test:browser",
+        "--",
+        "tests/browser/mainbar-integration.spec.js"
+      ],
+      "head": "60da0c804d9b1e0f7ee74322c5fbbed0beb18b5f",
+      "port": "18080",
+      "started_at": "2026-10-22T21:42:06.171421+00:00",
+      "elapsed_seconds": 2.403,
+      "exit_code": 0,
+      "sha256": "3081bf636c6d5e23cc512bf87f7d9cc085c7429891c7782c00485fc75e569cab"
+    },
+    "01-ruff": {
+      "command": [
+        ".venv/bin/ruff",
+        "check",
+        "--no-cache",
+        "."
+      ],
+      "head": "60da0c804d9b1e0f7ee74322c5fbbed0beb18b5f",
+      "port": "18080",
+      "started_at": "2026-10-22T21:42:51.628554+00:00",
+      "elapsed_seconds": 0.109,
+      "exit_code": 0,
+      "sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    "02-skills": {
+      "command": [
+        ".venv/bin/python",
+        "-B",
+        "scripts/check_skills.py"
+      ],
+      "head": "60da0c804d9b1e0f7ee74322c5fbbed0beb18b5f",
+      "port": "18080",
+      "started_at": "2026-10-22T21:42:51.913497+00:00",
+      "elapsed_seconds": 0.035,
+      "exit_code": 0,
+      "sha256": "fd7f151ef9c20676183c52051dc38436a8de140577cf552f4bfb470d5c8058b6"
+    },
+    "03-env": {
+      "command": [
+        ".venv/bin/python",
+        "-B",
+        "scripts/check_env_example.py"
+      ],
+      "head": "60da0c804d9b1e0f7ee74322c5fbbed0beb18b5f",
+      "port": "18080",
+      "started_at": "2026-10-22T21:42:52.108084+00:00",
+      "elapsed_seconds": 2.178,
+      "exit_code": 0,
+      "sha256": "bc243523b805cfaeb64daf1540da71749c485a41d8aed112495ab3f052f28a97"
+    },
+    "04-pytest": {
+      "command": [
+        ".venv/bin/python",
+        "-B",
+        "-m",
+        "pytest",
+        "-q"
+      ],
+      "head": "60da0c804d9b1e0f7ee74322c5fbbed0beb18b5f",
+      "port": "18080",
+      "started_at": "2026-10-22T21:42:54.459592+00:00",
+      "elapsed_seconds": 2745.775,
+      "exit_code": 0,
+      "sha256": "250b0073aef5fd992969d53398a96c4f194f9ae886d1b173d4e952499bb4cca0"
+    },
+    "05-typecheck": {
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "head": "60da0c804d9b1e0f7ee74322c5fbbed0beb18b5f",
+      "port": "18080",
+      "started_at": "2026-10-22T22:28:40.535211+00:00",
+      "elapsed_seconds": 0.514,
+      "exit_code": 0,
+      "sha256": "8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f"
+    },
+    "06-browser": {
+      "command": [
+        "npm",
+        "run",
+        "test:browser"
+      ],
+      "head": "60da0c804d9b1e0f7ee74322c5fbbed0beb18b5f",
+      "port": "18080",
+      "started_at": "2026-10-22T22:28:41.221161+00:00",
+      "elapsed_seconds": 773.316,
+      "exit_code": 0,
+      "sha256": "19644d4d5c3585c6ee6d6e7eeb8e1603b49f5cefa35dea7cc1ca0769aad9f587"
+    },
+    "07-diff-check": {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "head": "60da0c804d9b1e0f7ee74322c5fbbed0beb18b5f",
+      "port": "18080",
+      "started_at": "2026-10-22T22:41:34.907283+00:00",
+      "elapsed_seconds": 0.02,
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "08-build": {
+      "command": [
+        "uv",
+        "build"
+      ],
+      "head": "60da0c804d9b1e0f7ee74322c5fbbed0beb18b5f",
+      "port": "18080",
+      "started_at": "2026-10-22T22:41:35.089491+00:00",
+      "elapsed_seconds": 12.307,
+      "exit_code": 0,
+      "sha256": "7074ab6ff45bcd398fd9027e14204d3abf3ece90fef3d062c88178fdbd74f866"
+    },
+    "09-mcp": {
+      "command": [
+        "uv",
+        "run",
+        "python",
+        "scripts/check_mcp_installations.py",
+        "--output",
+        ".scratch/v08/pr143-20261023/mcp-artifacts.json"
+      ],
+      "head": "60da0c804d9b1e0f7ee74322c5fbbed0beb18b5f",
+      "port": "18080",
+      "started_at": "2026-10-22T22:41:47.567473+00:00",
+      "elapsed_seconds": 17.995,
+      "exit_code": 0,
+      "sha256": "af99d3282bf3e2d7aaac43022b3f362c701efa8475e83e7f0762bb0399de9983"
+    }
+  },
+  "pytest": "6445 passed, 1 deselected, 14 warnings in 2744.35s (0:45:44)",
+  "browser": "545 passed (12.9m)",
+  "mcp_installations": "wheel/sdist x base/mcp: four PASS",
+  "flaky": {
+    "test": "tests/browser/mainbar-integration.spec.js:3:1 - real S01 records compose with S02 exact location, identity merge and cross-Session drafts",
+    "old_ci_run": 38221502431,
+    "old_ci_result": "FAIL: expected B独立草稿; received A未提交草稿",
+    "isolated_retest": "PASS: 1 passed (1.9s); command elapsed 2.403s",
+    "full_suite_result": "  ✓  146 tests/browser/mainbar-integration.spec.js:3:1 › real S01 records compose with S02 exact location, identity merge and cross-Session drafts (704ms)",
+    "assessment": "Existing intermittent failure outside the V08 code path. The test only visits /inbox; accounting rendering is not mounted. MainBar test/app.js/shell.js match the failed CI source, and the V08 diff is confined to accounting styling/rendering. No wait, retry, timeout, assertion or shared-code change was made.",
+    "root_cause": "UNKNOWN; successful reruns do not demonstrate that the underlying timing issue is eliminated."
+  },
+  "remote_ci": "To be observed after this evidence commit is pushed; no success is claimed here."
+}

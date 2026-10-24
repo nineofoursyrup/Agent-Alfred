@@ -1,0 +1,26 @@
+[
+  {
+    "file": "layout/ops-1440-filters.png",
+    "width": 1440,
+    "height": 900,
+    "sha256": "9aad00079147fb293982bc76805851f519bf8bee8626daf4eb8b15a3ce11b3b9"
+  },
+  {
+    "file": "layout/ops-1280-filters.png",
+    "width": 1280,
+    "height": 800,
+    "sha256": "2ddf48c207f224426e8ee1e4858b1f9ff1f76f292962a179e178325886f275d1"
+  },
+  {
+    "file": "layout/ops-390-filters.png",
+    "width": 390,
+    "height": 844,
+    "sha256": "b6db3cec6dafeee51d2aed7bd1b2095a59ba0dd7a479781132b2da630516f607"
+  },
+  {
+    "file": "layout/ops-320-filters.png",
+    "width": 320,
+    "height": 800,
+    "sha256": "5f56ce10b01d99f5b6742e265105a86b5e610c68dd253ca665574ae9b6ea1e9d"
+  }
+]

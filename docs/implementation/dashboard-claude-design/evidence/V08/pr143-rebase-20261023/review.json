@@ -1,0 +1,43 @@
+{
+  "kind": "local code-review; no independent sub-agent review",
+  "reviewed_at": "2026-10-22T22:44:29.800412+00:00",
+  "base": "e982bfa83e72938b3e5cbaeb4f469290cc3538ad",
+  "head": "60da0c804d9b1e0f7ee74322c5fbbed0beb18b5f",
+  "scope": "git diff <base>...<head>; all original V08 code, test and evidence changes, plus this round of V08 documentation/evidence only",
+  "sources": [
+    "https://github.com/nineofoursyrup/Agent-Alfred/issues/130",
+    "https://github.com/nineofoursyrup/Agent-Alfred/issues/122",
+    "CLAUDE.md",
+    "docs/agents/issue-tracker.md",
+    "CONTEXT.md",
+    "docs/adr/0049-claude-design-original-is-dashboard-visual-authority.md",
+    "docs/design/issue-122/RECIPES.md",
+    "user-supplied pr143-V08.md and explicit approval to retain the existing accounting-layout.spec.js diff"
+  ],
+  "standards": {
+    "conclusion": "PASS",
+    "findings": [],
+    "checked": [
+      "Only accounting.js/accounting.css, approved existing layout test and V08 evidence differ from the pinned main.",
+      "CSS remains scoped to .accounting, uses existing tokens, adds no root/shared declarations, inline styles, remote resources or static assets.",
+      "Public accountingPage API and request import are unchanged; page conventions and small rendering helpers match the existing module.",
+      "The code-review smell baseline produced no concrete actionable defect."
+    ]
+  },
+  "spec": {
+    "conclusion": "PASS",
+    "findings": [],
+    "checked": [
+      "Summary cards read only value.summary; Run index rows still use per-Run facts and do not contain global totals.",
+      "Cost three-state, per-dimension price_source, stale/offline snapshot and source restoration semantics remain intact.",
+      "All four reference viewports have zero whole-page horizontal overflow; main content widths are 207/375/309/239px.",
+      "The 815px container wraps with a 343px content cell; 816px stays in one row with a 200px content cell; metric widths remain 100/120/170/130px.",
+      "Native table roles, accessible name, five column headers and headers associations remain covered.",
+      "Original reference comparisons and 22 screenshot hashes are preserved and verified; new layout evidence is captured within ports 18080-18088.",
+      "All nine requested local gate commands passed on the rebased candidate."
+    ]
+  },
+  "scope_exception": "The user explicitly authorized preserving the existing tests/browser/accounting-layout.spec.js difference. It was not edited in this round.",
+  "remaining_issues": [],
+  "human_acceptance": "No new manual/native/provider acceptance is claimed; original NOT RUN items remain."
+}
